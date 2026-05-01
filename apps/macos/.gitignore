@@ -1,0 +1,11 @@
+.build/
+build/
+artifacts/
+*.log
+*.out
+*.err
+*.tmp
+.DS_Store
+*.xcuserstate
+xcuserdata/
+DerivedData/
