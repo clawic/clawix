@@ -1,0 +1,168 @@
+# Clawix
+
+Monorepo for the Clawix project. Native clients for the [`codex`](https://github.com/openai/codex) CLI. The repo is designed to host several apps (macOS, iOS, …), each in its own subdirectory under `apps/`.
+
+## Repository layout
+
+```
+apps/
+  macos/        # macOS client (SwiftUI), exists.
+  ios/          # iOS client (placeholder, not implemented yet).
+```
+
+Each app is autonomous: its own `Package.swift` (or Xcode project), its own scripts, its own bundle id. The only repo-wide assets are the brand, this `CLAUDE.md`, and the hygiene gate run before publishing.
+
+## Build (macOS app)
+
+Requirements: macOS 14+, Swift 5.9+, Xcode Command Line Tools.
+
+### Dev loop
+
+```
+bash apps/macos/scripts/dev.sh
+```
+
+Compiles debug, kills the previous instance, relaunches. By default the build is ad-hoc-signed and bundled as `com.example.clawix.desktop` (a placeholder); macOS will re-prompt for permissions (Desktop folder, microphone, etc.) on every relaunch.
+
+### Stable signing (recommended)
+
+Create a `.signing.env` file at the repo root (or any parent directory) with your values:
+
+```
+SIGN_IDENTITY="Developer ID Application: Your Name (XXXXXXXXXX)"
+BUNDLE_ID="com.yourdomain.clawix"
+```
+
+`dev.sh` and `build_app.sh` source it automatically. Environment variables override the file. With a stable identity + bundle id, macOS persists TCC grants between rebuilds. List your codesign identities with `security find-identity -v -p codesigning`.
+
+### Release
+
+```
+bash apps/macos/scripts/build_app.sh
+```
+
+Produces `apps/macos/build/Clawix.app`. Same `SIGN_IDENTITY` / `BUNDLE_ID` resolution as `dev.sh`.
+
+## Hygiene gate (publication)
+
+Before publishing anything, this must pass:
+
+```
+bash apps/macos/scripts/public_hygiene_check.sh
+```
+
+It scans the entire repo (root + `apps/*/Sources` + `apps/*/scripts` + `apps/*/Resources`) for: developer-machine paths, secret-looking literals, hex digests, hard-coded codesign material, Apple Team IDs and committed `.signing.env` files. When new apps are added under `apps/`, their tree is picked up automatically because the gate iterates `apps/*/`.
+
+## Commits
+
+Conventional commits: `type(scope): description`. Types: `feat`, `fix`, `style`, `chore`, `refactor`, `docs`, `test`. Lowercase, no trailing period.
+
+Use a platform prefix in the scope when the change is specific to one app:
+
+- `feat(mac/composer): add model menu popup`
+- `fix(ios/onboarding): prevent loop when token expires`
+- `chore(repo): update hygiene globs`
+
+Rules:
+
+- One change per commit. Do not bundle unrelated changes.
+- Only the changes from the current session; do not sweep unrelated edits in.
+
+## Code style
+
+- **Language: English.** Every identifier, every comment, every doc comment, every commit message, every script log line, every user-visible string in this repo is written in English. No Spanish (or any other language) in code, comments or commits, even if the contributor's working language is different. This is a public repo and the default reader is an English-speaking contributor.
+- **Comments: minimal.** Default to writing none. Well-named identifiers explain WHAT the code does. Only add a comment when the WHY is non-obvious: a hidden constraint, a workaround for a specific bug, an invariant that would surprise a reader. One short line, not a paragraph. Never reference the current task or the PR ("added for X", "fixes Y") since that belongs in the commit message and rots over time.
+
+## Hard privacy rules (important for any contributor and any AI agent)
+
+This repository never contains the maintainer's real codesign identity, Apple Team ID, or bundle id. They live in a `.signing.env` file kept outside the public tree. When contributing code:
+
+- **Do not hard-code** a `CFBundleIdentifier`, a `DEVELOPMENT_TEAM`, or a codesign identity literal anywhere in this repository. Those values are read at runtime from `.signing.env` or environment variables.
+- **Do not commit** the file `.signing.env`. It is in `.gitignore` and `apps/macos/scripts/public_hygiene_check.sh` fails the build if a copy is detected inside the public tree.
+- **Do not introduce** an `Info.plist` with a literal bundle id. The plist is generated in `build_app.sh` interpolating `${BUNDLE_ID}`.
+- **Do not add** an Xcode project with `DEVELOPMENT_TEAM = XXXXXXXXXX;`. Leave the field empty; the script supplies it via `xcodebuild DEVELOPMENT_TEAM="$TEAM_ID" …` from the environment.
+
+If you need to expose a new piece of local config (another identifier, another flag), add the variable to the scripts and document it in `.signing.env.example`. Never the other way around.
+
+---
+
+# macOS app · `apps/macos/`
+
+Native macOS client (SwiftUI) for the `codex` CLI. Acts as a frontend: reads `~/.codex/auth.json`, runs the `codex` binary for login/logout, and connects to the JSON-RPC app-server the CLI exposes for threads, messages and events.
+
+## Layout
+
+- `apps/macos/Package.swift`: Swift Package, target `Clawix`, macOS 14+. No external dependencies.
+- `apps/macos/Sources/Clawix/`: SwiftUI source.
+- `apps/macos/scripts/dev.sh`: dev launcher (build + relaunch).
+- `apps/macos/scripts/build_app.sh`: release-only `.app` builder.
+- `apps/macos/scripts/public_hygiene_check.sh`: hygiene gate scanned across the whole repo.
+
+## Corner radius: always squircle (`.continuous`)
+
+App-wide standard. Every corner radius is rendered with `style: .continuous` (Apple's superellipse). Never `.circular`, never the default style. The difference vs. `.circular` is subtle but cumulative: a `.continuous` app feels "pro", a `.circular` one feels amateur.
+
+**Auto-enforced**: `dev.sh` runs a lint that fails the build if any of the following appear. If the lint fires, the build does not compile and the app is not relaunched.
+
+The lint covers four rules:
+
+- `RoundedRectangle(cornerRadius: X)` → always `RoundedRectangle(cornerRadius: X, style: .continuous)`. Lint A.
+- `UnevenRoundedRectangle(...)` → always with `style: .continuous`. Lint D scans for `.continuous` within the 6 lines following the opening, so multi-line declarations work as long as `.continuous` shows up.
+- `Path(roundedRect: r, cornerSize: s)` and `Path(roundedRect: r, cornerRadius: x)` default to `.circular`; pass `style: .continuous` explicitly. Lint D.
+- `.clipShape(RoundedRectangle(...))` → same `.continuous` standard (lint A covers it because the underlying pattern is the same).
+- **Forbidden**: SwiftUI's `.cornerRadius(X)` modifier. It clips circular by default. Replace with `.clipShape(RoundedRectangle(cornerRadius: X, style: .continuous))`. Lint B.
+- **Forbidden**: `style: .circular` and `RoundedCornerStyle.circular` literals. Lint C.
+- `Capsule()` and `Circle()` are out of scope (fully rounded by construction, no configurable radius).
+
+Edge cases the lint does not cover, watch by hand:
+
+- `NSBezierPath(roundedRect: rect, xRadius:, yRadius:)` (AppKit) has no squircle variant; it always draws circular. Allowed only when the radius is ≥ ~40% of the shorter side (effectively a capsule/pill, the visual delta is nil — e.g. the custom scrollbar thumb). For anything else, draw the shape with `Path` (SwiftUI) or `CGPath` with squircle, or replace with SwiftUI `RoundedRectangle`.
+- `Image` with rounded corners via `.clipShape(...)` → the `clipShape` carries `RoundedRectangle(cornerRadius:style: .continuous)`. Lint A catches it.
+
+When a new component draws its own radius (canvas, hand-painting in a `GeometryReader`, etc.) route it through `RoundedRectangle` or `Path(roundedRect:cornerSize:style: .continuous)`. Do not invent circular Bézier curves by hand.
+
+## Dropdowns / popups / context menus (project canon)
+
+The composer's model selector (`ModelMenuPopup` in `ComposerView.swift`) is the **visual reference** for any dropdown, popover-style menu, edit menu or context menu. Anything new and anything retroactive should match it.
+
+Chrome:
+
+- Background: `RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(white: 0.135))`.
+- Border: `.stroke(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)` (0.10 alpha, 0.5 px). Hairline, almost invisible.
+- Shadow: `.shadow(color: .black.opacity(0.40), radius: 18, x: 0, y: 10)`.
+- Container vertical padding: `6 pt`.
+- Canonical helper: `.menuStandardBackground()` in `ContentView.swift`. **Use it always**, do not re-create the rectangle by hand.
+
+Rows:
+
+- Padding: `.padding(.horizontal, 14).padding(.vertical, 7)`. Compact, NOT 10/8 nor 10/10.
+- Text: `font(.system(size: 13.5))`, color `Color(white: 0.94)`.
+- Icons: `font(.system(size: 13))` (14 if the row is heavy), color `Color(white: 0.86)`, fixed width `frame(width: 18, alignment: .center)` so columns align.
+- Subtitles, shortcuts, trailing chevrons: `Color(white: 0.55)`, sizes 11–12.
+- Hover: NOT a full-bleed background. Use the `MenuRowHover(active: hovered)` helper. It is a `RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.06)).padding(.horizontal, 5)` that breathes towards the menu's edges. For rows highlighted because their submenu is open, raise to `0.08`.
+- Selection check: `font(.system(size: 11, weight: .semibold))`, color `Color(white: 0.94)`.
+
+Opening + animation:
+
+- Anchoring: `anchorPreference` + `overlayPreferenceValue` (NOT SwiftUI `.popover`). `.popover` adds the system arrow chrome and breaks the look. Canonical pattern in `ComposerView.swift` for the model selector.
+- Position: anchored from above just below the trigger. `alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }` to hang 6 pt below; `alignmentGuide(.leading)` to align to the trigger (or to the right edge if the menu is wider).
+- Entry transition: `.transition(.softNudge(y: 4))` (defined in `ComposerView.swift`). Side submenus: `.transition(.softNudge(x: -4))`. Do NOT use `.opacity.combined(with: .scale)`.
+- Easing: `.animation(.easeOut(duration: 0.20), value: <openState>)` on the container.
+- Outside click: `.background(MenuOutsideClickWatcher(isPresented: $isOpen))` inside the menu so it closes on outside click.
+
+What to avoid:
+
+- `.popover(isPresented:arrowEdge:)` with system chrome.
+- Full-bleed hover backgrounds (highlights must inset from the menu edge).
+- Heavy borders `lineWidth: 1` with `Color.white.opacity(0.08)` or similar; always `Palette.popupStroke` with `Palette.popupStrokeWidth`.
+- `cornerRadius` 14/16; the standard is 12.
+- Tall rows (vertical 10+); compact at 7.
+
+Constants and helpers already available (in `ContentView.swift`):
+
+- `enum MenuStyle` with all sizes, colors and animation.
+- `extension View { func menuStandardBackground() }` for the container.
+- `struct MenuRowHover` for the hover highlight.
+- `extension AnyTransition { static func softNudge(x:y:) }` (in `ComposerView.swift`).
+
+Before adding a new dropdown, look at `ModelMenuPopup` and replicate its structure. If the behavior differs (side submenu, sectioned with header, divider), copy the building blocks `ModelMenuHeader`, `ModelMenuDivider`, `ModelMenuCheckRow`, `ModelMenuChevronRow`, `ModelMenuDescriptionRow` or build a new one with the same paddings and `MenuRowHover`.
