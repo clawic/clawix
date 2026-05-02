@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "Создать и переключиться на новую ветку...";
 "Create chat" = "Создать чат";
 "Create project…" = "Создать проект…";
+"Creation" = "По созданию";
 "Current version" = "Текущая версия";
 "Custom config.toml settings" = "Пользовательские настройки config.toml";
 "Custom instructions" = "Пользовательские инструкции";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "Протокол контекста модели";
 "Model picker: GPT-%1$@ %2$@" = "Выбор модели: GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "Выбор модели: GPT-%@ %@";
-"More information" = "Дополнительная информация";
 "More options" = "Дополнительные параметры";
 "Move to project" = "Переместить в проект";
 "My project" = "Мой проект";
@@ -210,7 +210,6 @@
 "Reasoning" = "Рассуждение";
 "Register an action that runs a command from the local toolbar." = "Добавьте действие для запуска команд с локальной панели инструментов.";
 "Reinstall" = "Переустановить";
-"Relevant" = "Важные";
 "Reload Browser Page" = "Перезагрузить страницу";
 "Remaining usage limits" = "Оставшиеся лимиты";
 "Remove attachment" = "Удалить вложение";
@@ -243,7 +242,6 @@
 "Set prefix" = "Задать префикс";
 "Settings" = "Настройки";
 "Settings categories" = "Категории настроек";
-"Show" = "Показать";
 "Show MCP server status" = "Показать статус сервера MCP";
 "Show chat ID, context usage and rate limits" = "Показать ID чата, использование контекста и лимиты";
 "Show more" = "Показать ещё";
@@ -255,6 +253,7 @@
 "Sign in" = "Войти";
 "Sign in to recover access to your chats and projects." = "Подключите аккаунт, чтобы вернуться к чатам и проектам.";
 "Sign out" = "Выйти";
+"Sort by" = "Сортировать по";
 "Speed" = "Скорость";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "Включи быстрый режим, чтобы ускорить инференс в чатах, субагентах и компактовании. Больший расход плана.";
 "Standard" = "Стандарт";
@@ -285,6 +284,7 @@
 "Unpin chat" = "Открепить чат";
 "Unread" = "Непрочитано";
 "Untitled" = "Без заголовка";
+"Updated" = "По обновлению";
 "Use an existing folder" = "Использовать существующую папку";
 "Use dark theme in the interface" = "Использовать тёмную тему интерфейса";
 "Use light, dark, or system appearance" = "Используйте светлую, тёмную или системную тему";

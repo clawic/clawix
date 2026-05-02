@@ -770,130 +770,194 @@
         }
       }
     },
-    "Show": {
+    "Sort by": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostrar"
+            "value": "Ordenar por"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show"
+            "value": "Sort by"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Afficher"
+            "value": "Trier par"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anzeigen"
+            "value": "Sortieren nach"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostra"
+            "value": "Ordina per"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostrar"
+            "value": "Ordenar por"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "表示"
+            "value": "並べ替え"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示"
+            "value": "排序方式"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "표시"
+            "value": "정렬"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показать"
+            "value": "Сортировать по"
           }
         }
       }
     },
-    "Relevant": {
+    "Creation": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relevante"
+            "value": "Creación"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relevant"
+            "value": "Creation"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pertinent"
+            "value": "Création"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relevant"
+            "value": "Erstellung"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rilevanti"
+            "value": "Creazione"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Relevante"
+            "value": "Criação"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "関連"
+            "value": "作成順"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "相关"
+            "value": "按创建时间"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "관련"
+            "value": "생성순"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Важные"
+            "value": "По созданию"
+          }
+        }
+      }
+    },
+    "Updated": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualización"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualisierung"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualização"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新順"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按更新时间"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트순"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По обновлению"
           }
         }
       }
@@ -21164,70 +21228,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Фильтровать, сортировать и упорядочивать чаты"
-          }
-        }
-      }
-    },
-    "More information": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más información"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More information"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus d’informations"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weitere Informationen"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Altre informazioni"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mais informações"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "詳細情報"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更多信息"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "추가 정보"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Дополнительная информация"
           }
         }
       }

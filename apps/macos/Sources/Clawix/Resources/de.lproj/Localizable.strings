@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "Neuen Branch erstellen und wechseln...";
 "Create chat" = "Chat erstellen";
 "Create project…" = "Projekt erstellen…";
+"Creation" = "Erstellung";
 "Current version" = "Aktuelle Version";
 "Custom config.toml settings" = "Benutzerdefinierte config.toml-Einstellungen";
 "Custom instructions" = "Benutzerdefinierte Anweisungen";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "Modellkontextprotokoll";
 "Model picker: GPT-%1$@ %2$@" = "Modellauswahl: GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "Modellauswahl: GPT-%@ %@";
-"More information" = "Weitere Informationen";
 "More options" = "Weitere Optionen";
 "Move to project" = "In Projekt verschieben";
 "My project" = "Mein Projekt";
@@ -210,7 +210,6 @@
 "Reasoning" = "Begründung";
 "Register an action that runs a command from the local toolbar." = "Füge eine Aktion hinzu, um Befehle über die lokale Symbolleiste auszuführen.";
 "Reinstall" = "Neu installieren";
-"Relevant" = "Relevant";
 "Reload Browser Page" = "Seite neu laden";
 "Remaining usage limits" = "Verbleibende Nutzungslimits";
 "Remove attachment" = "Anhang entfernen";
@@ -243,7 +242,6 @@
 "Set prefix" = "Präfix festlegen";
 "Settings" = "Einstellungen";
 "Settings categories" = "Einstellungskategorien";
-"Show" = "Anzeigen";
 "Show MCP server status" = "MCP-Serverstatus anzeigen";
 "Show chat ID, context usage and rate limits" = "Chat-ID, Kontextverbrauch und Nutzungslimits anzeigen";
 "Show more" = "Mehr anzeigen";
@@ -255,6 +253,7 @@
 "Sign in" = "Anmelden";
 "Sign in to recover access to your chats and projects." = "Verbinde dein Konto, um zu deinen Chats und Projekten zurückzukehren.";
 "Sign out" = "Abmelden";
+"Sort by" = "Sortieren nach";
 "Speed" = "Geschwindigkeit";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "Aktiviere den schnellen Modus für schnellere Inferenz in Chats, Subagenten und Kompaktierung. Höhere Plannutzung.";
 "Standard" = "Standard";
@@ -285,6 +284,7 @@
 "Unpin chat" = "Chat lösen";
 "Unread" = "Ungelesen";
 "Untitled" = "Ohne Titel";
+"Updated" = "Aktualisierung";
 "Use an existing folder" = "Vorhandenen Ordner verwenden";
 "Use dark theme in the interface" = "Dunkles Design in der Oberfläche verwenden";
 "Use light, dark, or system appearance" = "Hell, dunkel oder Systemeinstellung verwenden";

@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "创建并切换到新分支...";
 "Create chat" = "创建对话";
 "Create project…" = "创建项目…";
+"Creation" = "按创建时间";
 "Current version" = "当前版本";
 "Custom config.toml settings" = "config.toml 自定义设置";
 "Custom instructions" = "自定义指令";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "模型上下文协议";
 "Model picker: GPT-%1$@ %2$@" = "模型选择器：GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "模型选择器：GPT-%@ %@";
-"More information" = "更多信息";
 "More options" = "更多选项";
 "Move to project" = "移动到项目";
 "My project" = "我的项目";
@@ -210,7 +210,6 @@
 "Reasoning" = "推理过程";
 "Register an action that runs a command from the local toolbar." = "添加一个操作，用于从本地工具栏运行命令。";
 "Reinstall" = "重新安装";
-"Relevant" = "相关";
 "Reload Browser Page" = "重新加载页面";
 "Remaining usage limits" = "剩余使用额度";
 "Remove attachment" = "移除附件";
@@ -243,7 +242,6 @@
 "Set prefix" = "设置前缀";
 "Settings" = "设置";
 "Settings categories" = "设置类别";
-"Show" = "显示";
 "Show MCP server status" = "显示 MCP 服务器状态";
 "Show chat ID, context usage and rate limits" = "显示对话 ID、上下文用量与使用上限";
 "Show more" = "显示更多";
@@ -255,6 +253,7 @@
 "Sign in" = "登录";
 "Sign in to recover access to your chats and projects." = "连接你的帐户以返回聊天和项目。";
 "Sign out" = "退出登录";
+"Sort by" = "排序方式";
 "Speed" = "速度";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "启用快速模式以加速对话、子智能体与压缩的推理。会消耗更多计划额度。";
 "Standard" = "标准";
@@ -285,6 +284,7 @@
 "Unpin chat" = "取消置顶对话";
 "Unread" = "未读";
 "Untitled" = "无标题";
+"Updated" = "按更新时间";
 "Use an existing folder" = "使用现有文件夹";
 "Use dark theme in the interface" = "在界面中使用深色主题";
 "Use light, dark, or system appearance" = "使用浅色、深色或跟随系统";

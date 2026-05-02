@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "Create and switch to a new branch...";
 "Create chat" = "Create chat";
 "Create project…" = "Create project…";
+"Creation" = "Creation";
 "Current version" = "Current version";
 "Custom config.toml settings" = "Custom config.toml settings";
 "Custom instructions" = "Custom instructions";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "Model Context Protocol";
 "Model picker: GPT-%1$@ %2$@" = "Model picker: GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "Model picker: GPT-%@ %@";
-"More information" = "More information";
 "More options" = "More options";
 "Move to project" = "Move to project";
 "My project" = "My project";
@@ -210,7 +210,6 @@
 "Reasoning" = "Reasoning";
 "Register an action that runs a command from the local toolbar." = "Register an action that runs a command from the local toolbar.";
 "Reinstall" = "Reinstall";
-"Relevant" = "Relevant";
 "Reload Browser Page" = "Reload Browser Page";
 "Remaining usage limits" = "Remaining usage limits";
 "Remove attachment" = "Remove attachment";
@@ -243,7 +242,6 @@
 "Set prefix" = "Set prefix";
 "Settings" = "Settings";
 "Settings categories" = "Settings categories";
-"Show" = "Show";
 "Show MCP server status" = "Show MCP server status";
 "Show chat ID, context usage and rate limits" = "Show chat ID, context usage and rate limits";
 "Show more" = "Show more";
@@ -255,6 +253,7 @@
 "Sign in" = "Sign in";
 "Sign in to recover access to your chats and projects." = "Sign in to recover access to your chats and projects.";
 "Sign out" = "Sign out";
+"Sort by" = "Sort by";
 "Speed" = "Speed";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "Speed up inference across chats, subagents and compaction. Uses more of your plan quota.";
 "Standard" = "Standard";
@@ -285,6 +284,7 @@
 "Unpin chat" = "Unpin chat";
 "Unread" = "Unread";
 "Untitled" = "Untitled";
+"Updated" = "Updated";
 "Use an existing folder" = "Use an existing folder";
 "Use dark theme in the interface" = "Use dark theme in the interface";
 "Use light, dark, or system appearance" = "Use light, dark, or system appearance";

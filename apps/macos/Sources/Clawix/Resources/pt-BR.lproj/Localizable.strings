@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "Criar e alternar para uma nova branch...";
 "Create chat" = "Criar conversa";
 "Create project…" = "Criar projeto…";
+"Creation" = "Criação";
 "Current version" = "Versão atual";
 "Custom config.toml settings" = "Configurações personalizadas de config.toml";
 "Custom instructions" = "Instruções personalizadas";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "Protocolo de contexto de modelo";
 "Model picker: GPT-%1$@ %2$@" = "Seletor de modelo: GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "Seletor de modelo: GPT-%@ %@";
-"More information" = "Mais informações";
 "More options" = "Mais opções";
 "Move to project" = "Mover para projeto";
 "My project" = "Meu projeto";
@@ -210,7 +210,6 @@
 "Reasoning" = "Raciocínio";
 "Register an action that runs a command from the local toolbar." = "Adicione uma ação para executar comandos pela barra de ferramentas local.";
 "Reinstall" = "Reinstalar";
-"Relevant" = "Relevante";
 "Reload Browser Page" = "Recarregar página";
 "Remaining usage limits" = "Limites de uso restantes";
 "Remove attachment" = "Remover anexo";
@@ -243,7 +242,6 @@
 "Set prefix" = "Definir prefixo";
 "Settings" = "Configurações";
 "Settings categories" = "Categorias de configurações";
-"Show" = "Mostrar";
 "Show MCP server status" = "Mostrar status do servidor MCP";
 "Show chat ID, context usage and rate limits" = "Mostrar ID da conversa, uso do contexto e limites";
 "Show more" = "Mostrar mais";
@@ -255,6 +253,7 @@
 "Sign in" = "Entrar";
 "Sign in to recover access to your chats and projects." = "Conecte sua conta para voltar aos seus chats e projetos.";
 "Sign out" = "Sair";
+"Sort by" = "Ordenar por";
 "Speed" = "Velocidade";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "Ative o modo rápido para acelerar a inferência em conversas, subagentes e compactação. Maior uso do plano.";
 "Standard" = "Padrão";
@@ -285,6 +284,7 @@
 "Unpin chat" = "Desafixar conversa";
 "Unread" = "Não lido";
 "Untitled" = "Sem título";
+"Updated" = "Atualização";
 "Use an existing folder" = "Usar uma pasta existente";
 "Use dark theme in the interface" = "Usar tema escuro na interface";
 "Use light, dark, or system appearance" = "Use claro, escuro ou igual ao sistema";

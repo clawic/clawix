@@ -3,7 +3,6 @@ import UniformTypeIdentifiers
 
 enum SidebarOrganizationMode: String { case byProject, recentProjects, chronological }
 enum SidebarSortMode: String { case creation, updated }
-enum SidebarShowFilter: String { case all, relevant }
 
 /// UserDefaults suite used to persist sidebar preferences across launches.
 /// Same suite already used for the main window frame and browser state.
@@ -25,8 +24,6 @@ struct SidebarView: View {
     private var organizationModeRaw: String = SidebarOrganizationMode.byProject.rawValue
     @AppStorage("SidebarSortMode", store: SidebarPrefs.store)
     private var sortModeRaw: String = SidebarSortMode.updated.rawValue
-    @AppStorage("SidebarShowFilter", store: SidebarPrefs.store)
-    private var showFilterRaw: String = SidebarShowFilter.all.rawValue
     @State private var chronoLimit: Int = 15
 
     private var organizationMode: SidebarOrganizationMode {
@@ -265,8 +262,7 @@ struct SidebarView: View {
                     OrganizeMenuPopup(
                         isPresented: $organizeMenuOpen,
                         organizationModeRaw: $organizationModeRaw,
-                        sortModeRaw: $sortModeRaw,
-                        showFilterRaw: $showFilterRaw
+                        sortModeRaw: $sortModeRaw
                     )
                     .frame(width: popupWidth)
                     .offset(
@@ -1236,9 +1232,9 @@ private struct ProjectAccordion: View {
                 VStack(alignment: .leading, spacing: 3) {
                     if chats.isEmpty {
                         Text("No chats")
-                            .font(.system(size: 10.5))
+                            .font(.system(size: 13, weight: .light))
                             .foregroundColor(Color(white: 0.40))
-                            .padding(.leading, 30)
+                            .padding(.leading, 33)
                             .padding(.vertical, 4)
                     }
                     ForEach(chats) { chat in
@@ -1431,7 +1427,7 @@ private struct ProjectRowMenuRow: View {
     }
 }
 
-// MARK: - Organize / Sort / Show menu (funnel button next to the projects header)
+// MARK: - Organize / Sort menu (funnel button next to the projects header)
 
 private struct OrganizeMenuAnchorKey: PreferenceKey {
     static var defaultValue: Anchor<CGRect>? = nil
@@ -1440,14 +1436,13 @@ private struct OrganizeMenuAnchorKey: PreferenceKey {
     }
 }
 
-/// Three-section dropdown: organization mode, sort field, visibility filter.
-/// Each row shows a check on the active option; selections persist via the
-/// caller's `@AppStorage`-backed bindings, so the popup itself is stateless.
+/// Two-section dropdown: organization mode and sort field. Each row shows a
+/// check on the active option; selections persist via the caller's
+/// `@AppStorage`-backed bindings, so the popup itself is stateless.
 private struct OrganizeMenuPopup: View {
     @Binding var isPresented: Bool
     @Binding var organizationModeRaw: String
     @Binding var sortModeRaw: String
-    @Binding var showFilterRaw: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1476,18 +1471,11 @@ private struct OrganizeMenuPopup: View {
                 organizationModeRaw = SidebarOrganizationMode.chronological.rawValue
                 isPresented = false
             }
-            OrganizeMenuRow(
-                icon: .system("arrow.down"),
-                label: "Move down",
-                isSelected: false
-            ) {
-                isPresented = false
-            }
 
             MenuStandardDivider()
                 .padding(.vertical, 5)
 
-            ModelMenuHeader("Ordenar por")
+            ModelMenuHeader("Sort by")
             OrganizeMenuRow(
                 icon: .system("plus.circle"),
                 label: "Creation",
@@ -1498,31 +1486,10 @@ private struct OrganizeMenuPopup: View {
             }
             OrganizeMenuRow(
                 icon: .system("pencil.circle"),
-                label: "Actualizados",
+                label: "Updated",
                 isSelected: sortModeRaw == SidebarSortMode.updated.rawValue
             ) {
                 sortModeRaw = SidebarSortMode.updated.rawValue
-                isPresented = false
-            }
-
-            MenuStandardDivider()
-                .padding(.vertical, 5)
-
-            ModelMenuHeader("Show")
-            OrganizeMenuRow(
-                icon: .system("bubble.left.and.bubble.right"),
-                label: "All chats",
-                isSelected: showFilterRaw == SidebarShowFilter.all.rawValue
-            ) {
-                showFilterRaw = SidebarShowFilter.all.rawValue
-                isPresented = false
-            }
-            OrganizeMenuRow(
-                icon: .system("star"),
-                label: "Relevant",
-                isSelected: showFilterRaw == SidebarShowFilter.relevant.rawValue
-            ) {
-                showFilterRaw = SidebarShowFilter.relevant.rawValue
                 isPresented = false
             }
         }

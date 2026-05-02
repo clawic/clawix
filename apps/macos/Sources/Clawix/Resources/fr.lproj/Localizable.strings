@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "Créer et basculer vers une nouvelle branche...";
 "Create chat" = "Créer une conversation";
 "Create project…" = "Créer un projet…";
+"Creation" = "Création";
 "Current version" = "Version actuelle";
 "Custom config.toml settings" = "Réglages personnalisés de config.toml";
 "Custom instructions" = "Instructions personnalisées";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "Protocole de contexte de modèle";
 "Model picker: GPT-%1$@ %2$@" = "Sélecteur de modèle : GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "Sélecteur de modèle : GPT-%@ %@";
-"More information" = "Plus d’informations";
 "More options" = "Plus d’options";
 "Move to project" = "Déplacer vers un projet";
 "My project" = "Mon projet";
@@ -210,7 +210,6 @@
 "Reasoning" = "Raisonnement";
 "Register an action that runs a command from the local toolbar." = "Ajoutez une action pour exécuter des commandes depuis la barre d’outils locale.";
 "Reinstall" = "Réinstaller";
-"Relevant" = "Pertinent";
 "Reload Browser Page" = "Recharger la page";
 "Remaining usage limits" = "Limites d’usage restantes";
 "Remove attachment" = "Supprimer la piece jointe";
@@ -243,7 +242,6 @@
 "Set prefix" = "Définir le préfixe";
 "Settings" = "Réglages";
 "Settings categories" = "Catégories de réglages";
-"Show" = "Afficher";
 "Show MCP server status" = "Afficher l’état du serveur MCP";
 "Show chat ID, context usage and rate limits" = "Afficher l’ID de la conversation, l’usage du contexte et les limites";
 "Show more" = "Afficher plus";
@@ -255,6 +253,7 @@
 "Sign in" = "Se connecter";
 "Sign in to recover access to your chats and projects." = "Connectez votre compte pour retrouver vos conversations et projets.";
 "Sign out" = "Se déconnecter";
+"Sort by" = "Trier par";
 "Speed" = "Vitesse";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "Active le mode rapide pour accélérer l’inférence dans les conversations, sous-agents et compaction. Usage du plan plus élevé.";
 "Standard" = "Standard";
@@ -285,6 +284,7 @@
 "Unpin chat" = "Désépingler la conversation";
 "Unread" = "Non lu";
 "Untitled" = "Sans titre";
+"Updated" = "Mise à jour";
 "Use an existing folder" = "Utiliser un dossier existant";
 "Use dark theme in the interface" = "Utiliser le thème sombre dans l’interface";
 "Use light, dark, or system appearance" = "Utilisez le mode clair, sombre ou celui du système";

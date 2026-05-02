@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "새 브랜치를 만들고 전환...";
 "Create chat" = "채팅 만들기";
 "Create project…" = "프로젝트 만들기…";
+"Creation" = "생성순";
 "Current version" = "현재 버전";
 "Custom config.toml settings" = "config.toml 사용자 지정 설정";
 "Custom instructions" = "사용자 지정 지침";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "모델 컨텍스트 프로토콜";
 "Model picker: GPT-%1$@ %2$@" = "모델 선택기: GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "모델 선택기: GPT-%@ %@";
-"More information" = "추가 정보";
 "More options" = "추가 옵션";
 "Move to project" = "프로젝트로 이동";
 "My project" = "내 프로젝트";
@@ -210,7 +210,6 @@
 "Reasoning" = "추론";
 "Register an action that runs a command from the local toolbar." = "로컬 도구 모음에서 명령을 실행할 작업을 추가하세요.";
 "Reinstall" = "다시 설치";
-"Relevant" = "관련";
 "Reload Browser Page" = "페이지 새로고침";
 "Remaining usage limits" = "남은 사용 한도";
 "Remove attachment" = "첨부 파일 제거";
@@ -243,7 +242,6 @@
 "Set prefix" = "접두사 설정";
 "Settings" = "설정";
 "Settings categories" = "설정 카테고리";
-"Show" = "표시";
 "Show MCP server status" = "MCP 서버 상태 표시";
 "Show chat ID, context usage and rate limits" = "채팅 ID, 컨텍스트 사용량, 사용 한도를 표시";
 "Show more" = "더 보기";
@@ -255,6 +253,7 @@
 "Sign in" = "로그인";
 "Sign in to recover access to your chats and projects." = "계정을 연결하여 채팅과 프로젝트로 돌아가세요.";
 "Sign out" = "로그아웃";
+"Sort by" = "정렬";
 "Speed" = "속도";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "빠른 모드를 켜서 채팅, 서브에이전트, 압축의 추론 속도를 높입니다. 플랜 사용량이 늘어납니다.";
 "Standard" = "표준";
@@ -285,6 +284,7 @@
 "Unpin chat" = "채팅 고정 해제";
 "Unread" = "읽지 않음";
 "Untitled" = "제목 없음";
+"Updated" = "업데이트순";
 "Use an existing folder" = "기존 폴더 사용";
 "Use dark theme in the interface" = "인터페이스에 다크 테마 사용";
 "Use light, dark, or system appearance" = "라이트, 다크 또는 시스템 설정 사용";

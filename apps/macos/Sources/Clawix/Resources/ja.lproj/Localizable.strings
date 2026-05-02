@@ -89,6 +89,7 @@
 "Create and switch to a new branch..." = "新しいブランチを作成して切り替え...";
 "Create chat" = "チャットを作成";
 "Create project…" = "プロジェクトを作成…";
+"Creation" = "作成順";
 "Current version" = "現在のバージョン";
 "Custom config.toml settings" = "config.toml のカスタム設定";
 "Custom instructions" = "カスタム指示";
@@ -155,7 +156,6 @@
 "Model Context Protocol" = "モデルコンテキストプロトコル";
 "Model picker: GPT-%1$@ %2$@" = "モデルセレクタ: GPT-%1$@ %2$@";
 "Model picker: GPT-%@ %@" = "モデルピッカー: GPT-%@ %@";
-"More information" = "詳細情報";
 "More options" = "その他のオプション";
 "Move to project" = "プロジェクトに移動";
 "My project" = "マイプロジェクト";
@@ -210,7 +210,6 @@
 "Reasoning" = "推論";
 "Register an action that runs a command from the local toolbar." = "ローカルツールバーからコマンドを実行するアクションを追加します。";
 "Reinstall" = "再インストール";
-"Relevant" = "関連";
 "Reload Browser Page" = "ページを再読み込み";
 "Remaining usage limits" = "残りの利用上限";
 "Remove attachment" = "添付ファイルを削除";
@@ -243,7 +242,6 @@
 "Set prefix" = "プレフィックスを設定";
 "Settings" = "設定";
 "Settings categories" = "設定カテゴリ";
-"Show" = "表示";
 "Show MCP server status" = "MCPサーバーの状態を表示";
 "Show chat ID, context usage and rate limits" = "チャットID、コンテキスト使用量、利用上限を表示";
 "Show more" = "もっと表示";
@@ -255,6 +253,7 @@
 "Sign in" = "サインイン";
 "Sign in to recover access to your chats and projects." = "アカウントを接続してチャットとプロジェクトに戻ります。";
 "Sign out" = "ログアウト";
+"Sort by" = "並べ替え";
 "Speed" = "速度";
 "Speed up inference across chats, subagents and compaction. Uses more of your plan quota." = "高速モードを有効にしてチャット、サブエージェント、コンパクションの推論を加速。プラン消費は増加します。";
 "Standard" = "標準";
@@ -285,6 +284,7 @@
 "Unpin chat" = "チャットのピン留めを解除";
 "Unread" = "未読";
 "Untitled" = "無題";
+"Updated" = "更新順";
 "Use an existing folder" = "既存のフォルダを使用";
 "Use dark theme in the interface" = "インターフェースをダークテーマにする";
 "Use light, dark, or system appearance" = "ライト、ダーク、またはシステム設定を使用";
