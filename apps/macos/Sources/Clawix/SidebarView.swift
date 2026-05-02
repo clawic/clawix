@@ -128,18 +128,9 @@ struct SidebarView: View {
                     expanded: pinnedExpanded,
                     targetHeight: CGFloat(snapshot.pinned.count) * 32 + 8
                 ) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(snapshot.pinned) { chat in
-                            ChatDropTarget { droppedId in
-                                appState.reorderPinned(chatId: droppedId, beforeChatId: chat.id)
-                                return true
-                            } content: {
-                                RecentChatRow(chat: chat, leadingIcon: .pin)
-                            }
-                        }
-                    }
-                    .padding(.leading, 8)
-                    .padding(.trailing, 0)
+                    PinnedReorderableList(pinned: snapshot.pinned)
+                        .padding(.leading, 8)
+                        .padding(.trailing, 0)
                 }
             }
 
@@ -1251,6 +1242,15 @@ struct RecentChatRow: View {
     let chat: Chat
     var indent: CGFloat = 0
     var leadingIcon: SidebarChatLeadingIcon = .bubble
+    /// Called from `.onDrag` the moment AppKit asks for the drag's
+    /// `NSItemProvider`. The reorderable pinned list uses it to mark the
+    /// row as the drag source so it can collapse its slot to 0 height
+    /// while the drag is active.
+    var onDragStart: (() -> Void)? = nil
+    /// Disables the hovered-row tint. The reorderable pinned list flips
+    /// it on while a drag is active so dragging over another row doesn't
+    /// read as "you can drop on this chat" — drops only land in the gaps.
+    var suppressHoverStyling: Bool = false
     /// True for rows rendered inside the sidebar's archived section. The
     /// trailing hover button becomes "unarchive", drag is disabled (an
     /// archived chat has no slot to drop into) and the context menu is
@@ -1358,9 +1358,37 @@ struct RecentChatRow: View {
             // empty provider so drop targets can't decode a UUID and
             // the drag is effectively inert.
             if archivedRow { return NSItemProvider() }
+            onDragStart?()
             let provider = NSItemProvider(object: chat.id.uuidString as NSString)
             provider.suggestedName = chat.title
             return provider
+        } preview: {
+            // Translucent chip: clearly distinct from a list row so the
+            // user does not read the drag preview as a duplicate of the
+            // source still sitting in the list. Default macOS preview is
+            // an opaque snapshot of the source view at full row size.
+            HStack(spacing: 8) {
+                PinIcon(size: 11)
+                    .foregroundColor(Color(white: 0.85))
+                    .frame(width: 12, height: 12)
+                Text(chat.title.isEmpty
+                     ? String(localized: "Conversation", bundle: .module)
+                     : chat.title)
+                    .font(.system(size: 12.5, weight: .regular))
+                    .foregroundColor(Color(white: 0.95))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(white: 0.18).opacity(0.92))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                    )
+            )
+            .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
         }
         .contextMenu {
             if archivedRow {
@@ -1452,7 +1480,7 @@ struct RecentChatRow: View {
 
     private var rowBackground: Color {
         if isSelected { return Color.white.opacity(0.05) }
-        if hovered    { return Color.white.opacity(0.035) }
+        if hovered && !suppressHoverStyling { return Color.white.opacity(0.035) }
         return .clear
     }
 
@@ -2016,6 +2044,285 @@ private struct ChatDropTarget<Content: View>: View {
                 }
                 return true
             }
+    }
+}
+
+// MARK: - Pinned reorderable list
+
+/// Pinned-section list with intra-list drag reordering. The design
+/// optimises for stability of the visual feedback during the drag and
+/// for an instant, flicker-free placement on drop:
+///
+/// - On drag start the source row collapses (frame 0, opacity 0) AND the
+///   gap is opened at the source's own slot, so the total list height
+///   stays constant from frame zero. As the cursor moves to a different
+///   slot, only the gap migrates: the list never grows or shrinks.
+/// - Each slot zone is one contiguous drop target that includes the gap
+///   above the row plus the row itself. Adjacent slot zones touch with
+///   no dead band, so moving the cursor between rows can never land in a
+///   "no drop target" sliver and bounce the gap off.
+/// - `dropExited` does not clear the gap immediately. It schedules a
+///   cancelable task; if the next slot's `dropEntered` fires before the
+///   delay, the clear is cancelled. If the cursor truly left the list,
+///   the gap reverts to the source's own slot (internal drag) or closes
+///   (external drag). No flicker between adjacent slots.
+/// - `performDrop` applies `reorderPinned` AND clears `draggingId` /
+///   `targetIndex` inside a `Transaction(animation: nil)` so the row
+///   simply renders at its new index in the next pass. Nothing animates,
+///   nothing crossfades, the placement is atomic.
+///
+/// External drags (e.g. a chat dragged in from a project) are accepted
+/// too: the gap opens where it will land, and `reorderPinned` pins it
+/// at that position on drop.
+private struct PinnedReorderableList: View {
+    @EnvironmentObject var appState: AppState
+    let pinned: [Chat]
+
+    @State private var draggingId: UUID? = nil
+    @State private var targetIndex: Int? = nil
+    @State private var pendingClearTask: DispatchWorkItem? = nil
+    @State private var mouseUpMonitor: Any? = nil
+
+    private let baseSpacing: CGFloat = 2
+    /// Approximate row height. RecentChatRow renders at ~32 pt with
+    /// font 13 + vertical padding 7. The gap matches it so the source's
+    /// collapse and the gap's opening cancel out and the list height
+    /// stays constant during an internal drag.
+    private let gapHeight: CGFloat = 32
+    private let rowHeight: CGFloat = 32
+    /// Delay before a deferred clear fires when the cursor exits a slot
+    /// zone. Short enough that leaving the list closes the gap quickly,
+    /// long enough to absorb the brief inter-row transition without a
+    /// visible flash.
+    private static let exitClearDelay: TimeInterval = 0.10
+
+    /// Smooth curve for the gap migrating from one slot to the next.
+    /// Applied via `.animation(_:value:)` on the parent so every state
+    /// change to `targetIndex` / `draggingId` interpolates with the
+    /// same curve. Drop and cancel paths use a `disablesAnimations`
+    /// transaction to override and commit instantly.
+    private static let moveAnimation: Animation = .easeInOut(duration: 0.20)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(pinned.enumerated()), id: \.element.id) { (i, chat) in
+                slotZone(chat: chat, slot: i)
+            }
+            trailingSlotZone
+        }
+        // Animations are applied explicitly per-call (`withAnimation`) so
+        // start/drop are instant while only the gap slide during hover
+        // interpolates. `.animation(_:value:)` wouldn't honour the
+        // `disablesAnimations` flag on `Transaction`, so we can't use it
+        // here without also fading the source row.
+        .onAppear { installMouseUpMonitor() }
+        .onDisappear {
+            cancelPendingClear()
+            removeMouseUpMonitor()
+        }
+        .onChange(of: pinned.map(\.id)) { _, _ in
+            // Defensive cleanup: any pinned-array reorder (ours or an
+            // external sync) clears lingering drag state. Belt-and-
+            // suspenders against the "extra gap stays forever" bug.
+            guard draggingId != nil || targetIndex != nil else { return }
+            cancelPendingClear()
+            targetIndex = nil
+            draggingId = nil
+        }
+    }
+
+    /// One slot zone, with two SEPARATE drop targets:
+    ///
+    /// - `gapPlaceholder(at: slot)` accepts drops with a constant
+    ///   `slot` output. When the gap is open (32 pt) the cursor can
+    ///   dwell inside it without flipping the target.
+    /// - The row underneath uses a fixed `rowHeight / 2` threshold to
+    ///   pick `slot` (top half, gap above this row) or `slot + 1`
+    ///   (bottom half, gap below). Threshold is constant regardless
+    ///   of whether the gap is open, so there is no oscillation when
+    ///   the cursor sits right on a half boundary.
+    @ViewBuilder
+    private func slotZone(chat: Chat, slot: Int) -> some View {
+        let isDragging = draggingId == chat.id
+        let dragActive = draggingId != nil
+        VStack(alignment: .leading, spacing: 0) {
+            gapPlaceholder(at: slot)
+                .contentShape(Rectangle())
+                .onDrop(of: [.text], delegate: PinnedRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onExit: { scheduleExitClear() },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+            RecentChatRow(
+                chat: chat,
+                leadingIcon: .pin,
+                onDragStart: { handleDragStart(chat: chat) },
+                suppressHoverStyling: dragActive
+            )
+            .opacity(isDragging ? 0 : 1)
+            .frame(height: isDragging ? 0 : nil, alignment: .top)
+            .clipped()
+            .allowsHitTesting(!isDragging)
+            .onDrop(of: [.text], delegate: PinnedRowDropDelegate(
+                computeSlot: { y in y < rowHeight / 2 ? slot : slot + 1 },
+                onSet: { setTarget(slot: $0) },
+                onExit: { scheduleExitClear() },
+                onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+            ))
+        }
+    }
+
+    /// Slot after the last row: trailing-end gap plus a small strip so
+    /// the user can drop "at the end" without having to land on the
+    /// last row's bottom half pixel-perfectly.
+    @ViewBuilder
+    private var trailingSlotZone: some View {
+        let slot = pinned.count
+        VStack(alignment: .leading, spacing: 0) {
+            gapPlaceholder(at: slot)
+                .contentShape(Rectangle())
+                .onDrop(of: [.text], delegate: PinnedRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onExit: { scheduleExitClear() },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+            Color.clear
+                .frame(height: 14)
+                .contentShape(Rectangle())
+                .onDrop(of: [.text], delegate: PinnedRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onExit: { scheduleExitClear() },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+        }
+    }
+
+    @ViewBuilder
+    private func gapPlaceholder(at index: Int) -> some View {
+        let isOpen = targetIndex == index
+        let isFirst = index == 0
+        let isLast = index == pinned.count
+        let baseHeight: CGFloat = (isFirst || isLast) ? 0 : baseSpacing
+        Color.clear
+            .frame(height: isOpen ? gapHeight : baseHeight)
+    }
+
+    private func handleDragStart(chat: Chat) {
+        cancelPendingClear()
+        let src = pinned.firstIndex(where: { $0.id == chat.id })
+        // Instant: source row collapses to 0 + gap opens at its slot in
+        // the same render. The drag preview takes over with no fade.
+        // Cleanup paths after a drop are: `performReorder`, the
+        // `mouseUpMonitor` for drops outside any zone, and the
+        // `.onChange(of: pinned…)` defensive sweep. No watchdog timer
+        // here because any fixed delay either fires mid-drag (the
+        // source reappears under the cursor) or is too long to actually
+        // catch a stuck state.
+        targetIndex = src
+        draggingId = chat.id
+    }
+
+    private func setTarget(slot: Int) {
+        cancelPendingClear()
+        // Drop targets keep firing `dropUpdated` for one more frame after
+        // the drop completes (the layout reflow shifts which zone the
+        // cursor sits over, SwiftUI dispatches one trailing event).
+        // Without this guard that trailing event reopens the gap below
+        // the row we just dropped and only a click clears it.
+        guard draggingId != nil else { return }
+        guard targetIndex != slot else { return }
+        // Animated: the gap slides between positions as the cursor moves
+        // over different slot zones. Source row collapse already happened
+        // in `handleDragStart` so it doesn't get re-triggered here.
+        withAnimation(Self.moveAnimation) {
+            targetIndex = slot
+        }
+    }
+
+    private func scheduleExitClear() {
+        // Intentionally a no-op. SwiftUI fires `dropExited` on the zone
+        // we just dropped onto (same event as the drop itself), which
+        // means scheduling a state mutation here races with
+        // `performReorder` and lands a phantom gap below the dropped row
+        // for the gap between the two callbacks. Cleanup on cursor exit
+        // is handled by the `mouseUpMonitor` (release outside any zone)
+        // and `performReorder` (release inside a zone).
+    }
+
+    private func cancelPendingClear() {
+        pendingClearTask?.cancel()
+        pendingClearTask = nil
+    }
+
+    private func performReorder(uuid: UUID, beforeIndex: Int) {
+        cancelPendingClear()
+        let beforeChatId: UUID? = (beforeIndex < pinned.count) ? pinned[beforeIndex].id : nil
+        // Instant: row at new index, no gap, source uncollapsed, all in
+        // one frame. With no `.animation(_:value:)` modifier on the list,
+        // this needs no transaction trickery to be snappy.
+        appState.reorderPinned(chatId: uuid, beforeChatId: beforeChatId)
+        targetIndex = nil
+        draggingId = nil
+    }
+
+    private func installMouseUpMonitor() {
+        guard mouseUpMonitor == nil else { return }
+        mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp]) { event in
+            DispatchQueue.main.async {
+                cancelPendingClear()
+                guard draggingId != nil || targetIndex != nil else { return }
+                targetIndex = nil
+                draggingId = nil
+            }
+            return event
+        }
+    }
+
+    private func removeMouseUpMonitor() {
+        if let m = mouseUpMonitor {
+            NSEvent.removeMonitor(m)
+            mouseUpMonitor = nil
+        }
+    }
+}
+
+private struct PinnedRowDropDelegate: DropDelegate {
+    let computeSlot: (CGFloat) -> Int
+    let onSet: (Int) -> Void
+    let onExit: () -> Void
+    let onPerform: (UUID, Int) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.text])
+    }
+
+    func dropEntered(info: DropInfo) {
+        onSet(computeSlot(info.location.y))
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        onSet(computeSlot(info.location.y))
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        onExit()
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let slot = computeSlot(info.location.y)
+        guard let provider = info.itemProviders(for: [.text]).first else { return false }
+        _ = provider.loadObject(ofClass: NSString.self) { item, _ in
+            guard let s = item as? String,
+                  let uuid = UUID(uuidString: s) else { return }
+            DispatchQueue.main.async {
+                onPerform(uuid, slot)
+            }
+        }
+        return true
     }
 }
 
