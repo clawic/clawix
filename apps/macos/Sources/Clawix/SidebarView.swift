@@ -8,6 +8,14 @@ enum SidebarSortMode: String { case creation, updated }
 /// Same suite already used for the main window frame and browser state.
 enum SidebarPrefs {
     static let store: UserDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+
+    /// Read a Bool with a fallback for keys that have never been written.
+    /// `UserDefaults.bool(forKey:)` returns `false` for missing keys, which
+    /// would silently flip our "expanded by default" sections on first run.
+    static func bool(forKey key: String, default fallback: Bool) -> Bool {
+        if store.object(forKey: key) == nil { return fallback }
+        return store.bool(forKey: key)
+    }
 }
 
 struct SidebarView: View {
@@ -24,6 +32,10 @@ struct SidebarView: View {
     private var organizationModeRaw: String = SidebarOrganizationMode.byProject.rawValue
     @AppStorage("SidebarSortMode", store: SidebarPrefs.store)
     private var sortModeRaw: String = SidebarSortMode.updated.rawValue
+    @State private var pinnedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarPinnedExpanded", default: true)
+    @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarChronoExpanded", default: true)
+    @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
+    @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
     @State private var chronoLimit: Int = 15
 
     private var organizationMode: SidebarOrganizationMode {
@@ -106,85 +118,135 @@ struct SidebarView: View {
     private func sidebarScrollContent(snapshot: SidebarSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if !snapshot.pinned.isEmpty {
-                sectionHeader("Pinned")
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(snapshot.pinned) { chat in
-                        ChatDropTarget { droppedId in
-                            appState.reorderPinned(chatId: droppedId, beforeChatId: chat.id)
-                            return true
-                        } content: {
-                            RecentChatRow(chat: chat, leadingIcon: .pin)
+                sectionHeader(
+                    "Pinned",
+                    expanded: $pinnedExpanded,
+                    leadingIcon: AnyView(PinIcon(size: 14))
+                )
+                SidebarAccordion(
+                    expanded: pinnedExpanded,
+                    targetHeight: CGFloat(snapshot.pinned.count) * 32 + 8
+                ) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(snapshot.pinned) { chat in
+                            ChatDropTarget { droppedId in
+                                appState.reorderPinned(chatId: droppedId, beforeChatId: chat.id)
+                                return true
+                            } content: {
+                                RecentChatRow(chat: chat, leadingIcon: .pin)
+                            }
                         }
                     }
+                    .padding(.leading, 8)
+                    .padding(.trailing, 0)
                 }
-                .padding(.leading, 8)
-                .padding(.trailing, 0)
             }
 
             if organizationMode == .chronological {
                 chronoHeader
-                    .padding(.leading, 22)
+                    .padding(.leading, 18)
                     .padding(.trailing, 9)
-                    .padding(.top, 20)
+                    .padding(.top, 6)
                     .padding(.bottom, 4)
                     .onHover { projectsHeaderHovered = $0 }
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(Array(snapshot.chrono.prefix(chronoLimit))) { chat in
-                        RecentChatRow(chat: chat)
-                    }
-                }
-                .padding(.leading, 8)
-            } else {
-                projectsHeader
-                    .padding(.leading, 22)
-                    .padding(.trailing, 9)
-                    .padding(.top, 20)
-                    .padding(.bottom, 4)
-                    .onHover { projectsHeaderHovered = $0 }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(sortedProjects(snapshot: snapshot)) { project in
-                        ChatDropTarget { droppedId in
-                            appState.moveChatToProject(chatId: droppedId, projectId: project.id)
-                            return true
-                        } content: {
-                            ProjectAccordion(
-                                project: project,
-                                expanded: expandedProjects.contains(project.id),
-                                chats: snapshot.byProject[project.id] ?? [],
-                                onToggle: {
-                                    if expandedProjects.contains(project.id) {
-                                        expandedProjects.remove(project.id)
-                                    } else {
-                                        expandedProjects.insert(project.id)
-                                    }
-                                },
-                                onMenuToggle: {
-                                    projectMenuOpenId = projectMenuOpenId == project.id ? nil : project.id
-                                },
-                                onNewChat: {
-                                    appState.startNewChat(in: project)
-                                },
-                                menuOpen: projectMenuOpenId == project.id
-                            )
-                        }
-                    }
-                }
-                .padding(.leading, 8)
-
-                let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
-                if !projectlessChats.isEmpty {
-                    sectionHeader("No project")
+                let chronoCount = min(snapshot.chrono.count, chronoLimit)
+                SidebarAccordion(
+                    expanded: chronoExpanded,
+                    targetHeight: snapshot.chrono.isEmpty
+                        ? 26
+                        : SidebarRowMetrics.recentChats(count: chronoCount)
+                ) {
                     VStack(alignment: .leading, spacing: 2) {
-                        ForEach(projectlessChats) { chat in
-                            RecentChatRow(chat: chat)
+                        if snapshot.chrono.isEmpty {
+                            Text("No chats")
+                                .font(.system(size: 11.5))
+                                .foregroundColor(Color(white: 0.40))
+                                .padding(.leading, 22)
+                                .padding(.vertical, 4)
+                        } else {
+                            ForEach(Array(snapshot.chrono.prefix(chronoLimit))) { chat in
+                                RecentChatRow(chat: chat, leadingIcon: .pinOnHover)
+                            }
                         }
                     }
                     .padding(.leading, 8)
                 }
+            } else {
+                projectsHeader
+                    .padding(.leading, 18)
+                    .padding(.trailing, 9)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
+                    .onHover { projectsHeaderHovered = $0 }
+
+                // Projects list. We add/remove the whole subtree when
+                // toggling. Nesting an `ExpandableContainer` here doesn't
+                // work: each `ProjectAccordion` already runs its own
+                // `ExpandableContainer` for its chat list, and chaining the
+                // measurement twins reports `0` for the outer one on first
+                // layout, leaving the section permanently collapsed.
+                if projectsExpanded {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(sortedProjects(snapshot: snapshot)) { project in
+                            ChatDropTarget { droppedId in
+                                appState.moveChatToProject(chatId: droppedId, projectId: project.id)
+                                return true
+                            } content: {
+                                ProjectAccordion(
+                                    project: project,
+                                    expanded: expandedProjects.contains(project.id),
+                                    chats: snapshot.byProject[project.id] ?? [],
+                                    onToggle: {
+                                        if expandedProjects.contains(project.id) {
+                                            expandedProjects.remove(project.id)
+                                        } else {
+                                            expandedProjects.insert(project.id)
+                                        }
+                                    },
+                                    onMenuToggle: {
+                                        projectMenuOpenId = projectMenuOpenId == project.id ? nil : project.id
+                                    },
+                                    onNewChat: {
+                                        appState.startNewChat(in: project)
+                                    },
+                                    menuOpen: projectMenuOpenId == project.id
+                                )
+                            }
+                        }
+                    }
+                    .padding(.leading, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
+                if !projectlessChats.isEmpty {
+                    sectionHeader(
+                        "No project",
+                        expanded: $noProjectExpanded,
+                        leadingIcon: AnyView(
+                            Image(systemName: "bubble.left")
+                                .font(.system(size: 13, weight: .regular))
+                        )
+                    )
+                    SidebarAccordion(
+                        expanded: noProjectExpanded,
+                        targetHeight: SidebarRowMetrics.recentChats(count: projectlessChats.count)
+                    ) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(projectlessChats) { chat in
+                                RecentChatRow(chat: chat)
+                            }
+                        }
+                        .padding(.leading, 8)
+                    }
+                }
             }
         }
         .padding(.bottom, 10)
+        .onChange(of: pinnedExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarPinnedExpanded") }
+        .onChange(of: chronoExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarChronoExpanded") }
+        .onChange(of: noProjectExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarNoProjectExpanded") }
+        .onChange(of: projectsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarProjectsExpanded") }
     }
 
     var body: some View {
@@ -219,6 +281,14 @@ struct SidebarView: View {
                 .padding(.trailing, 22)
                 .padding(.top, 6)
 
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
+                    .padding(.leading, 18)
+                    .padding(.trailing, 22)
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+
                 ThinScrollView {
                     sidebarScrollContent(snapshot: makeSnapshot())
                         .padding(.trailing, 14)
@@ -239,7 +309,7 @@ struct SidebarView: View {
                     .background(MenuOutsideClickWatcher(isPresented: $settingsPopoverOpen))
                     .padding(.leading, 8)
                     .padding(.bottom, 50)
-                    .transition(.softNudge(y: -4))
+                    .transition(.softNudgeSymmetric(y: 4))
             }
         }
         .animation(.easeOut(duration: 0.20), value: settingsPopoverOpen)
@@ -351,36 +421,92 @@ struct SidebarView: View {
         }
     }
 
-    private func sectionHeader(_ title: String) -> some View {
-        HStack(spacing: 4) {
-            Text(title)
-                .font(.system(size: 13, weight: .light))
-                .foregroundColor(Color(white: 0.55))
-            Spacer()
+    private func sectionHeader(
+        _ title: LocalizedStringKey,
+        expanded: Binding<Bool>,
+        leadingIcon: AnyView? = nil
+    ) -> some View {
+        let isExpanded = expanded.wrappedValue
+        let leadingPadding: CGFloat = leadingIcon != nil ? 18 : 22
+        return Button(action: {
+            withAnimation(SidebarSection.toggleAnimation) { expanded.wrappedValue.toggle() }
+        }) {
+            HStack(spacing: 0) {
+                CollapsibleSectionLabel(
+                    title: title,
+                    expanded: isExpanded,
+                    leadingIcon: leadingIcon
+                )
+                Spacer()
+            }
+            .padding(.leading, leadingPadding)
+            .padding(.trailing, 11)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+            .contentShape(Rectangle())
         }
-        .padding(.leading, 22)
-        .padding(.trailing, 9)
-        .padding(.top, 26)
-        .padding(.bottom, 4)
+        .buttonStyle(.plain)
     }
 
     private var projectsHeader: some View {
-        sidebarHeader(title: "Projects", showCollapseAll: true, showNewChat: false)
+        sidebarHeader(title: "Projects",
+                      showCollapseAll: true,
+                      showNewChat: false,
+                      leadingIcon: AnyView(FolderMorphIcon(size: 14, progress: 0)),
+                      expanded: $projectsExpanded)
     }
 
     private var chronoHeader: some View {
-        sidebarHeader(title: "All chats", showCollapseAll: false, showNewChat: true, alwaysShow: true)
+        sidebarHeader(title: "All chats",
+                      showCollapseAll: false,
+                      showNewChat: true,
+                      alwaysShow: true,
+                      leadingIcon: AnyView(
+                          Image(systemName: "bubble.left.and.bubble.right")
+                              .font(.system(size: 12, weight: .regular))
+                      ),
+                      expanded: $chronoExpanded)
     }
 
     @ViewBuilder
-    private func sidebarHeader(title: LocalizedStringKey, showCollapseAll: Bool, showNewChat: Bool, alwaysShow: Bool = false) -> some View {
+    private func sidebarHeader(
+        title: LocalizedStringKey,
+        showCollapseAll: Bool,
+        showNewChat: Bool,
+        alwaysShow: Bool = false,
+        leadingIcon: AnyView? = nil,
+        expanded: Binding<Bool>? = nil
+    ) -> some View {
         // Fixed-height header. Icons are always laid out (so the row never
         // changes height) and toggled with opacity + hit-testing only.
+        // Tapping outside the icon group toggles the section's collapsed
+        // state, which is why the whole row is a `.contentShape(Rectangle())`
+        // with `.onTapGesture`. Inner icon buttons absorb their own clicks
+        // because SwiftUI prefers the innermost gesture handler.
         let iconsVisible = alwaysShow || projectsHeaderHovered || newProjectMenuOpen || organizeMenuOpen
+        let toggle: () -> Void = {
+            guard let expanded else { return }
+            withAnimation(SidebarSection.toggleAnimation) { expanded.wrappedValue.toggle() }
+        }
         HStack(spacing: 4) {
-            Text(title)
-                .font(.system(size: 13, weight: .light))
-                .foregroundColor(Color(white: 0.55))
+            if let expanded {
+                CollapsibleSectionLabel(title: title,
+                                        expanded: expanded.wrappedValue,
+                                        chevronLeadingPadding: 2,
+                                        leadingIcon: leadingIcon)
+            } else {
+                HStack(spacing: 0) {
+                    if let leadingIcon {
+                        leadingIcon
+                            .foregroundColor(Color(white: 0.78))
+                            .frame(width: 15, height: 15, alignment: .center)
+                            .padding(.trailing, 11)
+                    }
+                    Text(title)
+                        .font(.system(size: 13, weight: .light))
+                        .foregroundColor(Color(white: 0.88))
+                }
+            }
             Spacer()
             HStack(spacing: 2) {
                 if showCollapseAll {
@@ -395,51 +521,49 @@ struct SidebarView: View {
                     }
                 }
                 organizeButton
-                Button {
+                HeaderHoverIcon(tooltip: "Add new project") {
                     newProjectMenuOpen.toggle()
-                } label: {
-                    FolderAddIcon(size: 15)
-                        .foregroundColor(Color(white: 0.78))
+                } label: { color in
+                    FolderAddIcon(size: 15, plusStrokeWidth: 1.4)
+                        .foregroundColor(color)
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .help("Add new project")
                 .anchorPreference(key: NewProjectAnchorKey.self, value: .bounds) { $0 }
                 if showNewChat {
-                    Button {
+                    HeaderHoverIcon(tooltip: "New chat") {
                         appState.currentRoute = .home
-                    } label: {
+                    } label: { color in
                         ComposeIcon()
-                            .stroke(Color(white: 0.78),
-                                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
-                            .frame(width: 10.2, height: 10.2)
+                            .stroke(color,
+                                    style: StrokeStyle(lineWidth: 1.0, lineCap: .round, lineJoin: .round))
+                            .frame(width: 11.2, height: 11.2)
                             .frame(width: 22, height: 22)
                     }
-                    .buttonStyle(.plain)
-                    .help("New chat")
                 }
             }
-            .opacity(iconsVisible ? 0.78 : 0)
+            .opacity(iconsVisible ? 1 : 0)
             .disabled(!iconsVisible)
             .animation(.easeOut(duration: 0.12), value: iconsVisible)
         }
         .frame(height: 24)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if expanded != nil { toggle() }
+        }
     }
 
     /// Funnel button that anchors `OrganizeMenuPopup` and uses the
     /// project-wide dropdown chrome.
     private var organizeButton: some View {
-        Button {
+        HeaderHoverIcon(tooltip: "Filter, sort, and organize chats") {
             organizeMenuOpen.toggle()
-        } label: {
+        } label: { color in
             OrganizeFunnelIcon()
-                .foregroundColor(Color(white: 0.78))
+                .foregroundColor(color)
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .help("Filter, sort, and organize chats")
         .anchorPreference(key: OrganizeMenuAnchorKey.self, value: .bounds) { anchor in
             organizeMenuOpen ? anchor : nil
         }
@@ -448,18 +572,16 @@ struct SidebarView: View {
     @ViewBuilder
     private func headerIconButton(
         systemName: String,
-        tooltip: String,
+        tooltip: LocalizedStringKey,
         anchorKey: NewProjectAnchorKey.Type? = nil,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        HeaderHoverIcon(tooltip: tooltip, action: action) { color in
             Image(systemName: systemName)
                 .font(.system(size: 10, weight: .regular))
-                .foregroundColor(Color(white: 0.78))
+                .foregroundColor(color)
                 .frame(width: 22, height: 22)
         }
-        .buttonStyle(.plain)
-        .help(tooltip)
         .modifier(OptionalAnchorModifier(useAnchor: anchorKey != nil))
     }
 
@@ -827,7 +949,7 @@ private struct SidebarButton: View {
                     if let shape = customShape {
                         shape
                             .stroke(iconColor,
-                                    style: StrokeStyle(lineWidth: 1.235, lineCap: .round, lineJoin: .round))
+                                    style: StrokeStyle(lineWidth: 1.15, lineCap: .round, lineJoin: .round))
                             .frame(width: 11.3, height: 11.3)
                             .frame(width: 15, height: 15)
                     } else {
@@ -841,6 +963,18 @@ private struct SidebarButton: View {
                     .font(.system(size: 13, weight: .light))
                     .foregroundColor(labelColor)
                 Spacer(minLength: 6)
+                if let shortcut {
+                    Text(shortcut)
+                        .font(.system(size: 10.5, weight: .regular))
+                        .foregroundColor(Color(white: 0.78))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.09))
+                        )
+                        .opacity(hovered ? 1 : 0)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -849,6 +983,7 @@ private struct SidebarButton: View {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(backgroundFill)
             )
+            .animation(.easeOut(duration: 0.12), value: hovered)
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
@@ -915,7 +1050,115 @@ private struct ComposeIcon: Shape {
     }
 }
 
+// MARK: - SectionDisclosureChevron
+
+/// Tunables for collapsible sidebar sections. The chevron rotation and
+/// section height share the same spring so the disclosure feels like a
+/// single physical gesture.
+enum SidebarSection {
+    static let toggleAnimation: Animation = .easeInOut(duration: 0.28)
+}
+
+/// Disclosure chevron used by collapsible sidebar section headers
+/// (Pinned, All chats, No project, Projects). Rotates with its own
+/// spring curve so the rotation reads as physical even when the caller
+/// uses a different animation for layout. The hover-brightening is
+/// driven from `CollapsibleSectionLabel`, so the title and chevron
+/// share one hover region instead of lighting up independently.
+private struct SectionDisclosureChevron: View {
+    let expanded: Bool
+    var hovered: Bool = false
+
+    var body: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(Color(white: 0.78))
+            .frame(width: 16, height: 16, alignment: .center)
+            .rotationEffect(.degrees(expanded ? 90 : 0))
+            .animation(SidebarSection.toggleAnimation, value: expanded)
+            .opacity(hovered ? 1 : 0)
+            .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+}
+
+/// Title + chevron pair used by collapsible sidebar section headers.
+/// Owns one hover state so the label and chevron brighten together,
+/// matching the dim/brighten treatment of the header action icons.
+/// Optional `leadingIcon` mirrors the icon column of the top sidebar
+/// buttons (`New chat`, `Search`); when supplied, a 14x14 slot is laid
+/// out before the title so headers visually rhyme with those rows.
+private struct CollapsibleSectionLabel: View {
+    let title: LocalizedStringKey
+    let expanded: Bool
+    var chevronLeadingPadding: CGFloat = 6
+    var leadingIcon: AnyView? = nil
+
+    @State private var hovered = false
+
+    /// Collapsed sections read as part of the top button list (`New chat`,
+    /// `Search`), so they borrow that brighter palette. Expanded sections
+    /// recede into a dim title so the rows below stand out.
+    private var labelColor: Color {
+        if expanded {
+            return Color(white: hovered ? 0.78 : 0.55)
+        }
+        return Color(white: hovered ? 0.96 : 0.88)
+    }
+
+    private var iconColor: Color {
+        if expanded {
+            return Color(white: hovered ? 0.78 : 0.55)
+        }
+        return Color(white: hovered ? 0.92 : 0.78)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if let leadingIcon {
+                leadingIcon
+                    .foregroundColor(iconColor)
+                    .frame(width: 15, height: 15, alignment: .center)
+                    .padding(.trailing, 11)
+                    .opacity(expanded ? 0 : 1)
+                    .animation(.easeInOut(duration: 0.28), value: expanded)
+            }
+            Text(title)
+                .font(.system(size: 13, weight: .light))
+                .foregroundColor(labelColor)
+            SectionDisclosureChevron(expanded: expanded, hovered: hovered)
+                .padding(.leading, chevronLeadingPadding)
+        }
+        .contentShape(Rectangle())
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+}
+
 // MARK: - PinnedIcon
+
+/// Sidebar header icon button that dims by default and brightens on hover,
+/// mirroring the `PinIcon` pattern used in chat rows.
+private struct HeaderHoverIcon<Label: View>: View {
+    let tooltip: LocalizedStringKey
+    let action: () -> Void
+    @ViewBuilder let label: (Color) -> Label
+
+    @State private var hovered = false
+
+    private var color: Color {
+        hovered ? Color(white: 0.96) : Color(white: 0.6)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            label(color)
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+}
 
 private struct PinnedIcon: Shape {
     func path(in rect: CGRect) -> Path {
@@ -1164,6 +1407,8 @@ private struct ProjectAccordion: View {
 
     @EnvironmentObject var appState: AppState
     @State private var hovered = false
+    @State private var newChatHovered = false
+    @State private var menuHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -1196,22 +1441,23 @@ private struct ProjectAccordion: View {
                 Button(action: onMenuToggle) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(white: 0.55))
+                        .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .opacity(hovered || menuOpen ? 1 : 0)
                 .disabled(!(hovered || menuOpen))
+                .onHover { menuHovered = $0 }
                 .help("More options")
                 .anchorPreference(key: ProjectMenuAnchorKey.self, value: .bounds) { anchor in
                     menuOpen ? anchor : nil
                 }
 
-                // Pencil — start a new chat in this project (always visible)
+                // Pencil. start a new chat in this project (always visible)
                 Button(action: onNewChat) {
                     ComposeIcon()
-                        .stroke(Color(white: 0.50),
+                        .stroke(newChatHovered ? Color(white: 0.94) : Color(white: 0.50),
                                 style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
                         .frame(width: 11.2, height: 11.2)
                         .frame(width: 24, height: 24)
@@ -1219,6 +1465,7 @@ private struct ProjectAccordion: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 3)
+                .onHover { newChatHovered = $0 }
                 .help("New chat in this project")
             }
             .background(
@@ -1227,14 +1474,24 @@ private struct ProjectAccordion: View {
             )
             .onHover { hovered = $0 }
             .animation(.easeOut(duration: 0.10), value: hovered || menuOpen)
+            .animation(.easeOut(duration: 0.12), value: newChatHovered)
+            .animation(.easeOut(duration: 0.12), value: menuHovered)
 
-            ExpandableContainer(expanded: expanded) {
+            SmoothAccordion(
+                expanded: expanded,
+                targetHeight: chats.isEmpty
+                    ? SidebarRowMetrics.projectEmptyState
+                    : SidebarRowMetrics.recentChats(
+                        count: chats.count,
+                        spacing: SidebarRowMetrics.projectChatSpacing
+                    )
+            ) {
                 VStack(alignment: .leading, spacing: 3) {
                     if chats.isEmpty {
                         Text("No chats")
-                            .font(.system(size: 13, weight: .light))
+                            .font(.system(size: 10.5))
                             .foregroundColor(Color(white: 0.40))
-                            .padding(.leading, 33)
+                            .padding(.leading, 30)
                             .padding(.vertical, 4)
                     }
                     ForEach(chats) { chat in
@@ -1243,6 +1500,87 @@ private struct ProjectAccordion: View {
                 }
             }
         }
+    }
+}
+
+/// Animated vertical reveal driven by an explicit `targetHeight`. We
+/// learned the hard way that `GeometryReader` based measurement misfires
+/// when the container is clipped to 0, leaving content invisible. So
+/// callers compute the natural height from their content (e.g. row count
+/// times row height) and we just animate `frame(height:)` between 0 and
+/// that target. `.fixedSize(vertical:)` keeps the content rendered at
+/// its true intrinsic height so a slightly off estimate clips a few
+/// pixels rather than collapsing rows.
+private struct SmoothAccordion<Content: View>: View {
+    let expanded: Bool
+    let targetHeight: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(height: expanded ? targetHeight : 0, alignment: .top)
+            .clipped()
+            .allowsHitTesting(expanded)
+            .accessibilityHidden(!expanded)
+            .animation(.easeOut(duration: 0.28), value: expanded)
+            .animation(.easeOut(duration: 0.28), value: targetHeight)
+    }
+}
+
+/// Heights used for accordion target-height math. Keep these tight to
+/// the actual rendered values so the animation lands cleanly. Re-measure
+/// if you change row paddings or fonts.
+private enum SidebarRowMetrics {
+    /// `RecentChatRow`: vertical padding 7+7 + line-height ~16 = 30.
+    static let chatRow: CGFloat = 30
+    /// VStack spacing between recent chat rows.
+    static let chatSpacing: CGFloat = 2
+    /// Spacing inside `ProjectAccordion`'s chat list.
+    static let projectChatSpacing: CGFloat = 3
+    /// "No chats" / "Loading…" placeholder row inside a project accordion.
+    static let projectEmptyState: CGFloat = 24
+
+    static func recentChats(count: Int, spacing: CGFloat = chatSpacing) -> CGFloat {
+        guard count > 0 else { return 0 }
+        return CGFloat(count) * chatRow + CGFloat(count - 1) * spacing
+    }
+}
+
+/// Same accordion contract as `SmoothAccordion`, but the height lives in
+/// local `@State` and is mutated inside `onChange` with an explicit
+/// `withAnimation`. The implicit `.animation(_:value:)` form silently
+/// drops frames inside `ThinScrollView` (an `NSViewRepresentable`), so we
+/// run the animation from a place where SwiftUI can't lose the
+/// transaction: a state write under `withAnimation`.
+private struct SidebarAccordion<Content: View>: View {
+    let expanded: Bool
+    let targetHeight: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    @State private var displayHeight: CGFloat = 0
+    @State private var didAppear: Bool = false
+
+    var body: some View {
+        content()
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(height: displayHeight, alignment: .top)
+            .clipped()
+            .allowsHitTesting(expanded)
+            .accessibilityHidden(!expanded)
+            .onAppear {
+                displayHeight = expanded ? targetHeight : 0
+                didAppear = true
+            }
+            .onChange(of: expanded) { _, newValue in
+                guard didAppear else { return }
+                withAnimation(.easeInOut(duration: 0.28)) {
+                    displayHeight = newValue ? targetHeight : 0
+                }
+            }
+            .onChange(of: targetHeight) { _, newValue in
+                if expanded { displayHeight = newValue }
+            }
     }
 }
 
