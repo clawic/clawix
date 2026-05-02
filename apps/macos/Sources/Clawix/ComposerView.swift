@@ -1,0 +1,2057 @@
+import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
+
+struct ComposerView: View {
+    var chatMode: Bool = false
+
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var composer: ComposerState
+    @StateObject private var voice = VoiceRecorder()
+    @State private var addMenuOpen = false
+    @State private var addMenuHover = false
+    @State private var permissionsMenuOpen = false
+    @State private var modelMenuOpen = false
+    @State private var contextHover = false
+    @State private var projectMenuOpen = false
+    @State private var projectEditorContext: ProjectEditorContext?
+    @State private var slashHighlightID: String? = nil
+    @State private var composerContentHeight: CGFloat = 52
+
+    private let cornerRadius: CGFloat = 22
+    private let projectOverlap: CGFloat = 32
+    private let composerFill = Color(white: 0.135)
+    private let projectFill = Color(white: 0.085)
+
+    private let composerMinContentHeight: CGFloat = 52
+    private let composerMaxContentHeight: CGFloat = 412
+    private let composerVerticalPadding: CGFloat = 5
+
+    private var composerFrameHeight: CGFloat {
+        let clamped = min(composerMaxContentHeight, max(composerMinContentHeight, composerContentHeight))
+        return clamped + composerVerticalPadding * 2
+    }
+
+    private var placeholderText: String {
+        chatMode
+            ? String(localized: "Ask for follow-up changes", bundle: AppLocale.bundle, locale: AppLocale.current)
+            : String(localized: "Pregúntale a Clawix cualquier cosa. Escribe @ para mencionar archivos", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    private var slashQuery: String? {
+        let text = composer.text
+        guard text.hasPrefix("/") else { return nil }
+        if text.contains("\n") { return nil }
+        return String(text.dropFirst())
+    }
+
+    private var slashCommands: [SlashCommand] {
+        guard let q = slashQuery else { return [] }
+        return SlashCommandCatalog.filter(q)
+    }
+
+    private var slashOpen: Bool { slashQuery != nil }
+
+    var body: some View {
+        RenderProbe.tick("ComposerView")
+        return composerStack
+            .overlay(alignment: .topLeading) {
+                GeometryReader { proxy in
+                    if slashOpen {
+                        SlashCommandMenu(
+                            commands: slashCommands,
+                            highlightedID: slashHighlightID ?? slashCommands.first?.id,
+                            onSelect: { cmd in
+                                composer.text = ""
+                                slashHighlightID = nil
+                                if cmd.id == "modo-plan" {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        appState.togglePlanMode()
+                                    }
+                                }
+                            },
+                            onHover: { cmd in
+                                slashHighlightID = cmd.id
+                            }
+                        )
+                        .frame(width: proxy.size.width)
+                        .alignmentGuide(.top) { d in d[.bottom] + 8 }
+                        .alignmentGuide(.leading) { d in d[.leading] }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .transition(.softNudge(y: 4))
+                    }
+                }
+                .allowsHitTesting(slashOpen)
+            }
+        .onChange(of: composer.text) {
+            let ids = slashCommands.map(\.id)
+            if let current = slashHighlightID, !ids.contains(current) {
+                slashHighlightID = ids.first
+            } else if slashHighlightID == nil {
+                slashHighlightID = ids.first
+            }
+            if !slashOpen { slashHighlightID = nil }
+        }
+        .animation(.easeOut(duration: 0.20), value: slashOpen)
+    }
+
+    // MARK: - Toolbars
+
+    private var activeTurnInChat: Bool {
+        if case let .chat(id) = appState.currentRoute,
+           let chat = appState.chats.first(where: { $0.id == id }) {
+            return chat.hasActiveTurn
+        }
+        return false
+    }
+
+    private var canSend: Bool {
+        !composer.text.trimmingCharacters(in: .whitespaces).isEmpty
+            || !composer.attachments.isEmpty
+    }
+
+    /// Default composer toolbar: + / permissions / model / mic / send.
+    /// During transcription the mic button is replaced by a small spinner
+    /// so the user sees that the recorded clip is being processed.
+    private var normalToolbar: some View {
+        HStack(spacing: 6) {
+            plusButton
+
+            if appState.planMode {
+                planModePill
+                    .transition(.asymmetric(
+                        insertion: AnyTransition.opacity
+                            .combined(with: AnyTransition.scale(scale: 0.85, anchor: .leading)),
+                        removal: AnyTransition.opacity
+                    ))
+            }
+
+            Button {
+                permissionsMenuOpen.toggle()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: appState.permissionMode.iconName)
+                        .font(.system(size: 11, weight: .regular))
+                    Text(appState.permissionMode.label)
+                        .font(.system(size: 11.5))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                .foregroundColor(appState.permissionMode.accent)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L10n.a11yChangePermissions(label: appState.permissionMode.label))
+            .anchorPreference(key: PermissionsButtonAnchorKey.self, value: .bounds) { $0 }
+            .hoverHint("Change permissions")
+
+            Spacer()
+
+            if let usage = appState.currentContextUsage {
+                ContextIndicatorButton(
+                    usage: usage,
+                    isHovering: $contextHover
+                )
+            }
+
+            Button {
+                modelMenuOpen.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    if appState.selectedSpeed == .fast {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color(white: 0.92))
+                            .accessibilityHidden(true)
+                    }
+                    Text(appState.selectedModel)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(Color(white: 0.92))
+                    Text(appState.selectedIntelligence.label)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(Color(white: 0.55))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundColor(Color(white: 0.55))
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(L10n.a11yModelPicker(model: appState.selectedModel,
+                                                    intelligence: appState.selectedIntelligence.label))
+            .anchorPreference(key: ModelButtonAnchorKey.self, value: .bounds) { $0 }
+            .hoverHint("Change model")
+
+            if voice.state == .transcribing {
+                TranscribingSpinner()
+                    .frame(width: 28, height: 28)
+                    .accessibilityLabel("Transcribing voice note")
+            } else {
+                Button {
+                    voice.start(locale: appState.preferredLanguage.speechRecognitionLocale)
+                } label: {
+                    MicIcon()
+                        .foregroundColor(Color(white: 0.62))
+                        .frame(width: 14, height: 14)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Start voice recording")
+                .hoverHint("Grabar nota de voz")
+            }
+
+            if activeTurnInChat {
+                Button { appState.interruptActiveTurn() } label: {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color(white: 0.06))
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(Color.white))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Stop response")
+                .hoverHint("Stop response")
+            } else {
+                Button { appState.sendMessage() } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(canSend ? Color.white : Color.white.opacity(0.14)))
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
+                .accessibilityLabel("Send message")
+                .hoverHint("Send message")
+            }
+        }
+    }
+
+    /// Toolbar shown while a voice note is being recorded: + / waveform /
+    /// elapsed timer / stop / send. Stop transcribes; send transcribes
+    /// then auto-submits the resulting message.
+    private var recordingToolbar: some View {
+        HStack(spacing: 6) {
+            plusButton
+
+            VoiceWaveform(levels: voice.levels)
+                .frame(maxWidth: .infinity)
+                .frame(height: 28)
+                .padding(.horizontal, 4)
+
+            Text(voice.formattedElapsed)
+                .font(.system(size: 12.5, design: .monospaced))
+                .foregroundColor(Color(white: 0.78))
+                .monospacedDigit()
+                .padding(.horizontal, 2)
+
+            Button {
+                stopAndAppendTranscription()
+            } label: {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color(white: 0.92))
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(Color(white: 0.22)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop recording")
+            .hoverHint("Stop recording")
+
+            Button {
+                stopAndSend()
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Color(white: 0.06))
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(Color.white))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Send voice note")
+            .hoverHint("Transcribir y enviar")
+        }
+    }
+
+    private var plusButton: some View {
+        Button {
+            addMenuOpen.toggle()
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(Color(white: 0.62))
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle().fill((addMenuOpen || addMenuHover) ? Color.white.opacity(0.08) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .onHover { addMenuHover = $0 }
+        .accessibilityLabel(L10n.t("Add"))
+        .anchorPreference(key: PlusButtonAnchorKey.self, value: .bounds) { $0 }
+        .hoverHint(L10n.t("Add"))
+    }
+
+    /// Pill that mirrors the chrome of the permissions pill but renders
+    /// only while plan mode is on. Tap toggles plan mode off so the user
+    /// can drop back into normal execution without opening the "+" menu.
+    private var planModePill: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.18)) {
+                appState.togglePlanMode()
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 11, weight: .regular))
+                Text(L10n.t("Plan mode"))
+                    .font(.system(size: 11.5))
+                    .lineLimit(1)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .foregroundColor(Color(red: 0.62, green: 0.78, blue: 0.95))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(red: 0.62, green: 0.78, blue: 0.95).opacity(0.10))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L10n.t("Turn off plan mode"))
+        .hoverHint(L10n.t("Turn off plan mode"))
+    }
+
+    private func stopAndAppendTranscription() {
+        voice.stop { text in
+            appendTranscribedText(text)
+        }
+    }
+
+    private func stopAndSend() {
+        voice.stop { text in
+            appendTranscribedText(text)
+            if !composer.text.trimmingCharacters(in: .whitespaces).isEmpty {
+                appState.sendMessage()
+            }
+        }
+    }
+
+    private func appendTranscribedText(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if composer.text.isEmpty {
+            composer.text = trimmed
+        } else {
+            let needsSpace = !composer.text.hasSuffix(" ")
+                && !composer.text.hasSuffix("\n")
+            composer.text += (needsSpace ? " " : "") + trimmed
+        }
+    }
+
+    private func presentFilePicker() {
+        let panel = NSOpenPanel()
+        panel.title = L10n.t("Add photos and files")
+        panel.message = L10n.t("Select photos or files to attach to the chat")
+        panel.prompt = L10n.t("Attach")
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.canCreateDirectories = false
+        panel.resolvesAliases = true
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls
+        guard !urls.isEmpty else { return }
+        withAnimation(.easeInOut(duration: 0.20)) {
+            appState.addComposerAttachments(urls)
+        }
+        appState.requestComposerFocus()
+    }
+
+    private var composerStack: some View {
+        VStack(spacing: -projectOverlap) {
+            VStack(spacing: 0) {
+                if !composer.attachments.isEmpty {
+                    ComposerAttachmentRow(
+                        attachments: composer.attachments,
+                        onRemove: { id in
+                            withAnimation(.easeInOut(duration: 0.20)) {
+                                appState.removeComposerAttachment(id: id)
+                            }
+                        }
+                    )
+                    .padding(.horizontal, 9)
+                    .padding(.top, 9)
+                    .transition(.opacity)
+                }
+
+                ZStack(alignment: .topLeading) {
+                    if composer.text.isEmpty {
+                        Text(placeholderText)
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(white: 0.42))
+                            .padding(.horizontal, 13)
+                            .padding(.top, 13)
+                            .allowsHitTesting(false)
+                    }
+
+                    ComposerTextEditor(
+                        text: $composer.text,
+                        contentHeight: $composerContentHeight,
+                        autofocus: true,
+                        focusToken: composer.focusToken,
+                        onSubmit: { appState.sendMessage() }
+                    )
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, composerVerticalPadding)
+                    .frame(height: composerFrameHeight)
+                    .accessibilityLabel("Composer text field")
+                }
+
+                Group {
+                    if voice.state == .recording {
+                        recordingToolbar
+                    } else {
+                        normalToolbar
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
+                .padding(.top, 2)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(composerFill)
+            )
+            .animation(.easeInOut(duration: 0.20), value: composer.attachments)
+            .zIndex(1)
+
+            if !chatMode {
+                HStack(spacing: 6) {
+                    Button {
+                        projectMenuOpen.toggle()
+                    } label: {
+                        HStack(spacing: 6) {
+                            FolderClosedIcon(size: 11)
+                            Text(appState.selectedProject?.name
+                                 ?? String(localized: "Work on a project", bundle: AppLocale.bundle, locale: AppLocale.current))
+                                .font(.system(size: 11.5))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 8, weight: .semibold))
+                        }
+                        .foregroundColor(Color(white: 0.55))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Project picker")
+                    .anchorPreference(key: ProjectPickerAnchorKey.self, value: .bounds) { $0 }
+
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, projectOverlap + 12)
+                .padding(.bottom, 12)
+                .background(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: 0,
+                        bottomLeadingRadius: cornerRadius,
+                        bottomTrailingRadius: cornerRadius,
+                        topTrailingRadius: 0,
+                        style: .continuous
+                    )
+                    .fill(projectFill)
+                )
+                .zIndex(0)
+            }
+        }
+        .compositingGroup()
+        .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 5)
+        .overlayPreferenceValue(PlusButtonAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if addMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    AddMenuPopup(
+                        isPresented: $addMenuOpen,
+                        planMode: $appState.planMode,
+                        plugins: appState.plugins,
+                        onPickFiles: { presentFilePicker() }
+                    )
+                    .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
+                    .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(addMenuOpen)
+        }
+        .overlayPreferenceValue(PermissionsButtonAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if let anchor, permissionsMenuOpen {
+                    let buttonFrame = proxy[anchor]
+                    PermissionsMenuPopup(
+                        isPresented: $permissionsMenuOpen,
+                        selection: $appState.permissionMode
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+                    .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
+                    .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX + 6 }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(permissionsMenuOpen)
+        }
+        .overlayPreferenceValue(ContextIndicatorAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if contextHover, let anchor, let usage = appState.currentContextUsage {
+                    let buttonFrame = proxy[anchor]
+                    ContextTooltip(usage: usage)
+                        .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 8 }
+                        .alignmentGuide(.leading) { d in
+                            d[.leading] - (buttonFrame.midX - d.width / 2)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .transition(.opacity)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+        .overlayPreferenceValue(ModelButtonAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if modelMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    ModelMenuPopup(
+                        isPresented: $modelMenuOpen,
+                        intelligence: $appState.selectedIntelligence,
+                        model: $appState.selectedModel,
+                        speed: $appState.selectedSpeed,
+                        primaryModels: appState.availableModels,
+                        otherModels: appState.otherModels
+                    )
+                    .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
+                    .alignmentGuide(.leading) { d in
+                        d[.leading] - (buttonFrame.maxX - ModelMenuPopup.mainColumnWidth)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(modelMenuOpen)
+        }
+        .overlayPreferenceValue(ProjectPickerAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if projectMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    let composerFrame = proxy.frame(in: .global)
+                    let windowHeight = NSApp.keyWindow?.contentView?.bounds.height ?? 1000
+                    let buttonGlobalMaxY = composerFrame.minY + buttonFrame.maxY
+                    let buttonGlobalMinY = composerFrame.minY + buttonFrame.minY
+                    let gap: CGFloat = 6
+                    let safety: CGFloat = 16
+                    let popupTarget: CGFloat = 320
+                    let availableBelow = windowHeight - buttonGlobalMaxY - safety
+                    let availableAbove = buttonGlobalMinY - safety
+                    let placeBelow = availableBelow >= popupTarget || availableBelow >= availableAbove
+
+                    ProjectPickerPopup(
+                        isPresented: $projectMenuOpen,
+                        projects: appState.projects,
+                        selectedId: appState.selectedProject?.id,
+                        onSelect: { project in
+                            appState.selectedProject = project
+                            projectMenuOpen = false
+                        },
+                        onCreate: {
+                            projectMenuOpen = false
+                            projectEditorContext = ProjectEditorContext(project: nil)
+                        }
+                    )
+                    .alignmentGuide(.top) { d in
+                        placeBelow
+                            ? -(buttonFrame.maxY + gap)
+                            : d[.bottom] - buttonFrame.minY + gap
+                    }
+                    .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.softNudge(y: placeBelow ? -4 : 4))
+                }
+            }
+            .allowsHitTesting(projectMenuOpen)
+        }
+        .animation(.easeOut(duration: 0.20), value: addMenuOpen)
+        .animation(.easeOut(duration: 0.20), value: permissionsMenuOpen)
+        .animation(.easeOut(duration: 0.20), value: modelMenuOpen)
+        .animation(.easeOut(duration: 0.14), value: contextHover)
+        .animation(.easeOut(duration: 0.20), value: projectMenuOpen)
+        .sheet(item: $projectEditorContext) { ctx in
+            ProjectEditorSheet(context: ctx) { projectEditorContext = nil }
+                .environmentObject(appState)
+        }
+    }
+}
+
+// MARK: - Anchor keys
+
+private struct PlusButtonAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+private struct ModelButtonAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+private struct PermissionsButtonAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+private struct ProjectPickerAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+private struct ContextIndicatorAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+// MARK: - Project picker popup
+
+private struct ProjectPickerPopup: View {
+    @Binding var isPresented: Bool
+    let projects: [Project]
+    let selectedId: UUID?
+    let onSelect: (Project?) -> Void
+    let onCreate: () -> Void
+
+    @State private var query: String = ""
+    @FocusState private var searchFocused: Bool
+
+    static let popupWidth: CGFloat = 320
+    static let scrollMaxHeight: CGFloat = 220
+
+    private var filtered: [Project] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return projects }
+        return projects.filter { $0.name.lowercased().contains(q) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            searchField
+                .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+                .padding(.top, MenuStyle.menuVerticalPadding + 2)
+                .padding(.bottom, 4)
+
+            scrollableList
+
+            MenuStandardDivider()
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 0) {
+                ProjectPickerRow(
+                    label: String(localized: "Add project", bundle: AppLocale.bundle, locale: AppLocale.current),
+                    iconName: "folder.badge.plus",
+                    isSelected: false
+                ) { onCreate() }
+
+                ProjectPickerRow(
+                    label: String(localized: "No trabajar en un proyecto", bundle: AppLocale.bundle, locale: AppLocale.current),
+                    iconName: "folder.badge.minus",
+                    isSelected: selectedId == nil
+                ) { onSelect(nil) }
+            }
+            .padding(.bottom, MenuStyle.menuVerticalPadding)
+        }
+        .frame(width: Self.popupWidth, alignment: .leading)
+        .menuStandardBackground()
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+        .onAppear { searchFocused = true }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11))
+                .foregroundColor(MenuStyle.rowSubtle)
+                .frame(width: 18, alignment: .center)
+            TextField(
+                "",
+                text: $query,
+                prompt: Text(String(localized: "Search projects", bundle: AppLocale.bundle, locale: AppLocale.current))
+                    .foregroundColor(MenuStyle.rowSubtle)
+            )
+            .textFieldStyle(.plain)
+            .font(.system(size: 11.5))
+            .foregroundColor(MenuStyle.rowText)
+            .focused($searchFocused)
+            .onSubmit {
+                if let first = filtered.first { onSelect(first) }
+            }
+        }
+        .padding(.vertical, MenuStyle.rowVerticalPadding - 1)
+    }
+
+    @ViewBuilder
+    private var scrollableList: some View {
+        if filtered.isEmpty {
+            Text(String(localized: "No matches", bundle: AppLocale.bundle, locale: AppLocale.current))
+                .font(.system(size: 11.5))
+                .foregroundColor(MenuStyle.rowSubtle)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, MenuStyle.rowHorizontalPadding + 18 + MenuStyle.rowIconLabelSpacing)
+                .padding(.vertical, 12)
+        } else {
+            ThinScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(filtered) { project in
+                        ProjectPickerRow(
+                            label: project.name,
+                            iconName: "folder",
+                            isSelected: selectedId == project.id
+                        ) {
+                            onSelect(project)
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .frame(maxHeight: Self.scrollMaxHeight)
+        }
+    }
+}
+
+private struct ProjectPickerRow: View {
+    let label: String
+    let iconName: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                IconImage(iconName, size: 11)
+                    .foregroundColor(MenuStyle.rowIcon)
+                    .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 8)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowText)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+/// Standard 1-pt divider for menu rows. Indents 14pt to mirror row padding.
+struct MenuStandardDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(MenuStyle.dividerColor)
+            .frame(height: 1)
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+    }
+}
+
+// MARK: - Permissions menu popup
+
+private struct PermissionsMenuPopup: View {
+    @Binding var isPresented: Bool
+    @Binding var selection: PermissionMode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(PermissionMode.allCases) { mode in
+                PermissionsMenuRow(
+                    mode: mode,
+                    isSelected: selection == mode
+                ) {
+                    selection = mode
+                    isPresented = false
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(minWidth: 244, alignment: .leading)
+        .menuStandardBackground()
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+    }
+}
+
+private struct PermissionsMenuRow: View {
+    let mode: PermissionMode
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Image(systemName: mode.iconName)
+                    .font(.system(size: 11))
+                    .foregroundColor(MenuStyle.rowIcon)
+                    .frame(width: 18, alignment: .center)
+                Text(mode.label)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowText)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+// MARK: - Context indicator (left of the model button)
+
+/// Small donut showing how full the active model's context window is.
+/// Hover surfaces the detailed breakdown tooltip.
+struct ContextIndicatorButton: View {
+    let usage: ContextUsage
+    @Binding var isHovering: Bool
+
+    var body: some View {
+        ContextRing(fraction: usage.usedFraction)
+            .frame(width: 14, height: 14)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+            .anchorPreference(key: ContextIndicatorAnchorKey.self, value: .bounds) { $0 }
+            .onHover { hovering in
+                isHovering = hovering
+            }
+            .accessibilityLabel(contextA11yLabel(usage: usage))
+    }
+}
+
+private struct ContextRing: View {
+    let fraction: Double
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.18), lineWidth: 1.6)
+            Circle()
+                .trim(from: 0, to: max(0.02, min(1.0, fraction)))
+                .stroke(
+                    Color(white: 0.92),
+                    style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.25), value: fraction)
+        }
+    }
+}
+
+private struct ContextTooltip: View {
+    let usage: ContextUsage
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 6) {
+            Text("Context window:")
+                .font(.system(size: 11.5))
+                .foregroundColor(Color(white: 0.55))
+                .multilineTextAlignment(.center)
+
+            if usage.contextWindow != nil {
+                Text(percentLine)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(white: 0.94))
+                    .multilineTextAlignment(.center)
+            }
+
+            Text(tokensLine)
+                .font(.system(size: 12))
+                .foregroundColor(Color(white: 0.94))
+                .multilineTextAlignment(.center)
+
+            Text("Clawix automatically compacts its context")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundColor(Color(white: 0.94))
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(width: 180)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(white: 0.135))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
+                )
+                .shadow(color: Color.black.opacity(0.40), radius: 18, x: 0, y: 10)
+        )
+    }
+
+    private var percentLine: String {
+        let used = Int((usage.usedFraction * 100).rounded())
+        let remaining = max(0, 100 - used)
+        return "\(used) % usado (\(remaining) % restante)"
+    }
+
+    private var tokensLine: String {
+        let usedStr = formatTokens(usage.usedTokens)
+        if let window = usage.contextWindow {
+            return "\(usedStr)/\(formatTokens(window)) tokens used"
+        }
+        return "\(usedStr) tokens used"
+    }
+
+    private func formatTokens(_ value: Int64) -> String {
+        if value < 1_000 {
+            return "\(value)"
+        }
+        let k = Double(value) / 1_000.0
+        if k < 10 {
+            return String(format: "%.1f k", k)
+        }
+        return "\(Int(k.rounded())) k"
+    }
+}
+
+private func contextA11yLabel(usage: ContextUsage) -> String {
+    let used = Int((usage.usedFraction * 100).rounded())
+    if usage.contextWindow == nil {
+        return "Context window: \(usage.usedTokens) tokens used"
+    }
+    return "Context window: \(used) % used"
+}
+
+// MARK: - Model menu popup
+
+private enum ModelSubmenu { case none, model, otherModels, speed }
+
+private enum ModelChevronRow: Hashable { case gpt, velocidad, otrosModelos }
+
+private struct ModelChevronAnchorsKey: PreferenceKey {
+    static var defaultValue: [ModelChevronRow: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [ModelChevronRow: Anchor<CGRect>],
+                       nextValue: () -> [ModelChevronRow: Anchor<CGRect>]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+private struct ModelMenuPopup: View {
+    @Binding var isPresented: Bool
+    @Binding var intelligence: IntelligenceLevel
+    @Binding var model: String
+    @Binding var speed: SpeedLevel
+    let primaryModels: [String]
+    let otherModels: [String]
+
+    static let mainColumnWidth: CGFloat = 232
+    private static let modelColumnWidth: CGFloat = 220
+    private static let otherModelsColumnWidth: CGFloat = 200
+    private static let speedColumnWidth: CGFloat = 244
+    private static let columnGap: CGFloat = 6
+
+    @State private var openSubmenu: ModelSubmenu = .none
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            mainColumn
+        }
+        .overlayPreferenceValue(ModelChevronAnchorsKey.self) { anchors in
+            GeometryReader { proxy in
+                let parentGlobalMinX = proxy.frame(in: .global).minX
+                if openSubmenu == .speed, let anchor = anchors[.velocidad] {
+                    let row = proxy[anchor]
+                    let placement = submenuLeadingPlacement(
+                        parentGlobalMinX: parentGlobalMinX,
+                        row: row,
+                        submenuWidth: Self.speedColumnWidth,
+                        gap: Self.columnGap
+                    )
+                    speedColumn
+                        .alignmentGuide(.leading) { _ in placement.offset }
+                        .alignmentGuide(.top) { _ in -row.minY }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .transition(.softNudge(x: placement.placedRight ? -4 : 4))
+                }
+                if (openSubmenu == .model || openSubmenu == .otherModels), let anchor = anchors[.gpt] {
+                    let row = proxy[anchor]
+                    let placement = submenuLeadingPlacement(
+                        parentGlobalMinX: parentGlobalMinX,
+                        row: row,
+                        submenuWidth: Self.modelColumnWidth,
+                        gap: Self.columnGap
+                    )
+                    modelSubmenuTree(parentPlacedRight: placement.placedRight)
+                        .alignmentGuide(.leading) { _ in placement.offset }
+                        .alignmentGuide(.top) { _ in -row.minY }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .transition(.softNudge(x: placement.placedRight ? -4 : 4))
+                }
+            }
+            .animation(.easeOut(duration: 0.18), value: openSubmenu)
+        }
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+    }
+
+    private var mainColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(L10n.t("Intelligence"))
+
+            ForEach(IntelligenceLevel.allCases) { level in
+                ModelMenuCheckRow(
+                    label: level.label,
+                    isSelected: intelligence == level
+                ) {
+                    intelligence = level
+                    isPresented = false
+                }
+                .onHover { hovering in
+                    if hovering { openSubmenu = .none }
+                }
+            }
+
+            MenuStandardDivider()
+                .padding(.vertical, 5)
+
+            ModelMenuChevronRow(
+                label: "GPT-\(model)",
+                highlighted: openSubmenu == .model || openSubmenu == .otherModels
+            ) {
+                openSubmenu = (openSubmenu == .model || openSubmenu == .otherModels) ? .none : .model
+            }
+            .onHover { hovering in
+                if hovering, openSubmenu != .otherModels { openSubmenu = .model }
+            }
+            .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.gpt: $0] }
+
+            ModelMenuChevronRow(
+                label: L10n.t("Speed"),
+                highlighted: openSubmenu == .speed
+            ) {
+                openSubmenu = openSubmenu == .speed ? .none : .speed
+            }
+            .onHover { hovering in
+                if hovering { openSubmenu = .speed }
+            }
+            .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.velocidad: $0] }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.mainColumnWidth, alignment: .leading)
+        .menuStandardBackground()
+    }
+
+    @ViewBuilder
+    private func modelSubmenuTree(parentPlacedRight: Bool) -> some View {
+        modelColumn
+            .overlayPreferenceValue(ModelChevronAnchorsKey.self) { anchors in
+                GeometryReader { proxy in
+                    let parentGlobalMinX = proxy.frame(in: .global).minX
+                    if openSubmenu == .otherModels, let anchor = anchors[.otrosModelos] {
+                        let row = proxy[anchor]
+                        // If the modelColumn itself was forced to flip left,
+                        // keep cascading to the left so the chain stays inside
+                        // the window. Otherwise prefer right and only flip
+                        // when it overflows.
+                        let placement: (offset: CGFloat, placedRight: Bool) = {
+                            if parentPlacedRight {
+                                return submenuLeadingPlacement(
+                                    parentGlobalMinX: parentGlobalMinX,
+                                    row: row,
+                                    submenuWidth: Self.otherModelsColumnWidth,
+                                    gap: Self.columnGap
+                                )
+                            }
+                            return (-(row.minX - Self.columnGap - Self.otherModelsColumnWidth), false)
+                        }()
+                        otherModelsColumn
+                            .alignmentGuide(.leading) { _ in placement.offset }
+                            .alignmentGuide(.top) { _ in -row.minY }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .transition(.softNudge(x: placement.placedRight ? -4 : 4))
+                    }
+                }
+                .animation(.easeOut(duration: 0.18), value: openSubmenu)
+            }
+    }
+
+    private var modelColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(L10n.t("Model"))
+
+            ForEach(primaryModels, id: \.self) { m in
+                ModelMenuCheckRow(
+                    label: "GPT-\(m)",
+                    isSelected: model == m
+                ) {
+                    model = m
+                    isPresented = false
+                }
+                .onHover { hovering in
+                    if hovering { openSubmenu = .model }
+                }
+            }
+
+            ModelMenuChevronRow(
+                label: L10n.t("Other models"),
+                highlighted: openSubmenu == .otherModels
+            ) {
+                openSubmenu = openSubmenu == .otherModels ? .model : .otherModels
+            }
+            .onHover { hovering in
+                if hovering { openSubmenu = .otherModels }
+            }
+            .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.otrosModelos: $0] }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.modelColumnWidth, alignment: .leading)
+        .menuStandardBackground()
+    }
+
+    private var otherModelsColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(L10n.t("Other models"))
+
+            ForEach(otherModels, id: \.self) { m in
+                ModelMenuCheckRow(
+                    label: "GPT-\(m)",
+                    isSelected: model == m
+                ) {
+                    model = m
+                    isPresented = false
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.otherModelsColumnWidth, alignment: .leading)
+        .menuStandardBackground()
+    }
+
+    private var speedColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(L10n.t("Speed"))
+
+            ForEach(SpeedLevel.allCases) { s in
+                ModelMenuDescriptionRow(
+                    label: s.label,
+                    description: s.description,
+                    isSelected: speed == s
+                ) {
+                    speed = s
+                    isPresented = false
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.speedColumnWidth, alignment: .leading)
+        .menuStandardBackground()
+    }
+}
+
+struct ModelMenuHeader: View {
+    let text: String
+    init(_ text: String) { self.text = text }
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundColor(MenuStyle.headerText)
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.top, 4)
+            .padding(.bottom, 6)
+    }
+}
+
+private struct ModelMenuCheckRow: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Text(label)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowText)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+private struct ModelMenuChevronRow: View {
+    let label: String
+    let highlighted: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Text(label)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
+                    .foregroundColor(MenuStyle.rowSubtle)
+            }
+            .padding(.leading, MenuStyle.rowHorizontalPadding)
+            .padding(.trailing, MenuStyle.rowHorizontalPadding + MenuStyle.rowTrailingIconExtra)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(
+                active: highlighted || hovered,
+                intensity: highlighted ? MenuStyle.rowHoverIntensityStrong : MenuStyle.rowHoverIntensity
+            ))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+private struct ModelMenuDescriptionRow: View {
+    let label: String
+    let description: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 11.5))
+                        .foregroundColor(MenuStyle.rowText)
+                    Text(description)
+                        .font(.system(size: 10))
+                        .foregroundColor(MenuStyle.rowSubtle)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 8)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowText)
+                        .padding(.top, 2)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+// MARK: - Add menu popup
+
+private struct AddMenuPopup: View {
+    @Binding var isPresented: Bool
+    @Binding var planMode: Bool
+    let plugins: [Plugin]
+    let onPickFiles: () -> Void
+
+    @State private var showComplementos = false
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            mainColumn
+            if showComplementos {
+                pluginsColumn
+                    .transition(.softNudge(x: -4))
+            }
+        }
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+    }
+
+    private var mainColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            AddMenuRow(
+                icon: "paperclip",
+                label: L10n.t("Add photos and files"),
+                trailing: nil,
+                highlighted: false
+            ) {
+                isPresented = false
+                // Defer so the menu finishes dismissing before the
+                // modal NSOpenPanel takes over the run loop.
+                DispatchQueue.main.async { onPickFiles() }
+            }
+            .onHover { hovering in
+                if hovering { withAnimation(.easeOut(duration: 0.20)) { showComplementos = false } }
+            }
+
+            MenuStandardDivider()
+                .padding(.vertical, 3)
+
+            AddMenuToggleRow(icon: "checklist", label: L10n.t("Plan mode"), isOn: $planMode)
+                .onHover { hovering in
+                    if hovering { withAnimation(.easeOut(duration: 0.20)) { showComplementos = false } }
+                }
+
+            /*
+            MenuStandardDivider()
+                .padding(.vertical, 3)
+
+            AddMenuRow(
+                icon: "square.grid.2x2",
+                label: "Plugins",
+                trailing: "chevron.right",
+                highlighted: showComplementos
+            ) {
+                withAnimation(.easeOut(duration: 0.20)) { showComplementos.toggle() }
+            }
+            .onHover { hovering in
+                if hovering { withAnimation(.easeOut(duration: 0.20)) { showComplementos = true } }
+            }
+            */
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: 186, alignment: .leading)
+        .menuStandardBackground()
+    }
+
+    private var pluginsColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(headerText)
+
+            ForEach(plugins) { plugin in
+                PluginRow(plugin: plugin) { isPresented = false }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: 176, alignment: .leading)
+        .menuStandardBackground()
+    }
+
+    private var headerText: String {
+        L10n.installedPlugins(plugins.count)
+    }
+}
+
+private struct AddMenuRow: View {
+    let icon: String
+    let label: String
+    let trailing: String?
+    let highlighted: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundColor(MenuStyle.rowIcon)
+                    .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                if let trailing {
+                    Image(systemName: trailing)
+                        .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowSubtle)
+                }
+            }
+            .padding(.leading, MenuStyle.rowHorizontalPadding)
+            .padding(.trailing, MenuStyle.rowHorizontalPadding
+                                + (trailing != nil ? MenuStyle.rowTrailingIconExtra : 0))
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(
+                active: highlighted || hovered,
+                intensity: highlighted ? MenuStyle.rowHoverIntensityStrong : MenuStyle.rowHoverIntensity
+            ))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+private struct AddMenuToggleRow: View {
+    let icon: String
+    let label: String
+    @Binding var isOn: Bool
+
+    @State private var hovered = false
+
+    var body: some View {
+        HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundColor(MenuStyle.rowIcon)
+                .frame(width: 18, alignment: .center)
+            Text(label)
+                .font(.system(size: 11.5))
+                .foregroundColor(MenuStyle.rowText)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Spacer(minLength: 8)
+            CompactMenuToggle(isOn: $isOn)
+        }
+        .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+        .padding(.vertical, MenuStyle.rowVerticalPadding)
+        .contentShape(Rectangle())
+        .background(MenuRowHover(active: hovered))
+        .onHover { hovered = $0 }
+        .onTapGesture { withAnimation(.easeOut(duration: 0.14)) { isOn.toggle() } }
+    }
+}
+
+private struct PluginRow: View {
+    let plugin: Plugin
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Image(systemName: plugin.iconName)
+                    .font(.system(size: 11))
+                    .foregroundColor(MenuStyle.rowIcon)
+                    .frame(width: 18, alignment: .center)
+                Text(plugin.name)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer()
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+    }
+}
+
+/// Compact menu toggle. A small dark capsule with a white knob that slides
+/// from left (off) to right (on). Used inside dropdown rows where the native
+/// `.switch` style would feel too tall and chunky.
+struct CompactMenuToggle: View {
+    @Binding var isOn: Bool
+
+    private let trackWidth: CGFloat = 24
+    private let trackHeight: CGFloat = 14
+    private let knobSize: CGFloat = 10
+    private let knobInset: CGFloat = 2
+
+    var body: some View {
+        ZStack(alignment: isOn ? .trailing : .leading) {
+            Capsule()
+                .fill(isOn ? Color(white: 0.92) : Color(white: 0.30))
+            Circle()
+                .fill(isOn ? Color(white: 0.18) : Color(white: 0.96))
+                .frame(width: knobSize, height: knobSize)
+                .padding(.horizontal, knobInset)
+        }
+        .frame(width: trackWidth, height: trackHeight)
+        .contentShape(Capsule())
+        .onTapGesture {
+            withAnimation(.easeOut(duration: 0.14)) { isOn.toggle() }
+        }
+        .accessibilityElement()
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(isOn ? Text("On") : Text("Off"))
+    }
+}
+
+// MARK: - Outside click monitor
+
+struct MenuOutsideClickWatcher: NSViewRepresentable {
+    @Binding var isPresented: Bool
+
+    func makeNSView(context: Context) -> NSView {
+        let view = ClickWatcherView()
+        view.onOutsideClick = {
+            DispatchQueue.main.async { isPresented = false }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? ClickWatcherView)?.isMonitoring = isPresented
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: ()) {
+        (nsView as? ClickWatcherView)?.isMonitoring = false
+    }
+}
+
+final class ClickWatcherView: NSView {
+    var onOutsideClick: (() -> Void)?
+    private var monitor: Any?
+
+    var isMonitoring: Bool = false {
+        didSet {
+            guard oldValue != isMonitoring else { return }
+            isMonitoring ? attach() : detach()
+        }
+    }
+
+    private func attach() {
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self, let win = self.window, event.window == win else { return event }
+            let pointInSelf = self.convert(event.locationInWindow, from: nil)
+            if !self.bounds.contains(pointInSelf) {
+                self.onOutsideClick?()
+            }
+            return event
+        }
+    }
+
+    private func detach() {
+        if let m = monitor {
+            NSEvent.removeMonitor(m)
+            monitor = nil
+        }
+    }
+
+    deinit { detach() }
+}
+
+// MARK: - Popup transition
+
+private struct PopupNudgeModifier: ViewModifier {
+    let xOffset: CGFloat
+    let yOffset: CGFloat
+    let opacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: xOffset, y: yOffset)
+            .opacity(opacity)
+    }
+}
+
+extension AnyTransition {
+    // Asymmetric on purpose: insertion nudges from the offset to settle
+    // in place, removal is fade-only. Translating on dismiss feels off,
+    // especially when the click also opens a modal panel (NSOpenPanel)
+    // and the user sees the row sliding down behind it.
+    static func softNudge(x: CGFloat = 0, y: CGFloat = 0) -> AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: PopupNudgeModifier(xOffset: x, yOffset: y, opacity: 0),
+                identity: PopupNudgeModifier(xOffset: 0, yOffset: 0, opacity: 1)
+            ),
+            removal: .opacity
+        )
+    }
+}
+// trigger 1777602580
+
+// MARK: - Voice recording: waveform + transcribing spinner
+
+/// Live audio waveform shown inside the composer while recording.
+/// Bars flow in from the right as new samples arrive; the empty space to
+/// the left is covered by a faint horizontal track that shrinks as the
+/// take grows, matching the look of native voice-note inputs.
+struct VoiceWaveform: View {
+    let levels: [CGFloat]
+
+    private let barWidth: CGFloat = 2
+    private let barSpacing: CGFloat = 2
+    private let trackThickness: CGFloat = 1
+    private let minBarHeight: CGFloat = 2
+
+    var body: some View {
+        GeometryReader { proxy in
+            let totalWidth = proxy.size.width
+            let height = proxy.size.height
+            let stride = barWidth + barSpacing
+            let capacity = max(0, Int((totalWidth + barSpacing) / stride))
+            let visible = Array(levels.suffix(capacity))
+
+            ZStack {
+                Capsule()
+                    .fill(Color(white: 0.32))
+                    .frame(height: trackThickness)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: height, alignment: .center)
+
+                HStack(alignment: .center, spacing: barSpacing) {
+                    ForEach(Array(visible.enumerated()), id: \.offset) { _, level in
+                        Capsule()
+                            .fill(Color(white: 0.92))
+                            .frame(width: barWidth,
+                                   height: max(minBarHeight, level * height))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+    }
+}
+
+/// Tiny indeterminate spinner that takes the mic button's slot while the
+/// recorded clip is being transcribed.
+struct TranscribingSpinner: View {
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.15, to: 0.85)
+            .stroke(Color(white: 0.78), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
+            .frame(width: 14, height: 14)
+            .rotationEffect(.degrees(rotation))
+            .onAppear {
+                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
+    }
+}
+
+// MARK: - Composer text editor (Enter sends, Shift/Opt+Enter inserts a newline)
+
+final class ComposerNSTextView: NSTextView {
+    var trailingInset: CGFloat = 14
+    /// Set to true when the editor should grab keyboard focus the next
+    /// time it gets attached to a window. SwiftUI's `@FocusState` does
+    /// not cross the NSViewRepresentable boundary, so this is how the
+    /// composer auto-focuses on home / new chat.
+    var wantsInitialFocus: Bool = false
+
+    override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
+        super.init(frame: frameRect, textContainer: container)
+        pruneFileDragTypes()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        pruneFileDragTypes()
+    }
+
+    /// NSTextView registers file URL drag types by default so dropping a
+    /// file onto the editor inserts its path as text. That hijacks file
+    /// drops away from the panel-wide `BodyDropOverlay`: when the cursor
+    /// crosses the input, the text view wins the drag dispatch and the
+    /// drop overlay disappears. The user expects drops over the input to
+    /// behave exactly like drops over the main area, so we strip file URL
+    /// types here and let the body overlay handle them.
+    private func pruneFileDragTypes() {
+        let blocked: Set<NSPasteboard.PasteboardType> = [
+            .fileURL,
+            NSPasteboard.PasteboardType("NSFilenamesPboardType")
+        ]
+        let kept = registeredDraggedTypes.filter { !blocked.contains($0) }
+        unregisterDraggedTypes()
+        if !kept.isEmpty {
+            registerForDraggedTypes(kept)
+        }
+    }
+
+    override func drawInsertionPoint(in rect: NSRect, color: NSColor, turnedOn flag: Bool) {
+        var thin = rect
+        thin.size.width = 1
+        thin.size.height = max(0, rect.size.height - 4)
+        thin.origin.y = rect.origin.y + 2
+        super.drawInsertionPoint(in: thin, color: color, turnedOn: flag)
+    }
+
+    override var rangeForUserCompletion: NSRange { NSRange(location: NSNotFound, length: 0) }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard wantsInitialFocus, let window else { return }
+        wantsInitialFocus = false
+        DispatchQueue.main.async { [weak self, weak window] in
+            guard let self, let window, self.window === window else { return }
+            window.makeFirstResponder(self)
+        }
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        guard let container = self.textContainer else { return }
+        let targetWidth = max(0, newSize.width - trailingInset)
+        if abs(container.containerSize.width - targetWidth) > 0.5 {
+            container.containerSize = NSSize(width: targetWidth,
+                                             height: CGFloat.greatestFiniteMagnitude)
+        }
+    }
+}
+
+struct ComposerTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var contentHeight: CGFloat
+    /// Whether to grab keyboard focus the first time the view mounts.
+    var autofocus: Bool = false
+    /// Monotonic counter. When it changes, the editor is forced back to
+    /// first responder. Used for "⌘N from home" and chat switching where
+    /// the same editor instance stays mounted.
+    var focusToken: Int = 0
+    var onSubmit: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.borderType = .noBorder
+        scrollView.autohidesScrollers = true
+        scrollView.scrollerStyle = .overlay
+
+        let textStorage = NSTextStorage()
+        let layoutManager = NSLayoutManager()
+        textStorage.addLayoutManager(layoutManager)
+        let bigSize = NSSize(width: CGFloat(0), height: CGFloat.greatestFiniteMagnitude)
+        let textContainer = NSTextContainer(size: bigSize)
+        textContainer.widthTracksTextView = false
+        textContainer.lineFragmentPadding = 4
+        layoutManager.addTextContainer(textContainer)
+
+        let textView = ComposerNSTextView(frame: .zero, textContainer: textContainer)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = NSView.AutoresizingMask.width
+        textView.minSize = NSSize(width: CGFloat(0), height: CGFloat(0))
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.delegate = context.coordinator
+        textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        textView.font = .systemFont(ofSize: 13)
+        textView.textColor = NSColor(white: 1.0, alpha: 0.88)
+        textView.insertionPointColor = NSColor(white: 1.0, alpha: 0.88)
+        textView.allowsUndo = true
+        textView.isRichText = false
+        textView.usesFontPanel = false
+        textView.usesFindPanel = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.smartInsertDeleteEnabled = false
+        textView.textContainerInset = NSSize(width: 0, height: 8)
+        textView.string = text
+        textView.wantsInitialFocus = autofocus
+        context.coordinator.lastFocusToken = focusToken
+
+        let scroller = ComposerScroller()
+        scroller.scrollerStyle = .overlay
+        scrollView.verticalScroller = scroller
+
+        scrollView.documentView = textView
+        DispatchQueue.main.async { [weak textView] in
+            guard let tv = textView else { return }
+            context.coordinator.measure(tv)
+        }
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        RenderProbe.tick("ComposerTextEditor.updateNSView")
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        // Only push the binding's value into the text view (and re-measure)
+        // when it actually differs from what the user is currently editing.
+        // Doing this unconditionally on every SwiftUI re-render forces an
+        // extra `ensureLayout` pass per keystroke, which lands in the run
+        // loop *between* the character insertion and the caret redraw and
+        // makes typing feel laggy ("letter appears, then cursor catches up").
+        if textView.string != text {
+            textView.string = text
+            DispatchQueue.main.async { [weak textView] in
+                guard let tv = textView else { return }
+                context.coordinator.measure(tv)
+            }
+        }
+        if focusToken != context.coordinator.lastFocusToken {
+            context.coordinator.lastFocusToken = focusToken
+            if let composer = textView as? ComposerNSTextView {
+                if composer.window != nil {
+                    DispatchQueue.main.async { [weak composer] in
+                        guard let composer, let window = composer.window else { return }
+                        window.makeFirstResponder(composer)
+                    }
+                } else {
+                    composer.wantsInitialFocus = true
+                }
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        let parent: ComposerTextEditor
+        var lastFocusToken: Int = 0
+        init(_ parent: ComposerTextEditor) { self.parent = parent }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            measure(textView)
+            // Defer the binding write to the next run-loop tick. Writing
+            // synchronously fires `objectWillChange` on AppState mid-keystroke,
+            // which forces SwiftUI to re-render the entire composer (toolbars,
+            // attachment row, slash menu, project picker, model selector...)
+            // *before* AppKit has committed the caret redraw for the inserted
+            // character. The user perceives this as "the letter shows up, then
+            // the cursor moves." Yielding one tick lets AppKit finish its draw
+            // cycle first, then SwiftUI catches up.
+            let snapshot = textView.string
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if self.parent.text != snapshot {
+                    self.parent.text = snapshot
+                }
+            }
+        }
+
+        func measure(_ textView: NSTextView) {
+            guard let layoutManager = textView.layoutManager,
+                  let textContainer = textView.textContainer else { return }
+            layoutManager.ensureLayout(for: textContainer)
+            let used = layoutManager.usedRect(for: textContainer)
+            let inset = textView.textContainerInset.height
+            let h = ceil(used.height + inset * 2)
+            if abs(parent.contentHeight - h) > 0.5 {
+                parent.contentHeight = h
+            }
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                let flags = NSApp.currentEvent?.modifierFlags ?? []
+                if flags.contains(.shift) || flags.contains(.option) {
+                    textView.insertNewlineIgnoringFieldEditor(self)
+                    return true
+                }
+                parent.onSubmit()
+                return true
+            }
+            return false
+        }
+    }
+}
+
+final class ComposerScroller: NSScroller {
+    override class var isCompatibleWithOverlayScrollers: Bool { true }
+
+    override class func scrollerWidth(for controlSize: NSControl.ControlSize,
+                                      scrollerStyle: NSScroller.Style) -> CGFloat {
+        return 14
+    }
+
+    private static let verticalPad: CGFloat = 8
+    private static let thumbWidth: CGFloat = 7
+    private static let thumbInsetFromRight: CGFloat = 4
+
+    private func trackRect() -> NSRect {
+        let bounds = self.bounds
+        let pad = ComposerScroller.verticalPad
+        let width = ComposerScroller.thumbWidth
+        let inset = ComposerScroller.thumbInsetFromRight
+        return NSRect(
+            x: bounds.maxX - width - inset,
+            y: bounds.minY + pad,
+            width: width,
+            height: max(0, bounds.height - pad * 2)
+        )
+    }
+
+    override func drawKnobSlot(in slotRect: NSRect, highlight: Bool) {
+        // Overlay scrollers don't reliably invoke this; drawing lives in draw(_:).
+    }
+
+    override func rect(for part: NSScroller.Part) -> NSRect {
+        guard part == .knob else { return super.rect(for: part) }
+        let track = trackRect()
+        let knobProp = max(0.05, min(1.0, CGFloat(self.knobProportion)))
+        let thumbHeight = max(36, track.height * knobProp)
+        let maxThumbY = max(0, track.height - thumbHeight)
+        let progress = CGFloat(self.doubleValue)
+        let thumbY = track.minY + maxThumbY * progress
+        return NSRect(x: track.minX, y: thumbY, width: track.width, height: thumbHeight)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let track = trackRect()
+        if track.width > 0, track.height > 0 {
+            // Pill shape: radius == width/2, so NSBezierPath circular == .continuous visually.
+            let radius = track.width / 2
+            let trackPath = NSBezierPath(roundedRect: track, xRadius: radius, yRadius: radius)
+            NSColor(white: 1.0, alpha: 0.06).setFill()
+            trackPath.fill()
+        }
+        drawKnob()
+    }
+
+    override func drawKnob() {
+        let thumb = self.rect(for: .knob)
+        guard thumb.width > 0, thumb.height > 0 else { return }
+        // Pill shape (full radius): NSBezierPath circular matches .continuous visually.
+        let radius = min(thumb.width, thumb.height) / 2
+        let path = NSBezierPath(roundedRect: thumb, xRadius: radius, yRadius: radius)
+        NSColor(white: 1.0, alpha: 0.32).setFill()
+        path.fill()
+    }
+}
+
+// MARK: - Composer attachment chips
+
+private struct ComposerAttachmentRow: View {
+    let attachments: [ComposerAttachment]
+    let onRemove: (UUID) -> Void
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(attachments) { att in
+                    ComposerAttachmentChip(
+                        attachment: att,
+                        onRemove: { onRemove(att.id) },
+                        onOpen: {
+                            if att.isImage {
+                                withAnimation(.easeOut(duration: 0.18)) {
+                                    appState.imagePreviewURL = att.url
+                                }
+                            }
+                        }
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .padding(.vertical, 1)
+        }
+    }
+}
+
+private struct ComposerAttachmentChip: View {
+    let attachment: ComposerAttachment
+    let onRemove: () -> Void
+    let onOpen: () -> Void
+
+    @State private var hovered = false
+    @State private var removeHovered = false
+
+    var body: some View {
+        HStack(spacing: attachment.isImage ? 6 : 4) {
+            iconView
+            Text(attachment.filename)
+                .font(.system(size: 13))
+                .foregroundColor(Color(white: 0.94))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .layoutPriority(0)
+            if hovered {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
+                        .frame(width: 14, height: 14)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { removeHovered = $0 }
+                .help("Remove attachment")
+                .transition(.opacity)
+                .layoutPriority(1)
+            }
+        }
+        .padding(.leading, attachment.isImage ? 9 : 7)
+        .padding(.trailing, hovered ? 7 : 11)
+        .padding(.vertical, 5)
+        .frame(maxWidth: 220, alignment: .leading)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(hovered ? 0.03 : 0))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 0.6)
+        )
+        .animation(.easeOut(duration: 0.14), value: hovered)
+        .contentShape(Capsule(style: .continuous))
+        .onTapGesture { onOpen() }
+        .onHover { hovered = $0 }
+        .help(attachment.isImage ? "Click para ampliar" : attachment.url.path)
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        if attachment.isImage, let nsImage = NSImage(contentsOf: attachment.url) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 18, height: 18)
+                .clipShape(Circle())
+        } else {
+            FileChipIcon(size: 10)
+                .foregroundColor(Color(white: 0.60))
+                .frame(width: 18, height: 18)
+        }
+    }
+}
