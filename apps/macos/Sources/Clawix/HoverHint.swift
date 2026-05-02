@@ -67,6 +67,7 @@ private struct HoverHintModifier: ViewModifier {
 
     @State private var visible = false
     @State private var pending: DispatchWorkItem?
+    @State private var bubbleSize: CGSize = .zero
 
     func body(content: Content) -> some View {
         content
@@ -90,7 +91,15 @@ private struct HoverHintModifier: ViewModifier {
             }
             .overlay(alignment: overlayAlignment) {
                 if visible {
-                    bubbleView
+                    HoverHintBubble(text: text)
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .preference(key: HoverHintSizeKey.self, value: geo.size)
+                            }
+                        )
+                        .onPreferenceChange(HoverHintSizeKey.self) { bubbleSize = $0 }
+                        .offset(x: offsetX, y: offsetY)
                         .allowsHitTesting(false)
                         .transition(.opacity)
                         .zIndex(999)
@@ -107,22 +116,27 @@ private struct HoverHintModifier: ViewModifier {
         }
     }
 
-    @ViewBuilder
-    private var bubbleView: some View {
+    private var offsetY: CGFloat {
         switch placement {
-        case .above:
-            HoverHintBubble(text: text)
-                .alignmentGuide(.top) { d in d[.bottom] + HoverHintConfig.gap }
-        case .below:
-            HoverHintBubble(text: text)
-                .alignmentGuide(.bottom) { d in d[.top] - HoverHintConfig.gap }
-        case .leading:
-            HoverHintBubble(text: text)
-                .alignmentGuide(.leading) { d in d[.trailing] + HoverHintConfig.gap }
-        case .trailing:
-            HoverHintBubble(text: text)
-                .alignmentGuide(.trailing) { d in d[.leading] - HoverHintConfig.gap }
+        case .above:    return -(bubbleSize.height + HoverHintConfig.gap)
+        case .below:    return bubbleSize.height + HoverHintConfig.gap
+        default:        return 0
         }
+    }
+
+    private var offsetX: CGFloat {
+        switch placement {
+        case .leading:  return -(bubbleSize.width + HoverHintConfig.gap)
+        case .trailing: return bubbleSize.width + HoverHintConfig.gap
+        default:        return 0
+        }
+    }
+}
+
+private struct HoverHintSizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
     }
 }
 
