@@ -1174,15 +1174,10 @@ private struct ProjectAccordion: View {
             HStack(spacing: 0) {
                 Button(action: { withAnimation(.easeOut(duration: 0.28)) { onToggle() } }) {
                     HStack(spacing: 8) {
-                        Group {
-                            if expanded {
-                                FolderOpenIcon(size: 12)
-                            } else {
-                                FolderClosedIcon(size: 12)
-                            }
-                        }
-                        .foregroundColor(Color(white: 0.78))
-                        .frame(width: 15, height: 15)
+                        FolderMorphIcon(size: 12, progress: expanded ? 1 : 0)
+                            .foregroundColor(Color(white: 0.78))
+                            .frame(width: 15, height: 15)
+                            .animation(.easeOut(duration: 0.28), value: expanded)
                         Text(project.name)
                             .font(.system(size: 13, weight: .light))
                             .foregroundColor(Color(white: 0.94))

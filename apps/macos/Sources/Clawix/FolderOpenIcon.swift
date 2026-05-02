@@ -111,6 +111,144 @@ private struct FolderClosedIconShape: Shape {
     }
 }
 
+/// Folder icon that morphs continuously between closed (`progress == 0`) and
+/// open (`progress == 1`). The outline is split in two stroked sub-shapes:
+/// `Front` (the lid in open state, the bottom rectangle + seam in closed) and
+/// `Back` (the back panel in open state, the rest of the outline in closed).
+/// The back stroke thins as the folder opens, suggesting depth. Both shapes
+/// share a 20-anchor topology so SwiftUI can interpolate via `animatableData`.
+struct FolderMorphIcon: View {
+    var size: CGFloat = 13
+    var progress: CGFloat
+
+    var body: some View {
+        let baseWidth = 1.5 * (size / 18)
+        let backWidth = baseWidth * (1.0 - 0.32 * progress)
+        ZStack {
+            FolderMorphBackInsetShape(progress: progress, lineWidth: backWidth)
+            FolderMorphFrontInsetShape(progress: progress, lineWidth: baseWidth)
+        }
+        .frame(width: size * 1.18, height: size)
+    }
+}
+
+private struct FolderMorphFrontInsetShape: Shape {
+    var progress: CGFloat
+    var lineWidth: CGFloat
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(progress, lineWidth) }
+        set {
+            progress = newValue.first
+            lineWidth = newValue.second
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 18
+        let dx = (rect.width  - 18 * s) / 2
+        let dy = (rect.height - 18 * s) / 2
+        func L(_ cx: CGFloat, _ cy: CGFloat, _ ox: CGFloat, _ oy: CGFloat) -> CGPoint {
+            let x = cx + (ox - cx) * progress
+            let y = cy + (oy - cy) * progress
+            return CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+
+        var raw = Path()
+        raw.move(to: L(3.0, 15.0,  3.0, 15.0))
+        raw.addLine(to: L(3.0, 15.0,  4.5, 10.5))
+        raw.addLine(to: L(3.0, 15.0,  5.625, 8.324))
+        raw.addCurve(
+            to:       L(1.5, 13.5,    6.93, 7.5),
+            control1: L(2.172, 15.0,  5.875, 7.828),
+            control2: L(1.5, 14.328,  6.375, 7.512)
+        )
+        raw.addLine(to: L(1.5, 7.5,  15.0, 7.5))
+        raw.addCurve(
+            to:       L(16.5, 7.5,    16.188, 8.082),
+            control1: L(5.5, 7.5,     15.465, 7.5),
+            control2: L(12.5, 7.5,    15.902, 7.715)
+        )
+        raw.addCurve(
+            to:       L(16.5, 7.5,    16.453, 9.375),
+            control1: L(16.5, 7.5,    16.473, 8.449),
+            control2: L(16.5, 7.5,    16.570, 8.926)
+        )
+        raw.addLine(to: L(16.5, 13.5, 15.301, 13.875))
+        raw.addCurve(
+            to:       L(15.0, 15.0,   13.836, 15.0),
+            control1: L(16.5, 14.328, 15.129, 14.539),
+            control2: L(15.828, 15.0, 14.523, 15.004)
+        )
+        raw.addLine(to: L(3.0, 15.0,  3.0, 15.0))
+        return raw.strokedPath(StrokeStyle(
+            lineWidth: lineWidth,
+            lineCap: .round,
+            lineJoin: .round
+        ))
+    }
+}
+
+private struct FolderMorphBackInsetShape: Shape {
+    var progress: CGFloat
+    var lineWidth: CGFloat
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(progress, lineWidth) }
+        set {
+            progress = newValue.first
+            lineWidth = newValue.second
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 18
+        let dx = (rect.width  - 18 * s) / 2
+        let dy = (rect.height - 18 * s) / 2
+        func L(_ cx: CGFloat, _ cy: CGFloat, _ ox: CGFloat, _ oy: CGFloat) -> CGPoint {
+            let x = cx + (ox - cx) * progress
+            let y = cy + (oy - cy) * progress
+            return CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+
+        var raw = Path()
+        raw.move(to: L(3.0, 15.0,  3.0, 15.0))
+        raw.addCurve(
+            to:       L(1.5, 13.5,    1.5, 13.5),
+            control1: L(2.172, 15.0,  2.172, 15.0),
+            control2: L(1.5, 14.328,  1.5, 14.328)
+        )
+        raw.addLine(to: L(1.5, 3.75,  1.5, 3.75))
+        raw.addCurve(
+            to:       L(3.0, 2.25,    3.0, 2.25),
+            control1: L(1.5, 2.922,   1.5, 2.922),
+            control2: L(2.172, 2.25,  2.172, 2.25)
+        )
+        raw.addLine(to: L(5.949, 2.25, 5.949, 2.25))
+        raw.addCurve(
+            to:       L(7.191, 2.926, 7.191, 2.926),
+            control1: L(6.449, 2.254, 6.449, 2.254),
+            control2: L(6.918, 2.508, 6.918, 2.508)
+        )
+        raw.addLine(to: L(7.809, 3.824, 7.809, 3.824))
+        raw.addCurve(
+            to:       L(9.051, 4.5,   9.051, 4.5),
+            control1: L(8.082, 4.242, 8.082, 4.242),
+            control2: L(8.551, 4.496, 8.551, 4.496)
+        )
+        raw.addLine(to: L(15.0, 4.5,  13.5, 4.5))
+        raw.addCurve(
+            to:       L(16.5, 6.0,    15.0, 6.0),
+            control1: L(15.828, 4.5,  14.328, 4.5),
+            control2: L(16.5, 5.172,  15.0, 5.172)
+        )
+        raw.addLine(to: L(16.5, 13.5, 15.0, 7.5))
+        return raw.strokedPath(StrokeStyle(
+            lineWidth: lineWidth,
+            lineCap: .round,
+            lineJoin: .round
+        ))
+    }
+}
+
 /// Custom git-branch icon used in place of SF Symbols `arrow.triangle.branch`.
 struct BranchIcon: View {
     var size: CGFloat = 13
