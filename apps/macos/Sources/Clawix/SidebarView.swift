@@ -973,11 +973,10 @@ struct RecentChatRow: View {
     private var trailingStatusView: some View {
         Group {
             if chat.hasActiveTurn {
-                ProgressView()
-                    .controlSize(.small)
-                    .scaleEffect(0.6)
+                SidebarChatRowSpinner()
                     .frame(width: 14, height: 14)
-                    .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                    .padding(.trailing, 2)
+                    .transition(.opacity.combined(with: .scale(scale: 0.7)))
             } else if hovered {
                 Button {
                     appState.archiveChat(chatId: chat.id)
@@ -990,12 +989,15 @@ struct RecentChatRow: View {
                 .buttonStyle(.plain)
                 .onHover { archiveHovered = $0 }
                 .help("Archivar")
+                .padding(.trailing, 2)
                 .transition(.opacity)
             } else if chat.hasUnreadCompletion {
                 Circle()
                     .fill(Color(red: 0.45, green: 0.65, blue: 1.0))
                     .frame(width: 7, height: 7)
-                    .transition(.opacity)
+                    .frame(width: 14, height: 14)
+                    .padding(.trailing, 2)
+                    .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
             } else {
                 Text(ageLabel)
                     .font(.system(size: 11))
@@ -1003,8 +1005,8 @@ struct RecentChatRow: View {
                     .transition(.opacity)
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.72), value: chat.hasActiveTurn)
-        .animation(.spring(response: 0.45, dampingFraction: 0.72), value: chat.hasUnreadCompletion)
+        .animation(.smooth(duration: 0.55, extraBounce: 0), value: chat.hasActiveTurn)
+        .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.hasUnreadCompletion)
     }
 
     var body: some View {
@@ -1129,6 +1131,27 @@ struct RecentChatRow: View {
 
     private static func relative(from date: Date) -> String {
         L10n.relativeAge(elapsed: Date().timeIntervalSince(date))
+    }
+}
+
+/// Quiet thin ring used in chat rows while a turn is in flight. Replaces the
+/// default `ProgressView` so the rotation stays slow and the stroke matches
+/// the rest of the sidebar's restrained line work.
+private struct SidebarChatRowSpinner: View {
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.0, to: 0.82)
+            .stroke(Color(white: 0.55),
+                    style: StrokeStyle(lineWidth: 1.0, lineCap: .round))
+            .frame(width: 9, height: 9)
+            .rotationEffect(.degrees(rotation))
+            .onAppear {
+                withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                    rotation = 360
+                }
+            }
     }
 }
 
@@ -1622,10 +1645,10 @@ private struct ChatDropTarget<Content: View>: View {
 /// progression was too gentle to read as a hierarchy at this size.
 private struct OrganizeFunnelIcon: View {
     var body: some View {
-        VStack(spacing: 1.6) {
-            Capsule(style: .continuous).frame(width: 10.0, height: 1.0)
-            Capsule(style: .continuous).frame(width: 6.4, height: 1.0)
-            Capsule(style: .continuous).frame(width: 3.2, height: 1.0)
+        VStack(spacing: 1.76) {
+            Capsule(style: .continuous).frame(width: 11.0, height: 1.1)
+            Capsule(style: .continuous).frame(width: 7.04, height: 1.1)
+            Capsule(style: .continuous).frame(width: 3.52, height: 1.1)
         }
     }
 }
