@@ -101,14 +101,14 @@ final class ClawixService: ObservableObject {
 
     // MARK: - User intents
 
-    func listThreads(archived: Bool, limit: Int = 160, useStateDbOnly: Bool = true) async throws -> [AgentThreadSummary] {
+    func listThreads(archived: Bool, cwd: String? = nil, limit: Int = 160, useStateDbOnly: Bool = true) async throws -> [AgentThreadSummary] {
         guard status == .ready else { return [] }
         let result = try await client.send(
             method: ClawixMethod.threadList,
             params: ThreadListParams(
                 archived: archived,
                 cursor: nil,
-                cwd: nil,
+                cwd: cwd,
                 limit: limit,
                 modelProviders: nil,
                 searchTerm: nil,

@@ -36,6 +36,7 @@ struct SidebarView: View {
     @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarChronoExpanded", default: true)
     @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
     @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
+    @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarArchivedExpanded", default: false)
     @State private var chronoLimit: Int = 15
 
     private var organizationMode: SidebarOrganizationMode {
@@ -196,11 +197,13 @@ struct SidebarView: View {
                                     project: project,
                                     expanded: expandedProjects.contains(project.id),
                                     chats: snapshot.byProject[project.id] ?? [],
+                                    loading: appState.loadingProjects.contains(project.id),
                                     onToggle: {
                                         if expandedProjects.contains(project.id) {
                                             expandedProjects.remove(project.id)
                                         } else {
                                             expandedProjects.insert(project.id)
+                                            Task { await appState.loadThreadsForProject(project) }
                                         }
                                     },
                                     onMenuToggle: {
@@ -241,12 +244,61 @@ struct SidebarView: View {
                     }
                 }
             }
+
+            archivedSection
         }
         .padding(.bottom, 10)
         .onChange(of: pinnedExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarPinnedExpanded") }
         .onChange(of: chronoExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarChronoExpanded") }
         .onChange(of: noProjectExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarNoProjectExpanded") }
         .onChange(of: projectsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarProjectsExpanded") }
+        .onChange(of: archivedExpanded) { _, v in
+            SidebarPrefs.store.set(v, forKey: "SidebarArchivedExpanded")
+            if v { Task { await appState.loadArchivedChats() } }
+        }
+        .task {
+            if archivedExpanded { await appState.loadArchivedChats() }
+        }
+    }
+
+    /// Always-visible section so users learn that archived chats land
+    /// here. Lazy-fetches the list the first time it's expanded; the
+    /// runtime filter `archived: true` guarantees these chats never
+    /// also appear in the pinned / project / chronological lists.
+    @ViewBuilder
+    private var archivedSection: some View {
+        sectionHeader(
+            "Archived",
+            expanded: $archivedExpanded,
+            leadingIcon: AnyView(ArchiveIcon(size: 14))
+        )
+        SidebarAccordion(
+            expanded: archivedExpanded,
+            targetHeight: appState.archivedChats.isEmpty
+                ? 26
+                : SidebarRowMetrics.recentChats(count: appState.archivedChats.count)
+        ) {
+            VStack(alignment: .leading, spacing: 2) {
+                if appState.archivedChats.isEmpty {
+                    HStack(spacing: 6) {
+                        if appState.archivedLoading {
+                            SidebarChatRowSpinner()
+                                .frame(width: 9, height: 9)
+                        }
+                        Text(appState.archivedLoading ? "Loading…" : "No archived chats")
+                            .font(.system(size: 11.5))
+                            .foregroundColor(Color(white: 0.40))
+                    }
+                    .padding(.leading, 22)
+                    .padding(.vertical, 4)
+                } else {
+                    ForEach(appState.archivedChats) { chat in
+                        RecentChatRow(chat: chat, indent: 6, leadingIcon: .none, archivedRow: true)
+                    }
+                }
+            }
+            .padding(.leading, 8)
+        }
     }
 
     var body: some View {
@@ -592,6 +644,9 @@ struct SidebarView: View {
             if expandedProjects.isEmpty {
                 // Expand all
                 expandedProjects = Set(appState.projects.map { $0.id })
+                for project in appState.projects {
+                    Task { await appState.loadThreadsForProject(project) }
+                }
             } else {
                 expandedProjects.removeAll()
             }
@@ -1196,6 +1251,11 @@ struct RecentChatRow: View {
     let chat: Chat
     var indent: CGFloat = 0
     var leadingIcon: SidebarChatLeadingIcon = .bubble
+    /// True for rows rendered inside the sidebar's archived section. The
+    /// trailing hover button becomes "unarchive", drag is disabled (an
+    /// archived chat has no slot to drop into) and the context menu is
+    /// trimmed to actions that still make sense.
+    var archivedRow: Bool = false
     @EnvironmentObject var appState: AppState
     @State private var hovered = false
     @State private var pinHovered = false
@@ -1218,19 +1278,30 @@ struct RecentChatRow: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.7)))
             } else if hovered {
                 Button {
-                    appState.archiveChat(chatId: chat.id)
+                    if archivedRow {
+                        appState.unarchiveChat(chatId: chat.id)
+                    } else {
+                        appState.archiveChat(chatId: chat.id)
+                    }
                 } label: {
-                    ArchiveIcon(size: 14)
-                        .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
-                        .frame(width: 14, height: 14)
-                        .contentShape(Rectangle())
+                    Group {
+                        if archivedRow {
+                            Image(systemName: "tray.and.arrow.up")
+                                .font(.system(size: 12, weight: .regular))
+                        } else {
+                            ArchiveIcon(size: 14)
+                        }
+                    }
+                    .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
+                    .frame(width: 14, height: 14)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onHover { archiveHovered = $0 }
-                .help("Archivar")
+                .help(archivedRow ? "Unarchive" : "Archive")
                 .padding(.trailing, 2)
                 .transition(.opacity)
-            } else if chat.hasUnreadCompletion {
+            } else if !archivedRow && chat.hasUnreadCompletion {
                 Circle()
                     .fill(Color(red: 0.45, green: 0.65, blue: 1.0))
                     .frame(width: 7, height: 7)
@@ -1283,33 +1354,50 @@ struct RecentChatRow: View {
             // Carry the chat's UUID as plain text. Drop targets parse it
             // back to a UUID and route to AppState (reorder / move-to-
             // project / pin). The provider's suggestedName is used as
-            // the macOS drag preview's label.
+            // the macOS drag preview's label. Archived rows return an
+            // empty provider so drop targets can't decode a UUID and
+            // the drag is effectively inert.
+            if archivedRow { return NSItemProvider() }
             let provider = NSItemProvider(object: chat.id.uuidString as NSString)
             provider.suggestedName = chat.title
             return provider
         }
         .contextMenu {
-            Button(chat.isPinned ? "Unpin" : "Pin") {
-                appState.togglePin(chatId: chat.id)
-            }
-            Divider()
-            Menu("Move to project") {
-                Button("No project") {
-                    appState.assignChat(chatId: chat.id, toProject: nil)
+            if archivedRow {
+                Button("Unarchive") {
+                    appState.unarchiveChat(chatId: chat.id)
                 }
-                if !appState.projects.isEmpty { Divider() }
-                ForEach(appState.projects) { project in
-                    Button(project.name) {
-                        appState.assignChat(chatId: chat.id, toProject: project.id)
+                if let threadId = chat.clawixThreadId {
+                    Divider()
+                    Button("Copy session ID") {
+                        let pb = NSPasteboard.general
+                        pb.clearContents()
+                        pb.setString(threadId, forType: .string)
                     }
                 }
-            }
-            if let threadId = chat.clawixThreadId {
+            } else {
+                Button(chat.isPinned ? "Unpin" : "Pin") {
+                    appState.togglePin(chatId: chat.id)
+                }
                 Divider()
-                Button("Copy session ID") {
-                    let pb = NSPasteboard.general
-                    pb.clearContents()
-                    pb.setString(threadId, forType: .string)
+                Menu("Move to project") {
+                    Button("No project") {
+                        appState.assignChat(chatId: chat.id, toProject: nil)
+                    }
+                    if !appState.projects.isEmpty { Divider() }
+                    ForEach(appState.projects) { project in
+                        Button(project.name) {
+                            appState.assignChat(chatId: chat.id, toProject: project.id)
+                        }
+                    }
+                }
+                if let threadId = chat.clawixThreadId {
+                    Divider()
+                    Button("Copy session ID") {
+                        let pb = NSPasteboard.general
+                        pb.clearContents()
+                        pb.setString(threadId, forType: .string)
+                    }
                 }
             }
         }
@@ -1400,6 +1488,7 @@ private struct ProjectAccordion: View {
     let project: Project
     let expanded: Bool
     let chats: [Chat]
+    let loading: Bool
     let onToggle: () -> Void
     let onMenuToggle: () -> Void
     let onNewChat: () -> Void
@@ -1488,11 +1577,17 @@ private struct ProjectAccordion: View {
             ) {
                 VStack(alignment: .leading, spacing: 3) {
                     if chats.isEmpty {
-                        Text("No chats")
-                            .font(.system(size: 10.5))
-                            .foregroundColor(Color(white: 0.40))
-                            .padding(.leading, 30)
-                            .padding(.vertical, 4)
+                        HStack(spacing: 6) {
+                            if loading {
+                                SidebarChatRowSpinner()
+                                    .frame(width: 9, height: 9)
+                            }
+                            Text(loading ? "Loading…" : "No chats")
+                                .font(.system(size: 10.5))
+                                .foregroundColor(Color(white: 0.40))
+                        }
+                        .padding(.leading, 30)
+                        .padding(.vertical, 4)
                     }
                     ForEach(chats) { chat in
                         RecentChatRow(chat: chat, leadingIcon: .pinOnHover)

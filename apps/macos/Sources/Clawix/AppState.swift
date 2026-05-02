@@ -447,6 +447,24 @@ final class AppState: ObservableObject {
     /// index a chat appears at here; chats not in this array fall to the
     /// bottom of the pinned section.
     @Published var pinnedOrder: [UUID] = []
+    /// Chats the runtime has marked as archived. Kept separate from
+    /// `chats` so the regular sidebar lists never need to filter on
+    /// `isArchived`. Populated lazily the first time the sidebar's
+    /// archived section is expanded, plus optimistically appended when
+    /// the user archives a chat from inside the app.
+    @Published var archivedChats: [Chat] = []
+    /// True while a `listThreads(archived: true)` request is in flight.
+    /// The sidebar shows a spinner inside the section while this is set.
+    @Published var archivedLoading: Bool = false
+    /// Tracks whether the lazy fetch has succeeded at least once during
+    /// this session, so re-expanding the section doesn't re-hit the
+    /// runtime. `unarchiveChat` triggers a refetch when the active list
+    /// reload completes.
+    private var archivedLoaded: Bool = false
+    /// Cap applied to the sidebar's archived section. The settings page
+    /// can surface a larger list if we ever wire it up; the sidebar is
+    /// for browsing recent archives, not exhaustive history.
+    static let archivedSidebarLimit: Int = 30
     let sampleChat: Chat
     @Published var plugins: [Plugin] = []
     @Published var automations: [Automation] = []
@@ -481,6 +499,13 @@ final class AppState: ObservableObject {
     @Published var browserTabs: [BrowserTab] = []
     @Published var activeBrowserTabId: UUID?
     @Published var recentSessions: [ClawixSessionSummary] = []
+    /// Project ids whose chats are currently being lazy-loaded from the
+    /// runtime. The sidebar uses this to render a per-project spinner.
+    @Published var loadingProjects: Set<UUID> = []
+    /// Project ids we've already lazy-loaded at least once during this
+    /// session. Prevents re-firing the same query on every accordion
+    /// toggle. Cleared if the user explicitly refreshes.
+    private var lazyLoadedProjects: Set<UUID> = []
     @Published var clawixBackendStatus: ClawixService.Status = .idle
     @Published var settingsCategory: SettingsCategory = .general
     /// User-selected interface language. Persisted via UserDefaults
@@ -667,6 +692,31 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Pulls the threads belonging to a single project from the runtime
+    /// and merges them into `chats`. The runtime's global `thread/list`
+    /// is capped at 100 results, so projects whose recent activity sits
+    /// outside that window otherwise appear empty in the sidebar; this
+    /// fills them on demand when the user expands the accordion.
+    func loadThreadsForProject(_ project: Project) async {
+        guard let clawix, case .ready = clawix.status else { return }
+        if lazyLoadedProjects.contains(project.id) { return }
+        if loadingProjects.contains(project.id) { return }
+        loadingProjects.insert(project.id)
+        defer { loadingProjects.remove(project.id) }
+        do {
+            let threads = try await clawix.listThreads(
+                archived: false,
+                cwd: project.path,
+                limit: 200,
+                useStateDbOnly: true
+            )
+            mergeThreads(threads)
+            lazyLoadedProjects.insert(project.id)
+        } catch {
+            appendRuntimeStatusError("Could not load threads for project \(project.name): \(error)")
+        }
+    }
+
     private func mergedProjects() -> [Project] {
         var result = backendState.workspaceRoots
         var seen = Set(result.map { $0.path })
@@ -695,27 +745,10 @@ final class AppState: ObservableObject {
 
         let sorted = threads.sorted { $0.updatedAt > $1.updatedAt }
         chats = sorted.map { thread in
-            let old = oldByThread[thread.id]
-            let rootPath = rootPath(for: thread, projectByPath: projectByPath)
-            return Chat(
-                id: old?.id ?? UUID(),
-                title: resolveTitle(for: thread),
-                messages: old?.messages ?? [],
-                createdAt: thread.updatedDate,
-                clawixThreadId: thread.id,
-                rolloutPath: thread.path.map { URL(fileURLWithPath: $0) },
-                historyHydrated: old?.historyHydrated ?? false,
-                hasActiveTurn: old?.hasActiveTurn ?? false,
-                projectId: rootPath.flatMap { projectByPath[$0]?.id },
-                isArchived: thread.archived,
-                isPinned: !thread.archived && pinnedSet.contains(thread.id),
-                hasUnreadCompletion: old?.hasUnreadCompletion ?? false,
-                cwd: thread.cwd,
-                hasGitRepo: old?.hasGitRepo ?? false,
-                branch: old?.branch,
-                availableBranches: old?.availableBranches ?? [],
-                uncommittedFiles: old?.uncommittedFiles
-            )
+            chatFromThread(thread,
+                           old: oldByThread[thread.id],
+                           projectByPath: projectByPath,
+                           pinnedSet: pinnedSet)
         }
 
         let threadToChat = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
@@ -723,6 +756,71 @@ final class AppState: ObservableObject {
         })
         pinnedOrder = pinIds.compactMap { threadToChat[$0] }
         writeE2EStateReportIfRequested()
+    }
+
+    /// Like `applyThreads` but additive: refreshes existing chats from the
+    /// new payload and appends previously-unknown ones, instead of
+    /// replacing the whole list. Used by per-project lazy loads so they
+    /// don't wipe chats from other projects already in memory.
+    private func mergeThreads(_ threads: [AgentThreadSummary]) {
+        backendState = BackendStateReader.read()
+        projects = mergedProjects()
+        let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
+        let pinIds = metadata.hasLocalPins ? metadata.pinnedThreadIds : backendState.pinnedThreadIds
+        let pinnedSet = Set(pinIds)
+
+        var indexByThread: [String: Int] = [:]
+        for (idx, chat) in chats.enumerated() {
+            if let tid = chat.clawixThreadId { indexByThread[tid] = idx }
+        }
+
+        var updated = chats
+        for thread in threads {
+            if let idx = indexByThread[thread.id] {
+                updated[idx] = chatFromThread(thread,
+                                              old: updated[idx],
+                                              projectByPath: projectByPath,
+                                              pinnedSet: pinnedSet)
+            } else {
+                updated.append(chatFromThread(thread,
+                                              old: nil,
+                                              projectByPath: projectByPath,
+                                              pinnedSet: pinnedSet))
+            }
+        }
+        chats = updated
+
+        let threadToChat = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
+            chat.clawixThreadId.map { ($0, chat.id) }
+        })
+        pinnedOrder = pinIds.compactMap { threadToChat[$0] }
+        writeE2EStateReportIfRequested()
+    }
+
+    private func chatFromThread(_ thread: AgentThreadSummary,
+                                old: Chat?,
+                                projectByPath: [String: Project],
+                                pinnedSet: Set<String>) -> Chat {
+        let rootPath = rootPath(for: thread, projectByPath: projectByPath)
+        return Chat(
+            id: old?.id ?? UUID(),
+            title: resolveTitle(for: thread),
+            messages: old?.messages ?? [],
+            createdAt: thread.updatedDate,
+            clawixThreadId: thread.id,
+            rolloutPath: thread.path.map { URL(fileURLWithPath: $0) },
+            historyHydrated: old?.historyHydrated ?? false,
+            hasActiveTurn: old?.hasActiveTurn ?? false,
+            projectId: rootPath.flatMap { projectByPath[$0]?.id },
+            isArchived: thread.archived,
+            isPinned: !thread.archived && pinnedSet.contains(thread.id),
+            hasUnreadCompletion: old?.hasUnreadCompletion ?? false,
+            cwd: thread.cwd,
+            hasGitRepo: old?.hasGitRepo ?? false,
+            branch: old?.branch,
+            availableBranches: old?.availableBranches ?? [],
+            uncommittedFiles: old?.uncommittedFiles
+        )
     }
 
     private func rootPath(for thread: AgentThreadSummary, projectByPath: [String: Project]) -> String? {
@@ -1415,13 +1513,90 @@ final class AppState: ObservableObject {
     }
 
     func markThreadArchived(threadId: String, archived: Bool) {
-        guard let idx = chats.firstIndex(where: { $0.clawixThreadId == threadId }) else { return }
-        chats[idx].isArchived = archived
         if archived {
-            chats[idx].isPinned = false
-            pinnedOrder.removeAll { $0 == chats[idx].id }
-            if case let .chat(id) = currentRoute, id == chats[idx].id {
+            guard let idx = chats.firstIndex(where: { $0.clawixThreadId == threadId }) else { return }
+            var chat = chats[idx]
+            chat.isArchived = true
+            chat.isPinned = false
+            chat.hasUnreadCompletion = false
+            pinnedOrder.removeAll { $0 == chat.id }
+            if case let .chat(id) = currentRoute, id == chat.id {
                 currentRoute = .home
+            }
+            chats.remove(at: idx)
+            archivedChats.removeAll { $0.clawixThreadId == threadId }
+            archivedChats.insert(chat, at: 0)
+            if archivedChats.count > Self.archivedSidebarLimit {
+                archivedChats = Array(archivedChats.prefix(Self.archivedSidebarLimit))
+            }
+        } else {
+            if let idx = archivedChats.firstIndex(where: { $0.clawixThreadId == threadId }) {
+                var chat = archivedChats[idx]
+                chat.isArchived = false
+                archivedChats.remove(at: idx)
+                if !chats.contains(where: { $0.clawixThreadId == threadId }) {
+                    chats.insert(chat, at: 0)
+                }
+            } else if let idx = chats.firstIndex(where: { $0.clawixThreadId == threadId }) {
+                chats[idx].isArchived = false
+            }
+        }
+    }
+
+    /// Lazy fetch of archived threads for the sidebar's archived section.
+    /// First expand triggers the network round-trip; subsequent toggles
+    /// reuse the cached list unless `force` is set.
+    func loadArchivedChats(force: Bool = false) async {
+        guard let clawix, case .ready = clawix.status else { return }
+        if archivedLoading { return }
+        if archivedLoaded && !force { return }
+        archivedLoading = true
+        defer { archivedLoading = false }
+        do {
+            let threads = try await clawix.listThreads(
+                archived: true,
+                limit: Self.archivedSidebarLimit,
+                useStateDbOnly: true
+            )
+            let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
+            let oldByThread = Dictionary(uniqueKeysWithValues: archivedChats.compactMap { chat in
+                chat.clawixThreadId.map { ($0, chat) }
+            })
+            archivedChats = threads
+                .sorted { $0.updatedAt > $1.updatedAt }
+                .map { thread in
+                    chatFromThread(thread,
+                                   old: oldByThread[thread.id],
+                                   projectByPath: projectByPath,
+                                   pinnedSet: [])
+                }
+            archivedLoaded = true
+        } catch {
+            // Non-fatal: the section will render empty + retryable next expand.
+            archivedLoaded = false
+        }
+    }
+
+    func unarchiveChat(chatId: UUID) {
+        guard let idx = archivedChats.firstIndex(where: { $0.id == chatId }),
+              let threadId = archivedChats[idx].clawixThreadId,
+              let clawix,
+              case .ready = clawix.status else { return }
+        var moved = archivedChats[idx]
+        moved.isArchived = false
+        archivedChats.remove(at: idx)
+        if !chats.contains(where: { $0.clawixThreadId == threadId }) {
+            chats.insert(moved, at: 0)
+        }
+        Task { @MainActor in
+            do {
+                try await clawix.unarchiveThread(threadId: threadId)
+                await self.loadThreadsFromRuntime()
+            } catch {
+                self.chats.removeAll { $0.id == chatId }
+                moved.isArchived = true
+                self.archivedChats.insert(moved, at: min(idx, self.archivedChats.count))
+                self.appendErrorBubble(chatId: chatId, message: "Could not unarchive on the runtime: \(error)")
             }
         }
     }
