@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./media/readme-banner.webp" alt="Clawix — Native macOS client for Codex">
+</p>
+
 # Clawix
 
 > [!WARNING]
