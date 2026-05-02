@@ -1819,64 +1819,90 @@ private struct PlaceholderPage: View {
 // MARK: - Uso page
 
 private struct UsagePage: View {
+    @EnvironmentObject var appState: AppState
+
+    /// Per-bucket entries other than the base "codex" id (which mirrors
+    /// the general snapshot we already render at the top). Sorted by
+    /// limit name so the order is stable across renders.
+    private var perModelBuckets: [(id: String, snapshot: RateLimitSnapshot)] {
+        appState.rateLimitsByLimitId
+            .filter { $0.key != "codex" }
+            .sorted { ($0.value.limitName ?? $0.key) < ($1.value.limitName ?? $1.key) }
+            .map { ($0.key, $0.value) }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: "Uso")
 
-            Text("General usage limits")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(Palette.textPrimary)
-                .padding(.bottom, 14)
+            if let snapshot = appState.rateLimits, snapshot.primary != nil || snapshot.secondary != nil {
+                Text("General usage limits")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Palette.textPrimary)
+                    .padding(.bottom, 14)
 
-            SettingsCard {
-                UsageBarRow(title: "5-hour usage limit",
-                            detail: "Resets at 17:09",
-                            percent: 100)
-                CardDivider()
-                UsageBarRow(title: "Weekly usage limit",
-                            detail: "Resets on May 5",
-                            percent: 82)
+                SettingsCard {
+                    UsageBarStack(snapshot: snapshot)
+                }
             }
 
-            SectionLabel(title: "Usage limits for GPT-5.3-Clawix-Spark")
-            SettingsCard {
-                UsageBarRow(title: "5-hour usage limit",
-                            detail: "Resets at 18:02",
-                            percent: 100)
-                CardDivider()
-                UsageBarRow(title: "Weekly usage limit",
-                            detail: "Resets on May 8",
-                            percent: 100)
+            ForEach(perModelBuckets, id: \.id) { entry in
+                Text(verbatim: SettingsLimitsFormatter.perModelSectionTitle(name: entry.snapshot.limitName ?? entry.id))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Palette.textPrimary)
+                    .padding(.bottom, 14)
+                    .padding(.top, 28)
+                SettingsCard {
+                    UsageBarStack(snapshot: entry.snapshot)
+                }
             }
 
-            SectionLabel(title: "Credit")
-            SettingsCard {
-                CreditRow(title: "0 credit remaining",
-                          detail: "Use credit to send messages when you hit your usage limits. Docs",
-                          primaryLabel: "Comprar",
-                          showLink: true)
-                CardDivider()
-                CreditRow(title: "Auto top-up credit",
-                          detail: "Top up automatically when your balance hits the minimum.",
-                          primaryLabel: "Settings",
-                          showLink: false)
+            if let credits = appState.rateLimits?.credits {
+                SectionLabel(title: "Credit")
+                SettingsCard {
+                    CreditRow(title: SettingsLimitsFormatter.creditTitle(for: credits),
+                              detail: "Use credit to send messages when you hit your usage limits.")
+                }
+            }
+        }
+    }
+}
+
+private struct UsageBarStack: View {
+    let snapshot: RateLimitSnapshot
+
+    private var windows: [RateLimitWindow] {
+        [snapshot.primary, snapshot.secondary].compactMap { $0 }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(windows.enumerated()), id: \.offset) { entry in
+                if entry.offset > 0 {
+                    CardDivider()
+                }
+                UsageBarRow(
+                    title: SettingsLimitsFormatter.detailedWindowLabel(for: entry.element),
+                    detail: SettingsLimitsFormatter.detailedResetLabel(for: entry.element),
+                    percent: entry.element.usedPercent
+                )
             }
         }
     }
 }
 
 private struct UsageBarRow: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey
+    let title: String
+    let detail: String
     let percent: Int
 
     var body: some View {
         HStack(alignment: .center, spacing: 18) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(verbatim: title)
                     .font(.system(size: 12.5))
                     .foregroundColor(Palette.textPrimary)
-                Text(detail)
+                Text(verbatim: detail)
                     .font(.system(size: 11))
                     .foregroundColor(Palette.textSecondary)
             }
@@ -1891,10 +1917,10 @@ private struct UsageBarRow: View {
                         .frame(width: max(2, 120 * CGFloat(percent) / 100), height: 5)
                 }
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text("\(percent) %")
+                    Text(verbatim: "\(percent) %")
                         .font(.system(size: 13))
                         .foregroundColor(.white)
-                    Text("remaining")
+                    Text("used")
                         .font(.system(size: 11))
                         .foregroundColor(Palette.textSecondary)
                 }
@@ -1907,45 +1933,20 @@ private struct UsageBarRow: View {
 }
 
 private struct CreditRow: View {
-    let title: LocalizedStringKey
+    let title: String
     let detail: LocalizedStringKey
-    let primaryLabel: LocalizedStringKey
-    let showLink: Bool
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(verbatim: title)
                     .font(.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
-                HStack(spacing: 4) {
-                    Text(detail)
-                        .font(.system(size: 11.5))
-                        .foregroundColor(Palette.textSecondary)
-                    if showLink {
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 9))
-                            .foregroundColor(Palette.textSecondary)
-                    }
-                }
+                Text(detail)
+                    .font(.system(size: 11.5))
+                    .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
-            Button {} label: {
-                Text(primaryLabel)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                            )
-                    )
-            }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -1973,6 +1974,7 @@ private struct ArchivedChatsPage: View {
                     .font(.system(size: 13))
                     .foregroundColor(Palette.textSecondary)
                     .padding(.top, 12)
+                    .padding(.leading, 14)
             } else {
                 SettingsCard {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in

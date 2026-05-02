@@ -4,6 +4,7 @@
 " instead." = "。";
 " is deprecated. Use " = " 已弃用。请使用 ";
 " or " = " 或 ";
+"%@ credit remaining" = "剩余 %@ 额度";
 "%@ off" = "%@ 已关闭";
 "%@ on" = "%@ 已开启";
 "%@, website" = "%@，网站";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld 分钟";
 "%lld mo" = "%lld 个月";
 "%lld w" = "%lld 周";
+"%lld-hour usage limit" = "%lld小时使用上限";
+"%lld-minute usage limit" = "%lld分钟使用上限";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "速度提高 1.5 倍，用量更高";
 "About" = "关于";
@@ -90,9 +93,12 @@
 "Create chat" = "创建对话";
 "Create project…" = "创建项目…";
 "Creation" = "按创建时间";
+"Credit" = "额度";
 "Current version" = "当前版本";
 "Custom config.toml settings" = "config.toml 自定义设置";
 "Custom instructions" = "自定义指令";
+"Daily" = "每日";
+"Daily usage limit" = "每日使用上限";
 "Dark mode" = "深色模式";
 "Default model" = "默认模型";
 "Default model: %@" = "默认模型：%@";
@@ -217,6 +223,8 @@
 "Rename chat" = "重命名对话";
 "Rename project" = "重命名项目";
 "Reset and install workspace" = "重置并安装工作区";
+"Resets at %@" = "%@ 重置";
+"Resets on %@" = "%@ 重置";
 "Review" = "审查";
 "Review code" = "代码评审";
 "Right sidebar" = "右侧边栏";
@@ -280,12 +288,16 @@
 "Unarchive" = "取消归档";
 "Uncommitted: %d files" = "未提交：%d 个文件";
 "Uncommitted: 1 file" = "未提交：1 个文件";
+"Unlimited credit" = "无限额度";
 "Unpin" = "取消置顶";
 "Unpin chat" = "取消置顶对话";
 "Unread" = "未读";
 "Untitled" = "无标题";
 "Updated" = "按更新时间";
+"Usage limit" = "使用上限";
+"Usage limits for %@" = "%@ 的使用上限";
 "Use an existing folder" = "使用现有文件夹";
+"Use credit to send messages when you hit your usage limits." = "达到使用上限时使用额度发送消息。";
 "Use dark theme in the interface" = "在界面中使用深色主题";
 "Use light, dark, or system appearance" = "使用浅色、深色或跟随系统";
 "Used %@" = "已使用 %@";
@@ -294,6 +306,8 @@
 "Version" = "版本";
 "Waiting for confirmation…" = "正在等待确认…";
 "Website" = "网站";
+"Weekly" = "每周";
+"Weekly usage limit" = "每周使用上限";
 "What should we build?" = "我们要构建什么？";
 "What should we work on in %@?" = "在 %@ 中要处理什么？";
 "Work locally" = "本地工作";
@@ -315,4 +329,5 @@
 "off" = "已关闭";
 "on" = "已开启";
 "remaining" = "剩余";
+"used" = "已用";
 "~/.clawix (shared with CLI)" = "~/.clawix（与 CLI 共享）";

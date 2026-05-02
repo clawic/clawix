@@ -4,6 +4,7 @@
 " instead." = " instead.";
 " is deprecated. Use " = " is deprecated. Use ";
 " or " = " or ";
+"%@ credit remaining" = "%@ credit remaining";
 "%@ off" = "%@ off";
 "%@ on" = "%@ on";
 "%@, website" = "%@, website";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld min";
 "%lld mo" = "%lld mo";
 "%lld w" = "%lld w";
+"%lld-hour usage limit" = "%lld-hour usage limit";
+"%lld-minute usage limit" = "%lld-minute usage limit";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "1.5x faster speed, higher usage";
 "About" = "About";
@@ -90,9 +93,12 @@
 "Create chat" = "Create chat";
 "Create project…" = "Create project…";
 "Creation" = "Creation";
+"Credit" = "Credit";
 "Current version" = "Current version";
 "Custom config.toml settings" = "Custom config.toml settings";
 "Custom instructions" = "Custom instructions";
+"Daily" = "Daily";
+"Daily usage limit" = "Daily usage limit";
 "Dark mode" = "Dark mode";
 "Default model" = "Default model";
 "Default model: %@" = "Default model: %@";
@@ -217,6 +223,8 @@
 "Rename chat" = "Rename chat";
 "Rename project" = "Rename project";
 "Reset and install workspace" = "Reset and install workspace";
+"Resets at %@" = "Resets at %@";
+"Resets on %@" = "Resets on %@";
 "Review" = "Review";
 "Review code" = "Review code";
 "Right sidebar" = "Right sidebar";
@@ -280,12 +288,16 @@
 "Unarchive" = "Unarchive";
 "Uncommitted: %d files" = "Uncommitted: %d files";
 "Uncommitted: 1 file" = "Uncommitted: 1 file";
+"Unlimited credit" = "Unlimited credit";
 "Unpin" = "Unpin";
 "Unpin chat" = "Unpin chat";
 "Unread" = "Unread";
 "Untitled" = "Untitled";
 "Updated" = "Updated";
+"Usage limit" = "Usage limit";
+"Usage limits for %@" = "Usage limits for %@";
 "Use an existing folder" = "Use an existing folder";
+"Use credit to send messages when you hit your usage limits." = "Use credit to send messages when you hit your usage limits.";
 "Use dark theme in the interface" = "Use dark theme in the interface";
 "Use light, dark, or system appearance" = "Use light, dark, or system appearance";
 "Used %@" = "Used %@";
@@ -294,6 +306,8 @@
 "Version" = "Version";
 "Waiting for confirmation…" = "Waiting for confirmation…";
 "Website" = "Website";
+"Weekly" = "Weekly";
+"Weekly usage limit" = "Weekly usage limit";
 "What should we build?" = "What should we build?";
 "What should we work on in %@?" = "What should we work on in %@?";
 "Work locally" = "Work locally";
@@ -315,4 +329,5 @@
 "off" = "off";
 "on" = "on";
 "remaining" = "remaining";
+"used" = "used";
 "~/.clawix (shared with CLI)" = "~/.clawix (shared with CLI)";

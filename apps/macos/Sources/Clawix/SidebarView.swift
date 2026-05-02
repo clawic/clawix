@@ -804,7 +804,7 @@ private struct SettingsAccountPopover: View {
                 appState.currentRoute = .settings
                 isOpen = false
             }
-            SettingsLimitsExpandableSection(expanded: $limitsExpanded)
+            SettingsLimitsSection(expanded: $limitsExpanded)
             SettingsAccountRow(title: "Sign out",
                                icon: "rectangle.portrait.and.arrow.right",
                                trailing: nil) {
@@ -818,29 +818,41 @@ private struct SettingsAccountPopover: View {
     }
 }
 
-// MARK: - Usage limits inline expandable section
+// MARK: - Usage limits section
 
-/// Header + collapsible body for usage limits inside the account popover.
-private struct SettingsLimitsExpandableSection: View {
+/// Toggleable section for usage limits inside the account popover. Default
+/// collapsed; the chevron toggles visibility instantly via SwiftUI's
+/// conditional rendering (no height measurement, so it works regardless
+/// of when `appState.rateLimits` lands relative to the popover opening).
+/// Reads `appState.rateLimits`, which the backend populates via
+/// `account/rateLimits/read` at boot and refreshes through
+/// `account/rateLimits/updated`.
+private struct SettingsLimitsSection: View {
+    @EnvironmentObject var appState: AppState
     @Binding var expanded: Bool
+
+    private var windows: [RateLimitWindow] {
+        guard let snapshot = appState.rateLimits else { return [] }
+        return [snapshot.primary, snapshot.secondary].compactMap { $0 }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SettingsLimitsHeaderRow(expanded: $expanded)
             if expanded {
                 VStack(alignment: .leading, spacing: 0) {
-                    SettingsLimitsValueRow(label: "5 h",
-                                           percent: "100%",
-                                           detail: "17:09")
-                    SettingsLimitsValueRow(label: "Semanalmente",
-                                           percent: "82%",
-                                           detail: "5 may")
-                    SettingsLimitsMoreInfoRow()
+                    ForEach(Array(windows.enumerated()), id: \.offset) { entry in
+                        SettingsLimitsValueRow(
+                            label: SettingsLimitsFormatter.windowLabel(for: entry.element),
+                            percent: SettingsLimitsFormatter.percentLabel(for: entry.element),
+                            detail: SettingsLimitsFormatter.resetLabel(for: entry.element)
+                        )
+                    }
                 }
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity)
             }
         }
-        .animation(.easeOut(duration: 0.18), value: expanded)
+        .clipped()
     }
 }
 
@@ -849,7 +861,11 @@ private struct SettingsLimitsHeaderRow: View {
     @State private var hovered = false
 
     var body: some View {
-        Button(action: { expanded.toggle() }) {
+        Button(action: {
+            withAnimation(.easeOut(duration: 0.22)) {
+                expanded.toggle()
+            }
+        }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Image(systemName: "speedometer")
                     .font(.system(size: 11))
@@ -863,7 +879,6 @@ private struct SettingsLimitsHeaderRow: View {
                     .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .rotationEffect(.degrees(expanded ? 180 : 0))
-                    .animation(.easeOut(duration: 0.18), value: expanded)
             }
             .padding(.leading, MenuStyle.rowHorizontalPadding)
             .padding(.trailing, MenuStyle.rowHorizontalPadding + MenuStyle.rowTrailingIconExtra)
@@ -876,53 +891,117 @@ private struct SettingsLimitsHeaderRow: View {
     }
 }
 
+enum SettingsLimitsFormatter {
+    static func windowLabel(for window: RateLimitWindow) -> String {
+        guard let mins = window.windowDurationMins, mins > 0 else { return "" }
+        if mins == 10080 {
+            return String(localized: "Weekly", bundle: AppLocale.bundle, locale: AppLocale.current)
+        }
+        if mins == 1440 {
+            return String(localized: "Daily", bundle: AppLocale.bundle, locale: AppLocale.current)
+        }
+        if mins % 60 == 0 {
+            return "\(mins / 60)h"
+        }
+        return "\(mins)min"
+    }
+
+    static func percentLabel(for window: RateLimitWindow) -> String {
+        "\(window.usedPercent)%"
+    }
+
+    static func resetLabel(for window: RateLimitWindow) -> String {
+        guard let resetsAt = window.resetsAt else { return "" }
+        let date = Date(timeIntervalSince1970: TimeInterval(resetsAt))
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        if Calendar.current.isDateInToday(date) {
+            // Force 24h "HH:mm" regardless of locale's AM/PM convention.
+            formatter.dateFormat = "HH:mm"
+        } else {
+            formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        }
+        return formatter.string(from: date)
+    }
+
+    /// Long-form variant used by the Settings → Usage page.
+    static func detailedWindowLabel(for window: RateLimitWindow) -> String {
+        guard let mins = window.windowDurationMins, mins > 0 else {
+            return String(localized: "Usage limit", bundle: AppLocale.bundle, locale: AppLocale.current)
+        }
+        if mins == 10080 {
+            return String(localized: "Weekly usage limit", bundle: AppLocale.bundle, locale: AppLocale.current)
+        }
+        if mins == 1440 {
+            return String(localized: "Daily usage limit", bundle: AppLocale.bundle, locale: AppLocale.current)
+        }
+        if mins % 60 == 0 {
+            let template = String(localized: "%lld-hour usage limit", bundle: AppLocale.bundle, locale: AppLocale.current)
+            return String(format: template, locale: AppLocale.current, Int(mins / 60))
+        }
+        let template = String(localized: "%lld-minute usage limit", bundle: AppLocale.bundle, locale: AppLocale.current)
+        return String(format: template, locale: AppLocale.current, Int(mins))
+    }
+
+    /// Long-form reset label, e.g. "Resets at 18:39" / "Resets on 5 may".
+    static func detailedResetLabel(for window: RateLimitWindow) -> String {
+        guard let resetsAt = window.resetsAt else { return "" }
+        let date = Date(timeIntervalSince1970: TimeInterval(resetsAt))
+        let formatter = DateFormatter()
+        formatter.locale = AppLocale.current
+        if Calendar.current.isDateInToday(date) {
+            // Force 24h "HH:mm" regardless of locale's AM/PM convention.
+            formatter.dateFormat = "HH:mm"
+            let template = String(localized: "Resets at %@", bundle: AppLocale.bundle, locale: AppLocale.current)
+            return String(format: template, formatter.string(from: date))
+        }
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        let template = String(localized: "Resets on %@", bundle: AppLocale.bundle, locale: AppLocale.current)
+        return String(format: template, formatter.string(from: date))
+    }
+
+    static func perModelSectionTitle(name: String) -> String {
+        let template = String(localized: "Usage limits for %@", bundle: AppLocale.bundle, locale: AppLocale.current)
+        return String(format: template, name)
+    }
+
+    static func creditTitle(for credits: CreditsSnapshot) -> String {
+        if credits.unlimited {
+            return String(localized: "Unlimited credit", bundle: AppLocale.bundle, locale: AppLocale.current)
+        }
+        let balance = credits.balance ?? "0"
+        let template = String(localized: "%@ credit remaining", bundle: AppLocale.bundle, locale: AppLocale.current)
+        return String(format: template, balance)
+    }
+}
+
 private struct SettingsLimitsValueRow: View {
     let label: String
     let percent: String
     let detail: String
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(label)
+        HStack(spacing: 10) {
+            Text(verbatim: label)
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundColor(MenuStyle.rowText)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Spacer(minLength: 8)
-            Text(percent)
+            Text(verbatim: percent)
                 .font(.system(size: 11.5))
                 .foregroundColor(MenuStyle.rowText)
-            Text(detail)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Text(verbatim: detail)
                 .font(.system(size: 11.5))
                 .foregroundColor(MenuStyle.rowSubtle)
-                .frame(width: 44, alignment: .trailing)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.leading, MenuStyle.rowHorizontalPadding + 18 + MenuStyle.rowIconLabelSpacing)
         .padding(.trailing, MenuStyle.rowHorizontalPadding + MenuStyle.rowTrailingIconExtra)
         .padding(.vertical, MenuStyle.rowVerticalPadding)
-    }
-}
-
-private struct SettingsLimitsMoreInfoRow: View {
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: {}) {
-            HStack(spacing: 8) {
-                Text("More information")
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundColor(MenuStyle.rowText)
-                Spacer(minLength: 8)
-                Image(systemName: "arrow.up.right.square")
-                    .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .regular))
-                    .foregroundColor(MenuStyle.rowSubtle)
-            }
-            .padding(.leading, MenuStyle.rowHorizontalPadding + 18 + MenuStyle.rowIconLabelSpacing)
-            .padding(.trailing, MenuStyle.rowHorizontalPadding + MenuStyle.rowTrailingIconExtra)
-            .padding(.vertical, MenuStyle.rowVerticalPadding)
-            .contentShape(Rectangle())
-            .background(MenuRowHover(active: hovered))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
     }
 }
 

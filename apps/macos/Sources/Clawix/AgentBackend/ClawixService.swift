@@ -72,6 +72,7 @@ final class ClawixService: ObservableObject {
             try await client.notify(method: ClawixMethod.initialized, params: EmptyObject())
             status = .ready
             await refreshModelList()
+            await refreshRateLimits()
             await appState?.loadThreadsFromRuntime()
         } catch {
             status = .error(String(describing: error))
@@ -96,6 +97,21 @@ final class ClawixService: ObservableObject {
             }
         } catch {
             // Non-fatal; AppState keeps its hardcoded fallback.
+        }
+    }
+
+    private func refreshRateLimits() async {
+        do {
+            let response = try await client.send(
+                method: ClawixMethod.accountRateLimitsRead,
+                params: EmptyObject(),
+                expecting: GetAccountRateLimitsResponse.self
+            )
+            appState?.rateLimits = response.rateLimits
+            appState?.rateLimitsByLimitId = response.rateLimitsByLimitId ?? [:]
+        } catch {
+            appState?.rateLimits = nil
+            appState?.rateLimitsByLimitId = [:]
         }
     }
 
@@ -435,6 +451,11 @@ final class ClawixService: ObservableObject {
             if let payload = try? params?.decode(ThreadTokenUsageEnvelope.self),
                let chatId = chatByThread[payload.threadId] {
                 appState?.updateTokenUsage(chatId: chatId, usage: payload.tokenUsage)
+            }
+
+        case ClawixMethod.nAccountRateLimitsUpdated:
+            if let payload = try? params?.decode(AccountRateLimitsUpdatedNotification.self) {
+                appState?.rateLimits = payload.rateLimits
             }
 
         case ClawixMethod.nThreadArchived:

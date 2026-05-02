@@ -96,6 +96,7 @@ enum ClawixMethod {
     static let turnStart         = "turn/start"
     static let turnInterrupt     = "turn/interrupt"
     static let modelList         = "model/list"
+    static let accountRateLimitsRead = "account/rateLimits/read"
 
     // Server -> client notifications
     static let nThreadStarted    = "thread/started"
@@ -110,6 +111,7 @@ enum ClawixMethod {
     static let nReasoningDelta   = "item/reasoning/textDelta"
     static let nReasoningSumDelta = "item/reasoning/summaryTextDelta"
     static let nThreadTokenUsage = "thread/tokenUsage/updated"
+    static let nAccountRateLimitsUpdated = "account/rateLimits/updated"
     static let nError            = "error"
 
     // Server -> client requests we know how to refuse safely
@@ -470,6 +472,41 @@ struct ModelListEntry: Decodable {
 
 struct ModelListResult: Decodable {
     let data: [ModelListEntry]?
+}
+
+// MARK: - account/rateLimits
+
+struct RateLimitWindow: Decodable, Equatable {
+    let usedPercent: Int
+    let resetsAt: Int64?
+    let windowDurationMins: Int64?
+}
+
+struct CreditsSnapshot: Decodable, Equatable {
+    let hasCredits: Bool
+    let unlimited: Bool
+    let balance: String?
+}
+
+struct RateLimitSnapshot: Decodable, Equatable {
+    let primary: RateLimitWindow?
+    let secondary: RateLimitWindow?
+    let credits: CreditsSnapshot?
+    let limitId: String?
+    let limitName: String?
+}
+
+struct GetAccountRateLimitsResponse: Decodable {
+    let rateLimits: RateLimitSnapshot
+    /// Per-bucket view keyed by metered `limit_id` (e.g. "codex",
+    /// "codex_<model>"). Optional because older daemons only emit the
+    /// top-level `rateLimits` field.
+    let rateLimitsByLimitId: [String: RateLimitSnapshot]?
+}
+
+struct AccountRateLimitsUpdatedNotification: Decodable {
+    let rateLimits: RateLimitSnapshot
+    let rateLimitsByLimitId: [String: RateLimitSnapshot]?
 }
 
 // MARK: - JSONValue (untyped JSON)

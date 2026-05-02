@@ -4,6 +4,7 @@
 " instead." = "을(를) 대신 사용하세요.";
 " is deprecated. Use " = "은(는) 더 이상 사용되지 않습니다. ";
 " or " = " 또는 ";
+"%@ credit remaining" = "%@ 크레딧 남음";
 "%@ off" = "%@ 꺼짐";
 "%@ on" = "%@ 켜짐";
 "%@, website" = "%@, 웹사이트";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld분";
 "%lld mo" = "%lld개월";
 "%lld w" = "%lld주";
+"%lld-hour usage limit" = "%lld시간 사용 한도";
+"%lld-minute usage limit" = "%lld분 사용 한도";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "1.5배 더 빠른 속도, 더 높은 사용량";
 "About" = "정보";
@@ -90,9 +93,12 @@
 "Create chat" = "채팅 만들기";
 "Create project…" = "프로젝트 만들기…";
 "Creation" = "생성순";
+"Credit" = "크레딧";
 "Current version" = "현재 버전";
 "Custom config.toml settings" = "config.toml 사용자 지정 설정";
 "Custom instructions" = "사용자 지정 지침";
+"Daily" = "일간";
+"Daily usage limit" = "일일 사용 한도";
 "Dark mode" = "다크 모드";
 "Default model" = "기본 모델";
 "Default model: %@" = "기본 모델: %@";
@@ -217,6 +223,8 @@
 "Rename chat" = "채팅 이름 변경";
 "Rename project" = "프로젝트 이름 변경";
 "Reset and install workspace" = "작업 영역 재설정 및 설치";
+"Resets at %@" = "%@에 초기화";
+"Resets on %@" = "%@에 초기화";
 "Review" = "검토";
 "Review code" = "코드 리뷰";
 "Right sidebar" = "오른쪽 사이드바";
@@ -280,12 +288,16 @@
 "Unarchive" = "보관 해제";
 "Uncommitted: %d files" = "커밋되지 않음: 파일 %d개";
 "Uncommitted: 1 file" = "커밋되지 않음: 파일 1개";
+"Unlimited credit" = "무제한 크레딧";
 "Unpin" = "고정 해제";
 "Unpin chat" = "채팅 고정 해제";
 "Unread" = "읽지 않음";
 "Untitled" = "제목 없음";
 "Updated" = "업데이트순";
+"Usage limit" = "사용 한도";
+"Usage limits for %@" = "%@의 사용 한도";
 "Use an existing folder" = "기존 폴더 사용";
+"Use credit to send messages when you hit your usage limits." = "사용 한도에 도달하면 크레딧으로 메시지를 보낼 수 있습니다.";
 "Use dark theme in the interface" = "인터페이스에 다크 테마 사용";
 "Use light, dark, or system appearance" = "라이트, 다크 또는 시스템 설정 사용";
 "Used %@" = "%@을(를) 사용했습니다";
@@ -294,6 +306,8 @@
 "Version" = "버전";
 "Waiting for confirmation…" = "확인 대기 중…";
 "Website" = "웹사이트";
+"Weekly" = "주간";
+"Weekly usage limit" = "주간 사용 한도";
 "What should we build?" = "무엇을 만들까요?";
 "What should we work on in %@?" = "%@에서 무엇을 작업할까요?";
 "Work locally" = "로컬에서 작업";
@@ -315,4 +329,5 @@
 "off" = "꺼짐";
 "on" = "켜짐";
 "remaining" = "남음";
+"used" = "사용";
 "~/.clawix (shared with CLI)" = "~/.clawix (CLI와 공유)";

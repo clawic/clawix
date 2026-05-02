@@ -4,6 +4,7 @@
 " instead." = " no lugar.";
 " is deprecated. Use " = " foi descontinuado. Use ";
 " or " = " ou ";
+"%@ credit remaining" = "%@ de crédito restante";
 "%@ off" = "%@ desativado";
 "%@ on" = "%@ ativado";
 "%@, website" = "%@, site";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld min";
 "%lld mo" = "%lld mês";
 "%lld w" = "%lld sem";
+"%lld-hour usage limit" = "Limite de uso de %lld horas";
+"%lld-minute usage limit" = "Limite de uso de %lld minutos";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "Velocidade 1,5x maior, maior uso";
 "About" = "Sobre";
@@ -90,9 +93,12 @@
 "Create chat" = "Criar conversa";
 "Create project…" = "Criar projeto…";
 "Creation" = "Criação";
+"Credit" = "Crédito";
 "Current version" = "Versão atual";
 "Custom config.toml settings" = "Configurações personalizadas de config.toml";
 "Custom instructions" = "Instruções personalizadas";
+"Daily" = "Diariamente";
+"Daily usage limit" = "Limite de uso diário";
 "Dark mode" = "Modo escuro";
 "Default model" = "Modelo padrão";
 "Default model: %@" = "Modelo padrão: %@";
@@ -217,6 +223,8 @@
 "Rename chat" = "Renomear conversa";
 "Rename project" = "Renomear projeto";
 "Reset and install workspace" = "Redefinir e instalar o espaço de trabalho";
+"Resets at %@" = "Renova às %@";
+"Resets on %@" = "Renova em %@";
 "Review" = "Revisão";
 "Review code" = "Revisar código";
 "Right sidebar" = "Barra lateral direita";
@@ -280,12 +288,16 @@
 "Unarchive" = "Desarquivar";
 "Uncommitted: %d files" = "Não commitados: %d arquivos";
 "Uncommitted: 1 file" = "Não commitado: 1 arquivo";
+"Unlimited credit" = "Crédito ilimitado";
 "Unpin" = "Desafixar";
 "Unpin chat" = "Desafixar conversa";
 "Unread" = "Não lido";
 "Untitled" = "Sem título";
 "Updated" = "Atualização";
+"Usage limit" = "Limite de uso";
+"Usage limits for %@" = "Limites de uso para %@";
 "Use an existing folder" = "Usar uma pasta existente";
+"Use credit to send messages when you hit your usage limits." = "Use crédito para enviar mensagens quando atingir seus limites.";
 "Use dark theme in the interface" = "Usar tema escuro na interface";
 "Use light, dark, or system appearance" = "Use claro, escuro ou igual ao sistema";
 "Used %@" = "Usou %@";
@@ -294,6 +306,8 @@
 "Version" = "Versão";
 "Waiting for confirmation…" = "Aguardando confirmação…";
 "Website" = "Site";
+"Weekly" = "Semanalmente";
+"Weekly usage limit" = "Limite de uso semanal";
 "What should we build?" = "O que vamos construir?";
 "What should we work on in %@?" = "No que vamos trabalhar em %@?";
 "Work locally" = "Trabalhar localmente";
@@ -315,4 +329,5 @@
 "off" = "desativado";
 "on" = "ativado";
 "remaining" = "restante";
+"used" = "usado";
 "~/.clawix (shared with CLI)" = "~/.clawix (compartilhado com a CLI)";

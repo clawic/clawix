@@ -4,6 +4,7 @@
 " instead." = " вместо этого.";
 " is deprecated. Use " = " устарело. Используйте ";
 " or " = " или ";
+"%@ credit remaining" = "Осталось %@ кредита";
 "%@ off" = "%@ выключен";
 "%@ on" = "%@ включён";
 "%@, website" = "%@, веб-сайт";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld мин";
 "%lld mo" = "%lld мес";
 "%lld w" = "%lld нед";
+"%lld-hour usage limit" = "Лимит за %lld ч.";
+"%lld-minute usage limit" = "Лимит за %lld мин.";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "Скорость выше в 1,5 раза, большее использование";
 "About" = "О приложении";
@@ -90,9 +93,12 @@
 "Create chat" = "Создать чат";
 "Create project…" = "Создать проект…";
 "Creation" = "По созданию";
+"Credit" = "Кредит";
 "Current version" = "Текущая версия";
 "Custom config.toml settings" = "Пользовательские настройки config.toml";
 "Custom instructions" = "Пользовательские инструкции";
+"Daily" = "Ежедневно";
+"Daily usage limit" = "Дневной лимит";
 "Dark mode" = "Тёмный режим";
 "Default model" = "Модель по умолчанию";
 "Default model: %@" = "Модель по умолчанию: %@";
@@ -217,6 +223,8 @@
 "Rename chat" = "Переименовать чат";
 "Rename project" = "Переименовать проект";
 "Reset and install workspace" = "Сбросить и установить рабочую область";
+"Resets at %@" = "Сброс в %@";
+"Resets on %@" = "Сброс %@";
 "Review" = "Проверка";
 "Review code" = "Ревью кода";
 "Right sidebar" = "Правая панель";
@@ -280,12 +288,16 @@
 "Unarchive" = "Разархивировать";
 "Uncommitted: %d files" = "Не зафиксировано: %d файлов";
 "Uncommitted: 1 file" = "Не зафиксировано: 1 файл";
+"Unlimited credit" = "Безлимит";
 "Unpin" = "Открепить";
 "Unpin chat" = "Открепить чат";
 "Unread" = "Непрочитано";
 "Untitled" = "Без заголовка";
 "Updated" = "По обновлению";
+"Usage limit" = "Лимит";
+"Usage limits for %@" = "Лимиты для %@";
 "Use an existing folder" = "Использовать существующую папку";
+"Use credit to send messages when you hit your usage limits." = "Используйте кредит, чтобы отправлять сообщения после достижения лимита.";
 "Use dark theme in the interface" = "Использовать тёмную тему интерфейса";
 "Use light, dark, or system appearance" = "Используйте светлую, тёмную или системную тему";
 "Used %@" = "Использовано: %@";
@@ -294,6 +306,8 @@
 "Version" = "Версия";
 "Waiting for confirmation…" = "Ожидание подтверждения…";
 "Website" = "Веб-сайт";
+"Weekly" = "Еженедельно";
+"Weekly usage limit" = "Недельный лимит";
 "What should we build?" = "Что построим?";
 "What should we work on in %@?" = "Над чем поработаем в %@?";
 "Work locally" = "Работать локально";
@@ -315,4 +329,5 @@
 "off" = "выключено";
 "on" = "включено";
 "remaining" = "осталось";
+"used" = "исп.";
 "~/.clawix (shared with CLI)" = "~/.clawix (используется с CLI)";

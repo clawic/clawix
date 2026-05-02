@@ -4,6 +4,7 @@
 " instead." = " stattdessen.";
 " is deprecated. Use " = " ist veraltet. Verwende ";
 " or " = " oder ";
+"%@ credit remaining" = "%@ Guthaben verbleibend";
 "%@ off" = "%@ deaktiviert";
 "%@ on" = "%@ aktiviert";
 "%@, website" = "%@, Website";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld Min.";
 "%lld mo" = "%lld Mon.";
 "%lld w" = "%lld Wo.";
+"%lld-hour usage limit" = "Nutzungslimit von %lld Stunden";
+"%lld-minute usage limit" = "Nutzungslimit von %lld Minuten";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "1,5-mal höhere Geschwindigkeit, höhere Nutzung";
 "About" = "Über";
@@ -90,9 +93,12 @@
 "Create chat" = "Chat erstellen";
 "Create project…" = "Projekt erstellen…";
 "Creation" = "Erstellung";
+"Credit" = "Guthaben";
 "Current version" = "Aktuelle Version";
 "Custom config.toml settings" = "Benutzerdefinierte config.toml-Einstellungen";
 "Custom instructions" = "Benutzerdefinierte Anweisungen";
+"Daily" = "Täglich";
+"Daily usage limit" = "Tägliches Nutzungslimit";
 "Dark mode" = "Dunkelmodus";
 "Default model" = "Standardmodell";
 "Default model: %@" = "Standardmodell: %@";
@@ -217,6 +223,8 @@
 "Rename chat" = "Chat umbenennen";
 "Rename project" = "Projekt umbenennen";
 "Reset and install workspace" = "Arbeitsbereich zurücksetzen und installieren";
+"Resets at %@" = "Zurücksetzen um %@";
+"Resets on %@" = "Zurücksetzen am %@";
 "Review" = "Überprüfung";
 "Review code" = "Code überprüfen";
 "Right sidebar" = "Rechte Seitenleiste";
@@ -280,12 +288,16 @@
 "Unarchive" = "Aus Archiv entfernen";
 "Uncommitted: %d files" = "Nicht committet: %d Dateien";
 "Uncommitted: 1 file" = "Nicht committet: 1 Datei";
+"Unlimited credit" = "Unbegrenztes Guthaben";
 "Unpin" = "Lösen";
 "Unpin chat" = "Chat lösen";
 "Unread" = "Ungelesen";
 "Untitled" = "Ohne Titel";
 "Updated" = "Aktualisierung";
+"Usage limit" = "Nutzungslimit";
+"Usage limits for %@" = "Nutzungslimits für %@";
 "Use an existing folder" = "Vorhandenen Ordner verwenden";
+"Use credit to send messages when you hit your usage limits." = "Verwende Guthaben, um Nachrichten zu senden, wenn deine Limits erreicht sind.";
 "Use dark theme in the interface" = "Dunkles Design in der Oberfläche verwenden";
 "Use light, dark, or system appearance" = "Hell, dunkel oder Systemeinstellung verwenden";
 "Used %@" = "%@ wurde benutzt";
@@ -294,6 +306,8 @@
 "Version" = "Version";
 "Waiting for confirmation…" = "Warten auf Bestätigung…";
 "Website" = "Website";
+"Weekly" = "Wöchentlich";
+"Weekly usage limit" = "Wöchentliches Nutzungslimit";
 "What should we build?" = "Was bauen wir?";
 "What should we work on in %@?" = "Woran arbeiten wir in %@?";
 "Work locally" = "Lokal arbeiten";
@@ -315,4 +329,5 @@
 "off" = "aus";
 "on" = "an";
 "remaining" = "verbleibend";
+"used" = "genutzt";
 "~/.clawix (shared with CLI)" = "~/.clawix (gemeinsam mit der CLI)";

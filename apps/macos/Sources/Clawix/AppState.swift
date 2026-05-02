@@ -507,6 +507,15 @@ final class AppState: ObservableObject {
     /// toggle. Cleared if the user explicitly refreshes.
     private var lazyLoadedProjects: Set<UUID> = []
     @Published var clawixBackendStatus: ClawixService.Status = .idle
+    /// Snapshot of the user's primary/secondary rate-limit windows as
+    /// reported by the backend (`account/rateLimits/read` once at boot,
+    /// then refreshed by `account/rateLimits/updated`). nil while the
+    /// initial fetch is in flight or when the backend declined to answer.
+    @Published var rateLimits: RateLimitSnapshot? = nil
+    /// Per-bucket rate-limit snapshots keyed by metered `limit_id`
+    /// (e.g. "codex", "codex_<model>"). Empty when the backend doesn't
+    /// surface a per-bucket view.
+    @Published var rateLimitsByLimitId: [String: RateLimitSnapshot] = [:]
     @Published var settingsCategory: SettingsCategory = .general
     /// User-selected interface language. Persisted via UserDefaults
     /// (suite `appPrefsSuite`, key `PreferredLanguage`). Changing

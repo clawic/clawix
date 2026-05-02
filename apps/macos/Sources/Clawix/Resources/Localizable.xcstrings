@@ -1282,6 +1282,316 @@
         }
       }
     },
+    "Weekly": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semanalmente"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hebdomadaire"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wöchentlich"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settimanale"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semanalmente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎週"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每周"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주간"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Еженедельно"
+          }
+        }
+      }
+    },
+    "Daily": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diariamente"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daily"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quotidien"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Täglich"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giornaliero"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diariamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎日"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일간"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ежедневно"
+          }
+        }
+      }
+    },
+    "Weekly usage limit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Límite de uso semanal" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Weekly usage limit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Limite d’usage hebdomadaire" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wöchentliches Nutzungslimit" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Limite d’uso settimanale" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limite de uso semanal" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "週間使用上限" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "每周使用上限" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "주간 사용 한도" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Недельный лимит" } }
+      }
+    },
+    "Daily usage limit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Límite de uso diario" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Daily usage limit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Limite d’usage quotidienne" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Tägliches Nutzungslimit" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Limite d’uso giornaliero" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limite de uso diário" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "日次使用上限" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "每日使用上限" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "일일 사용 한도" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Дневной лимит" } }
+      }
+    },
+    "%lld-hour usage limit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Límite de uso de %lld horas" } },
+        "en": { "stringUnit": { "state": "translated", "value": "%lld-hour usage limit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Limite d’usage de %lld heures" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nutzungslimit von %lld Stunden" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Limite d’uso di %lld ore" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limite de uso de %lld horas" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%lld時間の使用上限" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld小时使用上限" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%lld시간 사용 한도" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Лимит за %lld ч." } }
+      }
+    },
+    "%lld-minute usage limit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Límite de uso de %lld minutos" } },
+        "en": { "stringUnit": { "state": "translated", "value": "%lld-minute usage limit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Limite d’usage de %lld minutes" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nutzungslimit von %lld Minuten" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Limite d’uso di %lld minuti" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limite de uso de %lld minutos" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%lld分の使用上限" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld分钟使用上限" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%lld분 사용 한도" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Лимит за %lld мин." } }
+      }
+    },
+    "Usage limit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Límite de uso" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Usage limit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Limite d’usage" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nutzungslimit" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Limite d’uso" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limite de uso" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "使用上限" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用上限" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "사용 한도" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Лимит" } }
+      }
+    },
+    "Resets at %@": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Se restablece a las %@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Resets at %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Réinitialisation à %@" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Zurücksetzen um %@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Si azzera alle %@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Renova às %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%@ にリセット" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%@ 重置" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%@에 초기화" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Сброс в %@" } }
+      }
+    },
+    "Resets on %@": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Se restablece el %@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Resets on %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Réinitialisation le %@" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Zurücksetzen am %@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Si azzera il %@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Renova em %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%@ にリセット" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%@ 重置" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%@에 초기화" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Сброс %@" } }
+      }
+    },
+    "Usage limits for %@": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Límites de uso para %@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Usage limits for %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Limites d’usage pour %@" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nutzungslimits für %@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Limiti d’uso per %@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limites de uso para %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%@ の使用上限" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%@ 的使用上限" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%@의 사용 한도" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Лимиты для %@" } }
+      }
+    },
+    "Unlimited credit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Crédito ilimitado" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Unlimited credit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Crédit illimité" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Unbegrenztes Guthaben" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Credito illimitato" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Crédito ilimitado" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "無制限クレジット" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无限额度" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "무제한 크레딧" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Безлимит" } }
+      }
+    },
+    "%@ credit remaining": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "%@ de crédito restante" } },
+        "en": { "stringUnit": { "state": "translated", "value": "%@ credit remaining" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "%@ de crédit restant" } },
+        "de": { "stringUnit": { "state": "translated", "value": "%@ Guthaben verbleibend" } },
+        "it": { "stringUnit": { "state": "translated", "value": "%@ di credito rimanente" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "%@ de crédito restante" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "残り %@ クレジット" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "剩余 %@ 额度" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%@ 크레딧 남음" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Осталось %@ кредита" } }
+      }
+    },
+    "used": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "usado" } },
+        "en": { "stringUnit": { "state": "translated", "value": "used" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "utilisé" } },
+        "de": { "stringUnit": { "state": "translated", "value": "genutzt" } },
+        "it": { "stringUnit": { "state": "translated", "value": "usato" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "usado" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "使用済み" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已用" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "사용" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "исп." } }
+      }
+    },
+    "Use credit to send messages when you hit your usage limits.": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Usa crédito para enviar mensajes cuando alcances tus límites de uso." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Use credit to send messages when you hit your usage limits." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Utilisez le crédit pour envoyer des messages lorsque vous atteignez vos limites." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verwende Guthaben, um Nachrichten zu senden, wenn deine Limits erreicht sind." } },
+        "it": { "stringUnit": { "state": "translated", "value": "Usa il credito per inviare messaggi quando raggiungi i tuoi limiti." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Use crédito para enviar mensagens quando atingir seus limites." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "使用上限に達したらクレジットでメッセージを送信できます。" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "达到使用上限时使用额度发送消息。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "사용 한도에 도달하면 크레딧으로 메시지를 보낼 수 있습니다." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Используйте кредит, чтобы отправлять сообщения после достижения лимита." } }
+      }
+    },
+    "Credit": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Crédito" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Credit" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Crédit" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Guthaben" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Credito" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Crédito" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "クレジット" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "额度" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "크레딧" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Кредит" } }
+      }
+    },
     "Sign out": {
       "localizations": {
         "es": {

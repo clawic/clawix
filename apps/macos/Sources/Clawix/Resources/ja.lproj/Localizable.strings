@@ -4,6 +4,7 @@
 " instead." = " を使用してください。";
 " is deprecated. Use " = " は非推奨です。";
 " or " = " または ";
+"%@ credit remaining" = "残り %@ クレジット";
 "%@ off" = "%@ オフ";
 "%@ on" = "%@ オン";
 "%@, website" = "%@、Webサイト";
@@ -12,6 +13,8 @@
 "%lld min" = "%lld 分";
 "%lld mo" = "%lld ヶ月";
 "%lld w" = "%lld 週間";
+"%lld-hour usage limit" = "%lld時間の使用上限";
+"%lld-minute usage limit" = "%lld分の使用上限";
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "速度が1.5倍、使用量が増加";
 "About" = "バージョン情報";
@@ -90,9 +93,12 @@
 "Create chat" = "チャットを作成";
 "Create project…" = "プロジェクトを作成…";
 "Creation" = "作成順";
+"Credit" = "クレジット";
 "Current version" = "現在のバージョン";
 "Custom config.toml settings" = "config.toml のカスタム設定";
 "Custom instructions" = "カスタム指示";
+"Daily" = "毎日";
+"Daily usage limit" = "日次使用上限";
 "Dark mode" = "ダークモード";
 "Default model" = "既定のモデル";
 "Default model: %@" = "既定のモデル: %@";
@@ -217,6 +223,8 @@
 "Rename chat" = "チャットの名前を変更";
 "Rename project" = "プロジェクトの名前を変更";
 "Reset and install workspace" = "ワークスペースをリセットしてインストール";
+"Resets at %@" = "%@ にリセット";
+"Resets on %@" = "%@ にリセット";
 "Review" = "レビュー";
 "Review code" = "コードレビュー";
 "Right sidebar" = "右サイドバー";
@@ -280,12 +288,16 @@
 "Unarchive" = "アーカイブ解除";
 "Uncommitted: %d files" = "未コミット: %d ファイル";
 "Uncommitted: 1 file" = "未コミット: 1 ファイル";
+"Unlimited credit" = "無制限クレジット";
 "Unpin" = "ピン留め解除";
 "Unpin chat" = "チャットのピン留めを解除";
 "Unread" = "未読";
 "Untitled" = "無題";
 "Updated" = "更新順";
+"Usage limit" = "使用上限";
+"Usage limits for %@" = "%@ の使用上限";
 "Use an existing folder" = "既存のフォルダを使用";
+"Use credit to send messages when you hit your usage limits." = "使用上限に達したらクレジットでメッセージを送信できます。";
 "Use dark theme in the interface" = "インターフェースをダークテーマにする";
 "Use light, dark, or system appearance" = "ライト、ダーク、またはシステム設定を使用";
 "Used %@" = "%@を使用しました";
@@ -294,6 +306,8 @@
 "Version" = "バージョン";
 "Waiting for confirmation…" = "確認を待機中…";
 "Website" = "Webサイト";
+"Weekly" = "毎週";
+"Weekly usage limit" = "週間使用上限";
 "What should we build?" = "何を作りましょうか？";
 "What should we work on in %@?" = "%@ で何に取り組みましょうか？";
 "Work locally" = "ローカルで作業";
@@ -315,4 +329,5 @@
 "off" = "オフ";
 "on" = "オン";
 "remaining" = "残り";
+"used" = "使用済み";
 "~/.clawix (shared with CLI)" = "~/.clawix（CLIと共有）";
