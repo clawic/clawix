@@ -1609,8 +1609,17 @@ extension AnyTransition {
             removal: .opacity
         )
     }
+
+    // Symmetric variant: removal also nudges back to the same offset while
+    // fading. Use for popovers that should feel like they recede back to
+    // their trigger on dismiss (no NSOpenPanel risk).
+    static func softNudgeSymmetric(x: CGFloat = 0, y: CGFloat = 0) -> AnyTransition {
+        .modifier(
+            active: PopupNudgeModifier(xOffset: x, yOffset: y, opacity: 0),
+            identity: PopupNudgeModifier(xOffset: 0, yOffset: 0, opacity: 1)
+        )
+    }
 }
-// trigger 1777602580
 
 // MARK: - Voice recording: waveform + transcribing spinner
 
