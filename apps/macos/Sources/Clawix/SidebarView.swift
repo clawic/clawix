@@ -139,8 +139,8 @@ struct SidebarView: View {
                 chronoHeader
                     .padding(.leading, 18)
                     .padding(.trailing, 9)
-                    .padding(.top, 2)
-                    .padding(.bottom, 0)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
                     .onHover { projectsHeaderHovered = $0 }
                 let chronoCount = min(snapshot.chrono.count, chronoLimit)
                 SidebarAccordion(
@@ -169,8 +169,8 @@ struct SidebarView: View {
                 projectsHeader
                     .padding(.leading, 18)
                     .padding(.trailing, 9)
-                    .padding(.top, 2)
-                    .padding(.bottom, 0)
+                    .padding(.top, 6)
+                    .padding(.bottom, 4)
                     .onHover { projectsHeaderHovered = $0 }
 
                 // Projects list. We add/remove the whole subtree when
@@ -2672,4 +2672,5 @@ private struct DragChipView: View {
         .shadow(color: .black.opacity(0.40), radius: 14, x: 0, y: 8)
     }
 }
+
 
