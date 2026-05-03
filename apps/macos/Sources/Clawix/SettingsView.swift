@@ -574,6 +574,10 @@ private struct GeneralPage: View {
     @State private var completionNotify: String = "Siempre"
     @State private var permissionNotify: Bool = true
     @State private var questionNotify: Bool = true
+    @State private var syncArchiveWithCodex: Bool = SyncSettings.syncArchiveWithCodex
+    @State private var syncRenamesWithCodex: Bool = SyncSettings.syncRenamesWithCodex
+    @State private var pushProjectsToCodex: Bool = SyncSettings.pushProjectsToCodex
+    @State private var autoReloadOnFocus: Bool = SyncSettings.autoReloadOnFocus
 
     enum WorkMode: Hashable { case coding, daily }
     enum FollowBehavior: Hashable { case queue, drive }
@@ -702,6 +706,48 @@ private struct GeneralPage: View {
                 ImportAgentRow()
             }
 
+            SectionLabel(title: "Sync with Codex")
+            SettingsCard {
+                ToggleRow(
+                    title: "Sync archived chats with Codex",
+                    detail: "When you archive or unarchive a chat, mirror that to Codex CLI. Disable to keep archive state local to this app. Reactivating sync does not propagate previous local-only changes.",
+                    isOn: Binding(
+                        get: { syncArchiveWithCodex },
+                        set: { newValue in
+                            syncArchiveWithCodex = newValue
+                            SyncSettings.syncArchiveWithCodex = newValue
+                        }
+                    )
+                )
+                CardDivider()
+                ToggleRow(
+                    title: "Sync chat renames with Codex",
+                    detail: "When you rename a chat, also update the title in Codex CLI. Disable to keep custom titles only in this app.",
+                    isOn: Binding(
+                        get: { syncRenamesWithCodex },
+                        set: { newValue in
+                            syncRenamesWithCodex = newValue
+                            SyncSettings.syncRenamesWithCodex = newValue
+                        }
+                    )
+                )
+                CardDivider()
+                ToggleRow(
+                    title: "Push local projects to Codex",
+                    detail: "When enabled, projects you create in this app are written to Codex's global state file so other Codex apps see them. Default off to keep your local projects local.",
+                    isOn: Binding(
+                        get: { pushProjectsToCodex },
+                        set: { newValue in
+                            handlePushProjectsToggle(newValue)
+                        }
+                    )
+                )
+                CardDivider()
+                PinsSourceInfoRow(isLocal: appState.pinsAreLocal)
+            }
+
+            HiddenCodexFoldersSection()
+
             SectionLabel(title: "Dictado")
             SettingsCard {
                 ActionPillRow(
@@ -752,7 +798,196 @@ private struct GeneralPage: View {
                     isOn: $questionNotify
                 )
             }
+
+            SectionLabel(title: "App behavior")
+            SettingsCard {
+                ToggleRow(
+                    title: "Auto-refresh on focus",
+                    detail: "Reload chats from Codex automatically when this app becomes the active window.",
+                    isOn: Binding(
+                        get: { autoReloadOnFocus },
+                        set: { newValue in
+                            autoReloadOnFocus = newValue
+                            SyncSettings.autoReloadOnFocus = newValue
+                        }
+                    )
+                )
+            }
+
+            SectionLabel(title: "Danger zone")
+            SettingsCard {
+                ResetLocalOverridesRow()
+            }
         }
+    }
+
+    /// Toggling Push projects ON triggers a confirmation dialog explaining
+    /// that we will write to a Codex-managed file. Cancelling reverts the
+    /// toggle to OFF so the @State stays in sync with the actual setting.
+    /// Toggling OFF is silent (no confirm, no Codex side-effect).
+    private func handlePushProjectsToggle(_ newValue: Bool) {
+        if !newValue {
+            pushProjectsToCodex = false
+            SyncSettings.pushProjectsToCodex = false
+            return
+        }
+        appState.pendingConfirmation = ConfirmationRequest(
+            title: "Sync local projects to Codex?",
+            body: "This will write your local projects to Codex's global state file at ~/.codex/.codex-global-state.json. Other Codex apps (CLI, Electron desktop) will see them. Existing Codex data is not affected.\n\nThis is a write to a file managed by Codex. We cannot guarantee that future Codex updates won't change its format.",
+            confirmLabel: "Enable sync",
+            isDestructive: false,
+            onConfirm: {
+                self.pushProjectsToCodex = true
+                SyncSettings.pushProjectsToCodex = true
+            }
+        )
+    }
+}
+
+private struct PinsSourceInfoRow: View {
+    let isLocal: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("Pins source")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color(white: 0.94))
+                    Text(isLocal ? "Local" : "Codex")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(isLocal ? Color(white: 0.94) : Color(white: 0.55))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color.white.opacity(isLocal ? 0.10 : 0.04))
+                        )
+                }
+                Text(isLocal
+                     ? "Pins are managed locally. Use Reset local overrides below to switch back to Codex's pins."
+                     : "Pins are read from Codex on each launch. Pin or unpin from this app to take local control.")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(white: 0.55))
+            }
+            Spacer(minLength: 12)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+}
+
+private struct HiddenCodexFoldersSection: View {
+    @EnvironmentObject var appState: AppState
+    @State private var hidden: [String] = []
+
+    var body: some View {
+        SectionLabel(title: "Hidden Codex folders")
+        SettingsCard {
+            if hidden.isEmpty {
+                HStack {
+                    Text("No hidden folders. Right-click a Codex folder in the sidebar to hide it.")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(white: 0.55))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            } else {
+                ForEach(Array(hidden.enumerated()), id: \.element) { idx, path in
+                    if idx > 0 { CardDivider() }
+                    HiddenFolderRow(path: path) {
+                        appState.showCodexRoot(path: path)
+                        reload()
+                    }
+                }
+            }
+        }
+        .onAppear { reload() }
+        .onChange(of: appState.projects) { _, _ in reload() }
+    }
+
+    private func reload() {
+        hidden = appState.hiddenCodexRoots()
+    }
+}
+
+private struct HiddenFolderRow: View {
+    let path: String
+    let onShow: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text((path as NSString).lastPathComponent)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color(white: 0.94))
+                Text(path)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(white: 0.55))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            Spacer(minLength: 12)
+            Button("Show", action: onShow)
+                .buttonStyle(SheetCancelButtonStyle())
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+}
+
+private struct ResetLocalOverridesRow: View {
+    @EnvironmentObject var appState: AppState
+    @State private var hovered = false
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Reset local overrides")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(Color(white: 0.94))
+                Text("Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(white: 0.55))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            Button("Reset") { presentConfirmation() }
+                .buttonStyle(SheetDestructiveButtonStyle())
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private func presentConfirmation() {
+        let counts = appState.localOverrideCounts()
+        let header = NSLocalizedString(
+            "This will permanently delete the following local data from this app:",
+            comment: "reset local overrides body header"
+        )
+        let footer = NSLocalizedString(
+            "After reset, the app will reload from Codex on the next refresh. Codex's data and other Codex apps are not affected. This cannot be undone.",
+            comment: "reset local overrides body footer"
+        )
+        let lines = [
+            String(format: "• %@: %d", NSLocalizedString("Pinned threads", comment: ""), counts.pins),
+            String(format: "• %@: %d", NSLocalizedString("Local projects", comment: ""), counts.projects),
+            String(format: "• %@: %d", NSLocalizedString("Chat-project overrides", comment: ""), counts.chatProjectOverrides),
+            String(format: "• %@: %d", NSLocalizedString("Projectless markers", comment: ""), counts.projectlessThreads),
+            String(format: "• %@: %d", NSLocalizedString("Local archive entries", comment: ""), counts.archives),
+            String(format: "• %@: %d", NSLocalizedString("Custom titles", comment: ""), counts.titles),
+            String(format: "• %@: %d", NSLocalizedString("Hidden Codex folders", comment: ""), counts.hiddenRoots)
+        ].joined(separator: "\n")
+        let body = "\(header)\n\n\(lines)\n\n\(footer)"
+        appState.pendingConfirmation = ConfirmationRequest(
+            title: "Reset local overrides?",
+            body: LocalizedStringKey(body),
+            confirmLabel: "Reset",
+            isDestructive: true,
+            onConfirm: { appState.resetLocalOverrides() }
+        )
     }
 }
 
@@ -1026,7 +1261,7 @@ private struct RecentDictationRow: View {
             }
             .buttonStyle(.plain)
             .onHover { copyHovered = $0 }
-            .hoverHint("Copy")
+            .hoverHint(L10n.t("Copy"))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -1491,7 +1726,7 @@ private struct ConfigurationPage: View {
                         .font(.system(size: 13))
                         .foregroundColor(Palette.textPrimary)
                     Spacer()
-                    Text("26.430.10722")
+                    Text(AppVersion.displayString)
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(Palette.textSecondary)
                 }
@@ -1544,10 +1779,10 @@ private struct DeprecationBanner: View {
                 HStack(spacing: 4) {
                     Image(systemName: "globe")
                         .font(.system(size: 10))
-                        .foregroundColor(Color(red: 0.45, green: 0.65, blue: 1.0))
+                        .foregroundColor(Palette.pastelBlue)
                     Text("Toggle experimental features by editing the configuration file.")
                         .font(.system(size: 11.5))
-                        .foregroundColor(Color(red: 0.45, green: 0.65, blue: 1.0))
+                        .foregroundColor(Palette.pastelBlue)
                     Text("for details.")
                         .font(.system(size: 11.5))
                         .foregroundColor(Color(white: 0.75))
@@ -1718,7 +1953,7 @@ private struct ExpandIconButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .hoverHint("Edit in large view")
+        .hoverHint(L10n.t("Edit in large view"))
     }
 }
 
@@ -2373,7 +2608,7 @@ private struct EnvironmentsDetail: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .hoverHint("Volver")
+                .hoverHint(L10n.t("Back"))
                 Text("Environments")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
@@ -2803,7 +3038,7 @@ private struct MCPListView: View {
                         .foregroundColor(Palette.textSecondary)
                     + Text(" ")
                     + Text("Learn more.")
-                        .foregroundColor(Color(red: 0.45, green: 0.65, blue: 1.0))
+                        .foregroundColor(Palette.pastelBlue)
                 )
                 .font(.system(size: 12.5))
             }
@@ -2866,7 +3101,7 @@ private struct MCPServerRow: View {
             }
             .buttonStyle(.plain)
             .onHover { configHovered = $0 }
-            .hoverHint("Configure")
+            .hoverHint(L10n.t("Configure"))
             PillToggle(isOn: $server.isOn)
         }
         .padding(.horizontal, 14)
@@ -2911,7 +3146,7 @@ private struct MCPDetailView: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .hoverHint("Volver")
+                .hoverHint(L10n.t("Back"))
                 Text("Connect to a custom MCP")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
@@ -2923,7 +3158,7 @@ private struct MCPDetailView: View {
                     Image(systemName: "arrow.up.right.square")
                         .font(.system(size: 10))
                 }
-                .foregroundColor(Color(red: 0.45, green: 0.65, blue: 1.0))
+                .foregroundColor(Palette.pastelBlue)
             }
             .buttonStyle(.plain)
             .padding(.top, 6)
@@ -3094,7 +3329,7 @@ private struct MCPTrashButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .hoverHint("Delete")
+        .hoverHint(L10n.t("Delete"))
     }
 }
 

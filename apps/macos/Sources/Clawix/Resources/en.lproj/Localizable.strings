@@ -69,6 +69,7 @@
 "Coming soon" = "Coming soon";
 "Command to start" = "Command to start";
 "Composer text field" = "Composer text field";
+"Configure" = "Configure";
 "Connect external tools and data sources." = "Connect external tools and data sources.";
 "Connect to a custom MCP" = "Connect to a custom MCP";
 "Connected" = "Connected";
@@ -113,6 +114,7 @@
 "Drop to attach" = "Drop to attach";
 "Each action can run any command and shows up in the toolbar header." = "Each action can run any command and shows up in the toolbar header.";
 "Edit" = "Edit";
+"Edit in large view" = "Edit in large view";
 "Edit project" = "Edit project";
 "Editor" = "Editor";
 "Enable it with " = "Enable it with ";

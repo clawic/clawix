@@ -69,6 +69,7 @@
 "Coming soon" = "곧 제공 예정";
 "Command to start" = "시작 명령";
 "Composer text field" = "작성기 텍스트 필드";
+"Configure" = "구성";
 "Connect external tools and data sources." = "외부 도구와 데이터 원본을 연결하세요.";
 "Connect to a custom MCP" = "사용자 지정 MCP에 연결";
 "Connected" = "연결됨";
@@ -113,6 +114,7 @@
 "Drop to attach" = "놓아서 첨부";
 "Each action can run any command and shows up in the toolbar header." = "이 작업은 모든 명령을 실행할 수 있으며 헤더에 표시됩니다.";
 "Edit" = "편집";
+"Edit in large view" = "큰 보기로 편집";
 "Edit project" = "프로젝트 편집";
 "Editor" = "에디터";
 "Enable it with " = "활성화하려면 ";

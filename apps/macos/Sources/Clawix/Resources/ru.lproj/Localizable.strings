@@ -69,6 +69,7 @@
 "Coming soon" = "Скоро";
 "Command to start" = "Команда запуска";
 "Composer text field" = "Поле ввода редактора";
+"Configure" = "Настроить";
 "Connect external tools and data sources." = "Подключайте внешние инструменты и источники данных.";
 "Connect to a custom MCP" = "Подключиться к пользовательскому MCP";
 "Connected" = "Подключено";
@@ -113,6 +114,7 @@
 "Drop to attach" = "Отпустите, чтобы прикрепить";
 "Each action can run any command and shows up in the toolbar header." = "Эти действия могут выполнять любые команды и отображаются в заголовке.";
 "Edit" = "Изменить";
+"Edit in large view" = "Редактировать в большом виде";
 "Edit project" = "Изменить проект";
 "Editor" = "Редактор";
 "Enable it with " = "Включите с помощью ";

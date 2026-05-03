@@ -69,6 +69,7 @@
 "Coming soon" = "即将推出";
 "Command to start" = "启动命令";
 "Composer text field" = "编辑器文本框";
+"Configure" = "配置";
 "Connect external tools and data sources." = "连接外部工具和数据源。";
 "Connect to a custom MCP" = "连接到自定义 MCP";
 "Connected" = "已连接";
@@ -113,6 +114,7 @@
 "Drop to attach" = "释放以附加";
 "Each action can run any command and shows up in the toolbar header." = "这些操作可以运行任何命令，并会显示在标题栏中。";
 "Edit" = "编辑";
+"Edit in large view" = "在大视图中编辑";
 "Edit project" = "编辑项目";
 "Editor" = "编辑器";
 "Enable it with " = "使用 ";

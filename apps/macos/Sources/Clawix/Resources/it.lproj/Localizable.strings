@@ -69,6 +69,7 @@
 "Coming soon" = "Prossimamente";
 "Command to start" = "Comando di avvio";
 "Composer text field" = "Campo di testo del compositore";
+"Configure" = "Configura";
 "Connect external tools and data sources." = "Collega strumenti esterni e origini dati.";
 "Connect to a custom MCP" = "Connetti a un MCP personalizzato";
 "Connected" = "Connesso";
@@ -113,6 +114,7 @@
 "Drop to attach" = "Rilascia per allegare";
 "Each action can run any command and shows up in the toolbar header." = "Queste azioni possono eseguire qualsiasi comando e verranno mostrate nell’intestazione.";
 "Edit" = "Modifica";
+"Edit in large view" = "Modifica in vista grande";
 "Edit project" = "Modifica progetto";
 "Editor" = "Editor";
 "Enable it with " = "Attivalo con ";

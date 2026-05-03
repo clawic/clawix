@@ -33,8 +33,9 @@ struct ContentView: View {
 
     private var rightSidebarColumnWidth: CGFloat {
         switch appState.rightSidebarContent {
-        case .browser: return rightSidebarBrowserWidth
-        case .empty:   return rightSidebarWidth
+        case .browser:    return rightSidebarBrowserWidth
+        case .empty:      return rightSidebarWidth
+        case .fileViewer: return rightSidebarBrowserWidth
         }
     }
 
@@ -366,6 +367,12 @@ private struct ContentTopChrome: View {
         .sheet(item: $chatRenameTarget) { chat in
             ChatRenameSheet(chat: chat) { chatRenameTarget = nil }
         }
+        .sheet(item: Binding(
+            get: { appState.pendingConfirmation },
+            set: { appState.pendingConfirmation = $0 }
+        )) { request in
+            ConfirmationDialog(request: request) { appState.pendingConfirmation = nil }
+        }
     }
 }
 
@@ -389,6 +396,8 @@ private struct RightSidebarColumn: View {
                 RightSidebarBody()
             case .browser:
                 BrowserView()
+            case .fileViewer:
+                EmptyView()
             }
         }
         .frame(maxHeight: .infinity)
@@ -821,6 +830,7 @@ enum Palette {
     static let textPrimary   = Color.white
     static let textSecondary = Color(white: 0.55)
     static let textTertiary  = Color(white: 0.38)
+    static let pastelBlue    = Color(red: 0.45, green: 0.65, blue: 1.0)
 }
 
 // MARK: - Standard dropdown / popup menu style

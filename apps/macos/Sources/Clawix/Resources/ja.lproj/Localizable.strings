@@ -69,6 +69,7 @@
 "Coming soon" = "近日公開";
 "Command to start" = "起動コマンド";
 "Composer text field" = "コンポーザーのテキストフィールド";
+"Configure" = "構成";
 "Connect external tools and data sources." = "外部ツールとデータソースを接続します。";
 "Connect to a custom MCP" = "カスタム MCP に接続";
 "Connected" = "接続済み";
@@ -113,6 +114,7 @@
 "Drop to attach" = "ドロップして添付";
 "Each action can run any command and shows up in the toolbar header." = "これらのアクションは任意のコマンドを実行でき、ヘッダーに表示されます。";
 "Edit" = "編集";
+"Edit in large view" = "拡大表示で編集";
 "Edit project" = "プロジェクトを編集";
 "Editor" = "エディタ";
 "Enable it with " = "有効にするには ";
