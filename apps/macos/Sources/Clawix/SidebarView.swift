@@ -1270,9 +1270,10 @@ private struct CollapsibleSectionLabel: View {
                 leadingIcon
                     .foregroundColor(iconColor)
                     .frame(width: 15, height: 15, alignment: .center)
-                    .padding(.trailing, 11)
+                    .scaleEffect(expanded ? 0 : 1, anchor: .center)
                     .opacity(expanded ? 0 : 1)
-                    .animation(.easeInOut(duration: 0.28), value: expanded)
+                    .animation(.easeOut(duration: 0.16), value: expanded)
+                    .padding(.trailing, 11)
             }
             Text(title)
                 .font(.system(size: 13, weight: .light))
