@@ -1367,6 +1367,10 @@ struct RecentChatRow: View {
     @State private var hovered = false
     @State private var pinHovered = false
     @State private var archiveHovered = false
+    /// Captured live from a `GeometryReader` background so the `.onDrag`
+    /// preview can render at the exact width of the source row instead of
+    /// shrinking to its intrinsic content size.
+    @State private var rowWidth: CGFloat = 280
 
     private var isSelected: Bool {
         if case let .chat(id) = appState.currentRoute, id == chat.id { return true }
@@ -1446,6 +1450,15 @@ struct RecentChatRow: View {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(rowBackground)
         )
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { rowWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { _, newValue in
+                        rowWidth = newValue
+                    }
+            }
+        )
         .onTapGesture {
             appState.currentRoute = .chat(chat.id)
         }
@@ -1470,32 +1483,13 @@ struct RecentChatRow: View {
             provider.suggestedName = chat.title
             return provider
         } preview: {
-            // Translucent chip: clearly distinct from a list row so the
-            // user does not read the drag preview as a duplicate of the
-            // source still sitting in the list. Default macOS preview is
-            // an opaque snapshot of the source view at full row size.
-            HStack(spacing: 8) {
-                PinIcon(size: 11)
-                    .foregroundColor(Color(white: 0.85))
-                    .frame(width: 12, height: 12)
-                Text(chat.title.isEmpty
-                     ? String(localized: "Conversation", bundle: .module)
-                     : chat.title)
-                    .font(.system(size: 12.5, weight: .regular))
-                    .foregroundColor(Color(white: 0.95))
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(white: 0.18).opacity(0.92))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                    )
-            )
-            .shadow(color: .black.opacity(0.35), radius: 8, x: 0, y: 4)
+            // 1pt transparent: macOS animates the drag preview settling
+            // at the drop location for ~500ms and SwiftUI does not expose
+            // a way to disable it. We hand it a 1pt invisible view here
+            // so the system has nothing visible to fade. The actual chip
+            // the user sees follows the cursor via `DragChipPanel`, which
+            // we close instantly on drop.
+            Color.clear.frame(width: 1, height: 1)
         }
         .contextMenu {
             if archivedRow {
@@ -2178,6 +2172,16 @@ private struct PinnedReorderableList: View {
     @State private var targetIndex: Int? = nil
     @State private var pendingClearTask: DispatchWorkItem? = nil
     @State private var mouseUpMonitor: Any? = nil
+    /// Custom drag chip rendered in a borderless `NSPanel` that follows
+    /// the cursor. Bypasses macOS's built-in drag preview so we control
+    /// when it disappears (instantly on drop), instead of the system's
+    /// ~500ms settle animation.
+    @State private var dragChipPanel: DragChipPanel? = nil
+    /// Each row reports its window-coord frame here so `handleDragStart`
+    /// can compute the cursor's offset within the row at drag start. The
+    /// chip is anchored to that offset so the cursor stays at the same
+    /// point of the chip the user originally clicked.
+    @State private var rowFramesById: [UUID: CGRect] = [:]
 
     private let baseSpacing: CGFloat = 2
     /// Approximate row height. RecentChatRow renders at ~32 pt with
@@ -2214,14 +2218,20 @@ private struct PinnedReorderableList: View {
         .onAppear { installMouseUpMonitor() }
         .onDisappear {
             cancelPendingClear()
+            cleanupDragChip()
             removeMouseUpMonitor()
         }
+        .onPreferenceChange(PinnedRowFrameKey.self) { rowFramesById = $0 }
         .onChange(of: pinned.map(\.id)) { _, _ in
             // Defensive cleanup: any pinned-array reorder (ours or an
             // external sync) clears lingering drag state. Belt-and-
             // suspenders against the "extra gap stays forever" bug.
-            guard draggingId != nil || targetIndex != nil else { return }
+            guard draggingId != nil || targetIndex != nil else {
+                cleanupDragChip()
+                return
+            }
             cancelPendingClear()
+            cleanupDragChip()
             targetIndex = nil
             draggingId = nil
         }
@@ -2260,6 +2270,14 @@ private struct PinnedReorderableList: View {
             .frame(height: isDragging ? 0 : nil, alignment: .top)
             .clipped()
             .allowsHitTesting(!isDragging)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: PinnedRowFrameKey.self,
+                        value: [chat.id: proxy.frame(in: .global)]
+                    )
+                }
+            )
             .onDrop(of: [.text], delegate: PinnedRowDropDelegate(
                 computeSlot: { y in y < rowHeight / 2 ? slot : slot + 1 },
                 onSet: { setTarget(slot: $0) },
@@ -2319,6 +2337,56 @@ private struct PinnedReorderableList: View {
         // catch a stuck state.
         targetIndex = src
         draggingId = chat.id
+        // Render our own chip in a borderless panel that polls the
+        // cursor each frame. macOS still runs its drag preview animation,
+        // but we hand it a 1pt transparent view (see `.onDrag`'s
+        // `preview:`) so there is nothing to fade. The visible chip is
+        // ours and disappears the instant `cleanupDragChip()` fires.
+        // Anchor offset: cursor position relative to the row's top-left
+        // at drag start. Carrying this through to the panel keeps the
+        // cursor at the same point on the chip the user originally
+        // clicked, instead of a fixed right-of-cursor offset.
+        let anchor = grabAnchor(for: chat)
+        dragChipPanel?.close()
+        dragChipPanel = DragChipPanel(chat: chat, grabAnchor: anchor)
+        dragChipPanel?.show()
+    }
+
+    /// Cursor offset (in chip-local coords, top-left origin) at drag
+    /// start. Falls back to a sensible default if we don't yet have a
+    /// frame measurement for this row (defensive only — every row reports
+    /// its frame on appear).
+    private func grabAnchor(for chat: Chat) -> CGPoint {
+        guard let rowFrame = rowFramesById[chat.id] else {
+            return CGPoint(x: 30, y: 16)
+        }
+        // Compute the offset entirely in SwiftUI window coordinates
+        // (top-left origin) to avoid screen<->window conversion errors
+        // around title bars / contentLayoutRect. Convert the cursor from
+        // screen coords into the same SwiftUI window space, then take
+        // the diff against the row's frame.
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              let contentView = window.contentView
+        else {
+            return CGPoint(x: 30, y: 16)
+        }
+        let cursorScreen = NSEvent.mouseLocation
+        // Screen -> window (still bottom-left origin).
+        let cursorInWindow = window.convertPoint(fromScreen: cursorScreen)
+        // Window bottom-left -> SwiftUI top-left.
+        let cursorSwiftUI = CGPoint(
+            x: cursorInWindow.x,
+            y: contentView.frame.height - cursorInWindow.y
+        )
+        // Anchor in chip-local coords (top-left).
+        let dx = cursorSwiftUI.x - rowFrame.origin.x
+        let dy = cursorSwiftUI.y - rowFrame.origin.y
+        return CGPoint(x: dx, y: dy)
+    }
+
+    private func cleanupDragChip() {
+        dragChipPanel?.close()
+        dragChipPanel = nil
     }
 
     private func setTarget(slot: Int) {
@@ -2355,13 +2423,20 @@ private struct PinnedReorderableList: View {
 
     private func performReorder(uuid: UUID, beforeIndex: Int) {
         cancelPendingClear()
+        cleanupDragChip()
         let beforeChatId: UUID? = (beforeIndex < pinned.count) ? pinned[beforeIndex].id : nil
-        // Instant: row at new index, no gap, source uncollapsed, all in
-        // one frame. With no `.animation(_:value:)` modifier on the list,
-        // this needs no transaction trickery to be snappy.
-        appState.reorderPinned(chatId: uuid, beforeChatId: beforeChatId)
-        targetIndex = nil
-        draggingId = nil
+        // Force-instant: the last `setTarget` during the drag opened an
+        // animation transaction (`withAnimation(moveAnimation)`); without
+        // an explicit nil-animation transaction here the source row's
+        // opacity/frame restore inherits that easeOut and fades in over
+        // 200ms instead of snapping back the moment the drop lands.
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t) {
+            appState.reorderPinned(chatId: uuid, beforeChatId: beforeChatId)
+            targetIndex = nil
+            draggingId = nil
+        }
     }
 
     private func installMouseUpMonitor() {
@@ -2369,6 +2444,7 @@ private struct PinnedReorderableList: View {
         mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp]) { event in
             DispatchQueue.main.async {
                 cancelPendingClear()
+                cleanupDragChip()
                 guard draggingId != nil || targetIndex != nil else { return }
                 targetIndex = nil
                 draggingId = nil
@@ -2468,3 +2544,132 @@ private struct WindowDragInhibitor: NSViewRepresentable {
         }
     }
 }
+
+// MARK: - DragChipPanel
+
+/// Borderless `NSPanel` that shows a SwiftUI chip following the cursor
+/// during a pinned-row drag. We hand macOS's drag preview a 1pt
+/// transparent view (so the system's ~500ms settle animation has nothing
+/// visible to fade) and render the user-facing chip ourselves here so we
+/// can hide it the instant the drop lands. A 60Hz timer polls
+/// `NSEvent.mouseLocation`; that is queryable even while AppKit's drag
+/// session owns the event stream and `NSEvent.addLocalMonitorForEvents`
+/// is silenced.
+/// Bubbles each pinned row's frame (window coords, top-left origin) up
+/// so `PinnedReorderableList` can compute the cursor's offset within
+/// the row at drag start. The chip rendered in `DragChipPanel` uses
+/// that offset to anchor the cursor to the same point of the chip the
+/// user originally clicked.
+private struct PinnedRowFrameKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] = [:]
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+@MainActor
+final class DragChipPanel {
+    private let panel: NSPanel
+    private let host: NSHostingView<AnyView>
+    private var timer: Timer?
+    /// Cursor offset within the chip (chip-local, top-left origin)
+    /// captured at drag start.
+    private let grabAnchor: CGPoint
+
+    init(chat: Chat, grabAnchor: CGPoint) {
+        self.grabAnchor = grabAnchor
+        let chip = DragChipView(chat: chat)
+        host = NSHostingView(rootView: AnyView(chip))
+        host.layoutSubtreeIfNeeded()
+        let size = host.fittingSize.width > 0
+            ? host.fittingSize
+            : CGSize(width: 240, height: 32)
+
+        panel = NSPanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: true
+        )
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.level = .popUpMenu
+        panel.isMovableByWindowBackground = false
+        panel.ignoresMouseEvents = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        panel.contentView = host
+    }
+
+    func show() {
+        updatePosition()
+        panel.orderFrontRegardless()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            self?.updatePosition()
+        }
+    }
+
+    func close() {
+        timer?.invalidate()
+        timer = nil
+        panel.orderOut(nil)
+    }
+
+    private func updatePosition() {
+        let cursor = NSEvent.mouseLocation
+        let frame = panel.frame
+        // grabAnchor is in chip-local coords, top-left origin. Translate
+        // to AppKit screen coords (bottom-left origin) so the cursor
+        // stays at the same point on the chip the user originally
+        // clicked when the drag began.
+        let new = NSRect(
+            x: cursor.x - grabAnchor.x,
+            y: cursor.y - (frame.height - grabAnchor.y),
+            width: frame.width,
+            height: frame.height
+        )
+        panel.setFrame(new, display: false)
+    }
+}
+
+/// Visual content of the drag chip. Mirrors a `RecentChatRow` (pin icon
+/// + title + age) so the user reads it as the line they picked up.
+private struct DragChipView: View {
+    let chat: Chat
+
+    private var ageLabel: String {
+        L10n.relativeAge(elapsed: Date().timeIntervalSince(chat.createdAt))
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            PinIcon(size: 12)
+                .foregroundColor(Color(white: 0.85))
+                .frame(width: 14, height: 14)
+            Text(chat.title.isEmpty
+                 ? String(localized: "Conversation", bundle: .module)
+                 : chat.title)
+                .font(.system(size: 13, weight: .light))
+                .foregroundColor(Color(white: 0.94))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text(ageLabel)
+                .font(.system(size: 11))
+                .foregroundColor(Color(white: 0.6))
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 9)
+        .padding(.vertical, 7)
+        .frame(width: 280, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color(white: 0.16).opacity(0.96))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                )
+        )
+        .shadow(color: .black.opacity(0.40), radius: 14, x: 0, y: 8)
+    }
+}
+
