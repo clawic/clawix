@@ -87,6 +87,7 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
     var nonReadCommands = 0
     var fileChanges = 0
     var browserUsed = false
+    var webSearchCount = 0
     var mcpTools: [(server: String, tool: String)] = []
     var dynamicTools: [String] = []
     var imageGenerations = 0
@@ -104,18 +105,22 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
             } else {
                 nonReadCommands += 1
             }
-        case .fileChange(let count):
-            fileChanges += max(1, count)
+        case .fileChange(let paths):
+            fileChanges += max(1, paths.count)
         case .webSearch:
-            browserUsed = true
+            webSearchCount += 1
         case .mcpTool(let server, let tool):
             mcpTools.append((server, tool))
         case .dynamicTool(let name):
-            // Clawix's own browser surfaces as a dynamic tool too; group it
-            // visually with `webSearch` instead of listing it raw.
+            // The integrated browser surfaces as a dynamic tool whose name
+            // contains "browser" (e.g. "the browser"). A separate "web"
+            // dynamic tool exists for one-off web fetches; route those to
+            // the globe row so each affordance gets its own glyph.
             let lower = name.lowercased()
-            if lower.contains("browser") || lower.contains("web") {
+            if lower.contains("browser") {
                 browserUsed = true
+            } else if lower.contains("web") {
+                webSearchCount += 1
             } else {
                 dynamicTools.append(name)
             }
@@ -136,7 +141,11 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
         if nonReadCommands > 0 {
             parts.append(L10n.ranCommands(nonReadCommands))
         }
-        rows.append(WorkRow(id: "exec", icon: "shippingbox", text: parts.joined(separator: ", ")))
+        // Magnifying glass when the row reads as exploration (files
+        // were read); terminal sentinel when it only ran opaque
+        // commands.
+        let icon = readFiles > 0 ? "magnifyingglass" : "clawix.terminal"
+        rows.append(WorkRow(id: "exec", icon: icon, text: parts.joined(separator: ", ")))
     }
     if fileChanges > 0 {
         rows.append(WorkRow(
@@ -148,9 +157,15 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
     if browserUsed {
         rows.append(WorkRow(
             id: "browser",
-            icon: "cursorarrow",
-            text: String(localized: "Se han usado the browser", bundle: AppLocale.bundle, locale: AppLocale.current)
+            icon: "clawix.cursor",
+            text: String(localized: "Used the browser", bundle: AppLocale.bundle, locale: AppLocale.current)
         ))
+    }
+    if webSearchCount > 0 {
+        let text = webSearchCount == 1
+            ? String(localized: "Searched the web", bundle: AppLocale.bundle, locale: AppLocale.current)
+            : String(localized: "Searched the web \(webSearchCount) times", bundle: AppLocale.bundle, locale: AppLocale.current)
+        rows.append(WorkRow(id: "webSearch", icon: "clawix.globe", text: text))
     }
     for (idx, mcp) in mcpTools.enumerated() {
         let label = mcp.server.isEmpty ? mcp.tool : "\(mcp.server) · \(mcp.tool)"
@@ -176,15 +191,29 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
     return rows
 }
 
+
 private struct WorkRowView: View {
     let row: WorkRow
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: row.icon)
-                .font(.system(size: 11))
-                .foregroundColor(Color(white: 0.42))
-                .frame(width: 16, alignment: .leading)
+            Group {
+                switch row.icon {
+                case "clawix.terminal":
+                    TerminalIcon(size: 13)
+                case "clawix.globe":
+                    GlobeIcon(size: 12)
+                case "clawix.cursor":
+                    CursorIcon(size: 12)
+                case "magnifyingglass":
+                    SearchIcon(size: 11)
+                default:
+                    Image(systemName: row.icon)
+                        .font(.system(size: 11))
+                }
+            }
+            .foregroundColor(Color(white: 0.42))
+            .frame(width: 16, alignment: .leading)
             Text(row.text)
                 .font(.system(size: 13))
                 .foregroundColor(Color(white: 0.50))

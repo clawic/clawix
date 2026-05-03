@@ -112,7 +112,7 @@ enum WorkItemStatus: Equatable { case inProgress, completed, failed }
 
 enum WorkItemKind: Equatable {
     case command(text: String?, actions: [CommandActionKind])
-    case fileChange(fileCount: Int)
+    case fileChange(paths: [String])
     case webSearch
     case mcpTool(server: String, tool: String)
     case dynamicTool(name: String)
@@ -466,6 +466,7 @@ final class AppState: ObservableObject {
     /// for browsing recent archives, not exhaustive history.
     static let archivedSidebarLimit: Int = 30
     let sampleChat: Chat
+    let browserSampleChat: Chat
     @Published var plugins: [Plugin] = []
     @Published var automations: [Automation] = []
     @Published var projects: [Project] = []
@@ -579,6 +580,39 @@ final class AppState: ObservableObject {
                             timestamp: Date())
             ],
             createdAt: Date()
+        )
+
+        let browserStart = Date().addingTimeInterval(-180)
+        let browserEnd = browserStart.addingTimeInterval(150)
+        browserSampleChat = Chat(
+            id: UUID(uuidString: "C0FFEE11-CAFE-4BAB-9B0E-BAB1E7B0FFEE")!,
+            title: "Find round titanium frames on 1688",
+            messages: [
+                ChatMessage(
+                    role: .user,
+                    content: "I'm looking for round titanium glasses frames similar to the ones in this photo. Can you browse 1688 and pull a few options?",
+                    timestamp: browserStart
+                ),
+                ChatMessage(
+                    role: .assistant,
+                    content: "Found a handful of close matches: aviator-style with metal bridge, full titanium frame and prescription-ready. Listings open in the integrated browser if you want to compare them side by side.",
+                    timestamp: browserEnd,
+                    workSummary: WorkSummary(
+                        startedAt: browserStart,
+                        endedAt: browserEnd,
+                        items: [
+                            WorkItem(id: "tool-browser-1",
+                                     kind: .dynamicTool(name: "the browser"),
+                                     status: .completed),
+                            WorkItem(id: "tool-search-1", kind: .webSearch, status: .completed),
+                            WorkItem(id: "tool-search-2", kind: .webSearch, status: .completed),
+                            WorkItem(id: "tool-search-3", kind: .webSearch, status: .completed),
+                            WorkItem(id: "tool-search-4", kind: .webSearch, status: .completed)
+                        ]
+                    )
+                )
+            ],
+            createdAt: browserStart
         )
 
         let resolvedBinary = ClawixBinary.resolve()
@@ -939,6 +973,9 @@ final class AppState: ObservableObject {
         case "chat":
             chats = [sampleChat]
             currentRoute = .chat(sampleChat.id)
+        case "chat-browser":
+            chats = [browserSampleChat, sampleChat]
+            currentRoute = .chat(browserSampleChat.id)
         case "browser":
             currentRoute = .home
             openBrowser()

@@ -518,7 +518,7 @@ final class ClawixService: ObservableObject {
             }
             return .command(text: item.command, actions: actions)
         case "fileChange":
-            return .fileChange(fileCount: item.changes?.count ?? 0)
+            return .fileChange(paths: (item.changes ?? []).map(\.path))
         case "webSearch":
             return .webSearch
         case "mcpToolCall":

@@ -41,8 +41,7 @@ struct ToolGroupView: View {
 
     private func inlineRow(prefix: String, body: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "terminal")
-                .font(.system(size: 11.5))
+            TerminalIcon(size: 14)
                 .foregroundColor(Color(white: 0.45))
                 .frame(width: 16, alignment: .leading)
             (Text(prefix + " ")
@@ -76,6 +75,7 @@ struct ToolGroupView: View {
         var ranCommands = 0
         var fileChanges = 0
         var browserUsed = false
+        var webSearchCount = 0
         var mcpTools: [(server: String, tool: String)] = []
         var dynamicTools: [String] = []
         var imageGenerations = 0
@@ -95,16 +95,18 @@ struct ToolGroupView: View {
                     listed += lists
                     ranCommands += other
                 }
-            case .fileChange(let count):
-                fileChanges += max(1, count)
+            case .fileChange(let paths):
+                fileChanges += max(1, paths.count)
             case .webSearch:
-                browserUsed = true
+                webSearchCount += 1
             case .mcpTool(let server, let tool):
                 mcpTools.append((server, tool))
             case .dynamicTool(let name):
                 let lower = name.lowercased()
-                if lower.contains("browser") || lower.contains("web") {
+                if lower.contains("browser") {
                     browserUsed = true
+                } else if lower.contains("web") {
+                    webSearchCount += 1
                 } else {
                     dynamicTools.append(name)
                 }
@@ -120,9 +122,10 @@ struct ToolGroupView: View {
             if readFiles > 0 { parts.append(L10n.exploredFiles(readFiles)) }
             if listed > 0 { parts.append(L10n.listedItems(listed)) }
             if ranCommands > 0 { parts.append(L10n.ranCommandsInline(ranCommands)) }
-            // Box icon when exploration drove the row, terminal-style
-            // otherwise.
-            let icon = (readFiles > 0 || listed > 0) ? "shippingbox" : "play.rectangle"
+            // Magnifying glass when the row reads as exploration (files
+            // were read or directories listed); terminal sentinel when
+            // it only ran opaque commands.
+            let icon = (readFiles > 0 || listed > 0) ? "magnifyingglass" : "clawix.terminal"
             rows.append(AggregateRow(
                 id: "exec",
                 icon: icon,
@@ -139,9 +142,15 @@ struct ToolGroupView: View {
         if browserUsed {
             rows.append(AggregateRow(
                 id: "browser",
-                icon: "play.fill",
-                text: String(localized: "Se han usado the browser", bundle: AppLocale.bundle, locale: AppLocale.current)
+                icon: "clawix.cursor",
+                text: String(localized: "Used the browser", bundle: AppLocale.bundle, locale: AppLocale.current)
             ))
+        }
+        if webSearchCount > 0 {
+            let text = webSearchCount == 1
+                ? String(localized: "Searched the web", bundle: AppLocale.bundle, locale: AppLocale.current)
+                : String(localized: "Searched the web \(webSearchCount) times", bundle: AppLocale.bundle, locale: AppLocale.current)
+            rows.append(AggregateRow(id: "webSearch", icon: "clawix.globe", text: text))
         }
         for (idx, mcp) in mcpTools.enumerated() {
             rows.append(AggregateRow(
@@ -190,10 +199,23 @@ struct ToolGroupView: View {
 
     private func aggregateRow(_ row: AggregateRow) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: row.icon)
-                .font(.system(size: 11.5))
-                .foregroundColor(Color(white: 0.45))
-                .frame(width: 16, alignment: .leading)
+            Group {
+                switch row.icon {
+                case "clawix.terminal":
+                    TerminalIcon(size: 14)
+                case "clawix.globe":
+                    GlobeIcon(size: 13)
+                case "clawix.cursor":
+                    CursorIcon(size: 13)
+                case "magnifyingglass":
+                    SearchIcon(size: 11.5)
+                default:
+                    Image(systemName: row.icon)
+                        .font(.system(size: 11.5))
+                }
+            }
+            .foregroundColor(Color(white: 0.45))
+            .frame(width: 16, alignment: .leading)
             Text(row.text)
                 .font(.system(size: 13))
                 .foregroundColor(Color(white: 0.55))
@@ -201,3 +223,4 @@ struct ToolGroupView: View {
         }
     }
 }
+
