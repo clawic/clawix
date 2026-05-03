@@ -506,13 +506,13 @@ struct SidebarView: View {
     }
 
     private var chronoHeader: some View {
-        sidebarHeader(title: "All chats",
+        sidebarHeader(title: "Chats",
                       showCollapseAll: false,
                       showNewChat: true,
                       alwaysShow: true,
                       leadingIcon: AnyView(
-                          Image(systemName: "bubble.left.and.bubble.right")
-                              .font(.system(size: 12, weight: .regular))
+                          Image(systemName: "bubble.left")
+                              .font(.system(size: 10.5, weight: .regular))
                       ),
                       expanded: $chronoExpanded)
     }
