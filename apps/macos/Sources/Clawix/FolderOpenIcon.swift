@@ -120,9 +120,10 @@ private struct FolderClosedIconShape: Shape {
 struct FolderMorphIcon: View {
     var size: CGFloat = 13
     var progress: CGFloat
+    var lineWidthScale: CGFloat = 1.0
 
     var body: some View {
-        let baseWidth = 1.5 * (size / 18)
+        let baseWidth = 1.5 * (size / 18) * lineWidthScale
         let backWidth = baseWidth * (1.0 - 0.32 * progress)
         ZStack {
             FolderMorphBackInsetShape(progress: progress, lineWidth: backWidth)
@@ -413,6 +414,256 @@ private struct ArchiveIconShape: Shape {
         path.move(to: p(10, 12.6))
         path.addLine(to: p(14, 12.6))
 
+        return path
+    }
+}
+
+/// Unarchive icon: same outline language as `ArchiveIcon` but the lid is
+/// reduced to two corner stubs and the body's top edge is cut by the same
+/// amount, so an upward arrow rises from inside the box without crossing
+/// any silhouette stroke. Used in the sidebar's archived rows in place of
+/// the pin slot.
+struct UnarchiveIcon: View {
+    var size: CGFloat = 14
+
+    var body: some View {
+        UnarchiveIconShape()
+            .stroke(style: StrokeStyle(
+                lineWidth: 1.5 * (size / 24),
+                lineCap: .round,
+                lineJoin: .round
+            ))
+            .frame(width: size, height: size)
+    }
+}
+
+private struct UnarchiveIconShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width  - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+
+        var path = Path()
+
+        path.move(to: p(5.7, 4.2))
+        path.addLine(to: p(4.65, 4.2))
+        path.addArc(tangent1End: p(3.25, 4.2), tangent2End: p(3.25, 5.6), radius: 1.4 * s)
+        path.addLine(to: p(3.25, 7.6))
+        path.addArc(tangent1End: p(3.25, 8.8), tangent2End: p(4.45, 8.8), radius: 1.2 * s)
+
+        path.move(to: p(18.3, 4.2))
+        path.addLine(to: p(19.35, 4.2))
+        path.addArc(tangent1End: p(20.75, 4.2), tangent2End: p(20.75, 5.6), radius: 1.4 * s)
+        path.addLine(to: p(20.75, 7.6))
+        path.addArc(tangent1End: p(20.75, 8.8), tangent2End: p(19.55, 8.8), radius: 1.2 * s)
+
+        path.move(to: p(5.7, 9))
+        path.addLine(to: p(4, 9))
+        path.addLine(to: p(4, 16.6))
+        path.addArc(tangent1End: p(4, 20.2), tangent2End: p(7.6, 20.2), radius: 3.6 * s)
+        path.addLine(to: p(16.4, 20.2))
+        path.addArc(tangent1End: p(20, 20.2), tangent2End: p(20, 16.6), radius: 3.6 * s)
+        path.addLine(to: p(20, 9))
+        path.addLine(to: p(18.3, 9))
+
+        path.move(to: p(12, 12))
+        path.addLine(to: p(12, 3))
+        path.move(to: p(9, 5.5))
+        path.addLine(to: p(12, 3))
+        path.addLine(to: p(15, 5.5))
+
+        return path
+    }
+}
+
+/// Archive box icon that morphs into an unarchive arrow on hover.
+///
+/// At rest it draws a closed lid plus a body silhouette (left side + bottom
+/// arcs + right side) with a horizontal slot bar inside. The body has NO
+/// top edge — the lid's bottom is the only horizontal at the lid–body
+/// interface, so reducing the stroke colour does not produce a darker
+/// band wherever two strokes overlap.
+///
+/// On hover it plays a staggered morph: slot collapses fast toward its
+/// centre, body's bottom edge opens symmetrically, an upward arrow grows
+/// from `(12, 12.6)` (the slot's collapse point), and the silhouette
+/// shifts to a darker grey + slightly thinner stroke. Un-hover reverses
+/// the order: arrow retracts first, body closes, slot grows back.
+struct ArchiveUnarchiveMorphIcon: View {
+    var size: CGFloat = 12
+    var hovered: Bool
+
+    @State private var slotProgress: Double = 0
+    @State private var bodyProgress: Double = 0
+    @State private var containerProgress: Double = 0
+    @State private var shaftProgress: Double = 0
+    @State private var headProgress: Double = 0
+
+    var body: some View {
+        let s = size / 24
+        let strokeWidth = (1.5 - 0.45 * containerProgress) * s
+        // Strokes morph from currentColor-equivalent (white 0.85) to a
+        // darker grey (white 0.53). Computed per frame so SwiftUI's
+        // animation interpolates smoothly through the @State driver.
+        let strokeColor = Color(white: 0.85 - 0.32 * containerProgress)
+        let arrowColor = Color(white: 0.85)
+        let style = StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round)
+        let arrowStyle = StrokeStyle(lineWidth: 1.5 * s, lineCap: .round, lineJoin: .round)
+
+        ZStack {
+            ArchiveMorphLidShape()
+                .stroke(strokeColor, style: style)
+            ArchiveMorphBodyHalfShape(side: .left)
+                .trim(from: 0, to: 1 - 0.2493 * bodyProgress)
+                .stroke(strokeColor, style: style)
+            ArchiveMorphBodyHalfShape(side: .right)
+                .trim(from: 0, to: 1 - 0.2493 * bodyProgress)
+                .stroke(strokeColor, style: style)
+            ArchiveMorphSlotHalfShape(side: .left)
+                .trim(from: 0, to: 1 - slotProgress)
+                .stroke(strokeColor, style: style)
+            ArchiveMorphSlotHalfShape(side: .right)
+                .trim(from: 0, to: 1 - slotProgress)
+                .stroke(strokeColor, style: style)
+            ArchiveMorphArrowShaftShape()
+                .trim(from: 0, to: shaftProgress)
+                .stroke(arrowColor, style: arrowStyle)
+            ArchiveMorphArrowHeadShape(side: .left)
+                .trim(from: 0, to: headProgress)
+                .stroke(arrowColor, style: arrowStyle)
+            ArchiveMorphArrowHeadShape(side: .right)
+                .trim(from: 0, to: headProgress)
+                .stroke(arrowColor, style: arrowStyle)
+        }
+        .frame(width: size, height: size)
+        .onChange(of: hovered) { _, isHovering in
+            animate(toHover: isHovering)
+        }
+    }
+
+    private func animate(toHover v: Bool) {
+        let target: Double = v ? 1.0 : 0.0
+        if v {
+            // Hover order: slot collapses → body opens → arrow grows.
+            withAnimation(.easeOut(duration: 0.14)) { slotProgress = target }
+            withAnimation(.easeOut(duration: 0.30).delay(0.06)) { bodyProgress = target }
+            withAnimation(.easeOut(duration: 0.32)) { containerProgress = target }
+            withAnimation(.easeOut(duration: 0.26).delay(0.14)) { shaftProgress = target }
+            withAnimation(.easeOut(duration: 0.22).delay(0.18)) { headProgress = target }
+        } else {
+            // Un-hover order: arrow retracts → body closes → slot regrows.
+            withAnimation(.easeOut(duration: 0.18)) { shaftProgress = target }
+            withAnimation(.easeOut(duration: 0.18)) { headProgress = target }
+            withAnimation(.easeOut(duration: 0.18).delay(0.06)) { bodyProgress = target }
+            withAnimation(.easeOut(duration: 0.18).delay(0.06)) { containerProgress = target }
+            withAnimation(.easeOut(duration: 0.14).delay(0.22)) { slotProgress = target }
+        }
+    }
+}
+
+private enum ArchiveMorphSide { case left, right }
+
+private struct ArchiveMorphLidShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+        var path = Path()
+        path.move(to: p(3.25, 5.6))
+        path.addArc(tangent1End: p(3.25, 4.2), tangent2End: p(4.65, 4.2), radius: 1.4 * s)
+        path.addLine(to: p(19.35, 4.2))
+        path.addArc(tangent1End: p(20.75, 4.2), tangent2End: p(20.75, 5.6), radius: 1.4 * s)
+        path.addLine(to: p(20.75, 7.6))
+        path.addArc(tangent1End: p(20.75, 8.8), tangent2End: p(19.55, 8.8), radius: 1.2 * s)
+        path.addLine(to: p(4.45, 8.8))
+        path.addArc(tangent1End: p(3.25, 8.8), tangent2End: p(3.25, 7.6), radius: 1.2 * s)
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// One half of the body silhouette. Each half traces from the top-corner
+/// (4, 9) or (20, 9) through the side, around the bottom arc, ending at
+/// bottom-centre (12, 20.2). Total length 17.65; the last 4.4 is the
+/// half of the bottom edge so trimming `to: 0.7507` retracts exactly that.
+private struct ArchiveMorphBodyHalfShape: Shape {
+    let side: ArchiveMorphSide
+
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+        var path = Path()
+        switch side {
+        case .left:
+            path.move(to: p(4, 9))
+            path.addLine(to: p(4, 16.6))
+            path.addArc(tangent1End: p(4, 20.2), tangent2End: p(7.6, 20.2), radius: 3.6 * s)
+            path.addLine(to: p(12, 20.2))
+        case .right:
+            path.move(to: p(20, 9))
+            path.addLine(to: p(20, 16.6))
+            path.addArc(tangent1End: p(20, 20.2), tangent2End: p(16.4, 20.2), radius: 3.6 * s)
+            path.addLine(to: p(12, 20.2))
+        }
+        return path
+    }
+}
+
+private struct ArchiveMorphSlotHalfShape: Shape {
+    let side: ArchiveMorphSide
+
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+        var path = Path()
+        path.move(to: p(12, 12.6))
+        path.addLine(to: p(side == .left ? 10 : 14, 12.6))
+        return path
+    }
+}
+
+private struct ArchiveMorphArrowShaftShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+        var path = Path()
+        path.move(to: p(12, 12.6))
+        path.addLine(to: p(12, 20.2))
+        return path
+    }
+}
+
+private struct ArchiveMorphArrowHeadShape: Shape {
+    let side: ArchiveMorphSide
+
+    func path(in rect: CGRect) -> Path {
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
+        var path = Path()
+        path.move(to: p(12, 12.6))
+        path.addLine(to: p(side == .left ? 9 : 15, 15))
         return path
     }
 }

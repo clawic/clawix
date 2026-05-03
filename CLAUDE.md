@@ -123,6 +123,43 @@ Edge cases the lint does not cover, watch by hand:
 
 When a new component draws its own radius (canvas, hand-painting in a `GeometryReader`, etc.) route it through `RoundedRectangle` or `Path(roundedRect:cornerSize:style: .continuous)`. Do not invent circular Bézier curves by hand.
 
+## Custom icons (project canon)
+
+The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph that has a strong identity in the UI: documents, folders, terminal, globe, mic, search, branch, pin, archive, copy, pencil, branch-arrows, sidebar toggle, etc. They live in `apps/macos/Sources/Clawix/` next to the rest of the views and are exported as plain `View` types (e.g. `FileChipIcon`, `TerminalIcon`, `GlobeIcon`, `FolderOpenIcon`, `MicIcon`, `SearchIcon`, `CursorIcon`).
+
+**Before adding any `Image(systemName:)`, check whether a custom equivalent already exists.** SF Symbols look generic next to the rest of the chrome and break visual consistency. The canonical map (extend it as new icons are added):
+
+| Concept            | Custom view                          | File                          |
+|--------------------|--------------------------------------|-------------------------------|
+| Document / file    | `FileChipIcon`                       | `FileChipIcon.swift`          |
+| Folder (open)      | `FolderOpenIcon`                     | `FolderOpenIcon.swift`        |
+| Folder (closed)    | `FolderClosedIcon`                   | `FolderOpenIcon.swift`        |
+| Folder add         | `FolderAddIcon`                      | `FolderOpenIcon.swift`        |
+| Branch (git)       | `BranchIcon`                         | `FolderOpenIcon.swift`        |
+| Pin                | `PinIcon`                            | `FolderOpenIcon.swift`        |
+| Archive / unarchive| `ArchiveIcon` / `UnarchiveIcon`      | `FolderOpenIcon.swift`        |
+| Globe / web        | `GlobeIcon`                          | `GlobeIcon.swift`             |
+| Search             | `SearchIcon`                         | `SearchIcon.swift`            |
+| Mic                | `MicIcon`                            | `MicIcon.swift`               |
+| Terminal           | `TerminalIcon`                       | `TerminalIcon.swift`          |
+| Cursor (text)      | `CursorIcon`                         | `CursorIcon.swift`            |
+| Copy               | `CopyIconView`, `CopyIconViewSquircle` | `ChatView.swift` (legacy spot, ideally `CopyIcon.swift`) |
+| Pencil / edit      | `PencilIconView`                     | `ChatView.swift` (legacy spot, ideally `PencilIcon.swift`) |
+| Branch arrows      | `BranchArrowsIconView`               | `ChatView.swift` (legacy spot) |
+| Sidebar toggle     | `SidebarToggleIcon`                  | `ContentView.swift` (legacy spot) |
+| Compose new chat   | `ComposeIcon` (`Shape`)              | `SidebarView.swift` (legacy spot) |
+| Pinned (sidebar)   | `PinnedIcon` (`Shape`)               | `SidebarView.swift` (legacy spot) |
+| Funnel (filter)    | `OrganizeFunnelIcon`                 | `SidebarView.swift` (legacy spot) |
+| Expand (settings)  | `ExpandIconButton` (composite)       | `SettingsView.swift` (legacy spot) |
+
+Hard rules:
+
+- **One file per icon, named after it.** New icons go in their own `XxxIcon.swift` file. Do not paste a Canvas / Path icon body into a feature view file. Existing icons that live in feature files (the "legacy spot" rows above) are pending extraction; treat them as an exception, not a precedent.
+- **Never duplicate a custom icon's body across files.** If you need the same glyph in a new place, import the existing struct. If two places need slightly different sizes / colors, parametrize the existing struct with `var size: CGFloat`, `var color: Color`, etc., do NOT copy/paste.
+- **Before reaching for `Image(systemName: "…")`, check the table above and grep the project for `<concept>Icon`.** Only fall back to SF Symbols when the glyph genuinely has no identity (caret chevrons, generic placeholders, OS-level concepts like `arrow.up.right.square`). When you do use SF Symbols, keep them tonally aligned with the surrounding custom icons (`Color(white: 0.55)`-`0.86`, hairline weights).
+- **The model behind this rule**: a custom icon is the project's design DNA. If you swap one for an SF Symbol the screen feels "off" even if you can't pinpoint why. The user notices.
+- When in doubt about whether a glyph deserves a custom icon, **ask before drawing**. Hand-drawing an icon that already has a system equivalent and lives nowhere else in the app is wasted work.
+
 ## Dropdowns / popups / context menus (project canon)
 
 The composer's model selector (`ModelMenuPopup` in `ComposerView.swift`) is the **visual reference** for any dropdown, popover-style menu, edit menu or context menu. Anything new and anything retroactive should match it.
