@@ -152,9 +152,9 @@ struct SidebarView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if snapshot.chrono.isEmpty {
                             Text("No chats")
-                                .font(.system(size: 11.5))
+                                .font(.system(size: 13, weight: .light))
                                 .foregroundColor(Color(white: 0.40))
-                                .padding(.leading, 22)
+                                .padding(.leading, 36)
                                 .padding(.vertical, 4)
                         } else {
                             ForEach(Array(snapshot.chrono.prefix(chronoLimit))) { chat in
@@ -281,10 +281,10 @@ struct SidebarView: View {
                                 .frame(width: 9, height: 9)
                         }
                         Text(appState.archivedLoading ? "Loading…" : "No archived chats")
-                            .font(.system(size: 11.5))
+                            .font(.system(size: 13, weight: .light))
                             .foregroundColor(Color(white: 0.40))
                     }
-                    .padding(.leading, 22)
+                    .padding(.leading, 36)
                     .padding(.vertical, 4)
                 } else {
                     ForEach(appState.archivedChats) { chat in
@@ -487,6 +487,7 @@ struct SidebarView: View {
                 )
                 Spacer()
             }
+            .frame(height: 24)
             .padding(.leading, leadingPadding)
             .padding(.trailing, 11)
             .padding(.top, 6)
