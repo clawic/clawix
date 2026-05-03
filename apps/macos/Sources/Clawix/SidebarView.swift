@@ -138,8 +138,8 @@ struct SidebarView: View {
                 chronoHeader
                     .padding(.leading, 18)
                     .padding(.trailing, 9)
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    .padding(.top, 2)
+                    .padding(.bottom, 0)
                     .onHover { projectsHeaderHovered = $0 }
                 let chronoCount = min(snapshot.chrono.count, chronoLimit)
                 SidebarAccordion(
@@ -167,8 +167,8 @@ struct SidebarView: View {
                 projectsHeader
                     .padding(.leading, 18)
                     .padding(.trailing, 9)
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
+                    .padding(.top, 2)
+                    .padding(.bottom, 0)
                     .onHover { projectsHeaderHovered = $0 }
 
                 // Projects list. We add/remove the whole subtree when
@@ -1749,40 +1749,29 @@ private enum SidebarRowMetrics {
     }
 }
 
-/// Same accordion contract as `SmoothAccordion`, but the height lives in
-/// local `@State` and is mutated inside `onChange` with an explicit
-/// `withAnimation`. The implicit `.animation(_:value:)` form silently
-/// drops frames inside `ThinScrollView` (an `NSViewRepresentable`), so we
-/// run the animation from a place where SwiftUI can't lose the
-/// transaction: a state write under `withAnimation`.
+/// Single-transaction accordion: the frame's height is bound directly
+/// to `expanded` and animated via `.animation(_:value:)` so it rides the
+/// same render pass as the header's icon-opacity and chevron-rotation
+/// animations. An earlier `@State displayHeight` updated from `.onChange`
+/// inside its own `withAnimation` ran one frame after the header's
+/// animations kicked off, so the icon/chevron faded first while the
+/// height stayed at 0 — visually the header looked like it drifted and
+/// the chats arrived late "from below" once the second transaction caught
+/// up.
 private struct SidebarAccordion<Content: View>: View {
     let expanded: Bool
     let targetHeight: CGFloat
     @ViewBuilder let content: () -> Content
 
-    @State private var displayHeight: CGFloat = 0
-    @State private var didAppear: Bool = false
-
     var body: some View {
         content()
             .fixedSize(horizontal: false, vertical: true)
-            .frame(height: displayHeight, alignment: .top)
+            .frame(height: expanded ? targetHeight : 0, alignment: .top)
             .clipped()
+            .animation(.easeInOut(duration: 0.28), value: expanded)
+            .animation(.easeInOut(duration: 0.28), value: targetHeight)
             .allowsHitTesting(expanded)
             .accessibilityHidden(!expanded)
-            .onAppear {
-                displayHeight = expanded ? targetHeight : 0
-                didAppear = true
-            }
-            .onChange(of: expanded) { _, newValue in
-                guard didAppear else { return }
-                withAnimation(.easeInOut(duration: 0.28)) {
-                    displayHeight = newValue ? targetHeight : 0
-                }
-            }
-            .onChange(of: targetHeight) { _, newValue in
-                if expanded { displayHeight = newValue }
-            }
     }
 }
 
