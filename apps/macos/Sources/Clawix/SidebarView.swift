@@ -132,6 +132,7 @@ struct SidebarView: View {
                         .padding(.leading, 8)
                         .padding(.trailing, 0)
                 }
+                AnimatedSidebarDivider(visible: pinnedExpanded)
             }
 
             if organizationMode == .chronological {
@@ -163,6 +164,7 @@ struct SidebarView: View {
                     }
                     .padding(.leading, 8)
                 }
+                AnimatedSidebarDivider(visible: chronoExpanded)
             } else {
                 projectsHeader
                     .padding(.leading, 18)
@@ -211,6 +213,7 @@ struct SidebarView: View {
                     .padding(.leading, 8)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
+                AnimatedSidebarDivider(visible: projectsExpanded)
 
                 let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
                 if !projectlessChats.isEmpty {
@@ -233,6 +236,7 @@ struct SidebarView: View {
                         }
                         .padding(.leading, 8)
                     }
+                    AnimatedSidebarDivider(visible: noProjectExpanded)
                 }
             }
 
@@ -290,6 +294,7 @@ struct SidebarView: View {
             }
             .padding(.leading, 8)
         }
+        AnimatedSidebarDivider(visible: archivedExpanded)
     }
 
     var body: some View {
@@ -1182,6 +1187,27 @@ private struct ComposeIcon: Shape {
 /// single physical gesture.
 enum SidebarSection {
     static let toggleAnimation: Animation = .easeInOut(duration: 0.28)
+}
+
+/// Hairline that appears above and below an expanded sidebar section.
+/// Matches the divider that sits under the top `Search` button, but
+/// scales horizontally and fades in/out so it reads as part of the
+/// section's open/close gesture instead of a static rule.
+private struct AnimatedSidebarDivider: View {
+    let visible: Bool
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.06))
+            .frame(height: visible ? 1 : 0)
+            .scaleEffect(x: visible ? 1 : 0, y: 1, anchor: .leading)
+            .opacity(visible ? 1 : 0)
+            .padding(.leading, 18)
+            .padding(.trailing, 22)
+            .padding(.top, visible ? 6 : 0)
+            .padding(.bottom, visible ? 4 : 0)
+            .animation(SidebarSection.toggleAnimation, value: visible)
+    }
 }
 
 /// Disclosure chevron used by collapsible sidebar section headers
