@@ -31,6 +31,7 @@
 "Adjust the base size used for the Clawix interface" = "Настройте базовый размер интерфейса Clawix";
 "All chats" = "Все чаты";
 "Appearance" = "Внешний вид";
+"Archive" = "Архивировать";
 "Archive chat" = "Архивировать чат";
 "Arguments" = "Аргументы";
 "Ask Clawix anything. Type @ to mention files" = "Спросите Clawix о чём угодно. Введите @, чтобы использовать плагины или упомянуть файлы";

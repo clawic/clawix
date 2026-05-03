@@ -31,6 +31,7 @@
 "Adjust the base size used for the Clawix interface" = "Clawix インターフェイスで使用する基準サイズを調整";
 "All chats" = "すべてのチャット";
 "Appearance" = "外観";
+"Archive" = "アーカイブ";
 "Archive chat" = "チャットをアーカイブ";
 "Arguments" = "引数";
 "Ask Clawix anything. Type @ to mention files" = "Clawixに何でも聞いてください。@ でプラグインやファイル参照を呼び出せます";

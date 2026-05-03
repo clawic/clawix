@@ -252,7 +252,6 @@ private struct ContentTopChrome: View {
     @EnvironmentObject var appState: AppState
     @State private var chatActionsOpen = false
     @State private var hoverEllipsis = false
-    @State private var chatRenameTarget: Chat?
 
     private var currentChat: Chat? {
         if case .chat(let id) = appState.currentRoute {
@@ -353,7 +352,7 @@ private struct ContentTopChrome: View {
                         isOpen: $chatActionsOpen,
                         isPinned: chat.isPinned,
                         onTogglePin: { appState.togglePin(chatId: chat.id) },
-                        onRename: { chatRenameTarget = chat },
+                        onRename: { appState.pendingRenameChat = chat },
                         onArchive: { appState.archiveChat(chatId: chat.id) }
                     )
                     .offset(x: buttonFrame.minX, y: buttonFrame.maxY + 6)
@@ -364,8 +363,11 @@ private struct ContentTopChrome: View {
             .allowsHitTesting(chatActionsOpen)
         }
         .animation(MenuStyle.openAnimation, value: chatActionsOpen)
-        .sheet(item: $chatRenameTarget) { chat in
-            ChatRenameSheet(chat: chat) { chatRenameTarget = nil }
+        .sheet(item: Binding(
+            get: { appState.pendingRenameChat },
+            set: { appState.pendingRenameChat = $0 }
+        )) { chat in
+            ChatRenameSheet(chat: chat) { appState.pendingRenameChat = nil }
         }
         .sheet(item: Binding(
             get: { appState.pendingConfirmation },
@@ -896,11 +898,11 @@ func submenuLeadingPlacement(parentGlobalMinX: CGFloat,
 extension View {
     /// Applies the canonical dropdown chrome: blurred backdrop + tinted
     /// rounded fill + thin popup stroke + soft shadow.
-    func menuStandardBackground() -> some View {
+    func menuStandardBackground(blurBehindWindow: Bool = false) -> some View {
         self.background(
             ZStack {
                 VisualEffectBlur(material: .hudWindow,
-                                 blendingMode: .withinWindow,
+                                 blendingMode: blurBehindWindow ? .behindWindow : .withinWindow,
                                  state: .active)
                 MenuStyle.fill
             }

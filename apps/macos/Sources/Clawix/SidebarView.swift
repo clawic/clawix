@@ -231,7 +231,7 @@ struct SidebarView: View {
                     ) {
                         VStack(alignment: .leading, spacing: 2) {
                             ForEach(projectlessChats) { chat in
-                                RecentChatRow(chat: chat)
+                                RecentChatRow(chat: chat, leadingIcon: .pinOnHover)
                             }
                         }
                         .padding(.leading, 8)
@@ -288,7 +288,7 @@ struct SidebarView: View {
                     .padding(.vertical, 4)
                 } else {
                     ForEach(appState.archivedChats) { chat in
-                        RecentChatRow(chat: chat, indent: 6, leadingIcon: .none, archivedRow: true)
+                        RecentChatRow(chat: chat, leadingIcon: .unarchive, archivedRow: true)
                     }
                 }
             }
@@ -1343,7 +1343,7 @@ private struct PinnedIcon: Shape {
 
 // MARK: - RecentChatRow (runtime-backed chats)
 
-enum SidebarChatLeadingIcon { case none, pin, pinOnHover, bubble }
+enum SidebarChatLeadingIcon { case none, pin, pinOnHover, bubble, unarchive }
 
 struct RecentChatRow: View {
     let chat: Chat
@@ -1367,6 +1367,7 @@ struct RecentChatRow: View {
     @State private var hovered = false
     @State private var pinHovered = false
     @State private var archiveHovered = false
+    @State private var unarchiveHovered = false
     /// Captured live from a `GeometryReader` background so the `.onDrag`
     /// preview can render at the exact width of the source row instead of
     /// shrinking to its intrinsic content size.
@@ -1387,34 +1388,23 @@ struct RecentChatRow: View {
                     .frame(width: 14, height: 14)
                     .padding(.trailing, 2)
                     .transition(.opacity.combined(with: .scale(scale: 0.7)))
-            } else if hovered {
+            } else if hovered && !archivedRow {
                 Button {
-                    if archivedRow {
-                        appState.unarchiveChat(chatId: chat.id)
-                    } else {
-                        appState.archiveChat(chatId: chat.id)
-                    }
+                    appState.archiveChat(chatId: chat.id)
                 } label: {
-                    Group {
-                        if archivedRow {
-                            Image(systemName: "tray.and.arrow.up")
-                                .font(.system(size: 12, weight: .regular))
-                        } else {
-                            ArchiveIcon(size: 14)
-                        }
-                    }
-                    .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
-                    .frame(width: 14, height: 14)
-                    .contentShape(Rectangle())
+                    ArchiveIcon(size: 14)
+                        .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
+                        .frame(width: 14, height: 14)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onHover { archiveHovered = $0 }
-                .help(archivedRow ? "Unarchive" : "Archive")
+                .help("Archive")
                 .padding(.trailing, 2)
                 .transition(.opacity)
             } else if !archivedRow && chat.hasUnreadCompletion {
                 Circle()
-                    .fill(Color(red: 0.45, green: 0.65, blue: 1.0))
+                    .fill(Palette.pastelBlue)
                     .frame(width: 7, height: 7)
                     .frame(width: 14, height: 14)
                     .padding(.trailing, 2)
@@ -1465,6 +1455,7 @@ struct RecentChatRow: View {
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: 0.12), value: hovered)
         .animation(.easeOut(duration: 0.12), value: pinHovered)
+        .animation(.easeOut(duration: 0.12), value: unarchiveHovered)
         // Window has `isMovableByWindowBackground = true`, so without an
         // NSView in the row that returns `mouseDownCanMoveWindow = false`
         // AppKit hijacks mouseDown for a window drag and SwiftUI's
@@ -1491,45 +1482,16 @@ struct RecentChatRow: View {
             // we close instantly on drop.
             Color.clear.frame(width: 1, height: 1)
         }
-        .contextMenu {
-            if archivedRow {
-                Button("Unarchive") {
-                    appState.unarchiveChat(chatId: chat.id)
-                }
-                if let threadId = chat.clawixThreadId {
-                    Divider()
-                    Button("Copy session ID") {
-                        let pb = NSPasteboard.general
-                        pb.clearContents()
-                        pb.setString(threadId, forType: .string)
-                    }
-                }
-            } else {
-                Button(chat.isPinned ? "Unpin" : "Pin") {
-                    appState.togglePin(chatId: chat.id)
-                }
-                Divider()
-                Menu("Move to project") {
-                    Button("No project") {
-                        appState.assignChat(chatId: chat.id, toProject: nil)
-                    }
-                    if !appState.projects.isEmpty { Divider() }
-                    ForEach(appState.projects) { project in
-                        Button(project.name) {
-                            appState.assignChat(chatId: chat.id, toProject: project.id)
-                        }
-                    }
-                }
-                if let threadId = chat.clawixThreadId {
-                    Divider()
-                    Button("Copy session ID") {
-                        let pb = NSPasteboard.general
-                        pb.clearContents()
-                        pb.setString(threadId, forType: .string)
-                    }
-                }
+        .overlay(
+            SidebarRightClickCatcher { screenPoint in
+                SidebarChatContextMenuPanel.present(
+                    at: screenPoint,
+                    chat: chat,
+                    isArchived: archivedRow,
+                    appState: appState
+                )
             }
-        }
+        )
     }
 
     @ViewBuilder
@@ -1554,7 +1516,22 @@ struct RecentChatRow: View {
                 .font(.system(size: 10))
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
+        case .unarchive:
+            unarchiveButton()
         }
+    }
+
+    private func unarchiveButton() -> some View {
+        Button {
+            appState.unarchiveChat(chatId: chat.id)
+        } label: {
+            ArchiveUnarchiveMorphIcon(size: 15, hovered: unarchiveHovered)
+                .frame(width: 14, height: 14)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { unarchiveHovered = $0 }
+        .help("Unarchive")
     }
 
     private func pinToggleButton(visible: Bool, color: Color, help: String) -> some View {

@@ -31,6 +31,7 @@
 "Adjust the base size used for the Clawix interface" = "Clawix 인터페이스에 사용할 기본 크기를 조정하세요";
 "All chats" = "모든 채팅";
 "Appearance" = "모양";
+"Archive" = "보관";
 "Archive chat" = "채팅 보관";
 "Arguments" = "인수";
 "Ask Clawix anything. Type @ to mention files" = "Clawix에게 무엇이든 물어보세요. @를 입력해 플러그인을 사용하거나 파일을 언급하세요";

@@ -31,6 +31,7 @@
 "Adjust the base size used for the Clawix interface" = "调整 Clawix 界面使用的基础大小";
 "All chats" = "全部对话";
 "Appearance" = "外观";
+"Archive" = "归档";
 "Archive chat" = "归档对话";
 "Arguments" = "参数";
 "Ask Clawix anything. Type @ to mention files" = "向 Clawix 提任何问题。输入 @ 使用插件或引用文件";

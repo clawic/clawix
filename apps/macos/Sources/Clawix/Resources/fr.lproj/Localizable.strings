@@ -31,6 +31,7 @@
 "Adjust the base size used for the Clawix interface" = "Ajustez la taille de base utilisée par l’interface de Clawix";
 "All chats" = "Toutes les conversations";
 "Appearance" = "Apparence";
+"Archive" = "Archiver";
 "Archive chat" = "Archiver la conversation";
 "Arguments" = "Arguments";
 "Ask Clawix anything. Type @ to mention files" = "Posez n’importe quelle question à Clawix. Tapez @ pour utiliser des extensions ou mentionner des fichiers";
