@@ -55,6 +55,12 @@ do
 done
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 BUNDLE_ID="${BUNDLE_ID:-$BUNDLE_ID_DEFAULT}"
+
+# Resolve marketing + build version. Sourced so MARKETING_VERSION and
+# BUILD_NUMBER end up in this shell's environment for the plist heredoc.
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_emit_version.sh"
+
 mkdir -p "$DEV_DIR"
 
 # Serialize: only one dev.sh runs at a time. Two parallel agents would
@@ -196,8 +202,8 @@ cat > "$BUNDLE/Contents/Info.plist" << PLIST
     <key>CFBundleName</key>              <string>Clawix</string>
     <key>CFBundleDisplayName</key>       <string>Clawix</string>
     <key>CFBundleIconFile</key>          <string>Clawix</string>
-    <key>CFBundleVersion</key>           <string>1.0</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key>           <string>${BUILD_NUMBER}</string>
+    <key>CFBundleShortVersionString</key><string>${MARKETING_VERSION}</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>

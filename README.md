@@ -55,6 +55,8 @@ bash apps/macos/scripts/build_app.sh
 
 Builds `apps/macos/build/Clawix.app`. Uses the same `SIGN_IDENTITY` / `BUNDLE_ID` resolution as `dev.sh`.
 
+The marketing version lives in [`apps/macos/VERSION`](./apps/macos/VERSION). It is the single source of truth: build scripts read it at compile time and inject it into `CFBundleShortVersionString`.
+
 ## Privacy guarantee for contributors
 
 This repository never contains the maintainer's real codesign identity, Apple Team ID, or bundle id. They live in a `.signing.env` file kept outside the public tree. The hygiene gate (`apps/macos/scripts/public_hygiene_check.sh`) blocks publishing if any of those values, or a `.signing.env`, leak into the public source. See [`CLAUDE.md`](./CLAUDE.md) for the full set of rules contributors are expected to follow.

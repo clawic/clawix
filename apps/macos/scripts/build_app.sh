@@ -28,6 +28,10 @@ done
 BUNDLE_ID="${BUNDLE_ID:-$BUNDLE_ID_DEFAULT}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 
+# Resolve marketing + build version for the generated Info.plist.
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_emit_version.sh"
+
 echo "==> Building Swift package (release)…"
 cd "$PROJECT_DIR"
 swift build -c release 2>&1
@@ -68,8 +72,8 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <key>CFBundleName</key>              <string>Clawix</string>
     <key>CFBundleDisplayName</key>       <string>Clawix</string>
     <key>CFBundleIconFile</key>          <string>Clawix</string>
-    <key>CFBundleVersion</key>           <string>1.0</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key>           <string>${BUILD_NUMBER}</string>
+    <key>CFBundleShortVersionString</key><string>${MARKETING_VERSION}</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>

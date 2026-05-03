@@ -62,7 +62,7 @@ final class ClawixService: ObservableObject {
             _ = try await client.send(
                 method: ClawixMethod.initialize,
                 params: InitializeParams(
-                    clientInfo: InitializeClientInfo(name: "Clawix", title: "Clawix", version: "0.1.0"),
+                    clientInfo: InitializeClientInfo(name: "Clawix", title: "Clawix", version: AppVersion.marketing),
                     capabilities: InitializeCapabilities(
                         experimentalApi: true,
                         optOutNotificationMethods: nil
