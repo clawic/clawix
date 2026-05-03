@@ -643,6 +643,22 @@ final class AppState: ObservableObject {
     private func loadMockData() {
         chats = []
 
+        let now = Date()
+        archivedChats = [
+            Chat(title: "Refactor authentication module",
+                 createdAt: now.addingTimeInterval(-60 * 60 * 26),
+                 isArchived: true),
+            Chat(title: "Investigate flaky CI on macOS",
+                 createdAt: now.addingTimeInterval(-60 * 60 * 24 * 3),
+                 isArchived: true),
+            Chat(title: "Spike: streaming JSON parser",
+                 createdAt: now.addingTimeInterval(-60 * 60 * 24 * 8),
+                 isArchived: true),
+            Chat(title: "Cleanup unused fixtures",
+                 createdAt: now.addingTimeInterval(-60 * 60 * 24 * 17),
+                 isArchived: true)
+        ]
+
         plugins = [
             Plugin(id: UUID(), name: "GitHub",
                    description: "Integration with GitHub repositories",
@@ -1503,10 +1519,17 @@ final class AppState: ObservableObject {
     }
 
     func archiveChat(chatId: UUID) {
-        guard let idx = chats.firstIndex(where: { $0.id == chatId }),
-              let threadId = chats[idx].clawixThreadId,
-              let clawix,
-              case .ready = clawix.status else {
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        let threadId = chats[idx].clawixThreadId
+
+        // Dummy / in-memory chat (no runtime thread): just move it locally so
+        // the archived UI is exercisable without a backend.
+        guard let threadId else {
+            archiveLocally(chatIndex: idx)
+            return
+        }
+
+        guard let clawix, case .ready = clawix.status else {
             appendErrorBubble(chatId: chatId, message: "Archiving requires the runtime to be available.")
             return
         }
@@ -1518,6 +1541,22 @@ final class AppState: ObservableObject {
                 self.markThreadArchived(threadId: threadId, archived: false)
                 self.appendErrorBubble(chatId: chatId, message: "Could not archive on the runtime: \(error)")
             }
+        }
+    }
+
+    private func archiveLocally(chatIndex idx: Int) {
+        var chat = chats[idx]
+        chat.isArchived = true
+        chat.isPinned = false
+        chat.hasUnreadCompletion = false
+        pinnedOrder.removeAll { $0 == chat.id }
+        if case let .chat(id) = currentRoute, id == chat.id {
+            currentRoute = .home
+        }
+        chats.remove(at: idx)
+        archivedChats.insert(chat, at: 0)
+        if archivedChats.count > Self.archivedSidebarLimit {
+            archivedChats = Array(archivedChats.prefix(Self.archivedSidebarLimit))
         }
     }
 
@@ -1587,13 +1626,27 @@ final class AppState: ObservableObject {
     }
 
     func unarchiveChat(chatId: UUID) {
-        guard let idx = archivedChats.firstIndex(where: { $0.id == chatId }),
-              let threadId = archivedChats[idx].clawixThreadId,
-              let clawix,
-              case .ready = clawix.status else { return }
+        guard let idx = archivedChats.firstIndex(where: { $0.id == chatId }) else { return }
+        let threadId = archivedChats[idx].clawixThreadId
         var moved = archivedChats[idx]
         moved.isArchived = false
         archivedChats.remove(at: idx)
+
+        // Dummy / in-memory chat: pop it back into the active list and stop.
+        guard let threadId else {
+            chats.insert(moved, at: 0)
+            return
+        }
+
+        guard let clawix, case .ready = clawix.status else {
+            // Runtime not available: roll back so a runtime-backed chat is
+            // never silently surfaced into the active list without the
+            // backend agreeing.
+            moved.isArchived = true
+            archivedChats.insert(moved, at: min(idx, archivedChats.count))
+            return
+        }
+
         if !chats.contains(where: { $0.clawixThreadId == threadId }) {
             chats.insert(moved, at: 0)
         }

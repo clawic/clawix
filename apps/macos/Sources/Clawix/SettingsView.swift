@@ -1955,58 +1955,75 @@ private struct CreditRow: View {
 
 // MARK: - Chats archivados page
 
-private struct ArchivedChatItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let date: String
-    let project: String
-}
-
 private struct ArchivedChatsPage: View {
-    private let items: [ArchivedChatItem] = []
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: "Chats archivados")
 
-            if items.isEmpty {
-                Text("You have no archived chats.")
+            if appState.archivedChats.isEmpty {
+                Text(appState.archivedLoading ? "Loading…" : "You have no archived chats.")
                     .font(.system(size: 13))
                     .foregroundColor(Palette.textSecondary)
                     .padding(.top, 12)
                     .padding(.leading, 14)
             } else {
                 SettingsCard {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
-                        ArchivedChatRow(item: item)
-                        if idx < items.count - 1 {
+                    ForEach(Array(appState.archivedChats.enumerated()), id: \.element.id) { idx, chat in
+                        ArchivedChatRow(chat: chat)
+                        if idx < appState.archivedChats.count - 1 {
                             CardDivider()
                         }
                     }
                 }
             }
         }
+        .task {
+            await appState.loadArchivedChats()
+        }
     }
 }
 
 private struct ArchivedChatRow: View {
-    let item: ArchivedChatItem
+    let chat: Chat
+    @EnvironmentObject var appState: AppState
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .full
+        return f
+    }()
+
+    private var subtitle: String {
+        let date = Self.relativeFormatter.localizedString(for: chat.createdAt, relativeTo: Date())
+        let project: String
+        if let pid = chat.projectId,
+           let match = appState.projects.first(where: { $0.id == pid }) {
+            project = match.name
+        } else {
+            project = "No project"
+        }
+        return "\(date) · \(project)"
+    }
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
+                Text(chat.title.isEmpty ? "Conversation" : chat.title)
                     .font(.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text("\(item.date) · \(item.project)")
+                Text(subtitle)
                     .font(.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
                     .lineLimit(1)
             }
             Spacer(minLength: 12)
-            Button {} label: {
+            Button {
+                appState.unarchiveChat(chatId: chat.id)
+            } label: {
                 Text("Unarchive")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
