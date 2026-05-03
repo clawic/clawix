@@ -573,6 +573,21 @@ private struct MessageRow: View {
                     }
                 }
 
+                // One pill per file the agent edited during this turn,
+                // mirroring the Codex Desktop "README.md / Document · MD"
+                // attachment cards. Order matches first-touch, deduped.
+                let changedFiles = Self.changedFilePaths(in: message.timeline)
+                if !changedFiles.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(changedFiles, id: \.self) { path in
+                            ChangedFileCard(path: path)
+                                .frame(maxWidth: chatRailMaxWidth * 0.7, alignment: .leading)
+                        }
+                    }
+                    .padding(.top, 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
                 // The runtime shows a "Sitio web · Abrir" preview card under the
                 // final answer whenever the message embeds a URL. Limit it
                 // to the very last assistant message so older turns stay
@@ -612,6 +627,24 @@ private struct MessageRow: View {
         .accessibilityLabel(isUser
                             ? L10n.a11yYou(message.content)
                             : L10n.a11yAssistant(message.content))
+    }
+
+    /// Walk the message timeline and return every absolute file path the
+    /// agent edited via apply_patch during the turn, deduped, in
+    /// first-touch order. Drives the trailing `ChangedFileCard` strip.
+    static func changedFilePaths(in timeline: [AssistantTimelineEntry]) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for entry in timeline {
+            guard case .tools(_, let items) = entry else { continue }
+            for item in items {
+                guard case .fileChange(let paths) = item.kind else { continue }
+                for path in paths where seen.insert(path).inserted {
+                    result.append(path)
+                }
+            }
+        }
+        return result
     }
 
     /// Hidden = every timeline entry up to and including the last `.tools`

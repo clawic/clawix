@@ -138,6 +138,23 @@ enum RolloutReader {
                 pending?.appendCommand(id: callId, text: nil, actions: [])
                 seenCallIds.insert(callId)
 
+            case ("event_msg", "patch_apply_end"):
+                let callId = payload["call_id"] as? String ?? UUID().uuidString
+                if !seenCallIds.insert(callId).inserted { continue }
+                let stdout = payload["stdout"] as? String ?? ""
+                let paths = Self.parsePatchApplyPaths(stdout)
+                if paths.isEmpty { continue }
+                if pending == nil {
+                    pending = PendingAssistant(timestamp: timestamp)
+                }
+                pending?.appendOther(
+                    WorkItem(
+                        id: callId,
+                        kind: .fileChange(paths: paths),
+                        status: .completed
+                    )
+                )
+
             case ("event_msg", "mcp_tool_call_end"):
                 let callId = payload["call_id"] as? String ?? UUID().uuidString
                 if !seenCallIds.insert(callId).inserted { continue }
@@ -188,6 +205,27 @@ enum RolloutReader {
             default: return .unknown
             }
         }
+    }
+
+    /// Pull absolute file paths out of a `patch_apply_end` stdout. The CLI
+    /// writes one line per touched file prefixed with the change kind:
+    /// `M /abs/path` (modified), `A /abs/path` (added), `D /abs/path`
+    /// (deleted). The first line is `Success. Updated the following files:`
+    /// and is ignored.
+    private static func parsePatchApplyPaths(_ stdout: String) -> [String] {
+        var paths: [String] = []
+        var seen: Set<String> = []
+        for raw in stdout.split(separator: "\n", omittingEmptySubsequences: true) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard line.count > 2 else { continue }
+            let prefix = line.prefix(2)
+            guard prefix == "M " || prefix == "A " || prefix == "D " else { continue }
+            let path = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            if path.isEmpty || seen.contains(path) { continue }
+            seen.insert(path)
+            paths.append(path)
+        }
+        return paths
     }
 
     /// True when an mcp_tool_call_end result carries an image item. Clawix

@@ -396,8 +396,8 @@ private struct RightSidebarColumn: View {
                 RightSidebarBody()
             case .browser:
                 BrowserView()
-            case .fileViewer:
-                EmptyView()
+            case .fileViewer(let path):
+                FileViewerPanel(path: path)
             }
         }
         .frame(maxHeight: .infinity)
