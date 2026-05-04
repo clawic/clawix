@@ -13,6 +13,13 @@ final class BrowserTabController: NSObject, ObservableObject {
     @Published var canGoForward: Bool = false
     @Published var isLoading: Bool = false
     @Published var faviconURL: URL?
+    @Published var pageZoom: Double = 1.0
+    @Published var mobileMode: Bool = false
+
+    private static let mobileUserAgent =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) " +
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) " +
+        "Version/17.0 Mobile/15E148 Safari/604.1"
 
     let webView: WKWebView
     private weak var appState: AppState?
@@ -59,6 +66,44 @@ final class BrowserTabController: NSObject, ObservableObject {
     func goBack()    { if webView.canGoBack    { webView.goBack() } }
     func goForward() { if webView.canGoForward { webView.goForward() } }
     func reload()    { webView.reload() }
+    func hardReload() { webView.reloadFromOrigin() }
+
+    func zoomIn()    { setZoom(min(pageZoom + 0.1, 5.0)) }
+    func zoomOut()   { setZoom(max(pageZoom - 0.1, 0.25)) }
+    func resetZoom() { setZoom(1.0) }
+
+    private func setZoom(_ value: Double) {
+        let rounded = (value * 100).rounded() / 100
+        pageZoom = rounded
+        webView.pageZoom = CGFloat(rounded)
+    }
+
+    func toggleMobileMode() {
+        mobileMode.toggle()
+        webView.customUserAgent = mobileMode ? Self.mobileUserAgent : nil
+        webView.reload()
+    }
+
+    func clearCookies(completion: (() -> Void)? = nil) {
+        let types: Set<String> = [WKWebsiteDataTypeCookies]
+        WKWebsiteDataStore.default()
+            .removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {
+                Task { @MainActor in completion?() }
+            }
+    }
+
+    func clearCache(completion: (() -> Void)? = nil) {
+        let types: Set<String> = [
+            WKWebsiteDataTypeDiskCache,
+            WKWebsiteDataTypeMemoryCache,
+            WKWebsiteDataTypeOfflineWebApplicationCache,
+            WKWebsiteDataTypeFetchCache,
+        ]
+        WKWebsiteDataStore.default()
+            .removeData(ofTypes: types, modifiedSince: Date(timeIntervalSince1970: 0)) {
+                Task { @MainActor in completion?() }
+            }
+    }
 
     private func attachObservers() {
         observers.append(webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] wv, _ in

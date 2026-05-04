@@ -127,6 +127,7 @@ private struct NewTabButton: View {
 
 struct BrowserNavigationBar: View {
     @ObservedObject var controller: BrowserTabController
+    @State private var moreMenuOpen = false
 
     var body: some View {
         HStack(spacing: 6) {
@@ -167,19 +168,49 @@ struct BrowserNavigationBar: View {
             ChromeIconButton(systemName: "plus") {}
                 .accessibilityLabel("Add")
                 .hoverHint(L10n.t("Add"), placement: .below)
-            ChromeIconButton(systemName: "ellipsis") {}
-                .accessibilityLabel("More options")
-                .hoverHint(L10n.t("More options"), placement: .below)
+            ChromeIconButton(systemName: "ellipsis", isActive: moreMenuOpen) {
+                moreMenuOpen.toggle()
+            }
+            .accessibilityLabel("More options")
+            .hoverHint(L10n.t("More options"), placement: .below)
+            .anchorPreference(key: BrowserMoreMenuAnchorKey.self, value: .bounds) { $0 }
         }
         .padding(.horizontal, 10)
         .frame(height: 44)
         .background(Color.black)
+        .overlayPreferenceValue(BrowserMoreMenuAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if moreMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    BrowserMoreOptionsMenu(
+                        controller: controller,
+                        isOpen: $moreMenuOpen
+                    )
+                    .offset(
+                        x: buttonFrame.maxX - BrowserMoreOptionsMenu.menuWidth,
+                        y: buttonFrame.maxY + 6
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(moreMenuOpen)
+        }
+        .animation(MenuStyle.openAnimation, value: moreMenuOpen)
+    }
+}
+
+private struct BrowserMoreMenuAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
     }
 }
 
 private struct ChromeIconButton: View {
     let systemName: String
     var enabled: Bool = true
+    var isActive: Bool = false
     let action: () -> Void
     @State private var hovered = false
 
@@ -191,7 +222,7 @@ private struct ChromeIconButton: View {
                 .frame(width: 26, height: 26)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(hovered && enabled ? Color.white.opacity(0.07) : Color.clear)
+                        .fill(backgroundColor)
                 )
                 .contentShape(Rectangle())
         }
@@ -203,7 +234,171 @@ private struct ChromeIconButton: View {
 
     private var foreground: Color {
         if !enabled { return Color(white: 0.32) }
+        if isActive { return Color(white: 0.96) }
         return hovered ? Color(white: 0.92) : Color(white: 0.72)
+    }
+
+    private var backgroundColor: Color {
+        if isActive { return Color.white.opacity(0.10) }
+        if hovered && enabled { return Color.white.opacity(0.07) }
+        return .clear
+    }
+}
+
+// MARK: - More options menu
+
+struct BrowserMoreOptionsMenu: View {
+    @ObservedObject var controller: BrowserTabController
+    @Binding var isOpen: Bool
+    @State private var hovered: String?
+
+    static let menuWidth: CGFloat = 268
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            simpleRow(id: "hardReload", title: "Hard reload") {
+                controller.hardReload()
+                isOpen = false
+            }
+            simpleRow(
+                id: "deviceToolbar",
+                title: "Show device toolbar",
+                trailingCheck: controller.mobileMode
+            ) {
+                controller.toggleMobileMode()
+                isOpen = false
+            }
+
+            MenuStandardDivider().padding(.vertical, 4)
+
+            ZoomRow(
+                pageZoom: controller.pageZoom,
+                onZoomOut: { controller.zoomOut() },
+                onZoomIn:  { controller.zoomIn()  },
+                onReset:   { controller.resetZoom() }
+            )
+
+            MenuStandardDivider().padding(.vertical, 4)
+
+            simpleRow(id: "clearCookies", title: "Clear cookies") {
+                controller.clearCookies { controller.reload() }
+                isOpen = false
+            }
+            simpleRow(id: "clearCache", title: "Clear cache") {
+                controller.clearCache { controller.reload() }
+                isOpen = false
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.menuWidth, alignment: .leading)
+        .menuStandardBackground()
+        .background(MenuOutsideClickWatcher(isPresented: $isOpen))
+    }
+
+    private func simpleRow(
+        id: String,
+        title: LocalizedStringKey,
+        trailingCheck: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundColor(MenuStyle.rowText)
+                Spacer(minLength: 0)
+                if trailingCheck {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowText)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding + 4)
+            .padding(.vertical, MenuStyle.rowVerticalPadding + 1)
+            .background(MenuRowHover(active: hovered == id))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering { hovered = id }
+            else if hovered == id { hovered = nil }
+        }
+    }
+}
+
+private struct ZoomRow: View {
+    let pageZoom: Double
+    let onZoomOut: () -> Void
+    let onZoomIn: () -> Void
+    let onReset: () -> Void
+
+    @State private var hoverMinus = false
+    @State private var hoverPlus = false
+    @State private var hoverReset = false
+
+    private var percentText: String {
+        "\(Int((pageZoom * 100).rounded()))%"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Zoom")
+                .font(.system(size: 13))
+                .foregroundColor(MenuStyle.rowText)
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 0) {
+                stepperButton(symbol: "minus", hovered: $hoverMinus, action: onZoomOut)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 1, height: 14)
+
+                Text(percentText)
+                    .font(.system(size: 12))
+                    .foregroundColor(MenuStyle.rowText)
+                    .frame(minWidth: 38)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(width: 1, height: 14)
+
+                stepperButton(symbol: "plus", hovered: $hoverPlus, action: onZoomIn)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.white.opacity(0.07))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            )
+
+            Button(action: onReset) {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(hoverReset ? MenuStyle.rowText : MenuStyle.rowSubtle)
+                    .frame(width: 22, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hoverReset = $0 }
+        }
+        .padding(.horizontal, MenuStyle.rowHorizontalPadding + 4)
+        .padding(.vertical, MenuStyle.rowVerticalPadding - 1)
+    }
+
+    private func stepperButton(symbol: String, hovered: Binding<Bool>, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(hovered.wrappedValue ? MenuStyle.rowText : MenuStyle.rowIcon)
+                .frame(width: 28, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered.wrappedValue = $0 }
     }
 }
 
