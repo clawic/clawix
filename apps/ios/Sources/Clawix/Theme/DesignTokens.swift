@@ -41,8 +41,9 @@ enum MenuStyle {
 
 // Mobile-specific spacing and radii. Mac values are dense (7-9pt
 // vertical row padding); on iOS we breathe a bit more for thumb
-// targets while keeping the typography compact.
-enum Layout {
+// targets while keeping the typography compact. Named `AppLayout`
+// to avoid colliding with SwiftUI's `Layout` protocol.
+enum AppLayout {
     static let screenHorizontalPadding: CGFloat = 16
     static let screenTopPadding: CGFloat        = 8
     static let cardCornerRadius: CGFloat        = 16

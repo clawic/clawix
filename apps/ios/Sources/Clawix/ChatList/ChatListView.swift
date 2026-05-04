@@ -30,7 +30,7 @@ struct ChatListView: View {
                     }
                     Spacer().frame(height: 80)
                 }
-                .padding(.horizontal, Layout.screenHorizontalPadding)
+                .padding(.horizontal, AppLayout.screenHorizontalPadding)
                 .padding(.top, 16)
             }
             .scrollIndicators(.hidden)
@@ -134,13 +134,13 @@ private struct ChatRow: View {
             }
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, Layout.listRowVerticalPadding)
+        .padding(.vertical, AppLayout.listRowVerticalPadding)
         .background(
-            RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius, style: .continuous)
                 .fill(Palette.cardFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius, style: .continuous)
                 .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
         )
     }

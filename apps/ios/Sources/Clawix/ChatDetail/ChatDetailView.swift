@@ -32,7 +32,7 @@ struct ChatDetailView: View {
                             }
                             Spacer().frame(height: 12)
                         }
-                        .padding(.horizontal, Layout.screenHorizontalPadding)
+                        .padding(.horizontal, AppLayout.screenHorizontalPadding)
                         .padding(.top, 16)
                     }
                     .scrollIndicators(.hidden)
@@ -79,7 +79,7 @@ struct ChatDetailView: View {
                 ActiveTurnPill()
             }
         }
-        .padding(.horizontal, Layout.screenHorizontalPadding)
+        .padding(.horizontal, AppLayout.screenHorizontalPadding)
         .padding(.vertical, 10)
     }
 

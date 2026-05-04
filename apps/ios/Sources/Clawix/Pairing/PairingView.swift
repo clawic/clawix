@@ -18,7 +18,7 @@ struct PairingView: View {
                 Spacer()
                 continueMockButton
             }
-            .padding(.horizontal, Layout.screenHorizontalPadding)
+            .padding(.horizontal, AppLayout.screenHorizontalPadding)
             .padding(.bottom, 32)
         }
     }
@@ -44,7 +44,7 @@ struct PairingView: View {
     }
 
     private var instructions: some View {
-        VStack(alignment: .leading, spacing: Layout.cardSpacing) {
+        VStack(alignment: .leading, spacing: AppLayout.cardSpacing) {
             stepRow(index: "1", text: "Open Clawix on your Mac.")
             stepRow(index: "2", text: "Click the iPhone icon in the sidebar footer.")
             stepRow(index: "3", text: "Hold this iPhone in front of the QR code.")
@@ -52,11 +52,11 @@ struct PairingView: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 18)
         .background(
-            RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius, style: .continuous)
                 .fill(Palette.cardFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Layout.cardCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius, style: .continuous)
                 .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
         )
     }
@@ -82,11 +82,11 @@ struct PairingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(
-                    RoundedRectangle(cornerRadius: Layout.buttonCornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppLayout.buttonCornerRadius, style: .continuous)
                         .fill(Color(white: 0.18))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: Layout.buttonCornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: AppLayout.buttonCornerRadius, style: .continuous)
                         .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
                 )
         }

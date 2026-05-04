@@ -44,11 +44,11 @@ struct ComposerView: View {
                 .padding(.vertical, 10)
         }
         .background(
-            RoundedRectangle(cornerRadius: Layout.composerCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppLayout.composerCornerRadius, style: .continuous)
                 .fill(Palette.cardFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: Layout.composerCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppLayout.composerCornerRadius, style: .continuous)
                 .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
         )
     }
