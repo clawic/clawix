@@ -497,7 +497,7 @@ private struct MessageRow: View {
     private var isUser: Bool { message.role == .user }
 
     var body: some View {
-        VStack(alignment: isUser ? .trailing : .leading, spacing: 16) {
+        VStack(alignment: isUser ? .trailing : .leading, spacing: 24) {
             if isUser {
                 if isEditing {
                     UserMessageEditor(
@@ -529,7 +529,7 @@ private struct MessageRow: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
                                 Text(p)
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 13.5))
                                     .foregroundColor(Palette.textPrimary)
                                     .lineSpacing(5)
                             }
@@ -602,7 +602,7 @@ private struct MessageRow: View {
                                 weight: message.isError ? .regular : .light,
                                 color: message.isError
                                     ? Color(red: 0.95, green: 0.45, blue: 0.45)
-                                    : Palette.textPrimary.opacity(0.85)
+                                    : Palette.textPrimary
                             )
                             .frame(maxWidth: .infinity, alignment: .leading)
                         case .plan(let body, let completed):
@@ -750,7 +750,7 @@ private struct MessageRow: View {
             AssistantMarkdownText(
                 text: text,
                 weight: .light,
-                color: Palette.textPrimary.opacity(0.85)
+                color: Palette.textPrimary
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         case .tools(_, let items):
@@ -794,9 +794,9 @@ private struct MessageRow: View {
                     .animation(.easeOut(duration: 0.15), value: rowHovered)
             }
         }
-        .padding(.leading, isUser ? 0 : -6)
-        .padding(.trailing, isUser ? -2 : 0)
-        .padding(.top, isUser ? -3 : 0)
+        .padding(.leading, isUser ? 0 : 6)
+        .padding(.trailing, isUser ? 6 : 0)
+        .padding(.top, -8)
     }
 
     private var timestampLabel: some View {
@@ -1735,7 +1735,7 @@ private struct AssistantMarkdownText: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("\(idx + 1).")
-                            .font(.system(size: 13, weight: weight))
+                            .font(.system(size: 13.5, weight: weight))
                             .foregroundColor(color)
                             .frame(width: 20, alignment: .leading)
                         ParagraphFlow(paragraph: item, weight: weight, color: color) { url in
@@ -1894,7 +1894,7 @@ private struct ParagraphFlow: View {
     let paragraph: AssistantMarkdown.Paragraph
     let weight: Font.Weight
     let color: Color
-    var fontSize: CGFloat = 13
+    var fontSize: CGFloat = 13.5
     let onLinkTap: (URL) -> Void
 
     var body: some View {
@@ -1920,7 +1920,7 @@ private struct AtomView: View {
     let atom: AssistantMarkdown.Atom
     let weight: Font.Weight
     let color: Color
-    var fontSize: CGFloat = 13
+    var fontSize: CGFloat = 13.5
     let onLinkTap: (URL) -> Void
 
     var body: some View {
@@ -1941,13 +1941,14 @@ private struct AtomView: View {
             Text(s)
                 .font(.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
                 .foregroundColor(Color(white: 0.94))
-                .padding(.horizontal, 5.5)
-                .padding(.vertical, 1.5)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
                 .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(Color.white.opacity(0.09))
                 )
                 .padding(.horizontal, 2)
+                .offset(y: -3)
         case .link(let label, let url, let isBareUrl):
             LinkAtom(label: label, url: url, isBareUrl: isBareUrl, weight: weight, onTap: onLinkTap)
         }
