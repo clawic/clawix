@@ -119,9 +119,11 @@ struct ContentView: View {
                         // Always-visible faint border around the whole panel.
                         contentShape
                             .stroke(Color.white.opacity(0.10), lineWidth: 0.7)
-                        // Left-edge brightening on resize hover. Masked so the
-                        // highlight covers only the two leading curves + the
-                        // straight left side, fading into the top/bottom edges.
+                        // Left-edge brightening on resize hover. Faded both
+                        // horizontally (into the top/bottom edges) and
+                        // vertically (away from the rounded corners) so the
+                        // highlight never meets the base stroke at the apex
+                        // of the curve.
                         contentShape
                             .stroke(Color.white.opacity(0.30), lineWidth: 0.7)
                             .mask(
@@ -135,6 +137,23 @@ struct ContentView: View {
                                     .frame(width: 80)
                                     Color.clear
                                 }
+                                .mask(
+                                    VStack(spacing: 0) {
+                                        LinearGradient(
+                                            colors: [.clear, .white],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                        .frame(height: 50)
+                                        Rectangle()
+                                        LinearGradient(
+                                            colors: [.white, .clear],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                        .frame(height: 50)
+                                    }
+                                )
                             )
                             .opacity(sidebarResizeHovered ? 1 : 0)
                             .animation(.easeOut(duration: 0.14), value: sidebarResizeHovered)
