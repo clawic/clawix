@@ -118,12 +118,25 @@ final class ClawixService: ObservableObject {
     // MARK: - User intents
 
     func listThreads(archived: Bool, cwd: String? = nil, limit: Int = 160, useStateDbOnly: Bool = true) async throws -> [AgentThreadSummary] {
-        guard status == .ready else { return [] }
+        try await listThreadsPage(archived: archived, cwd: cwd, limit: limit, useStateDbOnly: useStateDbOnly).threads
+    }
+
+    struct ThreadListPage {
+        let threads: [AgentThreadSummary]
+        let nextCursor: String?
+    }
+
+    func listThreadsPage(archived: Bool,
+                         cwd: String? = nil,
+                         cursor: String? = nil,
+                         limit: Int = 160,
+                         useStateDbOnly: Bool = true) async throws -> ThreadListPage {
+        guard status == .ready else { return ThreadListPage(threads: [], nextCursor: nil) }
         let result = try await client.send(
             method: ClawixMethod.threadList,
             params: ThreadListParams(
                 archived: archived,
-                cursor: nil,
+                cursor: cursor,
                 cwd: cwd,
                 limit: limit,
                 modelProviders: nil,
@@ -135,11 +148,12 @@ final class ClawixService: ObservableObject {
             ),
             expecting: ThreadListResponse.self
         )
-        return result.data.map { thread in
+        let threads = result.data.map { thread -> AgentThreadSummary in
             var copy = thread
             copy.archived = archived
             return copy
         }
+        return ThreadListPage(threads: threads, nextCursor: result.nextCursor)
     }
 
     func setThreadName(threadId: String, name: String) async throws {

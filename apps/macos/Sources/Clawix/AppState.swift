@@ -805,8 +805,44 @@ final class AppState: ObservableObject {
     func loadThreadsFromRuntime() async {
         guard let clawix, case .ready = clawix.status else { return }
         do {
-            let active = try await clawix.listThreads(archived: false, limit: 160, useStateDbOnly: true)
-            applyThreads(active)
+            let pageSize = 160
+            var collected: [AgentThreadSummary] = []
+            var seenIds = Set<String>()
+            var cursor: String? = nil
+            var page = 0
+
+            // Pinned ids from Codex's global state. Used as the stop
+            // condition for backfilling: keep paginating older threads
+            // until every pinned id has been resolved. Without this the
+            // sidebar drops pins whose updated_at falls outside the first
+            // page (heavy users routinely have >1000 active threads).
+            let pinnedTargets = Set(BackendStateReader.read().pinnedThreadIds)
+            var resolvedPins = Set<String>()
+            // Safety cap so a corrupt cursor or a stale pin id doesn't
+            // turn this into an unbounded sweep.
+            let maxPages = 12
+
+            repeat {
+                let result = try await clawix.listThreadsPage(
+                    archived: false,
+                    cursor: cursor,
+                    limit: pageSize,
+                    useStateDbOnly: true
+                )
+                for thread in result.threads where seenIds.insert(thread.id).inserted {
+                    collected.append(thread)
+                    if pinnedTargets.contains(thread.id) {
+                        resolvedPins.insert(thread.id)
+                    }
+                }
+                cursor = result.nextCursor
+                page += 1
+                if cursor == nil { break }
+                if page == 1 && resolvedPins.count == pinnedTargets.count { break }
+                if page >= maxPages { break }
+            } while resolvedPins.count < pinnedTargets.count
+
+            applyThreads(collected)
         } catch {
             appendRuntimeStatusError("No se pudo leer el índice real del runtime: \(error)")
         }
