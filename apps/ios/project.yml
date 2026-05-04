@@ -1,0 +1,58 @@
+name: Clawix
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  groupSortPosition: top
+  generateEmptyDirectories: false
+  defaultConfig: Debug
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+
+configFiles:
+  Debug: Clawix.xcconfig
+  Release: Clawix.xcconfig
+
+packages:
+  ClawixCore:
+    path: ../shared/ClawixCore
+
+targets:
+  Clawix:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+    info:
+      path: Sources/Clawix/Generated-Info.plist
+      properties:
+        CFBundleDisplayName: Clawix
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.developer-tools
+        UILaunchScreen:
+          UIBackgroundColor: LaunchBackground
+        UIRequiresFullScreen: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIUserInterfaceStyle: Dark
+        NSCameraUsageDescription: "Used to scan the Clawix pairing QR code shown on your Mac."
+        NSBonjourServices:
+          - _clawix-bridge._tcp
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ENABLE_PREVIEWS: YES
+    dependencies:
+      - package: ClawixCore
