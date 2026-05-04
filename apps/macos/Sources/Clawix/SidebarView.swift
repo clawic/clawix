@@ -658,7 +658,7 @@ struct SidebarView: View {
 
     private func startBlankProject() {
         let project = appState.createProject(
-            name: String(localized: "New project", bundle: .module),
+            name: String(localized: "New project", bundle: AppLocale.packageBundle),
             path: ""
         )
         appState.selectedProject = project
@@ -672,7 +672,7 @@ struct SidebarView: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        panel.prompt = String(localized: "Select", bundle: .module)
+        panel.prompt = String(localized: "Select", bundle: AppLocale.packageBundle)
         if panel.runModal() == .OK, let url = panel.url {
             let project = appState.createProject(
                 name: url.lastPathComponent,
@@ -1437,7 +1437,7 @@ struct RecentChatRow: View {
         HStack(spacing: 10) {
             leadingIconView
             Text(chat.title.isEmpty
-                 ? String(localized: "Conversation", bundle: .module)
+                 ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
                 .font(.system(size: 13, weight: .light))
                 .foregroundColor(isSelected ? .white : Color(white: 0.74))
@@ -2646,7 +2646,7 @@ private struct DragChipView: View {
                 .foregroundColor(Color(white: 0.85))
                 .frame(width: 14, height: 14)
             Text(chat.title.isEmpty
-                 ? String(localized: "Conversation", bundle: .module)
+                 ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
                 .font(.system(size: 13, weight: .light))
                 .foregroundColor(Color(white: 0.94))

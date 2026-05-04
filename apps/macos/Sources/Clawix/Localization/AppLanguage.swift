@@ -65,17 +65,18 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     /// resource bundle. SwiftPM lowercases lproj folder names on copy
     /// (`pt-BR.lproj` → `pt-br.lproj`), so we try the canonical BCP-47
     /// form first and the lowercased form as a fallback. Falls back to
-    /// `Bundle.module` (source language) if no lproj is found, e.g.
+    /// the package bundle (source language) if no lproj is found, e.g.
     /// when the user is on the dev source language ("es") or someone
     /// shipped without re-running compile_xcstrings.py.
     var bundle: Bundle {
+        let pkg = AppLocale.packageBundle
         for candidate in [rawValue, rawValue.lowercased()] {
-            if let path = Bundle.module.path(forResource: candidate, ofType: "lproj"),
+            if let path = pkg.path(forResource: candidate, ofType: "lproj"),
                let sub = Bundle(path: path) {
                 return sub
             }
         }
-        return .module
+        return pkg
     }
 
     static func from(code: String?) -> AppLanguage {
@@ -103,7 +104,31 @@ enum AppLocale {
     /// Sub-bundle of the active language. `String(localized:bundle:)`
     /// honors the locale chosen here regardless of the system locale,
     /// because the bundle itself only contains one language's strings.
-    nonisolated(unsafe) static var bundle: Bundle = .module
+    /// Initialised lazily on first read so it points at the package
+    /// resource bundle, not at `Bundle.module`. See `packageBundle`.
+    nonisolated(unsafe) static var bundle: Bundle = AppLocale.packageBundle
+
+    /// The SwiftPM-emitted `Bundle.module` accessor looks for the
+    /// resource bundle at `Bundle.main.bundleURL/<X>.bundle`, which
+    /// resolves to the .app root on macOS even though resources actually
+    /// live under `Contents/Resources/`. Reading `.module` from a
+    /// shipped .app crashes on launch. Resolve the bundle ourselves
+    /// from `resourceURL`, which is the canonical path on macOS, and
+    /// fall back to `Bundle.main` so non-app callers (CLI tools, tests)
+    /// stay usable.
+    static let packageBundle: Bundle = {
+        let bundleName = "Clawix_Clawix.bundle"
+        let candidates: [URL?] = [
+            Bundle.main.resourceURL?.appendingPathComponent(bundleName),
+            Bundle.main.bundleURL.appendingPathComponent(bundleName)
+        ]
+        for url in candidates {
+            if let url, let bundle = Bundle(url: url) {
+                return bundle
+            }
+        }
+        return Bundle.main
+    }()
 }
 
 extension AppLanguage {

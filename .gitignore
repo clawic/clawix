@@ -16,3 +16,4 @@ xcuserdata/
 .signing.env
 .signing.env.local
 .signing.env.*
+.release-notes.md
