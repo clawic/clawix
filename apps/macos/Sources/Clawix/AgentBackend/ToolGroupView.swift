@@ -135,7 +135,7 @@ struct ToolGroupView: View {
         if fileChanges > 0 {
             rows.append(AggregateRow(
                 id: "files",
-                icon: "doc.text",
+                icon: "clawix.pencil",
                 text: L10n.modifiedFiles(fileChanges)
             ))
         }
@@ -203,6 +203,9 @@ struct ToolGroupView: View {
                     CursorIcon(size: 13)
                 case "clawix.mcp":
                     McpIcon(size: 14)
+                case "clawix.pencil":
+                    PencilIconView(color: Color(white: 0.45), lineWidth: 0.85)
+                        .frame(width: 14, height: 14)
                 case "magnifyingglass":
                     SearchIcon(size: 11.5)
                 default:

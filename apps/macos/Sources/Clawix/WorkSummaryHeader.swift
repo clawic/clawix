@@ -150,7 +150,7 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
     if fileChanges > 0 {
         rows.append(WorkRow(
             id: "fileChange",
-            icon: "doc.text",
+            icon: "clawix.pencil",
             text: L10n.modifiedFiles(fileChanges)
         ))
     }
@@ -213,6 +213,9 @@ private struct WorkRowView: View {
                     CursorIcon(size: 12)
                 case "clawix.mcp":
                     McpIcon(size: 13)
+                case "clawix.pencil":
+                    PencilIconView(color: Color(white: 0.42), lineWidth: 0.85)
+                        .frame(width: 13, height: 13)
                 case "magnifyingglass":
                     SearchIcon(size: 11)
                 default:
