@@ -267,10 +267,16 @@ struct CommandPaletteView: View {
             execute(item)
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(Color(white: 0.85))
-                    .frame(width: 18, alignment: .center)
+                Group {
+                    if item.icon == "magnifyingglass" {
+                        SearchIcon(size: 14)
+                    } else {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 14, weight: .regular))
+                    }
+                }
+                .foregroundColor(Color(white: 0.85))
+                .frame(width: 18, alignment: .center)
                 Text(item.title)
                     .font(.system(size: 14))
                     .foregroundColor(Color(white: 0.94))

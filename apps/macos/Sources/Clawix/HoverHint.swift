@@ -23,9 +23,12 @@ enum HoverHintPlacement {
 
 enum HoverHintConfig {
     static let delay: TimeInterval        = 1.5
-    static let gap: CGFloat               = 8
+    static let gap: CGFloat               = 10
     static let cornerRadius: CGFloat      = 7
     static let fontSize: CGFloat          = 11
+    // Single-line bubble height with our padding (vertical 5 + ~13pt text + 5)
+    // is roughly 23pt. Use a fixed value so we don't need to measure async.
+    static let bubbleHeight: CGFloat      = 23
     static let textColor                  = Color(white: 0.98)
     static let fill                       = Color(white: 0.18)
     static let stroke                     = Color.white.opacity(0.22)
@@ -33,8 +36,11 @@ enum HoverHintConfig {
     static let shadow                     = Color.black.opacity(0.30)
     static let shadowRadius: CGFloat      = 8
     static let shadowOffsetY: CGFloat     = 3
-    static let appearAnimation            = Animation.easeOut(duration: 0.14)
-    static let disappearAnimation         = Animation.easeOut(duration: 0.10)
+    static let appearAnimation            = Animation.easeOut(duration: 0.18)
+    static let disappearAnimation         = Animation.easeOut(duration: 0.16)
+    // Direction-aware translate for the appear/disappear nudge, matching the
+    // popup language used app-wide (`softNudge` in ComposerView.swift).
+    static let nudge: CGFloat             = 4
 }
 
 struct HoverHintBubble: View {
@@ -67,7 +73,6 @@ private struct HoverHintModifier: ViewModifier {
 
     @State private var visible = false
     @State private var pending: DispatchWorkItem?
-    @State private var bubbleSize: CGSize = .zero
 
     func body(content: Content) -> some View {
         content
@@ -92,19 +97,27 @@ private struct HoverHintModifier: ViewModifier {
             .overlay(alignment: overlayAlignment) {
                 if visible {
                     HoverHintBubble(text: text)
-                        .background(
-                            GeometryReader { geo in
-                                Color.clear
-                                    .preference(key: HoverHintSizeKey.self, value: geo.size)
-                            }
-                        )
-                        .onPreferenceChange(HoverHintSizeKey.self) { bubbleSize = $0 }
                         .offset(x: offsetX, y: offsetY)
                         .allowsHitTesting(false)
-                        .transition(.opacity)
+                        .transition(nudgeTransition)
                         .zIndex(999)
                 }
             }
+    }
+
+    // Symmetric soft nudge: bubble enters AND exits with a small translate
+    // from the side of the control, plus opacity. Matches the popup language
+    // used elsewhere in the app (`softNudge` / `softNudgeSymmetric` in
+    // ComposerView.swift). Direction depends on placement so the hint always
+    // emerges from the edge nearest the icon (above → from below, below →
+    // from above, etc.).
+    private var nudgeTransition: AnyTransition {
+        switch placement {
+        case .above:    return .softNudgeSymmetric(y: HoverHintConfig.nudge)
+        case .below:    return .softNudgeSymmetric(y: -HoverHintConfig.nudge)
+        case .leading:  return .softNudgeSymmetric(x: HoverHintConfig.nudge)
+        case .trailing: return .softNudgeSymmetric(x: -HoverHintConfig.nudge)
+        }
     }
 
     private var overlayAlignment: Alignment {
@@ -118,25 +131,18 @@ private struct HoverHintModifier: ViewModifier {
 
     private var offsetY: CGFloat {
         switch placement {
-        case .above:    return -(bubbleSize.height + HoverHintConfig.gap)
-        case .below:    return bubbleSize.height + HoverHintConfig.gap
+        case .above:    return -(HoverHintConfig.bubbleHeight + HoverHintConfig.gap)
+        case .below:    return HoverHintConfig.bubbleHeight + HoverHintConfig.gap
         default:        return 0
         }
     }
 
     private var offsetX: CGFloat {
         switch placement {
-        case .leading:  return -(bubbleSize.width + HoverHintConfig.gap)
-        case .trailing: return bubbleSize.width + HoverHintConfig.gap
+        case .leading:  return -HoverHintConfig.gap * 2
+        case .trailing: return HoverHintConfig.gap * 2
         default:        return 0
         }
-    }
-}
-
-private struct HoverHintSizeKey: PreferenceKey {
-    static var defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        value = nextValue()
     }
 }
 

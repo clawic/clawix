@@ -42,6 +42,7 @@
 "Automatic review" = "자동 검토";
 "Back" = "뒤로";
 "Back to app" = "앱으로 돌아가기";
+"Back to review panel" = "검토 패널로 돌아가기";
 "Binary" = "바이너리";
 "Branch name" = "브랜치 이름";
 "Branch out" = "분기";
@@ -50,6 +51,7 @@
 "By project" = "프로젝트별";
 "Cancel" = "취소";
 "Change branch" = "브랜치 변경";
+"Change model" = "모델 변경";
 "Change permissions" = "권한 변경";
 "Change permissions: %@" = "권한 변경: %@";
 "Chat" = "채팅";
@@ -63,6 +65,7 @@
 "Clawix backend" = "Clawix 백엔드";
 "Clawix detected useful preferences from another local agent on this Mac" = "Clawix가 다른 로컬 에이전트 앱에서 유용한 설정을 찾았습니다";
 "Clear search" = "검색 지우기";
+"Click to enlarge" = "클릭하여 확대";
 "Close" = "닫기";
 "Close tab" = "탭 닫기";
 "Collapse" = "접기";
@@ -111,6 +114,7 @@
 "Documents" = "문서";
 "Done" = "완료";
 "Don’t work on a project" = "프로젝트 없이 작업";
+"Download image" = "이미지 다운로드";
 "Download plan" = "계획 다운로드";
 "Drop to attach" = "놓아서 첨부";
 "Each action can run any command and shows up in the toolbar header." = "이 작업은 모든 명령을 실행할 수 있으며 헤더에 표시됩니다.";
@@ -218,8 +222,10 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "프로젝트에 대한 추가 지침과 컨텍스트를 Clawix에 제공하세요. 자세히 알아보기";
 "Quick Chat" = "빠른 채팅";
 "Reasoning" = "추론";
+"Record voice note" = "음성 메모 녹음";
 "Register an action that runs a command from the local toolbar." = "로컬 도구 모음에서 명령을 실행할 작업을 추가하세요.";
 "Reinstall" = "다시 설치";
+"Reload" = "새로고침";
 "Reload Browser Page" = "페이지 새로고침";
 "Remaining usage limits" = "남은 사용 한도";
 "Remove attachment" = "첨부 파일 제거";
@@ -274,6 +280,8 @@
 "Start from scratch" = "처음부터 시작";
 "Start voice recording" = "음성 녹음 시작";
 "Status" = "상태";
+"Stop" = "중지";
+"Stop loading" = "로드 중지";
 "Stop recording" = "녹음 중지";
 "Stop response" = "응답 중지";
 "Tell the agent what to do instead" = "대신 무엇을 할지 에이전트에 알려주세요";
@@ -285,6 +293,7 @@
 "Toggle Sidebar" = "사이드바 전환";
 "Toggle Terminal" = "터미널 전환";
 "Toggle experimental features by editing the configuration file." = "구성 파일에서 실험적 기능을 설정하세요.";
+"Transcribe and send" = "전사 후 전송";
 "Transcribing voice note" = "음성 메모 전사 중";
 "Turn off plan mode" = "계획 모드 끄기";
 "Type a command" = "명령 입력";

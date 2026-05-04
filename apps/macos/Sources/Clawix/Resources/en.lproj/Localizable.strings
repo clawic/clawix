@@ -42,6 +42,7 @@
 "Automatic review" = "Automatic review";
 "Back" = "Back";
 "Back to app" = "Back to app";
+"Back to review panel" = "Back to review panel";
 "Binary" = "Binary";
 "Branch name" = "Branch name";
 "Branch out" = "Branch out";
@@ -50,6 +51,7 @@
 "By project" = "By project";
 "Cancel" = "Cancel";
 "Change branch" = "Change branch";
+"Change model" = "Change model";
 "Change permissions" = "Change permissions";
 "Change permissions: %@" = "Change permissions: %@";
 "Chat" = "Chat";
@@ -63,6 +65,7 @@
 "Clawix backend" = "Clawix backend";
 "Clawix detected useful preferences from another local agent on this Mac" = "Clawix detected useful preferences from another local agent on this Mac";
 "Clear search" = "Clear search";
+"Click to enlarge" = "Click to enlarge";
 "Close" = "Close";
 "Close tab" = "Close tab";
 "Collapse" = "Collapse";
@@ -111,6 +114,7 @@
 "Documents" = "Documents";
 "Done" = "Done";
 "Don’t work on a project" = "Don’t work on a project";
+"Download image" = "Download image";
 "Download plan" = "Download plan";
 "Drop to attach" = "Drop to attach";
 "Each action can run any command and shows up in the toolbar header." = "Each action can run any command and shows up in the toolbar header.";
@@ -218,8 +222,10 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more";
 "Quick Chat" = "Quick Chat";
 "Reasoning" = "Reasoning";
+"Record voice note" = "Record voice note";
 "Register an action that runs a command from the local toolbar." = "Register an action that runs a command from the local toolbar.";
 "Reinstall" = "Reinstall";
+"Reload" = "Reload";
 "Reload Browser Page" = "Reload Browser Page";
 "Remaining usage limits" = "Remaining usage limits";
 "Remove attachment" = "Remove attachment";
@@ -274,6 +280,8 @@
 "Start from scratch" = "Start from scratch";
 "Start voice recording" = "Start voice recording";
 "Status" = "Status";
+"Stop" = "Stop";
+"Stop loading" = "Stop loading";
 "Stop recording" = "Stop recording";
 "Stop response" = "Stop response";
 "Tell the agent what to do instead" = "Tell the agent what to do instead";
@@ -285,6 +293,7 @@
 "Toggle Sidebar" = "Toggle Sidebar";
 "Toggle Terminal" = "Toggle Terminal";
 "Toggle experimental features by editing the configuration file." = "Toggle experimental features by editing the configuration file.";
+"Transcribe and send" = "Transcribe and send";
 "Transcribing voice note" = "Transcribing voice note";
 "Turn off plan mode" = "Turn off plan mode";
 "Type a command" = "Type a command";

@@ -42,6 +42,7 @@
 "Automatic review" = "自動レビュー";
 "Back" = "戻る";
 "Back to app" = "アプリに戻る";
+"Back to review panel" = "レビューパネルに戻る";
 "Binary" = "バイナリ";
 "Branch name" = "ブランチ名";
 "Branch out" = "分岐";
@@ -50,6 +51,7 @@
 "By project" = "プロジェクト別";
 "Cancel" = "キャンセル";
 "Change branch" = "ブランチを切替";
+"Change model" = "モデルを変更";
 "Change permissions" = "権限を変更";
 "Change permissions: %@" = "権限を変更: %@";
 "Chat" = "チャット";
@@ -63,6 +65,7 @@
 "Clawix backend" = "Clawixバックエンド";
 "Clawix detected useful preferences from another local agent on this Mac" = "Clawix が別のローカルエージェントアプリで有用な設定を見つけました";
 "Clear search" = "検索をクリア";
+"Click to enlarge" = "クリックで拡大";
 "Close" = "閉じる";
 "Close tab" = "タブを閉じる";
 "Collapse" = "折りたたむ";
@@ -111,6 +114,7 @@
 "Documents" = "ドキュメント";
 "Done" = "完了";
 "Don’t work on a project" = "プロジェクトを使わない";
+"Download image" = "画像をダウンロード";
 "Download plan" = "プランをダウンロード";
 "Drop to attach" = "ドロップして添付";
 "Each action can run any command and shows up in the toolbar header." = "これらのアクションは任意のコマンドを実行でき、ヘッダーに表示されます。";
@@ -218,8 +222,10 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "プロジェクト向けに追加の指示とコンテキストを Clawix に渡します。詳細";
 "Quick Chat" = "クイックチャット";
 "Reasoning" = "推論";
+"Record voice note" = "音声メモを録音";
 "Register an action that runs a command from the local toolbar." = "ローカルツールバーからコマンドを実行するアクションを追加します。";
 "Reinstall" = "再インストール";
+"Reload" = "再読み込み";
 "Reload Browser Page" = "ページを再読み込み";
 "Remaining usage limits" = "残りの利用上限";
 "Remove attachment" = "添付ファイルを削除";
@@ -274,6 +280,8 @@
 "Start from scratch" = "ゼロから始める";
 "Start voice recording" = "音声録音を開始";
 "Status" = "ステータス";
+"Stop" = "停止";
+"Stop loading" = "読み込みを停止";
 "Stop recording" = "録音を停止";
 "Stop response" = "応答を停止";
 "Tell the agent what to do instead" = "代わりに何をするかエージェントに伝える";
@@ -285,6 +293,7 @@
 "Toggle Sidebar" = "サイドバーを切替";
 "Toggle Terminal" = "ターミナルを切替";
 "Toggle experimental features by editing the configuration file." = "設定ファイルから実験的機能を設定します。";
+"Transcribe and send" = "文字起こしして送信";
 "Transcribing voice note" = "音声メモを文字起こし中";
 "Turn off plan mode" = "プランモードをオフ";
 "Type a command" = "コマンドを入力";

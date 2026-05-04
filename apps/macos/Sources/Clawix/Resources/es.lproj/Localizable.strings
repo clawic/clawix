@@ -42,6 +42,7 @@
 "Automatic review" = "Revisión automática";
 "Back" = "Atrás";
 "Back to app" = "Volver a la aplicación";
+"Back to review panel" = "Volver al panel de revisión";
 "Binary" = "Binario";
 "Branch name" = "Nombre de la rama";
 "Branch out" = "Ramificar";
@@ -50,6 +51,7 @@
 "By project" = "Por proyecto";
 "Cancel" = "Cancelar";
 "Change branch" = "Cambiar de rama";
+"Change model" = "Cambiar modelo";
 "Change permissions" = "Cambiar permisos";
 "Change permissions: %@" = "Cambiar permisos: %@";
 "Chat" = "Chat";
@@ -63,6 +65,7 @@
 "Clawix backend" = "Backend de Clawix";
 "Clawix detected useful preferences from another local agent on this Mac" = "Clawix encontró ajustes útiles en otra aplicación de agente local";
 "Clear search" = "Limpiar búsqueda";
+"Click to enlarge" = "Haz clic para ampliar";
 "Close" = "Cerrar";
 "Close tab" = "Cerrar pestaña";
 "Collapse" = "Contraer";
@@ -111,6 +114,7 @@
 "Documents" = "Documentos";
 "Done" = "Hecho";
 "Don’t work on a project" = "No trabajes en un proyecto";
+"Download image" = "Descargar imagen";
 "Download plan" = "Descargar plan";
 "Drop to attach" = "Suelta para adjuntar";
 "Each action can run any command and shows up in the toolbar header." = "Estas acciones pueden ejecutar cualquier comando y se mostrarán en el encabezado.";
@@ -218,8 +222,10 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Dale a Clawix instrucciones adicionales y contexto para tu proyecto. Más información";
 "Quick Chat" = "Chat rápido";
 "Reasoning" = "Razonamiento";
+"Record voice note" = "Grabar nota de voz";
 "Register an action that runs a command from the local toolbar." = "Añade una acción para ejecutar comandos desde la barra de herramientas local.";
 "Reinstall" = "Reinstalar";
+"Reload" = "Recargar";
 "Reload Browser Page" = "Recargar página del navegador";
 "Remaining usage limits" = "Límites de uso restantes";
 "Remove attachment" = "Quitar adjunto";
@@ -274,6 +280,8 @@
 "Start from scratch" = "Empezar desde cero";
 "Start voice recording" = "Iniciar grabación de voz";
 "Status" = "Estado";
+"Stop" = "Detener";
+"Stop loading" = "Detener carga";
 "Stop recording" = "Detener grabación";
 "Stop response" = "Detener respuesta";
 "Tell the agent what to do instead" = "Dile al agente qué hacer en su lugar";
@@ -285,6 +293,7 @@
 "Toggle Sidebar" = "Alternar barra lateral";
 "Toggle Terminal" = "Alternar terminal";
 "Toggle experimental features by editing the configuration file." = "Configura las funciones experimentales desde el archivo de configuración.";
+"Transcribe and send" = "Transcribir y enviar";
 "Transcribing voice note" = "Transcribiendo nota de voz";
 "Turn off plan mode" = "Desactivar modo plan";
 "Type a command" = "Escribe un comando";

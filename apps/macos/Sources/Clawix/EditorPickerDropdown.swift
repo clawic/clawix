@@ -103,6 +103,7 @@ struct EditorPickerDropdown: View {
             }
             .buttonStyle(.plain)
             .onHover { hoverTrigger = $0 }
+            .animation(.easeOut(duration: 0.12), value: hoverTrigger)
             .accessibilityLabel("Open folder with")
             .anchorPreference(key: EditorPickerAnchorKey.self, value: .bounds) { $0 }
             .overlayPreferenceValue(EditorPickerAnchorKey.self) { anchor in

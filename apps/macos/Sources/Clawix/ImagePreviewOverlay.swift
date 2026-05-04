@@ -84,7 +84,7 @@ struct ImagePreviewOverlay: View {
                                 roundIconLabel(systemName: "arrow.down.to.line")
                             }
                             .buttonStyle(.plain)
-                            .help("Download image")
+                            .help(L10n.t("Download image"))
 
                             Button(action: dismiss) {
                                 roundIconLabel(systemName: "xmark")

@@ -10,9 +10,8 @@ struct SearchView: View {
 
             // Search field
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
+                SearchIcon(size: 13)
                     .foregroundColor(Palette.textTertiary)
-                    .font(.system(size: 13))
                 TextField("Search in conversations…", text: $appState.searchQuery)
                     .font(.system(size: 14))
                     .foregroundColor(Palette.textPrimary)
@@ -76,8 +75,7 @@ private struct SearchResultRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 12))
+            FileChipIcon(size: 13)
                 .foregroundColor(Palette.textTertiary)
             Text(text)
                 .font(.system(size: 13))
@@ -122,9 +120,15 @@ func pageHeaderString(_ title: String) -> some View {
 func emptyState(_ message: String, icon: String) -> some View {
     VStack(spacing: 10) {
         Spacer()
-        Image(systemName: icon)
-            .font(.system(size: 28))
-            .foregroundColor(Palette.textTertiary)
+        Group {
+            if icon == "magnifyingglass" {
+                SearchIcon(size: 28)
+            } else {
+                Image(systemName: icon)
+                    .font(.system(size: 28))
+            }
+        }
+        .foregroundColor(Palette.textTertiary)
         Text(message)
             .font(.system(size: 13))
             .foregroundColor(Palette.textTertiary)

@@ -147,7 +147,7 @@ struct ComposerView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(L10n.a11yChangePermissions(label: appState.permissionMode.label))
             .anchorPreference(key: PermissionsButtonAnchorKey.self, value: .bounds) { $0 }
-            .hoverHint("Change permissions")
+            .hoverHint(L10n.t("Change permissions"))
 
             Spacer()
 
@@ -186,7 +186,7 @@ struct ComposerView: View {
             .accessibilityLabel(L10n.a11yModelPicker(model: appState.selectedModel,
                                                     intelligence: appState.selectedIntelligence.label))
             .anchorPreference(key: ModelButtonAnchorKey.self, value: .bounds) { $0 }
-            .hoverHint("Change model")
+            .hoverHint(L10n.t("Change model"))
 
             if voice.state == .transcribing {
                 TranscribingSpinner()
@@ -203,7 +203,7 @@ struct ComposerView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Start voice recording")
-                .hoverHint("Grabar nota de voz")
+                .hoverHint(L10n.t("Record voice note"))
             }
 
             if activeTurnInChat {
@@ -216,7 +216,7 @@ struct ComposerView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Stop response")
-                .hoverHint("Stop response")
+                .hoverHint(L10n.t("Stop response"))
             } else {
                 Button { appState.sendMessage() } label: {
                     Image(systemName: "arrow.up")
@@ -228,7 +228,7 @@ struct ComposerView: View {
                 .buttonStyle(.plain)
                 .disabled(!canSend)
                 .accessibilityLabel("Send message")
-                .hoverHint("Send message")
+                .hoverHint(L10n.t("Send message"))
             }
         }
     }
@@ -262,7 +262,7 @@ struct ComposerView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Stop recording")
-            .hoverHint("Stop recording")
+            .hoverHint(L10n.t("Stop recording"))
 
             Button {
                 stopAndSend()
@@ -275,7 +275,7 @@ struct ComposerView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Send voice note")
-            .hoverHint("Transcribir y enviar")
+            .hoverHint(L10n.t("Transcribe and send"))
         }
     }
 
@@ -689,8 +689,7 @@ private struct ProjectPickerPopup: View {
 
     private var searchField: some View {
         HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
+            SearchIcon(size: 11)
                 .foregroundColor(MenuStyle.rowSubtle)
                 .frame(width: 18, alignment: .center)
             TextField(
@@ -2025,7 +2024,7 @@ private struct ComposerAttachmentChip: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { removeHovered = $0 }
-                .help("Remove attachment")
+                .help(L10n.t("Remove attachment"))
                 .transition(.opacity)
                 .layoutPriority(1)
             }
@@ -2046,7 +2045,7 @@ private struct ComposerAttachmentChip: View {
         .contentShape(Capsule(style: .continuous))
         .onTapGesture { onOpen() }
         .onHover { hovered = $0 }
-        .help(attachment.isImage ? "Click para ampliar" : attachment.url.path)
+        .help(attachment.isImage ? L10n.t("Click to enlarge") : attachment.url.path)
     }
 
     @ViewBuilder

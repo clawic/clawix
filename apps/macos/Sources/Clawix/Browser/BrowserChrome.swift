@@ -81,7 +81,8 @@ private struct ReviewTabPill: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .hoverHint("Volver al panel de revisión", placement: .below)
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .hoverHint(L10n.t("Back to review panel"), placement: .below)
     }
 }
 
@@ -162,7 +163,8 @@ private struct NewTabButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .hoverHint("New tab", placement: .below)
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .hoverHint(L10n.t("New tab"), placement: .below)
     }
 }
 
@@ -178,14 +180,14 @@ struct BrowserNavigationBar: View {
                 controller.goBack()
             }
             .accessibilityLabel("Back")
-            .hoverHint("Back", placement: .below)
+            .hoverHint(L10n.t("Back"), placement: .below)
 
             ChromeIconButton(systemName: "chevron.right",
                              enabled: controller.canGoForward) {
                 controller.goForward()
             }
             .accessibilityLabel("Forward")
-            .hoverHint("Forward", placement: .below)
+            .hoverHint(L10n.t("Forward"), placement: .below)
 
             ChromeIconButton(systemName: controller.isLoading
                              ? "xmark"
@@ -196,8 +198,8 @@ struct BrowserNavigationBar: View {
                     controller.reload()
                 }
             }
-            .accessibilityLabel(controller.isLoading ? "Detener" : "Recargar")
-            .hoverHint(controller.isLoading ? "Detener carga" : "Recargar", placement: .below)
+            .accessibilityLabel(controller.isLoading ? L10n.t("Stop") : L10n.t("Reload"))
+            .hoverHint(controller.isLoading ? L10n.t("Stop loading") : L10n.t("Reload"), placement: .below)
 
             BrowserURLField(controller: controller)
                 .frame(maxWidth: 520)
@@ -206,13 +208,13 @@ struct BrowserNavigationBar: View {
 
             ChromeIconButton(systemName: "viewfinder") {}
                 .accessibilityLabel("Lens")
-                .hoverHint("Lens", placement: .below)
+                .hoverHint(L10n.t("Lens"), placement: .below)
             ChromeIconButton(systemName: "plus") {}
                 .accessibilityLabel("Add")
-                .hoverHint("Add", placement: .below)
+                .hoverHint(L10n.t("Add"), placement: .below)
             ChromeIconButton(systemName: "ellipsis") {}
                 .accessibilityLabel("More options")
-                .hoverHint("More options", placement: .below)
+                .hoverHint(L10n.t("More options"), placement: .below)
         }
         .padding(.horizontal, 10)
         .frame(height: 44)
@@ -241,6 +243,7 @@ private struct ChromeIconButton: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
         .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
     }
 
     private var foreground: Color {
