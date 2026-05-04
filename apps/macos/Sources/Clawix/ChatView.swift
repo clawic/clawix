@@ -686,8 +686,6 @@ private struct MessageRow: View {
             ? String(localized: "Copied", bundle: AppLocale.bundle, locale: AppLocale.current)
             : String(localized: "Copy", bundle: AppLocale.bundle, locale: AppLocale.current)
         let editLabel = String(localized: "Edit", bundle: AppLocale.bundle, locale: AppLocale.current)
-        let upLabel = String(localized: "Helpful", bundle: AppLocale.bundle, locale: AppLocale.current)
-        let downLabel = String(localized: "Not helpful", bundle: AppLocale.bundle, locale: AppLocale.current)
         let branchLabel = String(localized: "Branch out", bundle: AppLocale.bundle, locale: AppLocale.current)
 
         HStack(spacing: -1) {
@@ -710,10 +708,6 @@ private struct MessageRow: View {
                 MessageActionIcon(kind: .copy(showCheck: justCopied),
                                   label: copyLabel,
                                   action: handleCopy)
-                MessageActionIcon(kind: .system("hand.thumbsup"),
-                                  label: upLabel) {}
-                MessageActionIcon(kind: .system("hand.thumbsdown"),
-                                  label: downLabel) {}
                 MessageActionIcon(kind: .branchArrows,
                                   label: branchLabel) {}
                 timestampLabel
@@ -826,7 +820,7 @@ private struct MessageActionIcon: View {
             }
         case .pencil:
             PencilIconView(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                .frame(width: 13, height: 13)
+                .frame(width: 16, height: 16)
         case .branchArrows:
             BranchArrowsIconView(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
                 .frame(width: 14, height: 14)
@@ -1030,8 +1024,7 @@ private struct BranchPickerPopup: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 12))
+                SearchIcon(size: 12)
                     .foregroundColor(MenuStyle.rowSubtle)
                 TextField(
                     String(localized: "Search branches", bundle: AppLocale.bundle, locale: AppLocale.current),
@@ -1181,8 +1174,8 @@ private struct BranchCreateSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text(String(localized: "Create and switch branch", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(Color(white: 0.96))
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(Color(white: 0.97))
                 Spacer(minLength: 12)
                 Button(action: onCancel) {
                     Image(systemName: "xmark")
@@ -1234,48 +1227,25 @@ private struct BranchCreateSheet: View {
                 Spacer(minLength: 0)
                 Button(action: onCancel) {
                     Text(String(localized: "Close", bundle: AppLocale.bundle, locale: AppLocale.current))
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(white: 0.94))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color(white: 0.20))
-                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SheetCancelButtonStyle())
 
                 Button {
                     guard !trimmed.isEmpty else { return }
                     onCreate(trimmed)
                 } label: {
                     Text(String(localized: "Create and switch", bundle: AppLocale.bundle, locale: AppLocale.current))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(Color.black)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(trimmed.isEmpty ? Color.white.opacity(0.55) : Color.white)
-                        )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(SheetPrimaryButtonStyle(enabled: !trimmed.isEmpty))
                 .disabled(trimmed.isEmpty)
                 .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 22)
-        .padding(.bottom, 20)
+        .padding(.horizontal, 22)
+        .padding(.top, 20)
+        .padding(.bottom, 18)
         .frame(width: 460)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(white: 0.135))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
-                )
-        )
+        .sheetStandardBackground()
         .onAppear { nameFocused = true }
     }
 }
@@ -1388,59 +1358,72 @@ struct PencilIconView: View {
             let baseX = (size.width - s) / 2
             let baseY = (size.height - s) / 2
 
-            func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-                CGPoint(x: baseX + x * s, y: baseY + y * s)
+            // Pencil tilted 45 degrees, rounded cap upper-right, rounded tip lower-left.
+            // Geometry parameterized along axis (a) and perpendicular (p).
+            let ux: CGFloat = -0.7071
+            let uy: CGFloat =  0.7071
+            let nx: CGFloat = -uy
+            let ny: CGFloat =  ux
+
+            let w: CGFloat = 0.144
+            let bodyLen: CGFloat = 0.54
+            let taperLen: CGFloat = 0.21
+            let transitionLen: CGFloat = 0.060
+            let tipCapExt: CGFloat = 0.020
+            let taperWidth: CGFloat = 0.132
+            let tipWidth: CGFloat = 0.032
+            let transitionOvershoot: CGFloat = 0.006
+            let ferruleA: CGFloat = 0.065
+
+            // Center the bbox of the pencil on (0.5, 0.5) regardless of length tweaks.
+            let midA = (bodyLen + taperLen + tipCapExt - w) / 2
+            let cx: CGFloat = 0.5 - midA * ux
+            let cy: CGFloat = 0.5 - midA * uy
+
+            func pt(_ a: CGFloat, _ p: CGFloat) -> CGPoint {
+                CGPoint(
+                    x: baseX + (cx + a * ux + p * nx) * s,
+                    y: baseY + (cy + a * uy + p * ny) * s
+                )
             }
 
-            // Lucide-style pencil. Coordinates in 0..1 space (originally 24x24).
-            // Pencil is tilted 45 degrees, rounded back end at upper-right,
-            // sharp tip at lower-left.
+            let bTop = pt(0,  w)
+            let bBot = pt(0, -w)
+            let backApex = pt(-w, 0)
+            let mTop = pt(bodyLen,  w)
+            let mBot = pt(bodyLen, -w)
+            let tTop = pt(bodyLen + transitionLen,  taperWidth)
+            let tBot = pt(bodyLen + transitionLen, -taperWidth)
+            let tipUpper = pt(bodyLen + taperLen,  tipWidth)
+            let tipLower = pt(bodyLen + taperLen, -tipWidth)
+            let tipPoint = pt(bodyLen + taperLen + tipCapExt, 0)
 
-            let bTop = p(17.188 / 24, 2.825 / 24)
-            let bBot = p(21.174 / 24, 6.812 / 24)
-            let backApex = p(21.174 / 24, 2.825 / 24)
-            // Cubic Bezier control points approximating a half-circle cap.
-            let bC1a = p(0.949, 0.247)
-            let bC1b = p(0.949, 0.165)
-            let bC2a = p(0.838, 0.069)
-            let bC2b = p(0.762, 0.069)
+            // 0.5523 is the standard cubic Bezier approximation factor for a quarter circle.
+            let k: CGFloat = 0.5523
+            let bcap1c1 = pt(-w * k, -w)
+            let bcap1c2 = pt(-w,     -w * k)
+            let bcap2c1 = pt(-w,      w * k)
+            let bcap2c2 = pt(-w * k,  w)
 
-            // Body-tip transition (upper edge, small radius arc)
-            let mTop = p(3.842 / 24, 16.174 / 24)
-            let tTop = p(3.342 / 24, 17.004 / 24)
-            // Tip end (very small radius, sharp point)
-            let tipUpper = p(2.021 / 24, 21.356 / 24)
-            let tipLower = p(2.644 / 24, 21.978 / 24)
-            let tipPoint = p(0.085, 0.910)
-            // Body-tip transition (lower edge, small radius arc)
-            let tBot = p(6.997 / 24, 20.658 / 24)
-            let mBot = p(7.827 / 24, 20.161 / 24)
+            let transTopCtl = pt(bodyLen + transitionLen * 0.45,  w + transitionOvershoot)
+            let transBotCtl = pt(bodyLen + transitionLen * 0.45, -(w + transitionOvershoot))
 
             var pencil = Path()
             pencil.move(to: bTop)
-            // Body upper side
             pencil.addLine(to: mTop)
-            // Small rounded transition into upper tip side
-            pencil.addQuadCurve(to: tTop, control: p(0.135, 0.674))
-            // Upper tip side
+            pencil.addQuadCurve(to: tTop, control: transTopCtl)
             pencil.addLine(to: tipUpper)
-            // Tip point (rounded)
             pencil.addQuadCurve(to: tipLower, control: tipPoint)
-            // Lower tip side
             pencil.addLine(to: tBot)
-            // Small rounded transition into body lower side
-            pencil.addQuadCurve(to: mBot, control: p(0.314, 0.851))
-            // Body lower side
+            pencil.addQuadCurve(to: mBot, control: transBotCtl)
             pencil.addLine(to: bBot)
-            // Half-circle back cap (two cubic segments)
-            pencil.addCurve(to: backApex, control1: bC1a, control2: bC1b)
-            pencil.addCurve(to: bTop, control1: bC2a, control2: bC2b)
+            pencil.addCurve(to: backApex, control1: bcap1c1, control2: bcap1c2)
+            pencil.addCurve(to: bTop,     control1: bcap2c1, control2: bcap2c2)
             pencil.closeSubpath()
 
-            // Ferrule line (perpendicular crossbar near the back)
             var ferrule = Path()
-            ferrule.move(to: p(15.0 / 24, 5.0 / 24))
-            ferrule.addLine(to: p(19.0 / 24, 9.0 / 24))
+            ferrule.move(to: pt(ferruleA,  w))
+            ferrule.addLine(to: pt(ferruleA, -w))
 
             let stroke = StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
             context.stroke(pencil, with: .color(color), style: stroke)

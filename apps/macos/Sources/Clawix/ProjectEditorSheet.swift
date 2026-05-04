@@ -23,14 +23,26 @@ struct ProjectEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(isEditing
-                 ? String(localized: "Edit project", bundle: AppLocale.bundle, locale: AppLocale.current)
-                 : String(localized: "New project", bundle: AppLocale.bundle, locale: AppLocale.current))
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color(white: 0.94))
-                .padding(.horizontal, 24)
-                .padding(.top, 22)
-                .padding(.bottom, 18)
+            HStack(alignment: .top) {
+                Text(isEditing
+                     ? String(localized: "Edit project", bundle: AppLocale.bundle, locale: AppLocale.current)
+                     : String(localized: "New project", bundle: AppLocale.bundle, locale: AppLocale.current))
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(Color(white: 0.97))
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(white: 0.65))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding(.horizontal, 22)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
             VStack(alignment: .leading, spacing: 14) {
                 fieldGroup("Name") {
@@ -54,11 +66,10 @@ struct ProjectEditorSheet: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 9)
                             .background(textFieldBackground)
-                        Button("Choose…") {
-                            chooseFolder()
+                        Button(action: chooseFolder) {
+                            Text("Choose…")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                        .buttonStyle(SheetCancelButtonStyle())
                     }
                 }
 
@@ -91,33 +102,36 @@ struct ProjectEditorSheet: View {
                     }
                 }
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .padding(.horizontal, 22)
+            .padding(.bottom, 18)
 
             HStack(spacing: 8) {
                 if isEditing, let project = context.project {
-                    Button("Delete", role: .destructive) {
+                    Button(action: {
                         appState.deleteProject(project.id)
                         onClose()
+                    }) {
+                        Text(String(localized: "Delete", bundle: AppLocale.bundle, locale: AppLocale.current))
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
+                    .buttonStyle(SheetDestructiveButtonStyle())
                 }
                 Spacer()
                 Button("Cancel") { onClose() }
                     .keyboardShortcut(.cancelAction)
+                    .buttonStyle(SheetCancelButtonStyle())
                 Button(isEditing
                        ? String(localized: "Save", bundle: AppLocale.bundle, locale: AppLocale.current)
                        : String(localized: "Create", bundle: AppLocale.bundle, locale: AppLocale.current)) { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(SheetPrimaryButtonStyle(enabled: canSave))
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 20)
+            .padding(.horizontal, 18)
+            .padding(.top, 4)
+            .padding(.bottom, 18)
         }
         .frame(width: 460)
-        .background(Color(white: 0.13))
+        .sheetStandardBackground()
         .onAppear {
             if let project = context.project {
                 name = project.name

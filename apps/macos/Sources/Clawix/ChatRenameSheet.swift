@@ -9,8 +9,7 @@ struct ChatRenameSheet: View {
     @FocusState private var fieldFocused: Bool
 
     private var canSave: Bool {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && trimmed != chat.title
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -18,63 +17,49 @@ struct ChatRenameSheet: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Rename chat")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(Color(white: 0.96))
-                    Text("Keep it short and easy to recognise")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(Color(white: 0.97))
+                    Text("Keep it short and recognizable")
                         .font(.system(size: 13))
                         .foregroundColor(Color(white: 0.55))
                 }
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(Color(white: 0.65))
-                        .frame(width: 26, height: 26)
+                        .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.cancelAction)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 22)
-            .padding(.bottom, 18)
+            .padding(.horizontal, 22)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
             TextField("Chat title", text: $title)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .foregroundColor(Color(white: 0.96))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(white: 0.16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
-                        )
-                )
+                .sheetTextFieldStyle()
                 .focused($fieldFocused)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 22)
                 .onSubmit { if canSave { save() } }
 
             HStack(spacing: 8) {
                 Spacer()
                 Button("Cancel") { onClose() }
                     .keyboardShortcut(.cancelAction)
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+                    .buttonStyle(SheetCancelButtonStyle())
                 Button("Save") { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    .buttonStyle(SheetPrimaryButtonStyle(enabled: canSave))
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 22)
-            .padding(.bottom, 22)
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
+            .padding(.bottom, 18)
         }
-        .frame(width: 460)
-        .background(Color(white: 0.10))
+        .frame(width: 440)
+        .sheetStandardBackground()
         .onAppear {
             title = chat.title
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { fieldFocused = true }
