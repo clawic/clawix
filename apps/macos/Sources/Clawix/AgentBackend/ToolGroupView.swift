@@ -9,7 +9,7 @@ struct ToolGroupView: View {
     let items: [WorkItem]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
             // Currently-running commands: render each one verbatim with
             // the live "Running" prefix so the user can read what
             // Clawix is doing right now.
