@@ -859,7 +859,7 @@ final class AppState: ObservableObject {
 
             applyThreads(collected)
         } catch {
-            appendRuntimeStatusError("No se pudo leer el índice real del runtime: \(error)")
+            appendRuntimeStatusError(L10n.runtimeIndexReadFailed("\(error)"))
         }
     }
 
@@ -1164,7 +1164,7 @@ final class AppState: ObservableObject {
         switch route {
         case "search":
             currentRoute = .search
-            searchQuery = "autenticación"
+            searchQuery = "authentication"
             performSearch(searchQuery)
         case "plugins":
             currentRoute = .plugins

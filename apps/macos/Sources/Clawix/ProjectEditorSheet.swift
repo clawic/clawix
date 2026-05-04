@@ -95,7 +95,7 @@ struct ProjectEditorSheet: View {
                         HStack(spacing: 6) {
                             Image(systemName: "point.3.connected.trianglepath.dotted")
                                 .font(.system(size: 11))
-                            Text("\(pathMatchCount) chat\(pathMatchCount == 1 ? "" : "s") agrupado\(pathMatchCount == 1 ? "" : "s") automáticamente por ruta")
+                            Text(L10n.chatsAutoGroupedByPath(pathMatchCount))
                                 .font(.system(size: 11.5))
                         }
                         .foregroundColor(Color(white: 0.50))

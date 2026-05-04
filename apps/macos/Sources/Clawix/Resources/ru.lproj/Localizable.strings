@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "Скорость выше в 1,5 раза, большее использование";
 "About" = "О приложении";
+"Account %@" = "Аккаунт %@";
 "Actions" = "Действия";
 "Actual Size" = "Реальный размер";
 "Add" = "Добавить";
@@ -33,6 +34,7 @@
 "Appearance" = "Внешний вид";
 "Archive" = "Архивировать";
 "Archive chat" = "Архивировать чат";
+"Archive chats" = "Архивировать чаты";
 "Arguments" = "Аргументы";
 "Ask Clawix anything. Type @ to mention files" = "Спросите Clawix о чём угодно. Введите @, чтобы использовать плагины или упомянуть файлы";
 "Ask for follow-up changes" = "Запросить дополнительные изменения";
@@ -73,6 +75,7 @@
 "Coming soon" = "Скоро";
 "Command to start" = "Команда запуска";
 "Composer text field" = "Поле ввода редактора";
+"Concise" = "Кратко";
 "Configure" = "Настроить";
 "Connect external tools and data sources." = "Подключайте внешние инструменты и источники данных.";
 "Connect to a custom MCP" = "Подключиться к пользовательскому MCP";
@@ -90,6 +93,9 @@
 "Copy theme" = "Скопировать тему";
 "Copy working directory" = "Скопировать рабочий каталог";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "Требуемый бинарный файл не найден. Настройте его в Настройки → Дополнительные настройки.";
+"Could not read the runtime index: %@" = "Не удалось прочитать индекс среды выполнения: %@";
+"Could not sign in." = "Не удалось войти.";
+"Could not sign in: %@" = "Не удалось войти: %@";
 "Create" = "Создать";
 "Create a project to group conversations" = "Создайте проект, чтобы группировать чаты";
 "Create and switch" = "Создать и переключиться";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "Скорость по умолчанию, обычное использование";
 "Delete" = "Удалить";
 "Delete project" = "Удалить проект";
+"Detached" = "Отдельно";
 "Documents" = "Документы";
 "Done" = "Готово";
 "Don’t work on a project" = "Не работать с проектом";
 "Download image" = "Скачать изображение";
 "Download plan" = "Скачать план";
+"Drive" = "Управлять";
 "Drop to attach" = "Отпустите, чтобы прикрепить";
 "Each action can run any command and shows up in the toolbar header." = "Эти действия могут выполнять любые команды и отображаются в заголовке.";
 "Edit" = "Изменить";
@@ -141,6 +149,7 @@
 "Fork to local" = "Форкнуть локально";
 "Fork to new worktree" = "Форкнуть в новый worktree";
 "Forward" = "Вперёд";
+"Friendly" = "Дружелюбный";
 "Full access" = "Полный доступ";
 "General usage limits" = "Общие лимиты использования";
 "Generating response" = "Создание ответа";
@@ -152,11 +161,13 @@
 "Ignore" = "Игнорировать";
 "Import" = "Импортировать";
 "Import another agent configuration" = "Импортировать другую конфигурацию агента";
+"Inline" = "Встроенно";
 "Install the available update" = "Установить доступное обновление";
 "Intelligence" = "Интеллект";
 "Interface font size" = "Размер шрифта интерфейса";
 "Keep it short and easy to recognise" = "Покороче и так, чтобы легко узнать";
 "Keyboard Shortcuts" = "Сочетания клавиш";
+"Language" = "Язык";
 "Learn more" = "Узнать больше";
 "Learn more." = "Подробнее.";
 "Lens" = "Линза";
@@ -205,15 +216,18 @@
 "Open in Finder" = "Показать в Finder";
 "Open in mini window" = "Открыть в мини-окне";
 "Open side chat" = "Открыть боковой чат";
+"Open with" = "Открыть с помощью";
 "Organize" = "Упорядочить";
 "Other models" = "Другие модели";
 "Personal account" = "Личный аккаунт";
 "Personality" = "Характер";
 "Pin" = "Закрепить";
+"Pin chat" = "Закрепить чат";
 "Pinned" = "Закреплённые";
 "Pinned chats" = "Закреплённые чаты";
 "Plan" = "План";
 "Plan mode" = "Режим плана";
+"Pragmatic" = "Прагматичный";
 "Press Enter to send messages" = "Нажмите Enter, чтобы отправить сообщение";
 "Previous Chat" = "Предыдущий чат";
 "Project" = "Проект";
@@ -221,6 +235,7 @@
 "Project picker" = "Выбор проекта";
 "Projects" = "Проекты";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Дайте Clawix дополнительные инструкции и контекст для проекта. Подробнее";
+"Queue" = "Очередь";
 "Quick Chat" = "Быстрый чат";
 "Reasoning" = "Рассуждение";
 "Record voice note" = "Записать голосовую заметку";
@@ -229,6 +244,7 @@
 "Reload" = "Перезагрузить";
 "Reload Browser Page" = "Перезагрузить страницу";
 "Remaining usage limits" = "Оставшиеся лимиты";
+"Remove" = "Удалить";
 "Remove attachment" = "Удалить вложение";
 "Removes the local package, fetches it fresh, and reloads the tools" = "Удаляет локальный пакет, скачивает его заново и перезагружает инструменты";
 "Rename chat" = "Переименовать чат";
@@ -285,6 +301,7 @@
 "Stop loading" = "Остановить загрузку";
 "Stop recording" = "Остановить запись";
 "Stop response" = "Остановить ответ";
+"Technical" = "Технический";
 "Tell the agent what to do instead" = "Скажите агенту, что сделать вместо этого";
 "Theme" = "Тема";
 "Thinking" = "Размышление";

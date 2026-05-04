@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 // Centralised localisation helpers. The bulk of the strings live in
-// `Resources/Localizable.xcstrings` (source language: Spanish) and are
+// `Resources/Localizable.xcstrings` (source language: English) and are
 // resolved automatically by SwiftUI when a literal is passed to `Text`,
 // `Button`, `accessibilityLabel`, etc. This file covers the cases where
 // SwiftUI's automatic lookup is not enough:
@@ -14,9 +14,11 @@ import SwiftUI
 //   • Strings with run-time interpolation that need plural support.
 //   • Helper funcs to keep the call sites tidy.
 //
-// All keys use the Spanish source as their literal, matching what
-// SwiftUI generates for `Text("…")` so Spanish + xcstrings stay in
-// sync.
+// All keys use the English source as their literal, matching the
+// xcstrings sourceLanguage. The compiled per-locale `.strings` /
+// `.stringsdict` files (emitted by `scripts/compile_xcstrings.py`) use
+// those same English keys, so a lookup hits regardless of the active
+// language.
 //
 // Every helper passes `locale: AppLocale.current` so the lookup honors
 // the user-selected language (set from Settings → General → Idioma)
@@ -38,11 +40,11 @@ enum L10n {
     // MARK: - Plurals
 
     static func exploredFiles(_ count: Int) -> String {
-        String(localized: "Se han explorado \(count) archivos", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Explored \(count) files", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func ranCommands(_ count: Int) -> String {
-        String(localized: "Se han ejecutado \(count) comandos", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Ran \(count) commands", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     /// Inline tool-group label fragment. Clawix shows the lowercase
@@ -57,29 +59,29 @@ enum L10n {
     /// Clawix shows just the count with no leading verb, so we mirror
     /// that to keep the comma-joined row readable.
     static func listedItems(_ count: Int) -> String {
-        String(localized: "\(count) listas", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "\(count) lists", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     /// Link rendered above the visible chat slice when older messages
     /// are collapsed.
     static func previousMessages(_ count: Int) -> String {
-        String(localized: "\(count) mensajes anteriores", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "\(count) previous messages", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func modifiedFiles(_ count: Int) -> String {
-        String(localized: "Se han modificado \(count) archivos", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Modified \(count) files", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func generatedImages(_ count: Int) -> String {
-        String(localized: "Se han generado \(count) imágenes", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Generated \(count) images", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func viewedImages(_ count: Int) -> String {
-        String(localized: "Se han visto \(count) imágenes", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Viewed \(count) images", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func installedPlugins(_ count: Int) -> String {
-        String(localized: "\(count) complementos instalados", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "\(count) plugins installed", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     // MARK: - Relative dates (used by sidebar chat rows)
@@ -108,11 +110,11 @@ enum L10n {
     // MARK: - Work summary header
 
     static func workingFor(seconds: Int) -> String {
-        String(localized: "Trabajando \(seconds) s", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Working \(seconds) s", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func workedFor(seconds: Int) -> String {
-        String(localized: "Ha trabajado durante \(seconds) s", bundle: AppLocale.bundle, locale: AppLocale.current)
+        String(localized: "Worked for \(seconds) s", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func usedTool(_ name: String) -> String {
@@ -170,6 +172,22 @@ enum L10n {
 
     static func errorPrefix(_ message: String) -> String {
         String(localized: "Error: \(message)", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    static func signInFailed(_ message: String) -> String {
+        String(localized: "Could not sign in: \(message)", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    static func runtimeIndexReadFailed(_ message: String) -> String {
+        String(localized: "Could not read the runtime index: \(message)", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    static func chatsAutoGroupedByPath(_ count: Int) -> String {
+        String(localized: "\(count) chats auto-grouped by path", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    static func accountLabel(_ name: String) -> String {
+        String(localized: "Account \(name)", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     // MARK: - Help menu

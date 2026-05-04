@@ -2,6 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>%lld chats auto-grouped by path</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld chat raggruppata automaticamente per percorso</string>
+			<key>other</key>
+			<string>%lld chat raggruppate automaticamente per percorso</string>
+		</dict>
+	</dict>
 	<key>%lld lists</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
@@ -16,6 +32,22 @@
 			<string>%lld elenco</string>
 			<key>other</key>
 			<string>%lld elenchi</string>
+		</dict>
+	</dict>
+	<key>%lld plugins installed</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld plugin installato</string>
+			<key>other</key>
+			<string>%lld plugin installati</string>
 		</dict>
 	</dict>
 	<key>%lld previous messages</key>

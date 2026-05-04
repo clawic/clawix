@@ -81,8 +81,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 
     static func from(code: String?) -> AppLanguage {
         guard let code, let match = AppLanguage(rawValue: code) else {
-            // Fall back to es because that's the source language.
-            return .spanish
+            return .english
         }
         return match
     }
@@ -100,7 +99,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 enum AppLocale {
     /// Cached locale of the active language. Default seeded by
     /// `AppLanguage.bootstrap()` from persisted UserDefaults.
-    nonisolated(unsafe) static var current: Locale = .init(identifier: "es")
+    nonisolated(unsafe) static var current: Locale = .init(identifier: "en")
     /// Sub-bundle of the active language. `String(localized:bundle:)`
     /// honors the locale chosen here regardless of the system locale,
     /// because the bundle itself only contains one language's strings.
@@ -152,7 +151,7 @@ extension AppLanguage {
             let primary = pref.split(separator: "-").first.map(String.init) ?? pref
             if let lang = AppLanguage(rawValue: primary) { return lang }
         }
-        return .spanish
+        return .english
     }
 
     /// Apply a language process-wide. Sets `AppleLanguages` (so any

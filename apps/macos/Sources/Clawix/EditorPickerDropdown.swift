@@ -142,7 +142,7 @@ private struct EditorPickerMenu: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ModelMenuHeader("Abrir con")
+            ModelMenuHeader("Open with")
 
             ForEach(clawixEditors) { editor in
                 Button {

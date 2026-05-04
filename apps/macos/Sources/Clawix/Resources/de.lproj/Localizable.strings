@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "1,5-mal höhere Geschwindigkeit, höhere Nutzung";
 "About" = "Über";
+"Account %@" = "Konto %@";
 "Actions" = "Aktionen";
 "Actual Size" = "Originalgröße";
 "Add" = "Hinzufügen";
@@ -33,6 +34,7 @@
 "Appearance" = "Darstellung";
 "Archive" = "Archivieren";
 "Archive chat" = "Chat archivieren";
+"Archive chats" = "Chats archivieren";
 "Arguments" = "Argumente";
 "Ask Clawix anything. Type @ to mention files" = "Frag Clawix alles. Tippe @, um Erweiterungen zu nutzen oder Dateien zu erwähnen";
 "Ask for follow-up changes" = "Folgeänderungen anfragen";
@@ -73,6 +75,7 @@
 "Coming soon" = "Demnächst";
 "Command to start" = "Startbefehl";
 "Composer text field" = "Eingabefeld des Verfassers";
+"Concise" = "Knapp";
 "Configure" = "Konfigurieren";
 "Connect external tools and data sources." = "Verbinde externe Werkzeuge und Datenquellen.";
 "Connect to a custom MCP" = "Mit einem benutzerdefinierten MCP verbinden";
@@ -90,6 +93,9 @@
 "Copy theme" = "Design kopieren";
 "Copy working directory" = "Arbeitsverzeichnis kopieren";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "Die erforderliche Binärdatei wurde nicht gefunden. Konfiguriere sie unter Einstellungen → Erweiterte Einstellungen.";
+"Could not read the runtime index: %@" = "Der Runtime-Index konnte nicht gelesen werden: %@";
+"Could not sign in." = "Anmeldung nicht möglich.";
+"Could not sign in: %@" = "Anmeldung nicht möglich: %@";
 "Create" = "Erstellen";
 "Create a project to group conversations" = "Erstelle ein Projekt, um Gespräche zu gruppieren";
 "Create and switch" = "Erstellen und wechseln";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "Standardgeschwindigkeit, normale Nutzung";
 "Delete" = "Löschen";
 "Delete project" = "Projekt löschen";
+"Detached" = "Getrennt";
 "Documents" = "Dokumente";
 "Done" = "Fertig";
 "Don’t work on a project" = "Nicht an einem Projekt arbeiten";
 "Download image" = "Bild herunterladen";
 "Download plan" = "Plan herunterladen";
+"Drive" = "Steuern";
 "Drop to attach" = "Loslassen zum Anhängen";
 "Each action can run any command and shows up in the toolbar header." = "Diese Aktionen können beliebige Befehle ausführen und erscheinen in der Kopfzeile.";
 "Edit" = "Bearbeiten";
@@ -141,6 +149,7 @@
 "Fork to local" = "Lokal forken";
 "Fork to new worktree" = "In neues Worktree forken";
 "Forward" = "Vorwärts";
+"Friendly" = "Freundlich";
 "Full access" = "Voller Zugriff";
 "General usage limits" = "Allgemeine Nutzungslimits";
 "Generating response" = "Antwort wird generiert";
@@ -152,11 +161,13 @@
 "Ignore" = "Ignorieren";
 "Import" = "Importieren";
 "Import another agent configuration" = "Andere Agentenkonfiguration importieren";
+"Inline" = "Inline";
 "Install the available update" = "Verfügbares Update installieren";
 "Intelligence" = "Intelligenz";
 "Interface font size" = "Schriftgröße der Oberfläche";
 "Keep it short and easy to recognise" = "Kurz und gut erkennbar halten";
 "Keyboard Shortcuts" = "Tastaturkurzbefehle";
+"Language" = "Sprache";
 "Learn more" = "Mehr erfahren";
 "Learn more." = "Mehr erfahren.";
 "Lens" = "Lupe";
@@ -205,15 +216,18 @@
 "Open in Finder" = "Im Finder öffnen";
 "Open in mini window" = "In Mini-Fenster öffnen";
 "Open side chat" = "Seiten-Chat öffnen";
+"Open with" = "Öffnen mit";
 "Organize" = "Ordnen";
 "Other models" = "Weitere Modelle";
 "Personal account" = "Privates Konto";
 "Personality" = "Persönlichkeit";
 "Pin" = "Anheften";
+"Pin chat" = "Chat anheften";
 "Pinned" = "Angeheftet";
 "Pinned chats" = "Angeheftete Chats";
 "Plan" = "Plan";
 "Plan mode" = "Planmodus";
+"Pragmatic" = "Pragmatisch";
 "Press Enter to send messages" = "Drücke die Eingabetaste, um Nachrichten zu senden";
 "Previous Chat" = "Vorheriger Chat";
 "Project" = "Projekt";
@@ -221,6 +235,7 @@
 "Project picker" = "Projektauswahl";
 "Projects" = "Projekte";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Gib Clawix zusätzliche Anweisungen und Kontext für dein Projekt. Mehr erfahren";
+"Queue" = "Warteschlange";
 "Quick Chat" = "Schnellchat";
 "Reasoning" = "Begründung";
 "Record voice note" = "Sprachnotiz aufnehmen";
@@ -229,6 +244,7 @@
 "Reload" = "Neu laden";
 "Reload Browser Page" = "Seite neu laden";
 "Remaining usage limits" = "Verbleibende Nutzungslimits";
+"Remove" = "Entfernen";
 "Remove attachment" = "Anhang entfernen";
 "Removes the local package, fetches it fresh, and reloads the tools" = "Löscht das lokale Paket, lädt es erneut herunter und lädt die Werkzeuge neu";
 "Rename chat" = "Chat umbenennen";
@@ -285,6 +301,7 @@
 "Stop loading" = "Laden stoppen";
 "Stop recording" = "Aufnahme stoppen";
 "Stop response" = "Antwort stoppen";
+"Technical" = "Technisch";
 "Tell the agent what to do instead" = "Sag dem Agenten, was stattdessen zu tun ist";
 "Theme" = "Design";
 "Thinking" = "Denkt nach";

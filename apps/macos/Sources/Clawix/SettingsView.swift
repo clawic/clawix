@@ -643,7 +643,7 @@ private struct GeneralPage: View {
                 )
                 CardDivider()
                 DropdownRow(
-                    title: "Idioma",
+                    title: "Language",
                     detail: "App interface language",
                     options: AppLanguage.allCases.map { ($0, $0.displayName) },
                     selection: Binding(
@@ -692,14 +692,14 @@ private struct GeneralPage: View {
                 SegmentedRow(
                     title: "Follow-up behavior",
                     detail: "Queue follow-up messages while Clawix runs, or steer the current run. Press ⌘Return to do the opposite for a single message.",
-                    options: [(.queue, "Cola"), (.drive, "Dirigir")],
+                    options: [(.queue, L10n.t("Queue")), (.drive, L10n.t("Drive"))],
                     selection: $followBehavior
                 )
                 CardDivider()
                 SegmentedRow(
                     title: "Code review",
                     detail: "Start /review in the current chat when possible, or open a separate review chat",
-                    options: [(.inline, "En línea"), (.detached, "Desvinculado")],
+                    options: [(.inline, L10n.t("Inline")), (.detached, L10n.t("Detached"))],
                     selection: $codeReview
                 )
                 CardDivider()
@@ -1860,7 +1860,7 @@ private struct ReinstallRow: View {
 // MARK: - Personalization page
 
 private struct PersonalizationPage: View {
-    @State private var personality: String = "Pragmática"
+    @State private var personality: String = "Pragmatic"
     @State private var expanded: Bool = false
     @State private var instructions: String = ""
 
@@ -1873,10 +1873,10 @@ private struct PersonalizationPage: View {
                     title: "Personality",
                     detail: "Choose a default tone for Clawix's responses",
                     options: [
-                        ("Pragmática", "Pragmática"),
-                        ("Amistosa", "Amistosa"),
-                        ("Concisa", "Concisa"),
-                        ("Técnica", "Técnica")
+                        ("Pragmatic", L10n.t("Pragmatic")),
+                        ("Friendly", L10n.t("Friendly")),
+                        ("Concise", L10n.t("Concise")),
+                        ("Technical", L10n.t("Technical"))
                     ],
                     selection: $personality
                 )

@@ -165,17 +165,17 @@ final class TitleGenerator {
         let trimmedUser = firstUserMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         let clippedUser = String(trimmedUser.prefix(1500))
         var lines: [String] = [
-            "Devuelve un título corto (3 a 6 palabras) para esta conversación, en el mismo idioma que el usuario.",
-            "Solo el título. Sin comillas, sin punto final, sin texto extra.",
+            "Return a short title (3 to 6 words) for this conversation, in the same language as the user.",
+            "Just the title. No quotes, no trailing period, no extra text.",
             "",
-            "Mensaje del usuario:",
+            "User message:",
             "<<<",
             clippedUser,
             ">>>"
         ]
         if let asst = firstAssistantMessage?.trimmingCharacters(in: .whitespacesAndNewlines), !asst.isEmpty {
             lines.append("")
-            lines.append("Respuesta del asistente:")
+            lines.append("Assistant response:")
             lines.append("<<<")
             lines.append(String(asst.prefix(800)))
             lines.append(">>>")

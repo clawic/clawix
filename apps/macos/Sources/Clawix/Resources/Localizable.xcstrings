@@ -23535,6 +23535,491 @@
           }
         }
       }
+    },
+    "%lld plugins installed": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld plugin installed"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld plugins installed"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld complemento instalado"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld complementos instalados"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld extension installée"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld extensions installées"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Erweiterung installiert"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Erweiterungen installiert"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld plugin installato"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld plugin installati"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld plugin instalado"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld plugins instalados"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 個のプラグインがインストール済み"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "已安装 %lld 个插件"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "플러그인 %lld개 설치됨"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld плагин установлен"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld плагинов установлено"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Concise": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Concise" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Concisa" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Concis" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Knapp" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Concisa" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Concisa" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "簡潔" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "简洁" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "간결" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Кратко" } }
+      }
+    },
+    "Could not read the runtime index: %@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not read the runtime index: %@" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se pudo leer el índice del runtime: %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Impossible de lire l’index du runtime : %@" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Der Runtime-Index konnte nicht gelesen werden: %@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Impossibile leggere l’indice del runtime: %@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Não foi possível ler o índice do runtime: %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "ランタイムインデックスを読み込めませんでした: %@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法读取运行时索引：%@" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "런타임 인덱스를 읽지 못했습니다: %@" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Не удалось прочитать индекс среды выполнения: %@" } }
+      }
+    },
+    "Could not sign in.": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not sign in." } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se ha podido iniciar sesión." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Impossible de se connecter." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anmeldung nicht möglich." } },
+        "it": { "stringUnit": { "state": "translated", "value": "Impossibile accedere." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Não foi possível entrar." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "サインインできませんでした。" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法登录。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "로그인할 수 없습니다." } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Не удалось войти." } }
+      }
+    },
+    "Could not sign in: %@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not sign in: %@" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se ha podido iniciar sesión: %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Impossible de se connecter : %@" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anmeldung nicht möglich: %@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Impossibile accedere: %@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Não foi possível entrar: %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "サインインできませんでした: %@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法登录:%@" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "로그인할 수 없습니다: %@" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Не удалось войти: %@" } }
+      }
+    },
+    "Detached": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Detached" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Desvinculado" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Détaché" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Getrennt" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Separato" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Separado" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "別ウィンドウ" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "独立" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "분리" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Отдельно" } }
+      }
+    },
+    "Drive": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Drive" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Dirigir" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Guider" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Steuern" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Guidare" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Direcionar" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "操作" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "引导" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "조정" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Управлять" } }
+      }
+    },
+    "Friendly": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Friendly" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Amistosa" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Amical" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Freundlich" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Amichevole" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Amigável" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "フレンドリー" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "友好" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "친근" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Дружелюбный" } }
+      }
+    },
+    "Inline": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Inline" } },
+        "es": { "stringUnit": { "state": "translated", "value": "En línea" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "En ligne" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Inline" } },
+        "it": { "stringUnit": { "state": "translated", "value": "In linea" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Em linha" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "インライン" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "内嵌" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "인라인" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Встроенно" } }
+      }
+    },
+    "Pragmatic": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pragmatic" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Pragmática" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Pragmatique" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Pragmatisch" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Pragmatica" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Pragmática" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "実用的" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "务实" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "실용적" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Прагматичный" } }
+      }
+    },
+    "Queue": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Queue" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Cola" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "File d’attente" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Warteschlange" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Coda" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Fila" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "キュー" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "队列" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "대기열" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Очередь" } }
+      }
+    },
+    "Technical": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Technical" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Técnica" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Technique" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Technisch" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Tecnica" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Técnica" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "専門的" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "专业" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "기술적" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Технический" } }
+      }
+    },
+    "Pin chat": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pin chat" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Anclar chat" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Épingler la conversation" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Chat anheften" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Fissa la chat" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Fixar chat" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "チャットをピン留め" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "置顶对话" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "채팅 고정" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Закрепить чат" } }
+      }
+    },
+    "Archive chats": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Archive chats" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Archivar chats" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Archiver les conversations" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Chats archivieren" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Archivia chat" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Arquivar chats" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "チャットをアーカイブ" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "归档对话" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "채팅 보관" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Архивировать чаты" } }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Remove" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Quitar" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Retirer" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Entfernen" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Rimuovi" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Remover" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "削除" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "移除" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "제거" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Удалить" } }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Language" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Idioma" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Langue" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sprache" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Lingua" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Idioma" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "言語" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "语言" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "언어" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Язык" } }
+      }
+    },
+    "Open with": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open with" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Abrir con" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Ouvrir avec" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Öffnen mit" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Apri con" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Abrir com" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "開く" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开方式" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "다른 앱으로 열기" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Открыть с помощью" } }
+      }
+    },
+    "Account %@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Account %@" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Cuenta %@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Compte %@" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konto %@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Account %@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Conta %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "アカウント %@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "账户 %@" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "계정 %@" } },
+        "ru": { "stringUnit": { "state": "translated", "value": "Аккаунт %@" } }
+      }
+    },
+    "%lld chats auto-grouped by path": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld chat auto-grouped by path" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld chats auto-grouped by path" } }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld chat agrupado automáticamente por ruta" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld chats agrupados automáticamente por ruta" } }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld conversation regroupée automatiquement par chemin" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld conversations regroupées automatiquement par chemin" } }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld Chat automatisch nach Pfad gruppiert" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld Chats automatisch nach Pfad gruppiert" } }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld chat raggruppata automaticamente per percorso" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld chat raggruppate automaticamente per percorso" } }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld chat agrupado automaticamente por caminho" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld chats agrupados automaticamente por caminho" } }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": { "stringUnit": { "state": "translated", "value": "%lld 件のチャットがパスごとに自動グループ化されました" } }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": { "stringUnit": { "state": "translated", "value": "%lld 个对话已按路径自动分组" } }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": { "stringUnit": { "state": "translated", "value": "경로별로 자동 그룹화된 채팅 %lld개" } }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": { "stringUnit": { "state": "translated", "value": "%lld чат автоматически сгруппирован по пути" } },
+              "other": { "stringUnit": { "state": "translated", "value": "%lld чатов автоматически сгруппированы по пути" } }
+            }
+          }
+        }
+      }
     }
   }
 }

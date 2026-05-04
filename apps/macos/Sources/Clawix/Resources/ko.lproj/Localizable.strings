@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "1.5배 더 빠른 속도, 더 높은 사용량";
 "About" = "정보";
+"Account %@" = "계정 %@";
 "Actions" = "작업";
 "Actual Size" = "실제 크기";
 "Add" = "추가";
@@ -33,6 +34,7 @@
 "Appearance" = "모양";
 "Archive" = "보관";
 "Archive chat" = "채팅 보관";
+"Archive chats" = "채팅 보관";
 "Arguments" = "인수";
 "Ask Clawix anything. Type @ to mention files" = "Clawix에게 무엇이든 물어보세요. @를 입력해 플러그인을 사용하거나 파일을 언급하세요";
 "Ask for follow-up changes" = "후속 변경 요청";
@@ -73,6 +75,7 @@
 "Coming soon" = "곧 제공 예정";
 "Command to start" = "시작 명령";
 "Composer text field" = "작성기 텍스트 필드";
+"Concise" = "간결";
 "Configure" = "구성";
 "Connect external tools and data sources." = "외부 도구와 데이터 원본을 연결하세요.";
 "Connect to a custom MCP" = "사용자 지정 MCP에 연결";
@@ -90,6 +93,9 @@
 "Copy theme" = "테마 복사";
 "Copy working directory" = "작업 디렉터리 복사";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "필요한 바이너리를 찾을 수 없습니다. 설정 → 고급 설정에서 구성하세요.";
+"Could not read the runtime index: %@" = "런타임 인덱스를 읽지 못했습니다: %@";
+"Could not sign in." = "로그인할 수 없습니다.";
+"Could not sign in: %@" = "로그인할 수 없습니다: %@";
 "Create" = "만들기";
 "Create a project to group conversations" = "대화를 그룹화하려면 프로젝트를 만드세요";
 "Create and switch" = "만들고 전환";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "기본 속도, 일반 사용량";
 "Delete" = "삭제";
 "Delete project" = "프로젝트 삭제";
+"Detached" = "분리";
 "Documents" = "문서";
 "Done" = "완료";
 "Don’t work on a project" = "프로젝트 없이 작업";
 "Download image" = "이미지 다운로드";
 "Download plan" = "계획 다운로드";
+"Drive" = "조정";
 "Drop to attach" = "놓아서 첨부";
 "Each action can run any command and shows up in the toolbar header." = "이 작업은 모든 명령을 실행할 수 있으며 헤더에 표시됩니다.";
 "Edit" = "편집";
@@ -141,6 +149,7 @@
 "Fork to local" = "로컬로 포크";
 "Fork to new worktree" = "새 워크트리로 포크";
 "Forward" = "앞으로";
+"Friendly" = "친근";
 "Full access" = "전체 액세스";
 "General usage limits" = "일반 사용 한도";
 "Generating response" = "응답 생성 중";
@@ -152,11 +161,13 @@
 "Ignore" = "무시";
 "Import" = "가져오기";
 "Import another agent configuration" = "다른 에이전트 구성 가져오기";
+"Inline" = "인라인";
 "Install the available update" = "사용 가능한 업데이트 설치";
 "Intelligence" = "지능 수준";
 "Interface font size" = "인터페이스 글꼴 크기";
 "Keep it short and easy to recognise" = "짧고 알아보기 쉽게";
 "Keyboard Shortcuts" = "키보드 단축키";
+"Language" = "언어";
 "Learn more" = "자세히 알아보기";
 "Learn more." = "자세히 알아보기.";
 "Lens" = "렌즈";
@@ -205,15 +216,18 @@
 "Open in Finder" = "Finder에서 열기";
 "Open in mini window" = "미니 창에서 열기";
 "Open side chat" = "사이드 채팅 열기";
+"Open with" = "다른 앱으로 열기";
 "Organize" = "정리";
 "Other models" = "다른 모델";
 "Personal account" = "개인 계정";
 "Personality" = "성격";
 "Pin" = "고정";
+"Pin chat" = "채팅 고정";
 "Pinned" = "고정됨";
 "Pinned chats" = "고정된 채팅";
 "Plan" = "계획";
 "Plan mode" = "플랜 모드";
+"Pragmatic" = "실용적";
 "Press Enter to send messages" = "Enter를 눌러 메시지를 보냅니다";
 "Previous Chat" = "이전 채팅";
 "Project" = "프로젝트";
@@ -221,6 +235,7 @@
 "Project picker" = "프로젝트 선택기";
 "Projects" = "프로젝트";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "프로젝트에 대한 추가 지침과 컨텍스트를 Clawix에 제공하세요. 자세히 알아보기";
+"Queue" = "대기열";
 "Quick Chat" = "빠른 채팅";
 "Reasoning" = "추론";
 "Record voice note" = "음성 메모 녹음";
@@ -229,6 +244,7 @@
 "Reload" = "새로고침";
 "Reload Browser Page" = "페이지 새로고침";
 "Remaining usage limits" = "남은 사용 한도";
+"Remove" = "제거";
 "Remove attachment" = "첨부 파일 제거";
 "Removes the local package, fetches it fresh, and reloads the tools" = "로컬 패키지를 삭제하고 다시 다운로드한 뒤 도구를 다시 불러옵니다";
 "Rename chat" = "채팅 이름 변경";
@@ -285,6 +301,7 @@
 "Stop loading" = "로드 중지";
 "Stop recording" = "녹음 중지";
 "Stop response" = "응답 중지";
+"Technical" = "기술적";
 "Tell the agent what to do instead" = "대신 무엇을 할지 에이전트에 알려주세요";
 "Theme" = "테마";
 "Thinking" = "생각 중";

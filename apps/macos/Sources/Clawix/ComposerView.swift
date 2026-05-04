@@ -35,7 +35,7 @@ struct ComposerView: View {
     private var placeholderText: String {
         chatMode
             ? String(localized: "Ask for follow-up changes", bundle: AppLocale.bundle, locale: AppLocale.current)
-            : String(localized: "Pregúntale a Clawix cualquier cosa. Escribe @ para mencionar archivos", bundle: AppLocale.bundle, locale: AppLocale.current)
+            : String(localized: "Ask Clawix anything. Type @ to mention files", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     private var slashQuery: String? {

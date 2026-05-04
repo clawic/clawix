@@ -83,7 +83,7 @@ final class BackendAuthCoordinator: ObservableObject {
                     let stderr = String(data: errData, encoding: .utf8)?
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     self.loginError = (stderr?.isEmpty == false ? stderr : nil)
-                        ?? "No se ha podido iniciar sesión."
+                        ?? L10n.t("Could not sign in.")
                 }
             }
         }
@@ -94,7 +94,7 @@ final class BackendAuthCoordinator: ObservableObject {
         } catch {
             DispatchQueue.main.async {
                 self.loginInProgress = false
-                self.loginError = "No se ha podido iniciar sesión: \(error.localizedDescription)"
+                self.loginError = L10n.signInFailed(error.localizedDescription)
             }
         }
     }

@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "速度が1.5倍、使用量が増加";
 "About" = "バージョン情報";
+"Account %@" = "アカウント %@";
 "Actions" = "アクション";
 "Actual Size" = "実際のサイズ";
 "Add" = "追加";
@@ -33,6 +34,7 @@
 "Appearance" = "外観";
 "Archive" = "アーカイブ";
 "Archive chat" = "チャットをアーカイブ";
+"Archive chats" = "チャットをアーカイブ";
 "Arguments" = "引数";
 "Ask Clawix anything. Type @ to mention files" = "Clawixに何でも聞いてください。@ でプラグインやファイル参照を呼び出せます";
 "Ask for follow-up changes" = "追加の変更を依頼";
@@ -73,6 +75,7 @@
 "Coming soon" = "近日公開";
 "Command to start" = "起動コマンド";
 "Composer text field" = "コンポーザーのテキストフィールド";
+"Concise" = "簡潔";
 "Configure" = "構成";
 "Connect external tools and data sources." = "外部ツールとデータソースを接続します。";
 "Connect to a custom MCP" = "カスタム MCP に接続";
@@ -90,6 +93,9 @@
 "Copy theme" = "テーマをコピー";
 "Copy working directory" = "作業ディレクトリをコピー";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "必要なバイナリが見つかりません。設定 → 詳細設定で構成してください。";
+"Could not read the runtime index: %@" = "ランタイムインデックスを読み込めませんでした: %@";
+"Could not sign in." = "サインインできませんでした。";
+"Could not sign in: %@" = "サインインできませんでした: %@";
 "Create" = "作成";
 "Create a project to group conversations" = "会話をまとめるプロジェクトを作成";
 "Create and switch" = "作成して切り替え";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "既定の速度、通常の使用量";
 "Delete" = "削除";
 "Delete project" = "プロジェクトを削除";
+"Detached" = "別ウィンドウ";
 "Documents" = "ドキュメント";
 "Done" = "完了";
 "Don’t work on a project" = "プロジェクトを使わない";
 "Download image" = "画像をダウンロード";
 "Download plan" = "プランをダウンロード";
+"Drive" = "操作";
 "Drop to attach" = "ドロップして添付";
 "Each action can run any command and shows up in the toolbar header." = "これらのアクションは任意のコマンドを実行でき、ヘッダーに表示されます。";
 "Edit" = "編集";
@@ -141,6 +149,7 @@
 "Fork to local" = "ローカルにフォーク";
 "Fork to new worktree" = "新しいworktreeにフォーク";
 "Forward" = "進む";
+"Friendly" = "フレンドリー";
 "Full access" = "フルアクセス";
 "General usage limits" = "全般的な使用制限";
 "Generating response" = "応答を生成中";
@@ -152,11 +161,13 @@
 "Ignore" = "無視";
 "Import" = "インポート";
 "Import another agent configuration" = "別のエージェント設定をインポート";
+"Inline" = "インライン";
 "Install the available update" = "利用可能なアップデートをインストール";
 "Intelligence" = "知能レベル";
 "Interface font size" = "インターフェイスのフォントサイズ";
 "Keep it short and easy to recognise" = "短くて見分けやすい名前に";
 "Keyboard Shortcuts" = "キーボードショートカット";
+"Language" = "言語";
 "Learn more" = "詳細はこちら";
 "Learn more." = "詳細を見る。";
 "Lens" = "レンズ";
@@ -205,15 +216,18 @@
 "Open in Finder" = "Finderで開く";
 "Open in mini window" = "ミニウィンドウで開く";
 "Open side chat" = "サイドチャットを開く";
+"Open with" = "開く";
 "Organize" = "整理";
 "Other models" = "他のモデル";
 "Personal account" = "個人アカウント";
 "Personality" = "パーソナリティ";
 "Pin" = "ピン留め";
+"Pin chat" = "チャットをピン留め";
 "Pinned" = "ピン留め";
 "Pinned chats" = "ピン留めしたチャット";
 "Plan" = "プラン";
 "Plan mode" = "プランモード";
+"Pragmatic" = "実用的";
 "Press Enter to send messages" = "Enterキーでメッセージを送信";
 "Previous Chat" = "前のチャット";
 "Project" = "プロジェクト";
@@ -221,6 +235,7 @@
 "Project picker" = "プロジェクトセレクタ";
 "Projects" = "プロジェクト";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "プロジェクト向けに追加の指示とコンテキストを Clawix に渡します。詳細";
+"Queue" = "キュー";
 "Quick Chat" = "クイックチャット";
 "Reasoning" = "推論";
 "Record voice note" = "音声メモを録音";
@@ -229,6 +244,7 @@
 "Reload" = "再読み込み";
 "Reload Browser Page" = "ページを再読み込み";
 "Remaining usage limits" = "残りの利用上限";
+"Remove" = "削除";
 "Remove attachment" = "添付ファイルを削除";
 "Removes the local package, fetches it fresh, and reloads the tools" = "ローカルパッケージを削除し、再ダウンロードしてツールを再読み込みします";
 "Rename chat" = "チャットの名前を変更";
@@ -285,6 +301,7 @@
 "Stop loading" = "読み込みを停止";
 "Stop recording" = "録音を停止";
 "Stop response" = "応答を停止";
+"Technical" = "専門的";
 "Tell the agent what to do instead" = "代わりに何をするかエージェントに伝える";
 "Theme" = "テーマ";
 "Thinking" = "考え中";

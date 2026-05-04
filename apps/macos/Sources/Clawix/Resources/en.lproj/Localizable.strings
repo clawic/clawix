@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "1.5x faster speed, higher usage";
 "About" = "About";
+"Account %@" = "Account %@";
 "Actions" = "Actions";
 "Actual Size" = "Actual Size";
 "Add" = "Add";
@@ -33,6 +34,7 @@
 "Appearance" = "Appearance";
 "Archive" = "Archive";
 "Archive chat" = "Archive chat";
+"Archive chats" = "Archive chats";
 "Arguments" = "Arguments";
 "Ask Clawix anything. Type @ to mention files" = "Ask Clawix anything. Type @ to mention files";
 "Ask for follow-up changes" = "Ask for follow-up changes";
@@ -73,6 +75,7 @@
 "Coming soon" = "Coming soon";
 "Command to start" = "Command to start";
 "Composer text field" = "Composer text field";
+"Concise" = "Concise";
 "Configure" = "Configure";
 "Connect external tools and data sources." = "Connect external tools and data sources.";
 "Connect to a custom MCP" = "Connect to a custom MCP";
@@ -90,6 +93,9 @@
 "Copy theme" = "Copy theme";
 "Copy working directory" = "Copy working directory";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "Could not locate the required binary. Set its path under Settings → Advanced settings.";
+"Could not read the runtime index: %@" = "Could not read the runtime index: %@";
+"Could not sign in." = "Could not sign in.";
+"Could not sign in: %@" = "Could not sign in: %@";
 "Create" = "Create";
 "Create a project to group conversations" = "Create a project to group conversations";
 "Create and switch" = "Create and switch";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "Default speed, normal usage";
 "Delete" = "Delete";
 "Delete project" = "Delete project";
+"Detached" = "Detached";
 "Documents" = "Documents";
 "Done" = "Done";
 "Don’t work on a project" = "Don’t work on a project";
 "Download image" = "Download image";
 "Download plan" = "Download plan";
+"Drive" = "Drive";
 "Drop to attach" = "Drop to attach";
 "Each action can run any command and shows up in the toolbar header." = "Each action can run any command and shows up in the toolbar header.";
 "Edit" = "Edit";
@@ -141,6 +149,7 @@
 "Fork to local" = "Fork to local";
 "Fork to new worktree" = "Fork to new worktree";
 "Forward" = "Forward";
+"Friendly" = "Friendly";
 "Full access" = "Full access";
 "General usage limits" = "General usage limits";
 "Generating response" = "Generating response";
@@ -152,11 +161,13 @@
 "Ignore" = "Ignore";
 "Import" = "Import";
 "Import another agent configuration" = "Import another agent configuration";
+"Inline" = "Inline";
 "Install the available update" = "Install the available update";
 "Intelligence" = "Intelligence";
 "Interface font size" = "Interface font size";
 "Keep it short and easy to recognise" = "Keep it short and easy to recognise";
 "Keyboard Shortcuts" = "Keyboard Shortcuts";
+"Language" = "Language";
 "Learn more" = "Learn more";
 "Learn more." = "Learn more.";
 "Lens" = "Lens";
@@ -205,15 +216,18 @@
 "Open in Finder" = "Open in Finder";
 "Open in mini window" = "Open in mini window";
 "Open side chat" = "Open side chat";
+"Open with" = "Open with";
 "Organize" = "Organize";
 "Other models" = "Other models";
 "Personal account" = "Personal account";
 "Personality" = "Personality";
 "Pin" = "Pin";
+"Pin chat" = "Pin chat";
 "Pinned" = "Pinned";
 "Pinned chats" = "Pinned chats";
 "Plan" = "Plan";
 "Plan mode" = "Plan mode";
+"Pragmatic" = "Pragmatic";
 "Press Enter to send messages" = "Press Enter to send messages";
 "Previous Chat" = "Previous Chat";
 "Project" = "Project";
@@ -221,6 +235,7 @@
 "Project picker" = "Project picker";
 "Projects" = "Projects";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more";
+"Queue" = "Queue";
 "Quick Chat" = "Quick Chat";
 "Reasoning" = "Reasoning";
 "Record voice note" = "Record voice note";
@@ -229,6 +244,7 @@
 "Reload" = "Reload";
 "Reload Browser Page" = "Reload Browser Page";
 "Remaining usage limits" = "Remaining usage limits";
+"Remove" = "Remove";
 "Remove attachment" = "Remove attachment";
 "Removes the local package, fetches it fresh, and reloads the tools" = "Removes the local package, fetches it fresh, and reloads the tools";
 "Rename chat" = "Rename chat";
@@ -285,6 +301,7 @@
 "Stop loading" = "Stop loading";
 "Stop recording" = "Stop recording";
 "Stop response" = "Stop response";
+"Technical" = "Technical";
 "Tell the agent what to do instead" = "Tell the agent what to do instead";
 "Theme" = "Theme";
 "Thinking" = "Thinking";

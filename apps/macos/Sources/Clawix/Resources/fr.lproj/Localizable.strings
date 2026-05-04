@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "Vitesse 1,5 fois plus élevée, utilisation accrue";
 "About" = "À propos";
+"Account %@" = "Compte %@";
 "Actions" = "Actions";
 "Actual Size" = "Taille réelle";
 "Add" = "Ajouter";
@@ -33,6 +34,7 @@
 "Appearance" = "Apparence";
 "Archive" = "Archiver";
 "Archive chat" = "Archiver la conversation";
+"Archive chats" = "Archiver les conversations";
 "Arguments" = "Arguments";
 "Ask Clawix anything. Type @ to mention files" = "Posez n’importe quelle question à Clawix. Tapez @ pour utiliser des extensions ou mentionner des fichiers";
 "Ask for follow-up changes" = "Demander des modifications complémentaires";
@@ -73,6 +75,7 @@
 "Coming soon" = "Prochainement";
 "Command to start" = "Commande de démarrage";
 "Composer text field" = "Champ de texte du compositeur";
+"Concise" = "Concis";
 "Configure" = "Configurer";
 "Connect external tools and data sources." = "Connectez des outils externes et des sources de données.";
 "Connect to a custom MCP" = "Se connecter à un MCP personnalisé";
@@ -90,6 +93,9 @@
 "Copy theme" = "Copier le thème";
 "Copy working directory" = "Copier le répertoire de travail";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "Le binaire requis est introuvable. Configurez-le dans Réglages → Réglages avancés.";
+"Could not read the runtime index: %@" = "Impossible de lire l’index du runtime : %@";
+"Could not sign in." = "Impossible de se connecter.";
+"Could not sign in: %@" = "Impossible de se connecter : %@";
 "Create" = "Créer";
 "Create a project to group conversations" = "Créez un projet pour regrouper les conversations";
 "Create and switch" = "Créer et basculer";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "Vitesse par défaut, utilisation normale";
 "Delete" = "Supprimer";
 "Delete project" = "Supprimer le projet";
+"Detached" = "Détaché";
 "Documents" = "Documents";
 "Done" = "Terminé";
 "Don’t work on a project" = "Ne pas travailler sur un projet";
 "Download image" = "Télécharger l'image";
 "Download plan" = "Télécharger le plan";
+"Drive" = "Guider";
 "Drop to attach" = "Déposez pour joindre";
 "Each action can run any command and shows up in the toolbar header." = "Ces actions peuvent exécuter n’importe quelle commande et s’afficheront dans l’en-tête.";
 "Edit" = "Modifier";
@@ -141,6 +149,7 @@
 "Fork to local" = "Bifurquer en local";
 "Fork to new worktree" = "Bifurquer vers un nouveau worktree";
 "Forward" = "Suivant";
+"Friendly" = "Amical";
 "Full access" = "Accès complet";
 "General usage limits" = "Limites d’utilisation générales";
 "Generating response" = "Génération de la réponse";
@@ -152,11 +161,13 @@
 "Ignore" = "Ignorer";
 "Import" = "Importer";
 "Import another agent configuration" = "Importer une autre configuration d’agent";
+"Inline" = "En ligne";
 "Install the available update" = "Installer la mise à jour disponible";
 "Intelligence" = "Intelligence";
 "Interface font size" = "Taille de police de l’interface";
 "Keep it short and easy to recognise" = "Court et facile à reconnaître";
 "Keyboard Shortcuts" = "Raccourcis clavier";
+"Language" = "Langue";
 "Learn more" = "En savoir plus";
 "Learn more." = "En savoir plus.";
 "Lens" = "Lentille";
@@ -205,15 +216,18 @@
 "Open in Finder" = "Ouvrir dans le Finder";
 "Open in mini window" = "Ouvrir en mini-fenêtre";
 "Open side chat" = "Ouvrir une conversation latérale";
+"Open with" = "Ouvrir avec";
 "Organize" = "Organiser";
 "Other models" = "Autres modèles";
 "Personal account" = "Compte personnel";
 "Personality" = "Personnalité";
 "Pin" = "Épingler";
+"Pin chat" = "Épingler la conversation";
 "Pinned" = "Épinglés";
 "Pinned chats" = "Conversations épinglées";
 "Plan" = "Plan";
 "Plan mode" = "Mode plan";
+"Pragmatic" = "Pragmatique";
 "Press Enter to send messages" = "Appuie sur Entrée pour envoyer un message";
 "Previous Chat" = "Conversation précédente";
 "Project" = "Projet";
@@ -221,6 +235,7 @@
 "Project picker" = "Sélecteur de projet";
 "Projects" = "Projets";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Donnez à Clawix des instructions et du contexte supplémentaires pour votre projet. En savoir plus";
+"Queue" = "File d’attente";
 "Quick Chat" = "Conversation rapide";
 "Reasoning" = "Raisonnement";
 "Record voice note" = "Enregistrer une note vocale";
@@ -229,6 +244,7 @@
 "Reload" = "Recharger";
 "Reload Browser Page" = "Recharger la page";
 "Remaining usage limits" = "Limites d’usage restantes";
+"Remove" = "Retirer";
 "Remove attachment" = "Supprimer la piece jointe";
 "Removes the local package, fetches it fresh, and reloads the tools" = "Supprime le paquet local, le télécharge à nouveau et recharge les outils";
 "Rename chat" = "Renommer la conversation";
@@ -285,6 +301,7 @@
 "Stop loading" = "Arrêter le chargement";
 "Stop recording" = "Arrêter l’enregistrement";
 "Stop response" = "Arrêter la réponse";
+"Technical" = "Technique";
 "Tell the agent what to do instead" = "Dites à l’agent quoi faire à la place";
 "Theme" = "Thème";
 "Thinking" = "Réflexion";

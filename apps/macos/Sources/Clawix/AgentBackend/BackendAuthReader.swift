@@ -61,7 +61,7 @@ enum BackendAuthReader {
         if trimmed.caseInsensitiveCompare("Personal") == .orderedSame {
             return "Personal account"
         }
-        return "Cuenta " + trimmed
+        return L10n.accountLabel(trimmed)
     }
 
     private static func decodeJWTPayload(_ token: String) -> [String: Any]? {

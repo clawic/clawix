@@ -18,6 +18,7 @@
 "1.0.0" = "1.0.0";
 "1.5x faster speed, higher usage" = "速度提高 1.5 倍，用量更高";
 "About" = "关于";
+"Account %@" = "账户 %@";
 "Actions" = "操作";
 "Actual Size" = "实际大小";
 "Add" = "添加";
@@ -33,6 +34,7 @@
 "Appearance" = "外观";
 "Archive" = "归档";
 "Archive chat" = "归档对话";
+"Archive chats" = "归档对话";
 "Arguments" = "参数";
 "Ask Clawix anything. Type @ to mention files" = "向 Clawix 提任何问题。输入 @ 使用插件或引用文件";
 "Ask for follow-up changes" = "请求后续修改";
@@ -73,6 +75,7 @@
 "Coming soon" = "即将推出";
 "Command to start" = "启动命令";
 "Composer text field" = "编辑器文本框";
+"Concise" = "简洁";
 "Configure" = "配置";
 "Connect external tools and data sources." = "连接外部工具和数据源。";
 "Connect to a custom MCP" = "连接到自定义 MCP";
@@ -90,6 +93,9 @@
 "Copy theme" = "复制主题";
 "Copy working directory" = "复制工作目录";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "未找到所需的二进制文件。请在设置 → 高级设置中配置。";
+"Could not read the runtime index: %@" = "无法读取运行时索引：%@";
+"Could not sign in." = "无法登录。";
+"Could not sign in: %@" = "无法登录:%@";
 "Create" = "创建";
 "Create a project to group conversations" = "创建项目以将对话分组";
 "Create and switch" = "创建并切换";
@@ -111,11 +117,13 @@
 "Default speed, normal usage" = "默认速度，正常用量";
 "Delete" = "删除";
 "Delete project" = "删除项目";
+"Detached" = "独立";
 "Documents" = "文档";
 "Done" = "完成";
 "Don’t work on a project" = "不在项目中工作";
 "Download image" = "下载图片";
 "Download plan" = "下载计划";
+"Drive" = "引导";
 "Drop to attach" = "释放以附加";
 "Each action can run any command and shows up in the toolbar header." = "这些操作可以运行任何命令，并会显示在标题栏中。";
 "Edit" = "编辑";
@@ -141,6 +149,7 @@
 "Fork to local" = "在本地创建分支";
 "Fork to new worktree" = "在新的 worktree 创建分支";
 "Forward" = "前进";
+"Friendly" = "友好";
 "Full access" = "完全访问";
 "General usage limits" = "常规使用限制";
 "Generating response" = "正在生成回复";
@@ -152,11 +161,13 @@
 "Ignore" = "忽略";
 "Import" = "导入";
 "Import another agent configuration" = "导入其他代理配置";
+"Inline" = "内嵌";
 "Install the available update" = "安装可用更新";
 "Intelligence" = "智能等级";
 "Interface font size" = "界面字体大小";
 "Keep it short and easy to recognise" = "尽量简短易识别";
 "Keyboard Shortcuts" = "键盘快捷键";
+"Language" = "语言";
 "Learn more" = "了解更多";
 "Learn more." = "了解更多。";
 "Lens" = "镜头";
@@ -205,15 +216,18 @@
 "Open in Finder" = "在 Finder 中打开";
 "Open in mini window" = "在小窗口中打开";
 "Open side chat" = "打开侧边对话";
+"Open with" = "打开方式";
 "Organize" = "整理";
 "Other models" = "其他模型";
 "Personal account" = "个人账户";
 "Personality" = "个性";
 "Pin" = "置顶";
+"Pin chat" = "置顶对话";
 "Pinned" = "已置顶";
 "Pinned chats" = "置顶聊天";
 "Plan" = "计划";
 "Plan mode" = "计划模式";
+"Pragmatic" = "务实";
 "Press Enter to send messages" = "按 Enter 发送消息";
 "Previous Chat" = "上一个对话";
 "Project" = "项目";
@@ -221,6 +235,7 @@
 "Project picker" = "项目选择器";
 "Projects" = "项目";
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "为你的项目向 Clawix 提供额外指令和上下文。了解更多";
+"Queue" = "队列";
 "Quick Chat" = "快速对话";
 "Reasoning" = "推理过程";
 "Record voice note" = "录制语音备注";
@@ -229,6 +244,7 @@
 "Reload" = "重新加载";
 "Reload Browser Page" = "重新加载页面";
 "Remaining usage limits" = "剩余使用额度";
+"Remove" = "移除";
 "Remove attachment" = "移除附件";
 "Removes the local package, fetches it fresh, and reloads the tools" = "删除本地包，重新下载并重新加载工具";
 "Rename chat" = "重命名对话";
@@ -285,6 +301,7 @@
 "Stop loading" = "停止加载";
 "Stop recording" = "停止录音";
 "Stop response" = "停止回复";
+"Technical" = "专业";
 "Tell the agent what to do instead" = "告诉代理改做什么";
 "Theme" = "主题";
 "Thinking" = "正在思考";
