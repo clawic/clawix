@@ -11,7 +11,7 @@ struct GlobeIcon: View {
     var body: some View {
         GlobeIconShape()
             .stroke(style: StrokeStyle(
-                lineWidth: 2.0 * (size / 28),
+                lineWidth: 2.5 * (size / 28),
                 lineCap: .round,
                 lineJoin: .round
             ))
@@ -42,11 +42,11 @@ private struct GlobeIconShape: Shape {
 
         // Central meridian: a tall narrow ellipse whose left/right halves
         // are the arcs that divide the visible hemisphere into quarters.
-        // Width 16 leaves 4 grid units of margin from each rim — bulged
-        // enough that the curves clearly belong to a sphere, not flat.
+        // Curves sit at x=9.5 and x=18.5, tucked in close to the central
+        // axis so the sphere reads as more spherical.
         path.addEllipse(in: CGRect(
-            x: dx + 6 * s, y: dy + 2 * s,
-            width: 16 * s, height: 24 * s
+            x: dx + 9.5 * s, y: dy + 2 * s,
+            width: 9 * s, height: 24 * s
         ))
 
         return path

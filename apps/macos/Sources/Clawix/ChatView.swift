@@ -1959,6 +1959,9 @@ private struct AtomView: View {
 /// a subtle dotted underline appears so the user can tell it is tappable.
 /// Tap routes through `onTap` (wired to `AppState.openLinkInBrowser`) so
 /// the URL lands in the right-sidebar browser instead of the system one.
+/// A leading `GlobeIcon` always sits before the label so the user reads
+/// the chip as "this is a web link" regardless of whether the source
+/// markdown was a bare URL or a `[label](url)` form.
 private struct LinkAtom: View {
     let label: String
     let url: URL
@@ -1967,30 +1970,44 @@ private struct LinkAtom: View {
     let onTap: (URL) -> Void
 
     @State private var hovered = false
-    private let linkColor = Color(red: 0.60, green: 0.78, blue: 0.96)
+    private let linkColor = Color(red: 0.42, green: 0.72, blue: 1.0)
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 3) {
-            if isBareUrl {
-                Image(systemName: "globe")
-                    .font(.system(size: 12, weight: .regular))
+        Button(action: { onTap(url) }) {
+            HStack(alignment: .center, spacing: 4) {
+                GlobeIcon(size: 15)
                     .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
+                Text(label)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
+                    .underline(hovered, pattern: .dot, color: linkColor.opacity(0.85))
             }
-            Text(label)
-                .font(.system(size: 14, weight: weight))
-                .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
-                .underline(hovered, pattern: .dot, color: linkColor.opacity(0.85))
+            .padding(.horizontal, 3)
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            hovered = hovering
-            if hovering {
-                NSCursor.pointingHand.push()
-            } else {
-                NSCursor.pop()
+        .buttonStyle(.plain)
+        .onContinuousHover { phase in
+            switch phase {
+            case .active:
+                hovered = true
+                NSCursor.pointingHand.set()
+            case .ended:
+                hovered = false
             }
         }
-        .onTapGesture { onTap(url) }
+        .hoverHint(url.absoluteString)
+        .contextMenu {
+            Button("Open in browser") { onTap(url) }
+            Button("Open in external browser") {
+                NSWorkspace.shared.open(url)
+            }
+            Divider()
+            Button("Copy link") {
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                pb.setString(url.absoluteString, forType: .string)
+            }
+        }
         .accessibilityAddTraits(.isLink)
     }
 }
@@ -2337,6 +2354,57 @@ enum AssistantMarkdown {
                                 isBareUrl: label == urlStr
                             ))
                             i = input.index(after: urlClose)
+                            continue
+                        }
+                    }
+                }
+            }
+
+            // Bare URL: http(s)://... — promote to a link atom so the
+            // user gets the same chip / hover / right-click treatment as
+            // a markdown link, even when the model emitted a raw URL.
+            if ch == "h" {
+                let suffix = input[i...]
+                let scheme: String?
+                if suffix.hasPrefix("https://") {
+                    scheme = "https://"
+                } else if suffix.hasPrefix("http://") {
+                    scheme = "http://"
+                } else {
+                    scheme = nil
+                }
+                let atBoundary = pending.isEmpty
+                    || pending.last.map { $0.isWhitespace || "([{<".contains($0) } ?? true
+                if let scheme, atBoundary {
+                    var end = input.index(i, offsetBy: scheme.count)
+                    while end < input.endIndex {
+                        let c = input[end]
+                        if c.isWhitespace || c == "\n" { break }
+                        end = input.index(after: end)
+                    }
+                    let trailers: Set<Character> = [
+                        ".", ",", ";", ":", "!", "?", "·",
+                        ")", "]", "}", ">", "'", "\""
+                    ]
+                    let bodyStart = input.index(i, offsetBy: scheme.count)
+                    while end > bodyStart {
+                        let prev = input.index(before: end)
+                        if trailers.contains(input[prev]) {
+                            end = prev
+                        } else {
+                            break
+                        }
+                    }
+                    if end > bodyStart {
+                        let urlStr = String(input[i..<end])
+                        if let url = URL(string: urlStr) {
+                            flushWords()
+                            atoms.append(.link(
+                                label: urlStr,
+                                url: url,
+                                isBareUrl: true
+                            ))
+                            i = end
                             continue
                         }
                     }
