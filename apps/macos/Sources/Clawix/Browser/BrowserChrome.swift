@@ -41,37 +41,6 @@ struct BrowserTabStrip: View {
     }
 }
 
-private struct ReviewTabPill: View {
-    @EnvironmentObject var appState: AppState
-    @State private var hovered = false
-
-    var body: some View {
-        Button {
-            appState.closeBrowserPanel()
-        } label: {
-            HStack(spacing: 7) {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(Color(white: 0.86))
-                Text("Review")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(Color(white: 0.92))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(hovered ? Color.white.opacity(0.07) : Color.clear)
-            )
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovered)
-        .hoverHint(L10n.t("Back to review panel"), placement: .below)
-    }
-}
-
 private struct BrowserTabPill: View {
     let tab: BrowserTab
     let isActive: Bool
