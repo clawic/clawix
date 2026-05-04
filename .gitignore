@@ -1,5 +1,6 @@
 .DS_Store
 apps/*/.build/
+apps/*/*/.build/
 apps/*/build/
 apps/*/artifacts/
 *.app/
