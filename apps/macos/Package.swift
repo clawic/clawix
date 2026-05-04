@@ -14,14 +14,18 @@ let package = Package(
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
         // SQLite-backed local persistence. Statically linked SQLite, no
         // system framework dep. Replaces the legacy JSON blob store.
-        .package(url: "https://github.com/groue/GRDB.swift", from: "6.29.0")
+        .package(url: "https://github.com/groue/GRDB.swift", from: "6.29.0"),
+        // Wire types shared with the iOS companion. Pure Foundation, no
+        // SwiftUI, no platform-specific code. Tests live in the package.
+        .package(path: "../shared/ClawixCore")
     ],
     targets: [
         .executableTarget(
             name: "Clawix",
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle"),
-                .product(name: "GRDB", package: "GRDB.swift")
+                .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "ClawixCore", package: "ClawixCore")
             ],
             path: "Sources/Clawix",
             resources: [

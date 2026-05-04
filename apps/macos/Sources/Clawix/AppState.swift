@@ -552,6 +552,11 @@ final class AppState: ObservableObject {
     let auth = BackendAuthCoordinator()
     private var authObserver: AnyCancellable?
 
+    /// Local-network WS server that exposes this AppState to the iOS
+    /// companion. Lazily created so the property doesn't take a
+    /// reference to `self` before init finishes.
+    private var bridgeServer: BridgeServer?
+
     private let projectsRepo = ProjectsRepository()
     private let pinsRepo = PinsRepository()
     private let chatProjectsRepo = ChatProjectsRepository()
@@ -663,6 +668,16 @@ final class AppState: ObservableObject {
                 }
                 await self.seedArchivesIfNeeded()
             }
+        }
+
+        // Bridge to the iOS companion. Off by default until the
+        // pairing UI lands; opt in for smoke tests with
+        // CLAWIX_BRIDGE_ENABLE=1. Phase 5 will gate it behind a
+        // user-facing toggle that flips a UserDefaults flag.
+        if ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_ENABLE"] == "1" {
+            let server = BridgeServer(appState: self)
+            server.start()
+            self.bridgeServer = server
         }
 
         // Auto-reload threads when the app gains focus, debounced to avoid
@@ -1225,6 +1240,28 @@ final class AppState: ObservableObject {
         if let clawix {
             Task { @MainActor in
                 await clawix.sendUserMessage(chatId: chatId, text: combined)
+                self.clawixBackendStatus = clawix.status
+            }
+        }
+    }
+
+    /// Entry point used by the bridge that exposes the desktop app to the
+    /// iOS companion. Mirrors the user-message half of `sendMessage()` but
+    /// takes the chat id and text as parameters rather than reading from
+    /// the composer; attachments and new-chat creation are out of scope
+    /// for the MVP.
+    @MainActor
+    func sendUserMessageFromBridge(chatId: UUID, text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+
+        let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
+        chats[idx].messages.append(userMsg)
+
+        if let clawix {
+            Task { @MainActor in
+                await clawix.sendUserMessage(chatId: chatId, text: trimmed)
                 self.clawixBackendStatus = clawix.status
             }
         }
