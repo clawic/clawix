@@ -122,7 +122,7 @@ struct SidebarView: View {
                 sectionHeader(
                     "Pinned",
                     expanded: $pinnedExpanded,
-                    leadingIcon: AnyView(PinIcon(size: 14))
+                    leadingIcon: AnyView(PinIcon(size: 14.5))
                 )
                 SidebarAccordion(
                     expanded: pinnedExpanded,
@@ -152,7 +152,7 @@ struct SidebarView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if snapshot.chrono.isEmpty {
                             Text("No chats")
-                                .font(.system(size: 13, weight: .light))
+                                .font(.system(size: 13.5, weight: .light))
                                 .foregroundColor(Color(white: 0.40))
                                 .padding(.leading, 36)
                                 .padding(.vertical, 4)
@@ -222,7 +222,7 @@ struct SidebarView: View {
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
                             Image(systemName: "bubble.left")
-                                .font(.system(size: 11, weight: .regular))
+                                .font(.system(size: 11.5, weight: .regular))
                         )
                     )
                     SidebarAccordion(
@@ -265,7 +265,7 @@ struct SidebarView: View {
         sectionHeader(
             "Archived",
             expanded: $archivedExpanded,
-            leadingIcon: AnyView(ArchiveIcon(size: 14))
+            leadingIcon: AnyView(ArchiveIcon(size: 14.5))
         )
         SidebarAccordion(
             expanded: archivedExpanded,
@@ -281,7 +281,7 @@ struct SidebarView: View {
                                 .frame(width: 9, height: 9)
                         }
                         Text(appState.archivedLoading ? "Loading…" : "No archived chats")
-                            .font(.system(size: 13, weight: .light))
+                            .font(.system(size: 13.5, weight: .light))
                             .foregroundColor(Color(white: 0.40))
                     }
                     .padding(.leading, 36)
@@ -507,7 +507,7 @@ struct SidebarView: View {
         sidebarHeader(title: "Projects",
                       showCollapseAll: true,
                       showNewChat: false,
-                      leadingIcon: AnyView(FolderMorphIcon(size: 13, progress: 0, lineWidthScale: 0.82)),
+                      leadingIcon: AnyView(FolderMorphIcon(size: 13.5, progress: 0, lineWidthScale: 0.82)),
                       expanded: $projectsExpanded)
     }
 
@@ -518,7 +518,7 @@ struct SidebarView: View {
                       alwaysShow: true,
                       leadingIcon: AnyView(
                           Image(systemName: "bubble.left")
-                              .font(.system(size: 10.5, weight: .regular))
+                              .font(.system(size: 11, weight: .regular))
                       ),
                       expanded: $chronoExpanded)
     }
@@ -558,7 +558,7 @@ struct SidebarView: View {
                             .padding(.trailing, 11)
                     }
                     Text(title)
-                        .font(.system(size: 13, weight: .light))
+                        .font(.system(size: 13.5, weight: .light))
                         .foregroundColor(Color(white: 0.88))
                 }
             }
@@ -579,7 +579,7 @@ struct SidebarView: View {
                 HeaderHoverIcon(tooltip: "Add new project") {
                     newProjectMenuOpen.toggle()
                 } label: { color in
-                    FolderAddIcon(size: 15, plusStrokeWidth: 1.4)
+                    FolderAddIcon(size: 15.5, plusStrokeWidth: 1.4)
                         .foregroundColor(color)
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
@@ -633,7 +633,7 @@ struct SidebarView: View {
     ) -> some View {
         HeaderHoverIcon(tooltip: tooltip, action: action) { color in
             Image(systemName: systemName)
-                .font(.system(size: 10, weight: .regular))
+                .font(.system(size: 10.5, weight: .regular))
                 .foregroundColor(color)
                 .frame(width: 22, height: 22)
         }
@@ -736,7 +736,7 @@ private struct NewProjectPopupRow: View {
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer()
             }
@@ -767,11 +767,11 @@ private struct SettingsBottomButton: View {
         } label: {
             HStack(spacing: 11) {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 13))
+                    .font(.system(size: 13.5))
                     .frame(width: 15)
                     .foregroundColor(open ? .white : Color(white: 0.78))
                 Text("Settings")
-                    .font(.system(size: 13, weight: .light))
+                    .font(.system(size: 13.5, weight: .light))
                     .foregroundColor(open ? .white : Color(white: 0.88))
                 Spacer()
             }
@@ -880,11 +880,11 @@ private struct SettingsLimitsHeaderRow: View {
         }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Image(systemName: "speedometer")
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(MenuStyle.rowIcon)
                 Text("Remaining usage limits")
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.down")
@@ -995,18 +995,18 @@ private struct SettingsLimitsValueRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(verbatim: label)
-                .font(.system(size: 11.5, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Spacer(minLength: 8)
             Text(verbatim: percent)
-                .font(.system(size: 11.5))
+                .font(.system(size: 12))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Text(verbatim: detail)
-                .font(.system(size: 11.5))
+                .font(.system(size: 12))
                 .foregroundColor(MenuStyle.rowSubtle)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
@@ -1029,11 +1029,11 @@ private struct SettingsAccountRow: View {
         Button(action: { action?() }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Image(systemName: icon)
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(MenuStyle.rowIcon)
                 Text(title)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 if let trailingIcon = trailing {
@@ -1091,18 +1091,18 @@ private struct SidebarButton: View {
                             .frame(width: 15, height: 15)
                     } else {
                         Image(systemName: icon)
-                            .font(.system(size: 13, weight: .regular))
+                            .font(.system(size: 13.5, weight: .regular))
                             .frame(width: 15)
                             .foregroundColor(iconColor)
                     }
                 }
                 Text(localizedTitle)
-                    .font(.system(size: 13, weight: .light))
+                    .font(.system(size: 13.5, weight: .light))
                     .foregroundColor(labelColor)
                 Spacer(minLength: 6)
                 if let shortcut {
                     Text(shortcut)
-                        .font(.system(size: 10.5, weight: .regular))
+                        .font(.system(size: 11, weight: .regular))
                         .foregroundColor(Color(white: 0.78))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
@@ -1236,7 +1236,7 @@ private struct SectionDisclosureChevron: View {
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: 9, weight: .semibold))
+            .font(.system(size: 9.5, weight: .semibold))
             .foregroundColor(Color(white: 0.78))
             .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -1289,7 +1289,7 @@ private struct CollapsibleSectionLabel: View {
                     .padding(.trailing, 11)
             }
             Text(title)
-                .font(.system(size: 13, weight: .light))
+                .font(.system(size: 13.5, weight: .light))
                 .foregroundColor(labelColor)
             SectionDisclosureChevron(expanded: expanded, hovered: hovered)
                 .padding(.leading, chevronLeadingPadding)
@@ -1405,7 +1405,7 @@ struct RecentChatRow: View {
                 Button {
                     appState.archiveChat(chatId: chat.id)
                 } label: {
-                    ArchiveIcon(size: 14)
+                    ArchiveIcon(size: 14.5)
                         .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
                         .frame(width: 14, height: 14)
                         .contentShape(Rectangle())
@@ -1439,7 +1439,7 @@ struct RecentChatRow: View {
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
-                .font(.system(size: 13, weight: .light))
+                .font(.system(size: 13.5, weight: .light))
                 .foregroundColor(isSelected ? .white : Color(white: 0.74))
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -1526,7 +1526,7 @@ struct RecentChatRow: View {
             )
         case .bubble:
             Image(systemName: "bubble.left")
-                .font(.system(size: 10))
+                .font(.system(size: 10.5))
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
         case .unarchive:
@@ -1538,7 +1538,7 @@ struct RecentChatRow: View {
         Button {
             appState.unarchiveChat(chatId: chat.id)
         } label: {
-            ArchiveUnarchiveMorphIcon(size: 15, hovered: unarchiveHovered)
+            ArchiveUnarchiveMorphIcon(size: 15.5, hovered: unarchiveHovered)
                 .frame(width: 14, height: 14)
                 .contentShape(Rectangle())
         }
@@ -1557,7 +1557,7 @@ struct RecentChatRow: View {
         Button {
             appState.togglePin(chatId: chat.id)
         } label: {
-            PinIcon(size: 12)
+            PinIcon(size: 12.5)
                 .foregroundColor(color)
                 .frame(width: 14, height: 14)
                 .contentShape(Rectangle())
@@ -1623,12 +1623,12 @@ private struct ProjectAccordion: View {
             HStack(spacing: 0) {
                 Button(action: { withAnimation(.easeOut(duration: 0.28)) { onToggle() } }) {
                     HStack(spacing: 8) {
-                        FolderMorphIcon(size: 12, progress: expanded ? 1 : 0)
+                        FolderMorphIcon(size: 12.5, progress: expanded ? 1 : 0)
                             .foregroundColor(Color(white: 0.78))
                             .frame(width: 15, height: 15)
                             .animation(.easeOut(duration: 0.28), value: expanded)
                         Text(project.name)
-                            .font(.system(size: 13, weight: .light))
+                            .font(.system(size: 13.5, weight: .light))
                             .foregroundColor(Color(white: 0.94))
                             .lineLimit(1)
                         Spacer(minLength: 6)
@@ -1648,7 +1648,7 @@ private struct ProjectAccordion: View {
                 // disappears.
                 Button(action: onMenuToggle) {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 12.5, weight: .medium))
                         .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
@@ -1702,7 +1702,7 @@ private struct ProjectAccordion: View {
                                     .frame(width: 9, height: 9)
                             }
                             Text(loading ? "Loading…" : "No chats")
-                                .font(.system(size: 10.5))
+                                .font(.system(size: 11))
                                 .foregroundColor(Color(white: 0.40))
                         }
                         .padding(.leading, 30)
@@ -1850,7 +1850,7 @@ private struct PinnedRow: View {
                         style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
                 .frame(width: 14, height: 14)
             Text(item.title)
-                .font(.system(size: 13.5, weight: .light))
+                .font(.system(size: 14, weight: .light))
                 .foregroundColor(Color(white: 0.92))
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -1859,7 +1859,7 @@ private struct PinnedRow: View {
                     // archivar chat
                 } label: {
                     Image(systemName: "archivebox")
-                        .font(.system(size: 12, weight: .regular))
+                        .font(.system(size: 12.5, weight: .regular))
                         .foregroundColor(Color(white: 0.72))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
@@ -1868,7 +1868,7 @@ private struct PinnedRow: View {
                 .help(L10n.t("Archive chat"))
             } else {
                 Text(item.age)
-                    .font(.system(size: 11))
+                    .font(.system(size: 11.5))
                     .foregroundColor(Color(white: 0.45))
             }
         }
@@ -1930,11 +1930,11 @@ private struct ProjectRowMenuPopup: View {
                 isPresented = false
             }
             ProjectRowMenuRow(icon: "pencil", label: "Rename project", action: onRename)
-            ProjectRowMenuRow(icon: "tray.and.arrow.down", label: "Archivar chats", action: onArchive)
+            ProjectRowMenuRow(icon: "tray.and.arrow.down", label: "Archive chats", action: onArchive)
             if isCodexSourced {
                 ProjectRowMenuRow(icon: "eye.slash", label: "Hide from sidebar", action: onHide)
             } else {
-                ProjectRowMenuRow(icon: "xmark", label: "Quitar", action: onRemove)
+                ProjectRowMenuRow(icon: "xmark", label: "Remove", action: onRemove)
             }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
@@ -1963,7 +1963,7 @@ private struct ProjectRowMenuRow: View {
                 }
                 .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
             }
@@ -2068,23 +2068,23 @@ private struct OrganizeMenuRow: View {
                 Group {
                     switch icon {
                     case .folderOpen:
-                        FolderOpenIcon(size: 11)
+                        FolderOpenIcon(size: 11.5)
                             .foregroundColor(MenuStyle.rowIcon)
                     case .system(let name):
                         Image(systemName: name)
-                            .font(.system(size: 11))
+                            .font(.system(size: 11.5))
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
                 .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 9.5, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -2642,13 +2642,13 @@ private struct DragChipView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            PinIcon(size: 12)
+            PinIcon(size: 12.5)
                 .foregroundColor(Color(white: 0.85))
                 .frame(width: 14, height: 14)
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
-                .font(.system(size: 13, weight: .light))
+                .font(.system(size: 13.5, weight: .light))
                 .foregroundColor(Color(white: 0.94))
                 .lineLimit(1)
             Spacer(minLength: 8)
