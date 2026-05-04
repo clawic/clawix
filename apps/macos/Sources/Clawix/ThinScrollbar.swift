@@ -43,6 +43,14 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
 
         let clipView = scrollView.contentView
         clipView.wantsLayer = true
+
+        // Sibling subview order alone isn't enough: the SwiftUI hosting
+        // view's layer can still composite over the left edge of the
+        // overlay knob in some layouts. Pinning the scroller's layer
+        // zPosition above the clip view guarantees the knob always
+        // paints on top, regardless of how AppKit orders the children.
+        scroller.layer?.zPosition = 1
+        scrollView.addSubview(scroller, positioned: .above, relativeTo: clipView)
         NSLayoutConstraint.activate([
             hosting.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
             hosting.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
@@ -162,5 +170,9 @@ final class ThinScroller: NSScroller {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         super.alphaValue = 1.0
+        // Re-assert z-order after AppKit reattaches the scroller. Without
+        // this the knob's left edge can disappear under the SwiftUI
+        // hosting layer when the scroll view is re-tiled.
+        layer?.zPosition = 1
     }
 }
