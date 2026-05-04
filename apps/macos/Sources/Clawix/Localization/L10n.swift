@@ -100,9 +100,9 @@ enum L10n {
             return String(localized: "\(Int(elapsed / 86_400)) d", bundle: AppLocale.bundle, locale: AppLocale.current)
         }
         if elapsed < 2_629_800 {
-            return String(localized: "\(Int(elapsed / 604_800)) sem", bundle: AppLocale.bundle, locale: AppLocale.current)
+            return String(localized: "\(Int(elapsed / 604_800)) w", bundle: AppLocale.bundle, locale: AppLocale.current)
         }
-        return String(localized: "\(Int(elapsed / 2_629_800)) mes", bundle: AppLocale.bundle, locale: AppLocale.current)
+        return String(localized: "\(Int(elapsed / 2_629_800)) mo", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     // MARK: - Work summary header

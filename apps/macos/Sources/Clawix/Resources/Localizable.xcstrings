@@ -1143,7 +1143,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld sem"
+            "value": "%lld s"
           }
         },
         "en": {

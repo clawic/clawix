@@ -12,7 +12,7 @@
 "%lld h" = "%lld h";
 "%lld min" = "%lld min";
 "%lld mo" = "%lld mes";
-"%lld w" = "%lld sem";
+"%lld w" = "%lld s";
 "%lld-hour usage limit" = "Límite de uso de %lld horas";
 "%lld-minute usage limit" = "Límite de uso de %lld minutos";
 "1.0.0" = "1.0.0";
