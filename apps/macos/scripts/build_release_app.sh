@@ -49,7 +49,15 @@ python3 "$SCRIPT_DIR/compile_xcstrings.py"
 
 echo "==> Building Swift package (release)"
 cd "$PROJECT_DIR"
-swift build -c release 2>&1
+# Strip absolute build paths (Swift's `#file` and DWARF debug records embed
+# them otherwise). With `-file-prefix-map`, each occurrence of the build
+# directory in the binary is rewritten to a stable, anonymous prefix so
+# the shipped artifact does not leak the maintainer's $HOME / username.
+# Functionally a no-op; only rewrites string literals in the binary.
+swift build -c release \
+    -Xswiftc -file-prefix-map -Xswiftc "${PROJECT_DIR}/.build=clawix/.build" \
+    -Xswiftc -file-prefix-map -Xswiftc "${PROJECT_DIR}=clawix/apps/macos" \
+    2>&1
 
 BINARY="$PROJECT_DIR/.build/release/${APP_NAME}"
 if [[ ! -f "$BINARY" ]]; then
@@ -125,6 +133,21 @@ if [[ -z "$SPARKLE_FW" ]]; then
     exit 1
 fi
 cp -R "$SPARKLE_FW" "$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
+
+# Strip absolute build paths from the binary. Swift's -file-prefix-map
+# only rewrites DWARF; #file literals embedded by precondition / GRDB
+# code live in __TEXT,__cstring and need a post-build patch. Done before
+# codesign so the signature seals the patched bytes.
+echo "==> Stripping absolute build paths from binary"
+# Pass the personal prefixes at runtime so the .py file holds none of
+# them as source literals (the workspace forbids listing personal paths
+# in any file under clawix/, even inside a "detection" routine).
+python3 "$SCRIPT_DIR/strip_user_paths.py" \
+    "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}" \
+    --replace "${PROJECT_DIR}/.build/=clawix/.build/" \
+    --replace "${PROJECT_DIR}/=clawix/apps/macos/" \
+    --replace "$(dirname "${PROJECT_DIR}")/=clawix/apps/" \
+    --replace "${HOME}/="
 
 # Per-component signing with hardened runtime, in the order the
 # notarization service requires: innermost executables first, then the
