@@ -88,11 +88,8 @@ final class BridgeSession: Identifiable {
     }
 
     private func handleAuth(token: String, deviceName: String?) {
-        // Phase 2: plaintext. Any non-empty token is accepted to let
-        // the smoke-test client connect. Phase 5 swaps this for a
-        // keychain-backed bearer compare.
-        guard !token.isEmpty else {
-            send(BridgeFrame(.authFailed(reason: "empty-token")))
+        guard PairingService.shared.acceptToken(token) else {
+            send(BridgeFrame(.authFailed(reason: "bad-token")))
             close(.protocolCode(.policyViolation))
             return
         }

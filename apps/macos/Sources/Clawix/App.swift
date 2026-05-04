@@ -26,6 +26,7 @@ struct ClawixApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
     @StateObject private var updater = UpdaterController()
+    @Environment(\.openWindow) private var openWindow
 
     init() {
         // Apply the user-chosen language process-wide BEFORE any view
@@ -66,10 +67,24 @@ struct ClawixApp: App {
             CommandGroup(replacing: .sidebar) {
                 ViewMenuCommands(appState: appState)
             }
+            CommandGroup(after: .windowSize) {
+                Divider()
+                Button("Pair iPhone…") {
+                    openWindow(id: "clawix-pair")
+                }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+            }
             CommandGroup(replacing: .help) {
                 HelpMenuCommands(appState: appState)
             }
         }
+
+        WindowGroup("Pair iPhone", id: "clawix-pair") {
+            PairWindowView()
+                .preferredColorScheme(.dark)
+        }
+        .defaultSize(width: 360, height: 540)
+        .windowResizability(.contentSize)
     }
 }
 

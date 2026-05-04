@@ -670,12 +670,12 @@ final class AppState: ObservableObject {
             }
         }
 
-        // Bridge to the iOS companion. Off by default until the
-        // pairing UI lands; opt in for smoke tests with
-        // CLAWIX_BRIDGE_ENABLE=1. Phase 5 will gate it behind a
-        // user-facing toggle that flips a UserDefaults flag.
-        if ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_ENABLE"] == "1" {
-            let server = BridgeServer(appState: self)
+        // Bridge to the iOS companion. Always-on so the pairing UI
+        // can show a QR the iPhone scans without flipping any env
+        // var. Disabled with CLAWIX_BRIDGE_DISABLE=1 for tests or
+        // multi-instance debugging.
+        if ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DISABLE"] != "1" {
+            let server = BridgeServer(appState: self, port: PairingService.shared.port)
             server.start()
             self.bridgeServer = server
         }
