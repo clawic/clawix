@@ -1609,11 +1609,12 @@ private struct LinkPreviewCard: View {
 
 // MARK: - Assistant markdown rendering
 
-/// Renders assistant prose with the small subset of markdown Clawix emits:
-/// `[label](url)` links (drawn with a leading globe icon when label==url)
-/// and inline `` `code` `` chips. Each link is its own hoverable atom
-/// inside a flow layout so tap routes to the sidebar browser and a
-/// dotted hover underline tells the user it is interactive.
+/// Renders assistant prose with the markdown subset Clawix emits:
+/// paragraphs, ATX headings, bullet/numbered lists, GitHub-style tables,
+/// fenced code blocks, plus inline `**bold**`, `*italic*`, `` `code` ``,
+/// and `[label](url)` links. Each link is its own hoverable atom inside
+/// a flow layout so tap routes to the sidebar browser and a dotted hover
+/// underline tells the user it is interactive.
 private struct AssistantMarkdownText: View {
     let text: String
     let weight: Font.Weight
@@ -1621,15 +1622,205 @@ private struct AssistantMarkdownText: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        let paragraphs = AssistantMarkdown.parse(text)
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                ParagraphFlow(paragraph: paragraph, weight: weight, color: color) { url in
-                    appState.openLinkInBrowser(url)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
+        let blocks = AssistantMarkdown.parseBlocks(text)
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                blockView(block)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func blockView(_ block: AssistantMarkdown.Block) -> some View {
+        switch block {
+        case .paragraph(let p):
+            ParagraphFlow(paragraph: p, weight: weight, color: color) { url in
+                appState.openLinkInBrowser(url)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+        case .heading(let level, let line):
+            ParagraphFlow(
+                paragraph: AssistantMarkdown.Paragraph(lines: [line]),
+                weight: .semibold,
+                color: color,
+                fontSize: headingFontSize(level)
+            ) { url in
+                appState.openLinkInBrowser(url)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+        case .bulletList(let items):
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Circle()
+                            .fill(color)
+                            .frame(width: 5, height: 5)
+                            .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + 4 }
+                            .frame(width: 10, alignment: .leading)
+                        ParagraphFlow(paragraph: item, weight: weight, color: color) { url in
+                            appState.openLinkInBrowser(url)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+
+        case .numberedList(let items):
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("\(idx + 1).")
+                            .font(.system(size: 13, weight: weight))
+                            .foregroundColor(color)
+                            .frame(width: 20, alignment: .leading)
+                        ParagraphFlow(paragraph: item, weight: weight, color: color) { url in
+                            appState.openLinkInBrowser(url)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+
+        case .table(let headers, let rows):
+            AssistantTableView(headers: headers, rows: rows, weight: weight, color: color) { url in
+                appState.openLinkInBrowser(url)
+            }
+
+        case .codeBlock(let language, let code):
+            AssistantCodeBlockView(language: language, code: code)
+        }
+    }
+
+    private func headingFontSize(_ level: Int) -> CGFloat {
+        switch level {
+        case 1:  return 20
+        case 2:  return 17
+        case 3:  return 15
+        default: return 14
+        }
+    }
+}
+
+/// Table block rendered with the same look as the reference UI: column
+/// headers in semibold weight, hairline horizontal divider after every
+/// row, leading-aligned cells with generous vertical padding and no
+/// vertical separators. Columns size by intrinsic content via `Grid`.
+private struct AssistantTableView: View {
+    let headers: [AssistantMarkdown.Line]
+    let rows: [[AssistantMarkdown.Line]]
+    let weight: Font.Weight
+    let color: Color
+    let onLinkTap: (URL) -> Void
+
+    private let divider = Color.white.opacity(0.14)
+    private let dividerThickness: CGFloat = 0.75
+    private let cellVPad: CGFloat = 7
+    private let cellHPad: CGFloat = 32
+
+    var body: some View {
+        let columnCount = max(headers.count, rows.map { $0.count }.max() ?? 0)
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0) {
+            GridRow {
+                ForEach(Array(headers.enumerated()), id: \.offset) { idx, cell in
+                    cellView(cell, weight: .semibold)
+                        .padding(.leading, idx == 0 ? 0 : cellHPad)
+                        .gridColumnAlignment(.leading)
+                }
+            }
+            .padding(.vertical, cellVPad)
+
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                Rectangle()
+                    .fill(divider)
+                    .frame(height: dividerThickness)
+                    .gridCellColumns(columnCount)
+                GridRow {
+                    ForEach(0..<columnCount, id: \.self) { idx in
+                        cellView(idx < row.count ? row[idx] : AssistantMarkdown.Line(atoms: []), weight: weight)
+                            .padding(.leading, idx == 0 ? 0 : cellHPad)
+                            .gridColumnAlignment(.leading)
+                    }
+                }
+                .padding(.vertical, cellVPad)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func cellView(_ line: AssistantMarkdown.Line, weight: Font.Weight) -> some View {
+        ParagraphFlow(
+            paragraph: AssistantMarkdown.Paragraph(lines: [line]),
+            weight: weight,
+            color: color
+        ) { url in
+            onLinkTap(url)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Fenced code block rendered with a header row showing the language
+/// label and a copy affordance, matching the file-preview code block
+/// style so multi-line snippets feel consistent across the app.
+private struct AssistantCodeBlockView: View {
+    let language: String
+    let code: String
+
+    @State private var copied = false
+    @State private var hoverCopy = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                Text(language.isEmpty ? "code" : language)
+                    .font(.system(size: 11.5, weight: .regular))
+                    .foregroundColor(Color(white: 0.55))
+                Spacer(minLength: 8)
+                Button(action: copyCode) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(Color(white: hoverCopy ? 0.85 : 0.55))
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .onHover { hoverCopy = $0 }
+                .accessibilityLabel("Copy code")
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+
+            Text(code)
+                .font(.system(size: 12.5, design: .monospaced))
+                .foregroundColor(Palette.textPrimary.opacity(0.94))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+                .textSelection(.enabled)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(white: 0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+        )
+    }
+
+    private func copyCode() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(code, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            copied = false
         }
     }
 }
@@ -1642,17 +1833,19 @@ private struct ParagraphFlow: View {
     let paragraph: AssistantMarkdown.Paragraph
     let weight: Font.Weight
     let color: Color
+    var fontSize: CGFloat = 13
     let onLinkTap: (URL) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(paragraph.lines.enumerated()), id: \.offset) { _, line in
-                FlowLayout(horizontalSpacing: 0, verticalSpacing: 4) {
+                FlowLayout(horizontalSpacing: 0, verticalSpacing: 6) {
                     ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, atom in
                         AtomView(
                             atom: atom,
                             weight: weight,
                             color: color,
+                            fontSize: fontSize,
                             onLinkTap: onLinkTap
                         )
                     }
@@ -1666,19 +1859,34 @@ private struct AtomView: View {
     let atom: AssistantMarkdown.Atom
     let weight: Font.Weight
     let color: Color
+    var fontSize: CGFloat = 13
     let onLinkTap: (URL) -> Void
 
     var body: some View {
         switch atom {
         case .word(let s):
             Text(s)
-                .font(.system(size: 14, weight: weight))
+                .font(.system(size: fontSize, weight: weight))
+                .foregroundColor(color)
+        case .bold(let s):
+            Text(s)
+                .font(.system(size: fontSize, weight: .semibold))
+                .foregroundColor(color)
+        case .italic(let s):
+            Text(s)
+                .font(.system(size: fontSize, weight: weight).italic())
                 .foregroundColor(color)
         case .code(let s):
             Text(s)
-                .font(.system(size: 12.5, weight: .regular, design: .monospaced))
-                .foregroundColor(Color(white: 0.92))
-                .padding(.horizontal, 4)
+                .font(.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
+                .foregroundColor(Color(white: 0.94))
+                .padding(.horizontal, 5.5)
+                .padding(.vertical, 1.5)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Color.white.opacity(0.09))
+                )
+                .padding(.horizontal, 2)
         case .link(let label, let url, let isBareUrl):
             LinkAtom(label: label, url: url, isBareUrl: isBareUrl, weight: weight, onTap: onLinkTap)
         }
@@ -1775,6 +1983,15 @@ struct FlowLayout: Layout {
 }
 
 enum AssistantMarkdown {
+    enum Block {
+        case paragraph(Paragraph)
+        case heading(level: Int, Line)
+        case bulletList(items: [Paragraph])
+        case numberedList(items: [Paragraph])
+        case codeBlock(language: String, code: String)
+        case table(headers: [Line], rows: [[Line]])
+    }
+
     struct Paragraph {
         let lines: [Line]
     }
@@ -1784,42 +2001,263 @@ enum AssistantMarkdown {
     }
 
     enum Atom {
-        case word(String)        // a token + trailing whitespace
+        case word(String)        // plain token + trailing whitespace
+        case bold(String)        // **strong** token + trailing whitespace
+        case italic(String)      // *em* / _em_ token + trailing whitespace
         case code(String)
         case link(label: String, url: URL, isBareUrl: Bool)
     }
 
-    static func parse(_ text: String) -> [Paragraph] {
+    /// Block-level parser. Walks the source line by line and groups
+    /// contiguous lines into structural blocks. Inline parsing (links,
+    /// code, bold, italic) runs once per produced line.
+    static func parseBlocks(_ text: String) -> [Block] {
         let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
-        return normalized
-            .components(separatedBy: "\n\n")
-            .map { block -> Paragraph in
-                let lines = block
-                    .components(separatedBy: "\n")
-                    .map { Line(atoms: parseAtoms(in: $0)) }
-                    .filter { !$0.atoms.isEmpty }
-                return Paragraph(lines: lines)
+        let lines = normalized.components(separatedBy: "\n")
+        var blocks: [Block] = []
+        var i = 0
+        while i < lines.count {
+            let line = lines[i]
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            if trimmed.isEmpty {
+                i += 1
+                continue
             }
-            .filter { !$0.lines.isEmpty }
+
+            // Fenced code block: ``` [language]
+            if trimmed.hasPrefix("```") {
+                let language = String(trimmed.dropFirst(3))
+                    .trimmingCharacters(in: .whitespaces)
+                var collected: [String] = []
+                i += 1
+                while i < lines.count {
+                    if lines[i].trimmingCharacters(in: .whitespaces).hasPrefix("```") {
+                        i += 1
+                        break
+                    }
+                    collected.append(lines[i])
+                    i += 1
+                }
+                blocks.append(.codeBlock(language: language,
+                                        code: collected.joined(separator: "\n")))
+                continue
+            }
+
+            // ATX heading
+            if let level = headingLevel(for: trimmed) {
+                let body = String(trimmed.dropFirst(level))
+                    .trimmingCharacters(in: .whitespaces)
+                blocks.append(.heading(level: level,
+                                       Line(atoms: parseAtoms(in: body))))
+                i += 1
+                continue
+            }
+
+            // Pipe table: header row + alignment row + 0..N data rows
+            if let (headers, rows, consumed) = parseTable(at: i, lines: lines) {
+                blocks.append(.table(headers: headers, rows: rows))
+                i += consumed
+                continue
+            }
+
+            // Bullet list (-, *, +)
+            if isBulletPrefix(trimmed) {
+                var items: [Paragraph] = []
+                while i < lines.count {
+                    let raw = lines[i]
+                    let t = raw.trimmingCharacters(in: .whitespaces)
+                    guard isBulletPrefix(t) else { break }
+                    let body = String(t.dropFirst(2))
+                    items.append(Paragraph(lines: [Line(atoms: parseAtoms(in: body))]))
+                    i += 1
+                }
+                blocks.append(.bulletList(items: items))
+                continue
+            }
+
+            // Numbered list
+            if numberedRange(in: trimmed) != nil {
+                var items: [Paragraph] = []
+                while i < lines.count {
+                    let t = lines[i].trimmingCharacters(in: .whitespaces)
+                    guard let r = numberedRange(in: t) else { break }
+                    let body = String(t[r.upperBound...])
+                    items.append(Paragraph(lines: [Line(atoms: parseAtoms(in: body))]))
+                    i += 1
+                }
+                blocks.append(.numberedList(items: items))
+                continue
+            }
+
+            // Paragraph: gather contiguous non-blank lines until the next
+            // structural break.
+            var paragraphLines: [Line] = [Line(atoms: parseAtoms(in: line))]
+            i += 1
+            while i < lines.count {
+                let next = lines[i]
+                let nt = next.trimmingCharacters(in: .whitespaces)
+                if nt.isEmpty
+                    || headingLevel(for: nt) != nil
+                    || nt.hasPrefix("```")
+                    || isBulletPrefix(nt)
+                    || numberedRange(in: nt) != nil
+                    || isTableHeaderCandidate(nt, nextTrimmed: i + 1 < lines.count ? lines[i + 1].trimmingCharacters(in: .whitespaces) : nil) {
+                    break
+                }
+                paragraphLines.append(Line(atoms: parseAtoms(in: next)))
+                i += 1
+            }
+            let nonEmpty = paragraphLines.filter { !$0.atoms.isEmpty }
+            if !nonEmpty.isEmpty {
+                blocks.append(.paragraph(Paragraph(lines: nonEmpty)))
+            }
+        }
+        return blocks
     }
+
+    // MARK: - Block helpers
+
+    private static func headingLevel(for trimmed: String) -> Int? {
+        guard trimmed.hasPrefix("#") else { return nil }
+        var hashes = 0
+        for ch in trimmed {
+            if ch == "#" { hashes += 1 } else { break }
+        }
+        guard (1...6).contains(hashes),
+              trimmed.count > hashes,
+              trimmed[trimmed.index(trimmed.startIndex, offsetBy: hashes)] == " "
+        else { return nil }
+        return hashes
+    }
+
+    private static func isBulletPrefix(_ trimmed: String) -> Bool {
+        trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ")
+    }
+
+    private static func numberedRange(in trimmed: String) -> Range<String.Index>? {
+        trimmed.range(of: #"^\d+[.)]\s"#, options: .regularExpression)
+    }
+
+    /// Quick check used while gathering paragraph lines so we don't
+    /// swallow the start of a table into a preceding paragraph.
+    private static func isTableHeaderCandidate(_ trimmed: String, nextTrimmed: String?) -> Bool {
+        guard trimmed.hasPrefix("|"), trimmed.contains("|"),
+              let next = nextTrimmed else { return false }
+        return isTableAlignmentRow(next)
+    }
+
+    /// Returns the parsed headers/rows of a pipe table starting at
+    /// `start`, or `nil` if the lines at that position are not a table.
+    private static func parseTable(at start: Int, lines: [String]) -> (headers: [Line], rows: [[Line]], consumed: Int)? {
+        guard start + 1 < lines.count else { return nil }
+        let header = lines[start].trimmingCharacters(in: .whitespaces)
+        let alignment = lines[start + 1].trimmingCharacters(in: .whitespaces)
+        guard header.contains("|"), isTableAlignmentRow(alignment) else { return nil }
+        let headerCells = splitTableRow(header)
+        guard !headerCells.isEmpty else { return nil }
+
+        var rows: [[Line]] = []
+        var i = start + 2
+        while i < lines.count {
+            let raw = lines[i].trimmingCharacters(in: .whitespaces)
+            if raw.isEmpty || !raw.contains("|") { break }
+            // Stop if we hit a non-pipe-leading line that is clearly another block.
+            let cells = splitTableRow(raw)
+            if cells.isEmpty { break }
+            rows.append(cells.map { Line(atoms: parseAtoms(in: $0)) })
+            i += 1
+        }
+        let headerLines = headerCells.map { Line(atoms: parseAtoms(in: $0)) }
+        return (headerLines, rows, i - start)
+    }
+
+    private static func isTableAlignmentRow(_ trimmed: String) -> Bool {
+        guard trimmed.contains("|"), trimmed.contains("-") else { return false }
+        let cells = splitTableRow(trimmed)
+        guard !cells.isEmpty else { return false }
+        let pattern = #"^:?-{1,}:?$"#
+        for cell in cells {
+            let t = cell.trimmingCharacters(in: .whitespaces)
+            if t.range(of: pattern, options: .regularExpression) == nil { return false }
+        }
+        return true
+    }
+
+    /// Split a pipe-table row into its cells, stripping the optional
+    /// leading and trailing pipes so " | a | b | " yields ["a", "b"].
+    private static func splitTableRow(_ trimmed: String) -> [String] {
+        var s = trimmed
+        if s.hasPrefix("|") { s.removeFirst() }
+        if s.hasSuffix("|") { s.removeLast() }
+        return s.components(separatedBy: "|").map {
+            $0.trimmingCharacters(in: .whitespaces)
+        }
+    }
+
+    // MARK: - Inline parsing
 
     /// Tokenise one line into atoms. Plain prose is split into word atoms
     /// (each carries its trailing space) so the FlowLayout can wrap mid
-    /// paragraph; links and code chips become their own atoms so they keep
-    /// per-element hover / tap handling.
-    private static func parseAtoms(in input: String) -> [Atom] {
+    /// paragraph; links, code chips and bold/italic spans become their
+    /// own atoms so they keep per-element styling and hover/tap handling.
+    static func parseAtoms(in input: String) -> [Atom] {
         var atoms: [Atom] = []
         var pending = ""
         var i = input.startIndex
 
         func flushWords() {
             guard !pending.isEmpty else { return }
-            atoms.append(contentsOf: splitIntoWords(pending))
+            atoms.append(contentsOf: splitIntoWords(pending, style: .plain))
             pending = ""
         }
 
         while i < input.endIndex {
             let ch = input[i]
+
+            // Bold: **text**
+            if ch == "*",
+               input.index(after: i) < input.endIndex,
+               input[input.index(after: i)] == "*" {
+                let openEnd = input.index(i, offsetBy: 2)
+                if let closeStart = findRange(of: "**", in: input, from: openEnd) {
+                    flushWords()
+                    let body = String(input[openEnd..<closeStart])
+                    atoms.append(contentsOf: splitIntoWords(body, style: .bold))
+                    i = input.index(closeStart, offsetBy: 2)
+                    continue
+                }
+            }
+
+            // Italic: *text* (single asterisk, not part of a **)
+            if ch == "*" {
+                let openEnd = input.index(after: i)
+                if openEnd < input.endIndex, input[openEnd] != "*",
+                   let closeStart = findSingleAsterisk(in: input, from: openEnd) {
+                    flushWords()
+                    let body = String(input[openEnd..<closeStart])
+                    atoms.append(contentsOf: splitIntoWords(body, style: .italic))
+                    i = input.index(after: closeStart)
+                    continue
+                }
+            }
+
+            // Italic: _text_
+            if ch == "_" {
+                let openEnd = input.index(after: i)
+                if openEnd < input.endIndex,
+                   let closeStart = input[openEnd...].firstIndex(of: "_") {
+                    let body = String(input[openEnd..<closeStart])
+                    if !body.contains(" ") || body.trimmingCharacters(in: .whitespaces) == body {
+                        flushWords()
+                        atoms.append(contentsOf: splitIntoWords(body, style: .italic))
+                        i = input.index(after: closeStart)
+                        continue
+                    }
+                }
+            }
+
+            // Markdown link: [label](url)
             if ch == "[" {
                 if let close = input[i...].firstIndex(of: "]"),
                    input.index(after: close) < input.endIndex,
@@ -1841,7 +2279,10 @@ enum AssistantMarkdown {
                         }
                     }
                 }
-            } else if ch == "`" {
+            }
+
+            // Inline code: `code`
+            if ch == "`" {
                 let afterTick = input.index(after: i)
                 if afterTick < input.endIndex,
                    let close = input[afterTick...].firstIndex(of: "`") {
@@ -1851,6 +2292,7 @@ enum AssistantMarkdown {
                     continue
                 }
             }
+
             pending.append(ch)
             i = input.index(after: i)
         }
@@ -1858,19 +2300,57 @@ enum AssistantMarkdown {
         return atoms
     }
 
-    /// Split prose into word atoms, attaching trailing whitespace to each
-    /// word so FlowLayout has a natural break point between them.
-    private static func splitIntoWords(_ s: String) -> [Atom] {
+    private enum InlineStyle { case plain, bold, italic }
+
+    /// Find the next occurrence of `needle` starting at `from`, scanning
+    /// for either a multi-character delimiter (`**`) or a marker we want
+    /// to anchor on a non-asterisk neighbour.
+    private static func findRange(of needle: String, in source: String, from: String.Index) -> String.Index? {
+        return source.range(of: needle, range: from..<source.endIndex)?.lowerBound
+    }
+
+    /// Locate the closing single-asterisk for an italic span, skipping
+    /// any `**` pairs that appear inside the candidate region so we don't
+    /// confuse italic with a half-open bold.
+    private static func findSingleAsterisk(in source: String, from: String.Index) -> String.Index? {
+        var i = from
+        while i < source.endIndex {
+            if source[i] == "*" {
+                // Skip if this is actually `**` (start of a new bold).
+                let next = source.index(after: i)
+                if next < source.endIndex, source[next] == "*" {
+                    i = source.index(after: next)
+                    continue
+                }
+                return i
+            }
+            i = source.index(after: i)
+        }
+        return nil
+    }
+
+    /// Split prose into atoms, attaching trailing whitespace to each
+    /// token so FlowLayout has a natural break point between them.
+    private static func splitIntoWords(_ s: String, style: InlineStyle) -> [Atom] {
         var out: [Atom] = []
         var current = ""
         var inWhitespaceTail = false
+
+        func emit(_ token: String) {
+            switch style {
+            case .plain:  out.append(.word(token))
+            case .bold:   out.append(.bold(token))
+            case .italic: out.append(.italic(token))
+            }
+        }
+
         for ch in s {
             if ch == " " || ch == "\t" {
                 current.append(ch)
                 inWhitespaceTail = true
             } else {
                 if inWhitespaceTail, !current.isEmpty {
-                    out.append(.word(current))
+                    emit(current)
                     current = ""
                     inWhitespaceTail = false
                 }
@@ -1878,18 +2358,18 @@ enum AssistantMarkdown {
             }
         }
         if !current.isEmpty {
-            out.append(.word(current))
+            emit(current)
         }
         return out
     }
 
-    /// Walk a paragraph's atoms and return the URLs of every `.link` token.
-    /// Used by callers that want to surface the assistant's links outside
-    /// the prose flow (e.g. the trailing "Website" card).
+    /// Walk every block in the source and return the URLs of every link
+    /// atom. Used by callers that want to surface the assistant's links
+    /// outside the prose flow (e.g. the trailing "Website" card).
     static func extractLinkURLs(in text: String) -> [URL] {
         var urls: [URL] = []
-        for paragraph in parse(text) {
-            for line in paragraph.lines {
+        for block in parseBlocks(text) {
+            visitLines(in: block) { line in
                 for atom in line.atoms {
                     if case .link(_, let url, _) = atom {
                         urls.append(url)
@@ -1898,5 +2378,21 @@ enum AssistantMarkdown {
             }
         }
         return urls
+    }
+
+    private static func visitLines(in block: Block, body: (Line) -> Void) {
+        switch block {
+        case .paragraph(let p):
+            p.lines.forEach(body)
+        case .heading(_, let line):
+            body(line)
+        case .bulletList(let items), .numberedList(let items):
+            for p in items { p.lines.forEach(body) }
+        case .table(let headers, let rows):
+            headers.forEach(body)
+            for row in rows { row.forEach(body) }
+        case .codeBlock:
+            break
+        }
     }
 }
