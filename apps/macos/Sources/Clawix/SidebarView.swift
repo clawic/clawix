@@ -157,7 +157,7 @@ struct SidebarView: View {
                                 .padding(.leading, 36)
                                 .padding(.vertical, 4)
                         } else {
-                            ForEach(Array(snapshot.chrono.prefix(chronoLimit))) { chat in
+                            ForEach(snapshot.chrono.prefix(chronoLimit), id: \.id) { chat in
                                 RecentChatRow(chat: chat, leadingIcon: .pinOnHover)
                             }
                         }
@@ -174,11 +174,11 @@ struct SidebarView: View {
                     .onHover { projectsHeaderHovered = $0 }
 
                 // Projects list. We add/remove the whole subtree when
-                // toggling. Nesting an `ExpandableContainer` here doesn't
-                // work: each `ProjectAccordion` already runs its own
-                // `ExpandableContainer` for its chat list, and chaining the
-                // measurement twins reports `0` for the outer one on first
-                // layout, leaving the section permanently collapsed.
+                // toggling. Wrapping in `ExpandableContainer` collapses the
+                // section to 0pt on first layout: its measurement twin sees
+                // each `ProjectAccordion` clip its inner `SmoothAccordion`
+                // to height 0 while collapsed, so the height preference
+                // arrives as 0 and never recovers.
                 if projectsExpanded {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(sortedProjects(snapshot: snapshot)) { project in
@@ -222,7 +222,7 @@ struct SidebarView: View {
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
                             Image(systemName: "bubble.left")
-                                .font(.system(size: 13, weight: .regular))
+                                .font(.system(size: 11, weight: .regular))
                         )
                     )
                     SidebarAccordion(
@@ -312,6 +312,7 @@ struct SidebarView: View {
                                   shortcut: "⌘N")
                     SidebarButton(title: "Search",
                                   icon: "magnifyingglass",
+                                  customShape: AnyShape(SearchIconShape()),
                                   route: .search,
                                   shortcut: "⌘F")
                     /*
@@ -431,6 +432,7 @@ struct SidebarView: View {
                     let popupWidth: CGFloat = 268
                     ProjectRowMenuPopup(
                         project: project,
+                        isCodexSourced: appState.isCodexSourcedProject(path: project.path),
                         isPresented: Binding(
                             get: { projectMenuOpenId == project.id },
                             set: { if !$0 { projectMenuOpenId = nil } }
@@ -453,6 +455,10 @@ struct SidebarView: View {
                         onRemove: {
                             projectMenuOpenId = nil
                             appState.deleteProject(project.id)
+                        },
+                        onHide: {
+                            projectMenuOpenId = nil
+                            appState.hideCodexRoot(path: project.path)
                         }
                     )
                     .frame(width: popupWidth)
@@ -501,7 +507,7 @@ struct SidebarView: View {
         sidebarHeader(title: "Projects",
                       showCollapseAll: true,
                       showNewChat: false,
-                      leadingIcon: AnyView(FolderMorphIcon(size: 14, progress: 0)),
+                      leadingIcon: AnyView(FolderMorphIcon(size: 13, progress: 0, lineWidthScale: 0.82)),
                       expanded: $projectsExpanded)
     }
 
@@ -564,7 +570,7 @@ struct SidebarView: View {
                         systemName: allCollapsed
                             ? "arrow.up.right.and.arrow.down.left"
                             : "arrow.down.right.and.arrow.up.left",
-                        tooltip: allCollapsed ? "Expandir todo" : "Collapse all"
+                        tooltip: allCollapsed ? "Expand all" : "Collapse all"
                     ) {
                         toggleAllProjectsCollapsed()
                     }
@@ -1188,12 +1194,19 @@ private struct ComposeIcon: Shape {
 /// single physical gesture.
 enum SidebarSection {
     static let toggleAnimation: Animation = .easeInOut(duration: 0.28)
+    /// Disclosure chevron rotation. Strong ease-out so the arrow snaps
+    /// most of the way to its target quickly, then brakes hard at the
+    /// end. Decoupled from `toggleAnimation` on purpose: the section
+    /// height keeps a softer in-out, the chevron reads as more crisp.
+    static let chevronRotation: Animation = .timingCurve(0.16, 1, 0.3, 1, duration: 0.22)
 }
 
 /// Hairline that appears above and below an expanded sidebar section.
-/// Matches the divider that sits under the top `Search` button, but
-/// scales horizontally and fades in/out so it reads as part of the
-/// section's open/close gesture instead of a static rule.
+/// Snapped to instant on open/close so the row reveal stays in lockstep
+/// with the rest of the section. Trailing padding is `8` (not `22`) to
+/// land at the same x as the top hairline below the search row: the
+/// scroll wrapper that hosts these dividers already adds a 14pt trailing
+/// gutter for the scrollbar, so 14 + 8 = 22 matches the chrome edge.
 private struct AnimatedSidebarDivider: View {
     let visible: Bool
 
@@ -1204,10 +1217,10 @@ private struct AnimatedSidebarDivider: View {
             .scaleEffect(x: visible ? 1 : 0, y: 1, anchor: .leading)
             .opacity(visible ? 1 : 0)
             .padding(.leading, 18)
-            .padding(.trailing, 22)
+            .padding(.trailing, 8)
             .padding(.top, visible ? 6 : 0)
             .padding(.bottom, visible ? 4 : 0)
-            .animation(SidebarSection.toggleAnimation, value: visible)
+            .animation(nil, value: visible)
     }
 }
 
@@ -1223,11 +1236,11 @@ private struct SectionDisclosureChevron: View {
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 9, weight: .semibold))
             .foregroundColor(Color(white: 0.78))
-            .frame(width: 16, height: 16, alignment: .center)
+            .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
-            .animation(SidebarSection.toggleAnimation, value: expanded)
+            .animation(SidebarSection.chevronRotation, value: expanded)
             .opacity(hovered ? 1 : 0)
             .animation(.easeOut(duration: 0.12), value: hovered)
     }
@@ -1399,7 +1412,7 @@ struct RecentChatRow: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { archiveHovered = $0 }
-                .help("Archive")
+                .help(L10n.t("Archive"))
                 .padding(.trailing, 2)
                 .transition(.opacity)
             } else if !archivedRow && chat.hasUnreadCompletion {
@@ -1503,13 +1516,13 @@ struct RecentChatRow: View {
             pinToggleButton(
                 visible: true,
                 color: pinHovered ? .white : Color(white: 0.5),
-                help: "Unpin"
+                help: L10n.t("Unpin")
             )
         case .pinOnHover:
             pinToggleButton(
                 visible: hovered,
                 color: pinHovered ? Color(white: 0.94) : Color(white: 0.5),
-                help: "Pin"
+                help: L10n.t("Pin")
             )
         case .bubble:
             Image(systemName: "bubble.left")
@@ -1531,7 +1544,7 @@ struct RecentChatRow: View {
         }
         .buttonStyle(.plain)
         .onHover { unarchiveHovered = $0 }
-        .help("Unarchive")
+        .help(L10n.t("Unarchive"))
     }
 
     private func pinToggleButton(visible: Bool, color: Color, help: String) -> some View {
@@ -1644,7 +1657,7 @@ private struct ProjectAccordion: View {
                 .opacity(hovered || menuOpen ? 1 : 0)
                 .disabled(!(hovered || menuOpen))
                 .onHover { menuHovered = $0 }
-                .help("More options")
+                .help(L10n.t("More options"))
                 .anchorPreference(key: ProjectMenuAnchorKey.self, value: .bounds) { anchor in
                     menuOpen ? anchor : nil
                 }
@@ -1661,7 +1674,7 @@ private struct ProjectAccordion: View {
                 .buttonStyle(.plain)
                 .padding(.trailing, 3)
                 .onHover { newChatHovered = $0 }
-                .help("New chat in this project")
+                .help(L10n.t("New chat in this project"))
             }
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -1724,8 +1737,8 @@ private struct SmoothAccordion<Content: View>: View {
             .clipped()
             .allowsHitTesting(expanded)
             .accessibilityHidden(!expanded)
-            .animation(.easeOut(duration: 0.28), value: expanded)
-            .animation(.easeOut(duration: 0.28), value: targetHeight)
+            .animation(nil, value: expanded)
+            .animation(nil, value: targetHeight)
     }
 }
 
@@ -1767,18 +1780,19 @@ private struct SidebarAccordion<Content: View>: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(height: expanded ? targetHeight : 0, alignment: .top)
             .clipped()
-            .animation(.easeInOut(duration: 0.28), value: expanded)
-            .animation(.easeInOut(duration: 0.28), value: targetHeight)
+            .animation(nil, value: expanded)
+            .animation(nil, value: targetHeight)
             .allowsHitTesting(expanded)
             .accessibilityHidden(!expanded)
     }
 }
 
-/// Animated vertical reveal: measures intrinsic content height in a hidden
-/// twin and animates the visible frame between 0 and that height. Wrapping
-/// the toggle in `withAnimation(.easeOut(...))` decelerates the height/opacity
-/// together so the project's container grows or shrinks smoothly instead of
-/// snapping rows in and out.
+/// Animated vertical reveal: a hidden twin always renders at its intrinsic
+/// height to drive `measuredHeight`, the visible tree renders at full
+/// opacity, and only the outer frame animates between 0 and the measured
+/// height. Reveal direction comes from the clip alone (top-to-bottom on
+/// open, bottom-to-top on close) so it matches the cadence of the simpler
+/// `SidebarAccordion`-driven sections like Archived.
 private struct ExpandableContainer<Content: View>: View {
     let expanded: Bool
     @ViewBuilder let content: () -> Content
@@ -1798,11 +1812,13 @@ private struct ExpandableContainer<Content: View>: View {
                     }
                 )
             content()
-                .opacity(expanded ? 1 : 0)
         }
         .frame(height: expanded ? measuredHeight : 0, alignment: .top)
         .clipped()
         .allowsHitTesting(expanded)
+        .accessibilityHidden(!expanded)
+        .animation(nil, value: expanded)
+        .animation(nil, value: measuredHeight)
         .onPreferenceChange(ExpandableHeightKey.self) { measuredHeight = $0 }
     }
 }
@@ -1849,7 +1865,7 @@ private struct PinnedRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Archive chat")
+                .help(L10n.t("Archive chat"))
             } else {
                 Text(item.age)
                     .font(.system(size: 11))
@@ -1899,11 +1915,13 @@ private struct PinnedRow: View {
 
 private struct ProjectRowMenuPopup: View {
     let project: Project
+    let isCodexSourced: Bool
     @Binding var isPresented: Bool
     let onOpenInFinder: () -> Void
     let onRename: () -> Void
     let onArchive: () -> Void
     let onRemove: () -> Void
+    let onHide: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1913,7 +1931,11 @@ private struct ProjectRowMenuPopup: View {
             }
             ProjectRowMenuRow(icon: "pencil", label: "Rename project", action: onRename)
             ProjectRowMenuRow(icon: "tray.and.arrow.down", label: "Archivar chats", action: onArchive)
-            ProjectRowMenuRow(icon: "xmark", label: "Quitar", action: onRemove)
+            if isCodexSourced {
+                ProjectRowMenuRow(icon: "eye.slash", label: "Hide from sidebar", action: onHide)
+            } else {
+                ProjectRowMenuRow(icon: "xmark", label: "Quitar", action: onRemove)
+            }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .menuStandardBackground()
@@ -1933,7 +1955,7 @@ private struct ProjectRowMenuRow: View {
                 Group {
                     if icon == "pencil" {
                         PencilIconView(color: MenuStyle.rowIcon, lineWidth: 1.0)
-                            .frame(width: 11, height: 11)
+                            .frame(width: 14, height: 14)
                     } else {
                         IconImage(icon, size: 11)
                             .foregroundColor(MenuStyle.rowIcon)

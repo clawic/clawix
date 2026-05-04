@@ -125,6 +125,7 @@
 "Environments" = "環境";
 "Error: %@" = "エラー: %@";
 "Expand" = "展開";
+"Expand all" = "すべて展開";
 "Expand panel" = "パネルを展開";
 "Expand plan" = "プランを展開";
 "Extra high" = "最高";
