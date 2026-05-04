@@ -19,6 +19,15 @@ enum BackendAuthReader {
     }
 
     static func read() -> BackendAuthInfo {
+        if ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] == "1" {
+            return BackendAuthInfo(
+                email: "account@example.com",
+                accountLabel: "Personal account",
+                planType: nil,
+                name: nil
+            )
+        }
+
         guard let data = try? Data(contentsOf: authURL),
               let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let tokens = root["tokens"] as? [String: Any],
