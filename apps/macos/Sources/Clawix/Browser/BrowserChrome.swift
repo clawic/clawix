@@ -8,8 +8,6 @@ struct BrowserTabStrip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            ReviewTabPill()
-
             ForEach(appState.browserTabs) { tab in
                 BrowserTabPill(
                     tab: tab,
@@ -33,21 +31,9 @@ struct BrowserTabStrip: View {
             ChromeIconButton(systemName: "arrow.up.left.and.arrow.down.right") {}
                 .accessibilityLabel("Maximize")
 
-            Button {
-                appState.isRightSidebarOpen.toggle()
-            } label: {
-                SidebarToggleIcon(
-                    side: .right,
-                    size: 16,
-                    color: appState.isRightSidebarOpen
-                        ? Color(white: 0.78)
-                        : Color(white: 0.55)
-                )
-                .frame(width: 26, height: 26)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Show right sidebar")
-            .padding(.trailing, 12)
+            // The window chrome owns the right toggle; reserve its
+            // footprint so the maximize button doesn't slide under it.
+            Color.clear.frame(width: 30, height: 1)
         }
         .padding(.leading, 10)
         .frame(height: 44)

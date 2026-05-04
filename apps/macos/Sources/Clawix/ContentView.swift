@@ -187,10 +187,9 @@ struct ContentView: View {
 
 // MARK: - Logged-out chrome
 
-/// Whole-window layout shown while the user has no runtime credentials. We
-/// keep the traffic-light dots so the window stays draggable / closable
-/// and place LoginGateView in the spot where the chat content normally
-/// renders. No sidebar, no resize handle, no right panel.
+/// Whole-window layout shown while the user has no runtime credentials.
+/// Reserves the titlebar band so the native traffic lights float cleanly
+/// above LoginGateView. No sidebar, no resize handle, no right panel.
 private struct LoggedOutChrome: View {
     @EnvironmentObject var appState: AppState
 
@@ -200,16 +199,10 @@ private struct LoggedOutChrome: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    Circle().fill(Color(red: 1.00, green: 0.37, blue: 0.34)).frame(width: 12, height: 12)
-                    Circle().fill(Color(red: 1.00, green: 0.74, blue: 0.20)).frame(width: 12, height: 12)
-                    Circle().fill(Color(red: 0.30, green: 0.78, blue: 0.30)).frame(width: 12, height: 12)
-                }
-                .padding(.leading, 14)
-                Spacer(minLength: 0)
-            }
-            .frame(height: 38)
+            // Reserve the titlebar strip so the native traffic lights
+            // (close / miniaturize / zoom) float over a clear band above
+            // the login content.
+            Color.clear.frame(height: 38)
 
             LoginGateView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -278,12 +271,10 @@ private struct WindowChromeOverlay: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Circle().fill(Color(red: 1.00, green: 0.37, blue: 0.34)).frame(width: 12, height: 12)
-                Circle().fill(Color(red: 1.00, green: 0.74, blue: 0.20)).frame(width: 12, height: 12)
-                Circle().fill(Color(red: 0.30, green: 0.78, blue: 0.30)).frame(width: 12, height: 12)
-            }
-            .padding(.leading, 14)
+            // Native traffic lights (close / miniaturize / zoom) float
+            // over the top-left of the window. Reserve their footprint
+            // here so the sidebar toggle never sits under them.
+            Color.clear.frame(width: 68, height: 1)
 
             SidebarToggleButton(
                 side: .left,
@@ -354,7 +345,7 @@ private struct ContentTopChrome: View {
             if let chatTitle, let _ = currentChat {
                 Text(chatTitle)
                     .font(.system(size: 13.5))
-                    .foregroundColor(Color(white: 0.83))
+                    .foregroundColor(Palette.textPrimary)
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
@@ -624,7 +615,7 @@ private struct ChatActionsMenu: View {
     private var groups: [[Item]] {
         [
         [
-            .init(id: "togglePin", icon: "pin",         title: isPinned ? "Unpin chat" : "Anclar chat", shortcut: "⌥⌘P"),
+            .init(id: "togglePin", icon: "pin",         title: isPinned ? "Unpin chat" : "Pin chat", shortcut: "⌥⌘P"),
             .init(id: "rename",   icon: "pencil",      title: "Rename chat", shortcut: "⌥⌘R"),
             .init(id: "archive",  icon: "archivebox",  title: "Archive chat",  shortcut: "⇧⌘A"),
         ],

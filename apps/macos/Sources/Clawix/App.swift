@@ -113,9 +113,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.hasShadow = true
         window.styleMask.insert(.fullSizeContentView)
         window.minSize = mainWindowMinSize
-        window.standardWindowButton(.closeButton)?.isHidden = true
-        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        window.standardWindowButton(.zoomButton)?.isHidden = true
 
         restoreFrame(window)
         attachFrameObservers(to: window)
