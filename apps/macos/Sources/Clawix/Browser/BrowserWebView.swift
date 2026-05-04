@@ -136,13 +136,48 @@ final class BrowserTabController: NSObject, ObservableObject {
         })
     }
 
+    /// Sets a Google-served PNG favicon for the current host so the tab pill
+    /// and URL bar show something immediately, before the page-level
+    /// `<link rel="icon">` lookup runs (and as a guaranteed fallback for
+    /// pages that only declare SVG/data-URI icons that AsyncImage can't
+    /// render on macOS).
+    private func setHostFallbackFavicon() {
+        guard let host = currentURL.host, !host.isEmpty else { return }
+        guard let fallback = URL(
+            string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64"
+        ) else { return }
+        faviconURL = fallback
+        appState?.updateBrowserTab(id, faviconURL: fallback)
+    }
+
     private func fetchFavicon() {
+        // Pick the best raster favicon declared by the page. SVG and
+        // data-URI hrefs are skipped because AsyncImage can't decode them
+        // on macOS, which is why favicons were silently failing to render.
+        // `mask-icon` (Safari pinned-tab silhouette) is also ignored.
         let js = """
             (function(){
-              const links = Array.from(document.querySelectorAll('link[rel*="icon" i]'));
-              const filtered = links.filter(l => l.href && l.href.length > 0);
-              if (filtered.length === 0) return null;
-              return filtered[filtered.length - 1].href;
+              try {
+                var links = document.getElementsByTagName('link');
+                var candidates = [];
+                for (var i = 0; i < links.length; i++) {
+                  var rel = (links[i].getAttribute('rel') || '').toLowerCase();
+                  if (rel.indexOf('icon') === -1) continue;
+                  if (rel.indexOf('mask-icon') !== -1) continue;
+                  var href = links[i].href;
+                  if (!href) continue;
+                  if (href.indexOf('data:') === 0) continue;
+                  if (/\\.svg(\\?|#|$)/i.test(href)) continue;
+                  candidates.push({ rel: rel, href: href });
+                }
+                for (var j = 0; j < candidates.length; j++) {
+                  if (candidates[j].rel === 'icon' ||
+                      candidates[j].rel === 'shortcut icon') {
+                    return candidates[j].href;
+                  }
+                }
+                return candidates.length > 0 ? candidates[0].href : null;
+              } catch (e) { return null; }
             })();
         """
         webView.evaluateJavaScript(js) { [weak self] result, _ in
@@ -151,12 +186,8 @@ final class BrowserTabController: NSObject, ObservableObject {
                 if let s = result as? String, let url = URL(string: s) {
                     self.faviconURL = url
                     self.appState?.updateBrowserTab(self.id, faviconURL: url)
-                } else if let host = self.currentURL.host {
-                    let fallback = URL(string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64")
-                    self.faviconURL = fallback
-                    if let fallback {
-                        self.appState?.updateBrowserTab(self.id, faviconURL: fallback)
-                    }
+                } else {
+                    self.setHostFallbackFavicon()
                 }
             }
         }
@@ -189,6 +220,18 @@ final class BrowserTabController: NSObject, ObservableObject {
 }
 
 extension BrowserTabController: WKNavigationDelegate {
+    nonisolated func webView(
+        _ webView: WKWebView,
+        didStartProvisionalNavigation navigation: WKNavigation!
+    ) {
+        Task { @MainActor in
+            // Show *something* immediately for the new host while the page
+            // is still loading. fetchFavicon() upgrades to the page-declared
+            // icon once navigation finishes.
+            self.setHostFallbackFavicon()
+        }
+    }
+
     nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         Task { @MainActor in
             self.fetchFavicon()

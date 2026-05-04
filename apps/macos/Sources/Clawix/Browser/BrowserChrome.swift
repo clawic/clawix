@@ -468,15 +468,19 @@ struct FaviconView: View {
     let url: URL?
     let size: CGFloat
 
+    @State private var hostFallback: URL?
+
     var body: some View {
         Group {
-            if let url {
-                AsyncImage(url: url) { phase in
+            if let resolved = hostFallback ?? url {
+                AsyncImage(url: resolved) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().scaledToFit()
-                    case .empty, .failure:
-                        fallback
+                    case .failure:
+                        retryView
+                    case .empty:
+                        Color.clear
                     @unknown default:
                         fallback
                     }
@@ -486,6 +490,25 @@ struct FaviconView: View {
             }
         }
         .frame(width: size, height: size)
+        .onChange(of: url) { _, _ in hostFallback = nil }
+    }
+
+    /// If AsyncImage fails to render the page-declared favicon (404, an
+    /// odd format, etc.) swap in Google's PNG service for the same host
+    /// so we always show something rather than the bare globe glyph.
+    private var retryView: some View {
+        Group {
+            if hostFallback == nil,
+               let url,
+               let host = url.host,
+               let google = URL(string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64"),
+               google != url {
+                Color.clear
+                    .onAppear { hostFallback = google }
+            } else {
+                fallback
+            }
+        }
     }
 
     private var fallback: some View {
