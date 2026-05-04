@@ -76,8 +76,16 @@ struct ChatView: View {
                             LazyVStack(alignment: .leading, spacing: 28) {
                                 if hiddenLabelCount > 0 {
                                     PreviousMessagesLink(count: hiddenLabelCount) {
-                                        withAnimation(.easeOut(duration: 0.18)) {
-                                            showAllMessages = true
+                                        // Anchor the scroll on the first message of
+                                        // the collapsed slice so expanding inserts
+                                        // the older history above without pushing
+                                        // the currently visible turn out of view.
+                                        let anchorId = slice.first?.id
+                                        showAllMessages = true
+                                        if let anchorId {
+                                            DispatchQueue.main.async {
+                                                proxy.scrollTo(anchorId, anchor: .top)
+                                            }
                                         }
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
