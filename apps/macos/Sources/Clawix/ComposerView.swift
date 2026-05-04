@@ -1793,8 +1793,8 @@ struct ComposerTextEditor: NSViewRepresentable {
         textView.drawsBackground = false
         textView.backgroundColor = .clear
         textView.font = .systemFont(ofSize: 13)
-        textView.textColor = NSColor(white: 1.0, alpha: 0.88)
-        textView.insertionPointColor = NSColor(white: 1.0, alpha: 0.88)
+        textView.textColor = NSColor.white
+        textView.insertionPointColor = NSColor.white
         textView.allowsUndo = true
         textView.isRichText = false
         textView.usesFontPanel = false
