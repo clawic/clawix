@@ -479,7 +479,7 @@ private struct MessageRow: View {
     private var isUser: Bool { message.role == .user }
 
     var body: some View {
-        VStack(alignment: isUser ? .trailing : .leading, spacing: 10) {
+        VStack(alignment: isUser ? .trailing : .leading, spacing: 16) {
             if isUser {
                 if isEditing {
                     UserMessageEditor(
@@ -503,15 +503,25 @@ private struct MessageRow: View {
                         UserMentionPreviews(parsed: parsed)
                     }
                     if !parsed.text.isEmpty {
-                        Text(parsed.text)
-                            .font(.system(size: 14))
-                            .foregroundColor(Palette.textPrimary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 9)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color.white.opacity(0.08))
-                            )
+                        let paragraphs = parsed.text
+                            .replacingOccurrences(of: "\r\n", with: "\n")
+                            .components(separatedBy: "\n\n")
+                            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                            .filter { !$0.isEmpty }
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
+                                Text(p)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Palette.textPrimary)
+                                    .lineSpacing(5)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.white.opacity(0.08))
+                        )
                     }
                 }
             } else {
