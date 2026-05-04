@@ -18,6 +18,10 @@ This repository is a monorepo. Apps live under `apps/`:
 - `apps/macos/` — macOS client (this is what currently exists).
 - `apps/ios/` — iOS client (placeholder for a future port).
 
+## Download
+
+Signed and notarized DMG builds are published on the [GitHub Releases page](https://github.com/clawic/clawix/releases). The app self-updates via [Sparkle](https://sparkle-project.org); when a new release is available a small "Update" chip appears in the top bar.
+
 ## Build
 
 Requirements: macOS 14+, Swift 5.9+, Xcode Command Line Tools.
@@ -54,6 +58,8 @@ bash apps/macos/scripts/build_app.sh
 ```
 
 Builds `apps/macos/build/Clawix.app`. Uses the same `SIGN_IDENTITY` / `BUNDLE_ID` resolution as `dev.sh`.
+
+For notarized DMG distribution use `apps/macos/scripts/build_release_app.sh`, which reads `DEVELOPER_ID_IDENTITY` from the environment and applies hardened-runtime per-component signing in the order Sparkle requires. The full release pipeline (notarization, DMG, appcast generation, GitHub release upload) is private to the maintainer and not part of this public tree.
 
 The marketing version lives in [`apps/macos/VERSION`](./apps/macos/VERSION). It is the single source of truth: build scripts read it at compile time and inject it into `CFBundleShortVersionString`.
 

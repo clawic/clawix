@@ -99,7 +99,10 @@ Native macOS client (SwiftUI) for the `codex` CLI. Acts as a frontend: reads `~/
 - `apps/macos/Sources/Clawix/Updater/UpdaterController.swift`: thin wrapper around `SPUStandardUpdaterController`. Drives the "Update" chip in the top bar.
 - `apps/macos/scripts/dev.sh`: dev launcher (build + relaunch). Copies Sparkle.framework into the bundle and signs deep.
 - `apps/macos/scripts/build_app.sh`: release-only `.app` builder (single identity, deep sign).
+- `apps/macos/scripts/build_release_app.sh`: notarization-ready builder. Reads `DEVELOPER_ID_IDENTITY` from env and applies per-component hardened-runtime signing in the order Sparkle requires.
 - `apps/macos/scripts/public_hygiene_check.sh`: hygiene gate scanned across the whole repo.
+
+The full release orchestration (notarytool, DMG packaging, Sparkle EdDSA signing, appcast regeneration, GitHub Release upload) is intentionally NOT in this public tree. It lives in the maintainer's private workspace and consumes `build_release_app.sh` plus credentials from `.signing.env`.
 
 ## Corner radius: always squircle (`.continuous`)
 
