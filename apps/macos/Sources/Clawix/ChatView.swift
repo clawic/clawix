@@ -73,20 +73,10 @@ struct ChatView: View {
                 VStack(spacing: 0) {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 28) {
+                            LazyVStack(alignment: .leading, spacing: 44) {
                                 if hiddenLabelCount > 0 {
                                     PreviousMessagesLink(count: hiddenLabelCount) {
-                                        // Anchor the scroll on the first message of
-                                        // the collapsed slice so expanding inserts
-                                        // the older history above without pushing
-                                        // the currently visible turn out of view.
-                                        let anchorId = slice.first?.id
                                         showAllMessages = true
-                                        if let anchorId {
-                                            DispatchQueue.main.async {
-                                                proxy.scrollTo(anchorId, anchor: .top)
-                                            }
-                                        }
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 }
@@ -106,7 +96,17 @@ struct ChatView: View {
                                         message: msg,
                                         isLastUserMessage: msg.id == lastUserMessageId,
                                         isLastAssistantMessage: msg.id == lastAssistantMessageId,
-                                        responseStreaming: responseStreaming
+                                        responseStreaming: responseStreaming,
+                                        onTimelineExpanded: { expandedId in
+                                            // Pin the bottom of the expanded
+                                            // bubble so the inserted prelude
+                                            // grows upward off-screen instead
+                                            // of pushing the closing answer
+                                            // and everything below it down.
+                                            DispatchQueue.main.async {
+                                                proxy.scrollTo(expandedId, anchor: .bottom)
+                                            }
+                                        }
                                     )
                                     .id(msg.id)
                                 }
@@ -121,6 +121,23 @@ struct ChatView: View {
                         .onChange(of: chat.messages.count) { _, _ in
                             if let last = chat.messages.last {
                                 withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                            }
+                        }
+                        .onChange(of: showAllMessages) { _, newValue in
+                            // When older messages are revealed, the LazyVStack
+                            // grows from the top. The ScrollView preserves its
+                            // content offset by default, so the previously
+                            // visible turn would shift off-screen as the older
+                            // history takes its place. Re-pin to the last
+                            // message so the bottom of the chat stays put and
+                            // the older messages live above the viewport.
+                            // Async ensures the body has re-evaluated against
+                            // the expanded slice before we measure.
+                            guard newValue else { return }
+                            DispatchQueue.main.async {
+                                if let last = chat.messages.last {
+                                    proxy.scrollTo(last.id, anchor: .bottom)
+                                }
                             }
                         }
                         .onAppear { appState.ensureSelectedChat() }
@@ -464,6 +481,7 @@ private struct MessageRow: View {
     var isLastUserMessage: Bool = false
     var isLastAssistantMessage: Bool = false
     var responseStreaming: Bool = false
+    var onTimelineExpanded: ((UUID) -> Void)? = nil
     @EnvironmentObject var appState: AppState
     @State private var rowHovered = false
     @State private var justCopied = false
@@ -541,26 +559,29 @@ private struct MessageRow: View {
                 // "N mensajes anteriores" disclosure inside the bubble,
                 // matching how Clawix hides intermediate work behind the
                 // final answer until the user opens it.
-                let split = splitTimeline(message.timeline)
+                let split = splitTimeline(collapseAdjacentSingleServerMcpTools(message.timeline))
                 if !split.hidden.isEmpty {
-                    InlinePreviousMessagesLink(
-                        count: split.hidden.reduce(0) { acc, e in
-                            switch e {
-                            case .reasoning: return acc + 1
-                            case .tools(_, let items): return acc + items.count
-                            }
-                        },
-                        expanded: timelineExpanded
-                    ) {
-                        withAnimation(.easeOut(duration: 0.16)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        InlinePreviousMessagesLink(
+                            count: split.hidden.reduce(0) { acc, e in
+                                switch e {
+                                case .reasoning: return acc + 1
+                                case .tools(_, let items): return acc + items.count
+                                }
+                            },
+                            expanded: timelineExpanded
+                        ) {
+                            let willExpand = !timelineExpanded
                             timelineExpanded.toggle()
+                            if willExpand {
+                                onTimelineExpanded?(message.id)
+                            }
                         }
+                        Rectangle()
+                            .fill(Color(white: 0.18))
+                            .frame(height: 0.5)
+                            .frame(maxWidth: .infinity)
                     }
-                    Rectangle()
-                        .fill(Color(white: 0.18))
-                        .frame(height: 0.5)
-                        .frame(maxWidth: .infinity)
-                        .padding(.bottom, 2)
                     if timelineExpanded {
                         ForEach(split.hidden) { entry in
                             timelineEntry(entry)
@@ -680,6 +701,46 @@ private struct MessageRow: View {
             return ([], timeline)
         }
         return (Array(timeline[..<(idx + 1)]), Array(timeline[(idx + 1)...]))
+    }
+
+    /// Fuse adjacent `.tools` timeline entries when each one contains only
+    /// MCP calls to the same server. Without this, a model that fires
+    /// several MCP tools in a row produces a wall of identical
+    /// "Used <Server>" rows in the inline transcript; merging the
+    /// underlying batches lets the per-batch dedup collapse them into a
+    /// single row while preserving any non-MCP work between them.
+    private func collapseAdjacentSingleServerMcpTools(
+        _ timeline: [AssistantTimelineEntry]
+    ) -> [AssistantTimelineEntry] {
+        var result: [AssistantTimelineEntry] = []
+        for entry in timeline {
+            guard case .tools(_, let items) = entry,
+                  let server = Self.sharedMcpServer(items),
+                  case .tools(let prevId, let prevItems) = result.last,
+                  Self.sharedMcpServer(prevItems) == server
+            else {
+                result.append(entry)
+                continue
+            }
+            result.removeLast()
+            result.append(.tools(id: prevId, items: prevItems + items))
+        }
+        return result
+    }
+
+    /// Server name shared by every item in `items`, or nil if the batch
+    /// contains anything other than MCP calls or hits more than one
+    /// server. Two adjacent `.tools` entries can be merged when both
+    /// return the same non-nil server here.
+    static func sharedMcpServer(_ items: [WorkItem]) -> String? {
+        guard !items.isEmpty else { return nil }
+        var server: String? = nil
+        for item in items {
+            guard case .mcpTool(let s, _) = item.kind, !s.isEmpty else { return nil }
+            if let known = server, known != s { return nil }
+            server = s
+        }
+        return server
     }
 
     @ViewBuilder
