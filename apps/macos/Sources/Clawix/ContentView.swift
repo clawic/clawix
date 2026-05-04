@@ -152,6 +152,11 @@ struct ContentView: View {
             .animation(.easeInOut(duration: 0.18), value: appState.isRightSidebarOpen)
             .animation(.easeInOut(duration: 0.18), value: appState.rightSidebarContent)
 
+            // Window-level chrome floats above the columns so the traffic
+            // lights and the sidebar toggles never slide with a column.
+            WindowChromeOverlay()
+                .zIndex(100)
+
             } // end logged-in branch
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -201,48 +206,88 @@ private struct LoggedOutChrome: View {
 // MARK: - Sidebar top chrome (traffic lights + nav arrows + reload pill)
 
 private struct SidebarTopChrome: View {
+    @EnvironmentObject var updater: UpdaterController
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            if updater.updateAvailable {
+                UpdateChip { updater.installUpdate() }
+                    .padding(.trailing, 10)
+                    .transition(.scale(scale: 0.85, anchor: .trailing).combined(with: .opacity))
+            }
+        }
+        .frame(height: 38)
+        .animation(.easeOut(duration: 0.20), value: updater.updateAvailable)
+    }
+}
+
+private struct UpdateChip: View {
+    var onTap: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("Update")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Palette.pastelBlue.opacity(hovered ? 1.0 : 0.92))
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .help(L10n.t("Install the available update"))
+    }
+}
+
+// MARK: - Window-level chrome (traffic lights + sidebar toggles)
+
+/// Always-visible top bar with the traffic-light dots, the left sidebar
+/// toggle and the right sidebar toggle. Floats above the column tree so
+/// the toggles never slide with a column transition.
+private struct WindowChromeOverlay: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
         HStack(spacing: 0) {
-            // Real macOS-style colored traffic lights
             HStack(spacing: 8) {
-                trafficDot(Color(red: 1.00, green: 0.37, blue: 0.34))
-                trafficDot(Color(red: 1.00, green: 0.74, blue: 0.20))
-                trafficDot(Color(red: 0.30, green: 0.78, blue: 0.30))
+                Circle().fill(Color(red: 1.00, green: 0.37, blue: 0.34)).frame(width: 12, height: 12)
+                Circle().fill(Color(red: 1.00, green: 0.74, blue: 0.20)).frame(width: 12, height: 12)
+                Circle().fill(Color(red: 0.30, green: 0.78, blue: 0.30)).frame(width: 12, height: 12)
             }
             .padding(.leading, 14)
 
-            // Sidebar-toggle icon
-            Button {
+            SidebarToggleButton(
+                side: .left,
+                hitSize: 24,
+                accessibilityLabel: appState.isLeftSidebarOpen ? "Hide sidebar" : "Show sidebar"
+            ) {
                 appState.isLeftSidebarOpen.toggle()
-            } label: {
-                SidebarToggleIcon(side: .left, size: 16, color: Color(white: 0.55))
             }
-            .buttonStyle(.plain)
             .padding(.leading, 14)
-            .accessibilityLabel("Hide sidebar")
-
-            // Disabled back / forward arrows
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(white: 0.32))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(Color(white: 0.32))
-            }
-            .padding(.leading, 10)
 
             Spacer(minLength: 0)
-        }
-        .frame(height: 38)
-    }
 
-    private func trafficDot(_ color: Color) -> some View {
-        Circle()
-            .fill(color)
-            .frame(width: 12, height: 12)
+            SidebarToggleButton(
+                side: .right,
+                hitSize: 24,
+                accessibilityLabel: appState.isRightSidebarOpen ? "Hide right sidebar" : "Show right sidebar"
+            ) {
+                appState.isRightSidebarOpen.toggle()
+            }
+            .padding(.trailing, 14)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 38)
     }
 }
 
@@ -281,26 +326,12 @@ private struct ContentTopChrome: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if !appState.isLeftSidebarOpen {
-                // When the left sidebar is hidden, traffic-light dots and the
-                // sidebar toggle migrate to the leading edge of the content
-                // chrome so the user keeps a way to bring the sidebar back.
-                HStack(spacing: 8) {
-                    Circle().fill(Color(red: 1.00, green: 0.37, blue: 0.34)).frame(width: 12, height: 12)
-                    Circle().fill(Color(red: 1.00, green: 0.74, blue: 0.20)).frame(width: 12, height: 12)
-                    Circle().fill(Color(red: 0.30, green: 0.78, blue: 0.30)).frame(width: 12, height: 12)
-                }
-                .padding(.leading, 14)
-
-                Button {
-                    appState.isLeftSidebarOpen.toggle()
-                } label: {
-                    SidebarToggleIcon(side: .left, size: 16, color: Color(white: 0.55))
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 14)
-                .accessibilityLabel("Show sidebar")
-            }
+            // When the left sidebar is hidden, the window chrome (traffic
+            // lights + left toggle) sits over this column. Reserve its
+            // footprint so the chat title doesn't slide under the toggle.
+            // Animating width keeps the layout shift smooth alongside the
+            // sidebar's slide transition.
+            Color.clear.frame(width: appState.isLeftSidebarOpen ? 0 : 96, height: 1)
             if let chatTitle, let _ = currentChat {
                 Text(chatTitle)
                     .font(.system(size: 13.5))
@@ -321,26 +352,16 @@ private struct ContentTopChrome: View {
                 .padding(.top, 6)
                 .buttonStyle(.plain)
                 .onHover { hoverEllipsis = $0 }
+                .animation(.easeOut(duration: 0.12), value: hoverEllipsis)
                 .accessibilityLabel("Chat actions")
                 .anchorPreference(key: ChatActionsAnchorKey.self, value: .bounds) { $0 }
             }
             Spacer()
             EditorPickerDropdown(folderPath: resolvedFolderPath)
                 .padding(.trailing, 8)
-            Button {
-                appState.isRightSidebarOpen.toggle()
-            } label: {
-                SidebarToggleIcon(
-                    side: .right,
-                    size: 16,
-                    color: appState.isRightSidebarOpen
-                        ? Color(white: 0.78)
-                        : Color(white: 0.42)
-                )
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 14)
-            .accessibilityLabel("Show right sidebar")
+            // Reserve the trailing footprint of the window chrome's right
+            // toggle when no right column sits between them.
+            Color.clear.frame(width: appState.isRightSidebarOpen ? 0 : 30, height: 1)
         }
         .frame(height: 38)
         .zIndex(1)
@@ -413,6 +434,11 @@ private struct RightSidebarTopChrome: View {
     @State private var addMenuOpen = false
     @State private var hoverAdd = false
     @State private var hoverExpand = false
+    // Secondary icons (`+`, expand) stay invisible while the column
+    // slides in from the trailing edge, then fade in with opacity once
+    // the panel has settled. The toggle itself remains visible the
+    // whole time so it appears anchored to the window edge.
+    @State private var secondaryVisible = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -432,9 +458,11 @@ private struct RightSidebarTopChrome: View {
             }
             .buttonStyle(.plain)
             .onHover { hoverAdd = $0 }
+            .animation(.easeOut(duration: 0.12), value: hoverAdd)
             .padding(.leading, 14)
             .accessibilityLabel("Add")
             .anchorPreference(key: RightSidebarAddAnchorKey.self, value: .bounds) { $0 }
+            .opacity(secondaryVisible ? 1 : 0)
 
             Spacer(minLength: 0)
 
@@ -446,17 +474,22 @@ private struct RightSidebarTopChrome: View {
             }
             .buttonStyle(.plain)
             .onHover { hoverExpand = $0 }
+            .animation(.easeOut(duration: 0.12), value: hoverExpand)
             .accessibilityLabel("Expand panel")
+            .opacity(secondaryVisible ? 1 : 0)
 
-            Button { appState.isRightSidebarOpen = false } label: {
-                SidebarToggleIcon(side: .right, size: 16, color: Color(white: 0.78))
-                    .frame(width: 24, height: 24)
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 14)
-            .accessibilityLabel("Hide right sidebar")
+            // The window chrome owns the right toggle; reserve its
+            // footprint so the expand button doesn't slide under it.
+            Color.clear.frame(width: 30, height: 1)
         }
         .frame(height: 38)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    secondaryVisible = true
+                }
+            }
+        }
         .overlayPreferenceValue(RightSidebarAddAnchorKey.self) { anchor in
             GeometryReader { proxy in
                 if addMenuOpen, let anchor {
@@ -521,10 +554,16 @@ private struct RightSidebarAddMenu: View {
             isOpen = false
         } label: {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: icon)
-                    .font(.system(size: 11))
-                    .foregroundColor(MenuStyle.rowIcon)
-                    .frame(width: 18, alignment: .center)
+                Group {
+                    if icon == "magnifyingglass" {
+                        SearchIcon(size: 11)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.system(size: 11))
+                    }
+                }
+                .foregroundColor(MenuStyle.rowIcon)
+                .frame(width: 18, alignment: .center)
                 Text(title)
                     .font(.system(size: 11.5))
                     .foregroundColor(MenuStyle.rowText)
@@ -619,7 +658,7 @@ private struct ChatActionsMenu: View {
                 Group {
                     if item.icon == "pencil" {
                         PencilIconView(color: MenuStyle.rowIcon, lineWidth: 1.0)
-                            .frame(width: 11, height: 11)
+                            .frame(width: 14, height: 14)
                     } else {
                         IconImage(item.icon, size: 11)
                             .foregroundColor(MenuStyle.rowIcon)
@@ -817,6 +856,36 @@ struct SidebarToggleIcon: View {
     }
 }
 
+/// Toggle button that brightens on hover, mirroring the sidebar header icons.
+/// `SidebarToggleIcon` renders through `Canvas`, which does not interpolate
+/// stroke colour between states. We render the canvas at full white and
+/// animate the wrapper's `.opacity` instead so the transition shows the
+/// same eased curve as the rest of the sidebar chrome.
+struct SidebarToggleButton: View {
+    let side: SidebarToggleIcon.Side
+    var size: CGFloat = 16
+    var hitSize: CGFloat? = nil
+    var defaultOpacity: Double = 0.55
+    var hoverOpacity: Double = 0.96
+    let accessibilityLabel: LocalizedStringKey
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            SidebarToggleIcon(side: side, size: size, color: .white)
+                .opacity(hovered ? hoverOpacity : defaultOpacity)
+                .frame(width: hitSize ?? size, height: hitSize ?? size)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}
+
 // MARK: - Shared colour palette
 
 enum Palette {
@@ -898,6 +967,11 @@ func submenuLeadingPlacement(parentGlobalMinX: CGFloat,
 extension View {
     /// Applies the canonical dropdown chrome: blurred backdrop + tinted
     /// rounded fill + thin popup stroke + soft shadow.
+    ///
+    /// `blurBehindWindow`: pass `true` when the menu lives in a standalone
+    /// `NSPanel` (e.g. the sidebar's right-click context menu) so the
+    /// blur samples the content behind the panel rather than the
+    /// transparent panel-internal contents.
     func menuStandardBackground(blurBehindWindow: Bool = false) -> some View {
         self.background(
             ZStack {

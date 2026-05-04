@@ -152,6 +152,7 @@
 "Ignore" = "무시";
 "Import" = "가져오기";
 "Import another agent configuration" = "다른 에이전트 구성 가져오기";
+"Install the available update" = "사용 가능한 업데이트 설치";
 "Intelligence" = "지능 수준";
 "Interface font size" = "인터페이스 글꼴 크기";
 "Keep it short and easy to recognise" = "짧고 알아보기 쉽게";

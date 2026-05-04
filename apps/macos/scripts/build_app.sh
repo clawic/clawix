@@ -61,6 +61,14 @@ else
     exit 1
 fi
 
+SU_FEED_URL_DEFAULT="https://github.com/clawic/clawix/releases/latest/download/appcast.xml"
+SU_FEED_URL="${SU_FEED_URL:-$SU_FEED_URL_DEFAULT}"
+SU_PUBLIC_ED_KEY="${SPARKLE_ED_PUB_KEY:-}"
+SU_ED_KEY_BLOCK=""
+if [[ -n "$SU_PUBLIC_ED_KEY" ]]; then
+    SU_ED_KEY_BLOCK=$'\n    <key>SUPublicEDKey</key>            <string>'"$SU_PUBLIC_ED_KEY"$'</string>'
+fi
+
 cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -85,15 +93,42 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <string>Clawix uses the microphone to record voice notes that are transcribed into the composer.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Clawix transcribes recorded voice notes to insert them as text in the composer.</string>
+    <key>SUFeedURL</key>                 <string>${SU_FEED_URL}</string>${SU_ED_KEY_BLOCK}
+    <key>SUEnableAutomaticChecks</key>   <true/>
+    <key>SUScheduledCheckInterval</key>  <integer>86400</integer>
+    <key>SUEnableInstallerLauncherService</key><true/>
 </dict>
 </plist>
 PLIST
 
-# Sign the release bundle. If SIGN_IDENTITY is "-" or empty, codesign uses
-# ad-hoc; the resulting .app will not survive Gatekeeper for distribution
-# but works fine locally. Maintainers ship by setting SIGN_IDENTITY in
-# .signing.env (outside this repo).
+# Sparkle.framework: copy from .build XCFramework into the app bundle.
+SPARKLE_FW="$(find "$PROJECT_DIR/.build" -path "*/Sparkle.xcframework/macos-*/Sparkle.framework" -type d -prune 2>/dev/null | head -n 1 || true)"
+if [[ -n "$SPARKLE_FW" ]]; then
+    mkdir -p "$BUNDLE_DIR/Contents/Frameworks"
+    rm -rf "$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
+    cp -R "$SPARKLE_FW" "$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
+else
+    echo "WARN: Sparkle.framework not found in .build; auto-update will be inert" >&2
+fi
+
+# Per-component signing. --deep with --identifier corrupts nested
+# bundle ids (Sparkle.framework would inherit the app's bundle id and
+# fail dyld library validation). Sign nested components first without
+# --identifier, then the .app top-level with --identifier.
 echo "==> Signing $BUNDLE_DIR (identity: ${SIGN_IDENTITY})"
+sign_one() {
+    codesign --force --sign "$SIGN_IDENTITY" --timestamp=none "$1"
+}
+SPARKLE_BUNDLE="$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
+if [[ -d "$SPARKLE_BUNDLE" ]]; then
+    SPARKLE_CURRENT="$SPARKLE_BUNDLE/Versions/Current"
+    while IFS= read -r xpc; do
+        sign_one "$xpc"
+    done < <(find "$SPARKLE_CURRENT/XPCServices" -maxdepth 1 -name "*.xpc" 2>/dev/null || true)
+    [[ -e "$SPARKLE_CURRENT/Autoupdate" ]] && sign_one "$SPARKLE_CURRENT/Autoupdate"
+    [[ -e "$SPARKLE_CURRENT/Updater.app" ]] && sign_one "$SPARKLE_CURRENT/Updater.app"
+    sign_one "$SPARKLE_BUNDLE"
+fi
 codesign --force --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" --timestamp=none "$BUNDLE_DIR"
 
 # Minimal PkgInfo

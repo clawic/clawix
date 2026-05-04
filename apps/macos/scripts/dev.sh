@@ -191,6 +191,18 @@ else
     echo "ERROR: resource bundle not found for debug build"
     exit 1
 fi
+# Sparkle: SUFeedURL is the only required key for update checks. The
+# public EdDSA key (SUPublicEDKey) gates whether downloaded updates are
+# accepted. It comes from `.signing.env`; if empty, Sparkle will check
+# but refuse to install (development scenario, expected).
+SU_FEED_URL_DEFAULT="https://github.com/clawic/clawix/releases/latest/download/appcast.xml"
+SU_FEED_URL="${SU_FEED_URL:-$SU_FEED_URL_DEFAULT}"
+SU_PUBLIC_ED_KEY="${SPARKLE_ED_PUB_KEY:-}"
+SU_ED_KEY_BLOCK=""
+if [[ -n "$SU_PUBLIC_ED_KEY" ]]; then
+    SU_ED_KEY_BLOCK=$'\n    <key>SUPublicEDKey</key>            <string>'"$SU_PUBLIC_ED_KEY"$'</string>'
+fi
+
 cat > "$BUNDLE/Contents/Info.plist" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -212,10 +224,26 @@ cat > "$BUNDLE/Contents/Info.plist" << PLIST
     <string>Clawix uses the microphone to record voice notes that are transcribed into the composer.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Clawix transcribes recorded voice notes to insert them as text in the composer.</string>
+    <key>SUFeedURL</key>                 <string>${SU_FEED_URL}</string>${SU_ED_KEY_BLOCK}
+    <key>SUEnableAutomaticChecks</key>   <true/>
+    <key>SUScheduledCheckInterval</key>  <integer>86400</integer>
+    <key>SUEnableInstallerLauncherService</key><true/>
 </dict>
 </plist>
 PLIST
 printf "APPL????" > "$BUNDLE/Contents/PkgInfo"
+
+# Sparkle.framework lives next to the binary so Sparkle's XPC services
+# and Autoupdate launcher are reachable. SPM ships it as a binary target
+# (XCFramework); pick the macos slice and copy the framework as-is.
+SPARKLE_FW="$(find "$PROJECT_DIR/.build" -path "*/Sparkle.xcframework/macos-*/Sparkle.framework" -type d -prune 2>/dev/null | head -n 1 || true)"
+if [[ -n "$SPARKLE_FW" ]]; then
+    mkdir -p "$BUNDLE/Contents/Frameworks"
+    rm -rf "$BUNDLE/Contents/Frameworks/Sparkle.framework"
+    cp -R "$SPARKLE_FW" "$BUNDLE/Contents/Frameworks/Sparkle.framework"
+else
+    echo "WARN: Sparkle.framework not found in .build; auto-update will be inert" >&2
+fi
 
 # 4) Sign the bundle with the stable identity. TCC ties permissions to
 #    Team ID + bundle ID + designated requirement, so as long as the
@@ -223,6 +251,34 @@ printf "APPL????" > "$BUNDLE/Contents/PkgInfo"
 #    folder access are remembered. If the cert is unavailable, fall back
 #    to ad-hoc rather than blocking the dev loop, but warn.
 echo "==> Signing $BUNDLE"
+# Sign nested signed components first (without --identifier so each
+# keeps its own bundle id from its Info.plist), then sign the app
+# itself with --identifier "$BUNDLE_ID". Using --deep with --identifier
+# corrupts nested code signatures: it overwrites the identifier of
+# Sparkle.framework with the app's bundle id, which breaks dyld
+# library validation at launch.
+sign_one() {
+    local target="$1"
+    local err
+    if ! err="$(codesign --force --sign "$SIGN_IDENTITY" --timestamp=none "$target" 2>&1)"; then
+        echo "WARN: codesign with $SIGN_IDENTITY failed for $target, falling back to ad-hoc: $err" >&2
+        codesign --force --sign - --timestamp=none "$target"
+    fi
+}
+
+SPARKLE_BUNDLE="$BUNDLE/Contents/Frameworks/Sparkle.framework"
+if [[ -d "$SPARKLE_BUNDLE" ]]; then
+    SPARKLE_CURRENT="$SPARKLE_BUNDLE/Versions/Current"
+    while IFS= read -r xpc; do
+        sign_one "$xpc"
+    done < <(find "$SPARKLE_CURRENT/XPCServices" -maxdepth 1 -name "*.xpc" 2>/dev/null || true)
+    [[ -e "$SPARKLE_CURRENT/Autoupdate" ]] && sign_one "$SPARKLE_CURRENT/Autoupdate"
+    if [[ -e "$SPARKLE_CURRENT/Updater.app" ]]; then
+        sign_one "$SPARKLE_CURRENT/Updater.app"
+    fi
+    sign_one "$SPARKLE_BUNDLE"
+fi
+
 if ! codesign --force --sign "$SIGN_IDENTITY" \
               --identifier "$BUNDLE_ID" \
               --timestamp=none \

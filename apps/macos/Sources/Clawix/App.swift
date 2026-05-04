@@ -25,6 +25,7 @@ private let mainWindowMinSize = NSSize(width: 1100, height: 720)
 struct ClawixApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
+    @StateObject private var updater = UpdaterController()
 
     init() {
         // Apply the user-chosen language process-wide BEFORE any view
@@ -40,6 +41,7 @@ struct ClawixApp: App {
             ContentView()
                 .environmentObject(appState)
                 .environmentObject(appState.composer)
+                .environmentObject(updater)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until

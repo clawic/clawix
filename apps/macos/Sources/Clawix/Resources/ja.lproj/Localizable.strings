@@ -152,6 +152,7 @@
 "Ignore" = "無視";
 "Import" = "インポート";
 "Import another agent configuration" = "別のエージェント設定をインポート";
+"Install the available update" = "利用可能なアップデートをインストール";
 "Intelligence" = "知能レベル";
 "Interface font size" = "インターフェイスのフォントサイズ";
 "Keep it short and easy to recognise" = "短くて見分けやすい名前に";

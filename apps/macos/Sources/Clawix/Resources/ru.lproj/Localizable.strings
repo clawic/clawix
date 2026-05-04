@@ -152,6 +152,7 @@
 "Ignore" = "Игнорировать";
 "Import" = "Импортировать";
 "Import another agent configuration" = "Импортировать другую конфигурацию агента";
+"Install the available update" = "Установить доступное обновление";
 "Intelligence" = "Интеллект";
 "Interface font size" = "Размер шрифта интерфейса";
 "Keep it short and easy to recognise" = "Покороче и так, чтобы легко узнать";

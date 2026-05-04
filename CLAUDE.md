@@ -92,12 +92,13 @@ Native macOS client (SwiftUI) for the `codex` CLI. Acts as a frontend: reads `~/
 
 ## Layout
 
-- `apps/macos/Package.swift`: Swift Package, target `Clawix`, macOS 14+. No external dependencies.
+- `apps/macos/Package.swift`: Swift Package, target `Clawix`, macOS 14+. One external dependency: [Sparkle 2](https://sparkle-project.org) for in-app updates.
 - `apps/macos/VERSION`: single source of truth for the marketing version. `dev.sh` and the release scripts read it via `_emit_version.sh` and inject it into the generated Info.plist.
 - `apps/macos/Sources/Clawix/`: SwiftUI source.
 - `apps/macos/Sources/Clawix/AppVersion.swift`: reads `CFBundleShortVersionString` / `CFBundleVersion` at runtime so the app reports the version it was actually compiled with.
-- `apps/macos/scripts/dev.sh`: dev launcher (build + relaunch).
-- `apps/macos/scripts/build_app.sh`: release-only `.app` builder.
+- `apps/macos/Sources/Clawix/Updater/UpdaterController.swift`: thin wrapper around `SPUStandardUpdaterController`. Drives the "Update" chip in the top bar.
+- `apps/macos/scripts/dev.sh`: dev launcher (build + relaunch). Copies Sparkle.framework into the bundle and signs deep.
+- `apps/macos/scripts/build_app.sh`: release-only `.app` builder (single identity, deep sign).
 - `apps/macos/scripts/public_hygiene_check.sh`: hygiene gate scanned across the whole repo.
 
 ## Corner radius: always squircle (`.continuous`)
