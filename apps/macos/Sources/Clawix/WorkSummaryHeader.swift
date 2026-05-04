@@ -167,9 +167,15 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
             : String(localized: "Searched the web \(webSearchCount) times", bundle: AppLocale.bundle, locale: AppLocale.current)
         rows.append(WorkRow(id: "webSearch", icon: "clawix.globe", text: text))
     }
-    for (idx, mcp) in mcpTools.enumerated() {
-        let label = mcp.server.isEmpty ? mcp.tool : "\(mcp.server) · \(mcp.tool)"
-        rows.append(WorkRow(id: "mcp\(idx)", icon: "puzzlepiece.extension", text: L10n.usedTool(label)))
+    // Collapse runs of MCP calls that target the same server into a
+    // single row: the user only cares which integration was used.
+    var seenServers = Set<String>()
+    var uniqueServers: [String] = []
+    for mcp in mcpTools where !mcp.server.isEmpty && seenServers.insert(mcp.server).inserted {
+        uniqueServers.append(mcp.server)
+    }
+    for (idx, server) in uniqueServers.enumerated() {
+        rows.append(WorkRow(id: "mcp\(idx)", icon: "clawix.mcp", text: L10n.usedTool(prettyMcpServer(server))))
     }
     for (idx, name) in dynamicTools.enumerated() {
         rows.append(WorkRow(id: "dyn\(idx)", icon: "wrench.and.screwdriver", text: L10n.usedTool(name)))
@@ -205,6 +211,8 @@ private struct WorkRowView: View {
                     GlobeIcon(size: 12)
                 case "clawix.cursor":
                     CursorIcon(size: 12)
+                case "clawix.mcp":
+                    McpIcon(size: 13)
                 case "magnifyingglass":
                     SearchIcon(size: 11)
                 default:

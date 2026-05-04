@@ -152,11 +152,19 @@ struct ToolGroupView: View {
                 : String(localized: "Searched the web \(webSearchCount) times", bundle: AppLocale.bundle, locale: AppLocale.current)
             rows.append(AggregateRow(id: "webSearch", icon: "clawix.globe", text: text))
         }
-        for (idx, mcp) in mcpTools.enumerated() {
+        // Collapse runs of MCP calls that target the same server into a
+        // single row: the user only cares which integration was used,
+        // not the per-tool cardinality.
+        var seenServers = Set<String>()
+        var uniqueServers: [String] = []
+        for mcp in mcpTools where !mcp.server.isEmpty && seenServers.insert(mcp.server).inserted {
+            uniqueServers.append(mcp.server)
+        }
+        for (idx, server) in uniqueServers.enumerated() {
             rows.append(AggregateRow(
                 id: "mcp\(idx)",
-                icon: "chevron.left.forwardslash.chevron.right",
-                text: L10n.usedTool(prettyMcpName(server: mcp.server, tool: mcp.tool))
+                icon: "clawix.mcp",
+                text: L10n.usedTool(prettyMcpServer(server))
             ))
         }
         for (idx, name) in dynamicTools.enumerated() {
@@ -183,20 +191,6 @@ struct ToolGroupView: View {
         return rows
     }
 
-    /// Map MCP `server` / `tool` ids to the display name Clawix uses in its
-    /// own UI (e.g. `node_repl::js` → "Node Repl"). Falls back to the raw
-    /// id when we don't have a canonical mapping yet.
-    private func prettyMcpName(server: String, tool: String) -> String {
-        let s = server.lowercased()
-        switch s {
-        case "node_repl", "node-repl", "noderepl": return "Node Repl"
-        default: break
-        }
-        if server.isEmpty { return tool }
-        if tool.isEmpty { return server }
-        return "\(server) · \(tool)"
-    }
-
     private func aggregateRow(_ row: AggregateRow) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Group {
@@ -207,6 +201,8 @@ struct ToolGroupView: View {
                     GlobeIcon(size: 13)
                 case "clawix.cursor":
                     CursorIcon(size: 13)
+                case "clawix.mcp":
+                    McpIcon(size: 14)
                 case "magnifyingglass":
                     SearchIcon(size: 11.5)
                 default:
