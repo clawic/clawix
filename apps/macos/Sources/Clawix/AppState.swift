@@ -1404,6 +1404,17 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Bridge entry point. Hydrates a chat's history from its rollout
+    /// file the first time the iPhone opens it, mirroring what the Mac
+    /// UI does the moment a chat row is clicked. Without this the
+    /// iPhone gets `messagesSnapshot([])` for every `notLoaded` thread
+    /// and the user only sees the "no messages loaded" empty state.
+    /// Idempotent: subsequent calls for the same chat are no-ops.
+    func hydrateHistoryFromBridge(chatId: UUID) {
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        hydrateHistoryIfNeeded(chatIndex: idx)
+    }
+
     // MARK: - ClawixService callbacks
 
     func attachThreadId(_ threadId: String, to chatId: UUID) {

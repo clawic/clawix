@@ -22,6 +22,11 @@ enum BridgeIntent {
                 session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
                 return
             }
+            // Mirror what selecting a chat in the Mac UI does: pull
+            // the rollout file off disk so `chat.messages` is populated
+            // before we hand it to the bridge subscriber. Without this
+            // every `notLoaded` thread shows up empty on the iPhone.
+            appState?.hydrateHistoryFromBridge(chatId: uuid)
             let messages = bus.subscribe(chatId: uuid)
             session.send(BridgeFrame(.messagesSnapshot(chatId: chatIdString, messages: messages)))
 
