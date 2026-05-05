@@ -30,12 +30,6 @@ struct ContentView: View {
     /// and visually swallow the left sidebar.
     private let minContentColumnWidth: CGFloat = 420
 
-    /// Smaller floor used only by the maximize button so the right
-    /// sidebar can really grow into the chat area, while still leaving
-    /// the chat (and the trailing chrome buttons that float over it)
-    /// visible and reachable.
-    private let minContentColumnWidthMaximized: CGFloat = 200
-
     private var leftSidebarWidth: CGFloat {
         min(sidebarMaxWidth, max(sidebarMinVisibleWidth, CGFloat(leftSidebarWidthRaw)))
     }
@@ -62,11 +56,6 @@ struct ContentView: View {
     }
 
     private var rightSidebarColumnWidth: CGFloat {
-        if appState.isRightSidebarMaximized {
-            let leftWidth = appState.isLeftSidebarOpen ? leftSidebarWidth : 0
-            let raw = windowWidth - leftWidth - minContentColumnWidthMaximized
-            return max(rightSidebarMinVisibleWidth, raw)
-        }
         let stored = max(rightSidebarMinVisibleWidth, CGFloat(rightSidebarWidthRaw))
         return min(dynamicRightSidebarMaxWidth, stored)
     }
@@ -165,7 +154,13 @@ struct ContentView: View {
                     .transition(.move(edge: .leading).combined(with: .opacity))
                 }
 
-                // Content column (chrome + routed content)
+                // Content column (chrome + routed content). Hidden when
+                // the right sidebar is maximized: the right sidebar grows
+                // into this slot via `maxWidth: .infinity` so its file/web
+                // viewer takes the chat area, and the chat composer is
+                // re-anchored at the bottom of the right column instead
+                // (see RightSidebarColumn).
+                if !appState.isRightSidebarMaximized {
                 VStack(spacing: 0) {
                     ContentTopChrome()
 
@@ -233,26 +228,34 @@ struct ContentView: View {
                     }
                 )
                 .bodyDropTarget(enabled: routeAcceptsFileDrops)
+                } // end !isRightSidebarMaximized content column
 
                 if appState.isRightSidebarOpen {
-                    RightSidebarColumn()
-                        .frame(width: rightSidebarColumnWidth)
-                        .overlay(alignment: .leading) {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.10))
-                                .frame(width: 0.7)
-                                .allowsHitTesting(false)
+                    Group {
+                        if appState.isRightSidebarMaximized {
+                            RightSidebarColumn()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            RightSidebarColumn()
+                                .frame(width: rightSidebarColumnWidth, alignment: .leading)
+                                .overlay(alignment: .leading) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.10))
+                                        .frame(width: 0.7)
+                                        .allowsHitTesting(false)
+                                }
+                                .overlay(alignment: .leading) {
+                                    SidebarResizeHandle(
+                                        widthRaw: $rightSidebarWidthRaw,
+                                        hovered: $rightSidebarResizeHovered,
+                                        side: .right,
+                                        maxWidthOverride: dynamicRightSidebarMaxWidth
+                                    )
+                                    .frame(width: 10)
+                                }
                         }
-                        .overlay(alignment: .leading) {
-                            SidebarResizeHandle(
-                                widthRaw: $rightSidebarWidthRaw,
-                                hovered: $rightSidebarResizeHovered,
-                                side: .right,
-                                maxWidthOverride: dynamicRightSidebarMaxWidth
-                            )
-                            .frame(width: 10)
-                        }
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .animation(.easeInOut(duration: 0.18), value: appState.isLeftSidebarOpen)
@@ -506,7 +509,10 @@ private struct ContentTopChrome: View {
                         isPinned: chat.isPinned,
                         onTogglePin: { appState.togglePin(chatId: chat.id) },
                         onRename: { appState.pendingRenameChat = chat },
-                        onArchive: { appState.archiveChat(chatId: chat.id) }
+                        onArchive: { appState.archiveChat(chatId: chat.id) },
+                        onForkConversation: {
+                            appState.forkConversation(chatId: chat.id)
+                        }
                     )
                     .anchoredPopupPlacement(
                         buttonFrame: buttonFrame,
@@ -727,6 +733,7 @@ private struct ChatActionsMenu: View {
     let onTogglePin: () -> Void
     let onRename: () -> Void
     let onArchive: () -> Void
+    let onForkConversation: () -> Void
     @State private var hovered: String?
 
     private struct Item {
@@ -750,6 +757,7 @@ private struct ChatActionsMenu: View {
             .init(id: "copyMd",   icon: "doc.on.doc",  title: "Copy as Markdown",         shortcut: nil),
         ],
         [
+            .init(id: "forkConv",      icon: "branchArrows",             title: "Fork conversation",        shortcut: nil),
             .init(id: "openSide",      icon: "plus.app",                 title: "Open side chat",         shortcut: nil),
             .init(id: "forkLocal",     icon: "laptopcomputer",           title: "Fork to local",            shortcut: nil),
             .init(id: "forkWorktree",  icon: "arrow.triangle.branch",    title: "Fork to new worktree", shortcut: nil),
@@ -785,6 +793,7 @@ private struct ChatActionsMenu: View {
             case "togglePin": onTogglePin()
             case "rename":    onRename()
             case "archive":   onArchive()
+            case "forkConv":  onForkConversation()
             default: break
             }
         } label: {
@@ -797,8 +806,14 @@ private struct ChatActionsMenu: View {
                         CopyIconViewSquircle(color: MenuStyle.rowIcon, lineWidth: 1.0)
                             .frame(width: 13, height: 13)
                     } else if item.icon == "archivebox" {
-                        ArchiveIcon(size: 13)
+                        ArchiveIcon(size: 15)
                             .foregroundColor(MenuStyle.rowIcon)
+                    } else if item.icon == "pin" {
+                        PinIcon(size: 13, lineWidth: 1.0)
+                            .foregroundColor(MenuStyle.rowIcon)
+                    } else if item.icon == "branchArrows" {
+                        BranchArrowsIconView(color: MenuStyle.rowIcon, lineWidth: 1.0)
+                            .frame(width: 14, height: 14)
                     } else {
                         IconImage(item.icon, size: 12)
                             .foregroundColor(MenuStyle.rowIcon)

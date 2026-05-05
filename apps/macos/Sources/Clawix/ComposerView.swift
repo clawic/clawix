@@ -13,6 +13,7 @@ struct ComposerView: View {
     @State private var permissionsMenuOpen = false
     @State private var modelMenuOpen = false
     @State private var contextHover = false
+    @State private var micHover = false
     @State private var projectMenuOpen = false
     @State private var projectEditorContext: ProjectEditorContext?
     @State private var slashHighlightID: String? = nil
@@ -197,11 +198,15 @@ struct ComposerView: View {
                     voice.start(locale: appState.preferredLanguage.speechRecognitionLocale)
                 } label: {
                     MicIcon()
-                        .foregroundColor(Color(white: 0.62))
+                        .foregroundColor(.white)
+                        .opacity(micHover ? 0.96 : 0.62)
                         .frame(width: 14, height: 14)
                         .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .onHover { micHover = $0 }
+                .animation(.easeOut(duration: 0.12), value: micHover)
                 .accessibilityLabel("Start voice recording")
                 .hoverHint(L10n.t("Record voice note"))
             }
@@ -280,19 +285,23 @@ struct ComposerView: View {
     }
 
     private var plusButton: some View {
-        Button {
+        let active = addMenuOpen || addMenuHover
+        return Button {
             addMenuOpen.toggle()
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 14, weight: .regular))
-                .foregroundColor(Color(white: 0.62))
+                .foregroundColor(.white)
+                .opacity(active ? 0.96 : 0.62)
                 .frame(width: 28, height: 28)
                 .background(
-                    Circle().fill((addMenuOpen || addMenuHover) ? Color.white.opacity(0.08) : Color.clear)
+                    Circle().fill(Color.white.opacity(active ? 0.08 : 0.0))
                 )
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { addMenuHover = $0 }
+        .animation(.easeOut(duration: 0.12), value: active)
         .accessibilityLabel(L10n.t("Add"))
         .anchorPreference(key: PlusButtonAnchorKey.self, value: .bounds) { $0 }
         .hoverHint(L10n.t("Add"))
@@ -855,7 +864,7 @@ struct ContextIndicatorButton: View {
 
     var body: some View {
         ContextRing(fraction: usage.usedFraction)
-            .frame(width: 14, height: 14)
+            .frame(width: 13, height: 13)
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
             .contentShape(Rectangle())
@@ -873,12 +882,12 @@ private struct ContextRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.18), lineWidth: 1.6)
+                .stroke(Color.white.opacity(0.07), lineWidth: 2.0)
             Circle()
                 .trim(from: 0, to: max(0.02, min(1.0, fraction)))
                 .stroke(
                     Color(white: 0.92),
-                    style: StrokeStyle(lineWidth: 1.6, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 2.0, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
                 .animation(.easeOut(duration: 0.25), value: fraction)
@@ -892,40 +901,40 @@ private struct ContextTooltip: View {
     var body: some View {
         VStack(alignment: .center, spacing: 6) {
             Text("Context window:")
-                .font(.system(size: 11.5))
+                .font(.system(size: 11.5, weight: .light))
                 .foregroundColor(Color(white: 0.55))
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
 
             if usage.contextWindow != nil {
                 Text(percentLine)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, weight: .light))
                     .foregroundColor(Color(white: 0.94))
                     .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Text(tokensLine)
-                .font(.system(size: 12))
+                .font(.system(size: 12, weight: .light))
                 .foregroundColor(Color(white: 0.94))
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text("Clawix automatically compacts its context")
-                .font(.system(size: 11.5, weight: .semibold))
+                .font(.system(size: 11.5, weight: .regular))
                 .foregroundColor(Color(white: 0.94))
                 .multilineTextAlignment(.center)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 4)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .frame(width: 180)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(white: 0.135))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
-                )
-                .shadow(color: Color.black.opacity(0.40), radius: 18, x: 0, y: 10)
-        )
+        .frame(width: 185)
+        .menuStandardBackground()
     }
 
     private var percentLine: String {

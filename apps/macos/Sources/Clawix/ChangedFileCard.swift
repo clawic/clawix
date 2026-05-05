@@ -10,7 +10,12 @@ struct ChangedFileCard: View {
 
     @EnvironmentObject var appState: AppState
     @State private var hovered = false
-    @State private var menuOpen = false
+    /// Window-coordinates frame of the entire "Open" pill, captured every
+    /// layout pass via a GeometryReader. Used to anchor the NSPanel popup
+    /// in screen coordinates so it can escape the chat scroll-view's clip
+    /// and sibling z-order entirely. Anchored on the pill (not just the
+    /// chevron) so the popup left-aligns with the "Open" label.
+    @State private var openPillWindowFrame: CGRect = .zero
 
     private var fileURL: URL { URL(fileURLWithPath: path) }
     private var fileName: String { fileURL.lastPathComponent }
@@ -62,31 +67,6 @@ struct ChangedFileCard: View {
         // Smoother, slightly longer easing so the highlight breathes
         // instead of snapping in/out of hover.
         .animation(.easeInOut(duration: 0.22), value: hovered)
-        // Anchor on the WHOLE card (not the inner pill) so the popup
-        // overlay can sit above the card's stroke and below the card's
-        // bottom edge, instead of being painted under the stroke and
-        // overlapping the card's translucent fill.
-        .anchorPreference(key: ChangedFileMenuAnchorKey.self, value: .bounds) { $0 }
-        .overlayPreferenceValue(ChangedFileMenuAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if menuOpen, let anchor {
-                    let cardFrame = proxy[anchor]
-                    let popupWidth: CGFloat = 220
-                    // Right-align popup with the pill's right edge. Pill
-                    // sits flush with the card's horizontal padding (14).
-                    ChangedFileMenu(path: path, isOpen: $menuOpen)
-                        .frame(width: popupWidth)
-                        .anchoredPopupPlacement(
-                            buttonFrame: cardFrame,
-                            proxy: proxy,
-                            horizontal: .trailing(offset: -14)
-                        )
-                        .transition(.softNudge(y: 4))
-                }
-            }
-            .allowsHitTesting(menuOpen)
-        }
-        .animation(MenuStyle.openAnimation, value: menuOpen)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("\(fileName), \(subtitle)"))
     }
@@ -131,7 +111,7 @@ struct ChangedFileCard: View {
                     if case .active = phase { NSCursor.pointingHand.set() }
                 }
                 .onTapGesture {
-                    menuOpen.toggle()
+                    presentMenuPanel()
                 }
                 .accessibilityLabel("Open with…")
         }
@@ -148,21 +128,71 @@ struct ChangedFileCard: View {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
         )
+        // Track the whole pill's window frame so the popup anchors on
+        // the pill's bottom-left edge.
+        .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame))
+    }
+
+    private func presentMenuPanel() {
+        guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible }) else {
+            return
+        }
+        // Anchor the popup's top-left at the pill's bottom-left in screen
+        // coordinates so the menu left-aligns with the "Open" label.
+        let screenRect = window.convertToScreen(openPillWindowFrame)
+        let anchorPoint = NSPoint(x: screenRect.minX, y: screenRect.minY)
+        ChangedFileMenuPanel.present(leftTopAnchor: anchorPoint, path: path)
     }
 }
 
-// MARK: - Menu
+// MARK: - Open pill frame reader
 
-private struct ChangedFileMenuAnchorKey: PreferenceKey {
-    static var defaultValue: Anchor<CGRect>? = nil
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-        value = value ?? nextValue()
+/// Reports the "Open" pill's frame in window-local coordinates whenever
+/// layout changes. The popup panel uses this to land in the right place
+/// even when the chat scroll view scrolls between layout passes.
+private struct OpenPillWindowFrameReader: NSViewRepresentable {
+    @Binding var frame: CGRect
+
+    func makeNSView(context: Context) -> Reader {
+        let v = Reader()
+        v.onFrameChange = { rect in
+            DispatchQueue.main.async { frame = rect }
+        }
+        return v
+    }
+
+    func updateNSView(_ nsView: Reader, context: Context) {
+        nsView.onFrameChange = { rect in
+            DispatchQueue.main.async { frame = rect }
+        }
+    }
+
+    final class Reader: NSView {
+        var onFrameChange: ((CGRect) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            report()
+        }
+
+        override func layout() {
+            super.layout()
+            report()
+        }
+
+        private func report() {
+            guard window != nil else { return }
+            let r = convert(bounds, to: nil)
+            onFrameChange?(r)
+        }
     }
 }
 
-private struct ChangedFileMenu: View {
+// MARK: - Menu content
+
+private struct ChangedFileMenuContent: View {
     let path: String
-    @Binding var isOpen: Bool
+    let onPick: () -> Void
     @State private var hovered: String?
 
     var body: some View {
@@ -174,18 +204,18 @@ private struct ChangedFileMenu: View {
             row(.openInFolder)
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: 220)
         // Opaque chrome (no blur, no 18% bleed) so the dropdown fully
-        // hides whatever sits behind it. The standard translucent menu
-        // chrome reads as a stacking glitch over chat messages.
+        // hides whatever sits behind it. The translucent menu chrome
+        // would read as a stacking glitch over chat messages.
         .menuStandardBackground(opaque: true)
-        .background(MenuOutsideClickWatcher(isPresented: $isOpen))
     }
 
     @ViewBuilder
     private func row(_ action: ChangedFileOpenAction) -> some View {
         Button {
             action.run(path: path)
-            isOpen = false
+            onPick()
         } label: {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 action.iconView
@@ -209,17 +239,167 @@ private struct ChangedFileMenu: View {
     }
 }
 
+// MARK: - Borderless panel host
+
+/// Hosts `ChangedFileMenuContent` in a borderless non-activating panel so
+/// the dropdown escapes the chat scroll view's clip and sibling z-order
+/// entirely. Click-outside, Escape and any selected item dismiss it,
+/// matching the sidebar's right-click context menu.
+@MainActor
+final class ChangedFileMenuPanel: NSObject {
+    private static var current: ChangedFileMenuPanel?
+
+    private let panel: NSPanel
+    private let shadowMargin: CGFloat
+    private var localMonitor: Any?
+    private var globalMonitor: Any?
+    private var keyMonitor: Any?
+
+    private init(rootView: AnyView, size: NSSize, shadowMargin: CGFloat) {
+        self.shadowMargin = shadowMargin
+        let host = NSHostingView(rootView: rootView)
+        host.frame = NSRect(origin: .zero, size: size)
+        host.autoresizingMask = [.width, .height]
+
+        panel = NSPanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: true
+        )
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.level = .popUpMenu
+        panel.isMovableByWindowBackground = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        panel.contentView = host
+        super.init()
+    }
+
+    /// Present the menu with its visible top-left corner pinned at
+    /// `leftTopAnchor` (already in screen coordinates) plus a small
+    /// vertical gap so the popup sits just below the trigger pill.
+    static func present(leftTopAnchor: NSPoint, path: String) {
+        current?.close()
+
+        var holder: ChangedFileMenuPanel!
+        let dismiss: () -> Void = { holder?.close() }
+
+        let content = ChangedFileMenuContent(path: path, onPick: dismiss)
+
+        // Shadow on the menu chrome paints outside the SwiftUI bounds; pad
+        // the hosting panel so the shadow isn't clipped at the edges.
+        let shadowMargin: CGFloat = 30
+        let padded = AnyView(
+            content
+                .padding(.horizontal, shadowMargin)
+                .padding(.top, shadowMargin - 8)
+                .padding(.bottom, shadowMargin + 8)
+        )
+
+        let measureController = NSHostingController(rootView: padded)
+        let fitting = measureController.sizeThatFits(in: NSSize(width: 400, height: 1200))
+        let size = NSSize(width: ceil(fitting.width), height: ceil(fitting.height))
+
+        let p = ChangedFileMenuPanel(
+            rootView: padded,
+            size: size,
+            shadowMargin: shadowMargin
+        )
+        holder = p
+        current = p
+        p.show(leftTopAnchor: leftTopAnchor)
+    }
+
+    private func show(leftTopAnchor: NSPoint) {
+        let size = panel.frame.size
+        // The visible menu sits inset by `shadowMargin` from each side of
+        // the panel, with the top inset being `shadowMargin - 8` to match
+        // the asymmetric padding wrapping the content. Position so the
+        // visible menu's top-left corner lands at `leftTopAnchor` minus a
+        // gap below the pill.
+        let topPadding = shadowMargin - 8
+        let menuVisibleWidth = size.width - 2 * shadowMargin
+        let gap: CGFloat = 14
+        var origin = NSPoint(
+            x: leftTopAnchor.x - shadowMargin,
+            y: leftTopAnchor.y + topPadding - size.height - gap
+        )
+
+        let hostScreen = NSScreen.screens.first {
+            NSPointInRect(leftTopAnchor, $0.frame)
+        } ?? NSScreen.main
+
+        if let screen = hostScreen {
+            let visible = screen.visibleFrame
+            let inset: CGFloat = 6
+            let minX = visible.minX + inset - shadowMargin
+            let maxX = visible.maxX - inset - menuVisibleWidth - shadowMargin
+            origin.x = min(max(origin.x, minX), max(minX, maxX))
+
+            // If we'd drop below the screen, flip and anchor the visible
+            // menu's bottom edge at the pill's top edge instead.
+            if origin.y < visible.minY + inset - (shadowMargin + 8) {
+                origin.y = leftTopAnchor.y - (shadowMargin + 8) + gap
+                let maxY = visible.maxY - inset - size.height + (shadowMargin + 8)
+                if origin.y > maxY { origin.y = maxY }
+            }
+        }
+
+        panel.setFrame(NSRect(origin: origin, size: size), display: false)
+        panel.orderFrontRegardless()
+        installMonitors()
+    }
+
+    private func installMonitors() {
+        localMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] event in
+            guard let self else { return event }
+            if event.window === self.panel { return event }
+            self.close()
+            return event
+        }
+
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        ) { [weak self] _ in
+            self?.close()
+        }
+
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // 53 = Escape.
+            if event.keyCode == 53 {
+                self?.close()
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func removeMonitors() {
+        if let m = localMonitor { NSEvent.removeMonitor(m); localMonitor = nil }
+        if let m = globalMonitor { NSEvent.removeMonitor(m); globalMonitor = nil }
+        if let m = keyMonitor { NSEvent.removeMonitor(m); keyMonitor = nil }
+    }
+
+    func close() {
+        removeMonitors()
+        panel.orderOut(nil)
+        if Self.current === self { Self.current = nil }
+    }
+}
+
 // MARK: - Open actions
 
 private enum ChangedFileOpenAction: Identifiable {
     case editor(EditorOption)
-    case defaultApp
     case openInFolder
 
     var id: String {
         switch self {
         case .editor(let e):  return "editor.\(e.bundleId)"
-        case .defaultApp:     return "defaultApp"
         case .openInFolder:   return "openInFolder"
         }
     }
@@ -228,10 +408,6 @@ private enum ChangedFileOpenAction: Identifiable {
         switch self {
         case .editor(let e):
             return e.name
-        case .defaultApp:
-            return String(localized: "Default app",
-                          bundle: AppLocale.bundle,
-                          locale: AppLocale.current)
         case .openInFolder:
             return String(localized: "Open in folder",
                           bundle: AppLocale.bundle,
@@ -246,15 +422,6 @@ private enum ChangedFileOpenAction: Identifiable {
             AppIconImage(bundleId: e.bundleId,
                          fallbackPath: e.fallbackPath,
                          size: 18)
-        case .defaultApp:
-            ZStack {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color(white: 0.20))
-                    .frame(width: 18, height: 18)
-                Image(systemName: "app.badge")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(Color(white: 0.85))
-            }
         case .openInFolder:
             AppIconImage(bundleId: "com.apple.finder",
                          fallbackPath: "/System/Library/CoreServices/Finder.app",
@@ -267,8 +434,6 @@ private enum ChangedFileOpenAction: Identifiable {
         switch self {
         case .editor(let editor):
             ChangedFileOpenAction.openInEditor(editor: editor, fileURL: fileURL)
-        case .defaultApp:
-            NSWorkspace.shared.open(fileURL)
         case .openInFolder:
             NSWorkspace.shared.activateFileViewerSelecting([fileURL])
         }
@@ -301,7 +466,6 @@ private enum ChangedFileOpenAction: Identifiable {
                       fallbackPath: "/Applications/Visual Studio Code.app")),
         .editor(.init(bundleId: "com.todesktop.230313mzl4w4u92", name: "Cursor",
                       fallbackPath: "/Applications/Cursor.app")),
-        .defaultApp,
         .editor(.init(bundleId: "com.apple.Terminal", name: "Terminal",
                       fallbackPath: "/System/Applications/Utilities/Terminal.app")),
         .editor(.init(bundleId: "com.mitchellh.ghostty", name: "Ghostty",

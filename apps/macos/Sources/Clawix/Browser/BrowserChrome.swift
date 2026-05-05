@@ -57,33 +57,46 @@ private struct SidebarItemPill: View {
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(isActive ? .white : Color(white: 0.78))
                     .lineLimit(1)
-                    .truncationMode(.middle)
-
-                if isHovered {
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(Color(white: 0.78))
-                            .frame(width: 14, height: 14)
-                            .background(
-                                Circle().fill(Color.white.opacity(0.10))
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close tab")
-                } else {
-                    Color.clear.frame(width: 14, height: 14)
-                }
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .frame(maxWidth: 180)
+            .padding(.vertical, 7)
+            .frame(maxWidth: 132)
+            .clipped()
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .black, location: 0.0),
+                        .init(color: .black, location: 0.82),
+                        .init(color: .clear, location: 1.0)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(background)
             )
+            .overlay(alignment: .trailing) {
+                if isHovered {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(Color(white: 0.95))
+                            .frame(width: 14, height: 14)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.18))
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Close tab")
+                    .padding(.trailing, 6)
+                }
+            }
         }
         .buttonStyle(.plain)
     }
