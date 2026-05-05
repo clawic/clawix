@@ -121,6 +121,11 @@ final class BridgeClient: NSObject {
         send(BridgeFrame(.sendPrompt(chatId: chatId, text: text)), on: winner)
     }
 
+    func sendNewChat(chatId: String, text: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.newChat(chatId: chatId, text: text)), on: winner)
+    }
+
     func readFile(path: String) {
         guard let winner else { return }
         send(BridgeFrame(.readFile(path: path)), on: winner)
@@ -434,9 +439,9 @@ final class BridgeClient: NSObject {
                     store.fileSnapshots[path] = .failed(reason: error ?? "Unknown error")
                 }
             }
-        case .auth, .listChats, .openChat, .sendPrompt, .readFile,
-             .editPrompt, .archiveChat, .unarchiveChat, .pinChat,
-             .unpinChat, .pairingStart, .listProjects,
+        case .auth, .listChats, .openChat, .sendPrompt, .newChat,
+             .readFile, .editPrompt, .archiveChat, .unarchiveChat,
+             .pinChat, .unpinChat, .pairingStart, .listProjects,
              .pairingPayload, .projectsSnapshot:
             // Outbound-from-desktop or server-to-desktop frames the
             // iPhone client neither emits nor consumes. Ignore.

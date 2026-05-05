@@ -150,7 +150,16 @@ private struct RootView: View {
                             path.append(RootNav.project(cwd))
                         },
                         onPair: onPair,
-                        onUnpair: onUnpair
+                        onUnpair: onUnpair,
+                        onNewChat: {
+                            // Mint a fresh chat id locally and route into
+                            // the detail screen. The chat materializes on
+                            // the Mac when the user sends the first
+                            // message (see BridgeStore.sendPrompt's
+                            // pending-newChats path).
+                            let id = store.startNewChat()
+                            path.append(RootNav.chat(id))
+                        }
                     )
                     .toolbar(.hidden, for: .navigationBar)
                     .task {
@@ -172,6 +181,14 @@ private struct RootView: View {
                                 onBack: popLast,
                                 onOpenFile: { filePath in
                                     presentedFile = PresentedFile(path: filePath)
+                                },
+                                onOpenProject: { cwd in
+                                    // Reset to home and push the chosen
+                                    // project, avoiding a stale breadcrumb:
+                                    // home -> projectA -> chat -> projectB.
+                                    var newPath = NavigationPath()
+                                    newPath.append(RootNav.project(cwd))
+                                    path = newPath
                                 }
                             )
                         case .project(let cwd):

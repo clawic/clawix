@@ -37,6 +37,17 @@ public enum BridgeIntent {
             }
             host?.handleSendPrompt(chatId: uuid, text: text)
 
+        case .newChat(let chatIdString, let text):
+            guard let uuid = UUID(uuidString: chatIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+                return
+            }
+            // Auto-subscribe so the bus pushes message-level deltas for
+            // the freshly created chat without an extra `openChat` round
+            // trip from the client.
+            _ = bus.subscribe(chatId: chatIdString)
+            host?.handleNewChat(chatId: uuid, text: text)
+
         case .editPrompt(let chatIdString, let messageIdString, let text):
             guard let chatUuid = UUID(uuidString: chatIdString),
                   let msgUuid = UUID(uuidString: messageIdString) else {

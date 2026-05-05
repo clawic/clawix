@@ -69,6 +69,13 @@ public enum BridgeBody: Equatable, Sendable {
     case listChats
     case openChat(chatId: String)
     case sendPrompt(chatId: String, text: String)
+    /// New conversation kicked off from the iPhone FAB. The client
+    /// pre-mints the UUID so it can route to the chat detail screen
+    /// before the round trip lands; the Mac creates a chat with that
+    /// exact id, appends the user message, and runs the turn. The bus
+    /// auto-subscribes the new id so streaming deltas flow back without
+    /// an extra `openChat`.
+    case newChat(chatId: String, text: String)
 
     // MARK: - v1 inbound (Mac -> iPhone)
     case authOk(macName: String?)
@@ -135,6 +142,7 @@ public enum BridgeBody: Equatable, Sendable {
         case .listChats:          return "listChats"
         case .openChat:           return "openChat"
         case .sendPrompt:         return "sendPrompt"
+        case .newChat:            return "newChat"
         case .authOk:             return "authOk"
         case .authFailed:         return "authFailed"
         case .versionMismatch:    return "versionMismatch"
@@ -182,6 +190,9 @@ public enum BridgeBody: Equatable, Sendable {
         case .openChat(let chatId):
             try c.encode(chatId, forKey: .chatId)
         case .sendPrompt(let chatId, let text):
+            try c.encode(chatId, forKey: .chatId)
+            try c.encode(text, forKey: .text)
+        case .newChat(let chatId, let text):
             try c.encode(chatId, forKey: .chatId)
             try c.encode(text, forKey: .text)
         case .authOk(let macName):
@@ -248,6 +259,11 @@ public enum BridgeBody: Equatable, Sendable {
             return .openChat(chatId: try c.decode(String.self, forKey: .chatId))
         case "sendPrompt":
             return .sendPrompt(
+                chatId: try c.decode(String.self, forKey: .chatId),
+                text: try c.decode(String.self, forKey: .text)
+            )
+        case "newChat":
+            return .newChat(
                 chatId: try c.decode(String.self, forKey: .chatId),
                 text: try c.decode(String.self, forKey: .text)
             )

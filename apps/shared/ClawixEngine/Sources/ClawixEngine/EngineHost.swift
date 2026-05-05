@@ -55,6 +55,13 @@ public protocol EngineHost: AnyObject {
     /// `AppState.sendUserMessageFromBridge`).
     func handleSendPrompt(chatId: UUID, text: String)
 
+    /// Inbound `newChat` from a client. The host creates a fresh chat
+    /// with the supplied UUID, appends the user message, and kicks off
+    /// the agent. Pre-minting the id on the client side lets the iPhone
+    /// route to the chat detail screen synchronously while the round
+    /// trip is in flight.
+    func handleNewChat(chatId: UUID, text: String)
+
     // MARK: - v2 desktop-only hooks (LaunchAgent daemon will override)
 
     /// Edit a previous user message in place and re-run the turn.
@@ -84,4 +91,5 @@ public extension EngineHost {
     func handlePinChat(chatId: UUID, pinned: Bool) {}
     func handlePairingStart() -> (qrJson: String, bearer: String)? { nil }
     func currentProjects() -> [WireProject] { [] }
+    func handleNewChat(chatId: UUID, text: String) {}
 }

@@ -59,6 +59,10 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.sendPrompt(chatId: "AB-123", text: "hello world\nwith newline"))
     }
 
+    func testNewChat() throws {
+        try roundTrip(.newChat(chatId: "DE-456", text: "first message from the iPhone FAB"))
+    }
+
     func testAuthOk() throws {
         try roundTrip(.authOk(macName: "studio Mac"))
         try roundTrip(.authOk(macName: nil))

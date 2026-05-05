@@ -39,6 +39,13 @@ final class BridgeStore {
     var openChatId: String?
     var fileSnapshots: [String: FileSnapshotState] = [:]
 
+    /// Chat ids minted locally by the FAB that haven't yet been
+    /// flushed to the Mac. The first `sendPrompt` for an id in this
+    /// set is upgraded to a `newChat` frame so the Mac creates the
+    /// chat with that exact UUID.
+    @ObservationIgnored
+    private var pendingNewChats: Set<String> = []
+
     @ObservationIgnored
     private var client: BridgeClient?
 
@@ -77,7 +84,25 @@ final class BridgeStore {
     func sendPrompt(chatId: String, text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        client?.sendPrompt(chatId: chatId, text: trimmed)
+        if pendingNewChats.remove(chatId) != nil {
+            client?.sendNewChat(chatId: chatId, text: trimmed)
+        } else {
+            client?.sendPrompt(chatId: chatId, text: trimmed)
+        }
+    }
+
+    /// Mints a fresh chat id for the FAB-driven "new chat" flow. The
+    /// id is queued as pending so the next `sendPrompt(chatId:text:)`
+    /// emits a `newChat` frame instead, and `messagesByChat` is seeded
+    /// to `[]` so the detail view treats the chat as "loaded, empty"
+    /// rather than gating on a snapshot that will never arrive (the
+    /// chat doesn't exist on the Mac yet).
+    @MainActor
+    func startNewChat() -> String {
+        let id = UUID().uuidString
+        pendingNewChats.insert(id)
+        messagesByChat[id] = []
+        return id
     }
 
     /// Kick off (or refresh) the read of a file on the Mac. Idempotent:

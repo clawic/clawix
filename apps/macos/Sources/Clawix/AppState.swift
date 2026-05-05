@@ -1536,6 +1536,44 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Bridge entry point for "tap the New Chat FAB on the iPhone": the
+    /// client pre-mints the UUID and ships the first prompt in one shot.
+    /// We create a Chat with that exact id, append the user message, and
+    /// kick the turn off through whichever runtime is active. Mirrors the
+    /// home-route branch of `sendMessage()` (lines around 1488), minus
+    /// composer attachments / project pill which the iPhone doesn't have
+    /// yet.
+    @MainActor
+    func newChatFromBridge(chatId: UUID, text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        // Idempotency: if the chat somehow already exists (re-delivery
+        // or client retry), fall through to the "append to existing"
+        // path so we don't duplicate it.
+        if chats.contains(where: { $0.id == chatId }) {
+            sendUserMessageFromBridge(chatId: chatId, text: trimmed)
+            return
+        }
+        let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
+        let titleSeed = String(trimmed.prefix(40))
+        let newChat = Chat(
+            id: chatId,
+            title: titleSeed,
+            messages: [userMsg],
+            createdAt: Date()
+        )
+        chats.insert(newChat, at: 0)
+
+        if let daemonBridgeClient {
+            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed)
+        } else if let clawix {
+            Task { @MainActor in
+                await clawix.sendUserMessage(chatId: chatId, text: trimmed)
+                self.clawixBackendStatus = clawix.status
+            }
+        }
+    }
+
     func addComposerAttachments(_ urls: [URL]) {
         let existing = Set(composer.attachments.map { $0.url.standardizedFileURL.path })
         for url in urls {
@@ -3257,6 +3295,10 @@ extension AppState: EngineHost {
 
     public func handleSendPrompt(chatId: UUID, text: String) {
         sendUserMessageFromBridge(chatId: chatId, text: text)
+    }
+
+    public func handleNewChat(chatId: UUID, text: String) {
+        newChatFromBridge(chatId: chatId, text: text)
     }
 
     private static func bridgeSnapshot(from chat: Chat) -> BridgeChatSnapshot {
