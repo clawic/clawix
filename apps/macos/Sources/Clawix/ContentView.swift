@@ -56,6 +56,10 @@ struct ContentView: View {
     }
 
     private var rightSidebarColumnWidth: CGFloat {
+        if appState.isRightSidebarMaximized {
+            let leftWidth = appState.isLeftSidebarOpen ? leftSidebarWidth : 0
+            return max(rightSidebarMinVisibleWidth, windowWidth - leftWidth)
+        }
         let stored = max(rightSidebarMinVisibleWidth, CGFloat(rightSidebarWidthRaw))
         return min(dynamicRightSidebarMaxWidth, stored)
     }
@@ -246,6 +250,7 @@ struct ContentView: View {
             }
             .animation(.easeInOut(duration: 0.18), value: appState.isLeftSidebarOpen)
             .animation(.easeInOut(duration: 0.18), value: appState.isRightSidebarOpen)
+            .animation(.easeInOut(duration: 0.28), value: appState.isRightSidebarMaximized)
             .animation(.easeInOut(duration: 0.18), value: appState.activeSidebarItem?.id)
 
             // Window-level chrome floats above the columns so the traffic
@@ -264,6 +269,11 @@ struct ContentView: View {
                     .onChange(of: proxy.size.width) { _, w in windowWidth = w }
             }
         )
+        .onChange(of: appState.isRightSidebarOpen) { _, open in
+            if !open && appState.isRightSidebarMaximized {
+                appState.isRightSidebarMaximized = false
+            }
+        }
         .overlay(CommandPaletteOverlay(appState: appState))
         .overlay(ImagePreviewOverlay(appState: appState))
     }

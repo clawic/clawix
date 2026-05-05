@@ -28,8 +28,8 @@ struct BrowserTabStrip: View {
 
             Spacer(minLength: 0)
 
-            ChromeMaximizeButton(action: {})
-                .accessibilityLabel("Maximize")
+            ChromeMaximizeButton()
+                .accessibilityLabel(appState.isRightSidebarMaximized ? "Restore panel size" : "Maximize panel")
 
             // The window chrome owns the right toggle; reserve its
             // footprint so the maximize button doesn't slide under it.
@@ -245,18 +245,21 @@ private struct ChromeIconButton: View {
 }
 
 private struct ChromeMaximizeButton: View {
-    let action: () -> Void
+    @EnvironmentObject var appState: AppState
     @State private var hovered = false
-    @State private var expanded = false
 
     var body: some View {
         Button {
-            expanded.toggle()
-            action()
+            withAnimation(.easeInOut(duration: 0.28)) {
+                if !appState.isRightSidebarMaximized && !appState.isLeftSidebarOpen {
+                    appState.isLeftSidebarOpen = true
+                }
+                appState.isRightSidebarMaximized.toggle()
+            }
         } label: {
             CornerBracketsIcon(
                 size: 13,
-                variant: expanded ? .collapsed : .expanded,
+                variant: appState.isRightSidebarMaximized ? .collapsed : .expanded,
                 lineWidth: 1.6
             )
             .foregroundColor(foreground)

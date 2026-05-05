@@ -495,6 +495,11 @@ final class AppState: ObservableObject {
     @Published var pinnedItems: [PinnedItem] = []
     @Published var isLeftSidebarOpen: Bool = true
     @Published var isCommandPaletteOpen: Bool = false
+    /// When `true`, the right sidebar takes over the full width of the
+    /// content area (everything to the right of the left sidebar),
+    /// completely covering the main view. The persisted column width is
+    /// preserved so collapsing brings the panel back to its previous size.
+    @Published var isRightSidebarMaximized: Bool = false
     /// One sidebar state per chat (keyed by `Chat.id`). Switching chats
     /// rebinds every consumer of `currentSidebar`/`isRightSidebarOpen` to
     /// the destination chat's entry, so the right column animates to
