@@ -247,7 +247,11 @@ if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
 AGENTPLIST
 fi
 
-RESOURCE_BUNDLE="$(find "$PROJECT_DIR/.build" -path "*/debug/${APP_NAME}_${APP_NAME}.bundle" -type d | head -n 1 || true)"
+#      Exclude `.build/index-build/...` — that tree is produced by
+#      SourceKit's background indexer and lags behind real builds, so
+#      newly-added resources (fonts, images) can be missing for an
+#      entire dev cycle if we copy from there.
+RESOURCE_BUNDLE="$(find "$PROJECT_DIR/.build" -path "*/index-build/*" -prune -o -path "*/debug/${APP_NAME}_${APP_NAME}.bundle" -type d -print 2>/dev/null | head -n 1 || true)"
 if [[ -n "$RESOURCE_BUNDLE" ]]; then
     cp -R "$RESOURCE_BUNDLE" "$BUNDLE/Contents/Resources/"
     while IFS= read -r lproj; do
