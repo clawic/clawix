@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 
 // Streaming fade-in for assistant text. The unit of animation is the
 // WORD: every word ramps from opacity 0 → 1 over `duration`. Words are
@@ -7,6 +8,12 @@ import SwiftUI
 // pace, giving the answer a "typing" feel even when the backend
 // streams in spikes. When the stream goes idle the queue empties on
 // its own and the next delta starts a fresh schedule from `now`.
+
+/// Toggle to surface streaming-pipeline timing in the dev log. Flip to
+/// `false` once we've root-caused the perceived slowness; the logs are
+/// noisy and shouldn't ship enabled.
+let streamingPerfLogEnabled = true
+let streamingPerfLog = Logger(subsystem: "com.clawix.app", category: "stream-perf")
 
 enum StreamingFade {
     /// How long a word takes to ramp from invisible to fully opaque.

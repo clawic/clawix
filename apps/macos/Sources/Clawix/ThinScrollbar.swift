@@ -7,10 +7,22 @@ import AppKit
 /// SwiftUI at all, so the bar moves with the content reliably.
 struct ThinScrollView<Content: View>: NSViewRepresentable {
     private let axes: Axis.Set
+    private let trailingGutter: CGFloat
     private let content: Content
 
-    init(_ axes: Axis.Set = .vertical, @ViewBuilder content: () -> Content) {
+    /// `trailingGutter`: width (in pt) of an empty strip reserved on the
+    /// right edge of the clip view that the SwiftUI content does NOT
+    /// extend into. The overlay scroller paints into this strip. Setting
+    /// it > 0 sidesteps the recurring "scroller's left edge gets clipped
+    /// by the SwiftUI hosting layer" bug entirely: with the hosting view
+    /// physically stopping before the scroller's column, there's no
+    /// overlap to z-fight over. Default 0 keeps the legacy overlay
+    /// behaviour for menus where the content already pads itself.
+    init(_ axes: Axis.Set = .vertical,
+         trailingGutter: CGFloat = 0,
+         @ViewBuilder content: () -> Content) {
         self.axes = axes
+        self.trailingGutter = trailingGutter
         self.content = content()
     }
 
@@ -53,7 +65,8 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
         scrollView.addSubview(scroller, positioned: .above, relativeTo: clipView)
         NSLayoutConstraint.activate([
             hosting.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: clipView.trailingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: clipView.trailingAnchor,
+                                              constant: -trailingGutter),
             hosting.topAnchor.constraint(equalTo: clipView.topAnchor),
         ])
 

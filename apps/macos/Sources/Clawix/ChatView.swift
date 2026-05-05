@@ -1669,7 +1669,16 @@ private struct AssistantMarkdownText: View {
     @State private var animationTick: Int = 0
 
     var body: some View {
-        let blocks = annotateBlocks(AssistantMarkdown.parseBlocks(text), source: text)
+        let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+        let parsed = AssistantMarkdown.parseBlocks(text)
+        let parseT1 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+        let blocks = annotateBlocks(parsed, source: text)
+        let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+        let _ = streamingPerfLogEnabled && (!checkpoints.isEmpty || !streamingFinished)
+            ? logBodyTiming(parseMs: (parseT1 - parseT0) * 1000,
+                            annotateMs: (parseT2 - parseT1) * 1000,
+                            len: text.count, blockCount: parsed.count)
+            : ()
         let now = Date()
         let animating = StreamingFade.isAnimating(
             checkpoints: checkpoints,
@@ -1698,6 +1707,14 @@ private struct AssistantMarkdownText: View {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
         }
         animationTick &+= 1
+    }
+
+    private func logBodyTiming(parseMs: Double, annotateMs: Double, len: Int, blockCount: Int) {
+        let line = String(
+            format: "body parse=%.2fms annotate=%.2fms len=%d blocks=%d cps=%d finished=%d",
+            parseMs, annotateMs, len, blockCount, checkpoints.count, streamingFinished ? 1 : 0
+        )
+        streamingPerfLog.log("\(line, privacy: .public)")
     }
 
     private struct TickKey: Hashable {
