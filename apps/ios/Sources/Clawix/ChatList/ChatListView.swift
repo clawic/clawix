@@ -1,18 +1,5 @@
 import SwiftUI
-import UIKit
 import ClawixCore
-
-// Pure dark blur backdrop with no SwiftUI vibrancy whitening.
-// SwiftUI Materials add a vibrancy layer that lifts dark areas to a
-// gray that reads as a halo over a black canvas; UIKit's
-// `.systemUltraThinMaterialDark` keeps the blur strong while
-// staying neutral against the underlying black.
-private struct NeutralDarkBlur: UIViewRepresentable {
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
-    }
-    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
-}
 
 // Home surface. Two-section scroll over a pure-black canvas with
 // floating Liquid Glass chrome:
@@ -85,7 +72,7 @@ struct ChatListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                Color.clear.frame(height: 8)
+                Color.clear.frame(height: 20)
 
                 if isSearching {
                     searchResults
@@ -100,40 +87,11 @@ struct ChatListView: View {
         .scrollIndicators(.hidden)
         .scrollEdgeEffectStyle(.soft, for: .top)
         .background(Palette.background.ignoresSafeArea())
-        .overlay(alignment: .top) {
-            ZStack(alignment: .top) {
-                NeutralDarkBlur()
-                    .mask(
-                        LinearGradient(
-                            stops: [
-                                .init(color: Color.black, location: 0.0),
-                                .init(color: Color.black, location: 0.55),
-                                .init(color: Color.black.opacity(0.42), location: 0.85),
-                                .init(color: Color.clear, location: 1.0)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                LinearGradient(
-                    stops: [
-                        .init(color: Palette.background.opacity(0.88), location: 0.0),
-                        .init(color: Palette.background.opacity(0.85), location: 0.55),
-                        .init(color: Palette.background.opacity(0.42), location: 0.85),
-                        .init(color: Palette.background.opacity(0.0), location: 1.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-            .frame(height: 135)
-            .allowsHitTesting(false)
-            .ignoresSafeArea(edges: .top)
-        }
+        .topBarBlurFade(height: 135)
         .safeAreaInset(edge: .top, spacing: 0) {
             topBar
                 .padding(.horizontal, 12)
-                .padding(.top, 4)
+                .padding(.top, 1)
                 .padding(.bottom, 8)
         }
         .overlay(alignment: .bottomTrailing) {
@@ -173,20 +131,20 @@ struct ChatListView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            if !searchActive {
+            if searchActive {
+                searchInputPill
+                    .transition(.scale(scale: 0.85, anchor: .leading).combined(with: .opacity))
+                searchCloseCircle
+                    .transition(.scale(scale: 0.6, anchor: .trailing).combined(with: .opacity))
+            } else {
                 Text("Clawix")
-                    .font(AppFont.system(size: 26, weight: .bold))
+                    .font(AppFont.system(size: 23, weight: .bold))
                     .foregroundStyle(Palette.textPrimary)
                     .padding(.leading, 6)
                     .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .leading)))
-            }
 
-            Spacer(minLength: 0)
+                Spacer(minLength: 0)
 
-            if searchActive {
-                searchFieldPill
-                    .transition(.scale(scale: 0.6, anchor: .trailing).combined(with: .opacity))
-            } else {
                 actionPill
                     .transition(.scale(scale: 0.85, anchor: .trailing).combined(with: .opacity))
             }
@@ -202,35 +160,39 @@ struct ChatListView: View {
     // why the glass goes on the container, not on the buttons).
     private var actionPill: some View {
         HStack(spacing: 0) {
-            Button {
+            Button(action: {}) {
+                SearchIcon(size: 15)
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 42, height: 40)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(InstantPressButtonStyle {
+                guard !searchActive else { return }
+                Haptics.tap()
                 withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
                     searchActive = true
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     searchFocused = true
                 }
-            } label: {
-                SearchIcon(size: 15)
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 42, height: 38)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            })
 
-            Button {
-                showSettings = true
-            } label: {
-                SettingsIcon(size: 19, lineWidth: 3.15 * 15 / 28)
+            Button(action: {}) {
+                SettingsIcon(size: 22, lineWidth: 1.5)
                     .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 42, height: 38)
+                    .frame(width: 42, height: 40)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(InstantPressButtonStyle {
+                guard !showSettings else { return }
+                Haptics.tap()
+                showSettings = true
+            })
         }
         .glassCapsule()
     }
 
-    private var searchFieldPill: some View {
+    private var searchInputPill: some View {
         HStack(spacing: 10) {
             SearchIcon(size: 16)
                 .foregroundStyle(Palette.textSecondary)
@@ -241,23 +203,45 @@ struct ChatListView: View {
                 .textFieldStyle(.plain)
                 .submitLabel(.search)
                 .focused($searchFocused)
-            Button {
-                withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
-                    searchActive = false
-                    searchText = ""
+            if !searchText.isEmpty {
+                Button {
+                    Haptics.tap()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                        searchText = ""
+                    }
+                } label: {
+                    CloseChipIcon(size: 14, lineWidth: 2.8)
                 }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(BodyFont.system(size: 11, weight: .bold))
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 22, height: 22)
-                    .background(Circle().fill(Color.white.opacity(0.18)))
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
-        .frame(height: AppLayout.topBarPillHeight)
+        .frame(maxWidth: .infinity)
+        .frame(height: 40)
         .glassCapsule()
+    }
+
+    private var searchCloseCircle: some View {
+        Button {
+            Haptics.tap()
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
+                searchActive = false
+                searchText = ""
+                searchFocused = false
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.clear)
+                    .glassEffect(.regular, in: Circle())
+                CloseIcon(size: 22, lineWidth: 2.1)
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .frame(width: 40, height: 40)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Projects section
@@ -268,10 +252,11 @@ struct ChatListView: View {
             VStack(alignment: .leading, spacing: 0) {
                 sectionHeader("Projects")
                     .padding(.horizontal, AppLayout.screenHorizontalPadding)
-                    .padding(.bottom, 4)
+                    .padding(.bottom, 12)
 
                 ForEach(projects.prefix(visibleProjectCount)) { project in
                     Button {
+                        Haptics.tap()
                         onOpenProject(project.cwd)
                     } label: {
                         ProjectRow(project: project)
@@ -281,6 +266,7 @@ struct ChatListView: View {
 
                 if projects.count > visibleProjectCount {
                     Button {
+                        Haptics.tap()
                         showAllProjects = true
                     } label: {
                         HStack(spacing: 12) {
@@ -300,7 +286,7 @@ struct ChatListView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.bottom, 18)
+            .padding(.bottom, 12)
         }
     }
 
@@ -312,7 +298,7 @@ struct ChatListView: View {
             VStack(alignment: .leading, spacing: 0) {
                 sectionHeader("Chats")
                     .padding(.horizontal, AppLayout.screenHorizontalPadding)
-                    .padding(.bottom, 6)
+                    .padding(.bottom, 12)
 
                 ForEach(Array(visibleChats.enumerated()), id: \.element.id) { index, chat in
                     chatRowButton(chat)
@@ -329,30 +315,37 @@ struct ChatListView: View {
 
     // MARK: Search results
 
+    // Headerless: projects first, then chats. The matched substring
+    // is bolded inside the title; chat rows additionally show a
+    // snippet of the source field where the match was found, with
+    // the matched word brightened against a dimmed snippet.
     @ViewBuilder
     private var searchResults: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !filteredProjects.isEmpty {
-                sectionHeader("Projects")
-                    .padding(.horizontal, AppLayout.screenHorizontalPadding)
-                    .padding(.bottom, 4)
                 ForEach(filteredProjects) { project in
                     Button {
+                        Haptics.tap()
                         onOpenProject(project.cwd)
                     } label: {
-                        ProjectRow(project: project)
+                        SearchProjectRow(project: project, query: searchText)
                     }
                     .buttonStyle(.plain)
                 }
-                Color.clear.frame(height: 18)
+                if !filteredChats.isEmpty {
+                    Color.clear.frame(height: 6)
+                }
             }
 
             if !filteredChats.isEmpty {
-                sectionHeader("Chats")
-                    .padding(.horizontal, AppLayout.screenHorizontalPadding)
-                    .padding(.bottom, 6)
                 ForEach(Array(filteredChats.enumerated()), id: \.element.id) { index, chat in
-                    chatRowButton(chat)
+                    Button {
+                        Haptics.tap()
+                        onOpen(chat.id)
+                    } label: {
+                        SearchChatRow(chat: chat, query: searchText)
+                    }
+                    .buttonStyle(.plain)
                     if index < filteredChats.count - 1 {
                         Rectangle()
                             .fill(Palette.borderSubtle)
@@ -380,13 +373,15 @@ struct ChatListView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .font(AppFont.system(size: 18, weight: .semibold))
+            .font(AppFont.system(size: 16, weight: .semibold))
+            .tracking(-0.4)
             .foregroundStyle(Palette.textPrimary)
             .padding(.top, 8)
     }
 
     private func chatRowButton(_ chat: WireChat) -> some View {
         Button {
+            Haptics.tap()
             onOpen(chat.id)
         } label: {
             ChatRow(chat: chat)
@@ -445,6 +440,7 @@ private struct ProjectRow: View {
                 .frame(width: 24, alignment: .center)
             Text(project.name)
                 .font(Typography.bodyFont)
+                .tracking(-0.2)
                 .foregroundStyle(Palette.textPrimary)
                 .lineLimit(1)
             Spacer()
@@ -468,11 +464,187 @@ struct ChatRow: View {
     var body: some View {
         Text(chat.title)
             .font(Typography.bodyFont)
+            .tracking(-0.2)
             .foregroundStyle(Palette.textPrimary)
             .lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, AppLayout.screenHorizontalPadding)
             .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Search rows
+//
+// Variants of the project / chat rows that highlight the matched
+// substring inline. Projects emphasise the match with a heavier
+// weight (the title stays white throughout); chats add a snippet
+// underneath drawn from the field where the match was found, with
+// the match brightened against a dimmed snippet so the eye snaps
+// straight to it.
+
+private struct SearchProjectRow: View {
+    let project: DerivedProject
+    let query: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            FolderClosedIcon(size: 20)
+                .foregroundStyle(Palette.textPrimary)
+                .frame(width: 24, alignment: .center)
+            SearchHighlight.titleText(
+                project.name,
+                query: query,
+                color: Palette.textPrimary
+            )
+            .tracking(-0.1)
+            .lineLimit(1)
+            Spacer()
+            if project.hasActiveTurn {
+                Circle()
+                    .fill(Color(red: 0.30, green: 0.78, blue: 0.45))
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.horizontal, AppLayout.screenHorizontalPadding)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct SearchChatRow: View {
+    let chat: WireChat
+    let query: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            SearchHighlight.titleText(
+                chat.title,
+                query: query,
+                color: Palette.textPrimary
+            )
+            .tracking(-0.1)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let snippet = snippetText {
+                snippet
+                    .tracking(0)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, AppLayout.screenHorizontalPadding)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    private var snippetText: Text? {
+        guard let source = SearchHighlight.snippetSource(for: chat, query: query) else {
+            return nil
+        }
+        let trimmed = SearchHighlight.snippet(source, query: query, leadingContext: 8)
+        return SearchHighlight.snippetText(trimmed, query: query)
+    }
+}
+
+// MARK: - Search highlight helpers
+
+private enum SearchHighlight {
+    /// Title is rendered in white. The match goes in Bold at full
+    /// opacity; the rest stays at the body-default Medium weight
+    /// with a barely-there opacity dip so the matched substring
+    /// gains a faint extra lift on top of the weight contrast.
+    static func titleText(_ source: String, query: String, color: Color) -> Text {
+        compose(
+            source,
+            query: query,
+            baseFont: BodyFont.system(size: 15, weight: .regular),
+            matchFont: BodyFont.system(size: 15, weight: .semibold),
+            baseColor: color.opacity(0.88),
+            matchColor: color
+        )
+    }
+
+    /// Snippet is smaller and dimmer than the title so the row reads
+    /// as title-first; the matched substring brightens to white to
+    /// guide the eye to the reason this row showed up.
+    static func snippetText(_ source: String, query: String) -> Text {
+        compose(
+            source,
+            query: query,
+            baseFont: BodyFont.system(size: 11, weight: .regular),
+            matchFont: BodyFont.system(size: 11, weight: .regular),
+            baseColor: Palette.textTertiary,
+            matchColor: Palette.textPrimary
+        )
+    }
+
+    /// Trim `source` so the first match sits near the start, leaving
+    /// `leadingContext` characters of context before it. Returns the
+    /// original string if the match is already near the start or
+    /// missing.
+    static func snippet(_ source: String, query: String, leadingContext: Int) -> String {
+        guard !query.isEmpty,
+              let range = source.range(of: query, options: .caseInsensitive) else {
+            return source
+        }
+        let offset = source.distance(from: source.startIndex, to: range.lowerBound)
+        guard offset > leadingContext else { return source }
+        let start = source.index(source.startIndex, offsetBy: offset - leadingContext)
+        return String(source[start...])
+    }
+
+    /// Pick the field that actually contains the match, in priority:
+    /// preview → cwd → title. Returns nil if none of the fields
+    /// contains the query.
+    static func snippetSource(for chat: WireChat, query: String) -> String? {
+        guard !query.isEmpty else { return nil }
+        if let preview = chat.lastMessagePreview,
+           !preview.isEmpty,
+           preview.range(of: query, options: .caseInsensitive) != nil {
+            return preview
+        }
+        if let cwd = chat.cwd,
+           !cwd.isEmpty,
+           cwd.range(of: query, options: .caseInsensitive) != nil {
+            return cwd
+        }
+        return nil
+    }
+
+    private static func compose(
+        _ source: String,
+        query: String,
+        baseFont: Font,
+        matchFont: Font,
+        baseColor: Color,
+        matchColor: Color
+    ) -> Text {
+        guard !query.isEmpty else {
+            return Text(source).font(baseFont).foregroundColor(baseColor)
+        }
+        var result = Text("")
+        var cursor = source.startIndex
+        while cursor < source.endIndex,
+              let range = source.range(
+                of: query,
+                options: .caseInsensitive,
+                range: cursor..<source.endIndex
+              ) {
+            let before = source[cursor..<range.lowerBound]
+            if !before.isEmpty {
+                result = result + Text(String(before)).font(baseFont).foregroundColor(baseColor)
+            }
+            let matched = source[range]
+            result = result + Text(String(matched)).font(matchFont).foregroundColor(matchColor)
+            cursor = range.upperBound
+        }
+        let tail = source[cursor..<source.endIndex]
+        if !tail.isEmpty {
+            result = result + Text(String(tail)).font(baseFont).foregroundColor(baseColor)
+        }
+        return result
     }
 }
 
@@ -492,6 +664,7 @@ private struct AllProjectsSheet: View {
                         Color.clear.frame(height: 12)
                         ForEach(projects) { project in
                             Button {
+                                Haptics.tap()
                                 onSelect(project)
                             } label: {
                                 ProjectRow(project: project)
@@ -507,8 +680,11 @@ private struct AllProjectsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close") { onDismiss() }
-                        .foregroundStyle(Palette.textPrimary)
+                    Button("Close") {
+                        Haptics.tap()
+                        onDismiss()
+                    }
+                    .foregroundStyle(Palette.textPrimary)
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -557,8 +733,11 @@ private struct SettingsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { onDismiss() }
-                        .foregroundStyle(Palette.textPrimary)
+                    Button("Done") {
+                        Haptics.tap()
+                        onDismiss()
+                    }
+                    .foregroundStyle(Palette.textPrimary)
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -676,7 +855,17 @@ private struct SettingsSheet: View {
         destructive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button(action: {
+            // Disconnect / unpair gets a `.warning` notification haptic
+            // because it's a destructive jump back to the pairing flow;
+            // routine actions get the standard light tap.
+            if destructive {
+                Haptics.warning()
+            } else {
+                Haptics.tap()
+            }
+            action()
+        }) {
             HStack(spacing: 14) {
                 Image(systemName: iconName)
                     .font(BodyFont.system(size: 16, weight: .regular))
@@ -729,7 +918,10 @@ private struct SettingsScannerSheet: View {
                 .ignoresSafeArea()
             VStack {
                 HStack {
-                    Button(action: onCancel) {
+                    Button(action: {
+                        Haptics.tap()
+                        onCancel()
+                    }) {
                         Image(systemName: "xmark")
                             .font(BodyFont.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
@@ -762,7 +954,10 @@ private struct NewChatFAB: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            Haptics.send()
+            action()
+        }) {
             HStack(spacing: 8) {
                 ComposeIcon(size: 17)
                     .foregroundStyle(Color.black)
@@ -770,15 +965,15 @@ private struct NewChatFAB: View {
                     .font(AppFont.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.black)
             }
-            .padding(.leading, 16)
-            .padding(.trailing, 18)
-            .frame(height: 46)
+            .padding(.leading, 17.5)
+            .padding(.trailing, 16.5)
+            .frame(height: 50)
             .background(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(Color.white)
             )
             .shadow(color: Color.black.opacity(0.32), radius: 18, y: 8)
-            .contentShape(Capsule(style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("New chat")
@@ -794,4 +989,18 @@ private struct NewChatFAB: View {
         onUnpair: {}
     )
     .preferredColorScheme(.dark)
+}
+
+// Fires its action on touch-down (when `isPressed` flips to true)
+// instead of touch-up, eliminating the perceived latency of a stock
+// SwiftUI Button. Idempotency is the caller's responsibility.
+private struct InstantPressButtonStyle: ButtonStyle {
+    let onPress: () -> Void
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { onPress() }
+            }
+    }
 }
