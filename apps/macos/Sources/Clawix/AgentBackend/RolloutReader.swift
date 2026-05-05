@@ -38,6 +38,11 @@ enum RolloutReader {
         // prefer the end event because it carries `parsed_cmd`, but if
         // the file is truncated we still surface the start.
         var seenCallIds = Set<String>()
+        // cwd captured from `session_meta`. Used to resolve relative
+        // paths emitted by `apply_patch` (the new custom_tool_call shape
+        // writes paths like `cualquiera.md`, not absolute) so the
+        // ChangedFileCard pill can find the file on disk.
+        var sessionCwd: String? = nil
 
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -63,6 +68,11 @@ enum RolloutReader {
             let kind = obj["type"] as? String
             guard let payload = obj["payload"] as? [String: Any] else { continue }
             let inner = payload["type"] as? String
+
+            if kind == "session_meta", sessionCwd == nil,
+               let cwd = payload["cwd"] as? String, !cwd.isEmpty {
+                sessionCwd = cwd
+            }
 
             switch (kind, inner) {
 
@@ -155,6 +165,34 @@ enum RolloutReader {
                     )
                 )
 
+            case ("response_item", "custom_tool_call"):
+                // Newer Codex Desktop serialises `apply_patch` as a
+                // custom_tool_call (with the patch body in `input`) rather
+                // than the legacy `patch_apply_end` event. Extract the
+                // touched paths from the patch headers so the timeline
+                // gets the same `.fileChange` row and the trailing
+                // ChangedFileCard pills appear.
+                let name = payload["name"] as? String ?? ""
+                guard name == "apply_patch" else { continue }
+                let callId = payload["call_id"] as? String ?? UUID().uuidString
+                if !seenCallIds.insert(callId).inserted { continue }
+                let input = (payload["input"] as? String)
+                    ?? (payload["arguments"] as? String)
+                    ?? ""
+                let raw = Self.parseApplyPatchInputPaths(input)
+                let paths = raw.map { Self.resolveAgainstCwd($0, cwd: sessionCwd) }
+                if paths.isEmpty { continue }
+                if pending == nil {
+                    pending = PendingAssistant(timestamp: timestamp)
+                }
+                pending?.appendOther(
+                    WorkItem(
+                        id: callId,
+                        kind: .fileChange(paths: paths),
+                        status: .completed
+                    )
+                )
+
             case ("event_msg", "mcp_tool_call_end"):
                 let callId = payload["call_id"] as? String ?? UUID().uuidString
                 if !seenCallIds.insert(callId).inserted { continue }
@@ -205,6 +243,46 @@ enum RolloutReader {
             default: return .unknown
             }
         }
+    }
+
+    /// Pull file paths out of a `custom_tool_call` apply_patch input. The
+    /// patch body uses `*** Add File: <path>`, `*** Update File: <path>`,
+    /// `*** Delete File: <path>` headers (and an optional `*** Move To:
+    /// <path>` after Update). Paths can be relative to the session cwd;
+    /// resolution to absolute happens at the call site.
+    private static func parseApplyPatchInputPaths(_ input: String) -> [String] {
+        var paths: [String] = []
+        var seen: Set<String> = []
+        let prefixes = [
+            "*** Add File: ",
+            "*** Update File: ",
+            "*** Delete File: ",
+            "*** Move To: ",
+        ]
+        for raw in input.split(separator: "\n", omittingEmptySubsequences: true) {
+            let line = String(raw)
+            for prefix in prefixes where line.hasPrefix(prefix) {
+                let path = String(line.dropFirst(prefix.count))
+                    .trimmingCharacters(in: .whitespaces)
+                if !path.isEmpty, seen.insert(path).inserted {
+                    paths.append(path)
+                }
+                break
+            }
+        }
+        return paths
+    }
+
+    /// Resolve a relative path against the rollout's session cwd captured
+    /// from `session_meta`. Absolute paths pass through unchanged. When
+    /// the cwd is missing we leave the path as-is so the chip still
+    /// renders the file name even if "Open" can't find the file on disk.
+    private static func resolveAgainstCwd(_ path: String, cwd: String?) -> String {
+        if path.hasPrefix("/") { return path }
+        guard let cwd, !cwd.isEmpty else { return path }
+        return URL(fileURLWithPath: cwd)
+            .appendingPathComponent(path)
+            .path
     }
 
     /// Pull absolute file paths out of a `patch_apply_end` stdout. The CLI

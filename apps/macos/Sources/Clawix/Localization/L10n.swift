@@ -62,6 +62,13 @@ enum L10n {
         String(localized: "\(count) lists", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
+    /// Inline tool-group label fragment for parsed search actions.
+    /// Same shape as `listedItems`: the count carries the verb so it
+    /// fits in a comma-joined row.
+    static func searchedItems(_ count: Int) -> String {
+        String(localized: "\(count) searches", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
     /// Link rendered above the visible chat slice when older messages
     /// are collapsed.
     static func previousMessages(_ count: Int) -> String {

@@ -214,8 +214,9 @@ private struct WorkRowView: View {
                 case "clawix.mcp":
                     McpIcon(size: 13)
                 case "clawix.pencil":
-                    PencilIconView(color: Color(white: 0.42), lineWidth: 0.85)
-                        .frame(width: 13, height: 13)
+                    PencilIconView(color: Color(white: 0.42), lineWidth: 1.0)
+                        .frame(width: 14, height: 14)
+                        .offset(y: 2)
                 case "magnifyingglass":
                     SearchIcon(size: 11)
                 default:

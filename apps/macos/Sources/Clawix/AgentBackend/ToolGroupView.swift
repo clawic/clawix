@@ -66,12 +66,14 @@ struct ToolGroupView: View {
         var rows: [AggregateRow] = []
 
         // Clawix tags each shell command with one or more parsed_cmd
-        // actions (read / list_files / search / unknown). The inline
-        // tool-group row mirrors that breakdown (one comma-joined line
-        // covering reads, lists and other commands) instead of
-        // collapsing everything into a single "Ran N" line.
+        // actions (read / list_files / search / unknown). Each command
+        // contributes to exactly one bucket: if any action is typed
+        // (read/list/search) it splits across those typed counters and
+        // does NOT also bump ranCommands; only fully-opaque commands
+        // (just .unknown, or no parsed_cmd at all) add to ranCommands.
         var readFiles = 0
         var listed = 0
+        var searchedItems = 0
         var ranCommands = 0
         var fileChanges = 0
         var browserUsed = false
@@ -87,13 +89,13 @@ struct ToolGroupView: View {
                 if item.status == .inProgress { continue }
                 let reads = actions.filter { $0 == .read }.count
                 let lists = actions.filter { $0 == .listFiles }.count
-                let other = actions.filter { $0 != .read && $0 != .listFiles }.count
-                if reads + lists + other == 0 {
-                    ranCommands += 1
-                } else {
+                let searches = actions.filter { $0 == .search }.count
+                if reads + lists + searches > 0 {
                     readFiles += reads
                     listed += lists
-                    ranCommands += other
+                    searchedItems += searches
+                } else {
+                    ranCommands += 1
                 }
             case .fileChange(let paths):
                 fileChanges += max(1, paths.count)
@@ -117,15 +119,31 @@ struct ToolGroupView: View {
             }
         }
 
-        if readFiles > 0 || listed > 0 || ranCommands > 0 {
+        if readFiles > 0 || listed > 0 || searchedItems > 0 || ranCommands > 0 {
             var parts: [String] = []
             if readFiles > 0 { parts.append(L10n.exploredFiles(readFiles)) }
+            if searchedItems > 0 { parts.append(L10n.searchedItems(searchedItems)) }
             if listed > 0 { parts.append(L10n.listedItems(listed)) }
-            if ranCommands > 0 { parts.append(L10n.ranCommandsInline(ranCommands)) }
-            // Magnifying glass when the row reads as exploration (files
-            // were read or directories listed); terminal sentinel when
-            // it only ran opaque commands.
-            let icon = (readFiles > 0 || listed > 0) ? "magnifyingglass" : "clawix.terminal"
+            if ranCommands > 0 {
+                // Standalone "Ran N commands" starts a sentence and
+                // must capitalise; when it trails other parts ("Explored
+                // 1 file, ran 3 commands") it stays inline lowercase.
+                parts.append(parts.isEmpty
+                    ? L10n.ranCommands(ranCommands)
+                    : L10n.ranCommandsInline(ranCommands))
+            }
+            // Stacked folders when the row includes any directory
+            // listing; magnifying glass when it reads files or runs
+            // searches; terminal sentinel when it only ran opaque
+            // commands.
+            let icon: String
+            if listed > 0 {
+                icon = "clawix.folderStack"
+            } else if readFiles > 0 || searchedItems > 0 {
+                icon = "magnifyingglass"
+            } else {
+                icon = "clawix.terminal"
+            }
             rows.append(AggregateRow(
                 id: "exec",
                 icon: icon,
@@ -204,10 +222,14 @@ struct ToolGroupView: View {
                 case "clawix.mcp":
                     McpIcon(size: 14)
                 case "clawix.pencil":
-                    PencilIconView(color: Color(white: 0.45), lineWidth: 0.85)
-                        .frame(width: 14, height: 14)
+                    PencilIconView(color: Color(white: 0.45), lineWidth: 1.0)
+                        .frame(width: 15, height: 15)
+                        .offset(y: 2)
                 case "magnifyingglass":
                     SearchIcon(size: 11.5)
+                case "clawix.folderStack":
+                    FolderStackIcon(size: 17)
+                        .offset(y: 3.5)
                 default:
                     Image(systemName: row.icon)
                         .font(.system(size: 11.5))

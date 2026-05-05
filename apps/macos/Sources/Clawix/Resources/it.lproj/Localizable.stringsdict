@@ -66,6 +66,22 @@
 			<string>%lld messaggi precedenti</string>
 		</dict>
 	</dict>
+	<key>%lld searches</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>one</key>
+			<string>%lld ricerca</string>
+			<key>other</key>
+			<string>%lld ricerche</string>
+		</dict>
+	</dict>
 	<key>Explored %lld files</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
