@@ -58,9 +58,6 @@ struct SidebarView: View {
         let recentDateByProject: [UUID: Date]
         /// Chronological list (excludes pinned, sorted desc).
         let chrono: [Chat]
-        /// Anchor "now" captured once so each row reuses it for its
-        /// relative-age label instead of calling `Date()` per body.
-        let now: Date
     }
 
     private func makeSnapshot() -> SidebarSnapshot {
@@ -99,8 +96,7 @@ struct SidebarView: View {
             pinned: pinnedRaw,
             byProject: byProject,
             recentDateByProject: recentDateByProject,
-            chrono: chronoRaw,
-            now: Date()
+            chrono: chronoRaw
         )
     }
 
@@ -566,13 +562,18 @@ struct SidebarView: View {
             HStack(spacing: 2) {
                 if showCollapseAll {
                     let allCollapsed = expandedProjects.isEmpty
-                    headerIconButton(
-                        systemName: allCollapsed
-                            ? "arrow.up.right.and.arrow.down.left"
-                            : "arrow.down.right.and.arrow.up.left",
+                    HeaderHoverIcon(
                         tooltip: allCollapsed ? "Expand all" : "Collapse all"
                     ) {
                         toggleAllProjectsCollapsed()
+                    } label: { color in
+                        CornerBracketsIcon(
+                            size: 12,
+                            variant: allCollapsed ? .expanded : .collapsed,
+                            lineWidth: 1.4
+                        )
+                        .foregroundColor(color)
+                        .frame(width: 22, height: 22)
                     }
                 }
                 organizeButton
@@ -624,22 +625,6 @@ struct SidebarView: View {
         }
     }
 
-    @ViewBuilder
-    private func headerIconButton(
-        systemName: String,
-        tooltip: LocalizedStringKey,
-        anchorKey: NewProjectAnchorKey.Type? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        HeaderHoverIcon(tooltip: tooltip, action: action) { color in
-            Image(systemName: systemName)
-                .font(.system(size: 10.5, weight: .regular))
-                .foregroundColor(color)
-                .frame(width: 22, height: 22)
-        }
-        .modifier(OptionalAnchorModifier(useAnchor: anchorKey != nil))
-    }
-
     // MARK: - Header actions
 
     private func toggleAllProjectsCollapsed() {
@@ -685,17 +670,6 @@ struct SidebarView: View {
     }
 }
 
-/// Allows selectively attaching an anchor preference only when a key is given.
-private struct OptionalAnchorModifier: ViewModifier {
-    let useAnchor: Bool
-    func body(content: Content) -> some View {
-        if useAnchor {
-            content.anchorPreference(key: NewProjectAnchorKey.self, value: .bounds) { $0 }
-        } else {
-            content
-        }
-    }
-}
 
 private struct NewProjectAnchorKey: PreferenceKey {
     static var defaultValue: Anchor<CGRect>? = nil
@@ -1381,10 +1355,6 @@ struct RecentChatRow: View {
     @State private var pinHovered = false
     @State private var archiveHovered = false
     @State private var unarchiveHovered = false
-    /// Captured live from a `GeometryReader` background so the `.onDrag`
-    /// preview can render at the exact width of the source row instead of
-    /// shrinking to its intrinsic content size.
-    @State private var rowWidth: CGFloat = 280
 
     private var isSelected: Bool {
         if case let .chat(id) = appState.currentRoute, id == chat.id { return true }
@@ -1452,15 +1422,6 @@ struct RecentChatRow: View {
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(rowBackground)
-        )
-        .background(
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear { rowWidth = geo.size.width }
-                    .onChange(of: geo.size.width) { _, newValue in
-                        rowWidth = newValue
-                    }
-            }
         )
         .onTapGesture {
             appState.currentRoute = .chat(chat.id)
@@ -2526,7 +2487,7 @@ private struct OrganizeFunnelIcon: View {
     }
 }
 
-private struct WindowDragInhibitor: NSViewRepresentable {
+struct WindowDragInhibitor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { _NoWindowDragView() }
     func updateNSView(_ nsView: NSView, context: Context) {}
 
@@ -2541,6 +2502,22 @@ private struct WindowDragInhibitor: NSViewRepresentable {
         override func mouseUp(with event: NSEvent) {
             nextResponder?.mouseUp(with: event)
         }
+    }
+}
+
+/// Counterpart to `WindowDragInhibitor`: a transparent NSView whose only
+/// job is to return `mouseDownCanMoveWindow = true`. Painted under the top
+/// chrome strip so the user can grab and move the window from anywhere in
+/// that band, even though `isMovableByWindowBackground` is off everywhere
+/// else. Buttons inside the strip keep working: AppKit's hit test finds
+/// the NSButton (or other control) on top of this view, and controls
+/// return `false` from `mouseDownCanMoveWindow` by default.
+struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { _DragView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class _DragView: NSView {
+        override var mouseDownCanMoveWindow: Bool { true }
     }
 }
 

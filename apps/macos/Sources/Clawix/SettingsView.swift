@@ -1938,8 +1938,7 @@ private struct ExpandIconButton: View {
 
     var body: some View {
         Button(action: onTap) {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 11, weight: .medium))
+            CornerBracketsIcon(size: 12, variant: .expanded, lineWidth: 1.5)
                 .foregroundColor(Color(white: hovered ? 0.95 : 0.78))
                 .padding(6)
                 .background(

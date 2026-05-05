@@ -21,11 +21,42 @@ private let frameKey = "ClawixMainWindowFrame"
 
 private let mainWindowMinSize = NSSize(width: 1100, height: 720)
 
+/// Tracks window-level state that views need to reflow on, namely the
+/// fullscreen toggle. macOS hides the traffic lights in fullscreen, so the
+/// chrome reservation that protects the sidebar toggle from sitting under
+/// them must collapse to zero whenever any window enters fullscreen.
+@MainActor
+final class WindowState: ObservableObject {
+    @Published var isFullscreen: Bool = false
+    private var observers: [NSObjectProtocol] = []
+
+    init() {
+        let nc = NotificationCenter.default
+        observers.append(nc.addObserver(
+            forName: NSWindow.didEnterFullScreenNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.isFullscreen = true
+        })
+        observers.append(nc.addObserver(
+            forName: NSWindow.didExitFullScreenNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.isFullscreen = false
+        })
+    }
+
+    deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
+}
+
 @main
 struct ClawixApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
     @StateObject private var updater = UpdaterController()
+    @StateObject private var windowState = WindowState()
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -43,6 +74,7 @@ struct ClawixApp: App {
                 .environmentObject(appState)
                 .environmentObject(appState.composer)
                 .environmentObject(updater)
+                .environmentObject(windowState)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until
@@ -103,11 +135,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.windows.forEach(saveFrame)
     }
 
+    // Custom inset for the native traffic lights. macOS plants them very
+    // close to the top-left corner; we nudge them right and down so they
+    // sit comfortably inside the larger titlebar band the app paints.
+    private let trafficLightLeftInset: CGFloat = 18
+    private let trafficLightTopInset: CGFloat = 14
+    private let trafficLightSpacing: CGFloat = 22.5
+
     private func configure(_ window: NSWindow) {
         window.title = appDisplayName
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
+        // Window drag is opt-in, restricted to the explicit `WindowDragArea`
+        // strip painted under the top chrome. Background drag would let the
+        // user move the whole window by clicking anywhere in the chat scroll
+        // view, which feels broken on macOS.
+        window.isMovableByWindowBackground = false
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
@@ -116,6 +159,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         restoreFrame(window)
         attachFrameObservers(to: window)
+        attachTrafficLightObservers(to: window)
+        layoutTrafficLights(window)
+    }
+
+    private func layoutTrafficLights(_ window: NSWindow) {
+        // In fullscreen the OS hides the buttons, no point repositioning.
+        if window.styleMask.contains(.fullScreen) { return }
+
+        let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        var x = trafficLightLeftInset
+        for type in buttons {
+            guard let btn = window.standardWindowButton(type),
+                  let host = btn.superview else { continue }
+            let y = host.bounds.height - trafficLightTopInset - btn.frame.height
+            let target = CGPoint(x: x, y: y)
+            if btn.frame.origin != target {
+                var f = btn.frame
+                f.origin = target
+                btn.frame = f
+            }
+            x += trafficLightSpacing
+        }
+    }
+
+    private func attachTrafficLightObservers(to window: NSWindow) {
+        let nc = NotificationCenter.default
+        // Defer to next runloop so AppKit's own relayout finishes before we
+        // re-snap. didExitFullScreen / didBecomeKey occasionally beat us
+        // otherwise and the buttons land at the default origin.
+        let relayout: (Notification) -> Void = { [weak self] _ in
+            DispatchQueue.main.async { self?.layoutTrafficLights(window) }
+        }
+        observers.append(nc.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: .main, using: relayout))
+        observers.append(nc.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main, using: relayout))
+        observers.append(nc.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main, using: relayout))
+        observers.append(nc.addObserver(forName: NSWindow.didChangeBackingPropertiesNotification, object: window, queue: .main, using: relayout))
     }
 
     private func restoreFrame(_ window: NSWindow) {
