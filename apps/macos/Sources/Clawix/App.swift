@@ -87,6 +87,11 @@ struct ClawixApp: App {
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .defaultSize(width: 1280, height: 800)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button(L10n.t("Check for Updates…")) {
+                    updater.checkForUpdates()
+                }
+            }
             CommandGroup(replacing: .newItem) {
                 FileMenuCommands(appState: appState)
             }

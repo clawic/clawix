@@ -310,6 +310,7 @@ private struct SidebarTopChrome: View {
 
             if updater.updateAvailable {
                 UpdateChip { updater.installUpdate() }
+                    .padding(.top, 8)
                     .padding(.trailing, 10)
                     .transition(.scale(scale: 0.85, anchor: .trailing).combined(with: .opacity))
             }
@@ -324,24 +325,24 @@ private struct UpdateChip: View {
     var onTap: () -> Void
     @State private var hovered = false
 
+    private static let fill = Color(red: 0.32, green: 0.48, blue: 0.92)
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 5) {
-                Image(systemName: "arrow.down.circle.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                Text("Update")
-                    .font(.system(size: 12, weight: .semibold))
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(Palette.pastelBlue.opacity(hovered ? 1.0 : 0.92))
-            )
+            Text("Update")
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(.white.opacity(hovered ? 1.0 : 0.94))
+                .padding(.horizontal, 11)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(Self.fill.opacity(hovered ? 1.0 : 0.88))
+                )
+                .scaleEffect(hovered ? 1.035 : 1.0)
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.20), value: hovered)
         .help(L10n.t("Install the available update"))
     }
 }
