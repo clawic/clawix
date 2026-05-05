@@ -63,12 +63,38 @@ struct FileViewerPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        RenderProbe.tick("FileViewerPanel")
+        return VStack(spacing: 0) {
             breadcrumbRow
             divider
             content
         }
         .frame(maxHeight: .infinity)
+        .overlayPreferenceValue(FileViewerMoreMenuAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if moreMenuOpen, let anchor {
+                    let frame = proxy[anchor]
+                    FileViewerMoreMenu(
+                        isOpen: $moreMenuOpen,
+                        showRichViewToggle: isMarkdown,
+                        richViewDisabled: richViewDisabled,
+                        showWordWrapToggle: isRawMode,
+                        wordWrapEnabled: wordWrapEnabled,
+                        onCopyPath: { copyPath() },
+                        onToggleRichView: { toggleRichView() },
+                        onToggleWordWrap: { toggleWordWrap() }
+                    )
+                    .anchoredPopupPlacement(
+                        buttonFrame: frame,
+                        proxy: proxy,
+                        horizontal: .trailing()
+                    )
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(moreMenuOpen)
+        }
+        .animation(MenuStyle.openAnimation, value: moreMenuOpen)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Preview of \(fileName)"))
         .task(id: path) { reload() }
@@ -128,31 +154,6 @@ struct FileViewerPanel: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 32)
-        .overlayPreferenceValue(FileViewerMoreMenuAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if moreMenuOpen, let anchor {
-                    let frame = proxy[anchor]
-                    FileViewerMoreMenu(
-                        isOpen: $moreMenuOpen,
-                        showRichViewToggle: isMarkdown,
-                        richViewDisabled: richViewDisabled,
-                        showWordWrapToggle: isRawMode,
-                        wordWrapEnabled: wordWrapEnabled,
-                        onCopyPath: { copyPath() },
-                        onToggleRichView: { toggleRichView() },
-                        onToggleWordWrap: { toggleWordWrap() }
-                    )
-                    .anchoredPopupPlacement(
-                        buttonFrame: frame,
-                        proxy: proxy,
-                        horizontal: .trailing()
-                    )
-                    .transition(.softNudge(y: 4))
-                }
-            }
-            .allowsHitTesting(moreMenuOpen)
-        }
-        .animation(MenuStyle.openAnimation, value: moreMenuOpen)
     }
 
     // MARK: - Body
@@ -364,9 +365,13 @@ private struct FileViewerMoreMenu: View {
             if showWordWrapToggle {
                 row(id: "toggleWordWrap",
                     title: wordWrapEnabled ? "Disable word wrap" : "Enable word wrap") {
-                    Image(systemName: "arrow.turn.down.left")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(MenuStyle.rowIcon)
+                    WordWrapToggleIcon(
+                        progress: wordWrapEnabled ? 0 : 1,
+                        rightBarOpacity: 1,
+                        color: MenuStyle.rowIcon,
+                        lineWidth: 1.0
+                    )
+                    .frame(width: 13, height: 13)
                 } action: {
                     onToggleWordWrap()
                     isOpen = false
@@ -437,11 +442,31 @@ private struct RawTextView: View {
     }
 
     var body: some View {
-        Group {
+        // SwiftUI's `ScrollView` centers content when its intrinsic size is
+        // smaller than the visible bounds, so a short markdown file in raw
+        // mode would float in the middle of the panel. Pinning the content
+        // to topLeading inside a frame that fills at least the viewport
+        // keeps short files anchored at the top, while long files still
+        // grow past the bounds and scroll normally.
+        GeometryReader { proxy in
             if wordWrap {
-                ScrollView(.vertical) { content }
+                ScrollView(.vertical) {
+                    content
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: proxy.size.height,
+                            alignment: .topLeading
+                        )
+                }
             } else {
-                ScrollView([.vertical, .horizontal]) { content }
+                ScrollView([.vertical, .horizontal]) {
+                    content
+                        .frame(
+                            minWidth: proxy.size.width,
+                            minHeight: proxy.size.height,
+                            alignment: .topLeading
+                        )
+                }
             }
         }
     }
@@ -463,7 +488,6 @@ private struct RawTextView: View {
         }
         .padding(.vertical, 12)
         .padding(.trailing, 16)
-        .frame(maxWidth: wordWrap ? .infinity : nil, alignment: .leading)
     }
 
     @ViewBuilder

@@ -271,6 +271,17 @@ private struct CodeBlockView: View {
     @State private var hoverCopy = false
     @State private var hoverWrap = false
 
+    /// 0 if wrap is active, 1 if no-wrap is active. Drives the icon's
+    /// "lines fit / lines overflow" visual.
+    private var wrapStateProgress: CGFloat {
+        appState.chatCodeBlockWordWrap ? 0 : 1
+    }
+    /// While hovered, preview the opposite mode and fade the right bar so
+    /// the morph reads as a clear affordance ("click to flip to that").
+    private var displayProgress: CGFloat {
+        hoverWrap ? (1 - wrapStateProgress) : wrapStateProgress
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
@@ -279,13 +290,19 @@ private struct CodeBlockView: View {
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
                 Button(action: toggleWrap) {
-                    Image(systemName: "arrow.turn.down.left")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(wrapForegroundColor)
-                        .frame(width: 22, height: 22)
+                    WordWrapToggleIcon(
+                        progress: displayProgress,
+                        rightBarOpacity: hoverWrap ? 0.35 : 1,
+                        color: wrapForegroundColor,
+                        lineWidth: 1.1
+                    )
+                    .frame(width: 13, height: 13)
+                    .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.plain)
                 .onHover { hoverWrap = $0 }
+                .animation(.easeInOut(duration: 0.22), value: hoverWrap)
+                .animation(.easeInOut(duration: 0.22), value: appState.chatCodeBlockWordWrap)
                 .help(appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap")
                 .accessibilityLabel(
                     appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap"

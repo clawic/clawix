@@ -298,11 +298,12 @@ private struct BranchIconShape: Shape {
 /// Custom pin icon used in place of SF Symbols `pin` / `pin.fill`.
 struct PinIcon: View {
     var size: CGFloat = 13
+    var lineWidth: CGFloat? = nil
 
     var body: some View {
         PinIconShape()
             .stroke(style: StrokeStyle(
-                lineWidth: 1.2 * (size / 18),
+                lineWidth: lineWidth ?? (1.2 * (size / 18)),
                 lineCap: .round,
                 lineJoin: .round
             ))
