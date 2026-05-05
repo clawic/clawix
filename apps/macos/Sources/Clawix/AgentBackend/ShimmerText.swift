@@ -12,7 +12,7 @@ struct ShimmerText: View {
     var color: Color = .white
     var baseOpacity: Double = 0.30
     var peakOpacity: Double = 0.85
-    var cycleDuration: Double = 2.2
+    var cycleDuration: Double = 3.0
     var radius: Double = 4.0
 
     var body: some View {

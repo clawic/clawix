@@ -29,6 +29,23 @@ struct ChatMessage: Identifiable {
     /// the chat row can render the Clawix-style timeline (text → "Ran N
     /// commands" → text → …) instead of a collapsed reasoning block.
     var timeline: [AssistantTimelineEntry]
+    /// One entry per scheduled WORD on `content`. Each records the
+    /// running total character count after that word was scheduled +
+    /// when its fade should start. The renderer ramps each word from
+    /// opacity 0→1 over a short window so the trailing edge of a
+    /// streamed answer reads as a soft gradient.
+    var streamCheckpoints: [StreamCheckpoint]
+    /// Trailing partial word that hasn't seen its closing whitespace
+    /// yet. Carried across deltas so the scheduler can run on
+    /// `pendingTail + delta` instead of rescanning the full body on
+    /// every token. Emptied by the scheduler whenever the tail closes.
+    var streamPendingTail: String
+    /// Same idea but per reasoning timeline entry (keyed by entry id).
+    /// Reasoning resets on every tool group, so checkpoints have to be
+    /// scoped to the entry rather than to the message as a whole.
+    var reasoningCheckpoints: [UUID: [StreamCheckpoint]]
+    /// Per-reasoning-entry pending partial-word tails.
+    var reasoningPendingTails: [UUID: String]
 
     init(
         id: UUID = UUID(),
@@ -39,7 +56,11 @@ struct ChatMessage: Identifiable {
         isError: Bool = false,
         timestamp: Date = Date(),
         workSummary: WorkSummary? = nil,
-        timeline: [AssistantTimelineEntry] = []
+        timeline: [AssistantTimelineEntry] = [],
+        streamCheckpoints: [StreamCheckpoint] = [],
+        streamPendingTail: String = "",
+        reasoningCheckpoints: [UUID: [StreamCheckpoint]] = [:],
+        reasoningPendingTails: [UUID: String] = [:]
     ) {
         self.id = id
         self.role = role
@@ -50,9 +71,23 @@ struct ChatMessage: Identifiable {
         self.timestamp = timestamp
         self.workSummary = workSummary
         self.timeline = timeline
+        self.streamCheckpoints = streamCheckpoints
+        self.streamPendingTail = streamPendingTail
+        self.reasoningCheckpoints = reasoningCheckpoints
+        self.reasoningPendingTails = reasoningPendingTails
     }
 
     enum MessageRole { case user, assistant }
+}
+
+/// Marker recorded each time a streaming delta lands on a piece of text.
+/// `prefixCount` is the total UTF-16 character count of the receiving
+/// string AFTER the delta was applied, so the renderer can find which
+/// checkpoint covers any given character index without re-scanning the
+/// delta history.
+struct StreamCheckpoint: Equatable {
+    let prefixCount: Int
+    let addedAt: Date
 }
 
 /// One block in an assistant message's chronological timeline.
@@ -1479,6 +1514,18 @@ final class AppState: ObservableObject {
               chats[idx].messages[last].role == .assistant
         else { return }
         chats[idx].messages[last].content += delta
+        let cps = chats[idx].messages[last].streamCheckpoints
+        let result = StreamingFade.ingest(
+            delta: delta,
+            pendingTail: chats[idx].messages[last].streamPendingTail,
+            scheduledLength: cps.last?.prefixCount ?? 0,
+            lastFadeStart: cps.last?.addedAt ?? .distantPast
+        )
+        if !result.newCheckpoints.isEmpty {
+            chats[idx].messages[last].streamCheckpoints
+                .append(contentsOf: result.newCheckpoints)
+        }
+        chats[idx].messages[last].streamPendingTail = result.pendingTail
     }
 
     func appendReasoningDelta(chatId: UUID, delta: String) {
@@ -1491,15 +1538,34 @@ final class AppState: ObservableObject {
         // new one if the last entry is a tools group (so the row order
         // becomes text → tools → text → tools → …).
         let timeline = chats[idx].messages[last].timeline
+        let entryId: UUID
+        let newText: String
         if let lastEntry = timeline.last,
-           case .reasoning(let entryId, let existing) = lastEntry {
+           case .reasoning(let existingId, let existing) = lastEntry {
+            entryId = existingId
+            newText = existing + delta
             chats[idx].messages[last].timeline[timeline.count - 1] =
-                .reasoning(id: entryId, text: existing + delta)
+                .reasoning(id: entryId, text: newText)
         } else {
+            entryId = UUID()
+            newText = delta
             chats[idx].messages[last].timeline.append(
-                .reasoning(id: UUID(), text: delta)
+                .reasoning(id: entryId, text: newText)
             )
         }
+        let bucket = chats[idx].messages[last].reasoningCheckpoints[entryId, default: []]
+        let pending = chats[idx].messages[last].reasoningPendingTails[entryId, default: ""]
+        let result = StreamingFade.ingest(
+            delta: delta,
+            pendingTail: pending,
+            scheduledLength: bucket.last?.prefixCount ?? 0,
+            lastFadeStart: bucket.last?.addedAt ?? .distantPast
+        )
+        if !result.newCheckpoints.isEmpty {
+            chats[idx].messages[last].reasoningCheckpoints[entryId, default: []]
+                .append(contentsOf: result.newCheckpoints)
+        }
+        chats[idx].messages[last].reasoningPendingTails[entryId] = result.pendingTail
     }
 
     func markAssistantCompleted(chatId: UUID, finalText: String?) {
@@ -1508,9 +1574,58 @@ final class AppState: ObservableObject {
               chats[idx].messages[last].role == .assistant
         else { return }
         if let text = finalText, !text.isEmpty {
+            // If the canonical final body differs from what we accumulated
+            // from deltas, the existing per-word checkpoints don't line up
+            // with the new characters. Replaying every word as a fresh
+            // fade-in would look like the answer animates twice. Instead,
+            // mark the entire replacement as already settled so the user
+            // sees the final body at full opacity without another ramp.
+            if text != chats[idx].messages[last].content {
+                chats[idx].messages[last].streamCheckpoints = [
+                    StreamCheckpoint(prefixCount: text.count, addedAt: .distantPast)
+                ]
+                chats[idx].messages[last].streamPendingTail = ""
+            }
             chats[idx].messages[last].content = text
         }
         chats[idx].messages[last].streamingFinished = true
+        // Flush any trailing partial word so its characters get a fade
+        // schedule and don't sit at opacity 0 forever.
+        let cps = chats[idx].messages[last].streamCheckpoints
+        let pending = chats[idx].messages[last].streamPendingTail
+        if !pending.isEmpty {
+            let flushed = StreamingFade.ingest(
+                delta: "",
+                pendingTail: pending,
+                scheduledLength: cps.last?.prefixCount ?? 0,
+                lastFadeStart: cps.last?.addedAt ?? .distantPast,
+                flush: true
+            )
+            if !flushed.newCheckpoints.isEmpty {
+                chats[idx].messages[last].streamCheckpoints
+                    .append(contentsOf: flushed.newCheckpoints)
+            }
+            chats[idx].messages[last].streamPendingTail = flushed.pendingTail
+        }
+        // Same for every reasoning chunk in the timeline.
+        for entry in chats[idx].messages[last].timeline {
+            guard case .reasoning(let entryId, _) = entry else { continue }
+            let rcps = chats[idx].messages[last].reasoningCheckpoints[entryId] ?? []
+            let rpending = chats[idx].messages[last].reasoningPendingTails[entryId] ?? ""
+            guard !rpending.isEmpty else { continue }
+            let flushed = StreamingFade.ingest(
+                delta: "",
+                pendingTail: rpending,
+                scheduledLength: rcps.last?.prefixCount ?? 0,
+                lastFadeStart: rcps.last?.addedAt ?? .distantPast,
+                flush: true
+            )
+            if !flushed.newCheckpoints.isEmpty {
+                chats[idx].messages[last].reasoningCheckpoints[entryId, default: []]
+                    .append(contentsOf: flushed.newCheckpoints)
+            }
+            chats[idx].messages[last].reasoningPendingTails[entryId] = flushed.pendingTail
+        }
         // If the user wasn't looking at this chat when the turn finished,
         // surface the soft-blue unread dot in the sidebar so they can spot
         // the freshly-arrived reply at a glance.

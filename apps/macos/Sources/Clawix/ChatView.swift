@@ -439,62 +439,68 @@ private struct MessageRow: View {
                     }
                 }
             } else {
-                if let summary = message.workSummary,
-                   !message.isError,
-                   !summary.isActive,
-                   !summary.items.isEmpty {
-                    WorkSummaryHeader(summary: summary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                // One streaming-state header sits at the top of the
+                // bubble and walks through three visual states:
+                //   1. "Working" while the very first reasoning chunk is
+                //      being typed (no seconds, no chevron).
+                //   2. "Working for Xs" once a second action has begun
+                //      (live ticking seconds, no chevron).
+                //   3. "Worked for Xs ›" once the turn fully completes
+                //      (chevron, expandable). The reasoning + tool
+                //      entries that accumulated while streaming collapse
+                //      behind the chevron so the user focuses on the
+                //      final answer.
+                //
+                // Crucial nuance: the collapse only happens when the
+                // turn ends, not when the final reply starts arriving.
+                // While streaming, every reasoning chunk and tool call
+                // stays visible and stacks below the header,
+                // accumulating like the expanded "N previous messages"
+                // disclosure used to show. The final answer streams in
+                // alongside them and only becomes the bubble's only
+                // visible content once streaming finishes.
+                let isStreaming = !message.streamingFinished && !message.isError
+                if let summary = message.workSummary, !message.isError {
+                    if isStreaming {
+                        if !message.timeline.isEmpty {
+                            LiveWorkingHeader(
+                                summary: summary,
+                                timelineCount: message.timeline.count
+                            )
+                        }
+                    } else if !message.timeline.isEmpty || !summary.items.isEmpty {
+                        WorkSummaryHeader(
+                            summary: summary,
+                            expanded: $timelineExpanded
+                        ) {
+                            onTimelineExpanded?(message.id)
+                        }
+                    }
                 }
 
-                // Clawix-style timeline: reasoning summary chunks and
-                // tool groups interleave in the order they arrived, so
-                // the user reads "text → Ran 1 command → text → Ran 3
-                // commands" exactly as Clawix emitted them. When the turn
-                // produced any tool work, the prelude collapses into a
-                // "N mensajes anteriores" disclosure inside the bubble,
-                // matching how Clawix hides intermediate work behind the
-                // final answer until the user opens it.
-                let split = splitTimeline(message.timeline)
-                let isStreaming = !message.streamingFinished && !message.isError
-                if !split.hidden.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if isStreaming, let summary = message.workSummary {
-                            LiveWorkingHeader(summary: summary)
-                        } else {
-                            InlinePreviousMessagesLink(
-                                count: split.hidden.reduce(0) { acc, e in
-                                    switch e {
-                                    case .reasoning: return acc + 1
-                                    case .tools(_, let items): return acc + items.count
-                                    }
-                                },
-                                expanded: timelineExpanded
-                            ) {
-                                let willExpand = !timelineExpanded
-                                timelineExpanded.toggle()
-                                if willExpand {
-                                    onTimelineExpanded?(message.id)
-                                }
-                            }
-                        }
-                        Rectangle()
-                            .fill(Color(white: 0.18))
-                            .frame(height: 0.5)
-                            .frame(maxWidth: .infinity)
+                // Show every timeline entry inline while the turn is
+                // still running so the user watches the agent's work
+                // accumulate. After the turn ends, the entries collapse
+                // behind the chevron and only resurface when the user
+                // expands the disclosure.
+                let showTimeline = isStreaming || timelineExpanded
+                if showTimeline {
+                    ForEach(message.timeline) { entry in
+                        timelineEntry(entry)
                     }
-                    if isStreaming || timelineExpanded {
-                        ForEach(split.hidden) { entry in
-                            timelineEntry(entry)
-                        }
-                    }
-                }
-                ForEach(split.visible) { entry in
-                    timelineEntry(entry)
                 }
 
                 if !message.content.isEmpty {
                     let segments = PlanSegmenter.segments(from: message.content)
+                    // The streaming fade is keyed by character offsets
+                    // into `message.content`, so it only lines up cleanly
+                    // when the body is a single, contiguous text segment.
+                    // The instant a Plan card splits the body we skip the
+                    // fade rather than render misaligned ramps.
+                    let onlyTextSegment: Bool = {
+                        guard segments.count == 1, case .text = segments[0] else { return false }
+                        return true
+                    }()
                     ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                         switch segment {
                         case .text(let body):
@@ -503,7 +509,9 @@ private struct MessageRow: View {
                                 weight: message.isError ? .regular : .light,
                                 color: message.isError
                                     ? Color(red: 0.95, green: 0.45, blue: 0.45)
-                                    : Palette.textPrimary
+                                    : Palette.textPrimary,
+                                checkpoints: onlyTextSegment ? message.streamCheckpoints : [],
+                                streamingFinished: message.streamingFinished
                             )
                             .frame(maxWidth: .infinity, alignment: .leading)
                         case .plan(let body, let completed):
@@ -516,8 +524,10 @@ private struct MessageRow: View {
                 // One pill per file the agent edited during this turn,
                 // mirroring the Codex Desktop "README.md / Document · MD"
                 // attachment cards. Order matches first-touch, deduped.
+                // Only surfaces once the turn fully ends so the cards
+                // don't pop in beside the still-streaming reasoning.
                 let changedFiles = Self.changedFilePaths(in: message.timeline)
-                if !changedFiles.isEmpty {
+                if !changedFiles.isEmpty, message.streamingFinished {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(changedFiles, id: \.self) { path in
                             ChangedFileCard(path: path)
@@ -552,7 +562,11 @@ private struct MessageRow: View {
                 }
             }
 
-            if !isEditing {
+            // Action bar (copy / branch / edit / timestamp) only shows
+            // once the assistant turn finishes. While streaming, the
+            // bubble's chrome stays clean: no actions, no timestamp.
+            let actionBarAvailable = isUser || message.streamingFinished
+            if !isEditing, actionBarAvailable {
                 let alwaysVisible = (isUser && isLastUserMessage) || (!isUser && isLastAssistantMessage)
                 actionBar
                     .opacity(alwaysVisible ? 1 : (rowHovered ? 1 : 0))
@@ -589,31 +603,16 @@ private struct MessageRow: View {
         return result
     }
 
-    /// Hidden = every timeline entry up to and including the last `.tools`
-    /// group; visible = whatever reasoning chunks Clawix wrote AFTER the
-    /// last tool finished (the closing summary). Returns hidden=[] when
-    /// the assistant never used a tool, so short answers render flat.
-    private func splitTimeline(
-        _ timeline: [AssistantTimelineEntry]
-    ) -> (hidden: [AssistantTimelineEntry], visible: [AssistantTimelineEntry]) {
-        var lastToolsIdx: Int? = nil
-        for (i, entry) in timeline.enumerated() {
-            if case .tools = entry { lastToolsIdx = i }
-        }
-        guard let idx = lastToolsIdx, idx + 1 < timeline.count else {
-            return ([], timeline)
-        }
-        return (Array(timeline[..<(idx + 1)]), Array(timeline[(idx + 1)...]))
-    }
-
     @ViewBuilder
     private func timelineEntry(_ entry: AssistantTimelineEntry) -> some View {
         switch entry {
-        case .reasoning(_, let text):
+        case .reasoning(let entryId, let text):
             AssistantMarkdownText(
                 text: text,
                 weight: .light,
-                color: Palette.textPrimary
+                color: Palette.textPrimary,
+                checkpoints: message.reasoningCheckpoints[entryId] ?? [],
+                streamingFinished: message.streamingFinished
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         case .tools(_, let items):
@@ -1418,41 +1417,6 @@ struct BranchArrowsIconView: View {
     }
 }
 
-// MARK: - In-bubble "N mensajes anteriores" disclosure
-
-/// Sits at the top of an assistant bubble whose timeline starts with
-/// reasoning + tool work. Renders "N mensajes anteriores" with a chevron
-/// that rotates when toggled, mirroring the disclosure Clawix uses to
-/// hide intermediate work behind the final answer.
-private struct InlinePreviousMessagesLink: View {
-    let count: Int
-    let expanded: Bool
-    let action: () -> Void
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Text(L10n.previousMessages(count))
-                    .font(.system(size: 13))
-                    .foregroundColor(Color(white: hovered ? 0.78 : 0.55))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color(white: hovered ? 0.78 : 0.55))
-                    .rotationEffect(.degrees(expanded ? 90 : 0))
-                    .animation(.easeOut(duration: 0.16), value: expanded)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { h in
-            withAnimation(.easeOut(duration: 0.12)) { hovered = h }
-        }
-        .accessibilityLabel(L10n.previousMessages(count))
-    }
-}
-
 // MARK: - Trailing "Website" preview card
 
 /// Compact link card shown under the last assistant answer when the body
@@ -1533,43 +1497,169 @@ private struct LinkPreviewCard: View {
 
 // MARK: - Assistant markdown rendering
 
+/// Atom + the offset of its first character inside the original streamed
+/// source. The renderer hands that offset to `StreamingFade` so each
+/// character ramps from 0→1 opacity in step with the delta that brought
+/// it in.
+private struct AnnotatedAtom {
+    let atom: AssistantMarkdown.Atom
+    let offset: Int
+}
+
+private struct AnnotatedLine {
+    let atoms: [AnnotatedAtom]
+}
+
+private struct AnnotatedParagraph {
+    let lines: [AnnotatedLine]
+}
+
+private enum AnnotatedBlock {
+    case paragraph(AnnotatedParagraph)
+    case heading(level: Int, line: AnnotatedLine)
+    case bulletList(items: [AnnotatedParagraph])
+    case numberedList(items: [AnnotatedParagraph])
+    case codeBlock(language: String, code: String)
+    case table(headers: [AnnotatedLine], rows: [[AnnotatedLine]])
+}
+
+private func annotateBlocks(_ blocks: [AssistantMarkdown.Block], source: String) -> [AnnotatedBlock] {
+    var resolver = AtomOffsetResolver(source: source)
+    return blocks.map { annotate($0, with: &resolver) }
+}
+
+private func annotate(_ block: AssistantMarkdown.Block, with resolver: inout AtomOffsetResolver) -> AnnotatedBlock {
+    switch block {
+    case .paragraph(let p):
+        return .paragraph(annotate(p, with: &resolver))
+    case .heading(let level, let line):
+        return .heading(level: level, line: annotate(line, with: &resolver))
+    case .bulletList(let items):
+        return .bulletList(items: items.map { annotate($0, with: &resolver) })
+    case .numberedList(let items):
+        return .numberedList(items: items.map { annotate($0, with: &resolver) })
+    case .codeBlock(let language, let code):
+        // The fenced body is rendered as a static block; we still walk the
+        // resolver past it so subsequent atoms keep their offsets aligned.
+        _ = resolver.locate(code)
+        return .codeBlock(language: language, code: code)
+    case .table(let headers, let rows):
+        let hs = headers.map { annotate($0, with: &resolver) }
+        let rs = rows.map { row in row.map { annotate($0, with: &resolver) } }
+        return .table(headers: hs, rows: rs)
+    }
+}
+
+private func annotate(_ paragraph: AssistantMarkdown.Paragraph, with resolver: inout AtomOffsetResolver) -> AnnotatedParagraph {
+    AnnotatedParagraph(lines: paragraph.lines.map { annotate($0, with: &resolver) })
+}
+
+private func annotate(_ line: AssistantMarkdown.Line, with resolver: inout AtomOffsetResolver) -> AnnotatedLine {
+    var atoms: [AnnotatedAtom] = []
+    atoms.reserveCapacity(line.atoms.count)
+    for atom in line.atoms {
+        let needle: String
+        switch atom {
+        case .word(let s):              needle = s
+        case .bold(let s):              needle = s
+        case .italic(let s):            needle = s
+        case .code(let s):              needle = s
+        case .link(let label, _, _):    needle = label
+        }
+        let offset = resolver.locate(needle)
+        atoms.append(AnnotatedAtom(atom: atom, offset: offset))
+    }
+    return AnnotatedLine(atoms: atoms)
+}
+
 /// Renders assistant prose with the markdown subset Clawix emits:
 /// paragraphs, ATX headings, bullet/numbered lists, GitHub-style tables,
 /// fenced code blocks, plus inline `**bold**`, `*italic*`, `` `code` ``,
 /// and `[label](url)` links. Each link is its own hoverable atom inside
 /// a flow layout so tap routes to the sidebar browser and a dotted hover
 /// underline tells the user it is interactive.
+///
+/// While the body is still streaming (or just finished and the trailing
+/// fade hasn't completed yet) the renderer wraps in `TimelineView` and
+/// applies a per-character opacity ramp from `StreamingFade`, so newly
+/// arrived characters glide in from invisible while older ones stay
+/// settled at full opacity.
 private struct AssistantMarkdownText: View {
     let text: String
     let weight: Font.Weight
     let color: Color
+    var checkpoints: [StreamCheckpoint] = []
+    var streamingFinished: Bool = true
     @EnvironmentObject var appState: AppState
+    /// Bumped when the trailing fade window closes, so the body
+    /// re-evaluates and tears down the `TimelineView` once nothing is
+    /// animating any more.
+    @State private var animationTick: Int = 0
 
     var body: some View {
-        let blocks = AssistantMarkdown.parseBlocks(text)
+        let blocks = annotateBlocks(AssistantMarkdown.parseBlocks(text), source: text)
+        let now = Date()
+        let animating = StreamingFade.isAnimating(
+            checkpoints: checkpoints,
+            finished: streamingFinished,
+            now: now
+        )
+
+        Group {
+            if animating {
+                TimelineView(.animation) { ctx in
+                    blocksView(blocks, now: ctx.date)
+                }
+            } else {
+                blocksView(blocks, now: now)
+            }
+        }
+        .task(id: TickKey(timestamp: checkpoints.last?.addedAt, finished: streamingFinished)) {
+            await scheduleSettle()
+        }
+    }
+
+    private func scheduleSettle() async {
+        guard let last = checkpoints.last else { return }
+        let remaining = StreamingFade.duration - Date().timeIntervalSince(last.addedAt)
+        if remaining > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+        }
+        animationTick &+= 1
+    }
+
+    private struct TickKey: Hashable {
+        let timestamp: Date?
+        let finished: Bool
+    }
+
+    @ViewBuilder
+    private func blocksView(_ blocks: [AnnotatedBlock], now: Date) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block)
+                blockView(block, now: now)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     @ViewBuilder
-    private func blockView(_ block: AssistantMarkdown.Block) -> some View {
+    private func blockView(_ block: AnnotatedBlock, now: Date) -> some View {
         switch block {
         case .paragraph(let p):
-            ParagraphFlow(paragraph: p, weight: weight, color: color) { url in
+            ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                 appState.openLinkInBrowser(url)
             }
             .fixedSize(horizontal: false, vertical: true)
 
         case .heading(let level, let line):
             ParagraphFlow(
-                paragraph: AssistantMarkdown.Paragraph(lines: [line]),
+                paragraph: AnnotatedParagraph(lines: [line]),
                 weight: .semibold,
                 color: color,
-                fontSize: headingFontSize(level)
+                fontSize: headingFontSize(level),
+                checkpoints: checkpoints,
+                now: now
             ) { url in
                 appState.openLinkInBrowser(url)
             }
@@ -1584,7 +1674,7 @@ private struct AssistantMarkdownText: View {
                             .frame(width: 5, height: 5)
                             .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + 4 }
                             .frame(width: 10, alignment: .leading)
-                        ParagraphFlow(paragraph: item, weight: weight, color: color) { url in
+                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                             appState.openLinkInBrowser(url)
                         }
                         .fixedSize(horizontal: false, vertical: true)
@@ -1601,7 +1691,7 @@ private struct AssistantMarkdownText: View {
                             .font(.system(size: 13.5, weight: weight))
                             .foregroundColor(color)
                             .frame(width: 20, alignment: .leading)
-                        ParagraphFlow(paragraph: item, weight: weight, color: color) { url in
+                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                             appState.openLinkInBrowser(url)
                         }
                         .fixedSize(horizontal: false, vertical: true)
@@ -1611,7 +1701,14 @@ private struct AssistantMarkdownText: View {
             }
 
         case .table(let headers, let rows):
-            AssistantTableView(headers: headers, rows: rows, weight: weight, color: color) { url in
+            AssistantTableView(
+                headers: headers,
+                rows: rows,
+                weight: weight,
+                color: color,
+                checkpoints: checkpoints,
+                now: now
+            ) { url in
                 appState.openLinkInBrowser(url)
             }
 
@@ -1635,10 +1732,12 @@ private struct AssistantMarkdownText: View {
 /// row, leading-aligned cells with generous vertical padding and no
 /// vertical separators. Columns size by intrinsic content via `Grid`.
 private struct AssistantTableView: View {
-    let headers: [AssistantMarkdown.Line]
-    let rows: [[AssistantMarkdown.Line]]
+    let headers: [AnnotatedLine]
+    let rows: [[AnnotatedLine]]
     let weight: Font.Weight
     let color: Color
+    var checkpoints: [StreamCheckpoint] = []
+    var now: Date = .distantPast
     let onLinkTap: (URL) -> Void
 
     private let divider = Color.white.opacity(0.14)
@@ -1665,7 +1764,7 @@ private struct AssistantTableView: View {
                     .gridCellColumns(columnCount)
                 GridRow {
                     ForEach(0..<columnCount, id: \.self) { idx in
-                        cellView(idx < row.count ? row[idx] : AssistantMarkdown.Line(atoms: []), weight: weight)
+                        cellView(idx < row.count ? row[idx] : AnnotatedLine(atoms: []), weight: weight)
                             .padding(.leading, idx == 0 ? 0 : cellHPad)
                             .gridColumnAlignment(.leading)
                     }
@@ -1677,11 +1776,13 @@ private struct AssistantTableView: View {
     }
 
     @ViewBuilder
-    private func cellView(_ line: AssistantMarkdown.Line, weight: Font.Weight) -> some View {
+    private func cellView(_ line: AnnotatedLine, weight: Font.Weight) -> some View {
         ParagraphFlow(
-            paragraph: AssistantMarkdown.Paragraph(lines: [line]),
+            paragraph: AnnotatedParagraph(lines: [line]),
             weight: weight,
-            color: color
+            color: color,
+            checkpoints: checkpoints,
+            now: now
         ) { url in
             onLinkTap(url)
         }
@@ -1764,22 +1865,27 @@ private struct AssistantCodeBlockView: View {
 /// word lets the link atoms participate in line wrapping while letting us
 /// attach per-link `.onHover` and `.onTapGesture` modifiers.
 private struct ParagraphFlow: View {
-    let paragraph: AssistantMarkdown.Paragraph
+    let paragraph: AnnotatedParagraph
     let weight: Font.Weight
     let color: Color
     var fontSize: CGFloat = 13.5
+    var checkpoints: [StreamCheckpoint] = []
+    var now: Date = .distantPast
     let onLinkTap: (URL) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(paragraph.lines.enumerated()), id: \.offset) { _, line in
                 FlowLayout(horizontalSpacing: 0, verticalSpacing: 6) {
-                    ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, atom in
+                    ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, annotated in
                         AtomView(
-                            atom: atom,
+                            atom: annotated.atom,
+                            sourceOffset: annotated.offset,
                             weight: weight,
                             color: color,
                             fontSize: fontSize,
+                            checkpoints: checkpoints,
+                            now: now,
                             onLinkTap: onLinkTap
                         )
                     }
@@ -1791,10 +1897,26 @@ private struct ParagraphFlow: View {
 
 private struct AtomView: View {
     let atom: AssistantMarkdown.Atom
+    let sourceOffset: Int
     let weight: Font.Weight
     let color: Color
     var fontSize: CGFloat = 13.5
+    var checkpoints: [StreamCheckpoint] = []
+    var now: Date = .distantPast
     let onLinkTap: (URL) -> Void
+
+    /// All characters in an atom belong to the same word (the parser
+    /// splits at whitespace), so the entire atom rides one opacity value
+    /// taken from its first character. Keeps per-frame work to a single
+    /// multiplier instead of rebuilding an attributed string.
+    private var atomOpacity: Double {
+        guard !checkpoints.isEmpty else { return 1.0 }
+        return StreamingFade.opacity(
+            offset: sourceOffset,
+            checkpoints: checkpoints,
+            now: now
+        )
+    }
 
     var body: some View {
         switch atom {
@@ -1802,14 +1924,17 @@ private struct AtomView: View {
             Text(s)
                 .font(.system(size: fontSize, weight: weight))
                 .foregroundColor(color)
+                .opacity(atomOpacity)
         case .bold(let s):
             Text(s)
                 .font(.system(size: fontSize, weight: .semibold))
                 .foregroundColor(color)
+                .opacity(atomOpacity)
         case .italic(let s):
             Text(s)
                 .font(.system(size: fontSize, weight: weight).italic())
                 .foregroundColor(color)
+                .opacity(atomOpacity)
         case .code(let s):
             Text(s)
                 .font(.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
@@ -1822,8 +1947,10 @@ private struct AtomView: View {
                 )
                 .padding(.horizontal, 2)
                 .offset(y: -3)
+                .opacity(atomOpacity)
         case .link(let label, let url, let isBareUrl):
             LinkAtom(label: label, url: url, isBareUrl: isBareUrl, weight: weight, onTap: onLinkTap)
+                .opacity(atomOpacity)
         }
     }
 }

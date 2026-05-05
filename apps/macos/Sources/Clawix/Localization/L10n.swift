@@ -116,6 +116,10 @@ enum L10n {
 
     // MARK: - Work summary header
 
+    static var working: String {
+        String(localized: "Working", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
     static func workingFor(seconds: Int) -> String {
         let elapsed = formatElapsed(seconds)
         return String(localized: "Working for \(elapsed)", bundle: AppLocale.bundle, locale: AppLocale.current)
@@ -144,7 +148,8 @@ enum L10n {
     /// in a single tools group ("Used Revenuecat 3 times"). The N=1 case
     /// keeps using `usedTool` so the row reads naturally.
     static func usedToolTimes(_ name: String, _ count: Int) -> String {
-        String(localized: "Used \(name) \(count) times", bundle: AppLocale.bundle, locale: AppLocale.current)
+        let format = L10n.t("Used %@ %lld times")
+        return String(format: format, locale: AppLocale.current, name, count)
     }
 
     // MARK: - Search

@@ -9,7 +9,7 @@ struct ThinkingShimmer: View {
     var font: Font = .system(size: 13.5)
     var baseOpacity: Double = 0.40
     var peakOpacity: Double = 0.78
-    var cycleDuration: Double = 2.2
+    var cycleDuration: Double = 3.0
     var radius: Double = 3.4
 
     var body: some View {

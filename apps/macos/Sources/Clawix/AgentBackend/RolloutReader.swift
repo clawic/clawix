@@ -9,10 +9,12 @@ import Foundation
 struct RolloutHistoryEntry {
     enum Role { case user, assistant }
     let role: Role
-    /// Final visible text for this entry. For assistants this is empty
-    /// when all the body lives in `timeline` as `.reasoning` chunks
-    /// (Clawix's "commentary" phase) — the renderer falls back to the
-    /// timeline in that case.
+    /// Final visible body for this entry. For assistants it mirrors what
+    /// the live streaming pipeline writes to `ChatMessage.content` after
+    /// `markAssistantCompleted`: the last `phase=final_answer` text, or
+    /// the last reasoning chunk if the turn was commentary-only. The
+    /// renderer collapses the timeline once the turn is done, so this
+    /// field is what the user actually sees in a hydrated rollout.
     let text: String
     let timestamp: Date
     let timeline: [AssistantTimelineEntry]
@@ -442,9 +444,27 @@ private struct PendingAssistant {
     }
 
     func finalize() -> RolloutHistoryEntry {
-        RolloutHistoryEntry(
+        // Mirror the live streaming pipeline: ChatMessage.content holds
+        // the last final_answer text. Commentary-only turns fall back to
+        // the last reasoning chunk so the body never goes invisible (the
+        // renderer collapses the timeline behind the chevron once the
+        // turn is finished).
+        let body: String
+        if !finalText.isEmpty {
+            body = finalText
+        } else {
+            var lastReasoning = ""
+            for entry in timeline.reversed() {
+                if case .reasoning(_, let text) = entry {
+                    lastReasoning = text
+                    break
+                }
+            }
+            body = lastReasoning
+        }
+        return RolloutHistoryEntry(
             role: .assistant,
-            text: "",
+            text: body,
             timestamp: timestamp,
             timeline: timeline
         )

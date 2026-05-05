@@ -50,7 +50,7 @@ struct ToolGroupView: View {
                 color: .white,
                 baseOpacity: 0.30,
                 peakOpacity: 0.80,
-                cycleDuration: 2.2,
+                cycleDuration: 3.0,
                 radius: 6.0
             )
         }
