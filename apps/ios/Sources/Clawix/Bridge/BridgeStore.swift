@@ -2,18 +2,25 @@ import Foundation
 import ClawixCore
 import Observation
 
-// Source-of-truth state container for the SwiftUI tree. Phase 3 ships
-// it backed by mock data so the views render before the real WS
-// client (Phase 4) is wired. Every public mutation is the same
-// surface the real client will drive.
-
 @Observable
 final class BridgeStore {
+
+    /// Path the bridge client is using. `lan` covers Bonjour-resolved
+    /// endpoints AND direct IPv4 candidates from the QR (any private
+    /// LAN address, including ethernet). `tailscale` is the CGNAT
+    /// 100.64.0.0/10 path: works from anywhere as long as both ends
+    /// are on the same Tailnet. Surfaced in the UI so the user can
+    /// tell at a glance whether they are on the fast home path or the
+    /// remote one.
+    enum Route: String, Equatable {
+        case lan
+        case tailscale
+    }
 
     enum ConnectionState: Equatable {
         case unpaired
         case connecting
-        case connected(macName: String?)
+        case connected(macName: String?, via: Route?)
         case error(message: String)
     }
 
@@ -22,43 +29,35 @@ final class BridgeStore {
     var messagesByChat: [String: [WireMessage]] = [:]
     var openChatId: String?
 
+    @ObservationIgnored
+    private var client: BridgeClient?
+
     init() {}
 
-    static func mock() -> BridgeStore {
-        let s = BridgeStore()
-        s.connection = .connected(macName: "studio Mac")
-        s.chats = MockData.chats
-        s.messagesByChat = [
-            MockData.chats[0].id: MockData.messages
-        ]
-        return s
+    @MainActor
+    func attach(client: BridgeClient) {
+        self.client = client
     }
 
-    // Intents the UI calls. Phase 4 will route these through the WS
-    // client; for Phase 3 they mutate the local mock store so the
-    // SwiftUI previews behave as expected.
-
+    @MainActor
     func openChat(_ chatId: String) {
         openChatId = chatId
         if messagesByChat[chatId] == nil {
             messagesByChat[chatId] = []
         }
+        client?.openChat(chatId)
     }
 
+    @MainActor
     func closeChat() {
         openChatId = nil
     }
 
+    @MainActor
     func sendPrompt(chatId: String, text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let userMsg = WireMessage(
-            id: UUID().uuidString,
-            role: .user,
-            content: trimmed,
-            timestamp: Date()
-        )
-        messagesByChat[chatId, default: []].append(userMsg)
+        client?.sendPrompt(chatId: chatId, text: trimmed)
     }
 
     func messages(for chatId: String) -> [WireMessage] {
@@ -67,5 +66,15 @@ final class BridgeStore {
 
     func chat(_ chatId: String) -> WireChat? {
         chats.first { $0.id == chatId }
+    }
+
+    static func mock() -> BridgeStore {
+        let s = BridgeStore()
+        s.connection = .connected(macName: "studio Mac", via: .lan)
+        s.chats = MockData.chats
+        s.messagesByChat = [
+            MockData.chats[0].id: MockData.messages
+        ]
+        return s
     }
 }
