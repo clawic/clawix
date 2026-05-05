@@ -118,6 +118,11 @@ enum RootNav: Hashable {
     case project(String)
 }
 
+private struct PresentedFile: Identifiable, Equatable {
+    let path: String
+    var id: String { path }
+}
+
 private struct RootView: View {
     @Bindable var store: BridgeStore
     @Binding var creds: Credentials?
@@ -125,6 +130,7 @@ private struct RootView: View {
     let onUnpair: () -> Void
 
     @State private var path = NavigationPath()
+    @State private var presentedFile: PresentedFile?
 
     var body: some View {
         ZStack {
@@ -143,16 +149,30 @@ private struct RootView: View {
                         onOpenProject: { cwd in
                             path.append(RootNav.project(cwd))
                         },
+                        onPair: onPair,
                         onUnpair: onUnpair
                     )
                     .toolbar(.hidden, for: .navigationBar)
+                    .task {
+                        // Honor `CLAWIX_MOCK_OPEN_FIRST_CHAT`: bootstrap()
+                        // seeds `store.openChatId`, but navigation lives
+                        // in this view's `path`. Push it on first appear
+                        // so the designer lands directly in the chat
+                        // detail without a manual tap.
+                        if path.isEmpty, let id = store.openChatId {
+                            path.append(RootNav.chat(id))
+                        }
+                    }
                     .navigationDestination(for: RootNav.self) { target in
                         switch target {
                         case .chat(let id):
                             ChatDetailView(
                                 store: store,
                                 chatId: id,
-                                onBack: popLast
+                                onBack: popLast,
+                                onOpenFile: { filePath in
+                                    presentedFile = PresentedFile(path: filePath)
+                                }
                             )
                         case .project(let cwd):
                             let project = DerivedProject.from(chats: store.chats.filter { !$0.isArchived })
@@ -165,11 +185,25 @@ private struct RootView: View {
                                         store.openChat(id)
                                         path.append(RootNav.chat(id))
                                     },
+                                    onSwitchProject: { newCwd in
+                                        // Replace the current project screen
+                                        // instead of pushing on top, so back
+                                        // still goes to the home and the
+                                        // stack stays one project deep.
+                                        if !path.isEmpty {
+                                            path.removeLast()
+                                        }
+                                        path.append(RootNav.project(newCwd))
+                                    },
                                     onBack: popLast
                                 )
                             }
                         }
                     }
+                }
+                .sheet(item: $presentedFile) { item in
+                    FileViewerView(store: store, path: item.path)
+                        .preferredColorScheme(.dark)
                 }
                 .onChange(of: path) { _, newValue in
                     // Keep the legacy `openChatId` flag in sync: when the

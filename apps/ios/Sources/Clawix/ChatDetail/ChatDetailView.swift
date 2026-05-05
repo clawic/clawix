@@ -22,6 +22,7 @@ struct ChatDetailView: View {
     @Bindable var store: BridgeStore
     let chatId: String
     let onBack: () -> Void
+    var onOpenFile: (String) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
     @State private var composerText: String = ""
@@ -38,6 +39,7 @@ struct ChatDetailView: View {
         if messages.count <= cap { return messages }
         return Array(messages.suffix(cap))
     }
+    private var hasLoaded: Bool { store.hasLoadedMessages(chatId) }
 
     var body: some View {
         transcript
@@ -70,15 +72,22 @@ struct ChatDetailView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 22) {
                 Color.clear.frame(height: 8)
-                if renderedMessages.isEmpty {
-                    emptyState
-                        .scaleEffect(x: 1, y: -1)
-                } else {
+                // Gate on `hasLoaded`: while the snapshot is in flight
+                // the transcript is empty (just the spacers). When the
+                // snapshot lands the messages appear in a single frame,
+                // already anchored to the visual bottom thanks to the
+                // Y-flip. NO opacity fade and NO animation: any
+                // animation here interpolates the LazyVStack's height
+                // growing from ~38px to thousands, which under the
+                // bottom-anchored flipped scroll reads as content
+                // scrolling up from below. The user wants zero motion.
+                if hasLoaded {
                     ForEach(Array(renderedMessages.reversed()), id: \.id) { msg in
                         MessageView(
                             message: msg,
                             isReasoningExpanded: expandedReasoning.contains(msg.id),
-                            toggleReasoning: { toggleReasoning(messageId: msg.id) }
+                            toggleReasoning: { toggleReasoning(messageId: msg.id) },
+                            onOpenFile: onOpenFile
                         )
                         .scaleEffect(x: 1, y: -1)
                         .id(msg.id)
@@ -87,28 +96,14 @@ struct ChatDetailView: View {
                 Color.clear.frame(height: 30)
             }
             .padding(.horizontal, AppLayout.screenHorizontalPadding)
+            // Disable any inherited implicit animation around the
+            // hasLoaded -> content transition. Pinning the transaction
+            // animation to nil here guarantees the snapshot arrives in
+            // place without a height tween.
+            .transaction { $0.animation = nil }
         }
         .scaleEffect(x: 1, y: -1)
         .scrollIndicators(.hidden)
-    }
-
-    @ViewBuilder
-    private var emptyState: some View {
-        VStack(alignment: .center, spacing: 10) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 28, weight: .regular))
-                .foregroundStyle(Palette.textTertiary)
-            Text("No messages loaded")
-                .font(Typography.bodyEmphasized)
-                .foregroundStyle(Palette.textSecondary)
-            Text("Open this chat on the Mac to load its history, or send a prompt below to start a turn.")
-                .font(Typography.secondaryFont)
-                .foregroundStyle(Palette.textTertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 80)
     }
 
     // MARK: Top bar
@@ -141,7 +136,7 @@ struct ChatDetailView: View {
 
     private var titlePill: some View {
         Text(chat?.title ?? "Chat")
-            .font(.system(size: 16, weight: .semibold))
+            .font(BodyFont.system(size: 16, weight: .semibold))
             .foregroundStyle(Palette.textPrimary)
             .lineLimit(1)
             .truncationMode(.middle)
@@ -156,7 +151,7 @@ struct ChatDetailView: View {
                 .fill(Color(red: 0.30, green: 0.78, blue: 0.45))
                 .frame(width: 7, height: 7)
             Text("Working")
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundStyle(Palette.textPrimary)
         }
         .padding(.horizontal, 14)
@@ -204,6 +199,7 @@ private struct MessageView: View {
     let message: WireMessage
     let isReasoningExpanded: Bool
     let toggleReasoning: () -> Void
+    var onOpenFile: (String) -> Void = { _ in }
 
     var body: some View {
         if message.role == .user {
@@ -253,11 +249,8 @@ private struct MessageView: View {
             }
 
             if !message.content.isEmpty {
-                Text(message.content)
-                    .font(Typography.bodyFont)
-                    .foregroundStyle(Palette.textPrimary)
+                AssistantMarkdownView(text: message.content)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineSpacing(3)
             } else if !message.streamingFinished && message.timeline.isEmpty {
                 Text("Thinking...")
                     .font(Typography.bodyFont)
@@ -265,7 +258,7 @@ private struct MessageView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            ChangedFilePills(timeline: message.timeline)
+            ChangedFilePills(timeline: message.timeline, onOpen: onOpenFile)
 
             if !message.streamingFinished && !message.content.isEmpty {
                 StreamingDots()
@@ -278,31 +271,31 @@ private struct MessageView: View {
     }
 }
 
-// Bare-icon action row that sits under every completed assistant
-// reply. Only `copy` is functional today; the rest are placeholders
-// so the surface matches the ChatGPT-style chat the user already
-// has muscle memory for. They tap and do nothing for now, by design.
 private struct MessageActions: View {
     let content: String
     @State private var copied: Bool = false
 
     var body: some View {
         HStack(spacing: 18) {
-            actionButton(systemName: copied ? "checkmark" : "doc.on.doc", action: copy)
-            actionButton(systemName: "speaker.wave.2", action: {})
-            actionButton(systemName: "hand.thumbsup", action: {})
-            actionButton(systemName: "hand.thumbsdown", action: {})
-            actionButton(systemName: "square.and.arrow.up", action: {})
-            actionButton(systemName: "ellipsis", action: {})
+            copyButton
         }
     }
 
-    private func actionButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(Palette.textTertiary)
-                .frame(width: 24, height: 24)
+    private var copyButton: some View {
+        Button(action: copy) {
+            ZStack {
+                if copied {
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Palette.textTertiary)
+                        .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                } else {
+                    CopyIconView(color: Palette.textTertiary, lineWidth: 0.85)
+                        .frame(width: 14, height: 14)
+                        .transition(.opacity)
+                }
+            }
+            .frame(width: 24, height: 24)
         }
         .buttonStyle(.plain)
     }
@@ -328,7 +321,7 @@ private struct ReasoningDisclosure: View {
             Button(action: toggle) {
                 HStack(spacing: 6) {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundStyle(Palette.textTertiary)
                     Text("Reasoning")
                         .font(Typography.captionFont)
