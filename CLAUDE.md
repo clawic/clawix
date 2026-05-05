@@ -139,6 +139,7 @@ The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph t
 | Folder (open)      | `FolderOpenIcon`                     | `FolderOpenIcon.swift`        |
 | Folder (closed)    | `FolderClosedIcon`                   | `FolderOpenIcon.swift`        |
 | Folder add         | `FolderAddIcon`                      | `FolderOpenIcon.swift`        |
+| Folder stack       | `FolderStackIcon`                    | `FolderStackIcon.swift`       |
 | Branch (git)       | `BranchIcon`                         | `FolderOpenIcon.swift`        |
 | Pin                | `PinIcon`                            | `FolderOpenIcon.swift`        |
 | Archive / unarchive| `ArchiveIcon` / `UnarchiveIcon`      | `FolderOpenIcon.swift`        |
@@ -155,6 +156,7 @@ The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph t
 | Pinned (sidebar)   | `PinnedIcon` (`Shape`)               | `SidebarView.swift` (legacy spot) |
 | Funnel (filter)    | `OrganizeFunnelIcon`                 | `SidebarView.swift` (legacy spot) |
 | Expand (settings)  | `ExpandIconButton` (composite)       | `SettingsView.swift` (legacy spot) |
+| Collapse / expand corners | `CornerBracketsIcon`           | `CornerBracketsIcon.swift`         |
 
 Hard rules:
 
@@ -209,3 +211,22 @@ Constants and helpers already available (in `ContentView.swift`):
 - `extension AnyTransition { static func softNudge(x:y:) }` (in `ComposerView.swift`).
 
 Before adding a new dropdown, look at `ModelMenuPopup` and replicate its structure. If the behavior differs (side submenu, sectioned with header, divider), copy the building blocks `ModelMenuHeader`, `ModelMenuDivider`, `ModelMenuCheckRow`, `ModelMenuChevronRow`, `ModelMenuDescriptionRow` or build a new one with the same paddings and `MenuRowHover`.
+
+# iOS app · `apps/ios/`
+
+## Design language: iOS 26 Liquid Glass
+
+Default visual identity for every screen, view, modifier and reusable widget on iOS is **iOS 26 Liquid Glass**. Floating chrome (top-bar pills, composer, action buttons, sheets, badges, scroll-to-bottom dots, etc.) is built on `glassEffect(_:in:)` and grouped with `GlassEffectContainer` so adjacent shapes morph together when they animate.
+
+Hard rules:
+
+- **Always** prefer the native iOS 26 APIs over manual translucency. `.ultraThinMaterial`, custom blur views, opaque dark fills with low alpha, hand-rolled "fake glass" gradient stacks: NO. `.glassEffect(.regular, in: Capsule(style: .continuous))`, `.glassEffect(.regular, in: Circle())`, `.glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))`, `GlassEffectContainer`: YES.
+- **Always** keep deployment target at iOS 26 so the call sites can use `.glassEffect()` directly without `if #available` ladders. If a view ever has to ship to an older iOS, gate it with availability and fall back, but the code path used by default is the iOS 26 one.
+- **Pure black canvas** (`Color.black`) is the substrate beneath glass capsules: refraction reads cleanest against full black, not stacked dark grays.
+- **Pill heights ≈ 50pt** for top-bar chrome, **composer ≈ 64pt**: glass needs vertical room for the highlight + refraction to read, thinner pills look like flat capsules.
+- **No solid stroke borders on glass shapes**. The system glass effect already supplies the rim highlight; layering `.strokeBorder(Color.white.opacity(0.10))` on top kills the refraction.
+- **Squircle rule still applies**: any RoundedRectangle passed as the shape to `.glassEffect(in:)` must use `style: .continuous`. Capsule and Circle are fine as-is.
+
+Canonical helpers live in `Theme/GlassPill.swift` (`glassCapsule()`, `glassCircle()`, `glassRounded(radius:)`, `GlassIconButton`). Reuse them; do not re-derive the modifier chain by hand. Color and size tokens live in `Theme/DesignTokens.swift` (`Palette`, `AppLayout`, `Typography`); add to those files instead of inlining magic numbers.
+
+Reference for layout, hierarchy and motion: ChatGPT iOS. The chat detail surface (light bubble for user messages, bare text for assistant, floating glass composer, two glass clusters in the top bar) is the visual baseline; copy paddings, radii and weights from there before inventing.
