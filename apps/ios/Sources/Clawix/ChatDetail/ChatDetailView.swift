@@ -1,87 +1,194 @@
 import SwiftUI
 import ClawixCore
+#if canImport(UIKit)
+import UIKit
+#endif
+
+// ChatGPT-iOS-styled chat surface, rebuilt on iOS 26 Liquid Glass.
+// Architecture:
+//   - pure black canvas filling the window
+//   - transcript scrolls edge-to-edge underneath the floating chrome
+//   - top bar: two glass clusters in `GlassEffectContainer`s so they
+//     morph as a unit when system animations run (rotation, dynamic
+//     type, working pill appearing)
+//   - composer: a tall floating glass capsule anchored to the bottom
+//     safe area, with the transcript fading behind it
+//   - user messages render as light squircle bubbles, assistant
+//     responses as bare text directly on black
+// `glassEffect(in:)` is the iOS 26 API; the deployment target was
+// bumped to 26.0 to use it without availability noise everywhere.
 
 struct ChatDetailView: View {
     @Bindable var store: BridgeStore
     let chatId: String
     let onBack: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
     @State private var composerText: String = ""
     @State private var expandedReasoning: Set<String> = []
+    @State private var hasDoneInitialScroll: Bool = false
 
     private var chat: WireChat? { store.chat(chatId) }
     private var messages: [WireMessage] { store.messages(for: chatId) }
+    // Defensive cap: a chat with thousands of messages would spend
+    // seconds laying out the LazyVStack on first scroll-to-bottom and
+    // can lock the main thread during that window. Render only the
+    // tail; "load older" can come later.
+    private var renderedMessages: [WireMessage] {
+        let cap = 250
+        if messages.count <= cap { return messages }
+        return Array(messages.suffix(cap))
+    }
 
     var body: some View {
-        ZStack {
-            Palette.background.ignoresSafeArea()
-            VStack(spacing: 0) {
+        transcript
+            .background(Palette.background.ignoresSafeArea())
+            .safeAreaInset(edge: .top, spacing: 0) {
                 topBar
-                Divider()
-                    .background(Palette.borderSubtle)
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 18) {
-                            ForEach(messages, id: \.id) { msg in
-                                MessageBubble(
-                                    message: msg,
-                                    isReasoningExpanded: expandedReasoning.contains(msg.id),
-                                    toggleReasoning: { toggleReasoning(messageId: msg.id) }
-                                )
-                                .id(msg.id)
-                            }
-                            Spacer().frame(height: 12)
-                        }
-                        .padding(.horizontal, AppLayout.screenHorizontalPadding)
-                        .padding(.top, 16)
-                    }
-                    .scrollIndicators(.hidden)
-                    .fadeEdge(height: 32)
-                    .onChange(of: messages.last?.id) { _, last in
-                        guard let last else { return }
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            proxy.scrollTo(last, anchor: .bottom)
-                        }
-                    }
-                }
-                ComposerView(text: $composerText, onSend: send)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 6)
+                    .padding(.bottom, 8)
             }
-        }
-        .toolbar(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                bottomChrome
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationBarBackButtonHidden(true)
     }
 
-    private var topBar: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(MenuStyle.rowText)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Palette.cardFill)
-                    )
+    // MARK: Transcript
+
+    private var transcript: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    Color.clear.frame(height: 8)
+                    if renderedMessages.isEmpty {
+                        emptyState
+                    } else {
+                        ForEach(renderedMessages, id: \.id) { msg in
+                            MessageView(
+                                message: msg,
+                                isReasoningExpanded: expandedReasoning.contains(msg.id),
+                                toggleReasoning: { toggleReasoning(messageId: msg.id) }
+                            )
+                            .id(msg.id)
+                        }
+                    }
+                    Color.clear.frame(height: 30)
+                }
+                .padding(.horizontal, AppLayout.screenHorizontalPadding)
             }
-            .buttonStyle(.plain)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(chat?.title ?? "Chat")
-                    .font(Typography.bodyEmphasized)
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                if let chat, let branch = chat.branch {
-                    Text(branch)
-                        .font(Typography.captionFont)
-                        .foregroundStyle(Palette.textTertiary)
+            .scrollIndicators(.hidden)
+            .onChange(of: renderedMessages.last?.id) { _, last in
+                guard let last else { return }
+                if !hasDoneInitialScroll {
+                    // First batch of messages just arrived. Defer the
+                    // jump-to-bottom one runloop tick so SwiftUI gets
+                    // to lay out the items first; doing it
+                    // synchronously inside this onChange has been
+                    // observed to freeze the UI on heavy chats.
+                    hasDoneInitialScroll = true
+                    DispatchQueue.main.async {
+                        proxy.scrollTo(last, anchor: .bottom)
+                    }
+                } else {
+                    withAnimation(.easeOut(duration: 0.22)) {
+                        proxy.scrollTo(last, anchor: .bottom)
+                    }
                 }
             }
-            Spacer()
-            if chat?.hasActiveTurn == true {
-                ActiveTurnPill()
-            }
         }
-        .padding(.horizontal, AppLayout.screenHorizontalPadding)
-        .padding(.vertical, 10)
     }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(alignment: .center, spacing: 10) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 28, weight: .regular))
+                .foregroundStyle(Palette.textTertiary)
+            Text("No messages loaded")
+                .font(Typography.bodyEmphasized)
+                .foregroundStyle(Palette.textSecondary)
+            Text("Open this chat on the Mac to load its history, or send a prompt below to start a turn.")
+                .font(Typography.secondaryFont)
+                .foregroundStyle(Palette.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+    }
+
+    // MARK: Top bar
+
+    private var topBar: some View {
+        HStack(spacing: 8) {
+            GlassIconButton(systemName: "chevron.left", action: handleBack)
+            titlePill
+
+            Spacer()
+
+            if chat?.hasActiveTurn == true {
+                workingPill
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
+            }
+
+            GlassIconButton(systemName: "ellipsis", action: {})
+        }
+        .animation(.easeOut(duration: 0.18), value: chat?.hasActiveTurn)
+    }
+
+    private func handleBack() {
+        // Belt-and-braces: call the explicit pop callback first, then
+        // ask SwiftUI's environment to dismiss as a fallback. Either
+        // path works on iOS 26; calling both is harmless because the
+        // second one is a no-op once the view is popping.
+        onBack()
+        dismiss()
+    }
+
+    private var titlePill: some View {
+        Text(chat?.title ?? "Chat")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(Palette.textPrimary)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .padding(.horizontal, 18)
+            .frame(height: AppLayout.topBarPillHeight)
+            .glassCapsule()
+    }
+
+    private var workingPill: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color(red: 0.30, green: 0.78, blue: 0.45))
+                .frame(width: 7, height: 7)
+            Text("Working")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.textPrimary)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 36)
+        .glassCapsule()
+    }
+
+    // MARK: Bottom chrome
+
+    private var bottomChrome: some View {
+        ComposerView(text: $composerText, onSend: send)
+            .padding(.bottom, 6)
+            .background(
+                LinearGradient(
+                    colors: [Palette.background.opacity(0), Palette.background],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+            )
+    }
+
+    // MARK: Actions
 
     private func toggleReasoning(messageId: String) {
         withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
@@ -100,7 +207,9 @@ struct ChatDetailView: View {
     }
 }
 
-private struct MessageBubble: View {
+// MARK: - Message rendering
+
+private struct MessageView: View {
     let message: WireMessage
     let isReasoningExpanded: Bool
     let toggleReasoning: () -> Void
@@ -115,40 +224,105 @@ private struct MessageBubble: View {
 
     private var userBubble: some View {
         HStack {
-            Spacer(minLength: 40)
+            Spacer(minLength: 48)
             Text(message.content)
                 .font(Typography.bodyFont)
-                .foregroundStyle(Palette.textPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .foregroundStyle(Palette.userBubbleText)
+                .multilineTextAlignment(.leading)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Palette.selFill)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
+                    RoundedRectangle(cornerRadius: AppLayout.userBubbleRadius, style: .continuous)
+                        .fill(Palette.userBubbleFill)
                 )
         }
     }
 
     private var assistantBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if !message.reasoningText.isEmpty {
+        VStack(alignment: .leading, spacing: 12) {
+            // Full-Mac parity: timeline interleaves reasoning chunks
+            // with tool-group rows, plus the elapsed-time disclosure
+            // header summarizing the whole turn. Skipped when neither
+            // is present (short answers stay flat).
+            if !message.timeline.isEmpty || message.workSummary != nil {
+                AssistantTimelineView(
+                    timeline: message.timeline,
+                    workSummary: message.workSummary,
+                    isStreaming: !message.streamingFinished
+                )
+            } else if !message.reasoningText.isEmpty {
+                // Legacy path: rollouts that didn't carry a structured
+                // timeline still surface their reasoning as a
+                // collapsible block.
                 ReasoningDisclosure(
                     text: message.reasoningText,
                     isExpanded: isReasoningExpanded,
                     toggle: toggleReasoning
                 )
             }
-            Text(message.content.isEmpty && !message.streamingFinished ? "Thinking..." : message.content)
-                .font(Typography.bodyFont)
-                .foregroundStyle(message.content.isEmpty ? Palette.textTertiary : Palette.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .lineSpacing(3)
+
+            if !message.content.isEmpty {
+                Text(message.content)
+                    .font(Typography.bodyFont)
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .lineSpacing(3)
+            } else if !message.streamingFinished && message.timeline.isEmpty {
+                Text("Thinking...")
+                    .font(Typography.bodyFont)
+                    .foregroundStyle(Palette.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            ChangedFilePills(timeline: message.timeline)
+
             if !message.streamingFinished && !message.content.isEmpty {
                 StreamingDots()
             }
+            if message.streamingFinished && !message.content.isEmpty {
+                MessageActions(content: message.content)
+                    .padding(.top, 2)
+            }
+        }
+    }
+}
+
+// Bare-icon action row that sits under every completed assistant
+// reply. Only `copy` is functional today; the rest are placeholders
+// so the surface matches the ChatGPT-style chat the user already
+// has muscle memory for. They tap and do nothing for now, by design.
+private struct MessageActions: View {
+    let content: String
+    @State private var copied: Bool = false
+
+    var body: some View {
+        HStack(spacing: 18) {
+            actionButton(systemName: copied ? "checkmark" : "doc.on.doc", action: copy)
+            actionButton(systemName: "speaker.wave.2", action: {})
+            actionButton(systemName: "hand.thumbsup", action: {})
+            actionButton(systemName: "hand.thumbsdown", action: {})
+            actionButton(systemName: "square.and.arrow.up", action: {})
+            actionButton(systemName: "ellipsis", action: {})
+        }
+    }
+
+    private func actionButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Palette.textTertiary)
+                .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func copy() {
+        #if canImport(UIKit)
+        UIPasteboard.general.string = content
+        #endif
+        withAnimation(.easeOut(duration: 0.18)) { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            withAnimation(.easeOut(duration: 0.18)) { copied = false }
         }
     }
 }
@@ -204,29 +378,6 @@ private struct StreamingDots: View {
         .onReceive(timer) { _ in
             phase = (phase + 1) % 3
         }
-    }
-}
-
-private struct ActiveTurnPill: View {
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(Color(red: 0.30, green: 0.78, blue: 0.45))
-                .frame(width: 6, height: 6)
-            Text("Working")
-                .font(Typography.captionFont)
-                .foregroundStyle(MenuStyle.rowText)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            Capsule(style: .continuous)
-                .fill(Palette.cardFill)
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
-        )
     }
 }
 
