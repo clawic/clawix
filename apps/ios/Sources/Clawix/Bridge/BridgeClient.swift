@@ -121,6 +121,11 @@ final class BridgeClient: NSObject {
         send(BridgeFrame(.sendPrompt(chatId: chatId, text: text)), on: winner)
     }
 
+    func readFile(path: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.readFile(path: path)), on: winner)
+    }
+
     // MARK: - Bonjour browser
 
     private func startBrowser() {
@@ -195,7 +200,15 @@ final class BridgeClient: NSObject {
     }
 
     private func makeEndpoint(host: String, port: Int) -> NWEndpoint {
-        NWEndpoint.hostPort(
+        // NWProtocolWebSocket clients need a URL endpoint to set the
+        // `Host` header and request path of the upgrade GET. With a bare
+        // `hostPort` endpoint the upgrade aborts on iOS 26 with
+        // ECONNABORTED right after the TCP handshake, even against a
+        // server that the same payload reaches fine over Python `ws://`.
+        if let url = URL(string: "ws://\(host):\(port)/") {
+            return NWEndpoint.url(url)
+        }
+        return NWEndpoint.hostPort(
             host: NWEndpoint.Host(host),
             port: NWEndpoint.Port(rawValue: UInt16(port)) ?? .any
         )
@@ -413,7 +426,15 @@ final class BridgeClient: NSObject {
             if winner?.id == candidate.id {
                 store.connection = .error(message: "\(code): \(message)")
             }
-        case .auth, .listChats, .openChat, .sendPrompt,
+        case .fileSnapshot(let path, let content, let isMarkdown, let error):
+            if winner?.id == candidate.id {
+                if let content {
+                    store.fileSnapshots[path] = .loaded(content: content, isMarkdown: isMarkdown)
+                } else {
+                    store.fileSnapshots[path] = .failed(reason: error ?? "Unknown error")
+                }
+            }
+        case .auth, .listChats, .openChat, .sendPrompt, .readFile,
              .editPrompt, .archiveChat, .unarchiveChat, .pinChat,
              .unpinChat, .pairingStart, .listProjects,
              .pairingPayload, .projectsSnapshot:

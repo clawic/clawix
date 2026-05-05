@@ -72,12 +72,43 @@ public enum BridgeIntent {
             let projects = host?.currentProjects() ?? []
             session.send(BridgeFrame(.projectsSnapshot(projects: projects)))
 
+        case .readFile(let path):
+            session.send(BridgeFrame(BridgeFileReader.read(path: path)))
+
         case .auth, .authOk, .authFailed, .versionMismatch,
              .chatsSnapshot, .chatUpdated, .messagesSnapshot,
              .messageAppended, .messageStreaming, .errorEvent,
-             .pairingPayload, .projectsSnapshot:
+             .pairingPayload, .projectsSnapshot, .fileSnapshot:
             // Either already handled (auth) or server-only.
             break
         }
+    }
+}
+
+/// Reads a text file off disk for the bridge `readFile` request.
+///
+/// Mirrors the macOS `FileViewerPanel.load` rules: report a friendly
+/// reason for missing files / binary blobs / undecodable bytes instead
+/// of leaking raw NSError descriptions, mark `.md` / `.markdown` files
+/// so the iPhone renders them with the assistant's markdown view.
+public enum BridgeFileReader {
+    public static func read(path: String) -> BridgeBody {
+        let url = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "File not found")
+        }
+        guard let data = try? Data(contentsOf: url) else {
+            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "Couldn't read file")
+        }
+        if data.prefix(4096).contains(0) {
+            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "Preview not available for binary files")
+        }
+        guard let raw = String(data: data, encoding: .utf8)
+                   ?? String(data: data, encoding: .utf16) else {
+            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "Couldn't decode file as text")
+        }
+        let ext = url.pathExtension.lowercased()
+        let isMarkdown = ext == "md" || ext == "markdown"
+        return .fileSnapshot(path: path, content: raw, isMarkdown: isMarkdown, error: nil)
     }
 }

@@ -109,6 +109,12 @@ public enum BridgeBody: Equatable, Sendable {
     /// Ask the daemon for the current list of projects derived from
     /// chats + manual additions. Reply is `projectsSnapshot`.
     case listProjects
+    /// Ask the daemon to read a text file off disk and ship its
+    /// contents back so the iPhone can render the same Markdown / raw
+    /// preview the Mac panel offers when tapping a changed-file pill.
+    /// Path is resolved as an absolute filesystem path on the Mac.
+    /// Reply is `fileSnapshot`.
+    case readFile(path: String)
 
     // MARK: - v2 inbound (daemon -> desktop client)
     /// Reply to `pairingStart`. The QR is what the iPhone scans; the
@@ -117,6 +123,11 @@ public enum BridgeBody: Equatable, Sendable {
     case pairingPayload(qrJson: String, bearer: String)
     /// Reply to `listProjects`.
     case projectsSnapshot(projects: [WireProject])
+    /// Reply to `readFile`. Either `content` is set with the UTF-8
+    /// text of the file (and `isMarkdown` says how to render it), or
+    /// `error` carries a short reason string suitable for display
+    /// ("File not found", "Couldn't decode file as text", etc.).
+    case fileSnapshot(path: String, content: String?, isMarkdown: Bool, error: String?)
 
     fileprivate var typeTag: String {
         switch self {
@@ -142,6 +153,8 @@ public enum BridgeBody: Equatable, Sendable {
         case .pairingPayload:     return "pairingPayload"
         case .listProjects:       return "listProjects"
         case .projectsSnapshot:   return "projectsSnapshot"
+        case .readFile:           return "readFile"
+        case .fileSnapshot:       return "fileSnapshot"
         }
     }
 
@@ -154,6 +167,7 @@ public enum BridgeBody: Equatable, Sendable {
         case code
         case qrJson, bearer
         case projects
+        case path, isMarkdown, error
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
@@ -209,6 +223,13 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encode(bearer, forKey: .bearer)
         case .projectsSnapshot(let projects):
             try c.encode(projects, forKey: .projects)
+        case .readFile(let path):
+            try c.encode(path, forKey: .path)
+        case .fileSnapshot(let path, let content, let isMarkdown, let error):
+            try c.encode(path, forKey: .path)
+            try c.encodeIfPresent(content, forKey: .content)
+            try c.encode(isMarkdown, forKey: .isMarkdown)
+            try c.encodeIfPresent(error, forKey: .error)
         }
     }
 
@@ -288,6 +309,15 @@ public enum BridgeBody: Equatable, Sendable {
             return .listProjects
         case "projectsSnapshot":
             return .projectsSnapshot(projects: try c.decode([WireProject].self, forKey: .projects))
+        case "readFile":
+            return .readFile(path: try c.decode(String.self, forKey: .path))
+        case "fileSnapshot":
+            return .fileSnapshot(
+                path: try c.decode(String.self, forKey: .path),
+                content: try c.decodeIfPresent(String.self, forKey: .content),
+                isMarkdown: try c.decodeIfPresent(Bool.self, forKey: .isMarkdown) ?? false,
+                error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
         default:
             throw BridgeDecodingError.unknownType(type)
         }

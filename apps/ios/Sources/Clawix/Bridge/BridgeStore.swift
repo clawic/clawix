@@ -24,10 +24,20 @@ final class BridgeStore {
         case error(message: String)
     }
 
+    /// State of an in-flight or cached file read. Keyed by absolute
+    /// path. `loading` is set the first time the viewer asks for a
+    /// path; the bridge reply flips it to `loaded` or `failed`.
+    enum FileSnapshotState: Equatable {
+        case loading
+        case loaded(content: String, isMarkdown: Bool)
+        case failed(reason: String)
+    }
+
     var connection: ConnectionState = .unpaired
     var chats: [WireChat] = []
     var messagesByChat: [String: [WireMessage]] = [:]
     var openChatId: String?
+    var fileSnapshots: [String: FileSnapshotState] = [:]
 
     @ObservationIgnored
     private var client: BridgeClient?
@@ -42,10 +52,20 @@ final class BridgeStore {
     @MainActor
     func openChat(_ chatId: String) {
         openChatId = chatId
-        if messagesByChat[chatId] == nil {
-            messagesByChat[chatId] = []
-        }
+        // Intentionally NOT seeding `messagesByChat[chatId] = []` here.
+        // We use the `nil` vs `[]` distinction to mean "snapshot not
+        // delivered yet" vs "snapshot arrived and the chat is genuinely
+        // empty". The detail view keys its empty-state visibility off
+        // that, so a freshly-opened chat doesn't flash "No messages
+        // loaded" for the few hundred ms before the bridge replies.
         client?.openChat(chatId)
+    }
+
+    /// `true` once a `messagesSnapshot` for this chat has been
+    /// delivered. Used to gate the empty-state UI: while loading, the
+    /// detail view shows nothing instead of the empty placeholder.
+    func hasLoadedMessages(_ chatId: String) -> Bool {
+        messagesByChat[chatId] != nil
     }
 
     @MainActor
@@ -60,6 +80,20 @@ final class BridgeStore {
         client?.sendPrompt(chatId: chatId, text: trimmed)
     }
 
+    /// Kick off (or refresh) the read of a file on the Mac. Idempotent:
+    /// re-tapping a pill while a request is in flight is a no-op, but a
+    /// second tap on a `.failed` row retries.
+    @MainActor
+    func requestFile(_ path: String) {
+        switch fileSnapshots[path] {
+        case .loading:
+            return
+        default:
+            fileSnapshots[path] = .loading
+            client?.readFile(path: path)
+        }
+    }
+
     func messages(for chatId: String) -> [WireMessage] {
         messagesByChat[chatId] ?? []
     }
@@ -72,9 +106,14 @@ final class BridgeStore {
         let s = BridgeStore()
         s.connection = .connected(macName: "studio Mac", via: .lan)
         s.chats = MockData.chats
-        s.messagesByChat = [
-            MockData.chats[0].id: MockData.messages
-        ]
+        // Seed every chat with the same canned transcript so any row the
+        // designer taps lands on a populated detail screen instead of
+        // the loading gate. Cheap and isolated to mock builds.
+        var seeded: [String: [WireMessage]] = [:]
+        for chat in MockData.chats {
+            seeded[chat.id] = MockData.messages
+        }
+        s.messagesByChat = seeded
         return s
     }
 }
