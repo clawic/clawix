@@ -178,6 +178,22 @@ The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph t
 | Funnel (filter)    | `OrganizeFunnelIcon`                 | `SidebarView.swift` (legacy spot) |
 | Expand (settings)  | `ExpandIconButton` (composite)       | `SettingsView.swift` (legacy spot) |
 | Collapse / expand corners | `CornerBracketsIcon`           | `CornerBracketsIcon.swift`         |
+| Brand logo (app icon)     | `ClawixLogoIcon`, `ClawixLogoTemplateImage` | `ClawixLogoIcon.swift`             |
+
+### Brand logo
+
+The Clawix mark itself is a custom shape too. Master vector lives at `brand/clawix-logo.svg` at the repo root: a single `evenodd`-filled `<path>` in a `100x100` viewBox. Geometry: outer iOS-style continuous-corner squircle (3 cubic beziers per corner with the Apple app-icon magic numbers, corner extent `38`), visor cut out (smaller squircle, corner extent `22`), two squircle eyes filled back in. `currentColor` so the consumer decides the tint.
+
+In code, the same path is reproduced in `apps/macos/Sources/Clawix/ClawixLogoIcon.swift`. Two entry points:
+
+- `ClawixLogoIcon(size:)` — SwiftUI `View`, fills with `.primary`. Use anywhere inside the SwiftUI hierarchy (splash, about screen, empty states, settings).
+- `ClawixLogoTemplateImage.make(size:)` — flattens the shape into an `NSImage` with `isTemplate = true`. Required for `MenuBarExtra` because its label slot does not render arbitrary SwiftUI `Shape`s reliably (renders as an empty hole). AppKit applies the menu bar's foreground tint automatically when the image is template.
+
+Hard rules:
+
+- The brand mark is `ClawixLogoIcon` / `ClawixLogoTemplateImage`. Never re-derive the path inline somewhere else, never use `Image(systemName:)` as a stand-in.
+- When the SVG master changes (`brand/clawix-logo.svg`), update the path in `ClawixLogoIcon.swift` to match. The two are intentionally redundant: the SVG is the human-editable source, the Swift path is the runtime rendering. If the iOS app eventually ships, it imports `brand/clawix-logo.svg` (or replicates the same path natively); the master in `brand/` stays canonical.
+- For places that need the `.icns` / iOS asset catalog renders, those are produced from the same master (currently the `.icns` lives in `apps/macos/Sources/Clawix/Resources/Clawix.icns`). When updating the brand, regenerate both the in-code path and the rasterized asset; do not let them drift.
 
 Hard rules:
 
