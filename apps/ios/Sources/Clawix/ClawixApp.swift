@@ -2,56 +2,157 @@ import SwiftUI
 
 @main
 struct ClawixApp: App {
-    @State private var store = BridgeStore.mock()
+    @State private var store = BridgeStore()
+    @State private var client: BridgeClient?
+    @State private var creds: Credentials? = CredentialStore.shared.load()
 
     var body: some Scene {
         WindowGroup {
-            RootView(store: store)
-                .preferredColorScheme(.dark)
+            RootView(
+                store: store,
+                creds: $creds,
+                onPair: handlePaired,
+                onUnpair: handleUnpair
+            )
+            .preferredColorScheme(.dark)
+            .onAppear(perform: bootstrap)
+            .onChange(of: creds) { _, newValue in
+                if let newValue {
+                    connect(with: newValue)
+                } else {
+                    client?.disconnect()
+                }
+            }
         }
     }
+
+    private func bootstrap() {
+        #if DEBUG
+        // Designer preview mode: launch with `CLAWIX_MOCK=1` (passed via
+        // simctl `--launch-args ... --setenv CLAWIX_MOCK 1`) to bypass
+        // the QR pairing flow and render the chat list / detail
+        // surfaces with mock data so we can iterate on the visual
+        // design without a paired Mac in the loop.
+        if ProcessInfo.processInfo.environment["CLAWIX_MOCK"] == "1" {
+            let mock = BridgeStore.mock()
+            store.connection = mock.connection
+            store.chats = mock.chats
+            store.messagesByChat = mock.messagesByChat
+            creds = Credentials(host: "127.0.0.1", port: 7777, token: "mock", macName: "studio Mac", tailscaleHost: nil)
+            if ProcessInfo.processInfo.environment["CLAWIX_MOCK_OPEN_FIRST_CHAT"] == "1",
+               let first = store.chats.first {
+                store.openChatId = first.id
+            }
+            return
+        }
+        #endif
+        if client == nil {
+            let c = BridgeClient(store: store)
+            store.attach(client: c)
+            client = c
+        }
+        if let creds {
+            connect(with: creds)
+        }
+    }
+
+    private func connect(with creds: Credentials) {
+        client?.connect(creds)
+    }
+
+    private func handlePaired(_ creds: Credentials) {
+        self.creds = creds
+    }
+
+    private func handleUnpair() {
+        client?.disconnect()
+        CredentialStore.shared.clear()
+        store.chats = []
+        store.messagesByChat = [:]
+        store.openChatId = nil
+        creds = nil
+    }
+}
+
+// One NavigationStack at the root rules them all. Both `chat` and
+// `project` pushes share the same path so SwiftUI doesn't end up with
+// nested NavigationStacks fighting over the back gesture (which would
+// freeze the chevron and the swipe-to-pop).
+enum RootNav: Hashable {
+    case chat(String)
+    case project(String)
 }
 
 private struct RootView: View {
     @Bindable var store: BridgeStore
-    @State private var paired: Bool = true
+    @Binding var creds: Credentials?
+    let onPair: (Credentials) -> Void
+    let onUnpair: () -> Void
+
+    @State private var path = NavigationPath()
 
     var body: some View {
         ZStack {
             Palette.background.ignoresSafeArea()
-            if !paired {
-                PairingView(onPaired: { paired = true })
+            if creds == nil {
+                PairingView(onPaired: onPair)
                     .transition(.opacity)
             } else {
-                NavigationStack {
+                NavigationStack(path: $path) {
                     ChatListView(
                         store: store,
-                        onOpen: { store.openChat($0) }
+                        onOpen: { id in
+                            store.openChat(id)
+                            path.append(RootNav.chat(id))
+                        },
+                        onOpenProject: { cwd in
+                            path.append(RootNav.project(cwd))
+                        },
+                        onUnpair: onUnpair
                     )
-                    .navigationDestination(isPresented: openChatBinding) {
-                        if let id = store.openChatId {
+                    .toolbar(.hidden, for: .navigationBar)
+                    .navigationDestination(for: RootNav.self) { target in
+                        switch target {
+                        case .chat(let id):
                             ChatDetailView(
                                 store: store,
                                 chatId: id,
-                                onBack: { store.closeChat() }
+                                onBack: popLast
                             )
+                        case .project(let cwd):
+                            let project = DerivedProject.from(chats: store.chats.filter { !$0.isArchived })
+                                .first(where: { $0.cwd == cwd })
+                            if let project {
+                                ProjectDetailView(
+                                    store: store,
+                                    project: project,
+                                    onOpen: { id in
+                                        store.openChat(id)
+                                        path.append(RootNav.chat(id))
+                                    },
+                                    onBack: popLast
+                                )
+                            }
                         }
+                    }
+                }
+                .onChange(of: path) { _, newValue in
+                    // Keep the legacy `openChatId` flag in sync: when the
+                    // user pops every screen and we're back at the home
+                    // (path empty), clear the open-chat state so the
+                    // store treats the chat as closed.
+                    if newValue.isEmpty {
+                        store.closeChat()
                     }
                 }
                 .transition(.opacity)
             }
         }
-        .animation(.easeOut(duration: 0.25), value: paired)
+        .animation(.easeOut(duration: 0.25), value: creds)
     }
 
-    private var openChatBinding: Binding<Bool> {
-        Binding(
-            get: { store.openChatId != nil },
-            set: { if !$0 { store.closeChat() } }
-        )
+    private func popLast() {
+        guard !path.isEmpty else { return }
+        path.removeLast()
     }
-}
-
-#Preview("Root") {
-    RootView(store: BridgeStore.mock())
 }
