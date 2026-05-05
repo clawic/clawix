@@ -62,6 +62,31 @@ struct ChangedFileCard: View {
         // Smoother, slightly longer easing so the highlight breathes
         // instead of snapping in/out of hover.
         .animation(.easeInOut(duration: 0.22), value: hovered)
+        // Anchor on the WHOLE card (not the inner pill) so the popup
+        // overlay can sit above the card's stroke and below the card's
+        // bottom edge, instead of being painted under the stroke and
+        // overlapping the card's translucent fill.
+        .anchorPreference(key: ChangedFileMenuAnchorKey.self, value: .bounds) { $0 }
+        .overlayPreferenceValue(ChangedFileMenuAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if menuOpen, let anchor {
+                    let cardFrame = proxy[anchor]
+                    let popupWidth: CGFloat = 220
+                    // Right-align popup with the pill's right edge. Pill
+                    // sits flush with the card's horizontal padding (14).
+                    ChangedFileMenu(path: path, isOpen: $menuOpen)
+                        .frame(width: popupWidth)
+                        .anchoredPopupPlacement(
+                            buttonFrame: cardFrame,
+                            proxy: proxy,
+                            horizontal: .trailing(offset: -14)
+                        )
+                        .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(menuOpen)
+        }
+        .animation(MenuStyle.openAnimation, value: menuOpen)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("\(fileName), \(subtitle)"))
     }
@@ -123,27 +148,6 @@ struct ChangedFileCard: View {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
         )
-        .anchorPreference(key: ChangedFileMenuAnchorKey.self, value: .bounds) { $0 }
-        .overlayPreferenceValue(ChangedFileMenuAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if menuOpen, let anchor {
-                    let buttonFrame = proxy[anchor]
-                    let popupWidth: CGFloat = 220
-                    ChangedFileMenu(path: path, isOpen: $menuOpen)
-                        .frame(width: popupWidth)
-                        .offset(
-                            x: buttonFrame.maxX - popupWidth,
-                            y: buttonFrame.maxY + 6
-                        )
-                        .frame(maxWidth: .infinity,
-                               maxHeight: .infinity,
-                               alignment: .topLeading)
-                        .transition(.softNudge(y: 4))
-                }
-            }
-            .allowsHitTesting(menuOpen)
-        }
-        .animation(MenuStyle.openAnimation, value: menuOpen)
     }
 }
 
@@ -170,7 +174,10 @@ private struct ChangedFileMenu: View {
             row(.openInFolder)
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
-        .menuStandardBackground()
+        // Opaque chrome (no blur, no 18% bleed) so the dropdown fully
+        // hides whatever sits behind it. The standard translucent menu
+        // chrome reads as a stacking glitch over chat messages.
+        .menuStandardBackground(opaque: true)
         .background(MenuOutsideClickWatcher(isPresented: $isOpen))
     }
 

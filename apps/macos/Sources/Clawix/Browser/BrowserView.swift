@@ -48,11 +48,12 @@ struct BrowserView: View {
                         controller: controller,
                         isOpen: $moreMenuOpen
                     )
-                    .offset(
-                        x: buttonFrame.maxX - BrowserMoreOptionsMenu.menuWidth,
-                        y: buttonFrame.maxY + 6
+                    .frame(width: BrowserMoreOptionsMenu.menuWidth)
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .trailing()
                     )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .transition(.softNudge(y: 4))
                 }
             }

@@ -117,9 +117,12 @@ struct ChatView: View {
                         if workMenuOpen, let anchor {
                             let buttonFrame = proxy[anchor]
                             WorkLocallyMenuPopup(isPresented: $workMenuOpen)
-                                .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
-                                .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX + 4 }
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                                .anchoredPopupPlacement(
+                                    buttonFrame: buttonFrame,
+                                    proxy: proxy,
+                                    horizontal: .leading(offset: 4),
+                                    direction: .above
+                                )
                                 .transition(.softNudge(y: 4))
                         }
                     }
@@ -144,9 +147,12 @@ struct ChatView: View {
                                     branchCreateOpen = true
                                 }
                             )
-                            .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
-                            .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX + 4 }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .anchoredPopupPlacement(
+                                buttonFrame: buttonFrame,
+                                proxy: proxy,
+                                horizontal: .leading(offset: 4),
+                                direction: .above
+                            )
                             .transition(.softNudge(y: 4))
                         }
                     }

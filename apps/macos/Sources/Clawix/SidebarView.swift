@@ -380,11 +380,11 @@ struct SidebarView: View {
                         sortModeRaw: $sortModeRaw
                     )
                     .frame(width: popupWidth)
-                    .offset(
-                        x: max(8, buttonFrame.maxX - popupWidth),
-                        y: buttonFrame.maxY + 6
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .trailing()
                     )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .transition(.softNudge(y: 4))
                 }
             }
@@ -408,11 +408,11 @@ struct SidebarView: View {
                         }
                     )
                     .frame(width: popupWidth)
-                    .offset(
-                        x: max(8, buttonFrame.maxX - popupWidth),
-                        y: buttonFrame.maxY + 6
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .trailing()
                     )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .transition(.softNudge(y: 4))
                 }
             }
@@ -458,11 +458,12 @@ struct SidebarView: View {
                         }
                     )
                     .frame(width: popupWidth)
-                    .offset(
-                        x: max(8, buttonFrame.maxX - popupWidth + 4),
-                        y: buttonFrame.maxY + 4
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .trailing(offset: 4),
+                        gap: 4
                     )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .transition(.softNudge(y: 4))
                 }
             }

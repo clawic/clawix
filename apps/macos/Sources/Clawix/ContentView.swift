@@ -501,8 +501,11 @@ private struct ContentTopChrome: View {
                         onRename: { appState.pendingRenameChat = chat },
                         onArchive: { appState.archiveChat(chatId: chat.id) }
                     )
-                    .offset(x: buttonFrame.minX, y: buttonFrame.maxY + 6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .leading()
+                    )
                     .transition(.softNudge(y: 4))
                 }
             }
@@ -616,8 +619,11 @@ private struct RightSidebarTopChrome: View {
                 if addMenuOpen, let anchor {
                     let buttonFrame = proxy[anchor]
                     RightSidebarAddMenu(isOpen: $addMenuOpen)
-                        .offset(x: buttonFrame.minX, y: buttonFrame.maxY + 6)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .anchoredPopupPlacement(
+                            buttonFrame: buttonFrame,
+                            proxy: proxy,
+                            horizontal: .leading()
+                        )
                         .transition(.softNudge(y: 4))
                 }
             }
@@ -1093,13 +1099,23 @@ extension View {
     /// `NSPanel` (e.g. the sidebar's right-click context menu) so the
     /// blur samples the content behind the panel rather than the
     /// transparent panel-internal contents.
-    func menuStandardBackground(blurBehindWindow: Bool = false) -> some View {
+    ///
+    /// `opaque`: drop the blur and the tint's translucency for menus that
+    /// open over visually busy regions where the standard 18% bleed reads
+    /// as a stacking glitch (e.g. file-card "Open" popup, where the parent
+    /// card's translucent fill would otherwise show through the menu).
+    func menuStandardBackground(blurBehindWindow: Bool = false,
+                                opaque: Bool = false) -> some View {
         self.background(
             ZStack {
-                VisualEffectBlur(material: .hudWindow,
-                                 blendingMode: blurBehindWindow ? .behindWindow : .withinWindow,
-                                 state: .active)
-                MenuStyle.fill
+                if !opaque {
+                    VisualEffectBlur(material: .hudWindow,
+                                     blendingMode: blurBehindWindow ? .behindWindow : .withinWindow,
+                                     state: .active)
+                    MenuStyle.fill
+                } else {
+                    Color(white: 0.135)
+                }
             }
             .clipShape(RoundedRectangle(cornerRadius: MenuStyle.cornerRadius, style: .continuous))
             .overlay(
