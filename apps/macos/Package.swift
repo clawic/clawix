@@ -17,7 +17,14 @@ let package = Package(
         .package(url: "https://github.com/groue/GRDB.swift", from: "6.29.0"),
         // Wire types shared with the iOS companion. Pure Foundation, no
         // SwiftUI, no platform-specific code. Tests live in the package.
-        .package(path: "../shared/ClawixCore")
+        .package(path: "../shared/ClawixCore"),
+        // Engine layer: hosts the bridge server, the pairing service,
+        // the Clawix subprocess wrapper, and the persistence repos
+        // that the LaunchAgent daemon needs to stay alive when the
+        // GUI is closed. Currently a thin layer that will absorb more
+        // of `AppState`'s engine-side responsibilities as the daemon
+        // refactor progresses.
+        .package(path: "../shared/ClawixEngine")
     ],
     targets: [
         .executableTarget(
@@ -25,7 +32,8 @@ let package = Package(
             dependencies: [
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "GRDB", package: "GRDB.swift"),
-                .product(name: "ClawixCore", package: "ClawixCore")
+                .product(name: "ClawixCore", package: "ClawixCore"),
+                .product(name: "ClawixEngine", package: "ClawixEngine")
             ],
             path: "Sources/Clawix",
             resources: [

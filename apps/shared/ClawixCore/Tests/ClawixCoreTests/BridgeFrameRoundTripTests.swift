@@ -12,8 +12,39 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testAuth() throws {
-        try roundTrip(.auth(token: "deadbeef", deviceName: "iPhone Studio"))
-        try roundTrip(.auth(token: "x", deviceName: nil))
+        try roundTrip(.auth(token: "deadbeef", deviceName: "iPhone Studio", clientKind: .ios))
+        try roundTrip(.auth(token: "x", deviceName: nil, clientKind: nil))
+        try roundTrip(.auth(token: "y", deviceName: "macOS GUI", clientKind: .desktop))
+    }
+
+    func testEditPrompt() throws {
+        try roundTrip(.editPrompt(chatId: "uuid-1", messageId: "m2", text: "rewritten"))
+    }
+
+    func testArchiveChatToggles() throws {
+        try roundTrip(.archiveChat(chatId: "uuid-1"))
+        try roundTrip(.unarchiveChat(chatId: "uuid-1"))
+        try roundTrip(.pinChat(chatId: "uuid-1"))
+        try roundTrip(.unpinChat(chatId: "uuid-1"))
+    }
+
+    func testPairingHandshake() throws {
+        try roundTrip(.pairingStart)
+        try roundTrip(.pairingPayload(qrJson: "{\"v\":1}", bearer: "abc"))
+    }
+
+    func testProjectsSnapshot() throws {
+        let project = WireProject(
+            id: "proj-1",
+            title: "monorepo",
+            cwd: "/Users/me/code/monorepo",
+            hasGitRepo: true,
+            branch: "main",
+            lastUsedAt: .init(timeIntervalSince1970: 1_700_002_000)
+        )
+        try roundTrip(.listProjects)
+        try roundTrip(.projectsSnapshot(projects: [project]))
+        try roundTrip(.projectsSnapshot(projects: []))
     }
 
     func testListChats() throws {
@@ -119,11 +150,30 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         let frame = BridgeFrame(.sendPrompt(chatId: "abc", text: "hello"))
         let data = try BridgeCoder.encode(frame)
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
-        XCTAssertTrue(json.contains("\"schemaVersion\":1"))
+        XCTAssertTrue(json.contains("\"schemaVersion\":\(bridgeSchemaVersion)"))
         XCTAssertTrue(json.contains("\"type\":\"sendPrompt\""))
         XCTAssertTrue(json.contains("\"chatId\":\"abc\""))
         XCTAssertTrue(json.contains("\"text\":\"hello\""))
         XCTAssertFalse(json.contains("\"payload\""))
+    }
+
+    /// v1 frames (no `clientKind` on `auth`) decode cleanly into v2.
+    /// Required so a v1 iPhone (in the wild between releases) can
+    /// connect to a v2 server, and so v2 frames remain readable by
+    /// the v1 round-trip path.
+    func testV1AuthFrameDecodesUnderV2() throws {
+        let v1Json = """
+        {"schemaVersion":1,"type":"auth","token":"abc","deviceName":"iPhone"}
+        """.data(using: .utf8)!
+        let frame = try BridgeCoder.decode(v1Json)
+        guard case .auth(let token, let device, let kind) = frame.body else {
+            XCTFail("expected auth")
+            return
+        }
+        XCTAssertEqual(token, "abc")
+        XCTAssertEqual(device, "iPhone")
+        XCTAssertNil(kind, "v1 auth omits clientKind, decodes as nil")
+        XCTAssertEqual(frame.schemaVersion, 1)
     }
 
     func testRejectsUnknownType() {

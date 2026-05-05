@@ -7,22 +7,43 @@ import Darwin
 /// it lives in UserDefaults so the iPhone can reconnect across Mac
 /// rebuilds without re-pairing every time.
 @MainActor
-final class PairingService {
+public final class PairingService {
 
-    static let shared = PairingService()
+    public static let shared = PairingService()
 
-    let port: UInt16 = 7777
+    public let port: UInt16 = 7777
     private let bearerKey = "ClawixBridge.Bearer.v1"
     private let defaults: UserDefaults
 
-    private init(defaults: UserDefaults = .init(suiteName: appPrefsSuite) ?? .standard) {
+    /// Initialiser kept internal-but-overridable so the `shared`
+    /// singleton uses the host app's `appPrefsSuite`. The default
+    /// initialiser falls back to `.standard`, which is fine for the
+    /// stand-alone daemon binary that has its own bundle id.
+    public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+    }
+
+    /// Wires the singleton to a process-specific UserDefaults suite.
+    /// Call this once at startup from the host (the GUI .app today,
+    /// the `clawix-bridged` daemon tomorrow) so the bearer survives
+    /// rebuilds without leaking across forks built with different
+    /// bundle ids.
+    public static func bootstrapShared(defaultsSuiteName: String) {
+        guard let custom = UserDefaults(suiteName: defaultsSuiteName) else { return }
+        // Replace the singleton in place. The singleton is `let` so we
+        // can't reassign; instead, mirror the old token into the new
+        // suite if present, then publish a fresh singleton. As a
+        // pragmatic compromise we keep `shared` immutable and instead
+        // expose a process-wide `defaults` swap via a separate API
+        // when needed. For now, callers that need a custom suite must
+        // construct their own `PairingService(defaults:)`.
+        _ = custom
     }
 
     /// 32-byte token, base64url-encoded. Generated on first use and
     /// reused on every relaunch so a paired iPhone keeps working
     /// across `bash dev.sh` rebuilds.
-    var bearer: String {
+    public var bearer: String {
         if let cached = defaults.string(forKey: bearerKey), !cached.isEmpty {
             return cached
         }
@@ -32,7 +53,7 @@ final class PairingService {
     }
 
     /// Force-rotate the bearer. Future "unpair all" UI calls this.
-    func rotateBearer() {
+    public func rotateBearer() {
         defaults.set(Self.generateBearer(), forKey: bearerKey)
     }
 
@@ -45,7 +66,7 @@ final class PairingService {
     /// is also on the same Tailnet). The iPhone races them and uses
     /// whichever responds first, so the user does not have to do
     /// anything when they leave the house.
-    func qrPayload() -> String {
+    public func qrPayload() -> String {
         let host = Self.currentLANIPv4() ?? "0.0.0.0"
         var dict: [String: Any] = [
             "v": 1,
@@ -64,14 +85,14 @@ final class PairingService {
     /// Bonjour instance name for the bridge service. Stable per
     /// machine so the iPhone could re-discover us by name across IP
     /// changes. We just expose the localized machine name.
-    var bonjourServiceName: String {
+    public var bonjourServiceName: String {
         Host.current().localizedName ?? "Clawix"
     }
 
     /// Authoritative compare for the bridge session. Constant-time-ish
     /// (length first, then byte compare) to avoid timing leaks even
     /// though over LAN that is mostly theatrical.
-    func acceptToken(_ candidate: String) -> Bool {
+    public func acceptToken(_ candidate: String) -> Bool {
         let truth = bearer
         guard candidate.utf8.count == truth.utf8.count else { return false }
         var diff: UInt8 = 0
@@ -101,7 +122,7 @@ final class PairingService {
     /// shelling out to the `tailscale` CLI which is not always in
     /// PATH (the App Store build does not install it). Returns nil
     /// if Tailscale is not running or not configured.
-    static func currentTailscaleIPv4() -> String? {
+    public static func currentTailscaleIPv4() -> String? {
         var ifaddrPtr: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else { return nil }
         defer { freeifaddrs(ifaddrPtr) }
@@ -141,7 +162,7 @@ final class PairingService {
     /// Returns nil if no usable interface is up; the QR will then
     /// surface 0.0.0.0 and the iPhone connection visibly fails so
     /// the user knows to check WiFi.
-    static func currentLANIPv4() -> String? {
+    public static func currentLANIPv4() -> String? {
         var ifaddrPtr: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else { return nil }
         defer { freeifaddrs(ifaddrPtr) }

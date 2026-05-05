@@ -1,10 +1,35 @@
 import Foundation
 
 /// Wire-format version exchanged in every frame. Bumped on any breaking
-/// change to `BridgeFrame` payloads. The iPhone refuses to talk to a Mac
-/// reporting a different `schemaVersion` and surfaces an "update Clawix
-/// on the Mac" empty state.
-public let bridgeSchemaVersion: Int = 1
+/// change to `BridgeFrame` payloads. Clients refuse to talk to a peer
+/// reporting a different `schemaVersion` and surface an "update Clawix"
+/// empty state.
+///
+/// v2 (2026-05): Added `clientKind` capability tag to `auth` so the
+/// server can tell apart the iPhone companion from a co-located desktop
+/// client (the macOS GUI talking to the LaunchAgent daemon over
+/// loopback). Added desktop-only frame types for chat editing
+/// (`editPrompt`), archive/pin toggles, project listing, and the
+/// pairing handshake the GUI uses to ask the daemon for a fresh QR.
+/// v1 frames decode cleanly into v2 because every new field is optional
+/// and every new frame type is additive.
+public let bridgeSchemaVersion: Int = 2
+
+/// Kind of client speaking on a session. Affects which frame types the
+/// server is willing to dispatch:
+///
+/// - `.ios` is the read-mostly mobile companion: list/open chats and
+///   send prompts, but not the chat-mutation grab-bag.
+/// - `.desktop` is the macOS GUI talking to the LaunchAgent daemon. It
+///   gets the full surface (edit, archive, pin, branch switch, project
+///   selection, pairing token issuance, auth coordinator, etc.).
+///
+/// Old v1 iPhones don't send a `clientKind`; the server treats absent
+/// as `.ios` so they keep working unchanged.
+public enum ClientKind: String, Codable, Equatable, Sendable {
+    case ios
+    case desktop
+}
 
 public struct BridgeFrame: Codable, Equatable, Sendable {
     public let schemaVersion: Int
@@ -39,13 +64,13 @@ public struct BridgeFrame: Codable, Equatable, Sendable {
 /// carries `schemaVersion`, `type`, and the payload fields at the top
 /// level (no `payload` envelope) so log lines stay readable.
 public enum BridgeBody: Equatable, Sendable {
-    // Outbound (iPhone -> Mac)
-    case auth(token: String, deviceName: String?)
+    // MARK: - v1 outbound (iPhone -> Mac)
+    case auth(token: String, deviceName: String?, clientKind: ClientKind?)
     case listChats
     case openChat(chatId: String)
     case sendPrompt(chatId: String, text: String)
 
-    // Inbound (Mac -> iPhone)
+    // MARK: - v1 inbound (Mac -> iPhone)
     case authOk(macName: String?)
     case authFailed(reason: String)
     case versionMismatch(serverVersion: Int)
@@ -65,6 +90,34 @@ public enum BridgeBody: Equatable, Sendable {
     )
     case errorEvent(code: String, message: String)
 
+    // MARK: - v2 outbound (desktop client -> daemon)
+    /// Edit a prompt in place and re-run the turn. `chatId` is the
+    /// chat, `messageId` is the user message being rewritten, `text`
+    /// is the new content. Daemon truncates the rollout at this turn,
+    /// applies the new prompt, and re-streams.
+    case editPrompt(chatId: String, messageId: String, text: String)
+    /// Toggle the archived flag. Sticks across relaunches because the
+    /// archive state lives in the GRDB database the daemon owns.
+    case archiveChat(chatId: String)
+    case unarchiveChat(chatId: String)
+    /// Toggle the pinned flag.
+    case pinChat(chatId: String)
+    case unpinChat(chatId: String)
+    /// Ask the daemon for a fresh pairing payload (token + QR JSON).
+    /// Used by `PairWindowView` in the GUI.
+    case pairingStart
+    /// Ask the daemon for the current list of projects derived from
+    /// chats + manual additions. Reply is `projectsSnapshot`.
+    case listProjects
+
+    // MARK: - v2 inbound (daemon -> desktop client)
+    /// Reply to `pairingStart`. The QR is what the iPhone scans; the
+    /// bearer is what the daemon will accept on the next `auth` frame
+    /// from a fresh iPhone.
+    case pairingPayload(qrJson: String, bearer: String)
+    /// Reply to `listProjects`.
+    case projectsSnapshot(projects: [WireProject])
+
     fileprivate var typeTag: String {
         switch self {
         case .auth:               return "auth"
@@ -80,24 +133,36 @@ public enum BridgeBody: Equatable, Sendable {
         case .messageAppended:    return "messageAppended"
         case .messageStreaming:   return "messageStreaming"
         case .errorEvent:         return "errorEvent"
+        case .editPrompt:         return "editPrompt"
+        case .archiveChat:        return "archiveChat"
+        case .unarchiveChat:      return "unarchiveChat"
+        case .pinChat:            return "pinChat"
+        case .unpinChat:          return "unpinChat"
+        case .pairingStart:       return "pairingStart"
+        case .pairingPayload:     return "pairingPayload"
+        case .listProjects:       return "listProjects"
+        case .projectsSnapshot:   return "projectsSnapshot"
         }
     }
 
     private enum FlatKeys: String, CodingKey {
-        case token, deviceName
+        case token, deviceName, clientKind
         case chatId, text, messageId
         case macName, reason, serverVersion
         case chats, chat, messages, message
         case content, reasoningText, finished
         case code
+        case qrJson, bearer
+        case projects
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: FlatKeys.self)
         switch self {
-        case .auth(let token, let deviceName):
+        case .auth(let token, let deviceName, let clientKind):
             try c.encode(token, forKey: .token)
             try c.encodeIfPresent(deviceName, forKey: .deviceName)
+            try c.encodeIfPresent(clientKind, forKey: .clientKind)
         case .listChats:
             break
         case .openChat(let chatId):
@@ -130,6 +195,20 @@ public enum BridgeBody: Equatable, Sendable {
         case .errorEvent(let code, let message):
             try c.encode(code, forKey: .code)
             try c.encode(message, forKey: .message)
+        case .editPrompt(let chatId, let messageId, let text):
+            try c.encode(chatId, forKey: .chatId)
+            try c.encode(messageId, forKey: .messageId)
+            try c.encode(text, forKey: .text)
+        case .archiveChat(let chatId), .unarchiveChat(let chatId),
+             .pinChat(let chatId), .unpinChat(let chatId):
+            try c.encode(chatId, forKey: .chatId)
+        case .pairingStart, .listProjects:
+            break
+        case .pairingPayload(let qrJson, let bearer):
+            try c.encode(qrJson, forKey: .qrJson)
+            try c.encode(bearer, forKey: .bearer)
+        case .projectsSnapshot(let projects):
+            try c.encode(projects, forKey: .projects)
         }
     }
 
@@ -139,7 +218,8 @@ public enum BridgeBody: Equatable, Sendable {
         case "auth":
             return .auth(
                 token: try c.decode(String.self, forKey: .token),
-                deviceName: try c.decodeIfPresent(String.self, forKey: .deviceName)
+                deviceName: try c.decodeIfPresent(String.self, forKey: .deviceName),
+                clientKind: try c.decodeIfPresent(ClientKind.self, forKey: .clientKind)
             )
         case "listChats":
             return .listChats
@@ -183,6 +263,31 @@ public enum BridgeBody: Equatable, Sendable {
                 code: try c.decode(String.self, forKey: .code),
                 message: try c.decode(String.self, forKey: .message)
             )
+        case "editPrompt":
+            return .editPrompt(
+                chatId: try c.decode(String.self, forKey: .chatId),
+                messageId: try c.decode(String.self, forKey: .messageId),
+                text: try c.decode(String.self, forKey: .text)
+            )
+        case "archiveChat":
+            return .archiveChat(chatId: try c.decode(String.self, forKey: .chatId))
+        case "unarchiveChat":
+            return .unarchiveChat(chatId: try c.decode(String.self, forKey: .chatId))
+        case "pinChat":
+            return .pinChat(chatId: try c.decode(String.self, forKey: .chatId))
+        case "unpinChat":
+            return .unpinChat(chatId: try c.decode(String.self, forKey: .chatId))
+        case "pairingStart":
+            return .pairingStart
+        case "pairingPayload":
+            return .pairingPayload(
+                qrJson: try c.decode(String.self, forKey: .qrJson),
+                bearer: try c.decode(String.self, forKey: .bearer)
+            )
+        case "listProjects":
+            return .listProjects
+        case "projectsSnapshot":
+            return .projectsSnapshot(projects: try c.decode([WireProject].self, forKey: .projects))
         default:
             throw BridgeDecodingError.unknownType(type)
         }

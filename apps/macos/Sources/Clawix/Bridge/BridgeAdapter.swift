@@ -14,7 +14,8 @@ extension Chat {
             lastMessageAt: last?.timestamp,
             lastMessagePreview: last.flatMap { String($0.content.prefix(140)) },
             branch: branch,
-            cwd: cwd
+            cwd: cwd,
+            lastTurnInterrupted: lastTurnInterrupted
         )
     }
 }

@@ -2,35 +2,40 @@ import Foundation
 import Network
 import ClawixCore
 
-/// One iPhone client. Owns the `NWConnection`, drives the receive loop,
-/// gates frames behind a successful `auth`. The Phase 2 plaintext build
-/// accepts any bearer token; Phase 5 will validate it against the
-/// keychain-backed `BearerStore`.
+/// One client of the bridge (an iPhone or a co-located desktop GUI).
+/// Owns the `NWConnection`, drives the receive loop, gates frames
+/// behind a successful `auth`. The Phase 2 build accepts any bearer
+/// matching `PairingService.shared.bearer`; TLS + cert pinning lands
+/// later.
 @MainActor
-final class BridgeSession: Identifiable {
-    let id = UUID()
+public final class BridgeSession: Identifiable {
+    public let id = UUID()
     private let connection: NWConnection
-    private weak var appState: AppState?
+    private weak var host: EngineHost?
     private let bus: BridgeBus
+    private let pairing: PairingService
     private let onTerminated: (UUID) -> Void
 
-    private(set) var isAuthenticated: Bool = false
-    private(set) var deviceName: String?
+    public private(set) var isAuthenticated: Bool = false
+    public private(set) var deviceName: String?
+    public private(set) var clientKind: ClientKind?
     private var didTerminate = false
 
-    init(
+    public init(
         connection: NWConnection,
-        appState: AppState,
+        host: EngineHost,
         bus: BridgeBus,
+        pairing: PairingService,
         onTerminated: @escaping (UUID) -> Void
     ) {
         self.connection = connection
-        self.appState = appState
+        self.host = host
         self.bus = bus
+        self.pairing = pairing
         self.onTerminated = onTerminated
     }
 
-    func start() {
+    public func start() {
         connection.stateUpdateHandler = { [weak self] state in
             switch state {
             case .failed, .cancelled:
@@ -70,36 +75,43 @@ final class BridgeSession: Identifiable {
             send(BridgeFrame(.errorEvent(code: "decode", message: "\(error)")))
             return
         }
-        if frame.schemaVersion != bridgeSchemaVersion {
+        // Strict major-version match. v1 frames decode under v2 (every
+        // new field is optional), so we only refuse frames we genuinely
+        // can't interpret. Anything else gets a `versionMismatch`
+        // before close so the client knows to update.
+        if frame.schemaVersion > bridgeSchemaVersion {
             send(BridgeFrame(.versionMismatch(serverVersion: bridgeSchemaVersion)))
             close(.protocolCode(.protocolError))
             return
         }
         if !isAuthenticated {
-            if case .auth(let token, let name) = frame.body {
-                handleAuth(token: token, deviceName: name)
+            if case .auth(let token, let name, let kind) = frame.body {
+                handleAuth(token: token, deviceName: name, clientKind: kind)
             } else {
                 send(BridgeFrame(.authFailed(reason: "auth-required-first")))
                 close(.protocolCode(.policyViolation))
             }
             return
         }
-        BridgeIntent.dispatch(body: frame.body, appState: appState, bus: bus, session: self)
+        BridgeIntent.dispatch(body: frame.body, host: host, bus: bus, session: self)
     }
 
-    private func handleAuth(token: String, deviceName: String?) {
-        guard PairingService.shared.acceptToken(token) else {
+    private func handleAuth(token: String, deviceName: String?, clientKind: ClientKind?) {
+        guard pairing.acceptToken(token) else {
             send(BridgeFrame(.authFailed(reason: "bad-token")))
             close(.protocolCode(.policyViolation))
             return
         }
         isAuthenticated = true
         self.deviceName = deviceName
+        // Absent kind = legacy v1 client = treat as iOS so existing
+        // iPhones keep working unchanged.
+        self.clientKind = clientKind ?? .ios
         send(BridgeFrame(.authOk(macName: Host.current().localizedName)))
         send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
     }
 
-    func send(_ frame: BridgeFrame) {
+    public func send(_ frame: BridgeFrame) {
         let data: Data
         do {
             data = try BridgeCoder.encode(frame)
@@ -116,7 +128,7 @@ final class BridgeSession: Identifiable {
         )
     }
 
-    func close(_ code: NWProtocolWebSocket.CloseCode = .protocolCode(.normalClosure)) {
+    public func close(_ code: NWProtocolWebSocket.CloseCode = .protocolCode(.normalClosure)) {
         let metadata = NWProtocolWebSocket.Metadata(opcode: .close)
         metadata.closeCode = code
         let context = NWConnection.ContentContext(identifier: "close", metadata: [metadata])

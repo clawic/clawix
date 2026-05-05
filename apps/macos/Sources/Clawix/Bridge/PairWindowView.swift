@@ -2,6 +2,7 @@ import SwiftUI
 import CoreImage
 import CoreImage.CIFilterBuiltins
 import AppKit
+import ClawixEngine
 
 struct PairWindowView: View {
     @State private var payload: String = ""

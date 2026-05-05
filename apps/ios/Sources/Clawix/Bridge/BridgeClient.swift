@@ -86,6 +86,29 @@ final class BridgeClient: NSObject {
         store.connection = .unpaired
     }
 
+    /// Tears down the active socket and pending reconnect timers without
+    /// dropping the cached credentials, so a later `connect(creds)`
+    /// (typically driven by `scenePhase == .active`) can resume the
+    /// session immediately.
+    ///
+    /// Calling `suspend()` on background does two things that
+    /// `disconnect()` also does: cancels the WebSocket and stops the
+    /// browser. The difference is that we keep `creds` cached and we
+    /// do NOT zero out the credential store, so the UI never flips
+    /// back to the pairing screen.
+    func suspend() {
+        cancelReconnect()
+        stopKeepalive()
+        cancelAllCandidates()
+        if let winner {
+            winner.connection.cancel()
+        }
+        winner = nil
+        stopBrowser()
+        store.connection = .unpaired
+        // creds intentionally preserved for resume.
+    }
+
     // MARK: - Outbound from UI
 
     func openChat(_ chatId: String) {
@@ -276,7 +299,11 @@ final class BridgeClient: NSObject {
 
     private func sendAuth(on candidate: Candidate) {
         guard let creds else { return }
-        let frame = BridgeFrame(.auth(token: creds.token, deviceName: deviceName()))
+        let frame = BridgeFrame(.auth(
+            token: creds.token,
+            deviceName: deviceName(),
+            clientKind: .ios
+        ))
         send(frame, on: candidate)
     }
 
@@ -386,7 +413,12 @@ final class BridgeClient: NSObject {
             if winner?.id == candidate.id {
                 store.connection = .error(message: "\(code): \(message)")
             }
-        case .auth, .listChats, .openChat, .sendPrompt:
+        case .auth, .listChats, .openChat, .sendPrompt,
+             .editPrompt, .archiveChat, .unarchiveChat, .pinChat,
+             .unpinChat, .pairingStart, .listProjects,
+             .pairingPayload, .projectsSnapshot:
+            // Outbound-from-desktop or server-to-desktop frames the
+            // iPhone client neither emits nor consumes. Ignore.
             break
         }
     }

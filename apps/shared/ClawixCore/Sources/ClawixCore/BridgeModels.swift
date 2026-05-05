@@ -5,6 +5,38 @@ public enum WireRole: String, Codable, Equatable, Sendable {
     case assistant
 }
 
+/// Project descriptor exposed to the desktop client when it asks the
+/// daemon for `listProjects`. Mirrors the macOS `DerivedProject` shape
+/// the GUI consumes today, minus the cached chat list (clients pull
+/// chats independently via `chatsSnapshot`).
+public struct WireProject: Codable, Equatable, Sendable {
+    public let id: String
+    public var title: String
+    /// Working directory the chats in this project were started in. The
+    /// daemon uses this when the client opens a "new chat in this
+    /// project" so it knows which `cwd` to pass to `clawix.startThread`.
+    public var cwd: String
+    public var hasGitRepo: Bool
+    public var branch: String?
+    public var lastUsedAt: Date?
+
+    public init(
+        id: String,
+        title: String,
+        cwd: String,
+        hasGitRepo: Bool = false,
+        branch: String? = nil,
+        lastUsedAt: Date? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.cwd = cwd
+        self.hasGitRepo = hasGitRepo
+        self.branch = branch
+        self.lastUsedAt = lastUsedAt
+    }
+}
+
 public struct WireChat: Codable, Equatable, Sendable {
     public let id: String
     public var title: String
@@ -16,6 +48,12 @@ public struct WireChat: Codable, Equatable, Sendable {
     public var lastMessagePreview: String?
     public var branch: String?
     public var cwd: String?
+    /// True when the rollout shows the last assistant turn ended
+    /// without `final_answer` / `turn_completed` and the rollout has
+    /// been quiet for more than `RolloutReader.interruptedThreshold`.
+    /// Surfaced so the iPhone (or any client) can render an
+    /// "Interrupted, retry?" affordance on the chat row.
+    public var lastTurnInterrupted: Bool
 
     public init(
         id: String,
@@ -27,7 +65,8 @@ public struct WireChat: Codable, Equatable, Sendable {
         lastMessageAt: Date? = nil,
         lastMessagePreview: String? = nil,
         branch: String? = nil,
-        cwd: String? = nil
+        cwd: String? = nil,
+        lastTurnInterrupted: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -39,6 +78,30 @@ public struct WireChat: Codable, Equatable, Sendable {
         self.lastMessagePreview = lastMessagePreview
         self.branch = branch
         self.cwd = cwd
+        self.lastTurnInterrupted = lastTurnInterrupted
+    }
+
+    /// Decode tolerant of legacy payloads (without `lastTurnInterrupted`).
+    /// Old Macs talking to a new iPhone (or vice versa during a phased
+    /// rollout) still parse cleanly — the field defaults to false.
+    private enum CodingKeys: String, CodingKey {
+        case id, title, createdAt, isPinned, isArchived, hasActiveTurn
+        case lastMessageAt, lastMessagePreview, branch, cwd, lastTurnInterrupted
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.title = try c.decode(String.self, forKey: .title)
+        self.createdAt = try c.decode(Date.self, forKey: .createdAt)
+        self.isPinned = try c.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        self.isArchived = try c.decodeIfPresent(Bool.self, forKey: .isArchived) ?? false
+        self.hasActiveTurn = try c.decodeIfPresent(Bool.self, forKey: .hasActiveTurn) ?? false
+        self.lastMessageAt = try c.decodeIfPresent(Date.self, forKey: .lastMessageAt)
+        self.lastMessagePreview = try c.decodeIfPresent(String.self, forKey: .lastMessagePreview)
+        self.branch = try c.decodeIfPresent(String.self, forKey: .branch)
+        self.cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
+        self.lastTurnInterrupted = try c.decodeIfPresent(Bool.self, forKey: .lastTurnInterrupted) ?? false
     }
 }
 
