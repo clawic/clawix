@@ -2,20 +2,20 @@ import SwiftUI
 import ClawixCore
 
 // iOS-side rendering of an assistant message's chronological timeline,
-// mirroring what the macOS app shows. Three pieces:
+// mirroring what the macOS app shows. Behavior parity with Mac:
 //
-//   - `WorkSummaryHeaderView`: the elapsed-time disclosure that sits
-//     above the assistant body. Collapsed by default; tapping reveals an
-//     aggregated list of rows ("Ran 4 commands", "Edited 2 files",
-//     "Used the browser", …) the same way the Mac does it.
-//   - `AssistantTimelineView`: walks the `[WireTimelineEntry]` and
-//     renders each `.reasoning` chunk as text and each `.tools` group
-//     as a `ToolGroupRowsView` (aggregate rows for that group only).
-//   - `ToolGroupRowsView`: per-tool-group aggregate rows.
+//   - While the turn is streaming, every reasoning chunk and tool
+//     group renders inline so the user watches the agent's work
+//     accumulate in real time.
+//   - The instant `streamingFinished` flips, the whole timeline
+//     collapses behind the "Worked for Xs" header. Only the assistant's
+//     final reply (rendered by the parent `MessageView`) stays visible.
+//   - Tapping the header chevron expands the timeline back, revealing
+//     every intermediate reasoning chunk and tool call.
 //
 // We intentionally keep the visual language simple (SF Symbols, plain
 // text). The point is fidelity of CONTENT, not the bespoke iconography
-// the desktop has. Matches Tarea: "paridad completa con Mac".
+// the desktop has.
 
 // MARK: - Public entry point
 
@@ -24,26 +24,38 @@ struct AssistantTimelineView: View {
     let workSummary: WireWorkSummary?
     let isStreaming: Bool
 
+    @State private var expanded: Bool = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let summary = workSummary,
                !summary.items.isEmpty,
                summary.endedAt != nil || isStreaming {
-                WorkSummaryHeaderView(summary: summary, isStreaming: isStreaming)
+                WorkSummaryHeaderView(
+                    summary: summary,
+                    isStreaming: isStreaming,
+                    expanded: $expanded
+                )
             }
 
-            ForEach(Array(timeline.enumerated()), id: \.offset) { _, entry in
-                switch entry {
-                case .reasoning(_, let text):
-                    if !text.isEmpty {
-                        Text(text)
-                            .font(Typography.bodyFont)
-                            .foregroundStyle(Palette.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .lineSpacing(3)
+            // Mac parity: timeline entries are visible while streaming
+            // (the user watches the agent work) or when the user has
+            // tapped the header to reveal the hidden history. Otherwise
+            // they collapse so only the final answer remains.
+            if isStreaming || expanded {
+                ForEach(Array(timeline.enumerated()), id: \.offset) { _, entry in
+                    switch entry {
+                    case .reasoning(_, let text):
+                        if !text.isEmpty {
+                            Text(text)
+                                .font(Typography.bodyFont)
+                                .foregroundStyle(Palette.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .lineSpacing(3)
+                        }
+                    case .tools(_, let items):
+                        ToolGroupRowsView(items: items)
                     }
-                case .tools(_, let items):
-                    ToolGroupRowsView(items: items)
                 }
             }
         }
@@ -55,26 +67,11 @@ struct AssistantTimelineView: View {
 private struct WorkSummaryHeaderView: View {
     let summary: WireWorkSummary
     let isStreaming: Bool
-    @State private var expanded: Bool = false
+    @Binding var expanded: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             disclosure
-            if expanded {
-                let rows = aggregateForSummary(summary.items)
-                if rows.isEmpty {
-                    Text("No actions recorded")
-                        .font(Typography.captionFont)
-                        .foregroundStyle(Palette.textTertiary)
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(rows) { row in
-                            ToolRowView(row: row)
-                        }
-                    }
-                    .padding(.leading, 2)
-                }
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 6)
@@ -88,6 +85,11 @@ private struct WorkSummaryHeaderView: View {
 
     private var disclosure: some View {
         Button {
+            // While streaming the timeline is forced visible, so the
+            // chevron is a no-op until the turn ends. Matches Mac,
+            // which swaps the live header out for the disclosure header
+            // only on `turn/completed`.
+            guard !isStreaming else { return }
             withAnimation(.easeOut(duration: 0.16)) {
                 expanded.toggle()
             }
@@ -95,11 +97,15 @@ private struct WorkSummaryHeaderView: View {
             TimelineView(.periodic(from: .now, by: isStreaming ? 1.0 : 3600)) { ctx in
                 HStack(spacing: 6) {
                     Text(headerText(now: ctx.date))
-                        .font(.system(size: 13, weight: .regular))
+                        .font(BodyFont.system(size: 13, weight: .regular))
                         .foregroundStyle(Palette.textSecondary)
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Palette.textTertiary)
+                    if !isStreaming {
+                        Image(systemName: "chevron.right")
+                            .font(BodyFont.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Palette.textTertiary)
+                            .rotationEffect(.degrees(expanded ? 90 : 0))
+                            .animation(.easeOut(duration: 0.16), value: expanded)
+                    }
                 }
                 .contentShape(Rectangle())
             }
@@ -151,7 +157,7 @@ private struct InlineRow: View {
                 .foregroundStyle(Palette.textSecondary)
                 .frame(width: 16, alignment: .leading)
             Text(prefix + " " + text)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundStyle(Palette.textPrimary)
                 .opacity(shimmer ? 0.7 : 1.0)
                 .lineLimit(2)
@@ -177,7 +183,7 @@ private struct ToolRowView: View {
                 .foregroundStyle(Palette.textTertiary)
                 .frame(width: 16, alignment: .leading)
             Text(row.text)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -209,7 +215,7 @@ private struct ToolRowIcon: View {
                 .frame(width: 14, height: 14)
         default:
             Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .regular))
+                .font(BodyFont.system(size: 12, weight: .regular))
         }
     }
 }
@@ -309,104 +315,18 @@ private func aggregateForGroup(_ items: [WireWorkItem]) -> [ToolRow] {
     return rows
 }
 
-/// Whole-turn aggregation for the `WorkSummary` disclosure header.
-/// Combines reads + non-read commands into a single row to match the
-/// macOS phrasing.
-private func aggregateForSummary(_ items: [WireWorkItem]) -> [ToolRow] {
-    var rows: [ToolRow] = []
-    var readFiles = 0
-    var nonReadCommands = 0
-    var fileChanges = 0
-    var browserUsed = false
-    var webSearchCount = 0
-    var mcpServers: [String] = []
-    var dynamicTools: [String] = []
-    var imageGenerations = 0
-    var imageViews = 0
-
-    for item in items {
-        switch item.kind {
-        case "command":
-            let actions = item.commandActions ?? []
-            let exploratory = actions.contains(where: { $0 == "read" || $0 == "listFiles" || $0 == "search" })
-            if exploratory {
-                readFiles += max(1, actions.filter { $0 == "read" }.count)
-            } else {
-                nonReadCommands += 1
-            }
-        case "fileChange":
-            fileChanges += max(1, item.paths?.count ?? 0)
-        case "webSearch":
-            webSearchCount += 1
-        case "mcpTool":
-            if let s = item.mcpServer, !s.isEmpty, !mcpServers.contains(s) {
-                mcpServers.append(s)
-            }
-        case "dynamicTool":
-            let lower = (item.dynamicToolName ?? "").lowercased()
-            if lower.contains("browser") {
-                browserUsed = true
-            } else if lower.contains("web") {
-                webSearchCount += 1
-            } else if let name = item.dynamicToolName, !name.isEmpty {
-                dynamicTools.append(name)
-            }
-        case "imageGeneration":
-            imageGenerations += 1
-        case "imageView":
-            imageViews += 1
-        default:
-            break
-        }
-    }
-
-    if readFiles > 0 || nonReadCommands > 0 {
-        var parts: [String] = []
-        if readFiles > 0 {
-            parts.append(pluralize("Explored \(readFiles) file", count: readFiles))
-        }
-        if nonReadCommands > 0 {
-            parts.append(pluralize("Ran \(nonReadCommands) command", count: nonReadCommands))
-        }
-        let icon = readFiles > 0 ? "magnifyingglass" : "terminal"
-        rows.append(.init(id: "exec", systemImage: icon, text: parts.joined(separator: ", ")))
-    }
-    if fileChanges > 0 {
-        rows.append(.init(id: "edit", systemImage: "pencil", text: pluralize("Modified \(fileChanges) file", count: fileChanges)))
-    }
-    if browserUsed {
-        rows.append(.init(id: "browser", systemImage: "safari", text: "Used the browser"))
-    }
-    if webSearchCount > 0 {
-        let text = webSearchCount == 1 ? "Searched the web" : "Searched the web \(webSearchCount) times"
-        rows.append(.init(id: "web", systemImage: "globe", text: text))
-    }
-    for (idx, server) in mcpServers.enumerated() {
-        rows.append(.init(id: "mcp\(idx)", systemImage: "puzzlepiece.extension", text: "Used \(prettyMcp(server))"))
-    }
-    for (idx, name) in dynamicTools.enumerated() {
-        rows.append(.init(id: "dyn\(idx)", systemImage: "wrench.and.screwdriver", text: "Used \(name)"))
-    }
-    if imageGenerations > 0 {
-        rows.append(.init(id: "imgGen", systemImage: "photo", text: pluralize("Generated \(imageGenerations) image", count: imageGenerations)))
-    }
-    if imageViews > 0 {
-        rows.append(.init(id: "imgView", systemImage: "eye", text: pluralize("Viewed \(imageViews) image", count: imageViews)))
-    }
-    return rows
-}
-
 // MARK: - File-change pills (after the assistant body)
 
 struct ChangedFilePills: View {
     let timeline: [WireTimelineEntry]
+    var onOpen: (String) -> Void = { _ in }
 
     var body: some View {
         let paths = changedFilePaths(in: timeline)
         if !paths.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(paths, id: \.self) { path in
-                    ChangedFilePill(path: path)
+                    ChangedFilePill(path: path, onOpen: { onOpen(path) })
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -416,35 +336,25 @@ struct ChangedFilePills: View {
 
 private struct ChangedFilePill: View {
     let path: String
+    let onOpen: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            FileChipIcon(size: 16)
-                .foregroundStyle(Palette.textPrimary)
-                .frame(width: 28, height: 28)
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Palette.cardFill)
-                )
-            VStack(alignment: .leading, spacing: 2) {
+        Button(action: onOpen) {
+            HStack(spacing: 8) {
+                FileChipIcon(size: 14)
+                    .foregroundStyle(Palette.textSecondary)
                 Text((path as NSString).lastPathComponent)
                     .font(Typography.bodyFont)
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
-                Text(path)
-                    .font(Typography.captionFont)
-                    .foregroundStyle(Palette.textTertiary)
-                    .lineLimit(1)
                     .truncationMode(.middle)
+                Spacer(minLength: 0)
             }
-            Spacer()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Palette.cardFill)
-        )
+        .buttonStyle(.plain)
     }
 }
 
