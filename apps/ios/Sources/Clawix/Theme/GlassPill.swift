@@ -68,7 +68,10 @@ struct GlassIconButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            Haptics.tap()
+            action()
+        }) {
             ZStack {
                 Circle()
                     .fill(.clear)

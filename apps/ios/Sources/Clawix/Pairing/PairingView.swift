@@ -83,7 +83,10 @@ struct PairingView: View {
     }
 
     private var scanButton: some View {
-        Button(action: { showScanner = true }) {
+        Button(action: {
+            Haptics.send()
+            showScanner = true
+        }) {
             HStack(spacing: 8) {
                 Image(systemName: "qrcode.viewfinder")
                     .font(BodyFont.system(size: 16, weight: .semibold))
@@ -127,7 +130,10 @@ private struct ScannerSheet: View {
                 .ignoresSafeArea()
             VStack {
                 HStack {
-                    Button(action: onCancel) {
+                    Button(action: {
+                        Haptics.tap()
+                        onCancel()
+                    }) {
                         Image(systemName: "xmark")
                             .font(BodyFont.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)

@@ -128,5 +128,6 @@ struct FileViewerView: View {
         #if canImport(UIKit)
         UIPasteboard.general.string = text
         #endif
+        Haptics.success()
     }
 }

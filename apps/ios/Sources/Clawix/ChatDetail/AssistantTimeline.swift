@@ -90,6 +90,7 @@ private struct WorkSummaryHeaderView: View {
             // which swaps the live header out for the disclosure header
             // only on `turn/completed`.
             guard !isStreaming else { return }
+            Haptics.tap()
             withAnimation(.easeOut(duration: 0.16)) {
                 expanded.toggle()
             }
@@ -339,7 +340,10 @@ private struct ChangedFilePill: View {
     let onOpen: () -> Void
 
     var body: some View {
-        Button(action: onOpen) {
+        Button(action: {
+            Haptics.tap()
+            onOpen()
+        }) {
             HStack(spacing: 8) {
                 FileChipIcon(size: 14)
                     .foregroundStyle(Palette.textSecondary)

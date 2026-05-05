@@ -228,6 +228,7 @@ struct AssistantMarkdownView: View {
         case .paragraph(let attr):
             Text(styledInline(attr))
                 .font(Typography.bodyFont)
+                .tracking(-0.2)
                 .foregroundStyle(Palette.textPrimary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
@@ -243,6 +244,7 @@ struct AssistantMarkdownView: View {
                             .frame(width: 8, alignment: .leading)
                         Text(styledInline(item))
                             .font(Typography.bodyFont)
+                            .tracking(-0.2)
                             .foregroundStyle(Palette.textPrimary)
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
@@ -271,6 +273,7 @@ struct AssistantMarkdownView: View {
                             .frame(width: 18, alignment: .trailing)
                         Text(styledInline(item))
                             .font(Typography.bodyFont)
+                            .tracking(-0.2)
                             .foregroundStyle(Palette.textPrimary)
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
@@ -375,6 +378,7 @@ private struct AssistantCodeBlockView: View {
         #if canImport(UIKit)
         UIPasteboard.general.string = code
         #endif
+        Haptics.success()
         withAnimation(.easeOut(duration: 0.18)) { copied = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
             withAnimation(.easeOut(duration: 0.18)) { copied = false }

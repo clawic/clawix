@@ -89,8 +89,7 @@ final class QRScannerController: UIViewController, AVCaptureMetadataOutputObject
               object.type == .qr,
               let payload = object.stringValue else { return }
         didReport = true
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        Haptics.success()
         onScan?(payload)
     }
 }
