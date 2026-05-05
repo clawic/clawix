@@ -44,13 +44,15 @@ struct ToolGroupView: View {
             TerminalIcon(size: 14)
                 .foregroundColor(Color(white: 0.45))
                 .frame(width: 16, alignment: .leading)
-            (Text(prefix + " ")
-                .foregroundColor(Color(white: 0.50))
-             + Text(body)
-                .foregroundColor(Color(white: 0.55))
+            ShimmerText(
+                text: prefix + " " + body,
+                font: .system(size: 13),
+                color: .white,
+                baseOpacity: 0.30,
+                peakOpacity: 0.80,
+                cycleDuration: 2.2,
+                radius: 6.0
             )
-            .font(.system(size: 13))
-            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
