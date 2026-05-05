@@ -2,13 +2,13 @@
 # Builds a notarization-ready Clawix.app:
 # - swift build -c release
 # - bundles Sparkle.framework with per-component hardened-runtime signing
-# - signs the whole .app with `Developer ID Application` (read from env)
+# - signs the whole .app with the release identity read from env
 #
 # This is the artifact the workspace-private release orchestrator
 # (scripts-dev/release.sh) feeds into notarytool + create-dmg.
 #
 # Required env (typically via .signing.env at the workspace root):
-#   DEVELOPER_ID_IDENTITY  → "Developer ID Application: ..."
+#   DEVELOPER_ID_IDENTITY  → release codesign identity
 #   BUNDLE_ID              → reverse-DNS bundle identifier
 set -euo pipefail
 

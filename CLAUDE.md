@@ -29,7 +29,7 @@ Compiles debug, kills the previous instance, relaunches. By default the build is
 Create a `.signing.env` file at the repo root (or any parent directory) with your values:
 
 ```
-SIGN_IDENTITY="Developer ID Application: Your Name (XXXXXXXXXX)"
+SIGN_IDENTITY="<codesign identity>"
 BUNDLE_ID="com.yourdomain.clawix"
 ```
 
@@ -80,7 +80,7 @@ This repository never contains the maintainer's real codesign identity, Apple Te
 - **Do not hard-code** a `CFBundleIdentifier`, a `DEVELOPMENT_TEAM`, or a codesign identity literal anywhere in this repository. Those values are read at runtime from `.signing.env` or environment variables.
 - **Do not commit** the file `.signing.env`. It is in `.gitignore` and `apps/macos/scripts/public_hygiene_check.sh` fails the build if a copy is detected inside the public tree.
 - **Do not introduce** an `Info.plist` with a literal bundle id. The plist is generated in `build_app.sh` interpolating `${BUNDLE_ID}`.
-- **Do not add** an Xcode project with `DEVELOPMENT_TEAM = XXXXXXXXXX;`. Leave the field empty; the script supplies it via `xcodebuild DEVELOPMENT_TEAM="$TEAM_ID" …` from the environment.
+- **Do not add** an Xcode project with a concrete development team value. Leave the field empty; the script supplies it from the environment.
 
 If you need to expose a new piece of local config (another identifier, another flag), add the variable to the scripts and document it in `.signing.env.example`. Never the other way around.
 

@@ -37,13 +37,13 @@ Compiles debug, kills the previous instance, relaunches. Window position, size a
 Create a `.signing.env` file at the repo root (or any parent directory) with your values:
 
 ```
-SIGN_IDENTITY="Developer ID Application: Your Name (XXXXXXXXXX)"
+SIGN_IDENTITY="<codesign identity>"
 BUNDLE_ID="com.yourdomain.clawix"
 ```
 
 Both `dev.sh` and `build_app.sh` source it automatically. With a stable identity + bundle id, macOS remembers the TCC grants between rebuilds and stops re-prompting. The file is in `.gitignore`.
 
-List your codesign identities with `security find-identity -v -p codesigning`. Any of `Apple Development`, `Developer ID Application` or `Apple Distribution` works.
+List your codesign identities with `security find-identity -v -p codesigning`. Any valid macOS codesign identity works.
 
 Environment variables also work and override the file:
 
