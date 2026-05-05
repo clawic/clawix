@@ -86,28 +86,28 @@ private struct FolderClosedIconShape: Shape {
         }
 
         var path = Path()
-        path.move(to: p(15.0, 15.0))
-        path.addCurve(to: p(16.5, 13.5),
-                      control1: p(15.828, 15.0), control2: p(16.5, 14.328))
-        path.addLine(to: p(16.5, 6.0))
-        path.addCurve(to: p(15.0, 4.5),
-                      control1: p(16.5, 5.172), control2: p(15.828, 4.5))
-        path.addLine(to: p(9.051, 4.5))
-        path.addCurve(to: p(7.809, 3.824),
-                      control1: p(8.551, 4.496), control2: p(8.082, 4.242))
-        path.addLine(to: p(7.191, 2.926))
-        path.addCurve(to: p(5.949, 2.25),
-                      control1: p(6.918, 2.508), control2: p(6.449, 2.254))
-        path.addLine(to: p(3.0, 2.25))
-        path.addCurve(to: p(1.5, 3.75),
-                      control1: p(2.172, 2.25), control2: p(1.5, 2.922))
-        path.addLine(to: p(1.5, 13.5))
-        path.addCurve(to: p(3.0, 15.0),
-                      control1: p(1.5, 14.328), control2: p(2.172, 15.0))
+        path.move(to: p(14.5, 15.0))
+        path.addCurve(to: p(16.5, 13.0),
+                      control1: p(15.605, 15.0), control2: p(16.5, 14.105))
+        path.addLine(to: p(16.5, 6.5))
+        path.addCurve(to: p(14.5, 4.5),
+                      control1: p(16.5, 5.395), control2: p(15.605, 4.5))
+        path.addLine(to: p(10.051, 4.5))
+        path.addCurve(to: p(8.809, 3.824),
+                      control1: p(9.551, 4.496), control2: p(9.082, 4.242))
+        path.addLine(to: p(8.191, 2.926))
+        path.addCurve(to: p(6.949, 2.25),
+                      control1: p(7.918, 2.508), control2: p(7.449, 2.254))
+        path.addLine(to: p(3.5, 2.25))
+        path.addCurve(to: p(1.5, 4.25),
+                      control1: p(2.395, 2.25), control2: p(1.5, 3.146))
+        path.addLine(to: p(1.5, 13.0))
+        path.addCurve(to: p(3.5, 15.0),
+                      control1: p(1.5, 14.105), control2: p(2.395, 15.0))
         path.closeSubpath()
 
-        path.move(to: p(1.5, 7.5))
-        path.addLine(to: p(16.5, 7.5))
+        path.move(to: p(1.5, 8.25))
+        path.addLine(to: p(16.5, 8.25))
         return path
     }
 }
