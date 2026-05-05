@@ -171,6 +171,7 @@ guard let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDes
     exit(2)
 }
 
+var best: (id: Int, width: CGFloat, height: CGFloat, area: CGFloat)?
 for window in windows {
     guard
         let ownerPID = window[kCGWindowOwnerPID as String] as? Int32,
@@ -181,10 +182,16 @@ for window in windows {
         let height = bounds["Height"] as? CGFloat
     else { continue }
 
-    print("\(id) \(Int(width)) \(Int(height))")
-    exit(0)
+    let area = width * height
+    if best == nil || area > best!.area {
+        best = (id, width, height, area)
+    }
 }
 
+if let best {
+    print("\(best.id) \(Int(best.width)) \(Int(best.height))")
+    exit(0)
+}
 exit(1)
 SWIFT
 )" || true
