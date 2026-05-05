@@ -65,6 +65,24 @@ if [[ ! -f "$BINARY" ]]; then
     exit 1
 fi
 
+# Build the bridge daemon for release. Lives in a sibling SPM package
+# under Helpers/Bridged/, ships as Contents/Helpers/clawix-bridged so
+# SMAppService.agent can register it as a LaunchAgent at runtime.
+BRIDGED_PKG="$PROJECT_DIR/Helpers/Bridged"
+BRIDGED_BINARY=""
+if [[ -f "$BRIDGED_PKG/Package.swift" ]]; then
+    echo "==> Building clawix-bridged daemon (release)"
+    (cd "$BRIDGED_PKG" && swift build -c release \
+        -Xswiftc -file-prefix-map -Xswiftc "${BRIDGED_PKG}/.build=clawix/.build" \
+        -Xswiftc -file-prefix-map -Xswiftc "${BRIDGED_PKG}=clawix/apps/macos/Helpers/Bridged" \
+        2>&1)
+    BRIDGED_BINARY="$BRIDGED_PKG/.build/release/clawix-bridged"
+    if [[ ! -f "$BRIDGED_BINARY" ]]; then
+        echo "ERROR: clawix-bridged binary not produced at $BRIDGED_BINARY" >&2
+        exit 1
+    fi
+fi
+
 echo "==> Assembling $BUNDLE_DIR"
 rm -rf "$BUNDLE_DIR"
 mkdir -p "$BUNDLE_DIR/Contents/MacOS"
@@ -134,6 +152,39 @@ if [[ -z "$SPARKLE_FW" ]]; then
 fi
 cp -R "$SPARKLE_FW" "$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
 
+# Embed the bridge daemon under Contents/Helpers/clawix-bridged plus
+# its LaunchAgent plist under Contents/Library/LaunchAgents/. The
+# plist label / filename uses "${BUNDLE_ID}.bridge" so the LaunchAgent
+# stays grouped with the GUI under the same reverse-DNS prefix without
+# leaking the maintainer's bundle id.
+if [[ -n "$BRIDGED_BINARY" ]]; then
+    mkdir -p "$BUNDLE_DIR/Contents/Helpers" "$BUNDLE_DIR/Contents/Library/LaunchAgents"
+    cp "$BRIDGED_BINARY" "$BUNDLE_DIR/Contents/Helpers/clawix-bridged"
+    chmod +x "$BUNDLE_DIR/Contents/Helpers/clawix-bridged"
+
+    AGENT_LABEL="${BUNDLE_ID}.bridge"
+    AGENT_PLIST="$BUNDLE_DIR/Contents/Library/LaunchAgents/${AGENT_LABEL}.plist"
+    cat > "$AGENT_PLIST" << AGENTPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>                       <string>${AGENT_LABEL}</string>
+    <key>BundleProgram</key>               <string>Contents/Helpers/clawix-bridged</string>
+    <key>RunAtLoad</key>                   <true/>
+    <key>KeepAlive</key>                   <true/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CLAWIX_BRIDGED_PORT</key>     <string>7778</string>
+    </dict>
+    <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
+    <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
+</dict>
+</plist>
+AGENTPLIST
+fi
+
 # Strip absolute build paths from the binary. Swift's -file-prefix-map
 # only rewrites DWARF; #file literals embedded by precondition / GRDB
 # code live in __TEXT,__cstring and need a post-build patch. Done before
@@ -177,6 +228,22 @@ if [[ -e "$SPARKLE_CURRENT/Updater.app" ]]; then
     sign "$SPARKLE_CURRENT/Updater.app"
 fi
 sign "$SPARKLE_BUNDLE"
+
+HELPER_BIN="$BUNDLE_DIR/Contents/Helpers/clawix-bridged"
+if [[ -f "$HELPER_BIN" ]]; then
+    echo "==> Stripping absolute build paths from clawix-bridged"
+    python3 "$SCRIPT_DIR/strip_user_paths.py" \
+        "$HELPER_BIN" \
+        --replace "${BRIDGED_PKG}/.build/=clawix/Helpers/Bridged/.build/" \
+        --replace "${BRIDGED_PKG}/=clawix/apps/macos/Helpers/Bridged/" \
+        --replace "$(dirname "${PROJECT_DIR}")/=clawix/apps/" \
+        --replace "${HOME}/="
+    echo "==> Signing clawix-bridged helper"
+    codesign --force --options runtime --timestamp \
+             --sign "$DEVELOPER_ID_IDENTITY" \
+             --identifier "${BUNDLE_ID}.bridge" \
+             "$HELPER_BIN"
+fi
 
 echo "==> Signing app binary + bundle (identity: $DEVELOPER_ID_IDENTITY)"
 codesign --force --options runtime --timestamp \

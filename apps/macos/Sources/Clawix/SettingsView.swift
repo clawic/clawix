@@ -565,6 +565,7 @@ private struct GeneralPage: View {
     @State private var openTarget: String = "Ghostty"
     @State private var showInMenuBar: Bool = true
     @State private var preventSleep: Bool = true
+    @StateObject private var backgroundBridge: BackgroundBridgeService = .shared
     @State private var requireCmdEnter: Bool = false
     @State private var speed: String = "Standard"
     @State private var followBehavior: FollowBehavior = .queue
@@ -659,6 +660,15 @@ private struct GeneralPage: View {
                     title: "Show in the menu bar",
                     detail: "Keep Clawix in the macOS menu bar when the main window closes",
                     isOn: $showInMenuBar
+                )
+                CardDivider()
+                ToggleRow(
+                    title: "Run bridge in background",
+                    detail: "Registers a LaunchAgent helper that keeps a bridge process alive even after Clawix is fully quit. Closing the window already keeps the in-process bridge alive thanks to the menu bar item; this toggle is a foundation for the upcoming \"daemon owns chat state\" mode and currently registers a stub helper that won't have your chats yet. Status: \(backgroundBridge.statusLabel)\(backgroundBridge.lastError.map { " — \($0)" } ?? "")",
+                    isOn: Binding(
+                        get: { backgroundBridge.isEnabled },
+                        set: { backgroundBridge.toggle($0) }
+                    )
                 )
                 CardDivider()
                 ActionPillRow(

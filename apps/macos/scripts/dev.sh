@@ -145,6 +145,29 @@ if [[ ! -f "$PROJECT_DIR/.build/debug/${APP_NAME}" ]]; then
     exit 1
 fi
 
+# 1.5) Build the bridge daemon (clawix-bridged). Lives in a sibling SPM
+#      package under Helpers/Bridged/. The daemon shares ClawixEngine
+#      with the GUI but is its own executable target so it can be
+#      registered as a LaunchAgent later (SMAppService.agent), keeping
+#      the iPhone bridge alive across Cmd+Q / GUI crashes.
+#
+#      The dev build embeds the daemon binary at
+#      Contents/Helpers/clawix-bridged so the eventual SMAppService
+#      registration finds it at the conventional path. The daemon is
+#      NOT auto-registered or auto-started here — that requires a
+#      Settings UI toggle which lands in a later phase.
+BRIDGED_PKG="$PROJECT_DIR/Helpers/Bridged"
+BRIDGED_BIN_BUILT=""
+if [[ -f "$BRIDGED_PKG/Package.swift" ]]; then
+    echo "==> Building clawix-bridged daemon…"
+    (cd "$BRIDGED_PKG" && swift build 2>&1)
+    BRIDGED_BIN_BUILT="$BRIDGED_PKG/.build/debug/clawix-bridged"
+    if [[ ! -f "$BRIDGED_BIN_BUILT" ]]; then
+        echo "WARN: clawix-bridged binary not produced; bundle will ship without daemon" >&2
+        BRIDGED_BIN_BUILT=""
+    fi
+fi
+
 # 2) Kill any previous instance, however launched.
 #    The frame is persisted on every move/resize, so killing is safe.
 PIDS=$({
@@ -181,6 +204,48 @@ mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$DEV_DIR"
 cp "$PROJECT_DIR/.build/debug/${APP_NAME}" "$BIN"
 chmod +x "$BIN"
 cp "$ICON_FILE" "$BUNDLE/Contents/Resources/Clawix.icns"
+
+# 3.1) Embed the bridge daemon under Contents/Helpers/clawix-bridged.
+#      SMAppService.agent expects the helper to live next to the .app
+#      it ships with so the LaunchAgent plist's `ProgramArguments` can
+#      use a path relative to the bundle. Even though SMAppService is
+#      not yet wired up to register/unregister this from Settings, the
+#      bundle layout is the production layout so future passes only
+#      add the wiring, not move the binary.
+#
+# 3.2) Generate Contents/Library/LaunchAgents/<bundle>.bridge.plist
+#      from a template here. The bundle id of the agent is
+#      "${BUNDLE_ID}.bridge" so it stays grouped with the GUI under
+#      the same reverse-DNS prefix without leaking the maintainer's
+#      real id into the public repo.
+if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
+    mkdir -p "$BUNDLE/Contents/Helpers" "$BUNDLE/Contents/Library/LaunchAgents"
+    cp "$BRIDGED_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-bridged"
+    chmod +x "$BUNDLE/Contents/Helpers/clawix-bridged"
+
+    AGENT_LABEL="${BUNDLE_ID}.bridge"
+    AGENT_PLIST="$BUNDLE/Contents/Library/LaunchAgents/${AGENT_LABEL}.plist"
+    cat > "$AGENT_PLIST" << AGENTPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>                       <string>${AGENT_LABEL}</string>
+    <key>BundleProgram</key>               <string>Contents/Helpers/clawix-bridged</string>
+    <key>RunAtLoad</key>                   <true/>
+    <key>KeepAlive</key>                   <true/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CLAWIX_BRIDGED_PORT</key>     <string>7778</string>
+    </dict>
+    <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
+    <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
+</dict>
+</plist>
+AGENTPLIST
+fi
+
 RESOURCE_BUNDLE="$(find "$PROJECT_DIR/.build" -path "*/debug/${APP_NAME}_${APP_NAME}.bundle" -type d | head -n 1 || true)"
 if [[ -n "$RESOURCE_BUNDLE" ]]; then
     cp -R "$RESOURCE_BUNDLE" "$BUNDLE/Contents/Resources/"
@@ -265,6 +330,23 @@ sign_one() {
         codesign --force --sign - --timestamp=none "$target"
     fi
 }
+
+# Sign the bridge daemon helper. SMAppService refuses to register a
+# LaunchAgent helper whose codesign team id doesn't match the
+# enclosing .app, so we sign with the same identity used for the GUI.
+# The helper carries its own bundle id (`${BUNDLE_ID}.bridge`) so
+# launchd / SMAppService can address it independently.
+HELPER_BIN="$BUNDLE/Contents/Helpers/clawix-bridged"
+if [[ -f "$HELPER_BIN" ]]; then
+    if ! codesign --force --sign "$SIGN_IDENTITY" \
+                  --identifier "${BUNDLE_ID}.bridge" \
+                  --timestamp=none \
+                  "$HELPER_BIN" 2>/tmp/clawix-bridged-sign.err; then
+        echo "WARN: codesign for clawix-bridged with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
+        cat /tmp/clawix-bridged-sign.err >&2
+        codesign --force --sign - --identifier "${BUNDLE_ID}.bridge" "$HELPER_BIN"
+    fi
+fi
 
 SPARKLE_BUNDLE="$BUNDLE/Contents/Frameworks/Sparkle.framework"
 if [[ -d "$SPARKLE_BUNDLE" ]]; then

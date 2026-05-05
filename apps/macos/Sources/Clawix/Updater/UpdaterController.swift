@@ -48,6 +48,13 @@ final class UpdaterController: NSObject, ObservableObject, SPUUpdaterDelegate {
         Task { @MainActor in
             self.updateAvailable = false
             self.pendingVersion = nil
+            // Sparkle is about to move the .app bundle. The
+            // LaunchAgent daemon (`clawix-bridged`) holds file
+            // handles into Contents/Helpers/, which would block the
+            // swap. Tell BackgroundBridgeService to unregister; it
+            // re-registers on next launch via
+            // `restoreAfterUpdateIfNeeded()`.
+            BackgroundBridgeService.shared.prepareForUpdateInstall()
         }
     }
 }

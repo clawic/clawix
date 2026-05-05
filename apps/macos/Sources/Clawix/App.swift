@@ -122,6 +122,58 @@ struct ClawixApp: App {
         }
         .defaultSize(width: 360, height: 540)
         .windowResizability(.contentSize)
+
+        // Menu bar status item. Lets the user reopen the main window
+        // when they've closed it (the app keeps running in the
+        // background to host the iPhone bridge), trigger pairing, and
+        // quit explicitly. The icon stays visible whenever the app is
+        // running, so the user always knows the bridge is alive.
+        MenuBarExtra {
+            MenuBarContent()
+                .environmentObject(appState)
+        } label: {
+            Image(systemName: "circle.hexagongrid.fill")
+        }
+    }
+}
+
+private struct MenuBarContent: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Open \(appDisplayName)") {
+            openMainWindow()
+        }
+        .keyboardShortcut("o")
+
+        Divider()
+
+        Button(L10n.t("Pair iPhone…")) {
+            openWindow(id: "clawix-pair")
+            NSApp.activate(ignoringOtherApps: true)
+        }
+
+        Divider()
+
+        Button(L10n.t("Quit \(appDisplayName)")) {
+            NSApp.terminate(nil)
+        }
+        .keyboardShortcut("q")
+    }
+
+    /// Reuse the existing main-window NSWindow if SwiftUI is still
+    /// holding it (the typical case after the user clicked the close
+    /// button); otherwise open a fresh window through the SwiftUI
+    /// environment so the WindowGroup re-mounts ContentView.
+    private func openMainWindow() {
+        for window in NSApp.windows where window.identifier?.rawValue == FileMenuActions.mainWindowID {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        openWindow(id: FileMenuActions.mainWindowID)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
@@ -134,10 +186,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             NSApp.windows.forEach(self.configure)
         }
+        // If the previous launch was interrupted by a Sparkle update
+        // mid-install, the LaunchAgent was unregistered to release
+        // file handles. Restore it now so the user does not have to
+        // re-enable "Run bridge in background" after every update.
+        BackgroundBridgeService.shared.restoreAfterUpdateIfNeeded()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         NSApp.windows.forEach(saveFrame)
+    }
+
+    /// Closing the main window does NOT quit the app. The bridge that
+    /// serves the paired iPhone lives in this process today; if the
+    /// user closing their window also tore down the bridge, the iPhone
+    /// would lose its session and have to reconnect on every relaunch.
+    /// We keep the process alive in the menu bar (see `MenuBarScene`)
+    /// so the iPhone keeps working, and the user reopens the window
+    /// from the menu or by clicking the Dock icon.
+    ///
+    /// `Cmd+Q` still quits the process the standard way, since that
+    /// is the user's explicit intent.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    /// When the app has no visible windows and the user clicks the
+    /// Dock icon (or activates from Spotlight), reopen the main
+    /// window instead of doing nothing.
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        if !flag {
+            // Re-show the existing main window if it's still around;
+            // SwiftUI keeps the WindowGroup instance alive even after
+            // the window is closed, so `makeKeyAndOrderFront` is the
+            // correct call.
+            for window in NSApp.windows where window.identifier?.rawValue == FileMenuActions.mainWindowID {
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+                return true
+            }
+            // No window object cached. Fall through to AppKit's default
+            // behaviour, which will re-instantiate via SwiftUI.
+        }
+        return true
     }
 
     // Custom inset for the native traffic lights. macOS plants them very
