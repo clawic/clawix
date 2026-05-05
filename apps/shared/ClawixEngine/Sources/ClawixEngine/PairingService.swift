@@ -11,7 +11,7 @@ public final class PairingService {
 
     public static let shared = PairingService()
 
-    public let port: UInt16 = 7777
+    public let port: UInt16
     private let bearerKey = "ClawixBridge.Bearer.v1"
     private let defaults: UserDefaults
 
@@ -19,8 +19,9 @@ public final class PairingService {
     /// singleton uses the host app's `appPrefsSuite`. The default
     /// initialiser falls back to `.standard`, which is fine for the
     /// stand-alone daemon binary that has its own bundle id.
-    public init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = .standard, port: UInt16 = 7777) {
         self.defaults = defaults
+        self.port = port
     }
 
     /// Wires the singleton to a process-specific UserDefaults suite.
