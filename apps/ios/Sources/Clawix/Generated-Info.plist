@@ -33,6 +33,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Used to scan the Clawix pairing QR code shown on your Mac.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Used to talk to Clawix running on your Mac over the local network.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIBackgroundColor</key>

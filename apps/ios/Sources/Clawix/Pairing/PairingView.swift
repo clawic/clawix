@@ -1,12 +1,15 @@
 import SwiftUI
 import ClawixCore
 
-// Phase 3 placeholder. Real QR scanning + Keychain persistence ship
-// in Phase 6. For now the view explains the flow and offers a
-// "continue with mock" action for the simulator.
+// First-run pairing screen. Pure black canvas, with a glass-bordered
+// instructions card and a glass capsule CTA. Stays consistent with
+// the ChatGPT-style chrome the rest of the app uses.
 
 struct PairingView: View {
-    let onPaired: () -> Void
+    let onPaired: (Credentials) -> Void
+
+    @State private var showScanner = false
+    @State private var lastError: String?
 
     var body: some View {
         ZStack {
@@ -15,28 +18,40 @@ struct PairingView: View {
                 Spacer()
                 logoBlock
                 instructions
+                if let lastError {
+                    Text(lastError)
+                        .font(Typography.captionFont)
+                        .foregroundStyle(Color.red.opacity(0.85))
+                }
                 Spacer()
-                continueMockButton
+                scanButton
             }
             .padding(.horizontal, AppLayout.screenHorizontalPadding)
             .padding(.bottom, 32)
         }
+        .sheet(isPresented: $showScanner) {
+            ScannerSheet(
+                onScan: handleScan,
+                onCancel: { showScanner = false },
+                onError: { msg in
+                    lastError = msg
+                    showScanner = false
+                }
+            )
+        }
     }
 
     private var logoBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Palette.cardFill)
-                    .frame(width: 64, height: 64)
-                Image(systemName: "qrcode.viewfinder")
-                    .font(.system(size: 30, weight: .regular))
-                    .foregroundStyle(Palette.textPrimary)
-            }
-            Text("Pair with your Mac")
-                .font(.system(size: 26, weight: .semibold))
+        VStack(alignment: .leading, spacing: 14) {
+            Image(systemName: "qrcode.viewfinder")
+                .font(.system(size: 28, weight: .regular))
                 .foregroundStyle(Palette.textPrimary)
-            Text("Scan the QR code Clawix shows on your Mac to link this iPhone over the local network.")
+                .frame(width: 72, height: 72)
+                .glassCircle()
+            Text("Pair with your Mac")
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(Palette.textPrimary)
+            Text("Open Clawix on your Mac, choose Window > Pair iPhone, and scan the QR with this device.")
                 .font(Typography.bodyFont)
                 .foregroundStyle(Palette.textSecondary)
                 .lineSpacing(2)
@@ -46,19 +61,12 @@ struct PairingView: View {
     private var instructions: some View {
         VStack(alignment: .leading, spacing: AppLayout.cardSpacing) {
             stepRow(index: "1", text: "Open Clawix on your Mac.")
-            stepRow(index: "2", text: "Click the iPhone icon in the sidebar footer.")
+            stepRow(index: "2", text: "Window menu > Pair iPhone (Cmd+Shift+P).")
             stepRow(index: "3", text: "Hold this iPhone in front of the QR code.")
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 18)
-        .background(
-            RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius, style: .continuous)
-                .fill(Palette.cardFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.cardCornerRadius, style: .continuous)
-                .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
-        )
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .glassRounded(radius: AppLayout.cardCornerRadius)
     }
 
     private func stepRow(index: String, text: String) -> some View {
@@ -74,27 +82,76 @@ struct PairingView: View {
         }
     }
 
-    private var continueMockButton: some View {
-        Button(action: onPaired) {
-            Text("Continue with mock data")
-                .font(Typography.bodyEmphasized)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: AppLayout.buttonCornerRadius, style: .continuous)
-                        .fill(Color(white: 0.18))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppLayout.buttonCornerRadius, style: .continuous)
-                        .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
-                )
+    private var scanButton: some View {
+        Button(action: { showScanner = true }) {
+            HStack(spacing: 8) {
+                Image(systemName: "qrcode.viewfinder")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Scan QR")
+                    .font(Typography.bodyEmphasized)
+            }
+            .foregroundStyle(Color.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                Capsule(style: .continuous).fill(Color.white)
+            )
         }
         .buttonStyle(.plain)
+    }
+
+    private func handleScan(_ raw: String) {
+        showScanner = false
+        guard let payload = PairingPayload.parse(raw) else {
+            lastError = "Not a Clawix pairing code"
+            return
+        }
+        guard payload.v == 1 else {
+            lastError = "Pairing format v\(payload.v) not supported. Update this app."
+            return
+        }
+        let creds = payload.asCredentials
+        CredentialStore.shared.save(creds)
+        onPaired(creds)
+    }
+}
+
+private struct ScannerSheet: View {
+    let onScan: (String) -> Void
+    let onCancel: () -> Void
+    let onError: (String) -> Void
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            QRScannerView(onScan: onScan, onError: onError)
+                .ignoresSafeArea()
+            VStack {
+                HStack {
+                    Button(action: onCancel) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 38, height: 38)
+                            .glassCircle()
+                    }
+                    .padding(.leading, 16)
+                    .padding(.top, 16)
+                    Spacer()
+                }
+                Spacer()
+                Text("Scan the Clawix QR shown on your Mac")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .glassCapsule()
+                    .padding(.bottom, 40)
+            }
+        }
     }
 }
 
 #Preview("Pairing") {
-    PairingView(onPaired: {})
+    PairingView(onPaired: { _ in })
         .preferredColorScheme(.dark)
 }

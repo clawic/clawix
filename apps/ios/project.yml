@@ -45,6 +45,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         UIUserInterfaceStyle: Dark
         NSCameraUsageDescription: "Used to scan the Clawix pairing QR code shown on your Mac."
+        NSLocalNetworkUsageDescription: "Used to talk to Clawix running on your Mac over the local network."
         NSBonjourServices:
           - _clawix-bridge._tcp
         NSAppTransportSecurity:
