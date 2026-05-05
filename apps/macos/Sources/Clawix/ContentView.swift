@@ -30,6 +30,12 @@ struct ContentView: View {
     /// and visually swallow the left sidebar.
     private let minContentColumnWidth: CGFloat = 420
 
+    /// Smaller floor used only by the maximize button so the right
+    /// sidebar can really grow into the chat area, while still leaving
+    /// the chat (and the trailing chrome buttons that float over it)
+    /// visible and reachable.
+    private let minContentColumnWidthMaximized: CGFloat = 200
+
     private var leftSidebarWidth: CGFloat {
         min(sidebarMaxWidth, max(sidebarMinVisibleWidth, CGFloat(leftSidebarWidthRaw)))
     }
@@ -58,7 +64,8 @@ struct ContentView: View {
     private var rightSidebarColumnWidth: CGFloat {
         if appState.isRightSidebarMaximized {
             let leftWidth = appState.isLeftSidebarOpen ? leftSidebarWidth : 0
-            return max(rightSidebarMinVisibleWidth, windowWidth - leftWidth)
+            let raw = windowWidth - leftWidth - minContentColumnWidthMaximized
+            return max(rightSidebarMinVisibleWidth, raw)
         }
         let stored = max(rightSidebarMinVisibleWidth, CGFloat(rightSidebarWidthRaw))
         return min(dynamicRightSidebarMaxWidth, stored)

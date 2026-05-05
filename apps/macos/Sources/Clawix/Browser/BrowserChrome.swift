@@ -251,9 +251,6 @@ private struct ChromeMaximizeButton: View {
     var body: some View {
         Button {
             withAnimation(.easeInOut(duration: 0.28)) {
-                if !appState.isRightSidebarMaximized && !appState.isLeftSidebarOpen {
-                    appState.isLeftSidebarOpen = true
-                }
                 appState.isRightSidebarMaximized.toggle()
             }
         } label: {
