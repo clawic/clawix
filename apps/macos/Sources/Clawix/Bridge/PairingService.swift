@@ -38,17 +38,34 @@ final class PairingService {
 
     /// JSON the QR encodes. The iPhone parses it, persists the host /
     /// port / token in its keychain (Phase 6), and connects.
+    ///
+    /// Includes both the LAN IPv4 (fast path when at home, on the same
+    /// WiFi as the Mac) and, if Tailscale is up on the Mac, its
+    /// Tailscale CGNAT IPv4 (works from anywhere as long as the iPhone
+    /// is also on the same Tailnet). The iPhone races them and uses
+    /// whichever responds first, so the user does not have to do
+    /// anything when they leave the house.
     func qrPayload() -> String {
         let host = Self.currentLANIPv4() ?? "0.0.0.0"
-        let dict: [String: Any] = [
+        var dict: [String: Any] = [
             "v": 1,
             "host": host,
             "port": Int(port),
             "token": bearer,
             "macName": Host.current().localizedName ?? "Mac"
         ]
+        if let ts = Self.currentTailscaleIPv4() {
+            dict["tailscaleHost"] = ts
+        }
         let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys])) ?? Data()
         return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    /// Bonjour instance name for the bridge service. Stable per
+    /// machine so the iPhone could re-discover us by name across IP
+    /// changes. We just expose the localized machine name.
+    var bonjourServiceName: String {
+        Host.current().localizedName ?? "Clawix"
     }
 
     /// Authoritative compare for the bridge session. Constant-time-ish
@@ -76,6 +93,48 @@ final class PairingService {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    /// First IPv4 in the Tailscale CGNAT range (`100.64.0.0/10`) we
+    /// find on a `utun*` interface. Tailscale on macOS exposes its
+    /// node IP via a `utun` tunnel; scanning interfaces avoids
+    /// shelling out to the `tailscale` CLI which is not always in
+    /// PATH (the App Store build does not install it). Returns nil
+    /// if Tailscale is not running or not configured.
+    static func currentTailscaleIPv4() -> String? {
+        var ifaddrPtr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddrPtr) == 0, let first = ifaddrPtr else { return nil }
+        defer { freeifaddrs(ifaddrPtr) }
+
+        var current: UnsafeMutablePointer<ifaddrs>? = first
+        while let ptr = current {
+            let interface = ptr.pointee
+            if let addr = interface.ifa_addr,
+               addr.pointee.sa_family == sa_family_t(AF_INET) {
+                let name = String(cString: interface.ifa_name)
+                if name.hasPrefix("utun") {
+                    var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                    let rc = getnameinfo(
+                        addr,
+                        socklen_t(addr.pointee.sa_len),
+                        &hostname,
+                        socklen_t(hostname.count),
+                        nil,
+                        0,
+                        NI_NUMERICHOST
+                    )
+                    if rc == 0 {
+                        let candidate = String(cString: hostname)
+                        let parts = candidate.split(separator: ".").compactMap { Int($0) }
+                        if parts.count == 4, parts[0] == 100, (64...127).contains(parts[1]) {
+                            return candidate
+                        }
+                    }
+                }
+            }
+            current = interface.ifa_next
+        }
+        return nil
     }
 
     /// First non-loopback IPv4 we find on en0/en1 (WiFi/Ethernet).

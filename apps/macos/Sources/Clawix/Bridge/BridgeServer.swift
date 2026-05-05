@@ -30,6 +30,16 @@ final class BridgeServer {
             params.allowLocalEndpointReuse = true
 
             let listener = try NWListener(using: params, on: port)
+            // Publish over Bonjour so the iPhone can discover us by
+            // service type even if its stored LAN IP is stale (Mac
+            // moved networks, DHCP gave a different lease, etc.).
+            // The iPhone primes its Local Network permission against
+            // this exact service type, so publishing here makes the
+            // permission dialog reach the user the first time.
+            listener.service = NWListener.Service(
+                name: PairingService.shared.bonjourServiceName,
+                type: "_clawix-bridge._tcp"
+            )
             listener.newConnectionHandler = { [weak self] connection in
                 Task { @MainActor in
                     self?.accept(connection)
