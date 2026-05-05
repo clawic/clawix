@@ -277,10 +277,20 @@ private struct CodeBlockView: View {
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
                 Button(action: copyCode) {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(Color(white: hoverCopy ? 0.85 : 0.55))
-                        .frame(width: 22, height: 22)
+                    Group {
+                        if copied {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
+                        } else {
+                            CopyIconViewSquircle(
+                                color: Color(white: hoverCopy ? 0.88 : 0.55),
+                                lineWidth: 0.85
+                            )
+                            .frame(width: 14, height: 14)
+                        }
+                    }
+                    .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.plain)
                 .onHover { hoverCopy = $0 }
