@@ -50,9 +50,11 @@ struct ChangedFileCard: View {
                 .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
         )
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        // Whole card opens the file in the sidebar preview. The chevron
-        // declares its own gesture below, which SwiftUI evaluates first
-        // and therefore won't fall through to this handler.
+        // Whole card opens the file in the sidebar preview. The "Open"
+        // pill has its own identical tap handler so taps on the pill
+        // body never get swallowed by intermediate hit-testing; the
+        // chevron declares a more local gesture and stays the only path
+        // to the editor dropdown.
         .onTapGesture {
             appState.openFileInSidebar(path)
         }
@@ -78,35 +80,47 @@ struct ChangedFileCard: View {
 
     // MARK: - Open pill
 
-    /// Compact "Open ⌄" pill that mirrors the Codex Desktop card. The pill
-    /// shows no fill or hover state of its own (the parent card handles
-    /// hover for the whole row). The label is purely visual: tapping
-    /// anywhere on the card runs the open-in-sidebar action. Only the
-    /// chevron registers its own gesture so it can intercept the tap and
-    /// pop the editor dropdown instead of falling through to the card.
+    /// "Open ⌄" pill that mirrors the Codex Desktop card. The label area
+    /// runs the same open-in-sidebar action as the parent card; the
+    /// chevron is the only sub-region that intercepts the tap and pops
+    /// the editor dropdown.
     private var openPill: some View {
         HStack(spacing: 4) {
             Text(String(localized: "Open",
                         bundle: AppLocale.bundle,
                         locale: AppLocale.current))
-                .font(.system(size: 12.5, weight: .regular))
+                .font(.system(size: 14, weight: .regular))
                 .foregroundColor(Color(white: 0.94))
+                // SwiftUI Text on macOS hijacks the I-beam cursor and
+                // swallows taps over its glyphs. Pass-through so the
+                // parent pill owns both the pointer cursor and the tap.
+                .allowsHitTesting(false)
 
             Image(systemName: "chevron.down")
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(Color(white: 0.72))
                 .padding(.leading, 2)
                 .padding(.vertical, 4)
                 .contentShape(Rectangle())
+                .onContinuousHover { phase in
+                    if case .active = phase { NSCursor.pointingHand.set() }
+                }
                 .onTapGesture {
                     menuOpen.toggle()
                 }
                 .accessibilityLabel("Open with…")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .onContinuousHover { phase in
+            if case .active = phase { NSCursor.pointingHand.set() }
+        }
+        .onTapGesture {
+            appState.openFileInSidebar(path)
+        }
         .overlay(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
         )
         .anchorPreference(key: ChangedFileMenuAnchorKey.self, value: .bounds) { $0 }
