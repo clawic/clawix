@@ -1162,7 +1162,7 @@ private struct SidebarButton: View {
 
 // MARK: - ComposeIcon
 
-private struct ComposeIcon: Shape {
+struct ComposeIcon: Shape {
     func path(in rect: CGRect) -> Path {
         let s = min(rect.width, rect.height) / 24
         let dx = (rect.width - 24 * s) / 2
@@ -1172,32 +1172,54 @@ private struct ComposeIcon: Shape {
         }
 
         var path = Path()
+        // Box (open rounded square, corner radius 5.5).
         path.move(to: p(10.5, 1.5))
-        path.addLine(to: p(6, 1.5))
-        path.addCurve(to: p(1.5, 6),
-                      control1: p(3.515, 1.5),
-                      control2: p(1.5, 3.515))
-        path.addLine(to: p(1.5, 18))
-        path.addCurve(to: p(6, 22.5),
-                      control1: p(1.5, 20.485),
-                      control2: p(3.515, 22.5))
-        path.addLine(to: p(18, 22.5))
-        path.addCurve(to: p(22.5, 18),
-                      control1: p(20.485, 22.5),
-                      control2: p(22.5, 20.485))
+        path.addLine(to: p(7, 1.5))
+        path.addCurve(to: p(1.5, 7),
+                      control1: p(3.96, 1.5),
+                      control2: p(1.5, 3.96))
+        path.addLine(to: p(1.5, 17))
+        path.addCurve(to: p(7, 22.5),
+                      control1: p(1.5, 20.04),
+                      control2: p(3.96, 22.5))
+        path.addLine(to: p(17, 22.5))
+        path.addCurve(to: p(22.5, 17),
+                      control1: p(20.04, 22.5),
+                      control2: p(22.5, 20.04))
         path.addLine(to: p(22.5, 13.5))
 
-        path.move(to: p(18, 1.5))
-        path.addLine(to: p(21, 1.5))
-        path.addCurve(to: p(22.5, 3),
-                      control1: p(22, 1.5),
-                      control2: p(22.5, 2))
-        path.addLine(to: p(22.5, 5))
-        path.addLine(to: p(13, 15))
-        path.addLine(to: p(8.5, 16))
-        path.addLine(to: p(8, 14.5))
-        path.addLine(to: p(8, 12))
-        path.addLine(to: p(17, 2.5))
+        // Pencil (45 deg axis from eraser center (20, 4) to tip apex
+        // (7.17, 16.83), body half-width 3). Eraser is a true
+        // semicircle, the two shoulders and the tip apex are filleted.
+        // All arcs converted to two-cubic Bezier approximations so the
+        // path renders identically across platforms without addArc's
+        // clockwise-flag ambiguity.
+        path.move(to: p(17.88, 1.88))
+        // Eraser cap (180 deg, radius 3) split at apex (22.12, 1.88).
+        path.addCurve(to: p(22.12, 1.88),
+                      control1: p(19.05, 0.71),
+                      control2: p(20.95, 0.71))
+        path.addCurve(to: p(22.12, 6.12),
+                      control1: p(23.29, 3.05),
+                      control2: p(23.29, 4.95))
+        // Body lower edge -> lower shoulder fillet (radius 1.5).
+        path.addLine(to: p(13.45, 14.79))
+        path.addCurve(to: p(12.81, 15.17),
+                      control1: p(13.27, 14.97),
+                      control2: p(13.05, 15.10))
+        // Tip lower side -> tip apex fillet (radius 0.8) split at (7.78, 16.22).
+        path.addLine(to: p(8.58, 16.42))
+        path.addCurve(to: p(7.78, 16.22),
+                      control1: p(8.30, 16.50),
+                      control2: p(7.99, 16.43))
+        path.addCurve(to: p(7.58, 15.42),
+                      control1: p(7.57, 16.01),
+                      control2: p(7.50, 15.70))
+        // Tip upper side -> upper shoulder fillet (radius 1.5).
+        path.addLine(to: p(8.83, 11.19))
+        path.addCurve(to: p(9.21, 10.55),
+                      control1: p(8.90, 10.95),
+                      control2: p(9.03, 10.73))
         path.closeSubpath()
         return path
     }

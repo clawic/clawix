@@ -228,6 +228,11 @@ struct ContentView: View {
                     }
                 )
                 .bodyDropTarget(enabled: routeAcceptsFileDrops)
+                .overlay(alignment: .bottomTrailing) {
+                    NewChatFAB()
+                        .padding(.trailing, 22)
+                        .padding(.bottom, 22)
+                }
                 } // end !isRightSidebarMaximized content column
 
                 if appState.isRightSidebarOpen {
@@ -1472,5 +1477,45 @@ struct MenuRowHover: View {
         RoundedRectangle(cornerRadius: MenuStyle.rowHoverCornerRadius, style: .continuous)
             .fill(active ? Color.white.opacity(intensity) : Color.clear)
             .padding(.horizontal, MenuStyle.rowHoverInset)
+    }
+}
+
+// MARK: - New chat FAB
+
+/// White floating action button anchored to the bottom-right of the
+/// content column. Pairs the v7 ComposeIcon with a "Chat" label and
+/// triggers the same `.home` route the sidebar's New chat button does.
+private struct NewChatFAB: View {
+    @EnvironmentObject var appState: AppState
+    @State private var hovered = false
+
+    var body: some View {
+        Button {
+            appState.currentRoute = .home
+        } label: {
+            HStack(spacing: 8) {
+                ComposeIcon()
+                    .stroke(style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                    .frame(width: 14, height: 14)
+                    .foregroundColor(.black)
+                Text("Chat")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.black)
+            }
+            .padding(.leading, 14)
+            .padding(.trailing, 16)
+            .frame(height: 36)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white)
+            )
+            .shadow(color: Color.black.opacity(0.30), radius: 14, y: 6)
+            .scaleEffect(hovered ? 1.03 : 1)
+            .animation(.easeOut(duration: 0.12), value: hovered)
+            .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .accessibilityLabel("New chat")
     }
 }
