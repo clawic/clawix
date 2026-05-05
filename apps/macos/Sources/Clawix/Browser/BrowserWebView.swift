@@ -24,6 +24,8 @@ final class BrowserTabController: NSObject, ObservableObject {
     let webView: WKWebView
     private weak var appState: AppState?
     private var observers: [NSKeyValueObservation] = []
+    private var bgSampleTimer: Timer?
+    private var lastSampledBgRaw: String?
 
     init(id: UUID, initialURL: URL, appState: AppState, initialTitle: String) {
         self.id = id
@@ -44,11 +46,13 @@ final class BrowserTabController: NSObject, ObservableObject {
 
         webView.navigationDelegate = self
         attachObservers()
+        startBackgroundSampling()
         webView.load(URLRequest(url: initialURL))
     }
 
     deinit {
         observers.forEach { $0.invalidate() }
+        bgSampleTimer?.invalidate()
     }
 
     func load(_ url: URL) {
@@ -105,6 +109,77 @@ final class BrowserTabController: NSObject, ObservableObject {
             }
     }
 
+    /// Polls the bottom-left visible pixel's CSS background colour so the
+    /// content column's bottom-trailing rounded-corner cutout can blend
+    /// with the live page. Walks up from `elementFromPoint` to find the
+    /// nearest opaque ancestor, falling back to body / html background.
+    private func startBackgroundSampling() {
+        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.sampleBottomLeftBackground() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        bgSampleTimer = timer
+    }
+
+    private func sampleBottomLeftBackground() {
+        let js = """
+            (function() {
+              if (!document.body) return '';
+              function colorAt(x, y) {
+                var el = document.elementFromPoint(x, y);
+                while (el) {
+                  var bg = getComputedStyle(el).backgroundColor;
+                  if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+                    return bg;
+                  }
+                  el = el.parentElement;
+                }
+                var b = getComputedStyle(document.body).backgroundColor;
+                if (b && b !== 'rgba(0, 0, 0, 0)' && b !== 'transparent') return b;
+                return getComputedStyle(document.documentElement).backgroundColor || '';
+              }
+              return colorAt(2, Math.max(1, window.innerHeight - 2));
+            })();
+        """
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
+            Task { @MainActor in
+                guard let self,
+                      let raw = result as? String,
+                      !raw.isEmpty,
+                      raw != self.lastSampledBgRaw,
+                      let color = Self.parseCSSColor(raw)
+                else { return }
+                self.lastSampledBgRaw = raw
+                self.appState?.browserPageBackgroundColors[self.id] = color
+            }
+        }
+    }
+
+    /// Parses CSS `rgb(r, g, b)` / `rgba(r, g, b, a)` strings into a SwiftUI
+    /// Color. Returns nil for any other format (named colours, `color()`,
+    /// hsl, etc.) so the caller keeps the previous sample instead of
+    /// flashing to a wrong colour.
+    static func parseCSSColor(_ raw: String) -> Color? {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        let pattern = #"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+        guard let match = regex.firstMatch(in: trimmed, range: range) else { return nil }
+        func capture(_ index: Int) -> String? {
+            let r = match.range(at: index)
+            guard r.location != NSNotFound, let rng = Range(r, in: trimmed) else { return nil }
+            return String(trimmed[rng])
+        }
+        guard let rs = capture(1), let gs = capture(2), let bs = capture(3),
+              let r = Int(rs), let g = Int(gs), let b = Int(bs) else { return nil }
+        let a = Double(capture(4) ?? "1") ?? 1
+        return Color(.sRGB,
+                     red: Double(r) / 255,
+                     green: Double(g) / 255,
+                     blue: Double(b) / 255,
+                     opacity: a)
+    }
+
     private func attachObservers() {
         observers.append(webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] wv, _ in
             let value = wv.canGoBack
@@ -148,6 +223,8 @@ final class BrowserTabController: NSObject, ObservableObject {
         ) else { return }
         faviconURL = fallback
         appState?.updateBrowserTab(id, faviconURL: fallback)
+        // Warm the disk cache so the icon renders the moment SwiftUI asks.
+        FaviconCache.shared.prefetch(fallback)
     }
 
     private func fetchFavicon() {
@@ -186,6 +263,7 @@ final class BrowserTabController: NSObject, ObservableObject {
                 if let s = result as? String, let url = URL(string: s) {
                     self.faviconURL = url
                     self.appState?.updateBrowserTab(self.id, faviconURL: url)
+                    FaviconCache.shared.prefetch(url)
                 } else {
                     self.setHostFallbackFavicon()
                 }
@@ -235,6 +313,7 @@ extension BrowserTabController: WKNavigationDelegate {
     nonisolated func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         Task { @MainActor in
             self.fetchFavicon()
+            self.sampleBottomLeftBackground()
         }
     }
 }
@@ -257,7 +336,7 @@ struct BrowserWebView: NSViewRepresentable {
 final class BrowserControllerStore {
     private var controllers: [UUID: BrowserTabController] = [:]
 
-    func controller(for tab: BrowserTab, appState: AppState) -> BrowserTabController {
+    func controller(for tab: SidebarItem.WebPayload, appState: AppState) -> BrowserTabController {
         if let existing = controllers[tab.id] { return existing }
         let new = BrowserTabController(
             id: tab.id,

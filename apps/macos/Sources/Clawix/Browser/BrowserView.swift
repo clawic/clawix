@@ -3,32 +3,74 @@ import SwiftUI
 struct BrowserView: View {
     @EnvironmentObject var appState: AppState
     @State private var store = BrowserControllerStore()
+    @State private var moreMenuOpen = false
 
-    private var activeTab: BrowserTab? {
-        guard let id = appState.activeBrowserTabId else { return nil }
-        return appState.browserTabs.first(where: { $0.id == id })
+    private var activeWeb: SidebarItem.WebPayload? {
+        if case .web(let p) = appState.activeSidebarItem { return p }
+        return nil
+    }
+
+    private var activeFile: SidebarItem.FilePayload? {
+        if case .file(let p) = appState.activeSidebarItem { return p }
+        return nil
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            BrowserTabStrip()
-            Divider().background(Color.white.opacity(0.06))
-
-            if let tab = activeTab {
-                let controller = store.controller(for: tab, appState: appState)
-                BrowserNavigationBar(controller: controller)
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 0) {
+                BrowserTabStrip()
                 Divider().background(Color.white.opacity(0.06))
-                BrowserWebView(controller: controller)
-                    .id(tab.id)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                emptyState
+
+                if let payload = activeWeb {
+                    let controller = store.controller(for: payload, appState: appState)
+                    BrowserNavigationBar(controller: controller, moreMenuOpen: $moreMenuOpen)
+                    Divider().background(Color.white.opacity(0.06))
+                    BrowserWebView(controller: controller)
+                        .id(payload.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let payload = activeFile {
+                    FileViewerPanel(path: payload.path)
+                        .id(payload.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    emptyState
+                }
             }
         }
         .background(Color.black)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onChange(of: appState.browserTabs.map(\.id)) { _, newIds in
+        .overlayPreferenceValue(BrowserMoreMenuAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if moreMenuOpen, let anchor, let payload = activeWeb {
+                    let controller = store.controller(for: payload, appState: appState)
+                    let buttonFrame = proxy[anchor]
+                    BrowserMoreOptionsMenu(
+                        controller: controller,
+                        isOpen: $moreMenuOpen
+                    )
+                    .offset(
+                        x: buttonFrame.maxX - BrowserMoreOptionsMenu.menuWidth,
+                        y: buttonFrame.maxY + 6
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(moreMenuOpen)
+        }
+        .animation(MenuStyle.openAnimation, value: moreMenuOpen)
+        .onChange(of: appState.sidebarItems.map(\.id)) { _, newIds in
             store.discardOrphans(currentTabIds: Set(newIds))
+            if activeWeb == nil { moreMenuOpen = false }
+        }
+        .onChange(of: appState.pendingReloadTabId) { _, newValue in
+            guard let tabId = newValue,
+                  let payload = activeWeb,
+                  payload.id == tabId
+            else { return }
+            let controller = store.controller(for: payload, appState: appState)
+            controller.reload()
+            appState.pendingReloadTabId = nil
         }
     }
 

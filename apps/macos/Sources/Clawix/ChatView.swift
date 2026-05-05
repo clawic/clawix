@@ -10,76 +10,19 @@ struct ChatView: View {
     @State private var branchMenuOpen = false
     @State private var branchCreateOpen = false
     @State private var branchSearch = ""
-    /// Toggled by the "N mensajes anteriores ›" link. Reset whenever
-    /// the chat selection changes so each chat starts collapsed.
-    @State private var showAllMessages = false
 
     private var chat: Chat? {
         appState.chats.first { $0.id == chatId }
-    }
-
-    /// Default-collapsed view shows the last user prompt and the
-    /// assistant reply right before it (the second-to-last user turn
-    /// onwards). Everything earlier is hidden behind the
-    /// "N mensajes anteriores" link so opening a long conversation
-    /// doesn't dump the whole history at once.
-    ///
-    /// `hiddenLabelCount` is the number we show in the disclosure: it
-    /// matches the runtime count, where each reasoning chunk and each tool
-    /// item folded under an assistant turn counts as its own "message"
-    /// (a 4-command exec block contributes 4, not 1). Without this
-    /// expansion the disclosure undercounts by ~7-13 per turn.
-    private func visibleSlice(of messages: [ChatMessage]) -> (hiddenLabelCount: Int, slice: ArraySlice<ChatMessage>) {
-        if showAllMessages || messages.count <= 3 {
-            return (0, messages[messages.startIndex..<messages.endIndex])
-        }
-        let userIndices = messages.enumerated()
-            .compactMap { $0.element.role == .user ? $0.offset : nil }
-        let visibleStart: Int
-        if userIndices.count >= 2 {
-            visibleStart = userIndices[userIndices.count - 2]
-        } else if let only = userIndices.first {
-            visibleStart = only
-        } else {
-            visibleStart = 0
-        }
-        let hidden = messages[messages.startIndex..<visibleStart]
-            .reduce(0) { acc, m in acc + ChatView.messageWeight(of: m) }
-        return (hidden, messages[visibleStart..<messages.endIndex])
-    }
-
-    /// Maps one `ChatMessage` to the "messages anteriores" weight used by
-    /// the disclosure counter. User messages count as one; assistant turns
-    /// count one per reasoning chunk plus one per tool item (so a 4-command
-    /// exec block contributes 4, not 1).
-    static func messageWeight(of message: ChatMessage) -> Int {
-        if message.role == .user { return 1 }
-        if message.timeline.isEmpty {
-            return message.content.isEmpty ? 0 : 1
-        }
-        return message.timeline.reduce(0) { acc, entry in
-            switch entry {
-            case .reasoning: return acc + 1
-            case .tools(_, let items): return acc + items.count
-            }
-        }
     }
 
     var body: some View {
         RenderProbe.tick("ChatView")
         return Group {
             if let chat {
-                let (hiddenLabelCount, slice) = visibleSlice(of: chat.messages)
                 VStack(spacing: 0) {
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 44) {
-                                if hiddenLabelCount > 0 {
-                                    PreviousMessagesLink(count: hiddenLabelCount) {
-                                        showAllMessages = true
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
                                 let lastUserMessageId = chat.messages.last(where: { $0.role == .user })?.id
                                 let lastAssistantMessageId = chat.messages.last(where: {
                                     $0.role == .assistant && $0.streamingFinished && !$0.isError
@@ -90,7 +33,7 @@ struct ChatView: View {
                                     }
                                     return chat.hasActiveTurn
                                 }()
-                                ForEach(slice) { msg in
+                                ForEach(chat.messages) { msg in
                                     MessageRow(
                                         chatId: chat.id,
                                         message: msg,
@@ -117,33 +60,16 @@ struct ChatView: View {
                             .padding(.horizontal, 24)
                             .padding(.top, 24)
                             .padding(.bottom, 12)
+                            .background(ThinScrollerInstaller().allowsHitTesting(false))
                         }
                         .onChange(of: chat.messages.count) { _, _ in
                             if let last = chat.messages.last {
                                 withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                             }
                         }
-                        .onChange(of: showAllMessages) { _, newValue in
-                            // When older messages are revealed, the LazyVStack
-                            // grows from the top. The ScrollView preserves its
-                            // content offset by default, so the previously
-                            // visible turn would shift off-screen as the older
-                            // history takes its place. Re-pin to the last
-                            // message so the bottom of the chat stays put and
-                            // the older messages live above the viewport.
-                            // Async ensures the body has re-evaluated against
-                            // the expanded slice before we measure.
-                            guard newValue else { return }
-                            DispatchQueue.main.async {
-                                if let last = chat.messages.last {
-                                    proxy.scrollTo(last.id, anchor: .bottom)
-                                }
-                            }
-                        }
                         .onAppear { appState.ensureSelectedChat() }
                         .onChange(of: chatId) { _, _ in
                             appState.ensureSelectedChat()
-                            showAllMessages = false
                             appState.requestComposerFocus()
                         }
                     }
@@ -281,36 +207,6 @@ private struct BranchPillAnchorKey: PreferenceKey {
     static var defaultValue: Anchor<CGRect>? = nil
     static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
         value = value ?? nextValue()
-    }
-}
-
-// MARK: - Previous-messages affordance
-
-/// "N mensajes anteriores ›" link rendered above the visible chat slice
-/// when older messages are collapsed. Tapping it expands the view to
-/// the full history.
-private struct PreviousMessagesLink: View {
-    let count: Int
-    let action: () -> Void
-    @State private var hovered = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Text(L10n.previousMessages(count))
-                    .font(.system(size: 13))
-                    .foregroundColor(Color(white: hovered ? 0.78 : 0.55))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(Color(white: hovered ? 0.78 : 0.55))
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { h in
-            withAnimation(.easeOut(duration: 0.12)) { hovered = h }
-        }
-        .accessibilityLabel(L10n.previousMessages(count))
     }
 }
 
@@ -637,7 +533,9 @@ private struct MessageRow: View {
                    message.streamingFinished,
                    !message.isError,
                    !PlanSegmenter.containsPlan(message.content),
-                   let lastURL = AssistantMarkdown.extractLinkURLs(in: message.content).last {
+                   let lastURL = AssistantMarkdown
+                       .extractLinkURLs(in: message.content)
+                       .last(where: { !$0.isFileURL }) {
                     LinkPreviewCard(url: lastURL)
                         .padding(.top, 4)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1378,7 +1276,7 @@ private struct CopyIconView: View {
     }
 }
 
-private struct CopyIconViewSquircle: View {
+struct CopyIconViewSquircle: View {
     let color: Color
     let lineWidth: CGFloat
 
@@ -1844,10 +1742,20 @@ private struct AssistantCodeBlockView: View {
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
                 Button(action: copyCode) {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(Color(white: hoverCopy ? 0.85 : 0.55))
-                        .frame(width: 22, height: 22)
+                    Group {
+                        if copied {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
+                        } else {
+                            CopyIconViewSquircle(
+                                color: Color(white: hoverCopy ? 0.88 : 0.55),
+                                lineWidth: 0.85
+                            )
+                            .frame(width: 14, height: 14)
+                        }
+                    }
+                    .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.plain)
                 .onHover { hoverCopy = $0 }
@@ -1957,11 +1865,13 @@ private struct AtomView: View {
 
 /// Inline link with hover affordance: cursor flips to a pointing hand and
 /// a subtle dotted underline appears so the user can tell it is tappable.
-/// Tap routes through `onTap` (wired to `AppState.openLinkInBrowser`) so
-/// the URL lands in the right-sidebar browser instead of the system one.
-/// A leading `GlobeIcon` always sits before the label so the user reads
-/// the chip as "this is a web link" regardless of whether the source
-/// markdown was a bare URL or a `[label](url)` form.
+/// Tap routes through `onTap` (wired to `AppState.openLinkInBrowser`,
+/// which itself dispatches `file://` URLs to the file viewer) so the
+/// destination always lands in the right-sidebar panel instead of the
+/// system browser. The leading icon picks `FileChipIcon` for `file://`
+/// links and `GlobeIcon` for everything else, so a `[abrir markdown]
+/// (/abs/path.md)` chip reads as a document and a `[clawix.com]
+/// (https://…)` chip reads as a web link.
 private struct LinkAtom: View {
     let label: String
     let url: URL
@@ -1975,8 +1885,14 @@ private struct LinkAtom: View {
     var body: some View {
         Button(action: { onTap(url) }) {
             HStack(alignment: .center, spacing: 4) {
-                GlobeIcon(size: 15)
-                    .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
+                Group {
+                    if url.isFileURL {
+                        FileChipIcon(size: 15)
+                    } else {
+                        GlobeIcon(size: 15)
+                    }
+                }
+                .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
                 Text(label)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
@@ -1995,17 +1911,33 @@ private struct LinkAtom: View {
                 hovered = false
             }
         }
-        .hoverHint(url.absoluteString)
+        .hoverHint(url.isFileURL ? url.path : url.absoluteString)
         .contextMenu {
-            Button("Open in browser") { onTap(url) }
-            Button("Open in external browser") {
-                NSWorkspace.shared.open(url)
-            }
-            Divider()
-            Button("Copy link") {
-                let pb = NSPasteboard.general
-                pb.clearContents()
-                pb.setString(url.absoluteString, forType: .string)
+            if url.isFileURL {
+                Button("Open") { onTap(url) }
+                Button("Open with default app") {
+                    NSWorkspace.shared.open(url)
+                }
+                Button("Reveal in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
+                Divider()
+                Button("Copy path") {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(url.path, forType: .string)
+                }
+            } else {
+                Button("Open in browser") { onTap(url) }
+                Button("Open in external browser") {
+                    NSWorkspace.shared.open(url)
+                }
+                Divider()
+                Button("Copy link") {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(url.absoluteString, forType: .string)
+                }
             }
         }
         .accessibilityAddTraits(.isLink)
@@ -2346,7 +2278,15 @@ enum AssistantMarkdown {
                     if let urlClose = input[urlOpen...].firstIndex(of: ")") {
                         let label = String(input[labelStart..<close])
                         let urlStr = String(input[input.index(after: urlOpen)..<urlClose])
-                        if let url = URL(string: urlStr) {
+                        // Codex Desktop writes local files as bare absolute
+                        // paths inside markdown links (`[label](/abs/path.md)`).
+                        // Promote those to file:// URLs so the renderer can
+                        // tell them apart from web links and the tap routes
+                        // to the in-app file viewer instead of the browser.
+                        let url: URL? = urlStr.hasPrefix("/")
+                            ? URL(fileURLWithPath: urlStr)
+                            : URL(string: urlStr)
+                        if let url {
                             flushWords()
                             atoms.append(.link(
                                 label: label,

@@ -4,21 +4,21 @@ import SwiftUI
 
 struct BrowserTabStrip: View {
     @EnvironmentObject var appState: AppState
-    @State private var hoveredTabId: UUID?
+    @State private var hoveredItemId: UUID?
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(appState.browserTabs) { tab in
-                BrowserTabPill(
-                    tab: tab,
-                    isActive: appState.activeBrowserTabId == tab.id,
-                    isHovered: hoveredTabId == tab.id,
-                    onSelect: { appState.activeBrowserTabId = tab.id },
-                    onClose:  { appState.closeBrowserTab(tab.id) }
+            ForEach(appState.sidebarItems) { item in
+                SidebarItemPill(
+                    item: item,
+                    isActive: appState.activeSidebarItemId == item.id,
+                    isHovered: hoveredItemId == item.id,
+                    onSelect: { appState.activeSidebarItemId = item.id },
+                    onClose:  { appState.closeSidebarItem(item.id) }
                 )
                 .onHover { hovering in
-                    if hovering { hoveredTabId = tab.id }
-                    else if hoveredTabId == tab.id { hoveredTabId = nil }
+                    if hovering { hoveredItemId = item.id }
+                    else if hoveredItemId == item.id { hoveredItemId = nil }
                 }
             }
 
@@ -28,7 +28,7 @@ struct BrowserTabStrip: View {
 
             Spacer(minLength: 0)
 
-            ChromeIconButton(systemName: "arrow.up.left.and.arrow.down.right") {}
+            ChromeMaximizeButton(action: {})
                 .accessibilityLabel("Maximize")
 
             // The window chrome owns the right toggle; reserve its
@@ -41,8 +41,8 @@ struct BrowserTabStrip: View {
     }
 }
 
-private struct BrowserTabPill: View {
-    let tab: BrowserTab
+private struct SidebarItemPill: View {
+    let item: SidebarItem
     let isActive: Bool
     let isHovered: Bool
     let onSelect: () -> Void
@@ -51,12 +51,13 @@ private struct BrowserTabPill: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 7) {
-                FaviconView(url: tab.faviconURL, size: 14)
+                leadingIcon
 
                 Text(displayTitle)
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(isActive ? .white : Color(white: 0.78))
                     .lineLimit(1)
+                    .truncationMode(.middle)
 
                 if isHovered || isActive {
                     Button(action: onClose) {
@@ -87,10 +88,27 @@ private struct BrowserTabPill: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
+    private var leadingIcon: some View {
+        switch item {
+        case .web(let p):
+            FaviconView(url: p.faviconURL, size: 14)
+        case .file:
+            FileChipIcon(size: 13)
+                .foregroundColor(Color(white: 0.78))
+                .frame(width: 14, height: 14)
+        }
+    }
+
     private var displayTitle: String {
-        if !tab.title.isEmpty { return tab.title }
-        if let host = tab.url.host { return host.replacingOccurrences(of: "www.", with: "") }
-        return tab.url.absoluteString
+        switch item {
+        case .web(let p):
+            if !p.title.isEmpty { return p.title }
+            if let host = p.url.host { return host.replacingOccurrences(of: "www.", with: "") }
+            return p.url.absoluteString
+        case .file(let p):
+            return (p.path as NSString).lastPathComponent
+        }
     }
 
     private var background: Color {
@@ -127,7 +145,7 @@ private struct NewTabButton: View {
 
 struct BrowserNavigationBar: View {
     @ObservedObject var controller: BrowserTabController
-    @State private var moreMenuOpen = false
+    @Binding var moreMenuOpen: Bool
 
     var body: some View {
         HStack(spacing: 6) {
@@ -178,29 +196,10 @@ struct BrowserNavigationBar: View {
         .padding(.horizontal, 10)
         .frame(height: 44)
         .background(Color.black)
-        .overlayPreferenceValue(BrowserMoreMenuAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if moreMenuOpen, let anchor {
-                    let buttonFrame = proxy[anchor]
-                    BrowserMoreOptionsMenu(
-                        controller: controller,
-                        isOpen: $moreMenuOpen
-                    )
-                    .offset(
-                        x: buttonFrame.maxX - BrowserMoreOptionsMenu.menuWidth,
-                        y: buttonFrame.maxY + 6
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .transition(.softNudge(y: 4))
-                }
-            }
-            .allowsHitTesting(moreMenuOpen)
-        }
-        .animation(MenuStyle.openAnimation, value: moreMenuOpen)
     }
 }
 
-private struct BrowserMoreMenuAnchorKey: PreferenceKey {
+struct BrowserMoreMenuAnchorKey: PreferenceKey {
     static var defaultValue: Anchor<CGRect>? = nil
     static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
         value = value ?? nextValue()
@@ -242,6 +241,39 @@ private struct ChromeIconButton: View {
         if isActive { return Color.white.opacity(0.10) }
         if hovered && enabled { return Color.white.opacity(0.07) }
         return .clear
+    }
+}
+
+private struct ChromeMaximizeButton: View {
+    let action: () -> Void
+    @State private var hovered = false
+    @State private var expanded = false
+
+    var body: some View {
+        Button {
+            expanded.toggle()
+            action()
+        } label: {
+            CornerBracketsIcon(
+                size: 13,
+                variant: expanded ? .collapsed : .expanded,
+                lineWidth: 1.6
+            )
+            .foregroundColor(foreground)
+            .frame(width: 26, height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(hovered ? Color.white.opacity(0.07) : .clear)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+
+    private var foreground: Color {
+        hovered ? Color(white: 0.92) : Color(white: 0.72)
     }
 }
 
@@ -468,46 +500,48 @@ struct FaviconView: View {
     let url: URL?
     let size: CGFloat
 
-    @State private var hostFallback: URL?
+    @State private var image: NSImage?
 
     var body: some View {
         Group {
-            if let resolved = hostFallback ?? url {
-                AsyncImage(url: resolved) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFit()
-                    case .failure:
-                        retryView
-                    case .empty:
-                        Color.clear
-                    @unknown default:
-                        fallback
-                    }
-                }
+            if let image {
+                Image(nsImage: image).resizable().scaledToFit()
             } else {
                 fallback
             }
         }
         .frame(width: size, height: size)
-        .onChange(of: url) { _, _ in hostFallback = nil }
+        .onAppear { syncFromMemory() }
+        .onChange(of: url) { _, _ in syncFromMemory() }
+        .task(id: url) { await load() }
     }
 
-    /// If AsyncImage fails to render the page-declared favicon (404, an
-    /// odd format, etc.) swap in Google's PNG service for the same host
-    /// so we always show something rather than the bare globe glyph.
-    private var retryView: some View {
-        Group {
-            if hostFallback == nil,
-               let url,
-               let host = url.host,
-               let google = URL(string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64"),
-               google != url {
-                Color.clear
-                    .onAppear { hostFallback = google }
-            } else {
-                fallback
-            }
+    /// Pull from the in-memory cache synchronously so a cached host hits
+    /// the very first frame with no flicker. Keeps the `.task` modifier
+    /// honest about the actual value to load.
+    private func syncFromMemory() {
+        guard let url else { image = nil; return }
+        image = FaviconCache.shared.cachedImage(for: url)
+    }
+
+    private func load() async {
+        guard let url else { return }
+        if let cached = FaviconCache.shared.cachedImage(for: url) {
+            image = cached
+            return
+        }
+        if let loaded = await FaviconCache.shared.image(for: url) {
+            image = loaded
+            return
+        }
+        // Page-declared favicon couldn't be loaded (404, weird format,
+        // etc.). Fall back to Google's PNG service for the same host so
+        // we always show something rather than the bare globe.
+        if let host = url.host,
+           let google = URL(string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64"),
+           google != url,
+           let loaded = await FaviconCache.shared.image(for: google) {
+            image = loaded
         }
     }
 

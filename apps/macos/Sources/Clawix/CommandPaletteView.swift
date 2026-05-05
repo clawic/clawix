@@ -74,7 +74,7 @@ private enum PaletteCatalog {
             PaletteItem(id: "browser-panel", icon: "globe",
                         title: "Toggle browser panel", shortcut: "⇧⌘B",
                         action: { state in
-                            if state.rightSidebarContent == .browser, state.isRightSidebarOpen {
+                            if state.isRightSidebarOpen, case .web = state.activeSidebarItem {
                                 state.closeBrowserPanel()
                             } else {
                                 state.openBrowser()

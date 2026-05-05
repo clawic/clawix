@@ -12,9 +12,6 @@ struct FileViewerPanel: View {
     @EnvironmentObject var appState: AppState
     @State private var loaded: LoadedBody = .loading
     @State private var rawText: String = ""
-    @State private var hoverClose = false
-    @State private var hoverExpand = false
-    @State private var hoverPlus = false
     @State private var hoverMore = false
     @State private var hoverOpenExt = false
     @State private var hoverCopy = false
@@ -39,8 +36,6 @@ struct FileViewerPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            tabsRow
-            divider
             breadcrumbRow
             divider
             content
@@ -55,51 +50,6 @@ struct FileViewerPanel: View {
         Rectangle()
             .fill(Color.white.opacity(0.06))
             .frame(height: 0.5)
-    }
-
-    // MARK: - Tabs row
-
-    private var tabsRow: some View {
-        HStack(spacing: 4) {
-            // Active tab — single file for now, the chrome is laid out
-            // so additional tabs slide in next to it without redesign.
-            HStack(spacing: 7) {
-                FileChipIcon(size: 13)
-                    .foregroundColor(Color(white: 0.78))
-                Text(fileName)
-                    .font(.system(size: 12.5, weight: .regular))
-                    .foregroundColor(Palette.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
-            )
-
-            iconButton(systemName: "plus",
-                       size: 11,
-                       hoverState: $hoverPlus,
-                       label: "New tab") { /* no-op for now */ }
-
-            Spacer(minLength: 8)
-
-            iconButton(systemName: "arrow.up.left.and.arrow.down.right",
-                       size: 11,
-                       hoverState: $hoverExpand,
-                       label: "Expand panel") { /* no-op for now */ }
-
-            iconButton(systemName: "sidebar.right",
-                       size: 13,
-                       hoverState: $hoverClose,
-                       label: "Close file preview") {
-                appState.rightSidebarContent = .empty
-            }
-        }
-        .padding(.horizontal, 8)
-        .frame(height: 38)
     }
 
     // MARK: - Breadcrumb row

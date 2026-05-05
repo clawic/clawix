@@ -14,14 +14,6 @@ enum SidebarRoute: Equatable {
     case settings
 }
 
-/// What the right-hand panel is currently showing. Selected by the
-/// "+" menu in the right sidebar chrome (RightSidebarAddMenu).
-enum RightSidebarContent: Equatable {
-    case empty
-    case browser
-    case fileViewer(path: String)
-}
-
 // MARK: - Models
 
 struct ChatMessage: Identifiable {
@@ -307,20 +299,6 @@ struct PinnedItem: Identifiable {
     let age: String
 }
 
-struct BrowserTab: Identifiable, Equatable {
-    let id: UUID
-    var url: URL
-    var title: String
-    var faviconURL: URL?
-
-    init(id: UUID = UUID(), url: URL, title: String = "", faviconURL: URL? = nil) {
-        self.id = id
-        self.url = url
-        self.title = title
-        self.faviconURL = faviconURL
-    }
-}
-
 enum IntelligenceLevel: String, CaseIterable, Identifiable {
     case low, medium, high, extra
     var id: String { rawValue }
@@ -504,11 +482,24 @@ final class AppState: ObservableObject {
     let composer = ComposerState()
     @Published var pinnedItems: [PinnedItem] = []
     @Published var isLeftSidebarOpen: Bool = true
-    @Published var isRightSidebarOpen: Bool = false
     @Published var isCommandPaletteOpen: Bool = false
-    @Published var rightSidebarContent: RightSidebarContent = .empty
-    @Published var browserTabs: [BrowserTab] = []
-    @Published var activeBrowserTabId: UUID?
+    /// One sidebar state per chat (keyed by `Chat.id`). Switching chats
+    /// rebinds every consumer of `currentSidebar`/`isRightSidebarOpen` to
+    /// the destination chat's entry, so the right column animates to
+    /// whatever was open in that chat last (or closes if the chat had no
+    /// items).
+    @Published var chatSidebars: [UUID: ChatSidebarState] = [:]
+    /// One-shot signal consumed by `BrowserView` to reload the active web
+    /// view. Set when `openLinkInBrowser` is asked to open a URL already
+    /// present in the strip and the user expects the existing tab to refresh
+    /// instead of a duplicate opening. The view resets it back to nil after
+    /// firing the reload.
+    @Published var pendingReloadTabId: UUID?
+    /// Per-web-tab live page background colour sampled from the bottom-left
+    /// pixel of each browser webview. Keyed by the web item's id so the
+    /// bottom-trailing rounded-corner cutout blends with whatever the
+    /// active page is currently painting at that edge.
+    @Published var browserPageBackgroundColors: [UUID: Color] = [:]
     @Published var recentSessions: [ClawixSessionSummary] = []
     /// Project ids whose chats are currently being lazy-loaded from the
     /// runtime. The sidebar uses this to render a per-project spinner.
@@ -646,7 +637,7 @@ final class AppState: ObservableObject {
         } else {
             applyThreads([])
         }
-        loadBrowserState()
+        loadChatSidebars()
         applyLaunchRoute()
 
         // Forward auth coordinator changes so views observing AppState
@@ -2120,122 +2111,265 @@ final class AppState: ObservableObject {
         currentRoute = .home
     }
 
-    // MARK: - Browser
+    // MARK: - Sidebar (per-chat web tabs and file previews)
 
-    private static let browserDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
-    private static let browserStateKey = "BrowserTabs"
-    private static let browserActiveKey = "BrowserActiveTabId"
+    private static let sidebarDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+    private static let chatSidebarsKey = "ChatSidebars"
+    private static let legacyBrowserStateKey = "BrowserTabs"
+    private static let legacyBrowserActiveKey = "BrowserActiveTabId"
 
-    private struct PersistedBrowserTab: Codable {
-        let id: UUID
-        let url: String
-        let title: String
+    /// UUID of the chat the user is currently viewing, if any. Returns nil
+    /// for non-chat routes (home, settings, etc.) so write-time accessors
+    /// silently no-op when there is no chat to attach state to.
+    var currentChatId: UUID? {
+        if case .chat(let id) = currentRoute { return id }
+        return nil
+    }
+
+    /// Sidebar state for the active chat (or `.empty` outside chat
+    /// routes). Setter persists and removes empty entries so the dict
+    /// doesn't grow forever.
+    var currentSidebar: ChatSidebarState {
+        get {
+            guard let id = currentChatId else { return .empty }
+            return chatSidebars[id] ?? .empty
+        }
+        set {
+            guard let id = currentChatId else { return }
+            if newValue == .empty {
+                chatSidebars.removeValue(forKey: id)
+            } else {
+                chatSidebars[id] = newValue
+            }
+            persistChatSidebars()
+        }
+    }
+
+    var isRightSidebarOpen: Bool {
+        get { currentSidebar.isOpen }
+        set {
+            var s = currentSidebar
+            s.isOpen = newValue
+            currentSidebar = s
+        }
+    }
+
+    var sidebarItems: [SidebarItem] { currentSidebar.items }
+
+    var activeSidebarItemId: UUID? {
+        get { currentSidebar.activeItemId }
+        set {
+            var s = currentSidebar
+            s.activeItemId = newValue
+            currentSidebar = s
+        }
+    }
+
+    var activeSidebarItem: SidebarItem? { currentSidebar.activeItem }
+
+    /// Convenience for the corner-cutout colour sampling: returns the id
+    /// of the active item only when it's a web tab (file previews don't
+    /// sample a page colour).
+    var activeWebTabId: UUID? {
+        if case .web(let p) = activeSidebarItem { return p.id }
+        return nil
     }
 
     func openBrowser(initialURL: URL = URL(string: "https://www.google.com")!) {
-        if browserTabs.isEmpty {
-            let tab = BrowserTab(url: initialURL)
-            browserTabs.append(tab)
-            activeBrowserTabId = tab.id
-        } else if activeBrowserTabId == nil {
-            activeBrowserTabId = browserTabs.first?.id
+        guard currentChatId != nil else { return }
+        var s = currentSidebar
+        if let firstWeb = s.items.first(where: { if case .web = $0 { return true } else { return false } }) {
+            s.activeItemId = firstWeb.id
+        } else {
+            let item = SidebarItem.web(.init(id: UUID(), url: initialURL, title: "", faviconURL: nil))
+            s.items.append(item)
+            s.activeItemId = item.id
         }
-        rightSidebarContent = .browser
-        isRightSidebarOpen = true
-        persistBrowserState()
+        s.isOpen = true
+        currentSidebar = s
     }
 
-    /// Tap target for any inline link inside chat content. Always opens the
-    /// URL in the right-sidebar browser as a fresh tab and brings the panel
-    /// forward, so the user never bounces out to the system browser.
+    /// Tap target for any inline link inside chat content. Opens the URL in
+    /// the active chat's sidebar and brings the panel forward, so the user
+    /// never bounces out to the system browser. If the same URL is already
+    /// open in an existing tab of this chat, that tab is activated and
+    /// reloaded instead of duplicating it. `file://` URLs are routed to
+    /// the file viewer instead of the browser tab so a `[abrir markdown]
+    /// (/abs/path.md)` link from the assistant lands on the same preview
+    /// surface as the trailing `ChangedFileCard` pill.
     func openLinkInBrowser(_ url: URL) {
-        let tab = BrowserTab(url: url)
-        browserTabs.append(tab)
-        activeBrowserTabId = tab.id
-        rightSidebarContent = .browser
-        isRightSidebarOpen = true
-        persistBrowserState()
+        if url.isFileURL {
+            openFileInSidebar(url.path)
+            return
+        }
+        guard currentChatId != nil else { return }
+        var s = currentSidebar
+        let key = Self.browserDedupKey(for: url)
+        if let existing = s.items.first(where: {
+            if case .web(let p) = $0 { return Self.browserDedupKey(for: p.url) == key }
+            return false
+        }) {
+            s.activeItemId = existing.id
+            s.isOpen = true
+            currentSidebar = s
+            pendingReloadTabId = existing.id
+            return
+        }
+        let item = SidebarItem.web(.init(id: UUID(), url: url, title: "", faviconURL: nil))
+        s.items.append(item)
+        s.activeItemId = item.id
+        s.isOpen = true
+        currentSidebar = s
     }
 
+    /// Loose URL identity for "is this already open in a tab". Drops scheme,
+    /// leading `www.`, trailing slash and fragment so a click on
+    /// `clawix.com` matches a tab whose live URL is the post-redirect
+    /// `https://www.clawix.com/`.
+    private static func browserDedupKey(for url: URL) -> String {
+        var host = (url.host ?? "").lowercased()
+        if host.hasPrefix("www.") { host = String(host.dropFirst(4)) }
+        var path = url.path
+        if path.isEmpty { path = "/" }
+        if path.count > 1 && path.hasSuffix("/") { path.removeLast() }
+        let query = url.query.map { "?" + $0 } ?? ""
+        return host + path + query
+    }
+
+    /// Hides the right column for the active chat without losing its
+    /// items, so reopening from the toggle restores whatever was there.
     func closeBrowserPanel() {
-        rightSidebarContent = .empty
+        var s = currentSidebar
+        s.isOpen = false
+        currentSidebar = s
     }
 
-    /// Open an absolute file path in the right-sidebar viewer. Used by
+    /// Open an absolute file path in the active chat's sidebar. Used by
     /// `ChangedFileCard`'s primary "Open" tap so the user can preview the
     /// edited file in-app instead of bouncing out to an external editor.
+    /// Re-activates an existing file tab for the same path instead of
+    /// duplicating it.
     func openFileInSidebar(_ path: String) {
-        rightSidebarContent = .fileViewer(path: path)
-        isRightSidebarOpen = true
+        guard currentChatId != nil else { return }
+        var s = currentSidebar
+        if let existing = s.items.first(where: {
+            if case .file(let p) = $0 { return p.path == path }
+            return false
+        }) {
+            s.activeItemId = existing.id
+            s.isOpen = true
+            currentSidebar = s
+            return
+        }
+        let item = SidebarItem.file(.init(id: UUID(), path: path))
+        s.items.append(item)
+        s.activeItemId = item.id
+        s.isOpen = true
+        currentSidebar = s
     }
 
     @discardableResult
-    func newBrowserTab(url: URL = URL(string: "https://www.google.com")!) -> BrowserTab {
-        let tab = BrowserTab(url: url)
-        browserTabs.append(tab)
-        activeBrowserTabId = tab.id
-        persistBrowserState()
-        return tab
+    func newBrowserTab(url: URL = URL(string: "https://www.google.com")!) -> SidebarItem.WebPayload? {
+        guard currentChatId != nil else { return nil }
+        var s = currentSidebar
+        let payload = SidebarItem.WebPayload(id: UUID(), url: url, title: "", faviconURL: nil)
+        s.items.append(.web(payload))
+        s.activeItemId = payload.id
+        s.isOpen = true
+        currentSidebar = s
+        return payload
     }
 
-    func closeBrowserTab(_ id: UUID) {
-        guard let idx = browserTabs.firstIndex(where: { $0.id == id }) else { return }
-        let wasActive = activeBrowserTabId == id
-        browserTabs.remove(at: idx)
-        if wasActive {
-            if browserTabs.isEmpty {
-                activeBrowserTabId = nil
-            } else {
-                let next = min(idx, browserTabs.count - 1)
-                activeBrowserTabId = browserTabs[next].id
-            }
+    /// Remove an item (web or file) from the active chat's sidebar. If
+    /// the closed tab was the active one, focus snaps to its neighbour.
+    /// Closing the last item collapses the panel so the column animates
+    /// away instead of leaving a chrome with no body.
+    func closeSidebarItem(_ id: UUID) {
+        var s = currentSidebar
+        guard let idx = s.items.firstIndex(where: { $0.id == id }) else { return }
+        let wasActive = s.activeItemId == id
+        s.items.remove(at: idx)
+        browserPageBackgroundColors.removeValue(forKey: id)
+        if wasActive && !s.items.isEmpty {
+            let next = min(idx, s.items.count - 1)
+            s.activeItemId = s.items[next].id
         }
-        persistBrowserState()
+        if s.items.isEmpty {
+            s.activeItemId = nil
+            s.isOpen = false
+        }
+        currentSidebar = s
     }
 
+    /// Update the live web-tab fields (URL on navigation, title, favicon).
+    /// The web view callbacks fire even when the user is on another chat,
+    /// so the search scans every chat's sidebar instead of only the
+    /// active one.
     func updateBrowserTab(
         _ id: UUID,
         url: URL? = nil,
         title: String? = nil,
         faviconURL: URL? = nil
     ) {
-        guard let idx = browserTabs.firstIndex(where: { $0.id == id }) else { return }
-        if let url { browserTabs[idx].url = url }
-        if let title { browserTabs[idx].title = title }
-        if let faviconURL { browserTabs[idx].faviconURL = faviconURL }
-        persistBrowserState()
-    }
-
-    private func loadBrowserState() {
-        let defaults = AppState.browserDefaults
-        guard let data = defaults.data(forKey: AppState.browserStateKey),
-              let saved = try? JSONDecoder().decode([PersistedBrowserTab].self, from: data)
-        else { return }
-        browserTabs = saved.compactMap { p in
-            guard let url = URL(string: p.url) else { return nil }
-            return BrowserTab(id: p.id, url: url, title: p.title)
-        }
-        if let activeRaw = defaults.string(forKey: AppState.browserActiveKey),
-           let activeId = UUID(uuidString: activeRaw),
-           browserTabs.contains(where: { $0.id == activeId }) {
-            activeBrowserTabId = activeId
-        } else {
-            activeBrowserTabId = browserTabs.first?.id
+        for chatId in chatSidebars.keys {
+            guard var s = chatSidebars[chatId],
+                  let idx = s.items.firstIndex(where: { $0.id == id }),
+                  case .web(var payload) = s.items[idx]
+            else { continue }
+            if let url { payload.url = url }
+            if let title { payload.title = title }
+            if let faviconURL { payload.faviconURL = faviconURL }
+            s.items[idx] = .web(payload)
+            chatSidebars[chatId] = s
+            persistChatSidebars()
+            return
         }
     }
 
-    private func persistBrowserState() {
-        let payload = browserTabs.map {
-            PersistedBrowserTab(id: $0.id, url: $0.url.absoluteString, title: $0.title)
+    /// Drop the chat's sidebar entry (used when a chat is removed
+    /// entirely; archiving keeps the entry so it comes back on
+    /// unarchive).
+    func discardSidebar(forChatId id: UUID) {
+        guard chatSidebars[id] != nil else { return }
+        chatSidebars.removeValue(forKey: id)
+        persistChatSidebars()
+    }
+
+    private func loadChatSidebars() {
+        let defaults = AppState.sidebarDefaults
+        if let data = defaults.data(forKey: AppState.chatSidebarsKey),
+           let saved = try? JSONDecoder().decode([String: ChatSidebarState].self, from: data) {
+            var rebuilt: [UUID: ChatSidebarState] = [:]
+            for (key, value) in saved {
+                guard let id = UUID(uuidString: key) else { continue }
+                rebuilt[id] = value
+                for item in value.items {
+                    if case .web(let p) = item, let favicon = p.faviconURL {
+                        FaviconCache.shared.prefetch(favicon)
+                    }
+                }
+            }
+            chatSidebars = rebuilt
         }
-        let defaults = AppState.browserDefaults
+        // Drop legacy global keys from earlier versions where browser tabs
+        // were app-wide instead of per-chat. Without an owning chat there
+        // is nowhere to migrate them to, so the cleanest path is to wipe
+        // the keys and let the user reopen what they need.
+        if defaults.object(forKey: AppState.legacyBrowserStateKey) != nil {
+            defaults.removeObject(forKey: AppState.legacyBrowserStateKey)
+        }
+        if defaults.object(forKey: AppState.legacyBrowserActiveKey) != nil {
+            defaults.removeObject(forKey: AppState.legacyBrowserActiveKey)
+        }
+    }
+
+    private func persistChatSidebars() {
+        let payload = Dictionary(uniqueKeysWithValues:
+            chatSidebars.map { ($0.key.uuidString, $0.value) }
+        )
+        let defaults = AppState.sidebarDefaults
         if let data = try? JSONEncoder().encode(payload) {
-            defaults.set(data, forKey: AppState.browserStateKey)
-        }
-        if let active = activeBrowserTabId {
-            defaults.set(active.uuidString, forKey: AppState.browserActiveKey)
-        } else {
-            defaults.removeObject(forKey: AppState.browserActiveKey)
+            defaults.set(data, forKey: AppState.chatSidebarsKey)
         }
     }
 }

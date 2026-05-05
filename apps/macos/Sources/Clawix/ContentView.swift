@@ -5,8 +5,10 @@ let sidebarDefaultWidth: CGFloat = 372
 let sidebarMaxWidth: CGFloat = 558           // 372 + 50%
 let sidebarMinVisibleWidth: CGFloat = 220    // can't shrink below while open
 let sidebarCloseThreshold: CGFloat = 200     // drag-release below → snap closed
-private let rightSidebarWidth: CGFloat = 340
-private let rightSidebarBrowserWidth: CGFloat = 720
+let rightSidebarDefaultWidth: CGFloat = 720
+let rightSidebarMaxWidth: CGFloat = 1080
+let rightSidebarMinVisibleWidth: CGFloat = 380
+let rightSidebarCloseThreshold: CGFloat = 320
 private let contentCornerRadius: CGFloat = 14
 
 struct ContentView: View {
@@ -15,10 +17,32 @@ struct ContentView: View {
     @AppStorage("LeftSidebarWidth", store: SidebarPrefs.store)
     private var leftSidebarWidthRaw: Double = Double(sidebarDefaultWidth)
 
+    @AppStorage("RightSidebarWidth", store: SidebarPrefs.store)
+    private var rightSidebarWidthRaw: Double = Double(rightSidebarDefaultWidth)
+
     @State private var sidebarResizeHovered = false
+    @State private var rightSidebarResizeHovered = false
+    @State private var windowWidth: CGFloat = 0
+
+    /// Floor reserved for the centre content column when the right
+    /// sidebar grows. Without this, dragging the right sidebar past the
+    /// window's available space would push the content column to zero
+    /// and visually swallow the left sidebar.
+    private let minContentColumnWidth: CGFloat = 420
 
     private var leftSidebarWidth: CGFloat {
         min(sidebarMaxWidth, max(sidebarMinVisibleWidth, CGFloat(leftSidebarWidthRaw)))
+    }
+
+    /// Largest width the right sidebar can take given the current window
+    /// size, so the left sidebar and a min content column are always
+    /// preserved. Falls back to the persisted minimum until the window
+    /// has been measured.
+    private var dynamicRightSidebarMaxWidth: CGFloat {
+        let leftWidth = appState.isLeftSidebarOpen ? leftSidebarWidth : 0
+        let raw = windowWidth - leftWidth - minContentColumnWidth
+        let bounded = max(rightSidebarMinVisibleWidth, raw)
+        return min(rightSidebarMaxWidth, bounded)
     }
 
     private var contentShape: UnevenRoundedRectangle {
@@ -32,11 +56,48 @@ struct ContentView: View {
     }
 
     private var rightSidebarColumnWidth: CGFloat {
-        switch appState.rightSidebarContent {
-        case .browser:    return rightSidebarBrowserWidth
-        case .empty:      return rightSidebarWidth
-        case .fileViewer: return rightSidebarBrowserWidth
+        let stored = max(rightSidebarMinVisibleWidth, CGFloat(rightSidebarWidthRaw))
+        return min(dynamicRightSidebarMaxWidth, stored)
+    }
+
+    /// Colour painted under the content panel's top-trailing rounded
+    /// corner cutout so the wedge revealed by the curve continues the
+    /// adjacent right-sidebar column instead of leaking the underlying
+    /// blur. The unified sidebar chrome is always solid black, so the
+    /// wedge tracks the column whenever it's visible.
+    private var trailingTopWedgeColor: Color {
+        appState.isRightSidebarOpen ? .black : .clear
+    }
+
+    /// Colour painted under the bottom-trailing corner cutout. For web
+    /// tabs, tracks the live page background sampled by the active tab's
+    /// controller so the curve blends with whatever the user sees in the
+    /// webview at that edge. File previews fall back to black.
+    private var trailingBottomWedgeColor: Color {
+        guard appState.isRightSidebarOpen else { return .clear }
+        if let id = appState.activeWebTabId,
+           let color = appState.browserPageBackgroundColors[id] {
+            return color
         }
+        return .black
+    }
+
+    @ViewBuilder
+    private var trailingCornerWedges: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(trailingTopWedgeColor)
+                    .frame(width: contentCornerRadius, height: contentCornerRadius)
+                Spacer(minLength: 0)
+                Rectangle()
+                    .fill(trailingBottomWedgeColor)
+                    .frame(width: contentCornerRadius, height: contentCornerRadius)
+            }
+        }
+        .allowsHitTesting(false)
+        .animation(.easeInOut(duration: 0.18), value: trailingBottomWedgeColor)
     }
 
     /// Routes whose body shows the composer accept drag-and-dropped
@@ -114,6 +175,7 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.background, in: contentShape)
+                .background(trailingCornerWedges)
                 .overlay(
                     ZStack {
                         // Always-visible faint border around the whole panel.
@@ -164,12 +226,27 @@ struct ContentView: View {
                 if appState.isRightSidebarOpen {
                     RightSidebarColumn()
                         .frame(width: rightSidebarColumnWidth)
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.10))
+                                .frame(width: 0.7)
+                                .allowsHitTesting(false)
+                        }
+                        .overlay(alignment: .leading) {
+                            SidebarResizeHandle(
+                                widthRaw: $rightSidebarWidthRaw,
+                                hovered: $rightSidebarResizeHovered,
+                                side: .right,
+                                maxWidthOverride: dynamicRightSidebarMaxWidth
+                            )
+                            .frame(width: 10)
+                        }
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .animation(.easeInOut(duration: 0.18), value: appState.isLeftSidebarOpen)
             .animation(.easeInOut(duration: 0.18), value: appState.isRightSidebarOpen)
-            .animation(.easeInOut(duration: 0.18), value: appState.rightSidebarContent)
+            .animation(.easeInOut(duration: 0.18), value: appState.activeSidebarItem?.id)
 
             // Window-level chrome floats above the columns so the traffic
             // lights and the sidebar toggles never slide with a column.
@@ -180,6 +257,13 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { windowWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, w in windowWidth = w }
+            }
+        )
         .overlay(CommandPaletteOverlay(appState: appState))
         .overlay(ImagePreviewOverlay(appState: appState))
     }
@@ -231,6 +315,7 @@ private struct SidebarTopChrome: View {
             }
         }
         .frame(height: 38)
+        .background(WindowDragArea())
         .animation(.easeOut(duration: 0.20), value: updater.updateAvailable)
     }
 }
@@ -268,13 +353,15 @@ private struct UpdateChip: View {
 /// the toggles never slide with a column transition.
 private struct WindowChromeOverlay: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var windowState: WindowState
 
     var body: some View {
         HStack(spacing: 0) {
             // Native traffic lights (close / miniaturize / zoom) float
             // over the top-left of the window. Reserve their footprint
-            // here so the sidebar toggle never sits under them.
-            Color.clear.frame(width: 68, height: 1)
+            // when they're visible; in fullscreen macOS hides them so
+            // the toggle slides flush to the leading edge.
+            Color.clear.frame(width: windowState.isFullscreen ? 0 : 68, height: 1)
 
             SidebarToggleButton(
                 side: .left,
@@ -283,7 +370,11 @@ private struct WindowChromeOverlay: View {
             ) {
                 appState.isLeftSidebarOpen.toggle()
             }
-            .padding(.leading, 14)
+            // Outside fullscreen the toggle sits next to the native traffic
+            // lights; nudge it slightly right + down so it aligns with their
+            // visual baseline. In fullscreen it goes back to the edge.
+            .padding(.leading, windowState.isFullscreen ? 14 : 20)
+            .padding(.top, windowState.isFullscreen ? 0 : 4)
 
             Spacer(minLength: 0)
 
@@ -295,9 +386,13 @@ private struct WindowChromeOverlay: View {
                 appState.isRightSidebarOpen.toggle()
             }
             .padding(.trailing, 14)
+            // Mirror the left toggle's vertical offset so both icons share
+            // the same baseline.
+            .padding(.top, windowState.isFullscreen ? 0 : 4)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 38)
+        .animation(.easeInOut(duration: 0.18), value: windowState.isFullscreen)
     }
 }
 
@@ -305,6 +400,7 @@ private struct WindowChromeOverlay: View {
 
 private struct ContentTopChrome: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var windowState: WindowState
     @State private var chatActionsOpen = false
     @State private var hoverEllipsis = false
 
@@ -339,9 +435,15 @@ private struct ContentTopChrome: View {
             // When the left sidebar is hidden, the window chrome (traffic
             // lights + left toggle) sits over this column. Reserve its
             // footprint so the chat title doesn't slide under the toggle.
-            // Animating width keeps the layout shift smooth alongside the
-            // sidebar's slide transition.
-            Color.clear.frame(width: appState.isLeftSidebarOpen ? 0 : 96, height: 1)
+            // In fullscreen macOS hides the traffic lights, so the toggle
+            // sits flush to the edge and the reservation shrinks. Animating
+            // width keeps the layout shift smooth.
+            Color.clear.frame(
+                width: appState.isLeftSidebarOpen
+                    ? 0
+                    : (windowState.isFullscreen ? 38 : 96),
+                height: 1
+            )
             if let chatTitle, let _ = currentChat {
                 Text(chatTitle)
                     .font(.system(size: 13.5))
@@ -374,6 +476,8 @@ private struct ContentTopChrome: View {
             Color.clear.frame(width: appState.isRightSidebarOpen ? 0 : 30, height: 1)
         }
         .frame(height: 38)
+        .background(WindowDragArea())
+        .animation(.easeInOut(duration: 0.18), value: windowState.isFullscreen)
         .zIndex(1)
         .overlayPreferenceValue(ChatActionsAnchorKey.self) { anchor in
             GeometryReader { proxy in
@@ -422,20 +526,10 @@ private struct RightSidebarColumn: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        VStack(spacing: 0) {
-            switch appState.rightSidebarContent {
-            case .empty:
-                RightSidebarTopChrome()
-                RightSidebarBody()
-            case .browser:
-                BrowserView()
-            case .fileViewer(let path):
-                FileViewerPanel(path: path)
-            }
-        }
-        .frame(maxHeight: .infinity)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Right sidebar")
+        BrowserView()
+            .frame(maxHeight: .infinity)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Right sidebar")
     }
 }
 
@@ -444,6 +538,7 @@ private struct RightSidebarTopChrome: View {
     @State private var addMenuOpen = false
     @State private var hoverAdd = false
     @State private var hoverExpand = false
+    @State private var panelExpanded = false
     // Secondary icons (`+`, expand) stay invisible while the column
     // slides in from the trailing edge, then fade in with opacity once
     // the panel has settled. The toggle itself remains visible the
@@ -476,16 +571,21 @@ private struct RightSidebarTopChrome: View {
 
             Spacer(minLength: 0)
 
-            Button {} label: {
-                Image(systemName: "arrow.up.right.and.arrow.down.left")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(hoverExpand ? Color(white: 0.78) : Color(white: 0.55))
-                    .frame(width: 24, height: 24)
+            Button {
+                panelExpanded.toggle()
+            } label: {
+                CornerBracketsIcon(
+                    size: 13,
+                    variant: panelExpanded ? .collapsed : .expanded,
+                    lineWidth: 1.6
+                )
+                .foregroundColor(hoverExpand ? Color(white: 0.78) : Color(white: 0.55))
+                .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
             .onHover { hoverExpand = $0 }
             .animation(.easeOut(duration: 0.12), value: hoverExpand)
-            .accessibilityLabel("Expand panel")
+            .accessibilityLabel(panelExpanded ? "Collapse panel" : "Expand panel")
             .opacity(secondaryVisible ? 1 : 0)
 
             // The window chrome owns the right toggle; reserve its
@@ -1022,18 +1122,53 @@ extension View {
 ///
 /// Releasing below `sidebarCloseThreshold` snaps the sidebar closed and
 /// resets the persisted width to the default for the next open.
+enum SidebarResizeSide {
+    case left
+    case right
+
+    var minWidth: CGFloat {
+        self == .left ? sidebarMinVisibleWidth : rightSidebarMinVisibleWidth
+    }
+    var maxWidth: CGFloat {
+        self == .left ? sidebarMaxWidth : rightSidebarMaxWidth
+    }
+    var closeThreshold: CGFloat {
+        self == .left ? sidebarCloseThreshold : rightSidebarCloseThreshold
+    }
+    var defaultWidth: CGFloat {
+        self == .left ? sidebarDefaultWidth : rightSidebarDefaultWidth
+    }
+    /// Sign applied to the horizontal drag delta when computing the new
+    /// width. Dragging right grows the left sidebar (+1) but shrinks the
+    /// right one (-1).
+    var deltaSign: CGFloat {
+        self == .left ? 1 : -1
+    }
+}
+
 struct SidebarResizeHandle: View {
     @Binding var widthRaw: Double
     @Binding var hovered: Bool
+    var side: SidebarResizeSide = .left
+    /// Tightens the upper bound below the side's static `maxWidth` when
+    /// the surrounding layout cannot afford the full range (typically
+    /// the right sidebar capped by the current window width minus the
+    /// left sidebar and the min content column).
+    var maxWidthOverride: CGFloat? = nil
     @EnvironmentObject var appState: AppState
 
     var body: some View {
         SidebarResizeNSViewBridge(
             widthRaw: $widthRaw,
             hovered: $hovered,
+            side: side,
+            maxWidthOverride: maxWidthOverride,
             onClose: {
                 withAnimation(.easeInOut(duration: 0.18)) {
-                    appState.isLeftSidebarOpen = false
+                    switch side {
+                    case .left:  appState.isLeftSidebarOpen = false
+                    case .right: appState.isRightSidebarOpen = false
+                    }
                 }
             }
         )
@@ -1043,10 +1178,18 @@ struct SidebarResizeHandle: View {
 private struct SidebarResizeNSViewBridge: NSViewRepresentable {
     @Binding var widthRaw: Double
     @Binding var hovered: Bool
+    var side: SidebarResizeSide
+    var maxWidthOverride: CGFloat?
     var onClose: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(widthRaw: $widthRaw, hovered: $hovered, onClose: onClose)
+        Coordinator(
+            widthRaw: $widthRaw,
+            hovered: $hovered,
+            side: side,
+            maxWidthOverride: maxWidthOverride,
+            onClose: onClose
+        )
     }
 
     func makeNSView(context: Context) -> SidebarResizeNSView {
@@ -1058,6 +1201,8 @@ private struct SidebarResizeNSViewBridge: NSViewRepresentable {
     func updateNSView(_ nsView: SidebarResizeNSView, context: Context) {
         context.coordinator.widthRaw = $widthRaw
         context.coordinator.hovered = $hovered
+        context.coordinator.side = side
+        context.coordinator.maxWidthOverride = maxWidthOverride
         context.coordinator.onClose = onClose
         nsView.coordinator = context.coordinator
     }
@@ -1065,10 +1210,20 @@ private struct SidebarResizeNSViewBridge: NSViewRepresentable {
     final class Coordinator {
         var widthRaw: Binding<Double>
         var hovered: Binding<Bool>
+        var side: SidebarResizeSide
+        var maxWidthOverride: CGFloat?
         var onClose: () -> Void
-        init(widthRaw: Binding<Double>, hovered: Binding<Bool>, onClose: @escaping () -> Void) {
+        init(
+            widthRaw: Binding<Double>,
+            hovered: Binding<Bool>,
+            side: SidebarResizeSide,
+            maxWidthOverride: CGFloat?,
+            onClose: @escaping () -> Void
+        ) {
             self.widthRaw = widthRaw
             self.hovered = hovered
+            self.side = side
+            self.maxWidthOverride = maxWidthOverride
             self.onClose = onClose
         }
     }
@@ -1222,22 +1377,26 @@ private final class SidebarResizeNSView: NSView {
         // means mouseMoved/cursorUpdate stop firing. Force the resize
         // cursor on every drag tick so it stays sticky.
         NSCursor.resizeLeftRight.set()
-        let delta = event.locationInWindow.x - dragStartLocationX
+        let side = coordinator.side
+        let maxW = min(side.maxWidth, coordinator.maxWidthOverride ?? .greatestFiniteMagnitude)
+        let delta = (event.locationInWindow.x - dragStartLocationX) * side.deltaSign
         let proposed = dragStartWidth + delta
-        let clamped = max(sidebarMinVisibleWidth, min(sidebarMaxWidth, proposed))
+        let clamped = max(side.minWidth, min(maxW, proposed))
         coordinator.widthRaw.wrappedValue = Double(clamped)
     }
 
     override func mouseUp(with event: NSEvent) {
         guard let coordinator, isDragging else { return }
         isDragging = false
-        let delta = event.locationInWindow.x - dragStartLocationX
+        let side = coordinator.side
+        let maxW = min(side.maxWidth, coordinator.maxWidthOverride ?? .greatestFiniteMagnitude)
+        let delta = (event.locationInWindow.x - dragStartLocationX) * side.deltaSign
         let proposed = dragStartWidth + delta
-        if proposed < sidebarCloseThreshold {
+        if proposed < side.closeThreshold {
             coordinator.onClose()
-            coordinator.widthRaw.wrappedValue = Double(sidebarDefaultWidth)
+            coordinator.widthRaw.wrappedValue = Double(side.defaultWidth)
         } else {
-            let clamped = max(sidebarMinVisibleWidth, min(sidebarMaxWidth, proposed))
+            let clamped = max(side.minWidth, min(maxW, proposed))
             coordinator.widthRaw.wrappedValue = Double(clamped)
         }
         // If the cursor moved out during the drag, fold hover off now.
