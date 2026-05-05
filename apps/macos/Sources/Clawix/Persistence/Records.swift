@@ -89,3 +89,28 @@ struct HiddenRootRecord: Codable, FetchableRecord, PersistableRecord {
         case hiddenAt = "hidden_at"
     }
 }
+
+struct SidebarSnapshotRow: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "sidebar_snapshot"
+    var threadId: String
+    var chatUuid: String
+    var title: String
+    var cwd: String?
+    var projectPath: String?
+    var updatedAt: Int64
+    var archived: Int64
+    var pinned: Int64
+    var capturedAt: Int64
+
+    enum CodingKeys: String, CodingKey {
+        case threadId = "thread_id"
+        case chatUuid = "chat_uuid"
+        case title
+        case cwd
+        case projectPath = "project_path"
+        case updatedAt = "updated_at"
+        case archived
+        case pinned
+        case capturedAt = "captured_at"
+    }
+}

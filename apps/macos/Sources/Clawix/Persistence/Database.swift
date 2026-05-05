@@ -68,6 +68,7 @@ final class Database {
             try db.execute(sql: "DELETE FROM local_archives")
             try db.execute(sql: "DELETE FROM session_titles")
             try db.execute(sql: "DELETE FROM hidden_codex_roots")
+            try db.execute(sql: "DELETE FROM sidebar_snapshot")
             try db.execute(sql: "DELETE FROM meta WHERE key IN ('has_local_pins','archives_seeded')")
         }
     }
@@ -145,6 +146,32 @@ final class Database {
             """)
             try db.execute(sql: """
                 CREATE INDEX hidden_codex_roots_hidden_at_idx ON hidden_codex_roots(hidden_at)
+            """)
+        }
+
+        // Cache of the sidebar's last applied state. Lets the next launch
+        // paint Pinned + chat list instantly from local SQLite instead of
+        // waiting for the runtime to bootstrap and paginate threads.
+        // Persists Chat.id (UUID) so identities stay stable across runs
+        // and pinnedOrder, ChatSidebars and currentRoute don't flicker
+        // when the runtime data lands and applyThreads reconciles.
+        migrator.registerMigration("v4_sidebar_snapshot") { db in
+            try db.execute(sql: """
+                CREATE TABLE sidebar_snapshot (
+                    thread_id    TEXT PRIMARY KEY NOT NULL,
+                    chat_uuid    TEXT NOT NULL,
+                    title        TEXT NOT NULL,
+                    cwd          TEXT,
+                    project_path TEXT,
+                    updated_at   INTEGER NOT NULL,
+                    archived     INTEGER NOT NULL DEFAULT 0,
+                    pinned       INTEGER NOT NULL DEFAULT 0,
+                    captured_at  INTEGER NOT NULL
+                )
+            """)
+            try db.execute(sql: """
+                CREATE INDEX sidebar_snapshot_order_idx
+                    ON sidebar_snapshot(pinned DESC, updated_at DESC)
             """)
         }
 

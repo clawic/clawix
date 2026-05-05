@@ -613,6 +613,16 @@ final class AppState: ObservableObject {
     private let metaRepo = MetaRepository()
     private let archivesRepo = ArchivesRepository()
     private let hiddenRootsRepo = HiddenRootsRepository()
+    /// Persistent cache of the sidebar's last applied state. Used to
+    /// paint Pinned + chat list instantly at launch from local SQLite,
+    /// before the runtime bootstraps and paginates the real thread list.
+    /// Rewritten at the end of every applyThreads / mergeThreads.
+    private let snapshotRepo = SnapshotRepository()
+    /// True when the snapshot cache is active. Disabled while fixtures
+    /// are driving the threads list (CLAWIX_THREAD_FIXTURE) so tests
+    /// stay deterministic and the snapshot table never sees fixture
+    /// data.
+    private let snapshotEnabled: Bool = (AgentThreadStore.fixtureThreads() == nil)
     private var backendState: BackendState = .empty
 
     /// Resolves session ids to thread names by aggregating the runtime
@@ -694,12 +704,23 @@ final class AppState: ObservableObject {
         if let fixtureThreads = AgentThreadStore.fixtureThreads() {
             applyThreads(fixtureThreads)
         } else {
-            applyThreads([])
+            // First paint: build chats[] + pinnedOrder from the SQLite
+            // snapshot of the last applied state. Falls back to an empty
+            // list (existing behavior) when the snapshot is empty
+            // (fresh install / post-resetLocalOverrides). The runtime
+            // reconciles via applyThreads once clawix.bootstrap()
+            // resolves, preserving Chat.id thanks to oldByThread.
+            applySnapshotForFirstPaint()
         }
-        FaviconCache.shared.primeDiskCache()
         loadHostFavicons()
         loadChatSidebars()
         applyLaunchRoute()
+        // FaviconCache hits disk; defer it past the first paint so the
+        // synchronous init returns as fast as possible and SwiftUI can
+        // render the sidebar from the snapshot.
+        Task { @MainActor in
+            FaviconCache.shared.primeDiskCache()
+        }
 
         // Forward auth coordinator changes so views observing AppState
         // also rebuild when login / logout state flips.
@@ -1024,6 +1045,85 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// First-paint pre-population of `chats[]` and `pinnedOrder` from
+    /// the SQLite snapshot of the last applied state. Reads at most
+    /// `firstPaintLimit` rows so a huge thread history doesn't slow the
+    /// initial paint; the rest is filled in when applyThreads runs.
+    /// No-op when the snapshot is empty (the caller leaves chats empty
+    /// like before, and the runtime fills them via applyThreads).
+    private func applySnapshotForFirstPaint() {
+        guard snapshotEnabled else { return }
+        // Populate projects unconditionally so the sidebar's project
+        // sections are present from the very first paint, even on a
+        // fresh install where the snapshot is still empty.
+        projects = mergedProjects()
+        let firstPaintLimit = 200
+        let rows = snapshotRepo.loadTop(limit: firstPaintLimit)
+        guard !rows.isEmpty else { return }
+
+        let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
+
+        let restored: [Chat] = rows.compactMap { row in
+            guard let id = UUID(uuidString: row.chatUuid) else { return nil }
+            let projectId = row.projectPath
+                .flatMap { path in projectByPath[path]?.id }
+            return Chat(
+                id: id,
+                title: row.title,
+                messages: [],
+                createdAt: Date(timeIntervalSince1970: TimeInterval(row.updatedAt)),
+                clawixThreadId: row.threadId,
+                rolloutPath: nil,
+                historyHydrated: false,
+                hasActiveTurn: false,
+                projectId: projectId,
+                isArchived: row.archived != 0,
+                isPinned: row.pinned != 0,
+                hasUnreadCompletion: false,
+                cwd: row.cwd,
+                hasGitRepo: false,
+                branch: nil,
+                availableBranches: [],
+                uncommittedFiles: nil
+            )
+        }
+        chats = restored
+
+        let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds
+        let threadToChat = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
+            chat.clawixThreadId.map { ($0, chat.id) }
+        })
+        pinnedOrder = pinIds.compactMap { threadToChat[$0] }
+    }
+
+    /// Rewrite the SQLite snapshot from the current in-memory `chats`
+    /// list. Called after every applyThreads / mergeThreads. Skipped
+    /// when fixtures drive the threads list so tests stay deterministic.
+    /// The actual write goes off-main via GRDB's serialized queue.
+    private func persistSidebarSnapshot() {
+        guard snapshotEnabled else { return }
+        let projectsById = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
+        let now = Int64(Date().timeIntervalSince1970)
+        let rows: [SidebarSnapshotRow] = chats.compactMap { chat in
+            guard let threadId = chat.clawixThreadId else { return nil }
+            return SidebarSnapshotRow(
+                threadId: threadId,
+                chatUuid: chat.id.uuidString,
+                title: chat.title,
+                cwd: chat.cwd,
+                projectPath: chat.projectId.flatMap { projectsById[$0]?.path },
+                updatedAt: Int64(chat.createdAt.timeIntervalSince1970),
+                archived: chat.isArchived ? 1 : 0,
+                pinned: chat.isPinned ? 1 : 0,
+                capturedAt: now
+            )
+        }
+        let repo = snapshotRepo
+        Task.detached(priority: .background) {
+            repo.replaceAll(rows)
+        }
+    }
+
     private func applyThreads(_ threads: [AgentThreadSummary]) {
         backendState = BackendStateReader.read()
         projects = mergedProjects()
@@ -1050,6 +1150,7 @@ final class AppState: ObservableObject {
         })
         pinnedOrder = pinIds.compactMap { threadToChat[$0] }
         writeE2EStateReportIfRequested()
+        persistSidebarSnapshot()
     }
 
     /// Like `applyThreads` but additive: refreshes existing chats from the
@@ -1091,6 +1192,7 @@ final class AppState: ObservableObject {
         })
         pinnedOrder = pinIds.compactMap { threadToChat[$0] }
         writeE2EStateReportIfRequested()
+        persistSidebarSnapshot()
     }
 
     private func chatFromThread(_ thread: AgentThreadSummary,

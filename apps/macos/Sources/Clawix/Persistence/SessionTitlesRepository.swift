@@ -25,7 +25,30 @@ final class SessionTitlesRepository {
 
     init(db: DatabaseQueue = Database.shared.dbQueue) {
         self.db = db
-        reload()
+        // Cheap, indexed read of the SQLite override table so manual
+        // renames + generated titles are honored from the very first
+        // paint. The expensive JSONL fold (~/.codex/session_index.jsonl)
+        // is deferred to a post-paint Task: thread names also come from
+        // the runtime via `AgentThreadSummary`, so the sidebar's first
+        // paint does not depend on it.
+        loadFromDB()
+        Task { @MainActor [weak self] in
+            self?.reload()
+        }
+    }
+
+    private func loadFromDB() {
+        let rows = (try? db.read { try SessionTitleRow.fetchAll($0) }) ?? []
+        var fold: [String: Entry] = [:]
+        for row in rows {
+            fold[row.threadId] = Entry(
+                threadId: row.threadId,
+                title: row.title,
+                updatedAt: Date(timeIntervalSince1970: TimeInterval(row.updatedAt)),
+                source: row.source
+            )
+        }
+        resolved = fold
     }
 
     static var runtimeIndexURL: URL {
