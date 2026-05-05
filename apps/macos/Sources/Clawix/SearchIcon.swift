@@ -1,9 +1,6 @@
 import SwiftUI
 
 /// Custom magnifying glass icon used in place of SF Symbols `magnifyingglass`.
-/// Lens diameter ~66% of the grid and a short 45° handle (0.65 × radius),
-/// centered as a single bbox so it visually replaces the SF Symbol without
-/// shifting alignment.
 struct SearchIcon: View {
     var size: CGFloat = 14
 
@@ -27,10 +24,10 @@ struct SearchIconShape: Shape {
             CGPoint(x: dx + x * s, y: dy + y * s)
         }
 
-        let circleOrigin: CGFloat = 1.5
-        let circleDiameter: CGFloat = 23.06
-        let handleStart: CGFloat = 21.19
-        let handleEnd: CGFloat = 26.49
+        let circleOrigin: CGFloat = 2.53
+        let circleDiameter: CGFloat = 21.00
+        let handleStart: CGFloat = 20.46
+        let handleEnd: CGFloat = 26.85
 
         var path = Path()
         path.addEllipse(in: CGRect(

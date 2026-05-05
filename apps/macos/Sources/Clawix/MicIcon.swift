@@ -1,61 +1,90 @@
 import SwiftUI
 
 /// Custom microphone glyph used in place of the SF Symbol "mic".
-/// Shape matches the project's house style: continuous-corner capsule body
-/// over a slightly squashed elliptical yoke (rx=13.5, ry=12) that opens
-/// 30° wider than 180°, with stem and base.
+/// Filled shape (Phosphor-style mic-fill geometry) with a 6% horizontal stretch
+/// around x=128, a 6% vertical compression of the body around y=96, and a U-arc cup
+/// trimmed 10° on each side.
+///
+/// `lineWidth` adds an optional outline stroke on top of the fill to nudge perceived
+/// thickness up at small render sizes; 0 = pure fill.
 struct MicIcon: View {
-    var lineWidth: CGFloat = 2.4
+    var lineWidth: CGFloat = 0
 
     var body: some View {
         Canvas { ctx, size in
-            // Source coordinate system: 66×68 (matches design SVG viewBox).
-            // The drawn glyph occupies x∈[18,48], y∈[18,53] including stroke.
-            let glyphRect = CGRect(x: 18, y: 18, width: 30, height: 36)
-            let scale = min(size.width / glyphRect.width,
-                            size.height / glyphRect.height)
-            let drawnW = glyphRect.width * scale
-            let drawnH = glyphRect.height * scale
-            ctx.translateBy(x: (size.width - drawnW) / 2,
-                            y: (size.height - drawnH) / 2)
+            let glyphSize: CGFloat = 256
+            let scale = min(size.width / glyphSize, size.height / glyphSize)
+            let drawn = glyphSize * scale
+            ctx.translateBy(x: (size.width - drawn) / 2,
+                            y: (size.height - drawn) / 2)
             ctx.scaleBy(x: scale, y: scale)
-            ctx.translateBy(x: -glyphRect.minX, y: -glyphRect.minY)
 
-            var path = Path()
+            let stretchX = CGAffineTransform.identity
+                .translatedBy(x: 128, y: 0)
+                .scaledBy(x: 1.06, y: 1)
+                .translatedBy(x: -128, y: 0)
 
-            path.addRoundedRect(
-                in: CGRect(x: 26, y: 21, width: 14, height: 21),
-                cornerSize: CGSize(width: 7, height: 7),
-                style: .continuous
+            var bodyPath = Path()
+            bodyPath.addRoundedRect(
+                in: CGRect(x: 80, y: 16, width: 96, height: 160),
+                cornerSize: CGSize(width: 48, height: 48)
             )
-
-            var arc = Path()
-            arc.addArc(
-                center: .zero,
-                radius: 13.5,
-                startAngle: .degrees(165),
-                endAngle: .degrees(15),
-                clockwise: true
+            bodyPath.addRoundedRect(
+                in: CGRect(x: 96, y: 32, width: 64, height: 128),
+                cornerSize: CGSize(width: 32, height: 32)
             )
-            arc = arc.applying(CGAffineTransform(scaleX: 1, y: 12.0 / 13.5))
-            arc = arc.applying(CGAffineTransform(translationX: 33, y: 35))
-            path.addPath(arc)
+            let compressY = CGAffineTransform.identity
+                .translatedBy(x: 0, y: 96)
+                .scaledBy(x: 1, y: 0.94)
+                .translatedBy(x: 0, y: -96)
+            bodyPath = bodyPath.applying(compressY).applying(stretchX)
 
-            path.move(to: CGPoint(x: 33, y: 47))
-            path.addLine(to: CGPoint(x: 33, y: 52))
-
-            path.move(to: CGPoint(x: 28, y: 52))
-            path.addLine(to: CGPoint(x: 38, y: 52))
-
-            ctx.stroke(
-                path,
-                with: .style(.foreground),
-                style: StrokeStyle(
-                    lineWidth: lineWidth,
-                    lineCap: .round,
-                    lineJoin: .round
-                )
+            var cupPath = Path()
+            cupPath.move(to: CGPoint(x: 136, y: 207.6))
+            cupPath.addLine(to: CGPoint(x: 136, y: 224))
+            cupPath.addLine(to: CGPoint(x: 152, y: 224))
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 152, y: 232), radius: 8,
+                startAngle: .degrees(270), delta: .degrees(180)
             )
+            cupPath.addLine(to: CGPoint(x: 104, y: 240))
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 104, y: 232), radius: 8,
+                startAngle: .degrees(90), delta: .degrees(180)
+            )
+            cupPath.addLine(to: CGPoint(x: 120, y: 224))
+            cupPath.addLine(to: CGPoint(x: 120, y: 207.6))
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 128, y: 128), radius: 80,
+                startAngle: .degrees(95.74), delta: .degrees(74.26)
+            )
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 57.095, y: 140.5), radius: 8,
+                startAngle: .degrees(170), delta: .degrees(180)
+            )
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 128, y: 128), radius: 64,
+                startAngle: .degrees(170), delta: .degrees(-160)
+            )
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 198.905, y: 140.5), radius: 8,
+                startAngle: .degrees(190), delta: .degrees(180)
+            )
+            cupPath.addRelativeArc(
+                center: CGPoint(x: 128, y: 128), radius: 80,
+                startAngle: .degrees(10), delta: .degrees(74.26)
+            )
+            cupPath.closeSubpath()
+            cupPath = cupPath.applying(stretchX)
+
+            ctx.fill(bodyPath, with: .style(.foreground), style: FillStyle(eoFill: true))
+            ctx.fill(cupPath, with: .style(.foreground))
+
+            if lineWidth > 0 {
+                let stroke = StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+                ctx.stroke(bodyPath, with: .style(.foreground), style: stroke)
+                ctx.stroke(cupPath, with: .style(.foreground), style: stroke)
+            }
         }
     }
 }
