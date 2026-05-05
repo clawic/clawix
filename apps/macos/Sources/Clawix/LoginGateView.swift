@@ -38,12 +38,12 @@ private struct LoginCard: View {
 
             VStack(spacing: 10) {
                 Text("Sign in")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(BodyFont.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
                     .multilineTextAlignment(.center)
 
                 Text("Sign in to recover access to your chats and projects.")
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -59,13 +59,13 @@ private struct LoginCard: View {
                 if inProgress {
                     HStack(spacing: 8) {
                         Text("We've opened the browser. Come back here when you've confirmed.")
-                            .font(.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5))
                             .foregroundColor(Palette.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     Button(action: { appState.auth.cancelLogin() }) {
                         Text("Cancel")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(BodyFont.system(size: 12, weight: .medium))
                             .foregroundColor(Color(white: 0.78))
                     }
                     .buttonStyle(.plain)
@@ -74,7 +74,7 @@ private struct LoginCard: View {
 
             if let error {
                 Text(error)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Color(red: 0.95, green: 0.45, blue: 0.45))
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -83,7 +83,7 @@ private struct LoginCard: View {
 
             if !hasBinary {
                 Text("Could not locate the required binary. Set its path under Settings → Advanced settings.")
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -118,7 +118,7 @@ private struct BrandMark: View {
                 .frame(width: 56, height: 56)
 
             Text(">_")
-                .font(.system(size: 20, weight: .semibold, design: .monospaced))
+                .font(BodyFont.system(size: 20, weight: .semibold, design: .monospaced))
                 .foregroundColor(Color(white: 0.92))
                 .offset(x: -1)
         }
@@ -145,11 +145,11 @@ private struct PrimaryLoginButton: View {
                     Text("Waiting for confirmation…")
                 } else {
                     Image(systemName: "arrow.right.to.line")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(BodyFont.system(size: 13, weight: .semibold))
                     Text("Sign in")
                 }
             }
-            .font(.system(size: 13.5, weight: .semibold))
+            .font(BodyFont.system(size: 13.5, weight: .semibold))
             .foregroundColor(.black)
             .padding(.horizontal, 22)
             .padding(.vertical, 11)

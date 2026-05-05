@@ -48,7 +48,7 @@ struct PlanQuestionCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 Text(currentQuestion.question)
-                    .font(.system(size: 14))
+                    .font(BodyFont.system(size: 14))
                     .foregroundColor(Palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 12)
@@ -89,7 +89,7 @@ struct PlanQuestionCard: View {
             Image(systemName: "arrow.up")
             Image(systemName: "arrow.down")
         }
-        .font(.system(size: 11, weight: .regular))
+        .font(BodyFont.system(size: 11, weight: .regular))
         .foregroundColor(Palette.textSecondary)
     }
 
@@ -136,10 +136,10 @@ struct PlanQuestionCard: View {
             } label: {
                 HStack(spacing: 6) {
                     Text("Ignore")
-                        .font(.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5))
                         .foregroundColor(Palette.textSecondary)
                     Text("ESC")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(white: 0.85))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -157,9 +157,9 @@ struct PlanQuestionCard: View {
             } label: {
                 HStack(spacing: 6) {
                     Text("Send")
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(BodyFont.system(size: 12.5, weight: .semibold))
                     Image(systemName: "return")
-                        .font(.system(size: 9.5, weight: .semibold))
+                        .font(BodyFont.system(size: 9.5, weight: .semibold))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(
@@ -257,19 +257,19 @@ private struct PlanOptionRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Text("\(index).")
-                .font(.system(size: 13, design: .default))
+                .font(BodyFont.system(size: 13, design: .default))
                 .foregroundColor(muted ? Color(white: 0.40) : Color(white: 0.55))
                 .frame(width: 18, alignment: .leading)
 
             Text(label)
-                .font(.system(size: 13.5, weight: isSelected ? .semibold : .regular))
+                .font(BodyFont.system(size: 13.5, weight: isSelected ? .semibold : .regular))
                 .foregroundColor(muted ? Color(white: 0.55) : Palette.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)
 
             if description != nil {
                 Image(systemName: "info.circle")
-                    .font(.system(size: 11, weight: .regular))
+                    .font(BodyFont.system(size: 11, weight: .regular))
                     .foregroundColor(Color(white: 0.45))
                     .help(description ?? "")
                     .onHover { infoHovered = $0 }
@@ -305,13 +305,13 @@ private struct PlanOtherFieldRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Text("\(index).")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Color(white: 0.55))
                 .frame(width: 18, alignment: .leading)
             TextField("", text: $text, prompt: Text("Tell the agent what to do instead")
                 .foregroundColor(Color(white: 0.42)))
                 .textFieldStyle(.plain)
-                .font(.system(size: 13.5))
+                .font(BodyFont.system(size: 13.5))
                 .foregroundColor(Palette.textPrimary)
                 .focused(focused)
                 .onAppear { focused.wrappedValue = true }

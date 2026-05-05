@@ -65,6 +65,8 @@ struct ClawixApp: App {
         // String(localized:bundle:) call resolves against the right
         // xcstrings entry, no restart required.
         AppLanguage.bootstrap()
+        // Register Manrope before any SwiftUI view resolves Font.custom("Manrope-…").
+        BodyFont.register()
         _appState = StateObject(wrappedValue: AppState())
     }
 

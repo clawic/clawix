@@ -166,7 +166,7 @@ struct MarkdownDocumentView: View {
 
         case .paragraph(let attr):
             Text(styledInline(attr))
-                .font(.system(size: 14))
+                .font(BodyFont.system(size: 14))
                 .foregroundColor(Palette.textPrimary.opacity(0.92))
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
@@ -178,11 +178,11 @@ struct MarkdownDocumentView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("•")
-                            .font(.system(size: 14))
+                            .font(BodyFont.system(size: 14))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 8, alignment: .leading)
                         Text(styledInline(item))
-                            .font(.system(size: 14))
+                            .font(BodyFont.system(size: 14))
                             .foregroundColor(Palette.textPrimary.opacity(0.92))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
@@ -198,11 +198,11 @@ struct MarkdownDocumentView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("\(idx + 1).")
-                            .font(.system(size: 14))
+                            .font(BodyFont.system(size: 14))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 20, alignment: .leading)
                         Text(styledInline(item))
-                            .font(.system(size: 14))
+                            .font(BodyFont.system(size: 14))
                             .foregroundColor(Palette.textPrimary.opacity(0.92))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
@@ -221,10 +221,10 @@ struct MarkdownDocumentView: View {
 
     private func headingFont(_ level: Int) -> Font {
         switch level {
-        case 1:  return .system(size: 26, weight: .bold)
-        case 2:  return .system(size: 20, weight: .bold)
-        case 3:  return .system(size: 16, weight: .semibold)
-        default: return .system(size: 14, weight: .semibold)
+        case 1:  return BodyFont.system(size: 26, weight: .bold)
+        case 2:  return BodyFont.system(size: 20, weight: .bold)
+        case 3:  return BodyFont.system(size: 16, weight: .semibold)
+        default: return BodyFont.system(size: 14, weight: .semibold)
         }
     }
 
@@ -253,7 +253,7 @@ struct MarkdownDocumentView: View {
         var out = source
         for run in out.runs {
             if run.inlinePresentationIntent?.contains(.code) == true {
-                out[run.range].font = .system(size: 12.5, design: .monospaced)
+                out[run.range].font = BodyFont.system(size: 12.5, design: .monospaced)
                 out[run.range].backgroundColor = Color(white: 0.18)
                 out[run.range].foregroundColor = Color(white: 0.92)
             }
@@ -286,7 +286,7 @@ private struct CodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(language.isEmpty ? "code" : language)
-                    .font(.system(size: 11.5, weight: .regular))
+                    .font(BodyFont.system(size: 11.5, weight: .regular))
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
                 Button(action: toggleWrap) {
@@ -311,7 +311,7 @@ private struct CodeBlockView: View {
                     Group {
                         if copied {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(BodyFont.system(size: 11, weight: .semibold))
                                 .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
                         } else {
                             CopyIconViewSquircle(
@@ -347,7 +347,7 @@ private struct CodeBlockView: View {
     private var codeBody: some View {
         if appState.chatCodeBlockWordWrap {
             Text(code)
-                .font(.system(size: 12.5, design: .monospaced))
+                .font(BodyFont.system(size: 12.5, design: .monospaced))
                 .foregroundColor(Palette.textPrimary.opacity(0.94))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
@@ -356,7 +356,7 @@ private struct CodeBlockView: View {
         } else {
             ScrollView(.horizontal, showsIndicators: true) {
                 Text(code)
-                    .font(.system(size: 12.5, design: .monospaced))
+                    .font(BodyFont.system(size: 12.5, design: .monospaced))
                     .foregroundColor(Palette.textPrimary.opacity(0.94))
                     .fixedSize(horizontal: true, vertical: false)
                     .padding(.horizontal, 14)

@@ -23,10 +23,10 @@ struct PairWindowView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 18) {
             Text("Pair iPhone")
-                .font(.system(size: 16, weight: .semibold))
+                .font(BodyFont.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.94))
             Text("Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.")
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 .foregroundStyle(Color.white.opacity(0.55))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
@@ -60,12 +60,12 @@ struct PairWindowView: View {
             HStack(spacing: 10) {
                 Button(action: rotate) {
                     Text("Rotate token")
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                 }
                 .buttonStyle(.borderless)
                 Button(action: copyPayload) {
                     Text("Copy payload")
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                 }
                 .buttonStyle(.borderless)
             }
@@ -86,11 +86,11 @@ struct PairWindowView: View {
     private func row(label: String, value: String) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(BodyFont.system(size: 11, weight: .medium))
                 .foregroundStyle(Color.white.opacity(0.45))
                 .frame(width: 50, alignment: .leading)
             Text(value)
-                .font(.system(size: 12, design: .monospaced))
+                .font(BodyFont.system(size: 12, design: .monospaced))
                 .foregroundStyle(Color.white.opacity(0.86))
                 .lineLimit(1)
                 .truncationMode(.middle)

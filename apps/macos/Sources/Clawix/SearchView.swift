@@ -13,7 +13,7 @@ struct SearchView: View {
                 SearchIcon(size: 13)
                     .foregroundColor(Palette.textTertiary)
                 TextField("Search in conversations…", text: $appState.searchQuery)
-                    .font(.system(size: 14))
+                    .font(BodyFont.system(size: 14))
                     .foregroundColor(Palette.textPrimary)
                     .textFieldStyle(.plain)
                     .focused($fieldFocused)
@@ -78,7 +78,7 @@ private struct SearchResultRow: View {
             FileChipIcon(size: 13)
                 .foregroundColor(Palette.textTertiary)
             Text(text)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textSecondary)
             Spacer()
         }
@@ -98,7 +98,7 @@ private struct SearchResultRow: View {
 
 func pageHeader(_ title: LocalizedStringKey) -> some View {
     Text(title)
-        .font(.system(size: 20, weight: .semibold))
+        .font(BodyFont.system(size: 20, weight: .semibold))
         .foregroundColor(Palette.textPrimary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
@@ -109,7 +109,7 @@ func pageHeader(_ title: LocalizedStringKey) -> some View {
 /// String-based variant for cases where the title is computed at runtime.
 func pageHeaderString(_ title: String) -> some View {
     Text(title)
-        .font(.system(size: 20, weight: .semibold))
+        .font(BodyFont.system(size: 20, weight: .semibold))
         .foregroundColor(Palette.textPrimary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)
@@ -125,12 +125,12 @@ func emptyState(_ message: String, icon: String) -> some View {
                 SearchIcon(size: 28)
             } else {
                 Image(systemName: icon)
-                    .font(.system(size: 28))
+                    .font(BodyFont.system(size: 28))
             }
         }
         .foregroundColor(Palette.textTertiary)
         Text(message)
-            .font(.system(size: 13))
+            .font(BodyFont.system(size: 13))
             .foregroundColor(Palette.textTertiary)
             .multilineTextAlignment(.center)
         Spacer()

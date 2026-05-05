@@ -33,12 +33,12 @@ struct ChangedFileCard: View {
             iconBadge
             VStack(alignment: .leading, spacing: 4) {
                 Text(fileName)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(BodyFont.system(size: 14, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(subtitle)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Color(white: 0.55))
             }
             Spacer(minLength: 8)
@@ -94,7 +94,7 @@ struct ChangedFileCard: View {
             Text(String(localized: "Open",
                         bundle: AppLocale.bundle,
                         locale: AppLocale.current))
-                .font(.system(size: 14, weight: .regular))
+                .font(BodyFont.system(size: 14, weight: .regular))
                 .foregroundColor(Color(white: 0.94))
                 // SwiftUI Text on macOS hijacks the I-beam cursor and
                 // swallows taps over its glyphs. Pass-through so the
@@ -102,7 +102,7 @@ struct ChangedFileCard: View {
                 .allowsHitTesting(false)
 
             Image(systemName: "chevron.down")
-                .font(.system(size: 10, weight: .semibold))
+                .font(BodyFont.system(size: 10, weight: .semibold))
                 .foregroundColor(Color(white: 0.72))
                 .padding(.leading, 2)
                 .padding(.vertical, 4)
@@ -221,7 +221,7 @@ private struct ChangedFileMenuContent: View {
                 action.iconView
                     .frame(width: 22, alignment: .center)
                 Text(action.title)
-                    .font(.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)

@@ -17,16 +17,16 @@ struct ProjectRenameSheet: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Rename project")
-                        .font(.system(size: 20, weight: .medium))
+                        .font(BodyFont.system(size: 20, weight: .medium))
                         .foregroundColor(Color(white: 0.97))
                     Text("Keep it short and recognizable")
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                         .foregroundColor(Color(white: 0.55))
                 }
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())

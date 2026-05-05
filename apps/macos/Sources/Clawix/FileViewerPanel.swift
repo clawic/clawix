@@ -111,15 +111,15 @@ struct FileViewerPanel: View {
     private var breadcrumbRow: some View {
         HStack(spacing: 6) {
             Text(folderName)
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 .foregroundColor(Color(white: 0.55))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Image(systemName: "chevron.right")
-                .font(.system(size: 9, weight: .semibold))
+                .font(BodyFont.system(size: 9, weight: .semibold))
                 .foregroundColor(Color(white: 0.35))
             Text(fileName)
-                .font(.system(size: 12, weight: .regular))
+                .font(BodyFont.system(size: 12, weight: .regular))
                 .foregroundColor(Color(white: 0.85))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -146,7 +146,7 @@ struct FileViewerPanel: View {
             } icon: {
                 if copied {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .regular))
+                        .font(BodyFont.system(size: 11, weight: .regular))
                 } else {
                     FolderStackIcon(size: 16)
                 }
@@ -187,7 +187,7 @@ struct FileViewerPanel: View {
                 FileChipIcon(size: 30)
                     .foregroundColor(Color(white: 0.40))
                 Text(reason)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Color(white: 0.55))
                     .multilineTextAlignment(.center)
             }
@@ -206,7 +206,7 @@ struct FileViewerPanel: View {
                             action: @escaping () -> Void) -> some View {
         iconButton(hoverState: hoverState, label: label, action: action) {
             Image(systemName: systemName)
-                .font(.system(size: size, weight: .regular))
+                .font(BodyFont.system(size: size, weight: .regular))
         }
     }
 
@@ -354,7 +354,7 @@ private struct FileViewerMoreMenu: View {
                 row(id: "toggleRichView",
                     title: richViewDisabled ? "Enable rich view" : "Disable rich view") {
                     Image(systemName: richViewDisabled ? "photo" : "curlybraces")
-                        .font(.system(size: 12, weight: .regular))
+                        .font(BodyFont.system(size: 12, weight: .regular))
                         .foregroundColor(MenuStyle.rowIcon)
                 } action: {
                     onToggleRichView()
@@ -394,7 +394,7 @@ private struct FileViewerMoreMenu: View {
                 icon()
                     .frame(width: 18, alignment: .center)
                 Text(title)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
             }
@@ -476,11 +476,11 @@ private struct RawTextView: View {
             ForEach(Array(lines.enumerated()), id: \.offset) { idx, line in
                 HStack(alignment: .top, spacing: 14) {
                     Text(verbatim: "\(idx + 1)")
-                        .font(.system(size: 12.5, design: .monospaced))
+                        .font(BodyFont.system(size: 12.5, design: .monospaced))
                         .foregroundColor(Self.muted)
                         .frame(width: gutterWidth, alignment: .trailing)
                     lineText(line)
-                        .font(.system(size: 12.5, design: .monospaced))
+                        .font(BodyFont.system(size: 12.5, design: .monospaced))
                         .modifier(NoWrapIfNeeded(wrap: wordWrap))
                         .textSelection(.enabled)
                 }

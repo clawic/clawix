@@ -48,7 +48,7 @@ struct HoverHintBubble: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: HoverHintConfig.fontSize))
+            .font(BodyFont.system(size: HoverHintConfig.fontSize))
             .foregroundColor(HoverHintConfig.textColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)

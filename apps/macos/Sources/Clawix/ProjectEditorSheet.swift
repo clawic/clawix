@@ -27,12 +27,12 @@ struct ProjectEditorSheet: View {
                 Text(isEditing
                      ? String(localized: "Edit project", bundle: AppLocale.bundle, locale: AppLocale.current)
                      : String(localized: "New project", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 20, weight: .medium))
+                    .font(BodyFont.system(size: 20, weight: .medium))
                     .foregroundColor(Color(white: 0.97))
                 Spacer()
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
@@ -48,7 +48,7 @@ struct ProjectEditorSheet: View {
                 fieldGroup("Name") {
                     TextField("My project", text: $name)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 13.5))
+                        .font(BodyFont.system(size: 13.5))
                         .foregroundColor(Color(white: 0.94))
                         .focused($nameFocused)
                         .padding(.horizontal, 12)
@@ -60,7 +60,7 @@ struct ProjectEditorSheet: View {
                     HStack(spacing: 8) {
                         TextField("/Users/me/code/foo", text: $path)
                             .textFieldStyle(.plain)
-                            .font(.system(size: 13))
+                            .font(BodyFont.system(size: 13))
                             .foregroundColor(Color(white: 0.92))
                             .focused($pathFocused)
                             .padding(.horizontal, 12)
@@ -76,9 +76,9 @@ struct ProjectEditorSheet: View {
                 if !path.isEmpty && !FileManager.default.fileExists(atPath: expandedPath) {
                     HStack(spacing: 6) {
                         Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 11))
+                            .font(BodyFont.system(size: 11))
                         Text("This folder doesn’t exist on disk")
-                            .font(.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5))
                     }
                     .foregroundColor(Color(red: 0.95, green: 0.6, blue: 0.35))
                 } else if !path.isEmpty && FileManager.default.fileExists(atPath: expandedPath) {
@@ -94,9 +94,9 @@ struct ProjectEditorSheet: View {
                     if pathMatchCount > 0 {
                         HStack(spacing: 6) {
                             Image(systemName: "point.3.connected.trianglepath.dotted")
-                                .font(.system(size: 11))
+                                .font(BodyFont.system(size: 11))
                             Text(L10n.chatsAutoGroupedByPath(pathMatchCount))
-                                .font(.system(size: 11.5))
+                                .font(BodyFont.system(size: 11.5))
                         }
                         .foregroundColor(Color(white: 0.50))
                     }
@@ -185,7 +185,7 @@ struct ProjectEditorSheet: View {
     private func fieldGroup<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+                .font(BodyFont.system(size: 10, weight: .semibold))
                 .tracking(0.6)
                 .foregroundColor(Color(white: 0.50))
             content()

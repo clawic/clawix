@@ -22,10 +22,10 @@ struct ReasoningBlock: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(BodyFont.system(size: 9, weight: .semibold))
                         .foregroundColor(Color(white: 0.50))
                     Text(headerLabel)
-                        .font(.system(size: 12.5, weight: .medium))
+                        .font(BodyFont.system(size: 12.5, weight: .medium))
                         .foregroundColor(Color(white: 0.62))
                     if isStreaming {
                         ReasoningPulseDot()
@@ -37,7 +37,7 @@ struct ReasoningBlock: View {
 
             if expanded {
                 Text(text)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Color(white: 0.55))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)

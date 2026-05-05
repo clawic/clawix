@@ -78,16 +78,16 @@ struct BrowserView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "globe")
-                .font(.system(size: 28, weight: .light))
+                .font(BodyFont.system(size: 28, weight: .light))
                 .foregroundColor(Color(white: 0.40))
             Text("No tabs open")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Color(white: 0.55))
             Button {
                 appState.newBrowserTab()
             } label: {
                 Text("New tab")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(BodyFont.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)

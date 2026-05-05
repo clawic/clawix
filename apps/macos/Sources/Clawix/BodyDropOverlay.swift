@@ -77,10 +77,10 @@ private struct BodyDropTarget: ViewModifier {
 
             HStack(spacing: 9) {
                 Image(systemName: "paperclip")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Color(white: 0.94))
                 Text(L10n.t("Drop to attach"))
-                    .font(.system(size: 13.5, weight: .medium))
+                    .font(BodyFont.system(size: 13.5, weight: .medium))
                     .foregroundColor(Color(white: 0.94))
             }
             .padding(.horizontal, 16)

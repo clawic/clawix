@@ -14,7 +14,7 @@ struct MainContentView: View {
                 let heading = L10n.homeHeading(project: appState.selectedProject?.name)
                 VStack(spacing: 28) {
                     Text(heading)
-                        .font(.system(size: 28, weight: .regular))
+                        .font(BodyFont.system(size: 28, weight: .regular))
                         .foregroundColor(Palette.textPrimary)
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)

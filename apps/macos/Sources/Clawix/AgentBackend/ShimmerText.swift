@@ -8,7 +8,7 @@ import SwiftUI
 
 struct ShimmerText: View {
     let text: String
-    var font: Font = .system(size: 13)
+    var font: Font = BodyFont.system(size: 13)
     var color: Color = .white
     var baseOpacity: Double = 0.30
     var peakOpacity: Double = 0.85

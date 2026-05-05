@@ -47,13 +47,13 @@ struct ConfirmationDialog: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 Text(request.title)
-                    .font(.system(size: 18, weight: .medium))
+                    .font(BodyFont.system(size: 18, weight: .medium))
                     .foregroundColor(Color(white: 0.97))
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 12)
                 Button(action: onClose) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
@@ -66,7 +66,7 @@ struct ConfirmationDialog: View {
             .padding(.bottom, 14)
 
             Text(request.body)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Color(white: 0.78))
                 .fixedSize(horizontal: false, vertical: true)
                 .lineSpacing(2)

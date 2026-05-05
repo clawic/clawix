@@ -46,7 +46,7 @@ struct ToolGroupView: View {
                 .frame(width: 16, alignment: .leading)
             ShimmerText(
                 text: prefix + " " + body,
-                font: .system(size: 13),
+                font: BodyFont.system(size: 13),
                 color: .white,
                 baseOpacity: 0.30,
                 peakOpacity: 0.80,
@@ -239,13 +239,13 @@ struct ToolGroupView: View {
                         .offset(y: 3.5)
                 default:
                     Image(systemName: row.icon)
-                        .font(.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5))
                 }
             }
             .foregroundColor(Color(white: 0.45))
             .frame(width: 16, alignment: .leading)
             Text(row.text)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Color(white: 0.55))
                 .fixedSize(horizontal: false, vertical: true)
         }

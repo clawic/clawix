@@ -824,7 +824,7 @@ struct IconImage: View {
             BranchIcon(size: size)
         default:
             Image(systemName: name)
-                .font(.system(size: size))
+                .font(BodyFont.system(size: size))
         }
     }
 }

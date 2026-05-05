@@ -38,7 +38,7 @@ struct AutomationsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Automations")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(BodyFont.system(size: 20, weight: .semibold))
                             .foregroundColor(Palette.textPrimary)
 
                         HStack(spacing: 0) {
@@ -47,7 +47,7 @@ struct AutomationsView: View {
                             Text("Learn more")
                                 .foregroundColor(Color(red: 0.35, green: 0.58, blue: 0.96))
                         }
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                     }
                     .padding(.bottom, 30)
 
@@ -66,9 +66,9 @@ struct AutomationsView: View {
             Button {} label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(BodyFont.system(size: 10, weight: .bold))
                     Text("New automation")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(BodyFont.system(size: 11, weight: .medium))
                 }
                 .foregroundColor(Color(white: 0.12))
                 .padding(.horizontal, 10)
@@ -109,7 +109,7 @@ private struct AutomationSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 13) {
             Text(section.title)
-                .font(.system(size: 12, weight: .medium))
+                .font(BodyFont.system(size: 12, weight: .medium))
                 .foregroundColor(Palette.textSecondary)
 
             LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
@@ -129,12 +129,12 @@ private struct AutomationCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: card.icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(BodyFont.system(size: 14, weight: .semibold))
                 .foregroundColor(card.color)
                 .frame(width: 18, height: 18, alignment: .leading)
 
             Text(card.text)
-                .font(.system(size: 12, weight: .semibold))
+                .font(BodyFont.system(size: 12, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)

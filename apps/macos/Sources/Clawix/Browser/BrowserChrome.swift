@@ -54,7 +54,7 @@ private struct SidebarItemPill: View {
                 leadingIcon
 
                 Text(displayTitle)
-                    .font(.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, weight: .regular))
                     .foregroundColor(isActive ? .white : Color(white: 0.78))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -84,7 +84,7 @@ private struct SidebarItemPill: View {
                 if isHovered {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(BodyFont.system(size: 9, weight: .bold))
                             .foregroundColor(Color(white: 0.95))
                             .frame(width: 14, height: 14)
                             .background(
@@ -138,7 +138,7 @@ private struct NewTabButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
-                .font(.system(size: 12, weight: .semibold))
+                .font(BodyFont.system(size: 12, weight: .semibold))
                 .foregroundColor(Color(white: 0.78))
                 .frame(width: 26, height: 26)
                 .background(
@@ -229,7 +229,7 @@ private struct ChromeIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 12, weight: .medium))
+                .font(BodyFont.system(size: 12, weight: .medium))
                 .foregroundColor(foreground)
                 .frame(width: 26, height: 26)
                 .background(
@@ -349,12 +349,12 @@ struct BrowserMoreOptionsMenu: View {
         Button(action: action) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Text(title)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if trailingCheck {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -388,7 +388,7 @@ private struct ZoomRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Text("Zoom")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(MenuStyle.rowText)
 
             Spacer(minLength: 0)
@@ -401,7 +401,7 @@ private struct ZoomRow: View {
                     .frame(width: 1, height: 14)
 
                 Text(percentText)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                     .frame(minWidth: 38)
 
@@ -422,7 +422,7 @@ private struct ZoomRow: View {
 
             Button(action: onReset) {
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(BodyFont.system(size: 11, weight: .medium))
                     .foregroundColor(hoverReset ? MenuStyle.rowText : MenuStyle.rowSubtle)
                     .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
@@ -437,7 +437,7 @@ private struct ZoomRow: View {
     private func stepperButton(symbol: String, hovered: Binding<Bool>, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
+                .font(BodyFont.system(size: 11, weight: .semibold))
                 .foregroundColor(hovered.wrappedValue ? MenuStyle.rowText : MenuStyle.rowIcon)
                 .frame(width: 28, height: 24)
                 .contentShape(Rectangle())
@@ -463,7 +463,7 @@ struct BrowserURLField: View {
             TextField("", text: $draft, onCommit: commit)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
-                .font(.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .onChange(of: isFocused) { _, focused in
@@ -592,7 +592,7 @@ private struct MonogramFavicon: View {
             .fill(fillColor)
             .overlay(
                 Text(letter)
-                    .font(.system(size: size * 0.62, weight: .semibold))
+                    .font(BodyFont.system(size: size * 0.62, weight: .semibold))
                     .foregroundColor(.white.opacity(0.92))
             )
             .frame(width: size, height: size)

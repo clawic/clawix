@@ -27,7 +27,7 @@ private struct PluginRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: plugin.iconName)
-                .font(.system(size: 16))
+                .font(BodyFont.system(size: 16))
                 .foregroundColor(Palette.textSecondary)
                 .frame(width: 36, height: 36)
                 .background(
@@ -37,10 +37,10 @@ private struct PluginRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(plugin.name)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                 Text(plugin.description)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textTertiary)
             }
 

@@ -86,7 +86,7 @@ struct EditorPickerDropdown: View {
                     .frame(width: 22, height: 22)
 
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(BodyFont.system(size: 10, weight: .semibold))
                         .foregroundColor(Color(white: 0.60))
                 }
                 .padding(.horizontal, 6)
@@ -157,7 +157,7 @@ private struct EditorPickerMenu: View {
                         )
                         .frame(width: 22, alignment: .center)
                         Text(editor.name)
-                            .font(.system(size: 13.5))
+                            .font(BodyFont.system(size: 13.5))
                             .foregroundColor(MenuStyle.rowText)
                             .lineLimit(1)
                         Spacer(minLength: 8)

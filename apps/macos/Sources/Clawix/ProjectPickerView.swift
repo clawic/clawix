@@ -22,7 +22,7 @@ struct ProjectPickerView: View {
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "plus")
-                                .font(.system(size: 13))
+                                .font(BodyFont.system(size: 13))
                                 .foregroundColor(Palette.textSecondary)
                                 .frame(width: 36, height: 36)
                                 .background(
@@ -30,7 +30,7 @@ struct ProjectPickerView: View {
                                         .fill(Palette.cardFill)
                                 )
                             Text("Add project…")
-                                .font(.system(size: 13))
+                                .font(BodyFont.system(size: 13))
                                 .foregroundColor(Palette.textSecondary)
                             Spacer()
                         }
@@ -62,7 +62,7 @@ private struct ProjectRow: View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: "folder.fill")
-                    .font(.system(size: 16))
+                    .font(BodyFont.system(size: 16))
                     .foregroundColor(isSelected ? Color.accentColor : Palette.textSecondary)
                     .frame(width: 36, height: 36)
                     .background(
@@ -72,10 +72,10 @@ private struct ProjectRow: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(project.name)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                     Text(project.path)
-                        .font(.system(size: 11))
+                        .font(BodyFont.system(size: 11))
                         .foregroundColor(Palette.textTertiary)
                 }
 
@@ -83,7 +83,7 @@ private struct ProjectRow: View {
 
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(Color.accentColor)
                 }
             }

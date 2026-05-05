@@ -81,7 +81,7 @@ struct SlashCommandMenu: View {
         Group {
             if commands.isEmpty {
                 Text("No matches")
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(MenuStyle.headerText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
@@ -123,13 +123,13 @@ private struct SlashCommandRow: View {
                     .frame(width: 14, alignment: .center)
 
                 Text(command.label)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Color(white: 0.86))
                     .fixedSize(horizontal: true, vertical: false)
 
                 if let desc = command.description {
                     Text(desc)
-                        .font(.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5))
                         .foregroundColor(MenuStyle.rowSubtle)
                         .lineLimit(1)
                         .truncationMode(.tail)

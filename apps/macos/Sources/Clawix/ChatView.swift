@@ -333,7 +333,7 @@ private struct UserImageThumbnail: View {
             } else {
                 Color.white.opacity(0.05)
                 Image(systemName: "photo")
-                    .font(.system(size: 18, weight: .regular))
+                    .font(BodyFont.system(size: 18, weight: .regular))
                     .foregroundColor(Color(white: 0.45))
             }
         }
@@ -365,7 +365,7 @@ private struct UserFileMentionChip: View {
             FileChipIcon(size: 11)
                 .foregroundColor(Color(white: 0.78))
             Text(url.lastPathComponent)
-                .font(.system(size: 14))
+                .font(BodyFont.system(size: 14))
                 .foregroundColor(Palette.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -437,7 +437,7 @@ private struct MessageRow: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
                                 Text(p)
-                                    .font(.system(size: 13.5))
+                                    .font(BodyFont.system(size: 13.5))
                                     .foregroundColor(Palette.textPrimary)
                                     .lineSpacing(5)
                             }
@@ -680,7 +680,7 @@ private struct MessageRow: View {
 
     private var timestampLabel: some View {
         Text(formattedTimestamp)
-            .font(.system(size: 11))
+            .font(BodyFont.system(size: 11))
             .foregroundColor(Color(white: 0.45))
             .padding(.horizontal, 4)
     }
@@ -768,7 +768,7 @@ private struct MessageActionIcon: View {
         case .copy(let showCheck):
             if showCheck {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(BodyFont.system(size: 12, weight: .semibold))
                     .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
@@ -813,7 +813,7 @@ private struct UserMessageEditor: View {
                 Spacer(minLength: 0)
                 Button(action: onCancel) {
                     Text("Cancel")
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
@@ -826,7 +826,7 @@ private struct UserMessageEditor: View {
 
                 Button(action: onSubmit) {
                     Text("Send")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, weight: .medium))
                         .foregroundColor(Color.black)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
@@ -866,10 +866,10 @@ private struct ChatFooterPill: View {
             HStack(spacing: 6) {
                 IconImage(icon, size: 12)
                 Text(label)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(BodyFont.system(size: 9, weight: .semibold))
             }
             .foregroundColor(Color(white: (hovered || isOpen) ? 0.82 : 0.55))
             .padding(.horizontal, 4)
@@ -927,11 +927,11 @@ private struct WorkLocallyRow: View {
         Button(action: action) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Image(systemName: icon)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
@@ -940,11 +940,11 @@ private struct WorkLocallyRow: View {
                     EmptyView()
                 case .check:
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 case .chevron:
                     Image(systemName: "chevron.right")
-                        .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
+                        .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
             }
@@ -989,7 +989,7 @@ private struct BranchPickerPopup: View {
                     text: $searchText
                 )
                 .textFieldStyle(.plain)
-                .font(.system(size: 13.5))
+                .font(BodyFont.system(size: 13.5))
                 .foregroundColor(MenuStyle.rowText)
                 .focused($searchFocused)
             }
@@ -1044,19 +1044,19 @@ private struct BranchRow: View {
                     .padding(.top, 1)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(.system(size: 13.5))
+                        .font(BodyFont.system(size: 13.5))
                         .foregroundColor(MenuStyle.rowText)
                         .lineLimit(1)
                     if let files = uncommittedFiles, files > 0 {
                         Text(uncommittedLabel(files))
-                            .font(.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5))
                             .foregroundColor(MenuStyle.rowSubtle)
                     }
                 }
                 Spacer(minLength: 8)
                 if isCurrent {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 1)
                 }
@@ -1086,11 +1086,11 @@ private struct BranchCreateRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, weight: .regular))
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(String(localized: "Create and switch to a new branch...", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
@@ -1132,12 +1132,12 @@ private struct BranchCreateSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text(String(localized: "Create and switch branch", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 20, weight: .medium))
+                    .font(BodyFont.system(size: 20, weight: .medium))
                     .foregroundColor(Color(white: 0.97))
                 Spacer(minLength: 12)
                 Button(action: onCancel) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(white: 0.70))
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
@@ -1149,7 +1149,7 @@ private struct BranchCreateSheet: View {
 
             HStack {
                 Text(String(localized: "Branch name", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Color(white: 0.78))
                 Spacer(minLength: 8)
                 Button {
@@ -1157,7 +1157,7 @@ private struct BranchCreateSheet: View {
                     // shape Clawix shows in screenshot.
                 } label: {
                     Text(String(localized: "Set prefix", bundle: AppLocale.bundle, locale: AppLocale.current))
-                        .font(.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5))
                         .foregroundColor(Color(white: 0.55))
                 }
                 .buttonStyle(.plain)
@@ -1166,7 +1166,7 @@ private struct BranchCreateSheet: View {
 
             TextField("", text: $name)
                 .textFieldStyle(.plain)
-                .font(.system(size: 14))
+                .font(BodyFont.system(size: 14))
                 .foregroundColor(Color(white: 0.95))
                 .focused($nameFocused)
                 .padding(.horizontal, 14)
@@ -1418,7 +1418,7 @@ private struct ForkedFromBanner: View {
                     BranchArrowsIconView(color: accent, lineWidth: 0.95)
                         .frame(width: 13, height: 13)
                     Text("Forked from conversation")
-                        .font(.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5))
                         .foregroundColor(accent)
                         .underline(hovered, color: accent)
                 }
@@ -1513,17 +1513,17 @@ private struct LinkPreviewCard: View {
                     .fill(Color(red: 0.20, green: 0.45, blue: 0.92))
                     .frame(width: 38, height: 38)
                 Image(systemName: "globe")
-                    .font(.system(size: 17, weight: .regular))
+                    .font(BodyFont.system(size: 17, weight: .regular))
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(BodyFont.system(size: 14, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(String(localized: "Website", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Color(white: 0.55))
             }
             Spacer(minLength: 8)
@@ -1531,7 +1531,7 @@ private struct LinkPreviewCard: View {
                 appState.openLinkInBrowser(url)
             } label: {
                 Text(String(localized: "Open", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Color(white: 0.94))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 7)
@@ -1777,7 +1777,7 @@ private struct AssistantMarkdownText: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text("\(idx + 1).")
-                            .font(.system(size: 13.5, weight: weight))
+                            .font(BodyFont.system(size: 13.5, weight: weight))
                             .foregroundColor(color)
                             .frame(width: 20, alignment: .leading)
                         ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
@@ -1907,7 +1907,7 @@ private struct AssistantCodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(language.isEmpty ? "code" : language)
-                    .font(.system(size: 11.5, weight: .regular))
+                    .font(BodyFont.system(size: 11.5, weight: .regular))
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
                 Button(action: toggleWrap) {
@@ -1932,7 +1932,7 @@ private struct AssistantCodeBlockView: View {
                     Group {
                         if copied {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(BodyFont.system(size: 11, weight: .semibold))
                                 .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
                         } else {
                             CopyIconViewSquircle(
@@ -1968,7 +1968,7 @@ private struct AssistantCodeBlockView: View {
     private var codeBody: some View {
         if appState.chatCodeBlockWordWrap {
             Text(code)
-                .font(.system(size: 12.5, design: .monospaced))
+                .font(BodyFont.system(size: 12.5, design: .monospaced))
                 .foregroundColor(Palette.textPrimary.opacity(0.94))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
@@ -1977,7 +1977,7 @@ private struct AssistantCodeBlockView: View {
         } else {
             ScrollView(.horizontal, showsIndicators: true) {
                 Text(code)
-                    .font(.system(size: 12.5, design: .monospaced))
+                    .font(BodyFont.system(size: 12.5, design: .monospaced))
                     .foregroundColor(Palette.textPrimary.opacity(0.94))
                     .fixedSize(horizontal: true, vertical: false)
                     .padding(.horizontal, 14)
@@ -2064,22 +2064,22 @@ private struct AtomView: View {
         switch atom {
         case .word(let s):
             Text(s)
-                .font(.system(size: fontSize, weight: weight))
+                .font(BodyFont.system(size: fontSize, weight: weight))
                 .foregroundColor(color)
                 .opacity(atomOpacity)
         case .bold(let s):
             Text(s)
-                .font(.system(size: fontSize, weight: .semibold))
+                .font(BodyFont.system(size: fontSize, weight: .semibold))
                 .foregroundColor(color)
                 .opacity(atomOpacity)
         case .italic(let s):
             Text(s)
-                .font(.system(size: fontSize, weight: weight).italic())
+                .font(BodyFont.system(size: fontSize, weight: weight).italic())
                 .foregroundColor(color)
                 .opacity(atomOpacity)
         case .code(let s):
             Text(s)
-                .font(.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
+                .font(BodyFont.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
                 .foregroundColor(Color(white: 0.94))
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
@@ -2128,7 +2128,7 @@ private struct LinkAtom: View {
                 }
                 .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
                 Text(label)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(BodyFont.system(size: 14, weight: .medium))
                     .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
                     .underline(hovered, pattern: .dot, color: linkColor.opacity(0.85))
             }

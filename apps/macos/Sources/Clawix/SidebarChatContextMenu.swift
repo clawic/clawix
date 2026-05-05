@@ -188,13 +188,13 @@ struct SidebarChatContextMenuContent: View {
                     .frame(width: 18, alignment: .center)
                     .opacity(item.enabled ? 1 : 0.4)
                 Text(item.title)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(MenuStyle.rowText)
                     .opacity(item.enabled ? 1 : 0.5)
                 Spacer(minLength: 0)
                 if let shortcut = item.shortcut {
                     Text(shortcut)
-                        .font(.system(size: 10))
+                        .font(BodyFont.system(size: 10))
                         .foregroundColor(MenuStyle.rowSubtle)
                         .opacity(item.enabled ? 1 : 0.5)
                 }
