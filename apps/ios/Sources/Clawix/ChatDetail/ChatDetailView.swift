@@ -26,7 +26,6 @@ struct ChatDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var composerText: String = ""
     @State private var expandedReasoning: Set<String> = []
-    @State private var hasDoneInitialScroll: Bool = false
 
     private var chat: WireChat? { store.chat(chatId) }
     private var messages: [WireMessage] { store.messages(for: chatId) }
@@ -59,46 +58,38 @@ struct ChatDetailView: View {
     // MARK: Transcript
 
     private var transcript: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 22) {
-                    Color.clear.frame(height: 8)
-                    if renderedMessages.isEmpty {
-                        emptyState
-                    } else {
-                        ForEach(renderedMessages, id: \.id) { msg in
-                            MessageView(
-                                message: msg,
-                                isReasoningExpanded: expandedReasoning.contains(msg.id),
-                                toggleReasoning: { toggleReasoning(messageId: msg.id) }
-                            )
-                            .id(msg.id)
-                        }
-                    }
-                    Color.clear.frame(height: 30)
-                }
-                .padding(.horizontal, AppLayout.screenHorizontalPadding)
-            }
-            .scrollIndicators(.hidden)
-            .onChange(of: renderedMessages.last?.id) { _, last in
-                guard let last else { return }
-                if !hasDoneInitialScroll {
-                    // First batch of messages just arrived. Defer the
-                    // jump-to-bottom one runloop tick so SwiftUI gets
-                    // to lay out the items first; doing it
-                    // synchronously inside this onChange has been
-                    // observed to freeze the UI on heavy chats.
-                    hasDoneInitialScroll = true
-                    DispatchQueue.main.async {
-                        proxy.scrollTo(last, anchor: .bottom)
-                    }
+        // Messaging-app inversion: the ScrollView is flipped on Y so
+        // its layout origin lives at the visual bottom. Messages are
+        // iterated newest-first and each one is flipped back so it
+        // reads correctly. Result: the latest message is the first
+        // item the LazyVStack lays out and it lands anchored to the
+        // bottom on first paint, with zero scrollTo or anchor dance.
+        // New messages prepended to the reversed array appear at the
+        // visual bottom; if the user has scrolled up to read older
+        // history, their content stays put.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 22) {
+                Color.clear.frame(height: 8)
+                if renderedMessages.isEmpty {
+                    emptyState
+                        .scaleEffect(x: 1, y: -1)
                 } else {
-                    withAnimation(.easeOut(duration: 0.22)) {
-                        proxy.scrollTo(last, anchor: .bottom)
+                    ForEach(Array(renderedMessages.reversed()), id: \.id) { msg in
+                        MessageView(
+                            message: msg,
+                            isReasoningExpanded: expandedReasoning.contains(msg.id),
+                            toggleReasoning: { toggleReasoning(messageId: msg.id) }
+                        )
+                        .scaleEffect(x: 1, y: -1)
+                        .id(msg.id)
                     }
                 }
+                Color.clear.frame(height: 30)
             }
+            .padding(.horizontal, AppLayout.screenHorizontalPadding)
         }
+        .scaleEffect(x: 1, y: -1)
+        .scrollIndicators(.hidden)
     }
 
     @ViewBuilder

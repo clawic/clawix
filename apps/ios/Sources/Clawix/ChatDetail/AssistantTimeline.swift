@@ -147,8 +147,7 @@ private struct InlineRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "terminal")
-                .font(.system(size: 12, weight: .regular))
+            TerminalIcon(size: 13)
                 .foregroundStyle(Palette.textSecondary)
                 .frame(width: 16, alignment: .leading)
             Text(prefix + " " + text)
@@ -174,14 +173,43 @@ private struct ToolRowView: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: row.systemImage)
-                .font(.system(size: 12, weight: .regular))
+            ToolRowIcon(systemImage: row.systemImage)
                 .foregroundStyle(Palette.textTertiary)
                 .frame(width: 16, alignment: .leading)
             Text(row.text)
                 .font(.system(size: 13))
                 .foregroundStyle(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// Resolves the aggregate-row icon name to either a custom Clawix icon
+/// (matching the macOS work-summary glyphs) or, when no custom glyph
+/// exists yet, falls back to the original SF Symbol.
+private struct ToolRowIcon: View {
+    let systemImage: String
+
+    var body: some View {
+        switch systemImage {
+        case "magnifyingglass", "magnifyingglass.circle":
+            SearchIcon(size: 12)
+        case "terminal":
+            TerminalIcon(size: 13)
+        case "list.bullet":
+            FolderStackIcon(size: 14)
+        case "globe":
+            GlobeIcon(size: 13)
+        case "safari":
+            CursorIcon(size: 13)
+        case "puzzlepiece.extension":
+            McpIcon(size: 13)
+        case "pencil":
+            PencilIconView(color: Palette.textTertiary, lineWidth: 1.0)
+                .frame(width: 14, height: 14)
+        default:
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .regular))
         }
     }
 }
@@ -391,8 +419,7 @@ private struct ChangedFilePill: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 14))
+            FileChipIcon(size: 16)
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 28, height: 28)
                 .background(

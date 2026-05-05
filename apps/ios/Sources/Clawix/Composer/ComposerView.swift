@@ -18,23 +18,23 @@ struct ComposerView: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 6) {
+        HStack(alignment: .bottom, spacing: 4) {
             plusButton
             field
             trailingButton
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .glassCapsule()
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .glassEffect(.regular.tint(Color.black.opacity(0.55)), in: Capsule(style: .continuous))
+        .padding(.horizontal, 14)
     }
 
     private var plusButton: some View {
         Button(action: {}) {
             Image(systemName: "plus")
-                .font(.system(size: 20, weight: .regular))
+                .font(.system(size: 18, weight: .regular))
                 .foregroundStyle(Palette.textPrimary)
-                .frame(width: 42, height: 42)
+                .frame(width: 34, height: 34)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Attachments")
@@ -55,7 +55,7 @@ struct ComposerView: View {
                 .focused($focused)
                 .tint(Color.white)
         }
-        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
     }
 
     @ViewBuilder
@@ -63,19 +63,19 @@ struct ComposerView: View {
         if canSend {
             Button(action: triggerSend) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.black)
-                    .frame(width: 42, height: 42)
+                    .frame(width: 34, height: 34)
                     .background(Circle().fill(Color.white))
             }
             .buttonStyle(.plain)
             .transition(.scale.combined(with: .opacity))
         } else {
             Button(action: {}) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.black)
-                    .frame(width: 42, height: 42)
+                MicIcon(lineWidth: 4)
+                    .foregroundColor(Color.black)
+                    .frame(width: 17, height: 17)
+                    .frame(width: 34, height: 34)
                     .background(Circle().fill(Color.white))
             }
             .buttonStyle(.plain)

@@ -127,13 +127,15 @@ struct ChatListView: View {
                     .transition(.scale(scale: 0.6, anchor: .trailing).combined(with: .opacity))
             } else {
                 HStack(spacing: 6) {
-                    GlassIconButton(systemName: "magnifyingglass") {
+                    GlassIconButton(action: {
                         withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
                             searchActive = true
                         }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                             searchFocused = true
                         }
+                    }) {
+                        SearchIcon(size: 18)
                     }
                     GlassIconButton(systemName: "personalhotspot.slash", action: onUnpair)
                 }
@@ -158,8 +160,7 @@ struct ChatListView: View {
 
     private var searchFieldPill: some View {
         HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .semibold))
+            SearchIcon(size: 16)
                 .foregroundStyle(Palette.textSecondary)
             TextField("Search", text: $searchText)
                 .font(.system(size: 16))
@@ -338,8 +339,7 @@ struct ChatListView: View {
 
             if filteredProjects.isEmpty && filteredChats.isEmpty {
                 VStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 28, weight: .regular))
+                    SearchIcon(size: 32)
                         .foregroundStyle(Palette.textTertiary)
                     Text("No matches for \"\(searchText)\"")
                         .font(Typography.secondaryFont)
@@ -419,8 +419,7 @@ private struct ProjectRow: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Palette.cardFill)
                     .frame(width: 38, height: 38)
-                Image(systemName: "folder.fill")
-                    .font(.system(size: 16, weight: .regular))
+                FolderClosedIcon(size: 18)
                     .foregroundStyle(Palette.textPrimary)
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -458,8 +457,7 @@ struct ChatRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     if chat.isPinned {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 10, weight: .semibold))
+                        PinIcon(size: 11)
                             .foregroundStyle(Palette.textTertiary)
                     }
                     Text(chat.title)
@@ -487,8 +485,7 @@ struct ChatRow: View {
                         }
                         if let branch = chat.branch {
                             HStack(spacing: 4) {
-                                Image(systemName: "arrow.triangle.branch")
-                                    .font(.system(size: 10, weight: .regular))
+                                BranchIcon(size: 11)
                                     .foregroundStyle(Palette.textTertiary)
                                 Text(branch)
                                     .font(Typography.captionFont)

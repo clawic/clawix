@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct ClawixApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var store = BridgeStore()
     @State private var client: BridgeClient?
     @State private var creds: Credentials? = CredentialStore.shared.load()
@@ -23,6 +24,40 @@ struct ClawixApp: App {
                     client?.disconnect()
                 }
             }
+            .onChange(of: scenePhase) { _, newPhase in
+                handleScenePhase(newPhase)
+            }
+        }
+    }
+
+    /// Honor the iOS app lifecycle so the WebSocket isn't left hanging
+    /// while we're suspended.
+    ///
+    /// The Mac side of the bridge keeps a `BridgeSession` alive per
+    /// connected iPhone. When the iPhone goes to background, iOS may
+    /// keep the socket nominally open for a while and then silently
+    /// kill it without flushing a close frame, leaving the Mac stuck
+    /// with a zombie session that thinks the iPhone is still there.
+    /// We close the socket actively on `.background` so the Mac
+    /// drops the session immediately, and reopen on `.active` so
+    /// returning to the app feels instant.
+    ///
+    /// `.inactive` is intentionally a no-op: it fires for transient
+    /// overlays (notification banners, control center, app switcher
+    /// peek) and reacting there would churn the connection for no
+    /// reason.
+    private func handleScenePhase(_ phase: ScenePhase) {
+        switch phase {
+        case .background:
+            client?.suspend()
+        case .active:
+            if let creds {
+                client?.connect(creds)
+            }
+        case .inactive:
+            break
+        @unknown default:
+            break
         }
     }
 

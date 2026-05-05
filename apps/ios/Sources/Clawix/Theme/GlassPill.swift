@@ -36,11 +36,36 @@ extension View {
 // the hit-test area with an explicit `.contentShape(Circle())` makes
 // the tap reliable across the whole top bar.
 struct GlassIconButton: View {
-    let systemName: String
-    var size: CGFloat = 44
-    var iconSize: CGFloat = 17
-    var iconWeight: Font.Weight = .semibold
-    let action: () -> Void
+    private enum Glyph {
+        case system(name: String, size: CGFloat, weight: Font.Weight)
+        case custom(AnyView)
+    }
+
+    private let glyph: Glyph
+    private let size: CGFloat
+    private let action: () -> Void
+
+    init(
+        systemName: String,
+        size: CGFloat = 44,
+        iconSize: CGFloat = 17,
+        iconWeight: Font.Weight = .semibold,
+        action: @escaping () -> Void
+    ) {
+        self.glyph = .system(name: systemName, size: iconSize, weight: iconWeight)
+        self.size = size
+        self.action = action
+    }
+
+    init<Icon: View>(
+        size: CGFloat = 44,
+        action: @escaping () -> Void,
+        @ViewBuilder icon: () -> Icon
+    ) {
+        self.glyph = .custom(AnyView(icon()))
+        self.size = size
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
@@ -48,13 +73,24 @@ struct GlassIconButton: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                Image(systemName: systemName)
-                    .font(.system(size: iconSize, weight: iconWeight))
-                    .foregroundStyle(Palette.textPrimary)
+                glyphView
             }
             .frame(width: size, height: size)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var glyphView: some View {
+        switch glyph {
+        case .system(let name, let iconSize, let weight):
+            Image(systemName: name)
+                .font(.system(size: iconSize, weight: weight))
+                .foregroundStyle(Palette.textPrimary)
+        case .custom(let view):
+            view
+                .foregroundStyle(Palette.textPrimary)
+        }
     }
 }

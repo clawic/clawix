@@ -74,8 +74,7 @@ struct ProjectDetailView: View {
 
     private var titlePill: some View {
         HStack(spacing: 8) {
-            Image(systemName: "folder.fill")
-                .font(.system(size: 13, weight: .regular))
+            FolderClosedIcon(size: 14)
                 .foregroundStyle(Palette.textPrimary)
             Text(project.name)
                 .font(.system(size: 16, weight: .semibold))
@@ -96,8 +95,7 @@ struct ProjectDetailView: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Palette.cardFill)
                         .frame(width: 48, height: 48)
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 22))
+                    FolderClosedIcon(size: 24)
                         .foregroundStyle(Palette.textPrimary)
                 }
                 VStack(alignment: .leading, spacing: 2) {
