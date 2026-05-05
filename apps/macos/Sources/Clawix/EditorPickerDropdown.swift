@@ -113,11 +113,11 @@ struct EditorPickerDropdown: View {
                         let popupWidth: CGFloat = 220
                         EditorPickerMenu(folderPath: folderPath, isOpen: $isOpen)
                             .frame(width: popupWidth)
-                            .offset(
-                                x: buttonFrame.maxX - popupWidth,
-                                y: buttonFrame.maxY + 6
+                            .anchoredPopupPlacement(
+                                buttonFrame: buttonFrame,
+                                proxy: proxy,
+                                horizontal: .trailing()
                             )
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                             .transition(.softNudge(y: 4))
                     }
                 }

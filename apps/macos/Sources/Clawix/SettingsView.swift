@@ -377,8 +377,11 @@ struct SettingsDropdown<T: Hashable>: View {
                         iconForOption: iconForOption,
                         minWidth: buttonFrame.width
                     )
-                    .offset(x: buttonFrame.minX, y: buttonFrame.maxY + 6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .leading()
+                    )
                     .transition(.softNudge(y: 4))
                 }
             }
