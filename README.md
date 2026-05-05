@@ -73,4 +73,9 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md). The repository conventions (corner-r
 
 ## License
 
-[MIT](./LICENSE).
+The source code and documentation are licensed under [MIT](./LICENSE).
+
+The Clawix name, logo, app icon, custom icons, custom typefaces, SVG marks,
+brand assets, screenshots, marketing assets, and visual identity are reserved
+and are not licensed under MIT. See [NOTICE](./NOTICE) and
+[TRADEMARKS.md](./TRADEMARKS.md).

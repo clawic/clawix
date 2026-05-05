@@ -1,0 +1,44 @@
+Clawix license notice
+=====================
+
+The source code and documentation in this repository are licensed under the
+MIT License, except where a file states otherwise.
+
+Reserved Materials
+------------------
+
+The MIT License does not apply to the following materials, whether stored as
+image files, font files, vector files, source-code paths, drawing commands,
+compiled resources, screenshots, documentation examples, or any other form:
+
+- the Clawix name, product name, and project identity;
+- the Clawix logo, app icon, wordmark, logomark, and SVG mark;
+- custom icon artwork, glyphs, symbols, and visual mark geometry;
+- custom typefaces, custom font files, and typography assets;
+- brand colors, brand compositions, marketing images, banners, screenshots,
+  and promotional assets;
+- protectable visual identity, trade dress, and product presentation elements.
+
+All rights in the Reserved Materials are reserved by their respective owners.
+No license is granted to copy, modify, distribute, sublicense, sell, rebrand,
+or use the Reserved Materials in another product, service, fork, template,
+theme, icon pack, font package, or design system without prior written
+permission.
+
+Limited repository use
+----------------------
+
+You may use the Reserved Materials only as strictly necessary to view, build,
+test, and contribute to the unmodified Clawix project in this repository.
+
+If you distribute a modified version, fork, derivative work, competing product,
+or independently branded build, you must remove or replace the Reserved
+Materials and use a clearly distinct name, logo, icon set, visual identity, and
+product presentation.
+
+Third-party materials
+---------------------
+
+Third-party dependencies, fonts, frameworks, and assets remain subject to their
+own licenses and notices. This notice does not expand, restrict, or replace any
+third-party license.
