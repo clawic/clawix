@@ -159,7 +159,7 @@ struct SidebarView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if snapshot.chrono.isEmpty {
                             Text("No chats")
-                                .font(.system(size: 13.5, weight: .light))
+                                .font(BodyFont.system(size: 13.5, weight: .light))
                                 .foregroundColor(Color(white: 0.40))
                                 .padding(.leading, 36)
                                 .padding(.vertical, 4)
@@ -187,7 +187,7 @@ struct SidebarView: View {
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
                             Image(systemName: "bubble.left")
-                                .font(.system(size: 11.5, weight: .regular))
+                                .font(BodyFont.system(size: 11.5, weight: .regular))
                         )
                     )
                     SidebarAccordion(
@@ -311,7 +311,7 @@ struct SidebarView: View {
                                 .frame(width: 9, height: 9)
                         }
                         Text(appState.archivedLoading ? "Loading…" : "No archived chats")
-                            .font(.system(size: 13.5, weight: .light))
+                            .font(BodyFont.system(size: 13.5, weight: .light))
                             .foregroundColor(Color(white: 0.40))
                     }
                     .padding(.leading, 36)
@@ -556,7 +556,7 @@ struct SidebarView: View {
                       alwaysShow: true,
                       leadingIcon: AnyView(
                           Image(systemName: "bubble.left")
-                              .font(.system(size: 11, weight: .regular))
+                              .font(BodyFont.system(size: 11, weight: .regular))
                       ),
                       expanded: $chronoExpanded)
     }
@@ -596,7 +596,7 @@ struct SidebarView: View {
                             .padding(.trailing, 11)
                     }
                     Text(title)
-                        .font(.system(size: 13.5, weight: .light))
+                        .font(BodyFont.system(size: 13.5, weight: .light))
                         .foregroundColor(Color(white: 0.88))
                 }
             }
@@ -752,7 +752,7 @@ private struct NewProjectPopupRow: View {
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer()
             }
@@ -782,12 +782,11 @@ private struct SettingsBottomButton: View {
             open.toggle()
         } label: {
             HStack(spacing: 11) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 13.5))
-                    .frame(width: 15)
+                SettingsIcon(size: 19)
+                    .frame(width: 20)
                     .foregroundColor(open ? .white : Color(white: 0.78))
                 Text("Settings")
-                    .font(.system(size: 13.5, weight: .light))
+                    .font(BodyFont.system(size: 13.5, weight: .light))
                     .foregroundColor(open ? .white : Color(white: 0.88))
                 Spacer()
             }
@@ -896,15 +895,15 @@ private struct SettingsLimitsHeaderRow: View {
         }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Image(systemName: "speedometer")
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(MenuStyle.rowIcon)
                 Text("Remaining usage limits")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
+                    .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .rotationEffect(.degrees(expanded ? 180 : 0))
             }
@@ -1011,18 +1010,18 @@ private struct SettingsLimitsValueRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(verbatim: label)
-                .font(.system(size: 12, weight: .medium))
+                .font(BodyFont.system(size: 12, weight: .medium))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Spacer(minLength: 8)
             Text(verbatim: percent)
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
             Text(verbatim: detail)
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 .foregroundColor(MenuStyle.rowSubtle)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
@@ -1045,16 +1044,16 @@ private struct SettingsAccountRow: View {
         Button(action: { action?() }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Image(systemName: icon)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(MenuStyle.rowIcon)
                 Text(title)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 if let trailingIcon = trailing {
                     Image(systemName: trailingIcon)
-                        .font(.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
+                        .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
             }
@@ -1107,18 +1106,18 @@ private struct SidebarButton: View {
                             .frame(width: 15, height: 15)
                     } else {
                         Image(systemName: icon)
-                            .font(.system(size: 13.5, weight: .regular))
+                            .font(BodyFont.system(size: 13.5, weight: .regular))
                             .frame(width: 15)
                             .foregroundColor(iconColor)
                     }
                 }
                 Text(localizedTitle)
-                    .font(.system(size: 13.5, weight: .light))
+                    .font(BodyFont.system(size: 13.5, weight: .light))
                     .foregroundColor(labelColor)
                 Spacer(minLength: 6)
                 if let shortcut {
                     Text(shortcut)
-                        .font(.system(size: 11, weight: .regular))
+                        .font(BodyFont.system(size: 11, weight: .regular))
                         .foregroundColor(Color(white: 0.78))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
@@ -1274,7 +1273,7 @@ private struct SectionDisclosureChevron: View {
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: 9.5, weight: .semibold))
+            .font(BodyFont.system(size: 9.5, weight: .semibold))
             .foregroundColor(Color(white: 0.78))
             .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -1327,7 +1326,7 @@ private struct CollapsibleSectionLabel: View {
                     .padding(.trailing, 11)
             }
             Text(title)
-                .font(.system(size: 13.5, weight: .light))
+                .font(BodyFont.system(size: 13.5, weight: .light))
                 .foregroundColor(labelColor)
             SectionDisclosureChevron(expanded: expanded, hovered: hovered)
                 .padding(.leading, chevronLeadingPadding)
@@ -1526,7 +1525,7 @@ struct RecentChatRow: View, Equatable {
                     .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
             } else {
                 Text(ageLabel)
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                     .foregroundColor(Color(white: 0.55))
                     .transition(.opacity)
             }
@@ -1543,7 +1542,7 @@ struct RecentChatRow: View, Equatable {
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
-                .font(.system(size: 13.5, weight: .light))
+                .font(BodyFont.system(size: 13.5, weight: .light))
                 .foregroundColor(isSelected ? .white : Color(white: 0.74))
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -1610,7 +1609,7 @@ struct RecentChatRow: View, Equatable {
             )
         case .bubble:
             Image(systemName: "bubble.left")
-                .font(.system(size: 10.5))
+                .font(BodyFont.system(size: 10.5))
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
         case .unarchive:
@@ -1747,7 +1746,7 @@ private struct ProjectAccordion: View, Equatable {
                             .frame(width: 15, height: 15)
                             .animation(.easeOut(duration: 0.28), value: expanded)
                         Text(project.name)
-                            .font(.system(size: 13.5, weight: .light))
+                            .font(BodyFont.system(size: 13.5, weight: .light))
                             .foregroundColor(Color(white: 0.94))
                             .lineLimit(1)
                         Spacer(minLength: 6)
@@ -1767,7 +1766,7 @@ private struct ProjectAccordion: View, Equatable {
                 // disappears.
                 Button(action: onMenuToggle) {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 12.5, weight: .medium))
+                        .font(BodyFont.system(size: 12.5, weight: .medium))
                         .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
@@ -1821,7 +1820,7 @@ private struct ProjectAccordion: View, Equatable {
                                     .frame(width: 9, height: 9)
                             }
                             Text(loading ? "Loading…" : "No chats")
-                                .font(.system(size: 11))
+                                .font(BodyFont.system(size: 11))
                                 .foregroundColor(Color(white: 0.40))
                         }
                         .padding(.leading, 30)
@@ -1976,7 +1975,7 @@ private struct PinnedRow: View {
                         style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
                 .frame(width: 14, height: 14)
             Text(item.title)
-                .font(.system(size: 14, weight: .light))
+                .font(BodyFont.system(size: 14, weight: .light))
                 .foregroundColor(Color(white: 0.92))
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -1985,7 +1984,7 @@ private struct PinnedRow: View {
                     // archivar chat
                 } label: {
                     Image(systemName: "archivebox")
-                        .font(.system(size: 12.5, weight: .regular))
+                        .font(BodyFont.system(size: 12.5, weight: .regular))
                         .foregroundColor(Color(white: 0.72))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
@@ -1994,7 +1993,7 @@ private struct PinnedRow: View {
                 .help(L10n.t("Archive chat"))
             } else {
                 Text(item.age)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Color(white: 0.45))
             }
         }
@@ -2089,7 +2088,7 @@ private struct ProjectRowMenuRow: View {
                 }
                 .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
             }
@@ -2198,19 +2197,19 @@ private struct OrganizeMenuRow: View {
                             .foregroundColor(MenuStyle.rowIcon)
                     case .system(let name):
                         Image(systemName: name)
-                            .font(.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5))
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
                 .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9.5, weight: .semibold))
+                        .font(BodyFont.system(size: 9.5, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -2957,12 +2956,12 @@ private struct DragChipView: View {
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
-                .font(.system(size: 13.5, weight: .light))
+                .font(BodyFont.system(size: 13.5, weight: .light))
                 .foregroundColor(Color(white: 0.94))
                 .lineLimit(1)
             Spacer(minLength: 8)
             Text(ageLabel)
-                .font(.system(size: 11))
+                .font(BodyFont.system(size: 11))
                 .foregroundColor(Color(white: 0.6))
         }
         .padding(.leading, 10)
