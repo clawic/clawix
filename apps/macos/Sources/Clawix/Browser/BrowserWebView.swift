@@ -27,10 +27,17 @@ final class BrowserTabController: NSObject, ObservableObject {
     private var bgSampleTimer: Timer?
     private var lastSampledBgRaw: String?
 
-    init(id: UUID, initialURL: URL, appState: AppState, initialTitle: String) {
+    init(
+        id: UUID,
+        initialURL: URL,
+        appState: AppState,
+        initialTitle: String,
+        initialFaviconURL: URL?
+    ) {
         self.id = id
         self.currentURL = initialURL
         self.title = initialTitle
+        self.faviconURL = initialFaviconURL
         self.appState = appState
 
         let config = WKWebViewConfiguration()
@@ -215,60 +222,201 @@ final class BrowserTabController: NSObject, ObservableObject {
     /// and URL bar show something immediately, before the page-level
     /// `<link rel="icon">` lookup runs (and as a guaranteed fallback for
     /// pages that only declare SVG/data-URI icons that AsyncImage can't
-    /// render on macOS).
+    /// render on macOS). Skips the overwrite when the existing favicon
+    /// already belongs to this host so a navigation restart (page
+    /// refresh, tab reopen, in-site link) doesn't flicker back to the
+    /// generic Google globe before the real icon resolves.
     private func setHostFallbackFavicon() {
         guard let host = currentURL.host, !host.isEmpty else { return }
+        if let current = faviconURL, Self.faviconBelongs(to: host, url: current) {
+            return
+        }
         guard let fallback = URL(
             string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64"
         ) else { return }
         faviconURL = fallback
         appState?.updateBrowserTab(id, faviconURL: fallback)
-        // Warm the disk cache so the icon renders the moment SwiftUI asks.
-        FaviconCache.shared.prefetch(fallback)
+        FaviconCache.shared.prefetch(fallback, priority: .userInitiated)
+    }
+
+    private static func faviconBelongs(to host: String, url: URL) -> Bool {
+        if let urlHost = url.host {
+            if urlHost == host { return true }
+            // CDN subdomains (assets.github.com, cdn.x.com, etc.) share
+            // the registrable domain. Treat any host whose registrable
+            // suffix matches as same-site.
+            let target = registrable(host)
+            if !target.isEmpty && registrable(urlHost) == target { return true }
+        }
+        // Google's s2/favicons endpoint identifies the source host via
+        // the `domain` query param.
+        if url.host == "www.google.com",
+           url.path == "/s2/favicons",
+           let query = url.query,
+           query.contains("domain=\(host)") {
+            return true
+        }
+        return false
+    }
+
+    private static func registrable(_ host: String) -> String {
+        let parts = host.split(separator: ".")
+        guard parts.count >= 2 else { return host }
+        return parts.suffix(2).joined(separator: ".")
     }
 
     private func fetchFavicon() {
-        // Pick the best raster favicon declared by the page. SVG and
-        // data-URI hrefs are skipped because AsyncImage can't decode them
-        // on macOS, which is why favicons were silently failing to render.
-        // `mask-icon` (Safari pinned-tab silhouette) is also ignored.
+        // Score every <link rel="*icon*"> by relType (real <link rel="icon">
+        // wins over apple-touch-icon, both win over rel="manifest" inferred
+        // entries) and by `sizes` proximity to 64px. Skip SVG and data-URI
+        // because AsyncImage can't decode them on macOS. Also surface the
+        // <link rel="manifest"> href so Swift can fall back to its icons[]
+        // when the page declared no <link rel="icon"> at all.
         let js = """
             (function(){
               try {
                 var links = document.getElementsByTagName('link');
                 var candidates = [];
+                var manifestHref = null;
                 for (var i = 0; i < links.length; i++) {
                   var rel = (links[i].getAttribute('rel') || '').toLowerCase();
+                  if (rel === 'manifest' && links[i].href && !manifestHref) {
+                    manifestHref = links[i].href;
+                  }
                   if (rel.indexOf('icon') === -1) continue;
                   if (rel.indexOf('mask-icon') !== -1) continue;
                   var href = links[i].href;
                   if (!href) continue;
                   if (href.indexOf('data:') === 0) continue;
                   if (/\\.svg(\\?|#|$)/i.test(href)) continue;
-                  candidates.push({ rel: rel, href: href });
-                }
-                for (var j = 0; j < candidates.length; j++) {
-                  if (candidates[j].rel === 'icon' ||
-                      candidates[j].rel === 'shortcut icon') {
-                    return candidates[j].href;
+                  var sizes = (links[i].getAttribute('sizes') || '').toLowerCase();
+                  var bestSize = 0;
+                  var parts = sizes.split(/\\s+/);
+                  for (var k = 0; k < parts.length; k++) {
+                    var dim = parts[k].split('x')[0];
+                    var n = parseInt(dim, 10);
+                    if (!isNaN(n) && n > bestSize) bestSize = n;
                   }
+                  candidates.push({ rel: rel, href: href, size: bestSize });
                 }
-                return candidates.length > 0 ? candidates[0].href : null;
+                function score(c) {
+                  var relScore = 25;
+                  if (c.rel === 'icon' || c.rel === 'shortcut icon') {
+                    relScore = 100;
+                  } else if (c.rel.indexOf('apple-touch-icon') !== -1) {
+                    relScore = 50;
+                  }
+                  var sizeScore = c.size === 0
+                    ? 50
+                    : Math.max(0, 100 - Math.abs(c.size - 64));
+                  return relScore + sizeScore;
+                }
+                candidates.sort(function(a, b) { return score(b) - score(a); });
+                return {
+                  icon: candidates.length > 0 ? candidates[0].href : null,
+                  manifest: manifestHref
+                };
               } catch (e) { return null; }
             })();
         """
         webView.evaluateJavaScript(js) { [weak self] result, _ in
             Task { @MainActor in
                 guard let self else { return }
-                if let s = result as? String, let url = URL(string: s) {
-                    self.faviconURL = url
-                    self.appState?.updateBrowserTab(self.id, faviconURL: url)
-                    FaviconCache.shared.prefetch(url)
-                } else {
-                    self.setHostFallbackFavicon()
+                let dict = result as? [String: Any]
+                if let iconStr = dict?["icon"] as? String,
+                   let url = URL(string: iconStr) {
+                    self.applyFavicon(url)
+                    return
                 }
+                let manifestHref = dict?["manifest"] as? String
+                await self.resolveFaviconFallback(manifestHref: manifestHref)
             }
         }
+    }
+
+    private func applyFavicon(_ url: URL) {
+        faviconURL = url
+        appState?.updateBrowserTab(id, faviconURL: url)
+        FaviconCache.shared.prefetch(url, priority: .userInitiated)
+    }
+
+    /// Last-resort favicon resolution when the page declared no
+    /// `<link rel="icon">`: try the manifest.json `icons[]`, then a
+    /// raw `/favicon.ico` at the page origin, and only after that
+    /// fall through to the Google API host fallback.
+    private func resolveFaviconFallback(manifestHref: String?) async {
+        let pageOrigin = Self.origin(of: currentURL)
+        if let href = manifestHref,
+           let manifestURL = Self.resolve(href, against: currentURL),
+           let icon = await Self.bestManifestIcon(manifestURL) {
+            applyFavicon(icon)
+            return
+        }
+        if let origin = pageOrigin,
+           let icoURL = URL(string: origin + "/favicon.ico"),
+           await Self.urlReturnsImage(icoURL) {
+            applyFavicon(icoURL)
+            return
+        }
+        setHostFallbackFavicon()
+    }
+
+    private static func origin(of url: URL) -> String? {
+        guard let scheme = url.scheme, let host = url.host else { return nil }
+        var s = "\(scheme)://\(host)"
+        if let port = url.port { s += ":\(port)" }
+        return s
+    }
+
+    private static func resolve(_ href: String, against base: URL) -> URL? {
+        if let direct = URL(string: href), direct.scheme != nil { return direct }
+        return URL(string: href, relativeTo: base)?.absoluteURL
+    }
+
+    private static func bestManifestIcon(_ url: URL) async -> URL? {
+        var req = URLRequest(
+            url: url,
+            cachePolicy: .useProtocolCachePolicy,
+            timeoutInterval: 4.0
+        )
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        guard let (data, response) = try? await URLSession.shared.data(for: req)
+        else { return nil }
+        if let http = response as? HTTPURLResponse,
+           !(200..<300).contains(http.statusCode) { return nil }
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let icons = json["icons"] as? [[String: Any]] else { return nil }
+        var best: (URL, Int)?
+        for icon in icons {
+            guard let src = icon["src"] as? String,
+                  let resolved = resolve(src, against: url) else { continue }
+            if resolved.pathExtension.lowercased() == "svg" { continue }
+            let sizes = (icon["sizes"] as? String ?? "").lowercased()
+            var bestSize = 0
+            for part in sizes.split(separator: " ") {
+                let dim = part.split(separator: "x").first.map(String.init) ?? ""
+                if let n = Int(dim), n > bestSize { bestSize = n }
+            }
+            let score = bestSize == 0 ? 50 : 100 - abs(bestSize - 64)
+            if best == nil || score > best!.1 {
+                best = (resolved, score)
+            }
+        }
+        return best?.0
+    }
+
+    private static func urlReturnsImage(_ url: URL) async -> Bool {
+        var req = URLRequest(
+            url: url,
+            cachePolicy: .useProtocolCachePolicy,
+            timeoutInterval: 4.0
+        )
+        req.httpMethod = "HEAD"
+        req.setValue("image/*", forHTTPHeaderField: "Accept")
+        guard let (_, response) = try? await URLSession.shared.data(for: req)
+        else { return false }
+        guard let http = response as? HTTPURLResponse else { return false }
+        return (200..<300).contains(http.statusCode)
     }
 
     /// Best-effort URL parser: accepts "google.com", "https://...", or a search
@@ -342,7 +490,8 @@ final class BrowserControllerStore {
             id: tab.id,
             initialURL: tab.url,
             appState: appState,
-            initialTitle: tab.title
+            initialTitle: tab.title,
+            initialFaviconURL: tab.faviconURL
         )
         controllers[tab.id] = new
         return new
