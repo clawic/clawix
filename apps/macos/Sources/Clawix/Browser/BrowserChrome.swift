@@ -36,7 +36,7 @@ struct BrowserTabStrip: View {
             Color.clear.frame(width: 30, height: 1)
         }
         .padding(.leading, 10)
-        .frame(height: 44)
+        .frame(height: 36)
         .background(Color.black)
     }
 }
@@ -59,7 +59,7 @@ private struct SidebarItemPill: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
 
-                if isHovered || isActive {
+                if isHovered {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .bold))
@@ -76,8 +76,8 @@ private struct SidebarItemPill: View {
                     Color.clear.frame(width: 14, height: 14)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
             .frame(maxWidth: 180)
             .contentShape(Rectangle())
             .background(
