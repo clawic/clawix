@@ -506,6 +506,13 @@ final class AppState: ObservableObject {
     /// whatever was open in that chat last (or closes if the chat had no
     /// items).
     @Published var chatSidebars: [UUID: ChatSidebarState] = [:]
+    /// Cross-tab favicon memory keyed by the registrable host. A tab freshly
+    /// opened to a host visited before therefore renders its real favicon
+    /// from the very first frame instead of cycling through the monogram and
+    /// the Google s2 fallback while WKWebView re-extracts the page's
+    /// `<link rel="icon">`. Persisted to UserDefaults under
+    /// `HostFavicons` so it survives relaunches.
+    @Published private(set) var hostFavicons: [String: URL] = [:]
     /// One-shot signal consumed by `BrowserView` to reload the active web
     /// view. Set when `openLinkInBrowser` is asked to open a URL already
     /// present in the strip and the user expects the existing tab to refresh
@@ -654,6 +661,8 @@ final class AppState: ObservableObject {
         } else {
             applyThreads([])
         }
+        FaviconCache.shared.primeDiskCache()
+        loadHostFavicons()
         loadChatSidebars()
         applyLaunchRoute()
 
@@ -2143,6 +2152,7 @@ final class AppState: ObservableObject {
 
     private static let sidebarDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
     private static let chatSidebarsKey = "ChatSidebars"
+    private static let hostFaviconsKey = "HostFavicons"
     private static let legacyBrowserStateKey = "BrowserTabs"
     private static let legacyBrowserActiveKey = "BrowserActiveTabId"
 
@@ -2209,7 +2219,12 @@ final class AppState: ObservableObject {
         if let firstWeb = s.items.first(where: { if case .web = $0 { return true } else { return false } }) {
             s.activeItemId = firstWeb.id
         } else {
-            let item = SidebarItem.web(.init(id: UUID(), url: initialURL, title: "", faviconURL: nil))
+            let item = SidebarItem.web(.init(
+                id: UUID(),
+                url: initialURL,
+                title: "",
+                faviconURL: cachedFavicon(forSite: initialURL)
+            ))
             s.items.append(item)
             s.activeItemId = item.id
         }
@@ -2243,7 +2258,12 @@ final class AppState: ObservableObject {
             pendingReloadTabId = existing.id
             return
         }
-        let item = SidebarItem.web(.init(id: UUID(), url: url, title: "", faviconURL: nil))
+        let item = SidebarItem.web(.init(
+            id: UUID(),
+            url: url,
+            title: "",
+            faviconURL: cachedFavicon(forSite: url)
+        ))
         s.items.append(item)
         s.activeItemId = item.id
         s.isOpen = true
@@ -2300,7 +2320,12 @@ final class AppState: ObservableObject {
     func newBrowserTab(url: URL = URL(string: "https://www.google.com")!) -> SidebarItem.WebPayload? {
         guard currentChatId != nil else { return nil }
         var s = currentSidebar
-        let payload = SidebarItem.WebPayload(id: UUID(), url: url, title: "", faviconURL: nil)
+        let payload = SidebarItem.WebPayload(
+            id: UUID(),
+            url: url,
+            title: "",
+            faviconURL: cachedFavicon(forSite: url)
+        )
         s.items.append(.web(payload))
         s.activeItemId = payload.id
         s.isOpen = true
@@ -2346,7 +2371,10 @@ final class AppState: ObservableObject {
             else { continue }
             if let url { payload.url = url }
             if let title { payload.title = title }
-            if let faviconURL { payload.faviconURL = faviconURL }
+            if let faviconURL {
+                payload.faviconURL = faviconURL
+                recordHostFavicon(faviconURL, for: payload.url)
+            }
             s.items[idx] = .web(payload)
             chatSidebars[chatId] = s
             persistChatSidebars()
@@ -2399,6 +2427,57 @@ final class AppState: ObservableObject {
         if let data = try? JSONEncoder().encode(payload) {
             defaults.set(data, forKey: AppState.chatSidebarsKey)
         }
+    }
+
+    /// Returns the best known favicon URL for `siteURL`'s host, or nil
+    /// when the user has never visited it. New tabs use this so the
+    /// pill renders the real favicon on the first frame instead of the
+    /// monogram while WKWebView spins up.
+    func cachedFavicon(forSite siteURL: URL) -> URL? {
+        guard let key = AppState.hostKey(siteURL) else { return nil }
+        return hostFavicons[key]
+    }
+
+    /// Records the favicon discovered for the given site URL into the
+    /// global host store, preferring real page-declared icons over the
+    /// Google s2 fallback when both have been seen for the same host.
+    private func recordHostFavicon(_ favicon: URL, for siteURL: URL) {
+        guard let key = AppState.hostKey(siteURL) else { return }
+        if let existing = hostFavicons[key],
+           !AppState.isGoogleS2Favicon(existing),
+           AppState.isGoogleS2Favicon(favicon) {
+            return
+        }
+        if hostFavicons[key] == favicon { return }
+        hostFavicons[key] = favicon
+        persistHostFavicons()
+    }
+
+    private func loadHostFavicons() {
+        let defaults = AppState.sidebarDefaults
+        guard let data = defaults.data(forKey: AppState.hostFaviconsKey),
+              let saved = try? JSONDecoder().decode([String: URL].self, from: data)
+        else { return }
+        hostFavicons = saved
+        for url in saved.values {
+            FaviconCache.shared.prefetch(url, priority: .userInitiated)
+        }
+    }
+
+    private func persistHostFavicons() {
+        let defaults = AppState.sidebarDefaults
+        if let data = try? JSONEncoder().encode(hostFavicons) {
+            defaults.set(data, forKey: AppState.hostFaviconsKey)
+        }
+    }
+
+    private static func hostKey(_ url: URL) -> String? {
+        guard let host = url.host?.lowercased(), !host.isEmpty else { return nil }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    private static func isGoogleS2Favicon(_ url: URL) -> Bool {
+        url.host == "www.google.com" && url.path == "/s2/favicons"
     }
 }
 
