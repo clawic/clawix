@@ -70,7 +70,7 @@ struct ClawixApp: App {
 
     var body: some Scene {
         WindowGroup(appDisplayName, id: FileMenuActions.mainWindowID) {
-            ContentView()
+            AppRootView()
                 .environmentObject(appState)
                 .environmentObject(appState.composer)
                 .environmentObject(updater)
@@ -132,7 +132,7 @@ struct ClawixApp: App {
             MenuBarContent()
                 .environmentObject(appState)
         } label: {
-            Image(systemName: "circle.hexagongrid.fill")
+            Image(nsImage: ClawixLogoTemplateImage.make(size: 18))
         }
     }
 }
