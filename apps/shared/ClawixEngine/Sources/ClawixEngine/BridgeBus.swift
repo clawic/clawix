@@ -97,6 +97,13 @@ public final class BridgeBus {
             let prev = snapshot[snap.id]
             snapshot[snap.id] = proj
             guard prev != proj else { continue }
+            let metadataChanged = prev.map {
+                $0.title != proj.title
+                    || $0.isPinned != proj.isPinned
+                    || $0.isArchived != proj.isArchived
+                    || $0.hasActiveTurn != proj.hasActiveTurn
+                    || $0.lastTurnInterrupted != proj.lastTurnInterrupted
+            } ?? false
 
             // Subscribed chats get message-level updates.
             if subscribedChatIds.contains(snap.id) {
@@ -132,9 +139,13 @@ public final class BridgeBus {
                 }
             }
 
+            if metadataChanged {
+                emit(BridgeFrame(.chatUpdated(chat: snap.chat)))
+            }
+
             // Unsubscribed chats still get a chatUpdated when surface
             // metadata (title, lastMessage, hasActiveTurn) changed.
-            if !subscribedChatIds.contains(snap.id), prev != nil {
+            if !subscribedChatIds.contains(snap.id), prev != nil, !metadataChanged {
                 emit(BridgeFrame(.chatUpdated(chat: snap.chat)))
             }
         }
