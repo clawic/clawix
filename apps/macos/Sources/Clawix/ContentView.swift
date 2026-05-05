@@ -228,11 +228,6 @@ struct ContentView: View {
                     }
                 )
                 .bodyDropTarget(enabled: routeAcceptsFileDrops)
-                .overlay(alignment: .bottomTrailing) {
-                    NewChatFAB()
-                        .padding(.trailing, 22)
-                        .padding(.bottom, 22)
-                }
                 } // end !isRightSidebarMaximized content column
 
                 if appState.isRightSidebarOpen {
@@ -355,7 +350,7 @@ private struct UpdateChip: View {
     var body: some View {
         Button(action: onTap) {
             Text("Update")
-                .font(.system(size: 12, weight: .regular))
+                .font(BodyFont.system(size: 12, weight: .regular))
                 .foregroundColor(.white.opacity(hovered ? 1.0 : 0.94))
                 .padding(.horizontal, 11)
                 .padding(.vertical, 4)
@@ -472,13 +467,13 @@ private struct ContentTopChrome: View {
             )
             if let chatTitle, let _ = currentChat {
                 Text(chatTitle)
-                    .font(.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(white: hoverEllipsis ? 0.78 : 0.55))
                         .frame(width: 24, height: 24)
                         .background(
@@ -581,7 +576,7 @@ private struct RightSidebarTopChrome: View {
         HStack(spacing: 0) {
             Button { addMenuOpen.toggle() } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(BodyFont.system(size: 13, weight: .semibold))
                     .foregroundColor(Color(white: 0.78))
                     .frame(width: 26, height: 26)
                     .background(
@@ -663,7 +658,7 @@ private struct RightSidebarBody: View {
         ZStack {
             Color.clear
             Text("Nothing here yet")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Color(white: 0.62))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -704,17 +699,17 @@ private struct RightSidebarAddMenu: View {
                         SearchIcon(size: 11)
                     } else {
                         Image(systemName: icon)
-                            .font(.system(size: 11))
+                            .font(BodyFont.system(size: 11))
                     }
                 }
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
                 Text(title)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 Text(shortcut)
-                    .font(.system(size: 10))
+                    .font(BodyFont.system(size: 10))
                     .foregroundColor(MenuStyle.rowSubtle)
             }
             .padding(.horizontal, MenuStyle.rowHorizontalPadding)
@@ -826,12 +821,12 @@ private struct ChatActionsMenu: View {
                 }
                 .frame(width: 18, alignment: .center)
                 Text(item.title)
-                    .font(.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if let shortcut = item.shortcut {
                     Text(shortcut)
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
             }
@@ -867,7 +862,7 @@ private struct SearchPopoverOverlay: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Find chats")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(MenuStyle.headerText)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -875,7 +870,7 @@ private struct SearchPopoverOverlay: View {
 
             if !pinnedChats.isEmpty {
                 Text("Pinned chats")
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(MenuStyle.headerText)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 4)
@@ -894,7 +889,7 @@ private struct SearchPopoverOverlay: View {
                 .padding(.bottom, 4)
             } else {
                 Text("You do not have any pinned chats yet")
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
@@ -929,12 +924,12 @@ private struct SearchPinnedRow: View {
     var body: some View {
         HStack(spacing: 11) {
             Image(systemName: "macwindow")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
 
             Text(title)
-                .font(.system(size: 13.5))
+                .font(BodyFont.system(size: 13.5))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -943,7 +938,7 @@ private struct SearchPinnedRow: View {
 
             if let projectName {
                 Text(projectName)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -971,7 +966,7 @@ private struct ShortcutGlyph: View {
 
     var body: some View {
         Text("⌘\(number)")
-            .font(.system(size: 11, weight: .medium))
+            .font(BodyFont.system(size: 11, weight: .medium))
             .foregroundColor(MenuStyle.rowSubtle)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
@@ -1477,45 +1472,5 @@ struct MenuRowHover: View {
         RoundedRectangle(cornerRadius: MenuStyle.rowHoverCornerRadius, style: .continuous)
             .fill(active ? Color.white.opacity(intensity) : Color.clear)
             .padding(.horizontal, MenuStyle.rowHoverInset)
-    }
-}
-
-// MARK: - New chat FAB
-
-/// White floating action button anchored to the bottom-right of the
-/// content column. Pairs the v7 ComposeIcon with a "Chat" label and
-/// triggers the same `.home` route the sidebar's New chat button does.
-private struct NewChatFAB: View {
-    @EnvironmentObject var appState: AppState
-    @State private var hovered = false
-
-    var body: some View {
-        Button {
-            appState.currentRoute = .home
-        } label: {
-            HStack(spacing: 8) {
-                ComposeIcon()
-                    .stroke(style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
-                    .frame(width: 14, height: 14)
-                    .foregroundColor(.black)
-                Text("Chat")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.black)
-            }
-            .padding(.leading, 14)
-            .padding(.trailing, 16)
-            .frame(height: 36)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(Color.white)
-            )
-            .shadow(color: Color.black.opacity(0.30), radius: 14, y: 6)
-            .scaleEffect(hovered ? 1.03 : 1)
-            .animation(.easeOut(duration: 0.12), value: hovered)
-            .contentShape(Capsule(style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .accessibilityLabel("New chat")
     }
 }
