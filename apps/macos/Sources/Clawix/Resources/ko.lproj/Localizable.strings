@@ -65,6 +65,7 @@
 "Chat actions" = "채팅 작업";
 "Chat not found" = "채팅을 찾을 수 없습니다";
 "Chat title" = "채팅 제목";
+"Chats" = "채팅";
 "Check for Updates…" = "업데이트 확인…";
 "Choose how much technical detail Clawix shows" = "Clawix가 표시할 기술 세부 정보 수준을 선택하세요";
 "Choose…" = "선택…";
@@ -162,8 +163,10 @@
 "Find" = "찾기";
 "Find chats" = "Find chats";
 "Folder" = "폴더";
+"Fork conversation" = "대화 포크";
 "Fork to local" = "로컬로 포크";
 "Fork to new worktree" = "새 워크트리로 포크";
+"Forked from conversation" = "대화에서 포크됨";
 "Forward" = "앞으로";
 "Friendly" = "친근";
 "Full access" = "전체 액세스";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "키보드 단축키";
 "Language" = "언어";
+"Last turn interrupted" = "마지막 응답이 중단됨";
 "Learn more" = "자세히 알아보기";
 "Learn more." = "자세히 알아보기.";
 "Lens" = "렌즈";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "폴더 열기";
 "Open Folder…" = "폴더 열기…";
+"Open \\(appDisplayName)" = "\\(appDisplayName) 열기";
 "Open config.toml" = "config.toml 열기";
 "Open file" = "파일 열기";
 "Open folder" = "폴더 열기";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "미니 창에서 열기";
 "Open side chat" = "사이드 채팅 열기";
+"Open the conversation this chat was forked from" = "이 채팅이 포크된 원래 대화 열기";
 "Open with" = "다른 앱으로 열기";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "프로젝트에 대한 추가 지침과 컨텍스트를 Clawix에 제공하세요. 자세히 알아보기";
 "Queue" = "대기열";
 "Quick Chat" = "빠른 채팅";
+"Quit \\(appDisplayName)" = "\\(appDisplayName) 종료";
 "Reasoning" = "추론";
 "Record voice note" = "음성 메모 녹음";
 "Register an action that runs a command from the local toolbar." = "로컬 도구 모음에서 명령을 실행할 작업을 추가하세요.";

@@ -65,6 +65,7 @@
 "Chat actions" = "Azioni della chat";
 "Chat not found" = "Chat non trovata";
 "Chat title" = "Titolo chat";
+"Chats" = "Chat";
 "Check for Updates…" = "Cerca aggiornamenti…";
 "Choose how much technical detail Clawix shows" = "Scegli quanti dettagli tecnici mostra Clawix";
 "Choose…" = "Scegli…";
@@ -162,8 +163,10 @@
 "Find" = "Trova";
 "Find chats" = "Find chats";
 "Folder" = "Cartella";
+"Fork conversation" = "Crea fork della conversazione";
 "Fork to local" = "Crea fork in locale";
 "Fork to new worktree" = "Crea fork in nuovo worktree";
+"Forked from conversation" = "Fork creato da una conversazione";
 "Forward" = "Avanti";
 "Friendly" = "Amichevole";
 "Full access" = "Accesso completo";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "Scorciatoie da tastiera";
 "Language" = "Lingua";
+"Last turn interrupted" = "Ultimo turno interrotto";
 "Learn more" = "Scopri di più";
 "Learn more." = "Scopri di più.";
 "Lens" = "Lente";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "Apri cartella";
 "Open Folder…" = "Apri cartella…";
+"Open \\(appDisplayName)" = "Apri \\(appDisplayName)";
 "Open config.toml" = "Apri config.toml";
 "Open file" = "Apri file";
 "Open folder" = "Apri cartella";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "Apri in mini finestra";
 "Open side chat" = "Apri chat laterale";
+"Open the conversation this chat was forked from" = "Apri la conversazione da cui è stato creato questo fork";
 "Open with" = "Apri con";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Fornisci a Clawix istruzioni aggiuntive e contesto per il progetto. Scopri di più";
 "Queue" = "Coda";
 "Quick Chat" = "Chat rapida";
+"Quit \\(appDisplayName)" = "Esci da \\(appDisplayName)";
 "Reasoning" = "Ragionamento";
 "Record voice note" = "Registra nota vocale";
 "Register an action that runs a command from the local toolbar." = "Aggiungi un’azione per eseguire comandi dalla barra degli strumenti locale.";

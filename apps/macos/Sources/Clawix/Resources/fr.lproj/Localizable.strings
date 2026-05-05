@@ -65,6 +65,7 @@
 "Chat actions" = "Actions de la conversation";
 "Chat not found" = "Conversation introuvable";
 "Chat title" = "Titre de la conversation";
+"Chats" = "Conversations";
 "Check for Updates…" = "Rechercher des mises à jour…";
 "Choose how much technical detail Clawix shows" = "Choisissez le niveau de détail technique affiché par Clawix";
 "Choose…" = "Choisir…";
@@ -162,8 +163,10 @@
 "Find" = "Rechercher";
 "Find chats" = "Find chats";
 "Folder" = "Dossier";
+"Fork conversation" = "Bifurquer la conversation";
 "Fork to local" = "Bifurquer en local";
 "Fork to new worktree" = "Bifurquer vers un nouveau worktree";
+"Forked from conversation" = "Bifurquée depuis une conversation";
 "Forward" = "Suivant";
 "Friendly" = "Amical";
 "Full access" = "Accès complet";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "Raccourcis clavier";
 "Language" = "Langue";
+"Last turn interrupted" = "Dernier tour interrompu";
 "Learn more" = "En savoir plus";
 "Learn more." = "En savoir plus.";
 "Lens" = "Lentille";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "Ouvrir un dossier";
 "Open Folder…" = "Ouvrir un dossier…";
+"Open \\(appDisplayName)" = "Ouvrir \\(appDisplayName)";
 "Open config.toml" = "Ouvrir config.toml";
 "Open file" = "Ouvrir un fichier";
 "Open folder" = "Ouvrir le dossier";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "Ouvrir en mini-fenêtre";
 "Open side chat" = "Ouvrir une conversation latérale";
+"Open the conversation this chat was forked from" = "Ouvrir la conversation dont ce chat est issu";
 "Open with" = "Ouvrir avec";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Donnez à Clawix des instructions et du contexte supplémentaires pour votre projet. En savoir plus";
 "Queue" = "File d’attente";
 "Quick Chat" = "Conversation rapide";
+"Quit \\(appDisplayName)" = "Quitter \\(appDisplayName)";
 "Reasoning" = "Raisonnement";
 "Record voice note" = "Enregistrer une note vocale";
 "Register an action that runs a command from the local toolbar." = "Ajoutez une action pour exécuter des commandes depuis la barre d’outils locale.";

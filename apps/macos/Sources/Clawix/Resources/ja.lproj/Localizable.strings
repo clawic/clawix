@@ -65,6 +65,7 @@
 "Chat actions" = "チャット操作";
 "Chat not found" = "チャットが見つかりません";
 "Chat title" = "チャットのタイトル";
+"Chats" = "チャット";
 "Check for Updates…" = "アップデートを確認…";
 "Choose how much technical detail Clawix shows" = "Clawix に表示する技術的な詳細度を選択";
 "Choose…" = "選択…";
@@ -162,8 +163,10 @@
 "Find" = "検索";
 "Find chats" = "Find chats";
 "Folder" = "フォルダ";
+"Fork conversation" = "会話をフォーク";
 "Fork to local" = "ローカルにフォーク";
 "Fork to new worktree" = "新しいworktreeにフォーク";
+"Forked from conversation" = "会話からフォーク済み";
 "Forward" = "進む";
 "Friendly" = "フレンドリー";
 "Full access" = "フルアクセス";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "キーボードショートカット";
 "Language" = "言語";
+"Last turn interrupted" = "最後のターンが中断されました";
 "Learn more" = "詳細はこちら";
 "Learn more." = "詳細を見る。";
 "Lens" = "レンズ";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "フォルダを開く";
 "Open Folder…" = "フォルダを開く…";
+"Open \\(appDisplayName)" = "\\(appDisplayName)を開く";
 "Open config.toml" = "config.toml を開く";
 "Open file" = "ファイルを開く";
 "Open folder" = "フォルダを開く";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "ミニウィンドウで開く";
 "Open side chat" = "サイドチャットを開く";
+"Open the conversation this chat was forked from" = "このチャットのフォーク元の会話を開く";
 "Open with" = "開く";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "プロジェクト向けに追加の指示とコンテキストを Clawix に渡します。詳細";
 "Queue" = "キュー";
 "Quick Chat" = "クイックチャット";
+"Quit \\(appDisplayName)" = "\\(appDisplayName)を終了";
 "Reasoning" = "推論";
 "Record voice note" = "音声メモを録音";
 "Register an action that runs a command from the local toolbar." = "ローカルツールバーからコマンドを実行するアクションを追加します。";

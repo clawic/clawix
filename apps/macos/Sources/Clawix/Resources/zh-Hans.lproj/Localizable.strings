@@ -65,6 +65,7 @@
 "Chat actions" = "对话操作";
 "Chat not found" = "未找到对话";
 "Chat title" = "聊天标题";
+"Chats" = "对话";
 "Check for Updates…" = "检查更新…";
 "Choose how much technical detail Clawix shows" = "选择 Clawix 显示的技术细节程度";
 "Choose…" = "选择…";
@@ -162,8 +163,10 @@
 "Find" = "查找";
 "Find chats" = "Find chats";
 "Folder" = "文件夹";
+"Fork conversation" = "为对话创建分支";
 "Fork to local" = "在本地创建分支";
 "Fork to new worktree" = "在新的 worktree 创建分支";
+"Forked from conversation" = "从对话创建的分支";
 "Forward" = "前进";
 "Friendly" = "友好";
 "Full access" = "完全访问";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "键盘快捷键";
 "Language" = "语言";
+"Last turn interrupted" = "上一次回复已中断";
 "Learn more" = "了解更多";
 "Learn more." = "了解更多。";
 "Lens" = "镜头";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "打开文件夹";
 "Open Folder…" = "打开文件夹…";
+"Open \\(appDisplayName)" = "打开 \\(appDisplayName)";
 "Open config.toml" = "打开 config.toml";
 "Open file" = "打开文件";
 "Open folder" = "打开文件夹";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "在小窗口中打开";
 "Open side chat" = "打开侧边对话";
+"Open the conversation this chat was forked from" = "打开此聊天的来源对话";
 "Open with" = "打开方式";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "为你的项目向 Clawix 提供额外指令和上下文。了解更多";
 "Queue" = "队列";
 "Quick Chat" = "快速对话";
+"Quit \\(appDisplayName)" = "退出 \\(appDisplayName)";
 "Reasoning" = "推理过程";
 "Record voice note" = "录制语音备注";
 "Register an action that runs a command from the local toolbar." = "添加一个操作，用于从本地工具栏运行命令。";

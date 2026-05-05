@@ -65,6 +65,7 @@
 "Chat actions" = "Действия чата";
 "Chat not found" = "Чат не найден";
 "Chat title" = "Название чата";
+"Chats" = "Чаты";
 "Check for Updates…" = "Проверить обновления…";
 "Choose how much technical detail Clawix shows" = "Выберите, сколько технических деталей показывает Clawix";
 "Choose…" = "Выбрать…";
@@ -162,8 +163,10 @@
 "Find" = "Найти";
 "Find chats" = "Find chats";
 "Folder" = "Папка";
+"Fork conversation" = "Форкнуть беседу";
 "Fork to local" = "Форкнуть локально";
 "Fork to new worktree" = "Форкнуть в новый worktree";
+"Forked from conversation" = "Форк из беседы";
 "Forward" = "Вперёд";
 "Friendly" = "Дружелюбный";
 "Full access" = "Полный доступ";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "Сочетания клавиш";
 "Language" = "Язык";
+"Last turn interrupted" = "Последний ответ прерван";
 "Learn more" = "Узнать больше";
 "Learn more." = "Подробнее.";
 "Lens" = "Линза";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "Открыть папку";
 "Open Folder…" = "Открыть папку…";
+"Open \\(appDisplayName)" = "Открыть \\(appDisplayName)";
 "Open config.toml" = "Открыть config.toml";
 "Open file" = "Открыть файл";
 "Open folder" = "Открыть папку";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "Открыть в мини-окне";
 "Open side chat" = "Открыть боковой чат";
+"Open the conversation this chat was forked from" = "Открыть беседу, из которой создан этот чат";
 "Open with" = "Открыть с помощью";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Дайте Clawix дополнительные инструкции и контекст для проекта. Подробнее";
 "Queue" = "Очередь";
 "Quick Chat" = "Быстрый чат";
+"Quit \\(appDisplayName)" = "Закрыть \\(appDisplayName)";
 "Reasoning" = "Рассуждение";
 "Record voice note" = "Записать голосовую заметку";
 "Register an action that runs a command from the local toolbar." = "Добавьте действие для запуска команд с локальной панели инструментов.";

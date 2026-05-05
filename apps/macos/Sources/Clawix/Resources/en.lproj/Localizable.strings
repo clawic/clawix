@@ -65,6 +65,7 @@
 "Chat actions" = "Chat actions";
 "Chat not found" = "Chat not found";
 "Chat title" = "Chat title";
+"Chats" = "Chats";
 "Check for Updates…" = "Check for Updates…";
 "Choose how much technical detail Clawix shows" = "Choose how much technical detail Clawix shows";
 "Choose…" = "Choose…";
@@ -162,8 +163,10 @@
 "Find" = "Find";
 "Find chats" = "Find chats";
 "Folder" = "Folder";
+"Fork conversation" = "Fork conversation";
 "Fork to local" = "Fork to local";
 "Fork to new worktree" = "Fork to new worktree";
+"Forked from conversation" = "Forked from conversation";
 "Forward" = "Forward";
 "Friendly" = "Friendly";
 "Full access" = "Full access";
@@ -185,6 +188,7 @@
 "Keep it short and recognizable" = "Keep it short and recognizable";
 "Keyboard Shortcuts" = "Keyboard Shortcuts";
 "Language" = "Language";
+"Last turn interrupted" = "Last turn interrupted";
 "Learn more" = "Learn more";
 "Learn more." = "Learn more.";
 "Lens" = "Lens";
@@ -231,6 +235,7 @@
 "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi." = "Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.";
 "Open Folder" = "Open Folder";
 "Open Folder…" = "Open Folder…";
+"Open \\(appDisplayName)" = "Open \\(appDisplayName)";
 "Open config.toml" = "Open config.toml";
 "Open file" = "Open file";
 "Open folder" = "Open folder";
@@ -241,6 +246,7 @@
 "Open in folder" = "Open in folder";
 "Open in mini window" = "Open in mini window";
 "Open side chat" = "Open side chat";
+"Open the conversation this chat was forked from" = "Open the conversation this chat was forked from";
 "Open with" = "Open with";
 "Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
@@ -271,6 +277,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more";
 "Queue" = "Queue";
 "Quick Chat" = "Quick Chat";
+"Quit \\(appDisplayName)" = "Quit \\(appDisplayName)";
 "Reasoning" = "Reasoning";
 "Record voice note" = "Record voice note";
 "Register an action that runs a command from the local toolbar." = "Register an action that runs a command from the local toolbar.";
