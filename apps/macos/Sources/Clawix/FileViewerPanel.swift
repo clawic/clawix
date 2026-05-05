@@ -2,10 +2,19 @@ import SwiftUI
 import AppKit
 
 /// Right-sidebar file preview that mirrors the Codex Desktop reference:
-/// a top tabs strip with the active file's name, a breadcrumb row with
-/// `<folder> › <file>` and trailing actions, and a markdown body
-/// rendered with `MarkdownDocumentView` for `.md` files (plain monospace
-/// for everything else, placeholder for binaries / missing files).
+/// a breadcrumb row with `<folder> › <file>` and trailing actions, and a
+/// markdown body rendered with `MarkdownDocumentView` for `.md` files
+/// (plain monospace for everything else, placeholder for binaries /
+/// missing files).
+///
+/// The breadcrumb's ellipsis exposes a per-file menu:
+///   - "Copy path" copies the absolute filesystem path.
+///   - "Disable / Enable rich view" (markdown only) flips between the
+///     parsed-and-styled view and a raw view with line numbers + light
+///     markdown syntax tinting.
+///   - "Enable / Disable word wrap" (raw view only) toggles between
+///     horizontal scroll for long lines and soft-wrapping inside the
+///     visible width.
 struct FileViewerPanel: View {
     let path: String
 
@@ -16,6 +25,7 @@ struct FileViewerPanel: View {
     @State private var hoverOpenExt = false
     @State private var hoverCopy = false
     @State private var copied = false
+    @State private var moreMenuOpen = false
 
     private enum LoadedBody: Equatable {
         case loading
@@ -32,6 +42,24 @@ struct FileViewerPanel: View {
         }
         let parent = fileURL.deletingLastPathComponent().lastPathComponent
         return parent.isEmpty ? "/" : parent
+    }
+
+    private var isMarkdown: Bool {
+        if case .markdown = loaded { return true }
+        return false
+    }
+    private var richViewDisabled: Bool {
+        appState.richViewDisabledPaths.contains(path)
+    }
+    private var wordWrapEnabled: Bool {
+        appState.wordWrapEnabledPaths.contains(path)
+    }
+    /// "Raw mode" is anything that ends up in the line-numbered monospace
+    /// renderer, that is plain text files and markdown with rich-view
+    /// disabled. The word-wrap toggle only makes sense for those.
+    private var isRawMode: Bool {
+        if case .plain = loaded { return true }
+        return isMarkdown && richViewDisabled
     }
 
     var body: some View {
@@ -75,24 +103,56 @@ struct FileViewerPanel: View {
             iconButton(systemName: "ellipsis",
                        size: 12,
                        hoverState: $hoverMore,
-                       label: "More") { /* no-op for now */ }
+                       label: "More") {
+                moreMenuOpen.toggle()
+            }
+            .anchorPreference(key: FileViewerMoreMenuAnchorKey.self,
+                              value: .bounds) { $0 }
 
-            iconButton(systemName: "arrow.up.right.square",
-                       size: 12,
-                       hoverState: $hoverOpenExt,
-                       label: "Open externally") {
+            iconButton(hoverState: $hoverOpenExt, label: "Open externally") {
                 NSWorkspace.shared.open(fileURL)
+            } icon: {
+                ExternalLinkIcon(size: 15)
             }
 
-            iconButton(systemName: copied ? "checkmark" : "doc.on.doc",
-                       size: 11,
-                       hoverState: $hoverCopy,
-                       label: "Copy contents") {
+            iconButton(hoverState: $hoverCopy, label: "Copy contents") {
                 copyContents()
+            } icon: {
+                if copied {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .regular))
+                } else {
+                    FolderStackIcon(size: 16)
+                }
             }
         }
         .padding(.horizontal, 14)
         .frame(height: 32)
+        .overlayPreferenceValue(FileViewerMoreMenuAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if moreMenuOpen, let anchor {
+                    let frame = proxy[anchor]
+                    FileViewerMoreMenu(
+                        isOpen: $moreMenuOpen,
+                        showRichViewToggle: isMarkdown,
+                        richViewDisabled: richViewDisabled,
+                        showWordWrapToggle: isRawMode,
+                        wordWrapEnabled: wordWrapEnabled,
+                        onCopyPath: { copyPath() },
+                        onToggleRichView: { toggleRichView() },
+                        onToggleWordWrap: { toggleWordWrap() }
+                    )
+                    .anchoredPopupPlacement(
+                        buttonFrame: frame,
+                        proxy: proxy,
+                        horizontal: .trailing()
+                    )
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(moreMenuOpen)
+        }
+        .animation(MenuStyle.openAnimation, value: moreMenuOpen)
     }
 
     // MARK: - Body
@@ -106,24 +166,20 @@ struct FileViewerPanel: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         case .markdown(let blocks):
-            ScrollView {
-                MarkdownDocumentView(blocks: blocks)
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
+            if richViewDisabled {
+                RawTextView(raw: rawText, syntax: .markdown, wordWrap: wordWrapEnabled)
+            } else {
+                ScrollView {
+                    MarkdownDocumentView(blocks: blocks)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
             }
 
         case .plain(let raw):
-            ScrollView {
-                Text(raw)
-                    .font(.system(size: 12.5, design: .monospaced))
-                    .foregroundColor(Palette.textPrimary.opacity(0.92))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 16)
-                    .textSelection(.enabled)
-            }
+            RawTextView(raw: raw, syntax: .plain, wordWrap: wordWrapEnabled)
 
         case .unavailable(let reason):
             VStack(spacing: 8) {
@@ -147,9 +203,19 @@ struct FileViewerPanel: View {
                             hoverState: Binding<Bool>,
                             label: String,
                             action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        iconButton(hoverState: hoverState, label: label, action: action) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .regular))
+        }
+    }
+
+    @ViewBuilder
+    private func iconButton<Icon: View>(hoverState: Binding<Bool>,
+                                        label: String,
+                                        action: @escaping () -> Void,
+                                        @ViewBuilder icon: () -> Icon) -> some View {
+        Button(action: action) {
+            icon()
                 .foregroundColor(Color(white: hoverState.wrappedValue ? 0.85 : 0.55))
                 .frame(width: 26, height: 26)
                 .background(
@@ -171,6 +237,28 @@ struct FileViewerPanel: View {
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
             copied = false
+        }
+    }
+
+    private func copyPath() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(path, forType: .string)
+    }
+
+    private func toggleRichView() {
+        if appState.richViewDisabledPaths.contains(path) {
+            appState.richViewDisabledPaths.remove(path)
+        } else {
+            appState.richViewDisabledPaths.insert(path)
+        }
+    }
+
+    private func toggleWordWrap() {
+        if appState.wordWrapEnabledPaths.contains(path) {
+            appState.wordWrapEnabledPaths.remove(path)
+        } else {
+            appState.wordWrapEnabledPaths.insert(path)
         }
     }
 
@@ -223,5 +311,236 @@ struct FileViewerPanel: View {
             return (.markdown(MarkdownParser.parse(raw)), raw)
         }
         return (.plain(raw), raw)
+    }
+}
+
+// MARK: - More menu anchor
+
+private struct FileViewerMoreMenuAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
+// MARK: - More menu
+
+private struct FileViewerMoreMenu: View {
+    @Binding var isOpen: Bool
+    let showRichViewToggle: Bool
+    let richViewDisabled: Bool
+    let showWordWrapToggle: Bool
+    let wordWrapEnabled: Bool
+    let onCopyPath: () -> Void
+    let onToggleRichView: () -> Void
+    let onToggleWordWrap: () -> Void
+
+    @State private var hovered: String?
+
+    private static let menuWidth: CGFloat = 220
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            row(id: "copyPath", title: "Copy path") {
+                CopyIconViewSquircle(color: MenuStyle.rowIcon, lineWidth: 1.0)
+                    .frame(width: 13, height: 13)
+            } action: {
+                onCopyPath()
+                isOpen = false
+            }
+
+            if showRichViewToggle {
+                row(id: "toggleRichView",
+                    title: richViewDisabled ? "Enable rich view" : "Disable rich view") {
+                    Image(systemName: richViewDisabled ? "photo" : "curlybraces")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(MenuStyle.rowIcon)
+                } action: {
+                    onToggleRichView()
+                    isOpen = false
+                }
+            }
+
+            if showWordWrapToggle {
+                row(id: "toggleWordWrap",
+                    title: wordWrapEnabled ? "Disable word wrap" : "Enable word wrap") {
+                    Image(systemName: "arrow.turn.down.left")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(MenuStyle.rowIcon)
+                } action: {
+                    onToggleWordWrap()
+                    isOpen = false
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.menuWidth, alignment: .leading)
+        .menuStandardBackground()
+        .background(MenuOutsideClickWatcher(isPresented: $isOpen))
+    }
+
+    @ViewBuilder
+    private func row<Icon: View>(id: String,
+                                 title: LocalizedStringKey,
+                                 @ViewBuilder icon: () -> Icon,
+                                 action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                icon()
+                    .frame(width: 18, alignment: .center)
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundColor(MenuStyle.rowText)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding + 4)
+            .padding(.vertical, MenuStyle.rowVerticalPadding + 1)
+            .background(MenuRowHover(active: hovered == id))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering { hovered = id }
+            else if hovered == id { hovered = nil }
+        }
+    }
+}
+
+// MARK: - Raw text view (line numbers + light syntax)
+
+/// Monospace renderer with a line-number gutter and very light syntax
+/// tinting. For markdown the heading prefix and the bullet markers
+/// borrow the same accent; everything else stays in the body colour.
+/// The plain variant just renders every line in the body colour.
+private struct RawTextView: View {
+    enum Syntax { case markdown, plain }
+
+    let raw: String
+    let syntax: Syntax
+    let wordWrap: Bool
+
+    private static let body  = Color(white: 0.92)
+    private static let muted = Color(white: 0.40)
+    private static let accent = Color(red: 0.96, green: 0.55, blue: 0.55)
+
+    private var lines: [String] {
+        // Trailing newline produces an empty last entry that adds a
+        // visually distracting "phantom" gutter row, so drop it.
+        var arr = raw.components(separatedBy: "\n")
+        if let last = arr.last, last.isEmpty, arr.count > 1 { arr.removeLast() }
+        return arr
+    }
+
+    private var gutterWidth: CGFloat {
+        let digits = max(2, String(lines.count).count)
+        return CGFloat(digits) * 8 + 8
+    }
+
+    var body: some View {
+        Group {
+            if wordWrap {
+                ScrollView(.vertical) { content }
+            } else {
+                ScrollView([.vertical, .horizontal]) { content }
+            }
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { idx, line in
+                HStack(alignment: .top, spacing: 14) {
+                    Text(verbatim: "\(idx + 1)")
+                        .font(.system(size: 12.5, design: .monospaced))
+                        .foregroundColor(Self.muted)
+                        .frame(width: gutterWidth, alignment: .trailing)
+                    lineText(line)
+                        .font(.system(size: 12.5, design: .monospaced))
+                        .modifier(NoWrapIfNeeded(wrap: wordWrap))
+                        .textSelection(.enabled)
+                }
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.trailing, 16)
+        .frame(maxWidth: wordWrap ? .infinity : nil, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func lineText(_ line: String) -> some View {
+        if line.isEmpty {
+            // Preserve the row height so the gutter stays evenly spaced.
+            Text(" ").foregroundColor(Self.body)
+        } else if syntax == .markdown {
+            Text(markdownAttributed(line))
+        } else {
+            Text(line).foregroundColor(Self.body)
+        }
+    }
+
+    /// Light-touch markdown tokenizer: heading lines (`# ` … `###### `)
+    /// and unordered bullet markers (`-`, `*`, `+`) borrow the accent
+    /// colour, fenced code lines (```) too. Inline code / bold / links
+    /// are intentionally left alone, since the goal of raw view is to
+    /// show the source, not re-render it.
+    private func markdownAttributed(_ line: String) -> AttributedString {
+        var attr = AttributedString(line)
+        attr.foregroundColor = Self.body
+
+        let trimmed = line.drop(while: { $0 == " " || $0 == "\t" })
+        let leading = line.count - trimmed.count
+
+        if trimmed.hasPrefix("#") {
+            // 1..6 hashes followed by a space → heading line, accent
+            // the entire visible content.
+            var hashes = 0
+            for ch in trimmed {
+                if ch == "#" { hashes += 1 } else { break }
+                if hashes > 6 { break }
+            }
+            if hashes >= 1 && hashes <= 6 {
+                let after = trimmed.index(trimmed.startIndex, offsetBy: hashes)
+                if after == trimmed.endIndex || trimmed[after] == " " {
+                    attr.foregroundColor = Self.accent
+                    return attr
+                }
+            }
+        }
+
+        if trimmed.hasPrefix("```") {
+            attr.foregroundColor = Self.accent
+            return attr
+        }
+
+        if let first = trimmed.first, "-*+".contains(first) {
+            let afterIdx = trimmed.index(after: trimmed.startIndex)
+            if afterIdx < trimmed.endIndex && trimmed[afterIdx] == " " {
+                let markerStart = line.index(line.startIndex, offsetBy: leading)
+                let markerEnd   = line.index(markerStart, offsetBy: 1)
+                if let r = Range(markerStart..<markerEnd, in: attr) {
+                    attr[r].foregroundColor = Self.accent
+                }
+                return attr
+            }
+        }
+
+        return attr
+    }
+}
+
+/// SwiftUI does not expose a "do not wrap" flag on `Text`, so we lean
+/// on `fixedSize` to opt long lines out of the parent's constrained
+/// width. When wrap is on we drop the modifier entirely so the line
+/// re-flows inside the visible bounds.
+private struct NoWrapIfNeeded: ViewModifier {
+    let wrap: Bool
+    func body(content: Content) -> some View {
+        if wrap {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            content.fixedSize(horizontal: true, vertical: false)
+        }
     }
 }

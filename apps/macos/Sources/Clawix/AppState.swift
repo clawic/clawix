@@ -577,6 +577,21 @@ final class AppState: ObservableObject {
     /// (e.g. "codex", "codex_<model>"). Empty when the backend doesn't
     /// surface a per-bucket view.
     @Published var rateLimitsByLimitId: [String: RateLimitSnapshot] = [:]
+    /// Paths whose right-sidebar file viewer is rendering raw text with
+    /// line numbers and basic syntax tinting instead of the parsed
+    /// markdown body. Toggled from the breadcrumb's ellipsis menu via
+    /// "Disable rich view" / "Enable rich view". In-memory only.
+    @Published var richViewDisabledPaths: Set<String> = []
+    /// Paths whose raw / plain file view (and only raw / plain) wraps
+    /// long lines instead of showing a horizontal scroll. Same source
+    /// of truth as the breadcrumb's "Enable word wrap" toggle.
+    @Published var wordWrapEnabledPaths: Set<String> = []
+    /// When true, fenced code blocks rendered in chat messages wrap
+    /// long lines so everything is visible without a horizontal scroll.
+    /// Toggled from the small wrap button next to each code block's
+    /// copy action; the choice is global because the same code is often
+    /// quoted across messages.
+    @Published var chatCodeBlockWordWrap: Bool = true
     @Published var settingsCategory: SettingsCategory = .general
     /// User-selected interface language. Persisted via UserDefaults
     /// (suite `appPrefsSuite`, key `PreferredLanguage`). Changing

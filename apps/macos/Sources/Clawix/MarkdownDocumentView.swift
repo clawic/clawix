@@ -266,8 +266,10 @@ private struct CodeBlockView: View {
     let language: String
     let code: String
 
+    @EnvironmentObject var appState: AppState
     @State private var copied = false
     @State private var hoverCopy = false
+    @State private var hoverWrap = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -276,6 +278,18 @@ private struct CodeBlockView: View {
                     .font(.system(size: 11.5, weight: .regular))
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
+                Button(action: toggleWrap) {
+                    Image(systemName: "arrow.turn.down.left")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(wrapForegroundColor)
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .onHover { hoverWrap = $0 }
+                .help(appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap")
+                .accessibilityLabel(
+                    appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap"
+                )
                 Button(action: copyCode) {
                     Group {
                         if copied {
@@ -300,13 +314,7 @@ private struct CodeBlockView: View {
             .padding(.top, 10)
             .padding(.bottom, 6)
 
-            Text(code)
-                .font(.system(size: 12.5, design: .monospaced))
-                .foregroundColor(Palette.textPrimary.opacity(0.94))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 12)
-                .textSelection(.enabled)
+            codeBody
         }
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -316,6 +324,39 @@ private struct CodeBlockView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
         )
+    }
+
+    @ViewBuilder
+    private var codeBody: some View {
+        if appState.chatCodeBlockWordWrap {
+            Text(code)
+                .font(.system(size: 12.5, design: .monospaced))
+                .foregroundColor(Palette.textPrimary.opacity(0.94))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
+                .textSelection(.enabled)
+        } else {
+            ScrollView(.horizontal, showsIndicators: true) {
+                Text(code)
+                    .font(.system(size: 12.5, design: .monospaced))
+                    .foregroundColor(Palette.textPrimary.opacity(0.94))
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private var wrapForegroundColor: Color {
+        let on = appState.chatCodeBlockWordWrap
+        if hoverWrap { return Color(white: on ? 0.94 : 0.85) }
+        return Color(white: on ? 0.78 : 0.45)
+    }
+
+    private func toggleWrap() {
+        appState.chatCodeBlockWordWrap.toggle()
     }
 
     private func copyCode() {
