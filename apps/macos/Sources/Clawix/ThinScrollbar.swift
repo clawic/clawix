@@ -81,11 +81,35 @@ final class ThinScroller: NSScroller {
     }
 
     private static let verticalPad: CGFloat = 8
-    private static let thumbWidth: CGFloat = 8
+    private static let thumbWidth: CGFloat = 9
     private static let thumbInsetFromRight: CGFloat = 3
+    private static let knobZPosition: CGFloat = 100
 
     private var mouseInside: Bool = false
     private var trackingArea: NSTrackingArea?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        installLayer()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        installLayer()
+    }
+
+    private func installLayer() {
+        wantsLayer = true
+        // Eagerly create the backing layer so the zPosition we set below
+        // lands on an actual layer instead of being lost. Without this,
+        // AppKit can defer layer creation past our first writes and leave
+        // the scroller composited under the SwiftUI hosting view until a
+        // later redraw (e.g. mouseEntered) finally reasserts the order.
+        if layer == nil {
+            layer = CALayer()
+        }
+        layer?.zPosition = ThinScroller.knobZPosition
+    }
 
     private func trackRect() -> NSRect {
         let b = self.bounds
@@ -128,7 +152,7 @@ final class ThinScroller: NSScroller {
         guard thumb.width > 0, thumb.height > 0 else { return }
         let radius = min(thumb.width, thumb.height) / 2
         let path = NSBezierPath(roundedRect: thumb, xRadius: radius, yRadius: radius)
-        let alpha: CGFloat = mouseInside ? 0.14 : 0.07
+        let alpha: CGFloat = mouseInside ? 0.18 : 0.10
         NSColor(white: 1.0, alpha: alpha).setFill()
         path.fill()
     }
@@ -173,6 +197,94 @@ final class ThinScroller: NSScroller {
         // Re-assert z-order after AppKit reattaches the scroller. Without
         // this the knob's left edge can disappear under the SwiftUI
         // hosting layer when the scroll view is re-tiled.
-        layer?.zPosition = 1
+        layer?.zPosition = ThinScroller.knobZPosition
+    }
+
+    // Re-pin zPosition on every layout pass: the SwiftUI hosting view's
+    // layer composites above ours unless this stays high, and AppKit can
+    // reset implicit layer state during overlay-scroller re-tiles.
+    override func layout() {
+        super.layout()
+        layer?.zPosition = ThinScroller.knobZPosition
+    }
+
+    override func viewWillDraw() {
+        super.viewWillDraw()
+        layer?.zPosition = ThinScroller.knobZPosition
+    }
+}
+
+// MARK: - ThinScrollerInstaller
+//
+// Swaps the system NSScroller of a SwiftUI `ScrollView` with our
+// `ThinScroller` so the chat (and any other view that needs a real
+// `ScrollViewReader`) gets the same low-opacity, thin capsule as the
+// sidebar without giving up SwiftUI's programmatic scrolling.
+//
+// SwiftUI's ScrollView is backed by an NSScrollView at runtime, but it
+// doesn't expose the scroller. The trick is to drop a hidden NSView
+// sibling inside the scroll view's content via `.background`, then walk
+// up the superview chain to find the NSScrollView and replace its
+// verticalScroller. We re-apply on every `viewDidMoveToWindow` and on
+// the next runloop after layout in case AppKit re-tiles.
+struct ThinScrollerInstaller: NSViewRepresentable {
+    func makeNSView(context: Context) -> ThinScrollerInstallerView {
+        ThinScrollerInstallerView()
+    }
+
+    func updateNSView(_ nsView: ThinScrollerInstallerView, context: Context) {
+        nsView.installIfNeeded()
+    }
+}
+
+final class ThinScrollerInstallerView: NSView {
+    private weak var installedScrollView: NSScrollView?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        DispatchQueue.main.async { [weak self] in
+            self?.installIfNeeded()
+        }
+    }
+
+    func installIfNeeded() {
+        guard installedScrollView == nil || installedScrollView?.verticalScroller is ThinScroller == false else {
+            return
+        }
+        var current: NSView? = self.superview
+        while let view = current {
+            if let scrollView = view as? NSScrollView {
+                attachThinScroller(to: scrollView)
+                installedScrollView = scrollView
+                return
+            }
+            current = view.superview
+        }
+    }
+
+    private func attachThinScroller(to scrollView: NSScrollView) {
+        let scroller = ThinScroller()
+        scroller.scrollerStyle = .overlay
+        scroller.controlSize = .regular
+        scroller.wantsLayer = true
+
+        scrollView.scrollerStyle = .overlay
+        scrollView.autohidesScrollers = true
+        scrollView.hasVerticalScroller = true
+        scrollView.verticalScroller = scroller
+
+        scroller.layer?.zPosition = 1
+        if let clipView = scrollView.contentView as NSClipView? {
+            clipView.wantsLayer = true
+            scrollView.addSubview(scroller, positioned: .above, relativeTo: clipView)
+        }
+    }
+}
+
+extension View {
+    /// Replace the underlying SwiftUI `ScrollView`'s vertical scroller
+    /// with the same thin, low-opacity capsule used by the sidebar.
+    func thinScrollers() -> some View {
+        background(ThinScrollerInstaller().allowsHitTesting(false))
     }
 }
