@@ -1,5 +1,12 @@
 import SwiftUI
 
+// Floating Liquid Glass composer. Lives over the transcript: the
+// chat content fades behind the glass capsule (real refraction on
+// iOS 26 thanks to `glassEffect`) while the round white send button
+// floats just inside the right edge of the pill. The pill is
+// intentionally tall so the bar reads as a primary surface, not as
+// a thin toolbar.
+
 struct ComposerView: View {
     @Binding var text: String
     let onSend: () -> Void
@@ -11,28 +18,34 @@ struct ComposerView: View {
     }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 10) {
+        HStack(alignment: .bottom, spacing: 6) {
+            plusButton
             field
-            sendButton
+            trailingButton
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .glassCapsule()
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Palette.background)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Palette.borderSubtle)
-                .frame(height: 0.5)
+    }
+
+    private var plusButton: some View {
+        Button(action: {}) {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(Palette.textPrimary)
+                .frame(width: 42, height: 42)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Attachments")
     }
 
     private var field: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .leading) {
             if text.isEmpty {
-                Text("Send a message")
+                Text("Ask Clawix")
                     .font(Typography.bodyFont)
-                    .foregroundStyle(Palette.textTertiary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .foregroundStyle(Palette.textSecondary)
                     .allowsHitTesting(false)
             }
             TextField("", text: $text, axis: .vertical)
@@ -40,33 +53,34 @@ struct ComposerView: View {
                 .foregroundStyle(Palette.textPrimary)
                 .lineLimit(1...6)
                 .focused($focused)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                .tint(Color.white)
         }
-        .background(
-            RoundedRectangle(cornerRadius: AppLayout.composerCornerRadius, style: .continuous)
-                .fill(Palette.cardFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppLayout.composerCornerRadius, style: .continuous)
-                .strokeBorder(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
-        )
+        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
     }
 
-    private var sendButton: some View {
-        Button(action: triggerSend) {
-            Image(systemName: "arrow.up")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(canSend ? Palette.background : Palette.textTertiary)
-                .frame(width: 38, height: 38)
-                .background(
-                    Circle()
-                        .fill(canSend ? Color.white : Palette.cardFill)
-                )
+    @ViewBuilder
+    private var trailingButton: some View {
+        if canSend {
+            Button(action: triggerSend) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.black)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(Color.white))
+            }
+            .buttonStyle(.plain)
+            .transition(.scale.combined(with: .opacity))
+        } else {
+            Button(action: {}) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.black)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(Color.white))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Voice")
         }
-        .buttonStyle(.plain)
-        .disabled(!canSend)
-        .animation(.easeOut(duration: 0.15), value: canSend)
     }
 
     private func triggerSend() {
@@ -79,6 +93,7 @@ struct ComposerView: View {
     StatefulPreviewWrapper("") { binding in
         ComposerView(text: binding, onSend: {})
             .preferredColorScheme(.dark)
+            .padding(.vertical, 40)
             .background(Palette.background)
     }
 }
@@ -87,6 +102,7 @@ struct ComposerView: View {
     StatefulPreviewWrapper("Help me find the bug in the receive loop") { binding in
         ComposerView(text: binding, onSend: {})
             .preferredColorScheme(.dark)
+            .padding(.vertical, 40)
             .background(Palette.background)
     }
 }
