@@ -52,6 +52,12 @@ struct ChatView: View {
                                         }
                                     )
                                     .id(msg.id)
+
+                                    if msg.id == chat.forkBannerAfterMessageId,
+                                       let parentChatId = chat.forkedFromChatId {
+                                        ForkedFromBanner(parentChatId: parentChatId)
+                                            .padding(.top, -20)
+                                    }
                                 }
                             }
                             .textSelection(.enabled)
@@ -633,7 +639,7 @@ private struct MessageRow: View {
             ? String(localized: "Copied", bundle: AppLocale.bundle, locale: AppLocale.current)
             : String(localized: "Copy", bundle: AppLocale.bundle, locale: AppLocale.current)
         let editLabel = String(localized: "Edit", bundle: AppLocale.bundle, locale: AppLocale.current)
-        let branchLabel = String(localized: "Branch out", bundle: AppLocale.bundle, locale: AppLocale.current)
+        let forkLabel = String(localized: "Fork conversation", bundle: AppLocale.bundle, locale: AppLocale.current)
 
         HStack(spacing: -1) {
             if isUser {
@@ -656,7 +662,12 @@ private struct MessageRow: View {
                                   label: copyLabel,
                                   action: handleCopy)
                 MessageActionIcon(kind: .branchArrows,
-                                  label: branchLabel) {}
+                                  label: forkLabel) {
+                    appState.forkConversation(
+                        chatId: chatId,
+                        atMessageId: message.id
+                    )
+                }
                 timestampLabel
                     .opacity(isLastAssistantMessage ? (rowHovered ? 1 : 0) : 1)
                     .animation(.easeOut(duration: 0.15), value: rowHovered)
@@ -1376,6 +1387,61 @@ struct PencilIconView: View {
             context.stroke(pencil, with: .color(color), style: stroke)
             context.stroke(ferrule, with: .color(color), style: stroke)
         }
+    }
+}
+
+// MARK: - Forked from conversation banner
+
+/// Centered separator with a branch glyph and a tappable label that
+/// navigates back to the parent chat. Sits between the copied parent
+/// transcript and any new turns the user adds in the forked chat.
+private struct ForkedFromBanner: View {
+    let parentChatId: UUID
+    @EnvironmentObject var appState: AppState
+    @State private var hovered = false
+
+    private var accent: Color {
+        Color(red: 0.34, green: 0.62, blue: 1.0)
+    }
+
+    private var ruleColor: Color { Color.white.opacity(0.10) }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(ruleColor)
+                .frame(height: 0.6)
+                .frame(maxWidth: .infinity)
+
+            Button(action: navigateToParent) {
+                HStack(spacing: 6) {
+                    BranchArrowsIconView(color: accent, lineWidth: 0.95)
+                        .frame(width: 13, height: 13)
+                    Text("Forked from conversation")
+                        .font(.system(size: 12.5))
+                        .foregroundColor(accent)
+                        .underline(hovered, color: accent)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { hovered = $0 }
+            .accessibilityLabel("Open the conversation this chat was forked from")
+
+            Rectangle()
+                .fill(ruleColor)
+                .frame(height: 0.6)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func navigateToParent() {
+        guard appState.chats.contains(where: { $0.id == parentChatId })
+                || appState.archivedChats.contains(where: { $0.id == parentChatId })
+        else { return }
+        appState.currentRoute = .chat(parentChatId)
     }
 }
 

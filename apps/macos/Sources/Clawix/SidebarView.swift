@@ -61,43 +61,54 @@ struct SidebarView: View {
     }
 
     private func makeSnapshot() -> SidebarSnapshot {
-        let order = appState.pinnedOrder
-        let pinIndex = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($1, $0) })
-        var pinnedRaw: [Chat] = []
-        var byProjectRaw: [UUID: [Chat]] = [:]
-        var chronoRaw: [Chat] = []
-        for chat in appState.chats {
-            if chat.isPinned {
-                pinnedRaw.append(chat)
-                continue
+        RenderProbe.time("makeSnapshot") {
+            let order = appState.pinnedOrder
+            let pinIndex = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($1, $0) })
+            var pinnedRaw: [Chat] = []
+            var byProjectRaw: [UUID: [Chat]] = [:]
+            var chronoRaw: [Chat] = []
+            for chat in appState.chats {
+                if chat.isPinned {
+                    pinnedRaw.append(chat)
+                    continue
+                }
+                if let pid = chat.projectId {
+                    byProjectRaw[pid, default: []].append(chat)
+                }
+                chronoRaw.append(chat)
             }
-            if let pid = chat.projectId {
-                byProjectRaw[pid, default: []].append(chat)
+            pinnedRaw.sort { lhs, rhs in
+                let li = pinIndex[lhs.id] ?? Int.max
+                let ri = pinIndex[rhs.id] ?? Int.max
+                if li != ri { return li < ri }
+                return lhs.createdAt > rhs.createdAt
             }
-            chronoRaw.append(chat)
+            chronoRaw.sort { $0.createdAt > $1.createdAt }
+            var byProject: [UUID: [Chat]] = [:]
+            var recentDateByProject: [UUID: Date] = [:]
+            byProject.reserveCapacity(byProjectRaw.count)
+            recentDateByProject.reserveCapacity(byProjectRaw.count)
+            for (pid, list) in byProjectRaw {
+                let sortedList = list.sorted { $0.createdAt > $1.createdAt }
+                byProject[pid] = Array(sortedList.prefix(10))
+                recentDateByProject[pid] = sortedList.first?.createdAt
+            }
+            return SidebarSnapshot(
+                pinned: pinnedRaw,
+                byProject: byProject,
+                recentDateByProject: recentDateByProject,
+                chrono: chronoRaw
+            )
         }
-        pinnedRaw.sort { lhs, rhs in
-            let li = pinIndex[lhs.id] ?? Int.max
-            let ri = pinIndex[rhs.id] ?? Int.max
-            if li != ri { return li < ri }
-            return lhs.createdAt > rhs.createdAt
-        }
-        chronoRaw.sort { $0.createdAt > $1.createdAt }
-        var byProject: [UUID: [Chat]] = [:]
-        var recentDateByProject: [UUID: Date] = [:]
-        byProject.reserveCapacity(byProjectRaw.count)
-        recentDateByProject.reserveCapacity(byProjectRaw.count)
-        for (pid, list) in byProjectRaw {
-            let sortedList = list.sorted { $0.createdAt > $1.createdAt }
-            byProject[pid] = Array(sortedList.prefix(10))
-            recentDateByProject[pid] = sortedList.first?.createdAt
-        }
-        return SidebarSnapshot(
-            pinned: pinnedRaw,
-            byProject: byProject,
-            recentDateByProject: recentDateByProject,
-            chrono: chronoRaw
-        )
+    }
+
+    private func recentChatCallbacks(for chat: Chat, archived: Bool) -> RecentChatRowCallbacks {
+        makeRecentChatCallbacks(appState: appState, chat: chat, archived: archived)
+    }
+
+    private var selectedChatId: UUID? {
+        if case let .chat(id) = appState.currentRoute { return id }
+        return nil
     }
 
     private func sortedProjects(snapshot: SidebarSnapshot) -> [Project] {
@@ -153,8 +164,15 @@ struct SidebarView: View {
                                 .padding(.leading, 36)
                                 .padding(.vertical, 4)
                         } else {
+                            let currentChatId = selectedChatId
                             ForEach(snapshot.chrono.prefix(chronoLimit), id: \.id) { chat in
-                                RecentChatRow(chat: chat, leadingIcon: .pinOnHover)
+                                RecentChatRow(
+                                    chat: chat,
+                                    isSelected: currentChatId == chat.id,
+                                    leadingIcon: .pinOnHover,
+                                    callbacks: recentChatCallbacks(for: chat, archived: false)
+                                )
+                                .equatable()
                             }
                         }
                     }
@@ -162,6 +180,37 @@ struct SidebarView: View {
                 }
                 AnimatedSidebarDivider(visible: chronoExpanded)
             } else {
+                let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
+                if !projectlessChats.isEmpty {
+                    sectionHeader(
+                        "Chats",
+                        expanded: $noProjectExpanded,
+                        leadingIcon: AnyView(
+                            Image(systemName: "bubble.left")
+                                .font(.system(size: 11.5, weight: .regular))
+                        )
+                    )
+                    SidebarAccordion(
+                        expanded: noProjectExpanded,
+                        targetHeight: SidebarRowMetrics.recentChats(count: projectlessChats.count)
+                    ) {
+                        let currentChatId = selectedChatId
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(projectlessChats) { chat in
+                                RecentChatRow(
+                                    chat: chat,
+                                    isSelected: currentChatId == chat.id,
+                                    leadingIcon: .pinOnHover,
+                                    callbacks: recentChatCallbacks(for: chat, archived: false)
+                                )
+                                .equatable()
+                            }
+                        }
+                        .padding(.leading, 8)
+                    }
+                    AnimatedSidebarDivider(visible: noProjectExpanded)
+                }
+
                 projectsHeader
                     .padding(.leading, 18)
                     .padding(.trailing, 9)
@@ -176,7 +225,13 @@ struct SidebarView: View {
                 // to height 0 while collapsed, so the height preference
                 // arrives as 0 and never recovers.
                 if projectsExpanded {
-                    VStack(alignment: .leading, spacing: 4) {
+                    let currentChatId = selectedChatId
+                    // `LazyVStack` instead of `VStack` so accordion bodies
+                    // for projects scrolled out of view never instantiate.
+                    // Visible projects still re-evaluate normally; the
+                    // saving is the long tail of off-screen ones (~70-90
+                    // out of ~100 in a typical sidebar).
+                    LazyVStack(alignment: .leading, spacing: 4) {
                         ForEach(sortedProjects(snapshot: snapshot)) { project in
                             ChatDropTarget { droppedId in
                                 appState.moveChatToProject(chatId: droppedId, projectId: project.id)
@@ -201,8 +256,11 @@ struct SidebarView: View {
                                     onNewChat: {
                                         appState.startNewChat(in: project)
                                     },
-                                    menuOpen: projectMenuOpenId == project.id
+                                    menuOpen: projectMenuOpenId == project.id,
+                                    selectedChatId: currentChatId,
+                                    chatCallbacks: { recentChatCallbacks(for: $0, archived: false) }
                                 )
+                                .equatable()
                             }
                         }
                     }
@@ -210,30 +268,6 @@ struct SidebarView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
                 AnimatedSidebarDivider(visible: projectsExpanded)
-
-                let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
-                if !projectlessChats.isEmpty {
-                    sectionHeader(
-                        "No project",
-                        expanded: $noProjectExpanded,
-                        leadingIcon: AnyView(
-                            Image(systemName: "bubble.left")
-                                .font(.system(size: 11.5, weight: .regular))
-                        )
-                    )
-                    SidebarAccordion(
-                        expanded: noProjectExpanded,
-                        targetHeight: SidebarRowMetrics.recentChats(count: projectlessChats.count)
-                    ) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(projectlessChats) { chat in
-                                RecentChatRow(chat: chat, leadingIcon: .pinOnHover)
-                            }
-                        }
-                        .padding(.leading, 8)
-                    }
-                    AnimatedSidebarDivider(visible: noProjectExpanded)
-                }
             }
 
             archivedSection
@@ -283,8 +317,16 @@ struct SidebarView: View {
                     .padding(.leading, 36)
                     .padding(.vertical, 4)
                 } else {
+                    let currentChatId = selectedChatId
                     ForEach(appState.archivedChats) { chat in
-                        RecentChatRow(chat: chat, leadingIcon: .unarchive, archivedRow: true)
+                        RecentChatRow(
+                            chat: chat,
+                            isSelected: currentChatId == chat.id,
+                            leadingIcon: .unarchive,
+                            archivedRow: true,
+                            callbacks: recentChatCallbacks(for: chat, archived: true)
+                        )
+                        .equatable()
                     }
                 }
             }
@@ -334,9 +376,8 @@ struct SidebarView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 6)
 
-                ThinScrollView {
+                ThinScrollView(trailingGutter: 14) {
                     sidebarScrollContent(snapshot: makeSnapshot())
-                        .padding(.trailing, 14)
                 }
 
                 // Settings button at bottom (toggles account popover above it)
@@ -509,7 +550,7 @@ struct SidebarView: View {
     }
 
     private var chronoHeader: some View {
-        sidebarHeader(title: "Chats",
+        sidebarHeader(title: "All chats",
                       showCollapseAll: false,
                       showNewChat: true,
                       alwaysShow: true,
@@ -1333,15 +1374,53 @@ private struct PinnedIcon: Shape {
 
 enum SidebarChatLeadingIcon { case none, pin, pinOnHover, bubble, unarchive }
 
-struct RecentChatRow: View {
+/// Action callbacks the row needs but doesn't own. Held externally so the
+/// row can drop `@EnvironmentObject var appState` and become `Equatable`:
+/// SwiftUI then short-circuits body re-evaluation when nothing in the row's
+/// data inputs changed, even if some other slice of `AppState` did. Each
+/// callback captures `appState` (and the chat id) at construction time on
+/// the parent side; the parent rebuilds them on demand whenever the row
+/// re-evaluates.
+struct RecentChatRowCallbacks {
+    let onSelect: () -> Void
+    let onArchive: () -> Void
+    let onUnarchive: () -> Void
+    let onTogglePin: () -> Void
+    let onContextMenu: (NSPoint) -> Void
+}
+
+/// Free-function factory: kept out of `SidebarView` so other sidebar
+/// containers (e.g. `PinnedReorderableList`) can build the same callbacks
+/// from their own `appState` reference without reaching back into the
+/// outer view.
+@MainActor
+private func makeRecentChatCallbacks(appState: AppState, chat: Chat, archived: Bool) -> RecentChatRowCallbacks {
+    let chatId = chat.id
+    let chatSnapshot = chat
+    return RecentChatRowCallbacks(
+        onSelect: { appState.currentRoute = .chat(chatId) },
+        onArchive: { appState.archiveChat(chatId: chatId) },
+        onUnarchive: { appState.unarchiveChat(chatId: chatId) },
+        onTogglePin: { appState.togglePin(chatId: chatId) },
+        onContextMenu: { screenPoint in
+            SidebarChatContextMenuPanel.present(
+                at: screenPoint,
+                chat: chatSnapshot,
+                isArchived: archived,
+                appState: appState
+            )
+        }
+    )
+}
+
+struct RecentChatRow: View, Equatable {
     let chat: Chat
+    /// Pre-computed `currentRoute == .chat(chat.id)`. Lifted out of the row
+    /// so the row's `Equatable` check can detect selection changes without
+    /// having to subscribe to `AppState`.
+    let isSelected: Bool
     var indent: CGFloat = 0
     var leadingIcon: SidebarChatLeadingIcon = .bubble
-    /// Called from `.onDrag` the moment AppKit asks for the drag's
-    /// `NSItemProvider`. The reorderable pinned list uses it to mark the
-    /// row as the drag source so it can collapse its slot to 0 height
-    /// while the drag is active.
-    var onDragStart: (() -> Void)? = nil
     /// Disables the hovered-row tint. The reorderable pinned list flips
     /// it on while a drag is active so dragging over another row doesn't
     /// read as "you can drop on this chat" — drops only land in the gaps.
@@ -1351,15 +1430,35 @@ struct RecentChatRow: View {
     /// archived chat has no slot to drop into) and the context menu is
     /// trimmed to actions that still make sense.
     var archivedRow: Bool = false
-    @EnvironmentObject var appState: AppState
+    let callbacks: RecentChatRowCallbacks
+    /// Called from `.onDrag` the moment AppKit asks for the drag's
+    /// `NSItemProvider`. The reorderable pinned list uses it to mark the
+    /// row as the drag source so it can collapse its slot to 0 height
+    /// while the drag is active.
+    var onDragStart: (() -> Void)? = nil
+
     @State private var hovered = false
     @State private var pinHovered = false
     @State private var archiveHovered = false
     @State private var unarchiveHovered = false
 
-    private var isSelected: Bool {
-        if case let .chat(id) = appState.currentRoute, id == chat.id { return true }
-        return false
+    /// Closures are deliberately excluded from equality: they are recreated
+    /// every parent render but capture `appState` (a stable reference) and
+    /// chat id (a stable value), so a "stale" closure still does the right
+    /// thing. Comparing only data fields lets SwiftUI skip body when none
+    /// of them moved, even when the closure identities did.
+    static func == (lhs: RecentChatRow, rhs: RecentChatRow) -> Bool {
+        lhs.chat.id == rhs.chat.id
+            && lhs.chat.title == rhs.chat.title
+            && lhs.chat.hasActiveTurn == rhs.chat.hasActiveTurn
+            && lhs.chat.hasUnreadCompletion == rhs.chat.hasUnreadCompletion
+            && lhs.chat.lastTurnInterrupted == rhs.chat.lastTurnInterrupted
+            && lhs.chat.createdAt == rhs.chat.createdAt
+            && lhs.isSelected == rhs.isSelected
+            && lhs.indent == rhs.indent
+            && lhs.leadingIcon == rhs.leadingIcon
+            && lhs.suppressHoverStyling == rhs.suppressHoverStyling
+            && lhs.archivedRow == rhs.archivedRow
     }
 
     private var ageLabel: String { Self.relative(from: chat.createdAt) }
@@ -1373,9 +1472,7 @@ struct RecentChatRow: View {
                     .padding(.trailing, 2)
                     .transition(.opacity.combined(with: .scale(scale: 0.7)))
             } else if hovered && !archivedRow {
-                Button {
-                    appState.archiveChat(chatId: chat.id)
-                } label: {
+                Button(action: callbacks.onArchive) {
                     ArchiveIcon(size: 14.5)
                         .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
                         .frame(width: 14, height: 14)
@@ -1386,6 +1483,18 @@ struct RecentChatRow: View {
                 .help(L10n.t("Archive"))
                 .padding(.trailing, 2)
                 .transition(.opacity)
+            } else if !archivedRow && chat.lastTurnInterrupted {
+                // Amber dot. Distinct from the unread-completion blue
+                // dot so the user can tell at a glance "the assistant
+                // didn't finish" from "the assistant finished while I
+                // was elsewhere".
+                Circle()
+                    .fill(Color(red: 1.0, green: 0.78, blue: 0.30))
+                    .frame(width: 7, height: 7)
+                    .frame(width: 14, height: 14)
+                    .padding(.trailing, 2)
+                    .help(L10n.t("Last turn interrupted"))
+                    .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
             } else if !archivedRow && chat.hasUnreadCompletion {
                 Circle()
                     .fill(Palette.pastelBlue)
@@ -1402,10 +1511,12 @@ struct RecentChatRow: View {
         }
         .animation(.smooth(duration: 0.55, extraBounce: 0), value: chat.hasActiveTurn)
         .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.hasUnreadCompletion)
+        .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.lastTurnInterrupted)
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        RenderProbe.tick("RecentChatRow")
+        return HStack(spacing: 10) {
             leadingIconView
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
@@ -1424,9 +1535,7 @@ struct RecentChatRow: View {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(rowBackground)
         )
-        .onTapGesture {
-            appState.currentRoute = .chat(chat.id)
-        }
+        .onTapGesture(perform: callbacks.onSelect)
         .onHover { hovered = $0 }
         .animation(.easeOut(duration: 0.12), value: hovered)
         .animation(.easeOut(duration: 0.12), value: pinHovered)
@@ -1457,16 +1566,7 @@ struct RecentChatRow: View {
             // we close instantly on drop.
             Color.clear.frame(width: 1, height: 1)
         }
-        .overlay(
-            SidebarRightClickCatcher { screenPoint in
-                SidebarChatContextMenuPanel.present(
-                    at: screenPoint,
-                    chat: chat,
-                    isArchived: archivedRow,
-                    appState: appState
-                )
-            }
-        )
+        .overlay(SidebarRightClickCatcher(onRightClick: callbacks.onContextMenu))
     }
 
     @ViewBuilder
@@ -1497,9 +1597,7 @@ struct RecentChatRow: View {
     }
 
     private func unarchiveButton() -> some View {
-        Button {
-            appState.unarchiveChat(chatId: chat.id)
-        } label: {
+        Button(action: callbacks.onUnarchive) {
             ArchiveUnarchiveMorphIcon(size: 15.5, hovered: unarchiveHovered)
                 .frame(width: 14, height: 14)
                 .contentShape(Rectangle())
@@ -1516,9 +1614,7 @@ struct RecentChatRow: View {
         // hover state, the moment the cursor crosses into the icon the parent
         // briefly loses hover, the icon flips back to non hit testable, and
         // the cursor falls through, producing the flicker the user reported.
-        Button {
-            appState.togglePin(chatId: chat.id)
-        } label: {
+        Button(action: callbacks.onTogglePin) {
             PinIcon(size: 12.5)
                 .foregroundColor(color)
                 .frame(width: 14, height: 14)
@@ -1565,7 +1661,7 @@ private struct SidebarChatRowSpinner: View {
 
 // MARK: - ProjectAccordion
 
-private struct ProjectAccordion: View {
+private struct ProjectAccordion: View, Equatable {
     let project: Project
     let expanded: Bool
     let chats: [Chat]
@@ -1574,14 +1670,53 @@ private struct ProjectAccordion: View {
     let onMenuToggle: () -> Void
     let onNewChat: () -> Void
     let menuOpen: Bool
+    /// Currently selected chat id, lifted out so the accordion's `Equatable`
+    /// check can detect "the user navigated to / away from a chat in this
+    /// project" without subscribing to `AppState`.
+    let selectedChatId: UUID?
+    /// Factory that produces per-row callbacks. The closure itself is
+    /// excluded from `==`; it captures `appState` and the chat id on the
+    /// parent side, both stable across renders.
+    let chatCallbacks: (Chat) -> RecentChatRowCallbacks
 
-    @EnvironmentObject var appState: AppState
     @State private var hovered = false
     @State private var newChatHovered = false
     @State private var menuHovered = false
 
+    static func == (lhs: ProjectAccordion, rhs: ProjectAccordion) -> Bool {
+        lhs.project.id == rhs.project.id
+            && lhs.project.name == rhs.project.name
+            && lhs.expanded == rhs.expanded
+            && lhs.loading == rhs.loading
+            && lhs.menuOpen == rhs.menuOpen
+            && lhs.selectedChatId == rhs.selectedChatId
+            && Self.chatsEqual(lhs.chats, rhs.chats)
+    }
+
+    /// Compare only the `Chat` fields the inner row actually renders
+    /// (everything in `RecentChatRow.==`). Skips `messages`, `cwd`,
+    /// `branch`, etc. — those mutate often during streaming and would
+    /// invalidate the accordion for nothing.
+    private static func chatsEqual(_ lhs: [Chat], _ rhs: [Chat]) -> Bool {
+        if lhs.count != rhs.count { return false }
+        for i in 0..<lhs.count {
+            let l = lhs[i]
+            let r = rhs[i]
+            if l.id != r.id
+                || l.title != r.title
+                || l.hasActiveTurn != r.hasActiveTurn
+                || l.hasUnreadCompletion != r.hasUnreadCompletion
+                || l.lastTurnInterrupted != r.lastTurnInterrupted
+                || l.createdAt != r.createdAt {
+                return false
+            }
+        }
+        return true
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
+        RenderProbe.tick("ProjectAccordion")
+        return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 0) {
                 Button(action: { withAnimation(.easeOut(duration: 0.28)) { onToggle() } }) {
                     HStack(spacing: 8) {
@@ -1671,7 +1806,13 @@ private struct ProjectAccordion: View {
                         .padding(.vertical, 4)
                     }
                     ForEach(chats) { chat in
-                        RecentChatRow(chat: chat, leadingIcon: .pinOnHover)
+                        RecentChatRow(
+                            chat: chat,
+                            isSelected: selectedChatId == chat.id,
+                            leadingIcon: .pinOnHover,
+                            callbacks: chatCallbacks(chat)
+                        )
+                        .equatable()
                     }
                 }
             }
@@ -1806,7 +1947,8 @@ private struct PinnedRow: View {
     @State private var hovered = false
 
     var body: some View {
-        HStack(spacing: 10) {
+        RenderProbe.tick("PinnedRow")
+        return HStack(spacing: 10) {
             PinnedIcon()
                 .stroke(Color(white: 0.58),
                         style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
@@ -2129,6 +2271,11 @@ private struct PinnedReorderableList: View {
     @EnvironmentObject var appState: AppState
     let pinned: [Chat]
 
+    private var selectedChatId: UUID? {
+        if case let .chat(id) = appState.currentRoute { return id }
+        return nil
+    }
+
     @State private var draggingId: UUID? = nil
     @State private var targetIndex: Int? = nil
     @State private var pendingClearTask: DispatchWorkItem? = nil
@@ -2171,7 +2318,8 @@ private struct PinnedReorderableList: View {
     private static let moveAnimation: Animation = .easeInOut(duration: 0.20)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        RenderProbe.tick("PinnedReorderableList")
+        return VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(pinned.enumerated()), id: \.element.id) { (i, chat) in
                 slotZone(chat: chat, slot: i)
             }
@@ -2230,10 +2378,13 @@ private struct PinnedReorderableList: View {
                 ))
             RecentChatRow(
                 chat: chat,
+                isSelected: selectedChatId == chat.id,
                 leadingIcon: .pin,
-                onDragStart: { handleDragStart(chat: chat) },
-                suppressHoverStyling: dragActive
+                suppressHoverStyling: dragActive,
+                callbacks: makeRecentChatCallbacks(appState: appState, chat: chat, archived: false),
+                onDragStart: { handleDragStart(chat: chat) }
             )
+            .equatable()
             .opacity(isDragging ? 0 : 1)
             .frame(height: isDragging ? 0 : nil, alignment: .top)
             .clipped()
@@ -2539,13 +2690,16 @@ private final class PinnedDragAutoScroller {
     private var timer: Timer?
 
     /// Distance from the top/bottom edge at which auto-scroll engages.
-    /// ~1.5 pinned rows: comfortable hit area without triggering during
-    /// normal mid-list dragging.
-    private let edgeZone: CGFloat = 56
-    /// Peak scroll speed (px/s) at the very edge. Squared falloff in
-    /// `tick(dt:)` keeps motion gentle near the boundary of `edgeZone`
-    /// and ramps up sharply only as the cursor approaches the edge.
-    private let maxSpeed: CGFloat = 900
+    /// ~3 pinned rows: wide enough that the user can park the cursor
+    /// near the edge without having to nail it pixel-perfect.
+    private let edgeZone: CGFloat = 96
+    /// Speed (px/s) at the boundary of `edgeZone`. Even a slight nudge
+    /// into the zone scrolls visibly instead of crawling.
+    private let minSpeed: CGFloat = 600
+    /// Peak scroll speed (px/s) right at the edge. ~3000 traverses
+    /// the visible sidebar in roughly a third of a second, so a long
+    /// pinned list moves quickly when the cursor is pinned to the edge.
+    private let maxSpeed: CGFloat = 3000
 
     init(box: EnclosingScrollViewBox) {
         self.box = box
@@ -2583,13 +2737,19 @@ private final class PinnedDragAutoScroller {
             : (bounds.maxY - cursorClip.y)
         let visibleH = bounds.height
 
+        // Linear ramp from `minSpeed` (factor=0, just inside the zone)
+        // to `maxSpeed` (factor=1, glued to the edge). A floor speed
+        // means scrolling kicks in immediately when the cursor enters
+        // the zone instead of crawling for the first few pixels.
         var delta: CGFloat = 0
         if yFromTop < edgeZone {
-            let factor = (edgeZone - yFromTop) / edgeZone
-            delta = -(factor * factor) * maxSpeed * CGFloat(dt)
+            let factor = max(0, min(1, (edgeZone - yFromTop) / edgeZone))
+            let speed = minSpeed + (maxSpeed - minSpeed) * factor
+            delta = -speed * CGFloat(dt)
         } else if yFromTop > visibleH - edgeZone {
-            let factor = (yFromTop - (visibleH - edgeZone)) / edgeZone
-            delta = (factor * factor) * maxSpeed * CGFloat(dt)
+            let factor = max(0, min(1, (yFromTop - (visibleH - edgeZone)) / edgeZone))
+            let speed = minSpeed + (maxSpeed - minSpeed) * factor
+            delta = speed * CGFloat(dt)
         }
         guard abs(delta) > 0.05 else { return }
 

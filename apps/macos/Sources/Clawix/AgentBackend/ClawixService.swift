@@ -309,6 +309,31 @@ final class ClawixService: ObservableObject {
         await sendUserMessage(chatId: chatId, text: newText)
     }
 
+    /// Fork the parent thread into a new server-side thread and bind it
+    /// to `newChatId`. Returns the new thread id on success. The runtime
+    /// copies the parent's rollout into the new session and stamps it
+    /// with `forked_from_id` so the forked chat resumes with full
+    /// context on the next `turn/start`.
+    func forkThread(parentThreadId: String, newChatId: UUID) async throws -> String {
+        guard status == .ready else {
+            throw NSError(
+                domain: "ClawixService.fork",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Backend not ready"]
+            )
+        }
+        let result = try await client.send(
+            method: ClawixMethod.threadFork,
+            params: ThreadForkParams(threadId: parentThreadId, excludeTurns: true),
+            expecting: ThreadForkResult.self
+        )
+        let newThreadId = result.thread.id
+        threadByChat[newChatId] = newThreadId
+        chatByThread[newThreadId] = newChatId
+        appState?.attachThreadId(newThreadId, to: newChatId)
+        return newThreadId
+    }
+
     /// Bind an existing chat to a server thread (called by the sidebar
     /// when the user clicks an entry coming from SessionsIndex).
     func attach(chatId: UUID, threadId: String) async {

@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import AppKit
+import ClawixEngine
 
 // MARK: - Route
 
@@ -245,6 +246,25 @@ struct Chat: Identifiable {
     var availableBranches: [String]
     /// Number of files with uncommitted changes on `branch`. nil when unknown.
     var uncommittedFiles: Int?
+    /// When this chat was created by forking another conversation, the
+    /// parent chat's id. Drives the trailing "Forked from conversation"
+    /// banner the renderer drops in after `forkBannerAfterMessageId`.
+    var forkedFromChatId: UUID?
+    /// Snapshot of the parent chat's title at fork time. Used as the
+    /// new chat's initial title (matches the screenshot — the fork keeps
+    /// the original title) and as the banner's tooltip / a11y label.
+    var forkedFromTitle: String?
+    /// The id of the last message included in the fork. The banner is
+    /// rendered immediately after this message in the chat transcript so
+    /// it sits between the copied parent history and any new turns the
+    /// user adds in the forked chat.
+    var forkBannerAfterMessageId: UUID?
+    /// True when the rollout shows the last assistant turn ended
+    /// without `final_answer` / `turn_completed` and has been quiet
+    /// past `RolloutReader.interruptedThreshold`. Drives the
+    /// "Interrupted, retry?" pill. Cleared when the user fires a new
+    /// prompt or the engine produces a fresh turn.
+    var lastTurnInterrupted: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -263,7 +283,11 @@ struct Chat: Identifiable {
         hasGitRepo: Bool = false,
         branch: String? = nil,
         availableBranches: [String] = [],
-        uncommittedFiles: Int? = nil
+        uncommittedFiles: Int? = nil,
+        forkedFromChatId: UUID? = nil,
+        forkedFromTitle: String? = nil,
+        forkBannerAfterMessageId: UUID? = nil,
+        lastTurnInterrupted: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -282,6 +306,10 @@ struct Chat: Identifiable {
         self.branch = branch
         self.availableBranches = availableBranches
         self.uncommittedFiles = uncommittedFiles
+        self.forkedFromChatId = forkedFromChatId
+        self.forkedFromTitle = forkedFromTitle
+        self.forkBannerAfterMessageId = forkBannerAfterMessageId
+        self.lastTurnInterrupted = lastTurnInterrupted
     }
 }
 
@@ -616,6 +644,15 @@ final class AppState: ObservableObject {
     let clawix: ClawixService?
     let auth = BackendAuthCoordinator()
     private var authObserver: AnyCancellable?
+    /// Diagnostic only: counts every `objectWillChange` fired by AppState so
+    /// `RenderProbe` shows how chatty the publisher is. Each tick on this
+    /// counter explains one downstream `SidebarView` invalidation.
+    private var willChangeProbe: AnyCancellable?
+    /// Bag of per-property publish probes. Each one ticks
+    /// `AppState.<propname>` whenever that `@Published` property is set,
+    /// so the render log can attribute every `AppState.willChange` to a
+    /// specific source.
+    private var publishProbes: [AnyCancellable] = []
 
     /// Local-network WS server that exposes this AppState to the iOS
     /// companion. Lazily created so the property doesn't take a
@@ -743,6 +780,43 @@ final class AppState: ObservableObject {
         authObserver = auth.objectWillChange.sink { [weak self] in
             self?.objectWillChange.send()
         }
+        willChangeProbe = objectWillChange.sink { _ in
+            RenderProbe.tick("AppState.willChange")
+        }
+        // Per-property publish probes. `$prop` for an `@Published var prop`
+        // emits each time the value is set, so each tick on `AppState.<x>`
+        // tells us what slice of state mutated immediately before a
+        // matching `AppState.willChange` tick. The `dropFirst()` skips the
+        // synchronous initial value emission.
+        publishProbes = [
+            $chats.dropFirst().sink { _ in RenderProbe.tick("AppState.chats") },
+            $pinnedOrder.dropFirst().sink { _ in RenderProbe.tick("AppState.pinnedOrder") },
+            $archivedChats.dropFirst().sink { _ in RenderProbe.tick("AppState.archivedChats") },
+            $archivedLoading.dropFirst().sink { _ in RenderProbe.tick("AppState.archivedLoading") },
+            $projects.dropFirst().sink { _ in RenderProbe.tick("AppState.projects") },
+            $selectedProject.dropFirst().sink { _ in RenderProbe.tick("AppState.selectedProject") },
+            $currentRoute.dropFirst().sink { _ in RenderProbe.tick("AppState.currentRoute") },
+            $loadingProjects.dropFirst().sink { _ in RenderProbe.tick("AppState.loadingProjects") },
+            $pendingPlanQuestions.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingPlanQuestions") },
+            $clawixBackendStatus.dropFirst().sink { _ in RenderProbe.tick("AppState.clawixBackendStatus") },
+            $rateLimits.dropFirst().sink { _ in RenderProbe.tick("AppState.rateLimits") },
+            $rateLimitsByLimitId.dropFirst().sink { _ in RenderProbe.tick("AppState.rateLimitsByLimitId") },
+            $hostFavicons.dropFirst().sink { _ in RenderProbe.tick("AppState.hostFavicons") },
+            $browserPageBackgroundColors.dropFirst().sink { _ in RenderProbe.tick("AppState.browserPageBackgroundColors") },
+            $recentSessions.dropFirst().sink { _ in RenderProbe.tick("AppState.recentSessions") },
+            $chatSidebars.dropFirst().sink { _ in RenderProbe.tick("AppState.chatSidebars") },
+            $pendingReloadTabId.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingReloadTabId") },
+            $richViewDisabledPaths.dropFirst().sink { _ in RenderProbe.tick("AppState.richViewDisabledPaths") },
+            $wordWrapEnabledPaths.dropFirst().sink { _ in RenderProbe.tick("AppState.wordWrapEnabledPaths") },
+            $isLeftSidebarOpen.dropFirst().sink { _ in RenderProbe.tick("AppState.isLeftSidebarOpen") },
+            $isRightSidebarMaximized.dropFirst().sink { _ in RenderProbe.tick("AppState.isRightSidebarMaximized") },
+            $isCommandPaletteOpen.dropFirst().sink { _ in RenderProbe.tick("AppState.isCommandPaletteOpen") },
+            $imagePreviewURL.dropFirst().sink { _ in RenderProbe.tick("AppState.imagePreviewURL") },
+            $pendingRenameChat.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingRenameChat") },
+            $pendingConfirmation.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingConfirmation") },
+            $searchQuery.dropFirst().sink { _ in RenderProbe.tick("AppState.searchQuery") },
+            $searchResults.dropFirst().sink { _ in RenderProbe.tick("AppState.searchResults") },
+        ]
 
         clawix?.appState = self
         if let clawix, ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] != "1" {
@@ -763,7 +837,7 @@ final class AppState: ObservableObject {
         // var. Disabled with CLAWIX_BRIDGE_DISABLE=1 for tests or
         // multi-instance debugging.
         if ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DISABLE"] != "1" {
-            let server = BridgeServer(appState: self, port: PairingService.shared.port)
+            let server = BridgeServer(host: self, port: PairingService.shared.port)
             server.start()
             self.bridgeServer = server
         }
@@ -1427,6 +1501,9 @@ final class AppState: ObservableObject {
 
         let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
         chats[idx].messages.append(userMsg)
+        // Sending a fresh prompt closes any earlier interrupted-turn
+        // pill: the user has acknowledged the gap and is moving on.
+        chats[idx].lastTurnInterrupted = false
 
         if let clawix {
             Task { @MainActor in
@@ -1562,8 +1639,8 @@ final class AppState: ObservableObject {
             chats[chatIndex].uncommittedFiles = git.uncommittedFiles
         }
         if let path = chat.rolloutPath {
-            let entries = RolloutReader.read(path: path)
-            chats[chatIndex].messages = entries.map { e in
+            let result = RolloutReader.readWithStatus(path: path)
+            chats[chatIndex].messages = result.entries.map { e in
                 ChatMessage(
                     role: e.role == .user ? .user : .assistant,
                     content: e.text,
@@ -1573,6 +1650,7 @@ final class AppState: ObservableObject {
                     timeline: e.timeline
                 )
             }
+            chats[chatIndex].lastTurnInterrupted = result.lastTurnInterrupted
         }
         chats[chatIndex].historyHydrated = true
         if let threadId = chat.clawixThreadId, let clawix {
@@ -1630,20 +1708,40 @@ final class AppState: ObservableObject {
               let last = chats[idx].messages.indices.last,
               chats[idx].messages[last].role == .assistant
         else { return }
+        let t0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
         chats[idx].messages[last].content += delta
         let cps = chats[idx].messages[last].streamCheckpoints
+        let lastAt = cps.last?.addedAt ?? .distantPast
         let result = StreamingFade.ingest(
             delta: delta,
             pendingTail: chats[idx].messages[last].streamPendingTail,
             scheduledLength: cps.last?.prefixCount ?? 0,
-            lastFadeStart: cps.last?.addedAt ?? .distantPast
+            lastFadeStart: lastAt
         )
         if !result.newCheckpoints.isEmpty {
             chats[idx].messages[last].streamCheckpoints
                 .append(contentsOf: result.newCheckpoints)
         }
         chats[idx].messages[last].streamPendingTail = result.pendingTail
+        if streamingPerfLogEnabled {
+            let t1 = CFAbsoluteTimeGetCurrent()
+            let dt = lastDeltaArrivalTime > 0 ? (t0 - lastDeltaArrivalTime) * 1000 : 0
+            lastDeltaArrivalTime = t0
+            let queueDepth = max(0, lastAt.timeIntervalSinceNow * 1000)
+            let totalLen = chats[idx].messages[last].content.count
+            let totalCps = chats[idx].messages[last].streamCheckpoints.count
+            let line = String(
+                format: "delta dt=%.1fms size=%d totalLen=%d ingest=%.2fms +cps=%d totalCps=%d pendTail=%d queueAheadMs=%.1f",
+                dt, delta.count, totalLen, (t1 - t0) * 1000,
+                result.newCheckpoints.count, totalCps,
+                result.pendingTail.count, queueDepth
+            )
+            streamingPerfLog.log("\(line, privacy: .public)")
+        }
     }
+    /// Wall-clock of the previous `appendAssistantDelta` call, used by
+    /// the perf log to surface inter-arrival jitter.
+    private var lastDeltaArrivalTime: Double = 0
 
     func appendReasoningDelta(chatId: UUID, delta: String) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }),
@@ -1690,6 +1788,9 @@ final class AppState: ObservableObject {
               let last = chats[idx].messages.indices.last,
               chats[idx].messages[last].role == .assistant
         else { return }
+        // Fresh turn closed cleanly. Drop any "Interrupted" pill that
+        // a previous hydration may have raised.
+        chats[idx].lastTurnInterrupted = false
         if let text = finalText, !text.isEmpty {
             // If the canonical final body differs from what we accumulated
             // from deltas, the existing per-word checkpoints don't line up
@@ -1985,6 +2086,101 @@ final class AppState: ObservableObject {
                 self.clawixBackendStatus = clawix.status
             }
         }
+    }
+
+    /// Fork an existing chat into a new sibling conversation. Mirrors
+    /// Codex Desktop's "Forked from conversation" affordance: the new
+    /// chat starts as a verbatim copy of the parent's transcript up to
+    /// (and including) the chosen anchor, plus a banner that links back
+    /// to the parent. When the runtime is available we also call
+    /// `thread/fork` so the server-side rollout carries the same prefix
+    /// and the next turn resumes with full context.
+    @discardableResult
+    func forkConversation(chatId: UUID, atMessageId anchorMessageId: UUID? = nil) -> UUID? {
+        guard let srcIdx = chats.firstIndex(where: { $0.id == chatId }) else { return nil }
+        let source = chats[srcIdx]
+
+        let cutIndex: Int
+        if let anchorMessageId,
+           let mIdx = source.messages.firstIndex(where: { $0.id == anchorMessageId }) {
+            cutIndex = mIdx
+        } else {
+            cutIndex = source.messages.count - 1
+        }
+        guard cutIndex >= 0 else { return nil }
+
+        // Deep-copy each message with a fresh UUID so the transcript in
+        // the forked chat is decoupled from the parent. Streaming state
+        // is reset because the copied turns are by definition completed
+        // history at fork time.
+        let copied: [ChatMessage] = source.messages[0...cutIndex].map { msg in
+            ChatMessage(
+                id: UUID(),
+                role: msg.role,
+                content: msg.content,
+                reasoningText: msg.reasoningText,
+                streamingFinished: true,
+                isError: msg.isError,
+                timestamp: msg.timestamp,
+                workSummary: msg.workSummary,
+                timeline: msg.timeline,
+                streamCheckpoints: msg.streamCheckpoints,
+                streamPendingTail: "",
+                reasoningCheckpoints: msg.reasoningCheckpoints,
+                reasoningPendingTails: [:]
+            )
+        }
+        guard let bannerAfterId = copied.last?.id else { return nil }
+
+        let newChat = Chat(
+            id: UUID(),
+            title: source.title,
+            messages: copied,
+            createdAt: Date(),
+            clawixThreadId: nil,
+            rolloutPath: nil,
+            historyHydrated: true,
+            hasActiveTurn: false,
+            projectId: source.projectId,
+            isArchived: false,
+            isPinned: false,
+            hasUnreadCompletion: false,
+            cwd: source.cwd,
+            hasGitRepo: source.hasGitRepo,
+            branch: source.branch,
+            availableBranches: source.availableBranches,
+            uncommittedFiles: source.uncommittedFiles,
+            forkedFromChatId: source.id,
+            forkedFromTitle: source.title,
+            forkBannerAfterMessageId: bannerAfterId
+        )
+
+        chats.insert(newChat, at: 0)
+        currentRoute = .chat(newChat.id)
+        requestComposerFocus()
+
+        // Fire the runtime-side fork in the background so the new chat
+        // resumes with the parent's full context the next time the user
+        // sends a message. Failures are non-fatal — the forked chat
+        // still works, it just starts a fresh thread on first send.
+        if let parentThreadId = source.clawixThreadId,
+           let clawix,
+           case .ready = clawix.status {
+            Task { @MainActor in
+                do {
+                    _ = try await clawix.forkThread(
+                        parentThreadId: parentThreadId,
+                        newChatId: newChat.id
+                    )
+                } catch {
+                    // Swallow: the chat is usable even without the
+                    // server-side fork. A future send will lazily
+                    // create a fresh thread via ensureThread.
+                }
+            }
+        }
+
+        return newChat.id
     }
 
     func appendErrorBubble(chatId: UUID, message: String) {
@@ -2770,5 +2966,40 @@ final class LinkMetadataStore: ObservableObject {
         let raw = html[openEnd.upperBound..<closeRange.lowerBound]
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return raw.isEmpty ? nil : raw
+    }
+}
+
+// MARK: - EngineHost conformance
+
+/// Adapts the GUI-side `AppState` to the platform-neutral `EngineHost`
+/// surface the bridge code lives against. The eventual LaunchAgent
+/// daemon implements the same protocol against its own in-process
+/// `ChatStore`, so the same `BridgeServer` / `BridgeBus` sources link
+/// into both targets.
+extension AppState: EngineHost {
+
+    public var bridgeChatsCurrent: [BridgeChatSnapshot] {
+        chats.map { Self.bridgeSnapshot(from: $0) }
+    }
+
+    public var bridgeChatsPublisher: AnyPublisher<[BridgeChatSnapshot], Never> {
+        $chats
+            .map { chats in chats.map { AppState.bridgeSnapshot(from: $0) } }
+            .eraseToAnyPublisher()
+    }
+
+    public func handleHydrateHistory(chatId: UUID) {
+        hydrateHistoryFromBridge(chatId: chatId)
+    }
+
+    public func handleSendPrompt(chatId: UUID, text: String) {
+        sendUserMessageFromBridge(chatId: chatId, text: text)
+    }
+
+    private static func bridgeSnapshot(from chat: Chat) -> BridgeChatSnapshot {
+        BridgeChatSnapshot(
+            chat: chat.toWire(),
+            messages: chat.messages.map { $0.toWire() }
+        )
     }
 }

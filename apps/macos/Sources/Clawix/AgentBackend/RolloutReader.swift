@@ -22,9 +22,98 @@ struct RolloutHistoryEntry {
 
 enum RolloutReader {
 
+    /// Combined output: the parsed history + whether the last
+    /// assistant turn looks interrupted (the agent started a turn the
+    /// rollout never closed with `final_answer` / `turn_completed`,
+    /// and the trailing event is older than `interruptedThreshold`,
+    /// so we are confident it is not just a turn still in flight).
+    struct ReadResult {
+        var entries: [RolloutHistoryEntry]
+        var lastTurnInterrupted: Bool
+    }
+
+    /// Anything older than this without a closing event is treated as
+    /// an interrupted turn rather than a turn-still-in-flight. 30s is
+    /// generous enough to outlast the typical "user is reading
+    /// reasoning" gap and short enough to surface the pill quickly
+    /// after a daemon respawn.
+    static let interruptedThreshold: TimeInterval = 30
+
     static func read(path: URL) -> [RolloutHistoryEntry] {
         guard let data = try? Data(contentsOf: path) else { return [] }
         return parse(data: data)
+    }
+
+    /// Like `read(path:)` but also reports whether the last turn was
+    /// interrupted. Use this on hydration after a daemon respawn so
+    /// the chat row can surface a "Interrupted, retry?" pill.
+    static func readWithStatus(path: URL, now: Date = Date()) -> ReadResult {
+        guard let data = try? Data(contentsOf: path) else {
+            return ReadResult(entries: [], lastTurnInterrupted: false)
+        }
+        let entries = parse(data: data)
+        let interrupted = detectInterrupted(in: data, now: now)
+        return ReadResult(entries: entries, lastTurnInterrupted: interrupted)
+    }
+
+    /// Walks the JSONL backwards looking for the last semantic close
+    /// (`event_msg.phase == "final_answer"` or `event_msg.event ==
+    /// "turn_completed"`). If the trailing record is older than the
+    /// threshold and we never saw a close, the turn was interrupted.
+    private static func detectInterrupted(in data: Data, now: Date) -> Bool {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoFallback = ISO8601DateFormatter()
+        isoFallback.formatOptions = [.withInternetDateTime]
+
+        var lastTimestamp: Date? = nil
+        var sawClose = false
+        var sawAnyAssistantWork = false
+
+        var start = data.startIndex
+        while start < data.endIndex {
+            let nl = data[start...].firstIndex(of: 0x0a) ?? data.endIndex
+            let line = data[start..<nl]
+            start = nl < data.endIndex ? data.index(after: nl) : data.endIndex
+            guard !line.isEmpty,
+                  let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else {
+                continue
+            }
+            if let ts = obj["timestamp"] as? String {
+                lastTimestamp = isoFormatter.date(from: ts) ?? isoFallback.date(from: ts) ?? lastTimestamp
+            }
+            let type = obj["type"] as? String
+            let event = (obj["payload"] as? [String: Any])?["type"] as? String
+                     ?? obj["event"] as? String
+            let phase = (obj["payload"] as? [String: Any])?["phase"] as? String
+                     ?? obj["phase"] as? String
+
+            if type == "event_msg" {
+                switch event {
+                case "agent_message", "agent_reasoning",
+                     "exec_command_begin", "exec_command_output_delta",
+                     "exec_command_end", "tool_call":
+                    sawAnyAssistantWork = true
+                case "turn_completed":
+                    sawClose = true
+                case "user_message":
+                    // New user turn: previous assistant work is no
+                    // longer "the last turn" we care about.
+                    sawClose = true
+                    sawAnyAssistantWork = false
+                default:
+                    break
+                }
+                if phase == "final_answer" {
+                    sawClose = true
+                }
+            }
+        }
+
+        guard sawAnyAssistantWork, !sawClose, let last = lastTimestamp else {
+            return false
+        }
+        return now.timeIntervalSince(last) > interruptedThreshold
     }
 
     private static func parse(data: Data) -> [RolloutHistoryEntry] {

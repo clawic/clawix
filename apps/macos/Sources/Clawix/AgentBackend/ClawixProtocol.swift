@@ -88,6 +88,7 @@ enum ClawixMethod {
     static let initialized       = "initialized"      // notification
     static let threadStart       = "thread/start"
     static let threadResume      = "thread/resume"
+    static let threadFork        = "thread/fork"
     static let threadRollback    = "thread/rollback"
     static let threadList        = "thread/list"
     static let threadSetName     = "thread/name/set"
@@ -250,6 +251,25 @@ struct TurnInterruptParams: Encodable {
 }
 
 struct TurnInterruptResult: Decodable {}
+
+// MARK: - thread/fork
+//
+// Forks an existing thread into a new one that mirrors the parent's
+// rollout up to the latest turn. The runtime writes the new
+// `session_meta` with `forked_from_id` pointing back at the parent and
+// copies every prior event into the new rollout, so the forked thread
+// resumes with the same context. After the call lands we behave like
+// any freshly-created thread: turn/start, deltas, etc.
+
+struct ThreadForkParams: Encodable {
+    let threadId: String
+    /// When true, the response omits `thread.turns` so we don't pay the
+    /// cost of receiving the full turn list when the client already has
+    /// the local copy.
+    let excludeTurns: Bool?
+}
+
+typealias ThreadForkResult = ThreadStartResult
 
 // MARK: - thread/rollback
 //
