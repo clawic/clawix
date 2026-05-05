@@ -1533,7 +1533,7 @@ struct MenuOutsideClickWatcher: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = ClickWatcherView()
         view.onOutsideClick = {
-            DispatchQueue.main.async { isPresented = false }
+            isPresented = false
         }
         return view
     }
@@ -1563,10 +1563,15 @@ final class ClickWatcherView: NSView {
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let win = self.window, event.window == win else { return event }
             let pointInSelf = self.convert(event.locationInWindow, from: nil)
-            if !self.bounds.contains(pointInSelf) {
-                self.onOutsideClick?()
-            }
-            return event
+            guard !self.bounds.contains(pointInSelf) else { return event }
+            // Swallow the dismissal click. SwiftUI Buttons fire on mouseUp,
+            // so if we let mouseDown through to a trigger that does
+            // `isOpen.toggle()`, the watcher closes the menu and the
+            // button reopens it on release. NSPopover/NSMenu transient
+            // dismissal works the same way: the click that closes the
+            // popup is consumed.
+            self.onOutsideClick?()
+            return nil
         }
     }
 
