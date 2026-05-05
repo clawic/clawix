@@ -20,15 +20,13 @@ enum BodyFont {
     private static func suffix(for weight: Font.Weight) -> String {
         switch weight {
         case .ultraLight, .thin, .light, .regular:
-            return "Regular"
-        case .medium:
             return "Medium"
-        case .semibold:
+        case .medium:
             return "SemiBold"
-        case .bold, .heavy, .black:
+        case .semibold, .bold, .heavy, .black:
             return "Bold"
         default:
-            return "Regular"
+            return "Medium"
         }
     }
 }
