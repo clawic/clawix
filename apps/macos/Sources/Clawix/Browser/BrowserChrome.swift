@@ -509,27 +509,30 @@ struct FaviconView: View {
         Group {
             if let image {
                 Image(nsImage: image).resizable().scaledToFit()
+                    .transition(.opacity)
             } else {
-                fallback
+                MonogramFavicon(seed: url?.host ?? "?", size: size)
+                    .transition(.opacity)
             }
         }
         .frame(width: size, height: size)
-        .onAppear { syncFromMemory() }
-        .onChange(of: url) { _, _ in syncFromMemory() }
+        .animation(.easeOut(duration: 0.18), value: image != nil)
+        .onAppear { syncFromCache() }
+        .onChange(of: url) { _, _ in syncFromCache() }
         .task(id: url) { await load() }
     }
 
-    /// Pull from the in-memory cache synchronously so a cached host hits
-    /// the very first frame with no flicker. Keeps the `.task` modifier
-    /// honest about the actual value to load.
-    private func syncFromMemory() {
+    /// Pull synchronously through the memory + disk tiers so any host
+    /// the user has ever visited paints on the first frame, not after a
+    /// `.task` hop. Disk reads are mmap'd and cost <1ms for a favicon.
+    private func syncFromCache() {
         guard let url else { image = nil; return }
-        image = FaviconCache.shared.cachedImage(for: url)
+        image = FaviconCache.shared.cachedImageOrLoadFromDisk(for: url)
     }
 
     private func load() async {
         guard let url else { return }
-        if let cached = FaviconCache.shared.cachedImage(for: url) {
+        if let cached = FaviconCache.shared.cachedImageOrLoadFromDisk(for: url) {
             image = cached
             return
         }
@@ -538,8 +541,7 @@ struct FaviconView: View {
             return
         }
         // Page-declared favicon couldn't be loaded (404, weird format,
-        // etc.). Fall back to Google's PNG service for the same host so
-        // we always show something rather than the bare globe.
+        // etc.). Fall back to Google's PNG service for the same host.
         if let host = url.host,
            let google = URL(string: "https://www.google.com/s2/favicons?domain=\(host)&sz=64"),
            google != url,
@@ -547,10 +549,42 @@ struct FaviconView: View {
             image = loaded
         }
     }
+}
 
-    private var fallback: some View {
-        Image(systemName: "globe")
-            .font(.system(size: size - 2, weight: .regular))
-            .foregroundColor(Color(white: 0.55))
+/// Identity placeholder shown while a favicon is loading or when the
+/// host has none. The first letter of the host on a stable hue derived
+/// from the host string reads as "this is the site", not "loading".
+private struct MonogramFavicon: View {
+    let seed: String
+    let size: CGFloat
+
+    private var letter: String {
+        let host = seed.replacingOccurrences(of: "www.", with: "")
+        return host.first.map { String($0).uppercased() } ?? "•"
+    }
+
+    private var fillColor: Color {
+        // Deterministic FNV-1a so a given host always lands on the same
+        // hue, regardless of process restarts. Swift's `Hasher` would
+        // re-seed per process and recolor the placeholder on relaunch.
+        var hash: UInt32 = 0x811c9dc5
+        for byte in seed.utf8 {
+            hash ^= UInt32(byte)
+            hash = hash &* 0x01000193
+        }
+        let bucket = Int(hash % 8)
+        let hues: [Double] = [0.58, 0.04, 0.34, 0.74, 0.92, 0.13, 0.50, 0.84]
+        return Color(hue: hues[bucket], saturation: 0.32, brightness: 0.42)
+    }
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+            .fill(fillColor)
+            .overlay(
+                Text(letter)
+                    .font(.system(size: size * 0.62, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.92))
+            )
+            .frame(width: size, height: size)
     }
 }
