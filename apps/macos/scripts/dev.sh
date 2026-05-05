@@ -238,6 +238,7 @@ if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
     <key>EnvironmentVariables</key>
     <dict>
         <key>CLAWIX_BRIDGED_PORT</key>     <string>7778</string>
+        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>${BUNDLE_ID}</string>
     </dict>
     <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
     <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
