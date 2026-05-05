@@ -63,11 +63,12 @@ private struct FolderOpenIconShape: Shape {
 /// Closed-folder counterpart used when a project is collapsed.
 struct FolderClosedIcon: View {
     var size: CGFloat = 13
+    var weight: CGFloat = 1.5
 
     var body: some View {
         FolderClosedIconShape()
             .stroke(style: StrokeStyle(
-                lineWidth: 1.5 * (size / 18),
+                lineWidth: weight * (size / 18),
                 lineCap: .round,
                 lineJoin: .round
             ))
