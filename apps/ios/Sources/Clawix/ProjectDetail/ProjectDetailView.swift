@@ -49,7 +49,9 @@ struct ProjectDetailView: View {
             }
         }
         .scrollIndicators(.hidden)
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .background(Palette.background.ignoresSafeArea())
+        .topBarBlurFade(height: 130)
         .safeAreaInset(edge: .top, spacing: 0) {
             topBar
                 .padding(.horizontal, 12)
@@ -112,6 +114,7 @@ struct ProjectDetailView: View {
 
     private var titlePill: some View {
         Button {
+            Haptics.tap()
             showProjectPicker = true
         } label: {
             HStack(spacing: 8) {
@@ -151,6 +154,7 @@ struct ProjectDetailView: View {
         } else {
             ForEach(Array(chats.enumerated()), id: \.element.id) { index, chat in
                 Button {
+                    Haptics.tap()
                     onOpen(chat.id)
                 } label: {
                     ChatRow(chat: chat)
@@ -173,8 +177,8 @@ struct ProjectDetailView: View {
 // bar. Lists every project the paired Mac surfaces, with the active
 // one marked. Tapping a different one tells the host to swap the
 // current screen for that project's detail without growing the nav
-// stack (replace, not push).
-private struct ProjectPickerSheet: View {
+// stack (replace, not push). Internal so ChatDetailView reuses it.
+struct ProjectPickerSheet: View {
     let projects: [DerivedProject]
     let currentCwd: String
     let onSelect: (DerivedProject) -> Void
@@ -190,6 +194,7 @@ private struct ProjectPickerSheet: View {
 
                 ForEach(Array(projects.enumerated()), id: \.element.id) { index, project in
                     Button {
+                        Haptics.selection()
                         onSelect(project)
                     } label: {
                         ProjectPickerRow(
@@ -234,6 +239,7 @@ private struct ProjectPickerRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(project.name)
                     .font(Typography.bodyFont)
+                    .tracking(-0.2)
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                 Text(project.cwd)
