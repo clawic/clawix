@@ -1,7 +1,10 @@
 import SwiftUI
 import Combine
 import AppKit
+import ClawixCore
 import ClawixEngine
+
+private let daemonBridgePort: UInt16 = 7778
 
 // MARK: - Route
 
@@ -492,7 +495,12 @@ final class ComposerState: ObservableObject {
 @MainActor
 final class AppState: ObservableObject {
     @Published var currentRoute: SidebarRoute = .home {
-        didSet { clearUnreadIfChatRoute() }
+        didSet {
+            clearUnreadIfChatRoute()
+            if case let .chat(id) = currentRoute {
+                daemonBridgeClient?.openChat(id)
+            }
+        }
     }
     @Published var searchQuery: String = ""
     @Published var searchResults: [String] = []
@@ -658,6 +666,7 @@ final class AppState: ObservableObject {
     /// companion. Lazily created so the property doesn't take a
     /// reference to `self` before init finishes.
     private var bridgeServer: BridgeServer?
+    private var daemonBridgeClient: DaemonBridgeClient?
 
     private let projectsRepo = ProjectsRepository()
     private let pinsRepo = PinsRepository()
@@ -818,8 +827,11 @@ final class AppState: ObservableObject {
             $searchResults.dropFirst().sink { _ in RenderProbe.tick("AppState.searchResults") },
         ]
 
+        let daemonBridgeEnabled = BackgroundBridgeService.shared.isEnabled
         clawix?.appState = self
-        if let clawix, ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] != "1" {
+        if let clawix,
+           ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] != "1",
+           !daemonBridgeEnabled {
             Task { @MainActor in
                 await clawix.bootstrap()
                 self.clawixBackendStatus = clawix.status
@@ -836,10 +848,17 @@ final class AppState: ObservableObject {
         // can show a QR the iPhone scans without flipping any env
         // var. Disabled with CLAWIX_BRIDGE_DISABLE=1 for tests or
         // multi-instance debugging.
-        if ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DISABLE"] != "1" {
+        if ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DISABLE"] != "1",
+           !daemonBridgeEnabled {
             let server = BridgeServer(host: self, port: PairingService.shared.port)
             server.start()
             self.bridgeServer = server
+        } else if daemonBridgeEnabled {
+            let pairing = PairingService(defaults: UserDefaults(suiteName: appPrefsSuite) ?? .standard,
+                                         port: daemonBridgePort)
+            let client = DaemonBridgeClient(appState: self, pairing: pairing)
+            daemonBridgeClient = client
+            client.connect()
         }
 
         // Auto-reload threads when the app gains focus, debounced to avoid
@@ -1480,7 +1499,9 @@ final class AppState: ObservableObject {
         composer.text = ""
         composer.attachments = []
 
-        if let clawix {
+        if let daemonBridgeClient {
+            daemonBridgeClient.sendPrompt(chatId: chatId, text: combined)
+        } else if let clawix {
             Task { @MainActor in
                 await clawix.sendUserMessage(chatId: chatId, text: combined)
                 self.clawixBackendStatus = clawix.status
@@ -1505,7 +1526,9 @@ final class AppState: ObservableObject {
         // pill: the user has acknowledged the gap and is moving on.
         chats[idx].lastTurnInterrupted = false
 
-        if let clawix {
+        if let daemonBridgeClient {
+            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed)
+        } else if let clawix {
             Task { @MainActor in
                 await clawix.sendUserMessage(chatId: chatId, text: trimmed)
                 self.clawixBackendStatus = clawix.status
@@ -1669,6 +1692,172 @@ final class AppState: ObservableObject {
     func hydrateHistoryFromBridge(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         hydrateHistoryIfNeeded(chatIndex: idx)
+    }
+
+    func applyDaemonChats(_ wireChats: [WireChat]) {
+        let oldById = Dictionary(uniqueKeysWithValues: chats.map { ($0.id, $0) })
+        let oldArchivedById = Dictionary(uniqueKeysWithValues: archivedChats.map { ($0.id, $0) })
+        chats = wireChats.compactMap { wire in
+            guard let id = UUID(uuidString: wire.id) else { return nil }
+            guard !wire.isArchived else { return nil }
+            return chat(from: wire, old: oldById[id] ?? oldArchivedById[id])
+        }
+        archivedChats = wireChats.compactMap { wire in
+            guard let id = UUID(uuidString: wire.id), wire.isArchived else { return nil }
+            return chat(from: wire, old: oldArchivedById[id] ?? oldById[id])
+        }
+    }
+
+    func applyDaemonChat(_ wire: WireChat) {
+        guard let id = UUID(uuidString: wire.id) else { return }
+        if wire.isArchived {
+            let old = chats.first(where: { $0.id == id }) ?? archivedChats.first(where: { $0.id == id })
+            chats.removeAll { $0.id == id }
+            let chat = chat(from: wire, old: old)
+            if let idx = archivedChats.firstIndex(where: { $0.id == id }) {
+                archivedChats[idx] = chat
+            } else {
+                archivedChats.insert(chat, at: 0)
+            }
+            return
+        }
+        if let archivedIndex = archivedChats.firstIndex(where: { $0.id == id }) {
+            let chat = chat(from: wire, old: archivedChats[archivedIndex])
+            archivedChats.remove(at: archivedIndex)
+            chats.insert(chat, at: 0)
+            return
+        }
+        if let idx = chats.firstIndex(where: { $0.id == id }) {
+            chats[idx] = chat(from: wire, old: chats[idx])
+        } else {
+            chats.insert(chat(from: wire, old: nil), at: 0)
+        }
+    }
+
+    func applyDaemonMessages(chatId: String, messages: [WireMessage]) {
+        guard let id = UUID(uuidString: chatId),
+              let idx = chats.firstIndex(where: { $0.id == id })
+        else { return }
+        chats[idx].messages = messages.compactMap(chatMessage(from:))
+        chats[idx].historyHydrated = true
+    }
+
+    func appendDaemonMessage(chatId: String, message: WireMessage) {
+        guard let id = UUID(uuidString: chatId),
+              let idx = chats.firstIndex(where: { $0.id == id }),
+              let msg = chatMessage(from: message)
+        else { return }
+        if let existing = chats[idx].messages.firstIndex(where: { $0.id == msg.id }) {
+            chats[idx].messages[existing] = msg
+        } else {
+            chats[idx].messages.append(msg)
+        }
+    }
+
+    func applyDaemonStreaming(
+        chatId: String,
+        messageId: String,
+        content: String,
+        reasoningText: String,
+        finished: Bool
+    ) {
+        guard let id = UUID(uuidString: chatId),
+              let msgId = UUID(uuidString: messageId),
+              let cIdx = chats.firstIndex(where: { $0.id == id })
+        else { return }
+        if let mIdx = chats[cIdx].messages.firstIndex(where: { $0.id == msgId }) {
+            chats[cIdx].messages[mIdx].content = content
+            chats[cIdx].messages[mIdx].reasoningText = reasoningText
+            chats[cIdx].messages[mIdx].streamingFinished = finished
+        } else {
+            chats[cIdx].messages.append(ChatMessage(
+                id: msgId,
+                role: .assistant,
+                content: content,
+                reasoningText: reasoningText,
+                streamingFinished: finished
+            ))
+        }
+        chats[cIdx].hasActiveTurn = !finished
+    }
+
+    private func chat(from wire: WireChat, old: Chat?) -> Chat {
+        Chat(
+            id: UUID(uuidString: wire.id) ?? old?.id ?? UUID(),
+            title: wire.title,
+            messages: old?.messages ?? [],
+            createdAt: wire.lastMessageAt ?? wire.createdAt,
+            clawixThreadId: old?.clawixThreadId,
+            rolloutPath: old?.rolloutPath,
+            historyHydrated: old?.historyHydrated ?? false,
+            hasActiveTurn: wire.hasActiveTurn,
+            projectId: old?.projectId,
+            isArchived: wire.isArchived,
+            isPinned: wire.isPinned,
+            hasUnreadCompletion: old?.hasUnreadCompletion ?? false,
+            cwd: wire.cwd,
+            hasGitRepo: old?.hasGitRepo ?? false,
+            branch: wire.branch ?? old?.branch,
+            availableBranches: old?.availableBranches ?? [],
+            uncommittedFiles: old?.uncommittedFiles,
+            forkedFromChatId: old?.forkedFromChatId,
+            forkedFromTitle: old?.forkedFromTitle,
+            forkBannerAfterMessageId: old?.forkBannerAfterMessageId,
+            lastTurnInterrupted: wire.lastTurnInterrupted
+        )
+    }
+
+    private func chatMessage(from wire: WireMessage) -> ChatMessage? {
+        guard let id = UUID(uuidString: wire.id) else { return nil }
+        return ChatMessage(
+            id: id,
+            role: wire.role == .user ? .user : .assistant,
+            content: wire.content,
+            reasoningText: wire.reasoningText,
+            streamingFinished: wire.streamingFinished,
+            isError: wire.isError,
+            timestamp: wire.timestamp,
+            timeline: wire.timeline.compactMap(timelineEntry(from:))
+        )
+    }
+
+    private func timelineEntry(from wire: WireTimelineEntry) -> AssistantTimelineEntry? {
+        switch wire {
+        case .reasoning(let id, let text):
+            return UUID(uuidString: id).map { .reasoning(id: $0, text: text) }
+        case .tools(let id, let items):
+            guard let uuid = UUID(uuidString: id) else { return nil }
+            return .tools(id: uuid, items: items.compactMap(workItem(from:)))
+        }
+    }
+
+    private func workItem(from wire: WireWorkItem) -> WorkItem? {
+        let status: WorkItemStatus
+        switch wire.status {
+        case .inProgress: status = .inProgress
+        case .completed: status = .completed
+        case .failed: status = .failed
+        }
+        let kind: WorkItemKind
+        switch wire.kind {
+        case "command":
+            kind = .command(text: wire.commandText, actions: (wire.commandActions ?? []).map { CommandActionKind(rawValue: $0) ?? .unknown })
+        case "fileChange":
+            kind = .fileChange(paths: wire.paths ?? [])
+        case "webSearch":
+            kind = .webSearch
+        case "mcpTool":
+            kind = .mcpTool(server: wire.mcpServer ?? "", tool: wire.mcpTool ?? "")
+        case "dynamicTool":
+            kind = .dynamicTool(name: wire.dynamicToolName ?? "")
+        case "imageGeneration":
+            kind = .imageGeneration
+        case "imageView":
+            kind = .imageView
+        default:
+            return nil
+        }
+        return WorkItem(id: wire.id, kind: kind, status: status)
     }
 
     // MARK: - ClawixService callbacks
@@ -2261,6 +2450,11 @@ final class AppState: ObservableObject {
 
     func archiveChat(chatId: UUID) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        if let daemonBridgeClient {
+            archiveLocally(chatIndex: idx)
+            daemonBridgeClient.archiveChat(chatId)
+            return
+        }
         let threadId = chats[idx].clawixThreadId
 
         // Dummy / in-memory chat (no runtime thread): just move it locally so
@@ -2378,6 +2572,14 @@ final class AppState: ObservableObject {
 
     func unarchiveChat(chatId: UUID) {
         guard let idx = archivedChats.firstIndex(where: { $0.id == chatId }) else { return }
+        if let daemonBridgeClient {
+            var moved = archivedChats[idx]
+            moved.isArchived = false
+            archivedChats.remove(at: idx)
+            chats.insert(moved, at: 0)
+            daemonBridgeClient.unarchiveChat(chatId)
+            return
+        }
         let threadId = archivedChats[idx].clawixThreadId
         var moved = archivedChats[idx]
         moved.isArchived = false

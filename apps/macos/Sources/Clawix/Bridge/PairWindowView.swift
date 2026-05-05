@@ -4,10 +4,21 @@ import CoreImage.CIFilterBuiltins
 import AppKit
 import ClawixEngine
 
+private let daemonBridgePort: UInt16 = 7778
+
 struct PairWindowView: View {
     @State private var payload: String = ""
     @State private var host: String = "..."
     @State private var token: String = ""
+    @StateObject private var backgroundBridge: BackgroundBridgeService = .shared
+
+    private var pairing: PairingService {
+        if backgroundBridge.isEnabled {
+            return PairingService(defaults: UserDefaults(suiteName: appPrefsSuite) ?? .standard,
+                                  port: daemonBridgePort)
+        }
+        return PairingService.shared
+    }
 
     var body: some View {
         VStack(alignment: .center, spacing: 18) {
@@ -32,7 +43,7 @@ struct PairWindowView: View {
 
             VStack(spacing: 6) {
                 row(label: "Host", value: host)
-                row(label: "Port", value: "\(PairingService.shared.port)")
+                row(label: "Port", value: "\(pairing.port)")
                 row(label: "Token", value: tokenPreview)
             }
             .padding(.horizontal, 16)
@@ -88,13 +99,14 @@ struct PairWindowView: View {
     }
 
     private func refresh() {
-        token = PairingService.shared.bearer
-        payload = PairingService.shared.qrPayload()
+        backgroundBridge.refresh()
+        token = pairing.bearer
+        payload = pairing.qrPayload()
         host = PairingService.currentLANIPv4() ?? "no LAN"
     }
 
     private func rotate() {
-        PairingService.shared.rotateBearer()
+        pairing.rotateBearer()
         refresh()
     }
 
