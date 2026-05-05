@@ -662,9 +662,9 @@ private struct MessageRow: View {
                     .animation(.easeOut(duration: 0.15), value: rowHovered)
             }
         }
-        .padding(.leading, isUser ? 0 : 6)
+        .padding(.leading, isUser ? 0 : 2)
         .padding(.trailing, isUser ? 6 : 0)
-        .padding(.top, -18)
+        .padding(.top, isUser ? -22 : -18)
     }
 
     private var timestampLabel: some View {
@@ -762,15 +762,15 @@ private struct MessageActionIcon: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
                 CopyIconViewSquircle(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                    .frame(width: 14, height: 14)
+                    .frame(width: 13, height: 13)
                     .transition(.opacity)
             }
         case .pencil:
             PencilIconView(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                .frame(width: 16, height: 16)
+                .frame(width: 15, height: 15)
         case .branchArrows:
             BranchArrowsIconView(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                .frame(width: 14, height: 14)
+                .frame(width: 13, height: 13)
         case .system(let name):
             IconImage(name, size: 13)
                 .foregroundColor(Color(white: hovered ? 0.82 : 0.45))

@@ -773,7 +773,7 @@ private struct ChatActionsMenu: View {
             }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
-        .frame(width: 308)
+        .frame(width: 246)
         .menuStandardBackground()
         .background(MenuOutsideClickWatcher(isPresented: $isOpen))
     }
@@ -792,20 +792,26 @@ private struct ChatActionsMenu: View {
                 Group {
                     if item.icon == "pencil" {
                         PencilIconView(color: MenuStyle.rowIcon, lineWidth: 1.0)
-                            .frame(width: 14, height: 14)
+                            .frame(width: 15, height: 15)
+                    } else if item.icon == "doc.on.doc" {
+                        CopyIconViewSquircle(color: MenuStyle.rowIcon, lineWidth: 1.0)
+                            .frame(width: 13, height: 13)
+                    } else if item.icon == "archivebox" {
+                        ArchiveIcon(size: 13)
+                            .foregroundColor(MenuStyle.rowIcon)
                     } else {
-                        IconImage(item.icon, size: 11)
+                        IconImage(item.icon, size: 12)
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
                 .frame(width: 18, alignment: .center)
                 Text(item.title)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 13.5))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if let shortcut = item.shortcut {
                     Text(shortcut)
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
             }
