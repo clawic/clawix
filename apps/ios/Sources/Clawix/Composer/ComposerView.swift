@@ -32,7 +32,7 @@ struct ComposerView: View {
     private var plusButton: some View {
         Button(action: {}) {
             Image(systemName: "plus")
-                .font(.system(size: 18, weight: .regular))
+                .font(BodyFont.system(size: 18, weight: .regular))
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 34, height: 34)
         }
@@ -63,7 +63,7 @@ struct ComposerView: View {
         if canSend {
             Button(action: triggerSend) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(BodyFont.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.black)
                     .frame(width: 34, height: 34)
                     .background(Circle().fill(Color.white))

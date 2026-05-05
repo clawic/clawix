@@ -50,6 +50,12 @@ targets:
           - _clawix-bridge._tcp
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        UIAppFonts:
+          - PlusJakartaSans-Regular.ttf
+          - PlusJakartaSans-Medium.ttf
+          - PlusJakartaSans-SemiBold.ttf
+          - PlusJakartaSans-Bold.ttf
+          - Manrope.ttf
     settings:
       base:
         MARKETING_VERSION: "0.1.0"

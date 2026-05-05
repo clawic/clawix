@@ -44,12 +44,12 @@ struct PairingView: View {
     private var logoBlock: some View {
         VStack(alignment: .leading, spacing: 14) {
             Image(systemName: "qrcode.viewfinder")
-                .font(.system(size: 28, weight: .regular))
+                .font(BodyFont.system(size: 28, weight: .regular))
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 72, height: 72)
                 .glassCircle()
             Text("Pair with your Mac")
-                .font(.system(size: 30, weight: .bold))
+                .font(AppFont.system(size: 30, weight: .bold))
                 .foregroundStyle(Palette.textPrimary)
             Text("Open Clawix on your Mac, choose Window > Pair iPhone, and scan the QR with this device.")
                 .font(Typography.bodyFont)
@@ -86,7 +86,7 @@ struct PairingView: View {
         Button(action: { showScanner = true }) {
             HStack(spacing: 8) {
                 Image(systemName: "qrcode.viewfinder")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(BodyFont.system(size: 16, weight: .semibold))
                 Text("Scan QR")
                     .font(Typography.bodyEmphasized)
             }
@@ -129,7 +129,7 @@ private struct ScannerSheet: View {
                 HStack {
                     Button(action: onCancel) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(BodyFont.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .glassCircle()
@@ -140,7 +140,7 @@ private struct ScannerSheet: View {
                 }
                 Spacer()
                 Text("Scan the Clawix QR shown on your Mac")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)

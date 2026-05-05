@@ -62,10 +62,10 @@ enum AppLayout {
 }
 
 enum Typography {
-    static let titleFont       = Font.system(size: 22, weight: .semibold)
-    static let bodyFont        = Font.system(size: 16)
-    static let bodyEmphasized  = Font.system(size: 16, weight: .medium)
-    static let secondaryFont   = Font.system(size: 14)
-    static let captionFont     = Font.system(size: 12)
-    static let monoFont        = Font.system(size: 14, design: .monospaced)
+    static let titleFont       = BodyFont.system(size: 22, weight: .semibold)
+    static let bodyFont        = BodyFont.system(size: 16)
+    static let bodyEmphasized  = BodyFont.system(size: 16, weight: .medium)
+    static let secondaryFont   = BodyFont.system(size: 14)
+    static let captionFont     = BodyFont.system(size: 12)
+    static let monoFont        = BodyFont.system(size: 14, design: .monospaced)
 }
