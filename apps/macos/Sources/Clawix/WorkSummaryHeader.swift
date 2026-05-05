@@ -168,14 +168,20 @@ private func aggregate(_ items: [WorkItem]) -> [WorkRow] {
         rows.append(WorkRow(id: "webSearch", icon: "clawix.globe", text: text))
     }
     // Collapse runs of MCP calls that target the same server into a
-    // single row: the user only cares which integration was used.
-    var seenServers = Set<String>()
-    var uniqueServers: [String] = []
-    for mcp in mcpTools where !mcp.server.isEmpty && seenServers.insert(mcp.server).inserted {
-        uniqueServers.append(mcp.server)
+    // single row, carrying the call count so the disclosure mirrors the
+    // inline transcript ("Used Revenuecat 3 times" instead of one row
+    // per server regardless of how often it was invoked).
+    var serverOrder: [String] = []
+    var serverCounts: [String: Int] = [:]
+    for mcp in mcpTools where !mcp.server.isEmpty {
+        if serverCounts[mcp.server] == nil { serverOrder.append(mcp.server) }
+        serverCounts[mcp.server, default: 0] += 1
     }
-    for (idx, server) in uniqueServers.enumerated() {
-        rows.append(WorkRow(id: "mcp\(idx)", icon: "clawix.mcp", text: L10n.usedTool(prettyMcpServer(server))))
+    for (idx, server) in serverOrder.enumerated() {
+        let count = serverCounts[server] ?? 1
+        let pretty = prettyMcpServer(server)
+        let text = count <= 1 ? L10n.usedTool(pretty) : L10n.usedToolTimes(pretty, count)
+        rows.append(WorkRow(id: "mcp\(idx)", icon: "clawix.mcp", text: text))
     }
     for (idx, name) in dynamicTools.enumerated() {
         rows.append(WorkRow(id: "dyn\(idx)", icon: "wrench.and.screwdriver", text: L10n.usedTool(name)))

@@ -117,15 +117,34 @@ enum L10n {
     // MARK: - Work summary header
 
     static func workingFor(seconds: Int) -> String {
-        String(localized: "Working \(seconds) s", bundle: AppLocale.bundle, locale: AppLocale.current)
+        let elapsed = formatElapsed(seconds)
+        return String(localized: "Working for \(elapsed)", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     static func workedFor(seconds: Int) -> String {
-        String(localized: "Worked for \(seconds) s", bundle: AppLocale.bundle, locale: AppLocale.current)
+        let elapsed = formatElapsed(seconds)
+        return String(localized: "Worked for \(elapsed)", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    /// Compact "2m 21s" / "21s" elapsed format used by the work-summary
+    /// header. Stays locale-agnostic on purpose: the unit letters match
+    /// the values most users encounter in the app's reference designs.
+    private static func formatElapsed(_ seconds: Int) -> String {
+        if seconds >= 60 {
+            return "\(seconds / 60)m \(seconds % 60)s"
+        }
+        return "\(seconds)s"
     }
 
     static func usedTool(_ name: String) -> String {
         String(localized: "Used \(name)", bundle: AppLocale.bundle, locale: AppLocale.current)
+    }
+
+    /// Inline label for an MCP integration that was invoked more than once
+    /// in a single tools group ("Used Revenuecat 3 times"). The N=1 case
+    /// keeps using `usedTool` so the row reads naturally.
+    static func usedToolTimes(_ name: String, _ count: Int) -> String {
+        String(localized: "Used \(name) \(count) times", bundle: AppLocale.bundle, locale: AppLocale.current)
     }
 
     // MARK: - Search

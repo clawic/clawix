@@ -303,7 +303,7 @@
 "Search in conversations…" = "在对话中搜索…";
 "Search projects" = "Search projects";
 "Searched the web" = "Searched the web";
-"Searched the web %@ times" = "Searched the web %@ times";
+"Searched the web %lld times" = "Searched the web %lld times";
 "Select" = "选择";
 "Select a project" = "选择项目";
 "Select editor" = "选择编辑器";
@@ -376,6 +376,7 @@
 "Use dark theme in the interface" = "在界面中使用深色主题";
 "Use light, dark, or system appearance" = "使用浅色、深色或跟随系统";
 "Used %@" = "已使用 %@";
+"Used %@ %lld times" = "已使用 %1$@ %2$lld 次";
 "Used the browser" = "已使用浏览器";
 "Variables" = "变量";
 "Version" = "版本";
@@ -390,9 +391,9 @@
 "Work mode" = "工作模式";
 "Work on a project" = "在项目中工作";
 "Work summary" = "工作摘要";
-"Worked for %lld s" = "已工作 %lld 秒";
-"Working %lld s" = "工作中 %lld 秒";
+"Worked for %@" = "已工作 %@";
 "Working directory" = "工作目录";
+"Working for %@" = "工作中 %@";
 "Writing plan" = "写作计划";
 "You do not have any pinned chats yet" = "你还没有置顶聊天";
 "You: %@" = "你：%@";

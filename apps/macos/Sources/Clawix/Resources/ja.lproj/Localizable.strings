@@ -303,7 +303,7 @@
 "Search in conversations…" = "会話を検索…";
 "Search projects" = "Search projects";
 "Searched the web" = "Searched the web";
-"Searched the web %@ times" = "Searched the web %@ times";
+"Searched the web %lld times" = "Searched the web %lld times";
 "Select" = "選択";
 "Select a project" = "プロジェクトを選択";
 "Select editor" = "エディタを選択";
@@ -376,6 +376,7 @@
 "Use dark theme in the interface" = "インターフェースをダークテーマにする";
 "Use light, dark, or system appearance" = "ライト、ダーク、またはシステム設定を使用";
 "Used %@" = "%@を使用しました";
+"Used %@ %lld times" = "%1$@を%2$lld回使用しました";
 "Used the browser" = "ブラウザを使用しました";
 "Variables" = "変数";
 "Version" = "バージョン";
@@ -390,9 +391,9 @@
 "Work mode" = "作業モード";
 "Work on a project" = "プロジェクトで作業";
 "Work summary" = "作業のまとめ";
-"Worked for %lld s" = "%lld 秒間実行しました";
-"Working %lld s" = "実行中 %lld 秒";
+"Worked for %@" = "%@ 実行しました";
 "Working directory" = "作業ディレクトリ";
+"Working for %@" = "%@ 実行中";
 "Writing plan" = "書き込みプラン";
 "You do not have any pinned chats yet" = "ピン留めしたチャットはまだありません";
 "You: %@" = "あなた: %@";

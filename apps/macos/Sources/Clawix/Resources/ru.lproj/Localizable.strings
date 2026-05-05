@@ -303,7 +303,7 @@
 "Search in conversations…" = "Поиск в чатах…";
 "Search projects" = "Search projects";
 "Searched the web" = "Searched the web";
-"Searched the web %@ times" = "Searched the web %@ times";
+"Searched the web %lld times" = "Searched the web %lld times";
 "Select" = "Выбрать";
 "Select a project" = "Выбрать проект";
 "Select editor" = "Выбрать редактор";
@@ -376,6 +376,7 @@
 "Use dark theme in the interface" = "Использовать тёмную тему интерфейса";
 "Use light, dark, or system appearance" = "Используйте светлую, тёмную или системную тему";
 "Used %@" = "Использовано: %@";
+"Used %@ %lld times" = "Использовано %1$@ %2$lld раз";
 "Used the browser" = "Использовался браузер";
 "Variables" = "Переменные";
 "Version" = "Версия";
@@ -390,9 +391,9 @@
 "Work mode" = "Режим работы";
 "Work on a project" = "Работать над проектом";
 "Work summary" = "Сводка работы";
-"Worked for %lld s" = "Работал %lld с";
-"Working %lld s" = "Работает %lld с";
+"Worked for %@" = "Работал %@";
 "Working directory" = "Рабочий каталог";
+"Working for %@" = "Работает %@";
 "Writing plan" = "План написания";
 "You do not have any pinned chats yet" = "У вас пока нет закреплённых чатов";
 "You: %@" = "Вы: %@";

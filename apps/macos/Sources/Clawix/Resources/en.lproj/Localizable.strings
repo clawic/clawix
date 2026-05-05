@@ -303,7 +303,7 @@
 "Search in conversations…" = "Search in conversations…";
 "Search projects" = "Search projects";
 "Searched the web" = "Searched the web";
-"Searched the web %@ times" = "Searched the web %@ times";
+"Searched the web %lld times" = "Searched the web %lld times";
 "Select" = "Select";
 "Select a project" = "Select a project";
 "Select editor" = "Select editor";
@@ -376,6 +376,7 @@
 "Use dark theme in the interface" = "Use dark theme in the interface";
 "Use light, dark, or system appearance" = "Use light, dark, or system appearance";
 "Used %@" = "Used %@";
+"Used %@ %lld times" = "Used %1$@ %2$lld times";
 "Used the browser" = "Used the browser";
 "Variables" = "Variables";
 "Version" = "Version";
@@ -390,9 +391,9 @@
 "Work mode" = "Work mode";
 "Work on a project" = "Work on a project";
 "Work summary" = "Work summary";
-"Worked for %lld s" = "Worked for %lld s";
-"Working %lld s" = "Working %lld s";
+"Worked for %@" = "Worked for %@";
 "Working directory" = "Working directory";
+"Working for %@" = "Working for %@";
 "Writing plan" = "Writing plan";
 "You do not have any pinned chats yet" = "You do not have any pinned chats yet";
 "You: %@" = "You: %@";

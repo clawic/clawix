@@ -120,18 +120,27 @@ enum CommandActionKind: String, Equatable {
 
 /// Coarse grouping used when assembling the timeline so the renderer can
 /// decide whether two consecutive tool items belong in the same `.tools`
-/// entry or should each get their own row. Only `command` (and, for
-/// future-proofing, `fileChange`) merge across calls; MCP/dynamic/image
-/// tools always open a fresh group so "Se han usado Node Repl" never gets
-/// folded into "Se han modificado 3 archivos".
-enum TimelineFamily {
-    case command, fileChange, other
+/// entry or should each get their own row. Same-family items merge so the
+/// inline transcript collapses runs like "Searched the web · Searched the
+/// web · Searched the web" into a single counted row, while different
+/// families ("Used Revenuecat" then "Searched the web") stay split.
+enum TimelineFamily: Equatable {
+    case command
+    case fileChange
+    case webSearch
+    /// MCP tools merge only when targeting the SAME server: two adjacent
+    /// `Used Revenuecat` calls collapse, but `Used Revenuecat` followed
+    /// by `Used Linear` does not.
+    case mcpTool(server: String)
+    case other
 
     static func from(_ kind: WorkItemKind) -> TimelineFamily {
         switch kind {
-        case .command:    return .command
-        case .fileChange: return .fileChange
-        default:          return .other
+        case .command:                return .command
+        case .fileChange:             return .fileChange
+        case .webSearch:              return .webSearch
+        case .mcpTool(let server, _): return .mcpTool(server: server)
+        default:                      return .other
         }
     }
 
@@ -139,6 +148,9 @@ enum TimelineFamily {
         switch (self, kind) {
         case (.command, .command):       return true
         case (.fileChange, .fileChange): return true
+        case (.webSearch, .webSearch):   return true
+        case (.mcpTool(let s), .mcpTool(let server, _)):
+            return s == server
         default:                         return false
         }
     }

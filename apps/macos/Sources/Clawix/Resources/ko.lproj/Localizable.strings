@@ -303,7 +303,7 @@
 "Search in conversations…" = "대화에서 검색…";
 "Search projects" = "Search projects";
 "Searched the web" = "Searched the web";
-"Searched the web %@ times" = "Searched the web %@ times";
+"Searched the web %lld times" = "Searched the web %lld times";
 "Select" = "선택";
 "Select a project" = "프로젝트 선택";
 "Select editor" = "에디터 선택";
@@ -376,6 +376,7 @@
 "Use dark theme in the interface" = "인터페이스에 다크 테마 사용";
 "Use light, dark, or system appearance" = "라이트, 다크 또는 시스템 설정 사용";
 "Used %@" = "%@을(를) 사용했습니다";
+"Used %@ %lld times" = "%1$@을(를) %2$lld번 사용했습니다";
 "Used the browser" = "브라우저를 사용했습니다";
 "Variables" = "변수";
 "Version" = "버전";
@@ -390,9 +391,9 @@
 "Work mode" = "작업 모드";
 "Work on a project" = "프로젝트에서 작업";
 "Work summary" = "작업 요약";
-"Worked for %lld s" = "%lld초 동안 작업했습니다";
-"Working %lld s" = "작업 중 %lld초";
+"Worked for %@" = "%@ 동안 작업했습니다";
 "Working directory" = "작업 디렉터리";
+"Working for %@" = "%@ 작업 중";
 "Writing plan" = "작성 계획";
 "You do not have any pinned chats yet" = "아직 고정된 채팅이 없습니다";
 "You: %@" = "사용자: %@";

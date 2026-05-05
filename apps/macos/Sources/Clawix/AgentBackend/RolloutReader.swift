@@ -193,6 +193,36 @@ enum RolloutReader {
                     )
                 )
 
+            case ("response_item", "web_search_call"):
+                let callId = payload["call_id"] as? String ?? UUID().uuidString
+                if !seenCallIds.insert(callId).inserted { continue }
+                if pending == nil {
+                    pending = PendingAssistant(timestamp: timestamp)
+                }
+                pending?.appendOther(
+                    WorkItem(id: callId, kind: .webSearch, status: .completed)
+                )
+
+            case ("event_msg", "image_generation_end"):
+                let callId = payload["call_id"] as? String ?? UUID().uuidString
+                if !seenCallIds.insert(callId).inserted { continue }
+                if pending == nil {
+                    pending = PendingAssistant(timestamp: timestamp)
+                }
+                pending?.appendOther(
+                    WorkItem(id: callId, kind: .imageGeneration, status: .completed)
+                )
+
+            case ("event_msg", "view_image_tool_call"):
+                let callId = payload["call_id"] as? String ?? UUID().uuidString
+                if !seenCallIds.insert(callId).inserted { continue }
+                if pending == nil {
+                    pending = PendingAssistant(timestamp: timestamp)
+                }
+                pending?.appendOther(
+                    WorkItem(id: callId, kind: .imageView, status: .completed)
+                )
+
             case ("event_msg", "mcp_tool_call_end"):
                 let callId = payload["call_id"] as? String ?? UUID().uuidString
                 if !seenCallIds.insert(callId).inserted { continue }

@@ -21484,6 +21484,70 @@
         }
       }
     },
+    "Used %@ %lld times": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se ha usado %1$@ %2$lld veces"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Used %1$@ %2$lld times"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ a été utilisé %2$lld fois"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld Mal benutzt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È stato usato %1$@ %2$lld volte"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usou %1$@ %2$lld vezes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@を%2$lld回使用しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已使用 %1$@ %2$lld 次"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@을(를) %2$lld번 사용했습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Использовано %1$@ %2$lld раз"
+          }
+        }
+      }
+    },
     "Used the browser": {
       "localizations": {
         "es": {
@@ -22494,130 +22558,130 @@
         }
       }
     },
-    "Worked for %lld s": {
+    "Worked for %@": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ha trabajado durante %lld s"
+            "value": "Ha trabajado %@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Worked for %lld s"
+            "value": "Worked for %@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "A travaillé pendant %lld s"
+            "value": "A travaillé pendant %@"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld s gearbeitet"
+            "value": "%@ gearbeitet"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ha lavorato per %lld s"
+            "value": "Ha lavorato per %@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trabalhou por %lld s"
+            "value": "Trabalhou por %@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 秒間実行しました"
+            "value": "%@ 実行しました"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已工作 %lld 秒"
+            "value": "已工作 %@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld초 동안 작업했습니다"
+            "value": "%@ 동안 작업했습니다"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Работал %lld с"
+            "value": "Работал %@"
           }
         }
       }
     },
-    "Working %lld s": {
+    "Working for %@": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trabajando %lld s"
+            "value": "Trabajando %@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Working %lld s"
+            "value": "Working for %@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Travail en cours %lld s"
+            "value": "Travail en cours %@"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arbeitet %lld s"
+            "value": "Arbeitet seit %@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "In esecuzione %lld s"
+            "value": "In esecuzione da %@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trabalhando %lld s"
+            "value": "Trabalhando há %@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "実行中 %lld 秒"
+            "value": "%@ 実行中"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "工作中 %lld 秒"
+            "value": "工作中 %@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "작업 중 %lld초"
+            "value": "%@ 작업 중"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Работает %lld с"
+            "value": "Работает %@"
           }
         }
       }
@@ -26286,66 +26350,66 @@
         }
       }
     },
-    "Searched the web %@ times": {
+    "Searched the web %lld times": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Searched the web %@ times"
+            "value": "Searched the web %lld times"
           }
         }
       }
