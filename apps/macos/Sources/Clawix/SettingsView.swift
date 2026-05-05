@@ -63,10 +63,10 @@ struct SettingsSidebar: View {
             } label: {
                 HStack(spacing: 15) {
                     Image(systemName: "arrow.left")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .frame(width: 16, alignment: .center)
                     Text("Back to app")
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                     Spacer(minLength: 10)
                 }
                 .foregroundColor(Color(white: 0.78))
@@ -113,7 +113,7 @@ private struct SettingsSidebarRow: View {
                     .frame(width: 16, alignment: .center)
                     .foregroundColor(isSelected ? .white : Color(white: 0.78))
                 Text(category.title)
-                    .font(.system(size: 13, weight: .light))
+                    .font(BodyFont.system(size: 13, weight: .light))
                     .foregroundColor(isSelected ? .white : Color(white: 0.88))
                 Spacer(minLength: 10)
             }
@@ -180,11 +180,11 @@ private struct PageHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: 22, weight: .semibold))
+                .font(BodyFont.system(size: 22, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Palette.textSecondary)
             }
         }
@@ -196,7 +196,7 @@ private struct SectionLabel: View {
     let title: LocalizedStringKey
     var body: some View {
         Text(title)
-            .font(.system(size: 13, weight: .medium))
+            .font(BodyFont.system(size: 13, weight: .medium))
             .foregroundColor(Palette.textPrimary)
             .padding(.bottom, 14)
             .padding(.top, 28)
@@ -235,11 +235,11 @@ private struct RowLabel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5))
                 .foregroundColor(Palette.textPrimary)
             if let detail {
                 Text(detail)
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                     .foregroundColor(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -344,12 +344,12 @@ struct SettingsDropdown<T: Hashable>: View {
                     icon
                 }
                 Text(currentLabel)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(BodyFont.system(size: 11, weight: .semibold))
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -419,13 +419,13 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                             icon
                         }
                         Text(opt.1)
-                            .font(.system(size: 12.5))
+                            .font(BodyFont.system(size: 12.5))
                             .foregroundColor(MenuStyle.rowText)
                             .lineLimit(1)
                         Spacer(minLength: 8)
                         if opt.0 == selection {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(BodyFont.system(size: 10, weight: .semibold))
                                 .foregroundColor(MenuStyle.rowText)
                         }
                     }
@@ -489,7 +489,7 @@ private struct SegmentedRow<T: Hashable>: View {
                         selection = opt.0
                     } label: {
                         Text(opt.1)
-                            .font(.system(size: 12, weight: isOn ? .medium : .regular))
+                            .font(BodyFont.system(size: 12, weight: isOn ? .medium : .regular))
                             .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
                             .padding(.horizontal, 11)
                             .padding(.vertical, 5)
@@ -526,14 +526,14 @@ private struct ActionPillRow: View {
             HStack(spacing: 6) {
                 if let trailingDisabled {
                     Text(trailingDisabled)
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                 }
                 Button(action: onPrimary) {
                     Text(primaryLabel)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
@@ -592,10 +592,10 @@ private struct GeneralPage: View {
             PageHeader(title: "General")
 
             Text("Work mode")
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
             Text("Choose how much technical detail Clawix shows")
-                .font(.system(size: 11))
+                .font(BodyFont.system(size: 11))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.bottom, 14)
 
@@ -865,10 +865,10 @@ private struct PinsSourceInfoRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text("Pins source")
-                        .font(.system(size: 13, weight: .regular))
+                        .font(BodyFont.system(size: 13, weight: .regular))
                         .foregroundColor(Color(white: 0.94))
                     Text(isLocal ? "Local" : "Codex")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(BodyFont.system(size: 11, weight: .medium))
                         .foregroundColor(isLocal ? Color(white: 0.94) : Color(white: 0.55))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
@@ -880,7 +880,7 @@ private struct PinsSourceInfoRow: View {
                 Text(isLocal
                      ? "Pins are managed locally. Use Reset local overrides below to switch back to Codex's pins."
                      : "Pins are read from Codex on each launch. Pin or unpin from this app to take local control.")
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                     .foregroundColor(Color(white: 0.55))
             }
             Spacer(minLength: 12)
@@ -900,7 +900,7 @@ private struct HiddenCodexFoldersSection: View {
             if hidden.isEmpty {
                 HStack {
                     Text("No hidden folders. Right-click a Codex folder in the sidebar to hide it.")
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                         .foregroundColor(Color(white: 0.55))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
@@ -934,10 +934,10 @@ private struct HiddenFolderRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
                 Text((path as NSString).lastPathComponent)
-                    .font(.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, weight: .regular))
                     .foregroundColor(Color(white: 0.94))
                 Text(path)
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                     .foregroundColor(Color(white: 0.55))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -959,10 +959,10 @@ private struct ResetLocalOverridesRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Reset local overrides")
-                    .font(.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, weight: .regular))
                     .foregroundColor(Color(white: 0.94))
                 Text("Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.")
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                     .foregroundColor(Color(white: 0.55))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1015,7 +1015,7 @@ private struct WorkModeCard: View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 14))
+                    .font(BodyFont.system(size: 14))
                     .foregroundColor(Color(white: 0.86))
                     .frame(width: 28, height: 28)
                     .background(
@@ -1024,10 +1024,10 @@ private struct WorkModeCard: View {
                     )
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                     Text(subtitle)
-                        .font(.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5))
                         .foregroundColor(Palette.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1071,11 +1071,10 @@ private struct ImportAgentRow: View {
                 Capsule(style: .continuous)
                     .fill(Color.white.opacity(0.06))
                     .frame(width: 30, height: 30)
-                Image(systemName: "gearshape")
-                    .font(.system(size: 13))
+                SettingsIcon(size: 19)
                     .foregroundColor(Color(white: 0.86))
                 Text("2")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(BodyFont.system(size: 9, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
@@ -1084,16 +1083,16 @@ private struct ImportAgentRow: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text("Import another agent configuration")
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                 Text("Clawix detected useful preferences from another local agent on this Mac")
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
             Button {} label: {
                 Text("Import")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(BodyFont.system(size: 12, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
@@ -1122,7 +1121,7 @@ private struct CollapsibleRow: View {
                 RowLabel(title: title, detail: detail)
                 Spacer(minLength: 12)
                 Image(systemName: open ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(BodyFont.system(size: 10, weight: .semibold))
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -1147,7 +1146,7 @@ private struct DictionaryExpandableRow: View {
                              detail: "Words or phrases dictation should recognize")
                     Spacer(minLength: 12)
                     Image(systemName: open ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(BodyFont.system(size: 10, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -1172,9 +1171,9 @@ private struct DictionaryExpandableRow: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(BodyFont.system(size: 11, weight: .semibold))
                             Text("Add entry")
-                                .font(.system(size: 12.5))
+                                .font(BodyFont.system(size: 12.5))
                         }
                         .foregroundColor(Color(white: 0.65))
                         .frame(maxWidth: .infinity)
@@ -1208,14 +1207,14 @@ private struct DictionaryEntryField: View {
             TextField("", text: $text)
                 .textFieldStyle(.plain)
                 .focused($focused)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.leading, 12)
                 .padding(.vertical, 9)
             Spacer(minLength: 8)
             Button(action: onDelete) {
                 Image(systemName: "trash")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Color(white: trashHovered ? 0.94 : 0.55))
                     .frame(width: 30, height: 30)
                     .contentShape(Rectangle())
@@ -1248,11 +1247,11 @@ private struct RecentDictationRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 18) {
             Text(stamp)
-                .font(.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5))
                 .foregroundColor(Palette.textSecondary)
                 .frame(width: 90, alignment: .leading)
             Text(text)
-                .font(.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5))
                 .foregroundColor(Palette.textSecondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -1267,7 +1266,7 @@ private struct RecentDictationRow: View {
                 }
             } label: {
                 Image(systemName: copied ? "checkmark" : "square.on.square")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Color(white: copyHovered ? 0.94 : 0.60))
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
@@ -1310,10 +1309,10 @@ private struct AppearancePage: View {
                 HStack(alignment: .top, spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Theme")
-                            .font(.system(size: 13))
+                            .font(BodyFont.system(size: 13))
                             .foregroundColor(Palette.textPrimary)
                         Text("Use light, dark, or system appearance")
-                            .font(.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5))
                             .foregroundColor(Palette.textSecondary)
                     }
                     Spacer(minLength: 12)
@@ -1389,9 +1388,9 @@ private struct ThemeChip: View {
         Button(action: onTap) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                 Text(label)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
             }
             .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
             .padding(.horizontal, 11)
@@ -1452,11 +1451,11 @@ private struct DiffSide: View {
                 let (kind, num, text) = l
                 HStack(spacing: 10) {
                     Text(num)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(BodyFont.system(size: 11, design: .monospaced))
                         .foregroundColor(Color(white: 0.45))
                         .frame(width: 22, alignment: .trailing)
                     Text(text)
-                        .font(.system(size: 11.5, design: .monospaced))
+                        .font(BodyFont.system(size: 11.5, design: .monospaced))
                         .foregroundColor(textColor(kind: kind))
                     Spacer(minLength: 4)
                 }
@@ -1501,14 +1500,14 @@ private struct ThemeSubSection: View {
         SettingsCard {
             HStack(alignment: .center, spacing: 16) {
                 Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                 Spacer(minLength: 8)
                 Text("Import")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
                 Text("Copy theme")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
                 SettingsDropdown(
                     options: [("Clawix", "Clawix"), ("Mono", "Mono"), ("Sans", "Sans")],
@@ -1543,7 +1542,7 @@ private struct ColorRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(title)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
             HStack(spacing: 8) {
@@ -1552,7 +1551,7 @@ private struct ColorRow: View {
                     .frame(width: 14, height: 14)
                     .overlay(Circle().stroke(Color.black.opacity(0.20), lineWidth: 0.5))
                 Text(hex)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(BodyFont.system(size: 12, design: .monospaced))
                     .foregroundColor(swatch == .white || swatch == Color.white
                                      ? Color.black
                                      : Palette.textPrimary)
@@ -1581,11 +1580,11 @@ private struct FontFieldRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(title)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
             Text(value)
-                .font(.system(size: 12, design: .monospaced))
+                .font(BodyFont.system(size: 12, design: .monospaced))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.horizontal, 11)
                 .padding(.vertical, 5)
@@ -1612,14 +1611,14 @@ private struct SliderRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(title)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
             Slider(value: $value, in: range)
                 .frame(width: 220)
                 .tint(Color(red: 0.30, green: 0.55, blue: 1.0))
             Text("\(Int(value))")
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: 28, alignment: .trailing)
         }
@@ -1635,10 +1634,10 @@ private struct FontSizeRow: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Interface font size")
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                 Text("Adjust the base size used for the Clawix interface")
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
@@ -1646,7 +1645,7 @@ private struct FontSizeRow: View {
                 TextField("", text: $value)
                     .textFieldStyle(.plain)
                     .multilineTextAlignment(.trailing)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(BodyFont.system(size: 12, design: .monospaced))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -1660,7 +1659,7 @@ private struct FontSizeRow: View {
                             )
                     )
                 Text("px")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
             }
         }
@@ -1685,7 +1684,7 @@ private struct ConfigurationPage: View {
             )
 
             Text("Custom config.toml settings")
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.bottom, 14)
 
@@ -1705,10 +1704,10 @@ private struct ConfigurationPage: View {
                 Button {} label: {
                     HStack(spacing: 4) {
                         Text("Open config.toml")
-                            .font(.system(size: 12))
+                            .font(BodyFont.system(size: 12))
                             .foregroundColor(Palette.textSecondary)
                         Image(systemName: "arrow.up.right")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(BodyFont.system(size: 9, weight: .semibold))
                             .foregroundColor(Palette.textSecondary)
                     }
                 }
@@ -1736,11 +1735,11 @@ private struct ConfigurationPage: View {
             SettingsCard {
                 HStack {
                     Text("Current version")
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                         .foregroundColor(Palette.textPrimary)
                     Spacer()
                     Text(AppVersion.displayString)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(BodyFont.system(size: 12, design: .monospaced))
                         .foregroundColor(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -1769,7 +1768,7 @@ private struct DeprecationBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.circle")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.30))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
@@ -1780,7 +1779,7 @@ private struct DeprecationBanner: View {
                     Text(" instead.")
                         .foregroundColor(Color(white: 0.85))
                 }
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 HStack(spacing: 0) {
                     Text("Enable it with ").foregroundColor(Color(white: 0.75))
                     InlineCode("--enable multi_agent")
@@ -1788,16 +1787,16 @@ private struct DeprecationBanner: View {
                     InlineCode("[features].multi_agent")
                     Text(" in config.toml. See").foregroundColor(Color(white: 0.75))
                 }
-                .font(.system(size: 11.5))
+                .font(BodyFont.system(size: 11.5))
                 HStack(spacing: 4) {
                     Image(systemName: "globe")
-                        .font(.system(size: 10))
+                        .font(BodyFont.system(size: 10))
                         .foregroundColor(Palette.pastelBlue)
                     Text("Toggle experimental features by editing the configuration file.")
-                        .font(.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5))
                         .foregroundColor(Palette.pastelBlue)
                     Text("for details.")
-                        .font(.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5))
                         .foregroundColor(Color(white: 0.75))
                 }
             }
@@ -1821,7 +1820,7 @@ private struct InlineCode: View {
     init(_ text: String) { self.text = text }
     var body: some View {
         Text(text)
-            .font(.system(size: 11.5, design: .monospaced))
+            .font(BodyFont.system(size: 11.5, design: .monospaced))
             .foregroundColor(Color(white: 0.95))
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
@@ -1837,19 +1836,19 @@ private struct ReinstallRow: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Reset and install workspace")
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                 Text("Removes the local package, fetches it fresh, and reloads the tools")
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
             Button {} label: {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.down.circle")
-                        .font(.system(size: 11))
+                        .font(BodyFont.system(size: 11))
                     Text("Reinstall")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                 }
                 .foregroundColor(Color(red: 1.0, green: 0.55, blue: 0.45))
                 .padding(.horizontal, 12)
@@ -1897,16 +1896,16 @@ private struct PersonalizationPage: View {
             .padding(.bottom, 28)
 
             Text("Custom instructions")
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
             Text("Provide extra instructions and context that Clawix should keep in mind for this project. Learn more")
-                .font(.system(size: 11))
+                .font(BodyFont.system(size: 11))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.bottom, 14)
 
             ZStack(alignment: .topTrailing) {
                 TextEditor(text: $instructions)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(BodyFont.system(size: 12, design: .monospaced))
                     .scrollContentBackground(.hidden)
                     .padding(10)
                     .frame(minHeight: 300)
@@ -1926,7 +1925,7 @@ private struct PersonalizationPage: View {
                 Spacer()
                 Button {} label: {
                     Text("Save")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -1977,12 +1976,12 @@ private struct InstructionsExpandedSheet: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Text("Custom instructions")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(BodyFont.system(size: 14, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(Color(white: 0.78))
                         .frame(width: 22, height: 22)
                         .background(
@@ -2000,7 +1999,7 @@ private struct InstructionsExpandedSheet: View {
                 .frame(height: 1)
 
             TextEditor(text: $text)
-                .font(.system(size: 13, design: .monospaced))
+                .font(BodyFont.system(size: 13, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(18)
                 .background(Color(white: 0.06))
@@ -2013,7 +2012,7 @@ private struct InstructionsExpandedSheet: View {
                 Spacer()
                 Button { isPresented = false } label: {
                     Text("Done")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -2049,10 +2048,10 @@ private struct PlaceholderPage: View {
             SettingsCard {
                 HStack(spacing: 12) {
                     Image(systemName: category.iconName)
-                        .font(.system(size: 16))
+                        .font(BodyFont.system(size: 16))
                         .foregroundColor(Palette.textSecondary)
                     Text("Coming soon")
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                         .foregroundColor(Palette.textSecondary)
                     Spacer()
                 }
@@ -2084,7 +2083,7 @@ private struct UsagePage: View {
 
             if let snapshot = appState.rateLimits, snapshot.primary != nil || snapshot.secondary != nil {
                 Text("General usage limits")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.bottom, 14)
 
@@ -2095,7 +2094,7 @@ private struct UsagePage: View {
 
             ForEach(perModelBuckets, id: \.id) { entry in
                 Text(verbatim: SettingsLimitsFormatter.perModelSectionTitle(name: entry.snapshot.limitName ?? entry.id))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.bottom, 14)
                     .padding(.top, 28)
@@ -2147,10 +2146,10 @@ private struct UsageBarRow: View {
         HStack(alignment: .center, spacing: 18) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: title)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Palette.textPrimary)
                 Text(verbatim: detail)
-                    .font(.system(size: 11))
+                    .font(BodyFont.system(size: 11))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
@@ -2165,10 +2164,10 @@ private struct UsageBarRow: View {
                 }
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(verbatim: "\(percent) %")
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                         .foregroundColor(.white)
                     Text("used")
-                        .font(.system(size: 11))
+                        .font(BodyFont.system(size: 11))
                         .foregroundColor(Palette.textSecondary)
                 }
                 .frame(width: 56, alignment: .trailing)
@@ -2187,10 +2186,10 @@ private struct CreditRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: title)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                 Text(detail)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
@@ -2211,7 +2210,7 @@ private struct ArchivedChatsPage: View {
 
             if appState.archivedChats.isEmpty {
                 Text(appState.archivedLoading ? "Loading…" : "You have no archived chats.")
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textSecondary)
                     .padding(.top, 12)
                     .padding(.leading, 14)
@@ -2258,12 +2257,12 @@ private struct ArchivedChatRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(chat.title.isEmpty ? "Conversation" : chat.title)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(subtitle)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
                     .lineLimit(1)
             }
@@ -2272,7 +2271,7 @@ private struct ArchivedChatRow: View {
                 appState.unarchiveChat(chatId: chat.id)
             } label: {
                 Text("Unarchive")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(BodyFont.system(size: 12, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
@@ -2305,7 +2304,7 @@ private struct BrowserUsagePage: View {
 
             /*
             Text("Plugins")
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.bottom, 14)
 
@@ -2384,21 +2383,21 @@ private struct BrowserPluginRow: View {
                     )
                     .frame(width: 36, height: 36)
                 Image(systemName: "paperplane.fill")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(BodyFont.system(size: 15, weight: .medium))
                     .foregroundColor(.white)
                     .rotationEffect(.degrees(-12))
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 13))
+                    .font(BodyFont.system(size: 13))
                     .foregroundColor(Palette.textPrimary)
                 Text(detail)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
             Image(systemName: "checkmark")
-                .font(.system(size: 12, weight: .semibold))
+                .font(BodyFont.system(size: 12, weight: .semibold))
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.horizontal, 14)
@@ -2415,15 +2414,15 @@ private struct DomainListSection: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center) {
                 Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button {} label: {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(BodyFont.system(size: 10, weight: .semibold))
                         Text("Add")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(BodyFont.system(size: 12, weight: .medium))
                     }
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 12)
@@ -2440,7 +2439,7 @@ private struct DomainListSection: View {
                 .buttonStyle(.plain)
             }
             Text(subtitle)
-                .font(.system(size: 11.5))
+                .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.top, 4)
                 .padding(.bottom, 10)
@@ -2448,7 +2447,7 @@ private struct DomainListSection: View {
             HStack {
                 Spacer()
                 Text(emptyText)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
                 Spacer()
             }
@@ -2503,12 +2502,12 @@ private struct EnvironmentsList: View {
 
             HStack {
                 Text("Select a project")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button {} label: {
                     Text("Add project")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
@@ -2541,21 +2540,21 @@ private struct ProjectListRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "folder")
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textSecondary)
                 .frame(width: 18)
             Text(project.name)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
             if let tag = project.tag {
                 Text(tag)
-                    .font(.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Color(white: 0.50))
             }
             Spacer()
             Button(action: onTap) {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(BodyFont.system(size: 11, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
                     .frame(width: 28, height: 24)
                     .background(
@@ -2611,7 +2610,7 @@ private struct EnvironmentsDetail: View {
             HStack(spacing: 8) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(BodyFont.system(size: 12, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                         .frame(width: 22, height: 22)
                         .background(
@@ -2622,27 +2621,27 @@ private struct EnvironmentsDetail: View {
                 .buttonStyle(.plain)
                 .hoverHint(L10n.t("Back"))
                 Text("Environments")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(BodyFont.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
             }
             .padding(.bottom, 26)
 
             Text("Local environment")
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.bottom, 14)
 
             HStack(spacing: 12) {
                 Image(systemName: "folder")
-                    .font(.system(size: 14))
+                    .font(BodyFont.system(size: 14))
                     .foregroundColor(Palette.textSecondary)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(project.name)
-                        .font(.system(size: 13))
+                        .font(BodyFont.system(size: 13))
                         .foregroundColor(Palette.textPrimary)
                     Text("~/Documents/\(project.name)")
-                        .font(.system(size: 11.5, design: .monospaced))
+                        .font(BodyFont.system(size: 11.5, design: .monospaced))
                         .foregroundColor(Palette.textSecondary)
                 }
                 Spacer()
@@ -2661,7 +2660,7 @@ private struct EnvironmentsDetail: View {
             SectionLabel(title: "Name")
             TextField("", text: $name)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.horizontal, 11)
                 .padding(.vertical, 8)
@@ -2693,12 +2692,12 @@ private struct EnvironmentsDetail: View {
 
             HStack {
                 Text("Actions")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button {} label: {
                     Text("Add an action")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
@@ -2716,7 +2715,7 @@ private struct EnvironmentsDetail: View {
             .padding(.top, 28)
 
             Text("Each action can run any command and shows up in the toolbar header.")
-                .font(.system(size: 11))
+                .font(BodyFont.system(size: 11))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.top, 4)
                 .padding(.bottom, 14)
@@ -2724,7 +2723,7 @@ private struct EnvironmentsDetail: View {
             HStack {
                 Spacer()
                 Text("Register an action that runs a command from the local toolbar.")
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
                 Spacer()
             }
@@ -2743,7 +2742,7 @@ private struct EnvironmentsDetail: View {
                 Spacer()
                 Button {} label: {
                     Text("Save")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -2768,10 +2767,10 @@ private struct ScriptBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .font(.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
             Text(detail)
-                .font(.system(size: 11.5))
+                .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.top, 3)
                 .padding(.bottom, 12)
@@ -2780,7 +2779,7 @@ private struct ScriptBlock: View {
                 .padding(.bottom, 8)
 
             TextEditor(text: $script)
-                .font(.system(size: 12, design: .monospaced))
+                .font(BodyFont.system(size: 12, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(10)
                 .frame(minHeight: 130)
@@ -2807,7 +2806,7 @@ private struct ScriptTabs: View {
                     selected = tab
                 } label: {
                     Text(tab)
-                        .font(.system(size: 12, weight: selected == tab ? .medium : .regular))
+                        .font(BodyFont.system(size: 12, weight: selected == tab ? .medium : .regular))
                         .foregroundColor(selected == tab ? Palette.textPrimary : Palette.textSecondary)
                         .padding(.horizontal, 11)
                         .padding(.vertical, 5)
@@ -2820,7 +2819,7 @@ private struct ScriptTabs: View {
             }
             Spacer()
             Text("Variables")
-                .font(.system(size: 12))
+                .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textSecondary)
         }
     }
@@ -2926,7 +2925,7 @@ private struct GitTextFieldRow: View {
             TextField("", text: $text)
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(rightAligned ? .trailing : .leading)
-                .font(.system(size: 12, design: monospaced ? .monospaced : .default))
+                .font(BodyFont.system(size: 12, design: monospaced ? .monospaced : .default))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.horizontal, 11)
                 .padding(.vertical, 6)
@@ -2956,16 +2955,16 @@ private struct CommitInstructionsBlock: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                     Text(detail)
-                        .font(.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5))
                         .foregroundColor(Palette.textSecondary)
                 }
                 Spacer()
                 Button {} label: {
                     Text("Save")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
@@ -2981,14 +2980,14 @@ private struct CommitInstructionsBlock: View {
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
                     Text(placeholder)
-                        .font(.system(size: 12))
+                        .font(BodyFont.system(size: 12))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)
                         .allowsHitTesting(false)
                 }
                 TextEditor(text: $text)
-                    .font(.system(size: 12))
+                    .font(BodyFont.system(size: 12))
                     .scrollContentBackground(.hidden)
                     .padding(10)
                     .frame(minHeight: 110)
@@ -3043,7 +3042,7 @@ private struct MCPListView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("MCP servers")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(BodyFont.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
                 (
                     Text("Connect external tools and data sources.")
@@ -3052,21 +3051,21 @@ private struct MCPListView: View {
                     + Text("Learn more.")
                         .foregroundColor(Palette.pastelBlue)
                 )
-                .font(.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5))
             }
             .padding(.bottom, 26)
 
             HStack {
                 Text("Servers")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button(action: onAdd) {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(BodyFont.system(size: 10, weight: .semibold))
                         Text("Add server")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(BodyFont.system(size: 12, weight: .medium))
                     }
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 12)
@@ -3101,12 +3100,11 @@ private struct MCPServerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(server.name)
-                .font(.system(size: 13))
+                .font(BodyFont.system(size: 13))
                 .foregroundColor(Palette.textPrimary)
             Spacer()
             Button(action: onConfig) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 13))
+                SettingsIcon(size: 18)
                     .foregroundColor(Color(white: configHovered ? 0.94 : 0.62))
                     .frame(width: 26, height: 26)
                     .contentShape(Rectangle())
@@ -3149,7 +3147,7 @@ private struct MCPDetailView: View {
             HStack(spacing: 8) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(BodyFont.system(size: 12, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                         .frame(width: 22, height: 22)
                         .background(
@@ -3160,15 +3158,15 @@ private struct MCPDetailView: View {
                 .buttonStyle(.plain)
                 .hoverHint(L10n.t("Back"))
                 Text("Connect to a custom MCP")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(BodyFont.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
             }
             Button {} label: {
                 HStack(spacing: 4) {
                     Text("Documents")
-                        .font(.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5))
                     Image(systemName: "arrow.up.right.square")
-                        .font(.system(size: 10))
+                        .font(BodyFont.system(size: 10))
                 }
                 .foregroundColor(Palette.pastelBlue)
             }
@@ -3255,7 +3253,7 @@ private struct MCPDetailView: View {
                 Spacer()
                 Button {} label: {
                     Text("Save")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, weight: .medium))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -3296,7 +3294,7 @@ private struct MCPFieldLabel: View {
     init(_ text: LocalizedStringKey) { self.text = text }
     var body: some View {
         Text(text)
-            .font(.system(size: 13, weight: .medium))
+            .font(BodyFont.system(size: 13, weight: .medium))
             .foregroundColor(Palette.textPrimary)
     }
 }
@@ -3308,7 +3306,7 @@ private struct MCPInputField: View {
     var body: some View {
         TextField(placeholder, text: $text)
             .textFieldStyle(.plain)
-            .font(.system(size: 13))
+            .font(BodyFont.system(size: 13))
             .foregroundColor(Palette.textPrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
@@ -3330,7 +3328,7 @@ private struct MCPTrashButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "trash")
-                .font(.system(size: 11))
+                .font(BodyFont.system(size: 11))
                 .foregroundColor(Color(white: hovered ? 0.94 : 0.55))
                 .frame(width: 30, height: 30)
                 .background(
@@ -3354,9 +3352,9 @@ private struct MCPAddRowButton: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(BodyFont.system(size: 11, weight: .semibold))
                 Text(label)
-                    .font(.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5))
             }
             .foregroundColor(Color(white: hovered ? 0.94 : 0.65))
             .frame(maxWidth: .infinity)
@@ -3401,7 +3399,7 @@ private struct MCPTransportSegmented: View {
             selection = value
         } label: {
             Text(label)
-                .font(.system(size: 12.5, weight: isOn ? .medium : .regular))
+                .font(BodyFont.system(size: 12.5, weight: isOn ? .medium : .regular))
                 .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 7)
