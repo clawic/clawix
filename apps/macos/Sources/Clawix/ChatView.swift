@@ -455,22 +455,27 @@ private struct MessageRow: View {
                 // "N mensajes anteriores" disclosure inside the bubble,
                 // matching how Clawix hides intermediate work behind the
                 // final answer until the user opens it.
-                let split = splitTimeline(collapseAdjacentSingleServerMcpTools(message.timeline))
+                let split = splitTimeline(message.timeline)
+                let isStreaming = !message.streamingFinished && !message.isError
                 if !split.hidden.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        InlinePreviousMessagesLink(
-                            count: split.hidden.reduce(0) { acc, e in
-                                switch e {
-                                case .reasoning: return acc + 1
-                                case .tools(_, let items): return acc + items.count
+                        if isStreaming, let summary = message.workSummary {
+                            LiveWorkingHeader(summary: summary)
+                        } else {
+                            InlinePreviousMessagesLink(
+                                count: split.hidden.reduce(0) { acc, e in
+                                    switch e {
+                                    case .reasoning: return acc + 1
+                                    case .tools(_, let items): return acc + items.count
+                                    }
+                                },
+                                expanded: timelineExpanded
+                            ) {
+                                let willExpand = !timelineExpanded
+                                timelineExpanded.toggle()
+                                if willExpand {
+                                    onTimelineExpanded?(message.id)
                                 }
-                            },
-                            expanded: timelineExpanded
-                        ) {
-                            let willExpand = !timelineExpanded
-                            timelineExpanded.toggle()
-                            if willExpand {
-                                onTimelineExpanded?(message.id)
                             }
                         }
                         Rectangle()
@@ -478,7 +483,7 @@ private struct MessageRow: View {
                             .frame(height: 0.5)
                             .frame(maxWidth: .infinity)
                     }
-                    if timelineExpanded {
+                    if isStreaming || timelineExpanded {
                         ForEach(split.hidden) { entry in
                             timelineEntry(entry)
                         }
@@ -601,46 +606,6 @@ private struct MessageRow: View {
         return (Array(timeline[..<(idx + 1)]), Array(timeline[(idx + 1)...]))
     }
 
-    /// Fuse adjacent `.tools` timeline entries when each one contains only
-    /// MCP calls to the same server. Without this, a model that fires
-    /// several MCP tools in a row produces a wall of identical
-    /// "Used <Server>" rows in the inline transcript; merging the
-    /// underlying batches lets the per-batch dedup collapse them into a
-    /// single row while preserving any non-MCP work between them.
-    private func collapseAdjacentSingleServerMcpTools(
-        _ timeline: [AssistantTimelineEntry]
-    ) -> [AssistantTimelineEntry] {
-        var result: [AssistantTimelineEntry] = []
-        for entry in timeline {
-            guard case .tools(_, let items) = entry,
-                  let server = Self.sharedMcpServer(items),
-                  case .tools(let prevId, let prevItems) = result.last,
-                  Self.sharedMcpServer(prevItems) == server
-            else {
-                result.append(entry)
-                continue
-            }
-            result.removeLast()
-            result.append(.tools(id: prevId, items: prevItems + items))
-        }
-        return result
-    }
-
-    /// Server name shared by every item in `items`, or nil if the batch
-    /// contains anything other than MCP calls or hits more than one
-    /// server. Two adjacent `.tools` entries can be merged when both
-    /// return the same non-nil server here.
-    static func sharedMcpServer(_ items: [WorkItem]) -> String? {
-        guard !items.isEmpty else { return nil }
-        var server: String? = nil
-        for item in items {
-            guard case .mcpTool(let s, _) = item.kind, !s.isEmpty else { return nil }
-            if let known = server, known != s { return nil }
-            server = s
-        }
-        return server
-    }
-
     @ViewBuilder
     private func timelineEntry(_ entry: AssistantTimelineEntry) -> some View {
         switch entry {
@@ -694,7 +659,7 @@ private struct MessageRow: View {
         }
         .padding(.leading, isUser ? 0 : 6)
         .padding(.trailing, isUser ? 6 : 0)
-        .padding(.top, -8)
+        .padding(.top, -18)
     }
 
     private var timestampLabel: some View {
