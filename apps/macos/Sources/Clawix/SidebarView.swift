@@ -2143,6 +2143,12 @@ private struct PinnedReorderableList: View {
     /// chip is anchored to that offset so the cursor stays at the same
     /// point of the chip the user originally clicked.
     @State private var rowFramesById: [UUID: CGRect] = [:]
+    /// Holds a weak ref to the surrounding sidebar `NSScrollView`,
+    /// captured by `EnclosingScrollViewLocator` once the view enters
+    /// the AppKit hierarchy. Drives the edge auto-scroll while a
+    /// pinned-row drag is active.
+    @StateObject private var scrollBox = EnclosingScrollViewBox()
+    @State private var autoScroller: PinnedDragAutoScroller? = nil
 
     private let baseSpacing: CGFloat = 2
     /// Approximate row height. RecentChatRow renders at ~32 pt with
@@ -2176,6 +2182,7 @@ private struct PinnedReorderableList: View {
         // interpolates. `.animation(_:value:)` wouldn't honour the
         // `disablesAnimations` flag on `Transaction`, so we can't use it
         // here without also fading the source row.
+        .background(EnclosingScrollViewLocator(box: scrollBox).allowsHitTesting(false))
         .onAppear { installMouseUpMonitor() }
         .onDisappear {
             cancelPendingClear()
@@ -2311,6 +2318,15 @@ private struct PinnedReorderableList: View {
         dragChipPanel?.close()
         dragChipPanel = DragChipPanel(chat: chat, grabAnchor: anchor)
         dragChipPanel?.show()
+        // Edge auto-scroll. The same 60Hz cursor poll the chip uses to
+        // follow the cursor also drives this; nudges the surrounding
+        // sidebar `NSScrollView` while the cursor sits in the top or
+        // bottom edge zone, so reordering across a long pinned list
+        // doesn't require manual scrolling.
+        autoScroller?.stop()
+        let scroller = PinnedDragAutoScroller(box: scrollBox)
+        scroller.start()
+        autoScroller = scroller
     }
 
     /// Cursor offset (in chip-local coords, top-left origin) at drag
@@ -2348,6 +2364,8 @@ private struct PinnedReorderableList: View {
     private func cleanupDragChip() {
         dragChipPanel?.close()
         dragChipPanel = nil
+        autoScroller?.stop()
+        autoScroller = nil
     }
 
     private func setTarget(slot: Int) {
@@ -2456,6 +2474,137 @@ private struct PinnedRowDropDelegate: DropDelegate {
             }
         }
         return true
+    }
+}
+
+// MARK: - Pinned drag auto-scroll
+
+/// Weak handle to the surrounding `NSScrollView`. Populated by
+/// `EnclosingScrollViewLocator` once SwiftUI drops the locator into
+/// the AppKit hierarchy; consumed by `PinnedDragAutoScroller` while a
+/// pinned-row drag is active so it can nudge the scroller without
+/// going through SwiftUI bindings.
+@MainActor
+final class EnclosingScrollViewBox: ObservableObject {
+    weak var scrollView: NSScrollView?
+}
+
+/// Walks up its AppKit superview chain to find the nearest enclosing
+/// `NSScrollView` and stashes a weak reference in `box`. Mirrors the
+/// trick `ThinScrollerInstaller` uses, but exposes the scroll view to
+/// SwiftUI code that needs to drive scrolling imperatively (e.g. the
+/// pinned-list drag auto-scroll).
+private struct EnclosingScrollViewLocator: NSViewRepresentable {
+    let box: EnclosingScrollViewBox
+
+    func makeNSView(context: Context) -> NSView { LocatorView(box: box) }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    final class LocatorView: NSView {
+        let box: EnclosingScrollViewBox
+        init(box: EnclosingScrollViewBox) {
+            self.box = box
+            super.init(frame: .zero)
+        }
+        required init?(coder: NSCoder) { fatalError("not used") }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            DispatchQueue.main.async { [weak self] in self?.locate() }
+        }
+        private func locate() {
+            var current: NSView? = self.superview
+            while let v = current {
+                if let sv = v as? NSScrollView {
+                    box.scrollView = sv
+                    return
+                }
+                current = v.superview
+            }
+        }
+    }
+}
+
+/// 60Hz auto-scroll driver active during a pinned-row drag. Polls
+/// `NSEvent.mouseLocation` (still queryable while AppKit's drag
+/// session owns the event stream, same trick `DragChipPanel` uses);
+/// when the cursor sits inside the top or bottom edge zone of the
+/// surrounding scroll view's visible rect, scrolls in that direction
+/// with a speed that ramps up the closer the cursor is to the edge.
+/// SwiftUI's `.onDrop` keeps firing against whatever slot zone is now
+/// under the cursor, so the gap follows the new content and the user
+/// can drop on rows that started off screen.
+@MainActor
+private final class PinnedDragAutoScroller {
+    private weak var box: EnclosingScrollViewBox?
+    private var timer: Timer?
+
+    /// Distance from the top/bottom edge at which auto-scroll engages.
+    /// ~1.5 pinned rows: comfortable hit area without triggering during
+    /// normal mid-list dragging.
+    private let edgeZone: CGFloat = 56
+    /// Peak scroll speed (px/s) at the very edge. Squared falloff in
+    /// `tick(dt:)` keeps motion gentle near the boundary of `edgeZone`
+    /// and ramps up sharply only as the cursor approaches the edge.
+    private let maxSpeed: CGFloat = 900
+
+    init(box: EnclosingScrollViewBox) {
+        self.box = box
+    }
+
+    func start() {
+        timer?.invalidate()
+        let dt: TimeInterval = 1.0 / 60.0
+        timer = Timer.scheduledTimer(withTimeInterval: dt, repeats: true) { [weak self] _ in
+            self?.tick(dt: dt)
+        }
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func tick(dt: TimeInterval) {
+        guard let sv = box?.scrollView, let win = sv.window else { return }
+        let cursorScreen = NSEvent.mouseLocation
+        let cursorWindow = win.convertPoint(fromScreen: cursorScreen)
+        let clip = sv.contentView
+        let cursorClip = clip.convert(cursorWindow, from: nil)
+        let bounds = clip.bounds
+        guard cursorClip.x >= bounds.minX, cursorClip.x <= bounds.maxX,
+              cursorClip.y >= bounds.minY, cursorClip.y <= bounds.maxY
+        else { return }
+
+        // Distance from the visible top edge, regardless of clip view
+        // orientation. SwiftUI hosting views are flipped (origin at top),
+        // but support both orientations defensively.
+        let yFromTop: CGFloat = clip.isFlipped
+            ? (cursorClip.y - bounds.minY)
+            : (bounds.maxY - cursorClip.y)
+        let visibleH = bounds.height
+
+        var delta: CGFloat = 0
+        if yFromTop < edgeZone {
+            let factor = (edgeZone - yFromTop) / edgeZone
+            delta = -(factor * factor) * maxSpeed * CGFloat(dt)
+        } else if yFromTop > visibleH - edgeZone {
+            let factor = (yFromTop - (visibleH - edgeZone)) / edgeZone
+            delta = (factor * factor) * maxSpeed * CGFloat(dt)
+        }
+        guard abs(delta) > 0.05 else { return }
+
+        let docHeight = sv.documentView?.frame.height ?? 0
+        let maxY = max(0, docHeight - visibleH)
+        // In a flipped clip view, increasing bounds.origin.y reveals
+        // content that was below; in a non-flipped one it's the
+        // opposite. Flip the sign so a positive `delta` always means
+        // "scroll towards the bottom".
+        let signedDelta: CGFloat = clip.isFlipped ? delta : -delta
+        let currentY = bounds.origin.y
+        let newY = max(0, min(maxY, currentY + signedDelta))
+        guard abs(newY - currentY) > 0.05 else { return }
+        clip.scroll(to: NSPoint(x: bounds.origin.x, y: newY))
+        sv.reflectScrolledClipView(clip)
     }
 }
 
