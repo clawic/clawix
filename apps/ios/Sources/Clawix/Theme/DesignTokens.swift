@@ -1,27 +1,30 @@
 import SwiftUI
 
-// This iOS companion is deliberately dark-first: it is a remote
-// control for the macOS Clawix app and inherits its identity.
-// Background colors match the desktop palette so a user switching
-// screens doesn't feel they are using a different product.
-//
-// Tokens here mirror `apps/macos/Sources/Clawix/ContentView.swift`
-// `Palette` and `MenuStyle`. Values come straight from the desktop
-// canon. When updating, update both sides.
+// ChatGPT-iOS-inspired identity, rebuilt for iOS 26 Liquid Glass.
+// The desktop Clawix stays on its dense dark-gray surfaces; the
+// iPhone companion intentionally diverges because iOS 26 reads
+// better with refractive glass capsules over a pure black canvas
+// than with stacked opaque grays.
 
 enum Palette {
-    static let background    = Color(white: 0.04)
+    static let background    = Color.black
     static let surface       = Color(white: 0.10)
-    static let cardFill      = Color(white: 0.14)
-    static let cardHover     = Color(white: 0.17)
-    static let border        = Color(white: 0.20)
-    static let borderSubtle  = Color(white: 0.15)
+    static let cardFill      = Color.white.opacity(0.06)
+    static let cardHover     = Color.white.opacity(0.10)
+    static let border        = Color.white.opacity(0.10)
+    static let borderSubtle  = Color.white.opacity(0.06)
     static let popupStroke   = Color.white.opacity(0.10)
     static let popupStrokeWidth: CGFloat = 0.5
     static let selFill       = Color(white: 0.28)
     static let textPrimary   = Color.white
-    static let textSecondary = Color(white: 0.55)
-    static let textTertiary  = Color(white: 0.38)
+    static let textSecondary = Color(white: 0.65)
+    static let textTertiary  = Color(white: 0.45)
+
+    // ChatGPT-style user message bubble: light, almost white, with
+    // dark text. The contrast against the assistant's bare-text
+    // response is what gives the conversation its rhythm.
+    static let userBubbleFill = Color(white: 0.92)
+    static let userBubbleText = Color(white: 0.05)
 }
 
 enum MenuStyle {
@@ -39,26 +42,30 @@ enum MenuStyle {
     static let openAnimation                = Animation.easeOut(duration: 0.20)
 }
 
-// Mobile-specific spacing and radii. Mac values are dense (7-9pt
-// vertical row padding); on iOS we breathe a bit more for thumb
-// targets while keeping the typography compact. Named `AppLayout`
-// to avoid colliding with SwiftUI's `Layout` protocol.
+// Tuned for iOS 26 Liquid Glass: pill heights are ~50pt so the
+// refraction has room to read, the composer reaches ~64pt for a
+// chunky tappable surface, and the top bar reserves enough room
+// for both. Bigger than the original mac-port values on purpose.
 enum AppLayout {
     static let screenHorizontalPadding: CGFloat = 16
     static let screenTopPadding: CGFloat        = 8
-    static let cardCornerRadius: CGFloat        = 16
+    static let cardCornerRadius: CGFloat        = 20
     static let chipCornerRadius: CGFloat        = 12
-    static let buttonCornerRadius: CGFloat      = 14
+    static let buttonCornerRadius: CGFloat      = 16
     static let cardSpacing: CGFloat             = 12
     static let listRowVerticalPadding: CGFloat  = 14
-    static let composerCornerRadius: CGFloat    = 22
+    static let composerCornerRadius: CGFloat    = 32
+    static let userBubbleRadius: CGFloat        = 24
+    static let topBarPillHeight: CGFloat        = 50
+    static let topBarReservedHeight: CGFloat    = 64
+    static let composerReservedHeight: CGFloat  = 110
 }
 
 enum Typography {
-    static let titleFont       = Font.system(size: 20, weight: .semibold)
-    static let bodyFont        = Font.system(size: 15)
-    static let bodyEmphasized  = Font.system(size: 15, weight: .medium)
-    static let secondaryFont   = Font.system(size: 13)
+    static let titleFont       = Font.system(size: 22, weight: .semibold)
+    static let bodyFont        = Font.system(size: 16)
+    static let bodyEmphasized  = Font.system(size: 16, weight: .medium)
+    static let secondaryFont   = Font.system(size: 14)
     static let captionFont     = Font.system(size: 12)
     static let monoFont        = Font.system(size: 14, design: .monospaced)
 }
