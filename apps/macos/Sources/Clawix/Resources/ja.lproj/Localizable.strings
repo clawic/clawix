@@ -95,6 +95,7 @@
 "Copy code" = "Copy code";
 "Copy direct link" = "ダイレクトリンクをコピー";
 "Copy link" = "Copy link";
+"Copy path" = "Copy path";
 "Copy payload" = "Copy payload";
 "Copy plan" = "プランをコピー";
 "Copy session ID" = "セッションIDをコピー";
@@ -240,6 +241,7 @@
 "Open in mini window" = "ミニウィンドウで開く";
 "Open side chat" = "サイドチャットを開く";
 "Open with" = "開く";
+"Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
 "Organize" = "整理";
 "Other models" = "他のモデル";
@@ -285,6 +287,7 @@
 "Reset local overrides" = "Reset local overrides";
 "Resets at %@" = "%@ にリセット";
 "Resets on %@" = "%@ にリセット";
+"Reveal in Finder" = "Reveal in Finder";
 "Review" = "レビュー";
 "Review code" = "コードレビュー";
 "Right sidebar" = "右サイドバー";

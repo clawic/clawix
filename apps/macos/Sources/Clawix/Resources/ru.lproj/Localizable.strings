@@ -95,6 +95,7 @@
 "Copy code" = "Copy code";
 "Copy direct link" = "Скопировать прямую ссылку";
 "Copy link" = "Copy link";
+"Copy path" = "Copy path";
 "Copy payload" = "Copy payload";
 "Copy plan" = "Скопировать план";
 "Copy session ID" = "Скопировать ID сеанса";
@@ -240,6 +241,7 @@
 "Open in mini window" = "Открыть в мини-окне";
 "Open side chat" = "Открыть боковой чат";
 "Open with" = "Открыть с помощью";
+"Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
 "Organize" = "Упорядочить";
 "Other models" = "Другие модели";
@@ -285,6 +287,7 @@
 "Reset local overrides" = "Reset local overrides";
 "Resets at %@" = "Сброс в %@";
 "Resets on %@" = "Сброс %@";
+"Reveal in Finder" = "Reveal in Finder";
 "Review" = "Проверка";
 "Review code" = "Ревью кода";
 "Right sidebar" = "Правая панель";

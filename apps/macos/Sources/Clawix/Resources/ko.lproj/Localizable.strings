@@ -95,6 +95,7 @@
 "Copy code" = "Copy code";
 "Copy direct link" = "다이렉트 링크 복사";
 "Copy link" = "Copy link";
+"Copy path" = "Copy path";
 "Copy payload" = "Copy payload";
 "Copy plan" = "계획 복사";
 "Copy session ID" = "세션 ID 복사";
@@ -240,6 +241,7 @@
 "Open in mini window" = "미니 창에서 열기";
 "Open side chat" = "사이드 채팅 열기";
 "Open with" = "다른 앱으로 열기";
+"Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
 "Organize" = "정리";
 "Other models" = "다른 모델";
@@ -285,6 +287,7 @@
 "Reset local overrides" = "Reset local overrides";
 "Resets at %@" = "%@에 초기화";
 "Resets on %@" = "%@에 초기화";
+"Reveal in Finder" = "Reveal in Finder";
 "Review" = "검토";
 "Review code" = "코드 리뷰";
 "Right sidebar" = "오른쪽 사이드바";

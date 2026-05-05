@@ -95,6 +95,7 @@
 "Copy code" = "Copy code";
 "Copy direct link" = "复制直接链接";
 "Copy link" = "Copy link";
+"Copy path" = "Copy path";
 "Copy payload" = "Copy payload";
 "Copy plan" = "复制计划";
 "Copy session ID" = "复制会话 ID";
@@ -240,6 +241,7 @@
 "Open in mini window" = "在小窗口中打开";
 "Open side chat" = "打开侧边对话";
 "Open with" = "打开方式";
+"Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
 "Organize" = "整理";
 "Other models" = "其他模型";
@@ -285,6 +287,7 @@
 "Reset local overrides" = "Reset local overrides";
 "Resets at %@" = "%@ 重置";
 "Resets on %@" = "%@ 重置";
+"Reveal in Finder" = "Reveal in Finder";
 "Review" = "审查";
 "Review code" = "代码评审";
 "Right sidebar" = "右侧边栏";

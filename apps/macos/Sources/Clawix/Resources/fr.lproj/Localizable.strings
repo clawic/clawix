@@ -95,6 +95,7 @@
 "Copy code" = "Copy code";
 "Copy direct link" = "Copier le lien direct";
 "Copy link" = "Copy link";
+"Copy path" = "Copy path";
 "Copy payload" = "Copy payload";
 "Copy plan" = "Copier le plan";
 "Copy session ID" = "Copier l’ID de session";
@@ -240,6 +241,7 @@
 "Open in mini window" = "Ouvrir en mini-fenêtre";
 "Open side chat" = "Ouvrir une conversation latérale";
 "Open with" = "Ouvrir avec";
+"Open with default app" = "Open with default app";
 "Open with…" = "Open with…";
 "Organize" = "Organiser";
 "Other models" = "Autres modèles";
@@ -285,6 +287,7 @@
 "Reset local overrides" = "Reset local overrides";
 "Resets at %@" = "Réinitialisation à %@";
 "Resets on %@" = "Réinitialisation le %@";
+"Reveal in Finder" = "Reveal in Finder";
 "Review" = "Révision";
 "Review code" = "Revoir le code";
 "Right sidebar" = "Barre latérale droite";
