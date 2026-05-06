@@ -58,6 +58,31 @@ final class BridgeClient: NSObject {
     private static let keepalivePingInterval: TimeInterval = 15
     private static let keepaliveDeadAfter: TimeInterval = 30
 
+    /// Coalesce window for `messageStreaming` chunks. A turn typically
+    /// emits a few chunks per second; without coalescing each one
+    /// reassigns `store.messagesByChat[chatId]` and causes every view
+    /// observing the array to redraw, including the markdown parser
+    /// in `AssistantMarkdownView`. Batching at 80ms keeps the visible
+    /// streaming smooth (~12fps text growth, well under typing speed)
+    /// while collapsing redraws by an order of magnitude when chunks
+    /// arrive faster than the eye can read.
+    private static let streamCoalesceNanos: UInt64 = 80_000_000
+
+    /// Pending streaming updates keyed by `messageId`. Each new chunk
+    /// for the same message overwrites the previous (last-wins); a
+    /// `finished == true` chunk forces an immediate flush so the user
+    /// sees the final text without the 80ms delay.
+    private var pendingStreamUpdates: [String: PendingStreamUpdate] = [:]
+    private var streamFlushScheduled: Bool = false
+
+    private struct PendingStreamUpdate {
+        let chatId: String
+        let messageId: String
+        let content: String
+        let reasoning: String
+        let finished: Bool
+    }
+
     init(store: BridgeStore) {
         self.store = store
         super.init()
@@ -437,12 +462,21 @@ final class BridgeClient: NSObject {
             }
         case .messageStreaming(let chatId, let messageId, let content, let reasoning, let finished):
             if winner?.id == candidate.id {
-                var current = store.messagesByChat[chatId] ?? []
-                if let idx = current.firstIndex(where: { $0.id == messageId }) {
-                    current[idx].content = content
-                    current[idx].reasoningText = reasoning
-                    current[idx].streamingFinished = finished
-                    store.messagesByChat[chatId] = current
+                pendingStreamUpdates[messageId] = PendingStreamUpdate(
+                    chatId: chatId,
+                    messageId: messageId,
+                    content: content,
+                    reasoning: reasoning,
+                    finished: finished
+                )
+                if finished {
+                    flushPendingStreamUpdates()
+                } else if !streamFlushScheduled {
+                    streamFlushScheduled = true
+                    Task { @MainActor [weak self] in
+                        try? await Task.sleep(nanoseconds: BridgeClient.streamCoalesceNanos)
+                        self?.flushPendingStreamUpdates()
+                    }
                 }
             }
         case .errorEvent(let code, let message):
@@ -472,6 +506,31 @@ final class BridgeClient: NSObject {
             // Outbound-from-desktop or server-to-desktop frames the
             // iPhone client neither emits nor consumes. Ignore.
             break
+        }
+    }
+
+    /// Apply all pending streaming updates in a single pass. Each
+    /// `messageId` mutates `store.messagesByChat[chatId]` once,
+    /// regardless of how many chunks arrived during the coalesce
+    /// window. The caller must clear `streamFlushScheduled` before
+    /// returning so a subsequent chunk re-arms the timer.
+    private func flushPendingStreamUpdates() {
+        streamFlushScheduled = false
+        guard !pendingStreamUpdates.isEmpty else { return }
+        // Drain into a snapshot so callers can keep enqueuing onto a
+        // fresh dict if a flush re-entry happens (defensive; under
+        // current call sites this can't loop, but keeping the apply
+        // pass against an immutable copy avoids surprises).
+        let updates = pendingStreamUpdates
+        pendingStreamUpdates.removeAll(keepingCapacity: true)
+        for (_, u) in updates {
+            var current = store.messagesByChat[u.chatId] ?? []
+            if let idx = current.firstIndex(where: { $0.id == u.messageId }) {
+                current[idx].content = u.content
+                current[idx].reasoningText = u.reasoning
+                current[idx].streamingFinished = u.finished
+                store.messagesByChat[u.chatId] = current
+            }
         }
     }
 
