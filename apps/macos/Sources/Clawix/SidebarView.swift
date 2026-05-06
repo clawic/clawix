@@ -216,7 +216,7 @@ struct SidebarView: View {
                     .padding(.trailing, 9)
                     .padding(.top, 6)
                     .padding(.bottom, 4)
-                    .onHover { projectsHeaderHovered = $0 }
+                    .sidebarHover { projectsHeaderHovered = $0 }
 
                 // Projects list. We add/remove the whole subtree when
                 // toggling. Wrapping in `ExpandableContainer` collapses the
@@ -381,6 +381,7 @@ struct SidebarView: View {
                 // strip between content and that column.
                 ThinScrollView(trailingGutter: 4) {
                     sidebarScrollContent(snapshot: makeSnapshot())
+                        .background(SidebarScrollStateInstaller().allowsHitTesting(false))
                 }
 
                 // Settings button at bottom (toggles account popover above it)
@@ -765,7 +766,7 @@ private struct NewProjectPopupRow: View {
             .background(MenuRowHover(active: hovered))
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
     }
 }
 
@@ -917,7 +918,7 @@ private struct SettingsLimitsHeaderRow: View {
             .background(MenuRowHover(active: hovered))
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
     }
 }
 
@@ -1141,7 +1142,7 @@ private struct SidebarButton: View {
             .animation(.easeOut(duration: 0.12), value: hovered)
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
         .accessibilityLabel(localizedTitle)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -1646,7 +1647,7 @@ struct RecentChatRow: View, Equatable {
                 .opacity(visible ? 1 : 0)
         }
         .buttonStyle(.plain)
-        .onHover { pinHovered = $0 }
+        .sidebarHover { pinHovered = $0 }
         .disabled(!visible)
         .help(help)
     }
@@ -2101,7 +2102,7 @@ private struct ProjectRowMenuRow: View {
             .background(MenuRowHover(active: hovered))
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
     }
 }
 
@@ -2222,7 +2223,7 @@ private struct OrganizeMenuRow: View {
             .background(MenuRowHover(active: hovered))
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
     }
 }
 
