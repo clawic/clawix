@@ -48,8 +48,8 @@ final class DaemonBridgeClient {
         send(.openChat(chatId: chatId.uuidString))
     }
 
-    func sendPrompt(chatId: UUID, text: String) {
-        send(.sendPrompt(chatId: chatId.uuidString, text: text))
+    func sendPrompt(chatId: UUID, text: String, attachments: [WireAttachment] = []) {
+        send(.sendPrompt(chatId: chatId.uuidString, text: text, attachments: attachments))
     }
 
     func archiveChat(_ chatId: UUID) {

@@ -68,14 +68,20 @@ public enum BridgeBody: Equatable, Sendable {
     case auth(token: String, deviceName: String?, clientKind: ClientKind?)
     case listChats
     case openChat(chatId: String)
-    case sendPrompt(chatId: String, text: String)
+    /// Carries optional inline attachments alongside the prompt. The
+    /// daemon writes each one to a turn-scoped temp file and forwards
+    /// the resulting paths to Codex as `localImage` user input items.
+    /// Old peers that don't know about attachments omit the field; old
+    /// servers receiving a frame with attachments fall back to text
+    /// because the field is decoded with `decodeIfPresent ?? []`.
+    case sendPrompt(chatId: String, text: String, attachments: [WireAttachment])
     /// New conversation kicked off from the iPhone FAB. The client
     /// pre-mints the UUID so it can route to the chat detail screen
     /// before the round trip lands; the Mac creates a chat with that
     /// exact id, appends the user message, and runs the turn. The bus
     /// auto-subscribes the new id so streaming deltas flow back without
     /// an extra `openChat`.
-    case newChat(chatId: String, text: String)
+    case newChat(chatId: String, text: String, attachments: [WireAttachment])
 
     // MARK: - v1 inbound (Mac -> iPhone)
     case authOk(macName: String?)
@@ -176,6 +182,7 @@ public enum BridgeBody: Equatable, Sendable {
         case qrJson, bearer
         case projects
         case path, isMarkdown, error
+        case attachments
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
@@ -189,12 +196,18 @@ public enum BridgeBody: Equatable, Sendable {
             break
         case .openChat(let chatId):
             try c.encode(chatId, forKey: .chatId)
-        case .sendPrompt(let chatId, let text):
+        case .sendPrompt(let chatId, let text, let attachments):
             try c.encode(chatId, forKey: .chatId)
             try c.encode(text, forKey: .text)
-        case .newChat(let chatId, let text):
+            if !attachments.isEmpty {
+                try c.encode(attachments, forKey: .attachments)
+            }
+        case .newChat(let chatId, let text, let attachments):
             try c.encode(chatId, forKey: .chatId)
             try c.encode(text, forKey: .text)
+            if !attachments.isEmpty {
+                try c.encode(attachments, forKey: .attachments)
+            }
         case .authOk(let macName):
             try c.encodeIfPresent(macName, forKey: .macName)
         case .authFailed(let reason):
@@ -260,12 +273,14 @@ public enum BridgeBody: Equatable, Sendable {
         case "sendPrompt":
             return .sendPrompt(
                 chatId: try c.decode(String.self, forKey: .chatId),
-                text: try c.decode(String.self, forKey: .text)
+                text: try c.decode(String.self, forKey: .text),
+                attachments: try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
             )
         case "newChat":
             return .newChat(
                 chatId: try c.decode(String.self, forKey: .chatId),
-                text: try c.decode(String.self, forKey: .text)
+                text: try c.decode(String.self, forKey: .text),
+                attachments: try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
             )
         case "authOk":
             return .authOk(macName: try c.decodeIfPresent(String.self, forKey: .macName))

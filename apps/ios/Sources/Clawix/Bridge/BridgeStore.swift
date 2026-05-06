@@ -81,13 +81,16 @@ final class BridgeStore {
     }
 
     @MainActor
-    func sendPrompt(chatId: String, text: String) {
+    func sendPrompt(chatId: String, text: String, attachments: [WireAttachment] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        // Allow attachment-only sends: an empty text body still goes
+        // through as long as at least one image is attached, mirroring
+        // how the Codex CLI accepts dragged images without a prompt.
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
         if pendingNewChats.remove(chatId) != nil {
-            client?.sendNewChat(chatId: chatId, text: trimmed)
+            client?.sendNewChat(chatId: chatId, text: trimmed, attachments: attachments)
         } else {
-            client?.sendPrompt(chatId: chatId, text: trimmed)
+            client?.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         }
     }
 

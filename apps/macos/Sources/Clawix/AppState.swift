@@ -3293,11 +3293,15 @@ extension AppState: EngineHost {
         hydrateHistoryFromBridge(chatId: chatId)
     }
 
-    public func handleSendPrompt(chatId: UUID, text: String) {
+    public func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment]) {
+        // The Mac GUI doesn't currently surface inline image attachments
+        // from its in-process server path — only the iPhone does, and
+        // those go through the daemon. Drop the array silently here so
+        // existing GUI flows stay text-only without throwing.
         sendUserMessageFromBridge(chatId: chatId, text: text)
     }
 
-    public func handleNewChat(chatId: UUID, text: String) {
+    public func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {
         newChatFromBridge(chatId: chatId, text: text)
     }
 

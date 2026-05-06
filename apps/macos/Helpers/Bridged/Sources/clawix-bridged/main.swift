@@ -149,15 +149,17 @@ final class DaemonEngineHost: EngineHost {
         hydrate(chatId: chatId.uuidString)
     }
 
-    func handleSendPrompt(chatId: UUID, text: String) {
+    func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment]) {
         let chatIdString = chatId.uuidString
         Task { @MainActor in
             do {
                 let threadId = try await ensureThread(chatId: chatIdString, firstPrompt: text)
+                let imagePaths = AttachmentSpooler.write(attachments: attachments, threadId: threadId)
+                let preview = userMessagePreview(text: text, imageCount: imagePaths.count)
                 appendMessage(chatId: chatIdString, message: WireMessage(
                     id: UUID().uuidString,
                     role: .user,
-                    content: text,
+                    content: preview,
                     streamingFinished: true,
                     timestamp: Date()
                 ))
@@ -165,13 +167,17 @@ final class DaemonEngineHost: EngineHost {
                     chat.hasActiveTurn = true
                     chat.lastTurnInterrupted = false
                     chat.lastMessageAt = Date()
-                    chat.lastMessagePreview = String(text.prefix(140))
+                    chat.lastMessagePreview = String(preview.prefix(140))
                 }
+                var input: [TurnStartUserInput] = []
+                if !text.isEmpty { input.append(.text(text)) }
+                for path in imagePaths { input.append(.localImage(path: path)) }
+                if input.isEmpty { input.append(.text(text)) }
                 let result = try await backend.send(
                     method: "turn/start",
                     params: TurnStartParams(
                         threadId: threadId,
-                        input: [TurnStartUserInput(type: "text", text: text)],
+                        input: input,
                         model: nil,
                         effort: nil,
                         serviceTier: nil,
@@ -184,6 +190,21 @@ final class DaemonEngineHost: EngineHost {
                 appendError(chatId: chatIdString, message: "\(error)")
             }
         }
+    }
+
+    private func userMessagePreview(text: String, imageCount: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard imageCount > 0 else { return text }
+        let label = imageCount == 1 ? "[image]" : "[\(imageCount) images]"
+        return trimmed.isEmpty ? label : "\(label) \(text)"
+    }
+
+    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {
+        // The iPhone composer treats the first prompt of a chat as a
+        // `newChat` frame so the daemon can mint the thread with the
+        // chat's pre-allocated UUID. The actual run path is identical
+        // to a regular send: ensureThread creates the thread on demand.
+        handleSendPrompt(chatId: chatId, text: text, attachments: attachments)
     }
 
     func handleArchiveChat(chatId: UUID, archived: Bool) {
@@ -815,9 +836,31 @@ struct AgentThreadSummary: Decodable {
     }
 }
 
-struct TurnStartUserInput: Encodable {
-    let type: String
-    let text: String
+/// One element of `turn/start`'s `input` array. Codex's app-server
+/// protocol accepts a small discriminated union of input items; we
+/// support `text` for the prompt body and `localImage` for inline
+/// image attachments materialized to temp files. Encoding is hand-
+/// rolled because Swift's Codable derivation would emit both fields
+/// for both cases.
+enum TurnStartUserInput: Encodable {
+    case text(String)
+    case localImage(path: String)
+
+    private enum Keys: String, CodingKey {
+        case type, text, path
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: Keys.self)
+        switch self {
+        case .text(let body):
+            try c.encode("text", forKey: .type)
+            try c.encode(body, forKey: .text)
+        case .localImage(let path):
+            try c.encode("localImage", forKey: .type)
+            try c.encode(path, forKey: .path)
+        }
+    }
 }
 
 struct CollaborationModePayload: Encodable {
@@ -981,5 +1024,61 @@ enum RolloutHistory {
             && !sawClose
             && lastEventAt.map { now.timeIntervalSince($0) > 30 } == true
         return (messages, interrupted)
+    }
+}
+
+// MARK: - Inline image attachments
+
+/// Materializes inline image attachments coming off the bridge as on-disk
+/// files Codex can pick up via 'localImage' user input items. Files live
+/// in a per-thread subdir of `NSTemporaryDirectory()/clawix-attachments`
+/// so they are easy to spot, easy to delete, and grouped together if
+/// debugging is needed. We never delete them eagerly: the thread may be
+/// resumed minutes later and the rollout still references the path. The
+/// system reaps `NSTemporaryDirectory()` on its own schedule, which is
+/// good enough for a chat companion.
+enum AttachmentSpooler {
+    static func write(attachments: [WireAttachment], threadId: String) -> [String] {
+        guard !attachments.isEmpty else { return [] }
+        let root = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("clawix-attachments", isDirectory: true)
+            .appendingPathComponent(threadId, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        } catch {
+            BridgedLog.write("attachment dir failed \(error)")
+            return []
+        }
+        var paths: [String] = []
+        for attachment in attachments {
+            guard let data = Data(base64Encoded: attachment.dataBase64) else {
+                BridgedLog.write("attachment decode failed id=\(attachment.id)")
+                continue
+            }
+            let ext = preferredExtension(filename: attachment.filename, mimeType: attachment.mimeType)
+            let url = root.appendingPathComponent("\(attachment.id).\(ext)")
+            do {
+                try data.write(to: url, options: .atomic)
+                paths.append(url.path)
+            } catch {
+                BridgedLog.write("attachment write failed \(error)")
+            }
+        }
+        return paths
+    }
+
+    private static func preferredExtension(filename: String?, mimeType: String) -> String {
+        if let filename, let dotRange = filename.range(of: ".", options: .backwards) {
+            let candidate = String(filename[dotRange.upperBound...]).lowercased()
+            if !candidate.isEmpty, candidate.count <= 5 { return candidate }
+        }
+        switch mimeType.lowercased() {
+        case "image/png": return "png"
+        case "image/heic": return "heic"
+        case "image/heif": return "heif"
+        case "image/webp": return "webp"
+        case "image/gif":  return "gif"
+        default: return "jpg"
+        }
     }
 }

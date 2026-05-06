@@ -5,6 +5,30 @@ public enum WireRole: String, Codable, Equatable, Sendable {
     case assistant
 }
 
+/// One image attached to a `sendPrompt` / `newChat` frame. The payload
+/// rides inline as base64 because the bridge speaks JSON over WebSocket
+/// (no multipart). The daemon decodes the bytes, writes them to a
+/// turn-scoped temp file, and forwards the path to Codex as a
+/// `localImage` user input item.
+///
+/// `filename` is advisory: the daemon uses its extension when picking
+/// the on-disk suffix, defaulting to `.jpg` if none is supplied. Old
+/// peers that don't carry attachments simply omit the field entirely;
+/// new peers receiving a frame without it default to an empty array.
+public struct WireAttachment: Codable, Equatable, Sendable {
+    public let id: String
+    public let mimeType: String
+    public let filename: String?
+    public let dataBase64: String
+
+    public init(id: String, mimeType: String, filename: String?, dataBase64: String) {
+        self.id = id
+        self.mimeType = mimeType
+        self.filename = filename
+        self.dataBase64 = dataBase64
+    }
+}
+
 /// Project descriptor exposed to the desktop client when it asks the
 /// daemon for `listProjects`. Mirrors the macOS `DerivedProject` shape
 /// the GUI consumes today, minus the cached chat list (clients pull

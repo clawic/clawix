@@ -30,14 +30,14 @@ public enum BridgeIntent {
             let messages = bus.subscribe(chatId: chatIdString)
             session.send(BridgeFrame(.messagesSnapshot(chatId: chatIdString, messages: messages)))
 
-        case .sendPrompt(let chatIdString, let text):
+        case .sendPrompt(let chatIdString, let text, let attachments):
             guard let uuid = UUID(uuidString: chatIdString) else {
                 session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
                 return
             }
-            host?.handleSendPrompt(chatId: uuid, text: text)
+            host?.handleSendPrompt(chatId: uuid, text: text, attachments: attachments)
 
-        case .newChat(let chatIdString, let text):
+        case .newChat(let chatIdString, let text, let attachments):
             guard let uuid = UUID(uuidString: chatIdString) else {
                 session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
                 return
@@ -46,7 +46,7 @@ public enum BridgeIntent {
             // the freshly created chat without an extra `openChat` round
             // trip from the client.
             _ = bus.subscribe(chatId: chatIdString)
-            host?.handleNewChat(chatId: uuid, text: text)
+            host?.handleNewChat(chatId: uuid, text: text, attachments: attachments)
 
         case .editPrompt(let chatIdString, let messageIdString, let text):
             guard let chatUuid = UUID(uuidString: chatIdString),

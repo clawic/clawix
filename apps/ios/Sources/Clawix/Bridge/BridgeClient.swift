@@ -116,14 +116,14 @@ final class BridgeClient: NSObject {
         send(BridgeFrame(.openChat(chatId: chatId)), on: winner)
     }
 
-    func sendPrompt(chatId: String, text: String) {
+    func sendPrompt(chatId: String, text: String, attachments: [WireAttachment]) {
         guard let winner else { return }
-        send(BridgeFrame(.sendPrompt(chatId: chatId, text: text)), on: winner)
+        send(BridgeFrame(.sendPrompt(chatId: chatId, text: text, attachments: attachments)), on: winner)
     }
 
-    func sendNewChat(chatId: String, text: String) {
+    func sendNewChat(chatId: String, text: String, attachments: [WireAttachment]) {
         guard let winner else { return }
-        send(BridgeFrame(.newChat(chatId: chatId, text: text)), on: winner)
+        send(BridgeFrame(.newChat(chatId: chatId, text: text, attachments: attachments)), on: winner)
     }
 
     func readFile(path: String) {

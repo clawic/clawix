@@ -52,15 +52,18 @@ public protocol EngineHost: AnyObject {
 
     /// Inbound `sendPrompt` from a client. The host is responsible for
     /// routing the prompt into the agent (the macOS GUI delegates to
-    /// `AppState.sendUserMessageFromBridge`).
-    func handleSendPrompt(chatId: UUID, text: String)
+    /// `AppState.sendUserMessageFromBridge`). Attachments are inline
+    /// image payloads the daemon writes to disk and forwards as
+    /// `localImage` user input items; hosts that don't support them
+    /// can ignore the array.
+    func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment])
 
     /// Inbound `newChat` from a client. The host creates a fresh chat
     /// with the supplied UUID, appends the user message, and kicks off
     /// the agent. Pre-minting the id on the client side lets the iPhone
     /// route to the chat detail screen synchronously while the round
     /// trip is in flight.
-    func handleNewChat(chatId: UUID, text: String)
+    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment])
 
     // MARK: - v2 desktop-only hooks (LaunchAgent daemon will override)
 
@@ -91,5 +94,5 @@ public extension EngineHost {
     func handlePinChat(chatId: UUID, pinned: Bool) {}
     func handlePairingStart() -> (qrJson: String, bearer: String)? { nil }
     func currentProjects() -> [WireProject] { [] }
-    func handleNewChat(chatId: UUID, text: String) {}
+    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {}
 }
