@@ -161,9 +161,9 @@ struct ChatListView: View {
     private var actionPill: some View {
         HStack(spacing: 0) {
             Button(action: {}) {
-                SearchIcon(size: 15)
+                SearchIcon(size: 20)
                     .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 42, height: 40)
+                    .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
             }
             .buttonStyle(InstantPressButtonStyle {
@@ -178,9 +178,9 @@ struct ChatListView: View {
             })
 
             Button(action: {}) {
-                SettingsIcon(size: 22, lineWidth: 1.5)
+                SettingsIcon(size: 28, lineWidth: 2.0)
                     .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 42, height: 40)
+                    .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
             }
             .buttonStyle(InstantPressButtonStyle {
@@ -218,7 +218,7 @@ struct ChatListView: View {
         }
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity)
-        .frame(height: 40)
+        .frame(height: 46)
         .glassCapsule()
     }
 
@@ -235,10 +235,10 @@ struct ChatListView: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                CloseIcon(size: 22, lineWidth: 2.1)
+                CloseIcon(size: 27, lineWidth: 2.1)
                     .foregroundStyle(Palette.textPrimary)
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 46, height: 46)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)

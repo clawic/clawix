@@ -24,7 +24,7 @@ struct SettingsIcon: View {
                 ))
             Circle()
                 .stroke(style: StrokeStyle(lineWidth: lw, lineCap: .round))
-                .frame(width: 5.6 * s, height: 5.6 * s)
+                .frame(width: 8.0 * s, height: 8.0 * s)
         }
         .frame(width: size, height: size)
     }
