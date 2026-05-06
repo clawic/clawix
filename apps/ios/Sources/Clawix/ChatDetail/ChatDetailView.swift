@@ -93,23 +93,42 @@ struct ChatDetailView: View {
     private var hasLoaded: Bool { store.hasLoadedMessages(chatId) }
 
     var body: some View {
-        transcript
-            .background(Palette.background.ignoresSafeArea())
-            .onAppear {
-                if isFreshChat == nil {
-                    isFreshChat = hasLoaded && messages.isEmpty
-                }
+        // ScrollViewReader is hoisted to the body so the floating
+        // bottom-jump bubble can call `proxy.scrollTo` directly. The
+        // earlier "increment a trigger and watch it inside the reader"
+        // relay broke on iOS 26 when LazyVStack had unloaded the bottom
+        // marker — the .onChange would fire but the scroll wouldn't
+        // happen. Direct access avoids the issue.
+        ScrollViewReader { proxy in
+            ZStack(alignment: .bottom) {
+                transcript(proxy: proxy)
+                    .background(Palette.background.ignoresSafeArea())
+                    .onAppear {
+                        if isFreshChat == nil {
+                            isFreshChat = hasLoaded && messages.isEmpty
+                        }
+                    }
+                    .topBarBlurFade(height: 135)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        topBar
+                            .padding(.horizontal, 20)
+                            .padding(.top, 6)
+                            .padding(.bottom, 8)
+                    }
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        bottomChrome
+                    }
+
+                // Sits above the composer without affecting its layout, so
+                // appearing/disappearing animates only the bubble itself
+                // (scale + opacity) and never nudges the composer.
+                scrollToBottomButton(proxy: proxy)
+                    .padding(.bottom, bottomChromeHeight + 10)
+                    .allowsHitTesting(showScrollToBottom)
+
+                recordingLayer
             }
-            .topBarBlurFade(height: 135)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                topBar
-                    .padding(.horizontal, 12)
-                    .padding(.top, 6)
-                    .padding(.bottom, 8)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                bottomChrome
-            }
+        }
             .toolbar(.hidden, for: .navigationBar)
             .navigationBarBackButtonHidden(true)
             .sheet(isPresented: $showProjectPicker) {
@@ -125,74 +144,89 @@ struct ChatDetailView: View {
                     },
                     onDismiss: { showProjectPicker = false }
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.55), .large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Palette.background)
+                .presentationBackground(Palette.surface)
                 .preferredColorScheme(.dark)
             }
     }
 
     // MARK: Transcript
 
-    private var transcript: some View {
+    private func transcript(proxy: ScrollViewProxy) -> some View {
         // Top-anchored natural flow: oldest message at the top, newest
         // appended below. When the chat is short enough to fit, content
         // sits at the top of the viewport (which is what the user wants
-        // for empty/new chats). When it overflows, ScrollViewReader
-        // anchors the latest message to the bottom on initial load and
-        // on every new message appended after that.
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 22) {
-                    Color.clear.frame(height: 8)
-                    if hasLoaded {
-                        ForEach(renderedMessages, id: \.id) { msg in
-                            MessageView(
-                                message: msg,
-                                isReasoningExpanded: expandedReasoning.contains(msg.id),
-                                toggleReasoning: { toggleReasoning(messageId: msg.id) },
-                                onOpenFile: onOpenFile,
-                                shouldAnimateEntrance: shouldAnimateEntrance(for: msg)
-                            )
-                            .id(msg.id)
-                            .onAppear { alreadySeenMessageIds.insert(msg.id) }
-                        }
+        // for empty/new chats). The hoisted ScrollViewReader anchors
+        // the latest message to the bottom on initial load and on every
+        // new message appended after that.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 22) {
+                Color.clear.frame(height: 8)
+                if hasLoaded {
+                    ForEach(renderedMessages, id: \.id) { msg in
+                        MessageView(
+                            message: msg,
+                            isReasoningExpanded: expandedReasoning.contains(msg.id),
+                            toggleReasoning: { toggleReasoning(messageId: msg.id) },
+                            onOpenFile: onOpenFile,
+                            shouldAnimateEntrance: shouldAnimateEntrance(for: msg)
+                        )
+                        .id(msg.id)
+                        .onAppear { alreadySeenMessageIds.insert(msg.id) }
                     }
-                    Color.clear.frame(height: 30).id("transcript-bottom")
                 }
-                .padding(.horizontal, AppLayout.screenHorizontalPadding)
+                Color.clear.frame(height: 30).id("transcript-bottom")
             }
-            .scrollIndicators(.hidden)
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    #if canImport(UIKit)
-                    UIApplication.shared.sendAction(
-                        #selector(UIResponder.resignFirstResponder),
-                        to: nil, from: nil, for: nil
-                    )
-                    #endif
-                }
-            )
-            .onChange(of: hasLoaded, initial: true) { _, loaded in
-                guard loaded, !didCaptureInitialSnapshot else { return }
-                didCaptureInitialSnapshot = true
-                alreadySeenMessageIds.formUnion(renderedMessages.map(\.id))
-                // No-op for short chats (content fits in viewport);
-                // anchors the latest message to the bottom for long
-                // chats so the user lands on what they were last
-                // reading instead of the top of the history.
-                DispatchQueue.main.async {
-                    proxy.scrollTo("transcript-bottom", anchor: .bottom)
-                }
+            .padding(.horizontal, 20)
+        }
+        .scrollIndicators(.hidden)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                #if canImport(UIKit)
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil, from: nil, for: nil
+                )
+                #endif
             }
-            .onChange(of: renderedMessages.last?.id) { _, newId in
-                guard didCaptureInitialSnapshot, newId != nil else { return }
-                // No `withAnimation`: the scroll spring competed with
-                // the bubble entrance in the same run loop and dropped
-                // frames. Short chats make this a no-op; long chats jump
-                // directly to the latest message without tweening.
+        )
+        // Robust "are we at the bottom?" derived from the raw scroll
+        // geometry: max scrollable offset accounts for both top and
+        // bottom contentInsets so the calculation works regardless of
+        // how SwiftUI translates the composer's safeAreaInset into the
+        // ScrollView's reported insets.
+        .onScrollGeometryChange(for: Bool.self) { geom in
+            let maxOffset = geom.contentSize.height
+                - geom.containerSize.height
+                + geom.contentInsets.top
+                + geom.contentInsets.bottom
+            return geom.contentOffset.y < maxOffset - 40
+        } action: { _, scrolledUp in
+            guard scrolledUp != showScrollToBottom else { return }
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                showScrollToBottom = scrolledUp
+            }
+        }
+        .onChange(of: hasLoaded, initial: true) { _, loaded in
+            guard loaded, !didCaptureInitialSnapshot else { return }
+            didCaptureInitialSnapshot = true
+            alreadySeenMessageIds.formUnion(renderedMessages.map(\.id))
+            // No-op for short chats (content fits in viewport);
+            // anchors the latest message to the bottom for long
+            // chats so the user lands on what they were last
+            // reading instead of the top of the history.
+            DispatchQueue.main.async {
                 proxy.scrollTo("transcript-bottom", anchor: .bottom)
             }
+        }
+        .onChange(of: renderedMessages.last?.id) { _, newId in
+            guard didCaptureInitialSnapshot, newId != nil else { return }
+            // No `withAnimation`: the scroll spring competed with
+            // the bubble entrance in the same run loop and dropped
+            // frames. Short chats make this a no-op; long chats jump
+            // directly to the latest message without tweening.
+            proxy.scrollTo("transcript-bottom", anchor: .bottom)
         }
     }
 
@@ -322,6 +356,70 @@ struct ChatDetailView: View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea(edges: .bottom)
             )
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.height
+            } action: { _, height in
+                bottomChromeHeight = height
+            }
+    }
+
+    @ViewBuilder
+    private var recordingLayer: some View {
+        if let active = recording {
+            ZStack(alignment: .bottom) {
+                Color.black.opacity(0.78)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture { cancelRecording() }
+                    .transition(.opacity)
+
+                RecordingOverlay(
+                    purpose: active.purpose,
+                    phase: active.phase,
+                    levels: voiceRecorder.levels,
+                    onCancel: cancelRecording,
+                    onStop: { stopRecording(active) },
+                    onResume: resumeRecording,
+                    onSend: { sendRecording(active) }
+                )
+                .padding(.bottom, 6)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            .animation(.spring(response: 0.34, dampingFraction: 0.86), value: active.phase)
+        }
+    }
+
+    // Floating "scroll to bottom" pill. Same liquid-glass surface as the
+    // top bar buttons so it reads as part of the same chrome family.
+    // Hidden state collapses scale to 0.6 + opacity to 0; springs back
+    // when the transcript has scrolled away from the tail.
+    private func scrollToBottomButton(proxy: ScrollViewProxy) -> some View {
+        Button {
+            Haptics.tap()
+            // Target the last actual message (the bottom anchor is a
+            // Color.clear that LazyVStack may have unloaded while the
+            // user was up-scroll); falling back to the anchor id keeps
+            // empty/loading states well-defined.
+            let target = renderedMessages.last?.id ?? "transcript-bottom"
+            withAnimation(.easeOut(duration: 0.32)) {
+                proxy.scrollTo(target, anchor: .bottom)
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.clear)
+                    .glassEffect(.regular, in: Circle())
+                Image(systemName: "arrow.down")
+                    .font(BodyFont.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .frame(width: 38, height: 38)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .scaleEffect(showScrollToBottom ? 1 : 0.6, anchor: .center)
+        .opacity(showScrollToBottom ? 1 : 0)
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: showScrollToBottom)
     }
 
     // MARK: Actions
