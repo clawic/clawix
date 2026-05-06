@@ -10,11 +10,12 @@ import UIKit
 //   - transcript scrolls edge-to-edge underneath the floating chrome
 //   - top bar: two glass clusters in `GlassEffectContainer`s so they
 //     morph as a unit when system animations run (rotation, dynamic
-//     type, working pill appearing)
+//     type)
 //   - composer: a tall floating glass capsule anchored to the bottom
 //     safe area, with the transcript fading behind it
 //   - user messages render as light squircle bubbles, assistant
-//     responses as bare text directly on black
+//     responses as bare text directly on black, with a "Thinking"
+//     shimmer at the tail while streaming (mirrors the Mac app)
 // `glassEffect(in:)` is the iOS 26 API; the deployment target was
 // bumped to 26.0 to use it without availability noise everywhere.
 
@@ -603,18 +604,13 @@ private struct MessageView: View {
             if !message.content.isEmpty {
                 AssistantMarkdownView(text: message.content)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            } else if !message.streamingFinished && message.timeline.isEmpty {
-                Text("Thinking...")
-                    .font(Typography.bodyFont)
-                    .tracking(-0.2)
-                    .foregroundStyle(Palette.textTertiary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             ChangedFilePills(timeline: message.timeline, onOpen: onOpenFile)
 
-            if !message.streamingFinished && !message.content.isEmpty {
-                StreamingDots()
+            if !message.streamingFinished {
+                ThinkingShimmer(text: "Thinking")
+                    .padding(.top, 2)
             }
             if message.streamingFinished && !message.content.isEmpty {
                 MessageActions(content: message.content)
@@ -752,25 +748,6 @@ private struct ReasoningDisclosure: View {
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
-        }
-    }
-}
-
-private struct StreamingDots: View {
-    @State private var phase: Int = 0
-    private let timer = Timer.publish(every: 0.45, on: .main, in: .common).autoconnect()
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<3, id: \.self) { idx in
-                Circle()
-                    .fill(Palette.textTertiary)
-                    .frame(width: 5, height: 5)
-                    .opacity(phase == idx ? 1.0 : 0.35)
-            }
-        }
-        .onReceive(timer) { _ in
-            phase = (phase + 1) % 3
         }
     }
 }
