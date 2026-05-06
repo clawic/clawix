@@ -61,6 +61,24 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    /// ISO 639-1 code Whisper uses for its language hint. Returning
+    /// `nil` means "auto-detect", which is the natural mapping for
+    /// `.english` and friends when the user picks the system default.
+    var whisperLanguageCode: String {
+        switch self {
+        case .spanish:      return "es"
+        case .english:      return "en"
+        case .french:       return "fr"
+        case .german:       return "de"
+        case .italian:      return "it"
+        case .portugueseBR: return "pt"
+        case .japanese:     return "ja"
+        case .chineseSimp:  return "zh"
+        case .korean:       return "ko"
+        case .russian:      return "ru"
+        }
+    }
+
     /// Resolves to the `<lang>.lproj` sub-bundle inside the package's
     /// resource bundle. SwiftPM lowercases lproj folder names on copy
     /// (`pt-BR.lproj` → `pt-br.lproj`), so we try the canonical BCP-47
