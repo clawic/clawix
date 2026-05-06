@@ -213,6 +213,9 @@ enum TimelineFamily: Equatable {
         case (.webSearch, .webSearch):   return true
         case (.mcpTool(let s), .mcpTool(let server, _)):
             return s == server
+        case (.jsBrowser, .jsCall(_, .browser)): return true
+        case (.jsRepl, .jsCall(_, .repl)):       return true
+        case (.jsRepl, .jsReset):                return true
         default:                         return false
         }
     }
@@ -2341,7 +2344,23 @@ final class AppState: ObservableObject {
         case "webSearch":
             kind = .webSearch
         case "mcpTool":
-            kind = .mcpTool(server: wire.mcpServer ?? "", tool: wire.mcpTool ?? "")
+            // The browser-use plugin reports through the synthetic
+            // `node_repl` MCP server. The daemon doesn't yet ship a
+            // dedicated wire kind, so we relabel here so the live
+            // streaming pill reads `Used Node Repl` instead of the raw
+            // server/tool dump. Once we reload the chat from the rollout,
+            // RolloutReader's classifier upgrades the browser calls to
+            // `.jsCall(.browser)` so the timeline picks up the proper
+            // `Used the browser` pill.
+            let server = wire.mcpServer ?? ""
+            let tool = wire.mcpTool ?? ""
+            if server == "node_repl" {
+                kind = tool == "js_reset"
+                    ? .jsReset
+                    : .jsCall(title: nil, flavor: .repl)
+            } else {
+                kind = .mcpTool(server: server, tool: tool)
+            }
         case "dynamicTool":
             kind = .dynamicTool(name: wire.dynamicToolName ?? "")
         case "imageGeneration":
