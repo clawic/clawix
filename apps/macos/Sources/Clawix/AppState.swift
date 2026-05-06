@@ -2239,6 +2239,9 @@ final class AppState: ObservableObject {
         guard let id = UUID(uuidString: chatId),
               let idx = chats.firstIndex(where: { $0.id == id })
         else { return }
+        // Wholesale rehydrate from the daemon: drop any buffered text
+        // delta that would otherwise pile on top of the canonical body.
+        dropPendingAssistantText(chatId: id)
         chats[idx].messages = messages.compactMap(chatMessage(from:))
         chats[idx].historyHydrated = true
     }
@@ -2269,6 +2272,10 @@ final class AppState: ObservableObject {
               let msgId = UUID(uuidString: messageId),
               let cIdx = chats.firstIndex(where: { $0.id == id })
         else { return }
+        // Same reasoning as `appendDaemonMessage`: the daemon-supplied
+        // content replaces ours wholesale, so any pending tick of
+        // local deltas would double up on top of the canonical body.
+        dropPendingAssistantText(chatId: id)
         if let mIdx = chats[cIdx].messages.firstIndex(where: { $0.id == msgId }) {
             chats[cIdx].messages[mIdx].content = content
             chats[cIdx].messages[mIdx].reasoningText = reasoningText
@@ -2513,7 +2520,7 @@ final class AppState: ObservableObject {
             streamingPerfLog.log("\(line, privacy: .public)")
         }
     }
-    /// Wall-clock of the previous `appendAssistantDelta` call, used by
+    /// Wall-clock of the previous `applyAssistantTextDelta` call, used by
     /// the perf log to surface inter-arrival jitter.
     private var lastDeltaArrivalTime: Double = 0
 
@@ -2558,6 +2565,9 @@ final class AppState: ObservableObject {
     }
 
     func markAssistantCompleted(chatId: UUID, finalText: String?) {
+        // Drain any text deltas still buffered for this chat before we
+        // fold in the canonical body / mark the turn finished.
+        flushPendingAssistantTextDeltas(chatId: chatId)
         guard let idx = chats.firstIndex(where: { $0.id == chatId }),
               let last = chats[idx].messages.indices.last,
               chats[idx].messages[last].role == .assistant
@@ -2845,7 +2855,10 @@ final class AppState: ObservableObject {
         }
 
         // Truncate locally and re-append the edited user bubble so the
-        // UI matches the new conversation state immediately.
+        // UI matches the new conversation state immediately. Any text
+        // deltas still buffered for this chat belong to the assistant
+        // turn we're about to drop, so discard them.
+        dropPendingAssistantText(chatId: chatId)
         chats[cIdx].messages.removeSubrange(mIdx...)
         let edited = ChatMessage(role: .user, content: trimmed, timestamp: Date())
         chats[cIdx].messages.append(edited)
