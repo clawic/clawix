@@ -1999,6 +1999,13 @@ final class AppState: ObservableObject {
             chats[idx].messages.remove(at: last)
         } else {
             chats[idx].messages[last].streamingFinished = true
+            // Freeze the elapsed-seconds counter at the moment of stop.
+            // Without this, WorkSummaryHeader's TimelineView keeps ticking
+            // because `summary.isActive` stays true while `endedAt` is nil.
+            if chats[idx].messages[last].workSummary != nil,
+               chats[idx].messages[last].workSummary?.endedAt == nil {
+                chats[idx].messages[last].workSummary?.endedAt = Date()
+            }
         }
     }
 
