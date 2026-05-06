@@ -32,9 +32,15 @@
 		<string>_clawix-bridge._tcp</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Used to scan the Clawix pairing QR code shown on your Mac.</string>
+	<string>Used to scan the Clawix pairing QR code shown on your Mac, and to capture photos to attach to your Codex prompts.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Used to talk to Clawix running on your Mac over the local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Used to record voice prompts and dictate messages to Codex.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Used to attach photos from your library to your Codex prompts.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Used to transcribe your voice messages on-device into editable text.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>PlusJakartaSans-Regular.ttf</string>
