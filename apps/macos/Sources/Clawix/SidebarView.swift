@@ -135,9 +135,14 @@ struct SidebarView: View {
                     expanded: pinnedExpanded,
                     targetHeight: CGFloat(snapshot.pinned.count) * 32 + 8
                 ) {
-                    PinnedReorderableList(pinned: snapshot.pinned)
-                        .padding(.leading, 8)
-                        .padding(.trailing, 0)
+                    PinnedReorderableList(
+                        appState: appState,
+                        pinned: snapshot.pinned,
+                        selectedChatId: selectedChatId
+                    )
+                    .equatable()
+                    .padding(.leading, 8)
+                    .padding(.trailing, 0)
                 }
                 AnimatedSidebarDivider(visible: pinnedExpanded)
             }
@@ -2304,13 +2309,48 @@ private struct ChatDropTarget<Content: View>: View {
 /// External drags (e.g. a chat dragged in from a project) are accepted
 /// too: the gap opens where it will land, and `reorderPinned` pins it
 /// at that position on drop.
-private struct PinnedReorderableList: View {
-    @EnvironmentObject var appState: AppState
-    let pinned: [Chat]
+/// Mutable bag for per-row window-coord frames. Used at drag-start to
+/// anchor the chip relative to the cursor. Stored on a reference type
+/// (mutated via `byId = ...`) so the per-frame `onPreferenceChange`
+/// writes don't go through `@State` and therefore don't invalidate
+/// SwiftUI on every layout pass — the streaming chat publish flood was
+/// otherwise running this loop dozens of times per second for nothing.
+private final class PinnedRowFrameStore: ObservableObject {
+    var byId: [UUID: CGRect] = [:]
+}
 
-    private var selectedChatId: UUID? {
-        if case let .chat(id) = appState.currentRoute { return id }
-        return nil
+private struct PinnedReorderableList: View, Equatable {
+    /// Injected from the parent. Not observed: callbacks go through the
+    /// reference, but state reads are passed in explicitly so this view
+    /// stops re-evaluating on every `AppState` publish (per-token chats
+    /// updates were rebuilding the pinned list at ~16 Hz during streaming).
+    let appState: AppState
+    let pinned: [Chat]
+    let selectedChatId: UUID?
+
+    static func == (lhs: PinnedReorderableList, rhs: PinnedReorderableList) -> Bool {
+        lhs.selectedChatId == rhs.selectedChatId
+            && Self.pinnedEqual(lhs.pinned, rhs.pinned)
+    }
+
+    /// Same shape as `RecentChatRow.==`: only fields the row actually
+    /// renders, skipping `messages`, `cwd`, `branch`, etc. Streaming
+    /// mutates those continually; comparing them would defeat the gate.
+    private static func pinnedEqual(_ lhs: [Chat], _ rhs: [Chat]) -> Bool {
+        if lhs.count != rhs.count { return false }
+        for i in 0..<lhs.count {
+            let l = lhs[i]
+            let r = rhs[i]
+            if l.id != r.id
+                || l.title != r.title
+                || l.hasActiveTurn != r.hasActiveTurn
+                || l.hasUnreadCompletion != r.hasUnreadCompletion
+                || l.lastTurnInterrupted != r.lastTurnInterrupted
+                || l.createdAt != r.createdAt {
+                return false
+            }
+        }
+        return true
     }
 
     @State private var draggingId: UUID? = nil
