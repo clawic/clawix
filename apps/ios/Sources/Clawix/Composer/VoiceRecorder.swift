@@ -26,6 +26,18 @@ final class VoiceRecorder: ObservableObject {
     @Published private(set) var levels: [CGFloat] = []
     @Published private(set) var elapsed: TimeInterval = 0
 
+    /// Optional remote transcriber. When set the recorder ships the
+    /// captured m4a to this closure (typically `BridgeStore` forwarding
+    /// it to the Mac daemon for Whisper) and falls back to on-device
+    /// `SFSpeechRecognizer` only if it throws. Letting the caller wire
+    /// this up keeps `VoiceRecorder` decoupled from the bridge layer.
+    var bridgeTranscriber: ((URL, String?) async throws -> String)?
+
+    /// Whisper-style language hint sent to the bridge call. `nil`
+    /// means auto-detect. Set by the caller before `start(...)`; the
+    /// recorder forwards it to the bridge transcriber.
+    var bridgeLanguage: String?
+
     private var recorder: AVAudioRecorder?
     private var levelTimer: Timer?
     private var elapsedTimer: Timer?
@@ -200,6 +212,33 @@ final class VoiceRecorder: ObservableObject {
     // MARK: - Transcription
 
     private func transcribe(url: URL, completion: @escaping (String) -> Void) {
+        // Prefer the bridge transcriber when available so the iPhone
+        // gets the same Whisper output the Mac dictation flow does.
+        // If the bridge isn't connected or the daemon errored, fall
+        // through to the on-device Apple Speech path.
+        if let bridgeTranscriber {
+            Task { [weak self] in
+                do {
+                    let text = try await bridgeTranscriber(url, self?.bridgeLanguage)
+                    await MainActor.run {
+                        guard let self else { return }
+                        self.cleanup(url: url)
+                        self.resetAfterTranscription()
+                        completion(text)
+                    }
+                } catch {
+                    // Soft fallback: try Apple Speech with the same
+                    // file, so the user still gets a transcript when
+                    // the Mac is unreachable.
+                    self?.transcribeWithSpeech(url: url, completion: completion)
+                }
+            }
+            return
+        }
+        transcribeWithSpeech(url: url, completion: completion)
+    }
+
+    private func transcribeWithSpeech(url: URL, completion: @escaping (String) -> Void) {
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
                 guard let self else { return }
