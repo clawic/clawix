@@ -47,10 +47,21 @@ struct ChatDetailView: View {
     // with `hasLoaded == false`, keeping autofocus limited to fresh
     // conversations.
     @State private var isFreshChat: Bool? = nil
-    // Floating "scroll to bottom" affordance state. Toggled from the
-    // ScrollView's geometry: shown when the user has scrolled away from
-    // the tail by more than ~40pt, hidden as soon as they return.
-    @State private var showScrollToBottom: Bool = false
+    // Declarative scroll model. `bottomId` is the id of the view
+    // currently anchored to the viewport's `.bottom`; when the
+    // transcript is at the tail, it equals `ChatScroll.tail`. Geometry
+    // metrics decide whether there is real overflow at all — without
+    // them, a chat that fits in the viewport could still report a
+    // non-tail anchor during a layout in flight and surface a button
+    // that the user has nothing to scroll to.
+    @State private var bottomId: String? = ChatScroll.tail
+    @State private var contentHeight: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
+    @State private var verticalInsets: CGFloat = 0
+    // New-message counter shown as a badge on the scroll-to-bottom
+    // button while the user is reading history above. Resets to 0 the
+    // moment the user is back at the tail.
+    @State private var unreadCount: Int = 0
     // Measured height of the bottom chrome (composer + its padding) so
     // the floating bubble can sit just above it without depending on a
     // hardcoded offset that drifts when the composer grows multiline.
@@ -97,42 +108,55 @@ struct ChatDetailView: View {
     }
     private var hasLoaded: Bool { store.hasLoadedMessages(chatId) }
 
+    // Derived scroll predicates. Keeping them computed (vs. @State)
+    // means a single source of truth and no risk of going stale.
+    private var hasOverflow: Bool {
+        // 1pt epsilon absorbs sub-pixel rounding when content and
+        // viewport-minus-insets are visually identical.
+        contentHeight > viewportHeight - verticalInsets + 1
+    }
+    private var isAtBottom: Bool {
+        bottomId == ChatScroll.tail
+    }
+    private var showScrollToBottom: Bool {
+        hasOverflow && !isAtBottom
+    }
+
     var body: some View {
-        // ScrollViewReader is hoisted to the body so the floating
-        // bottom-jump bubble can call `proxy.scrollTo` directly. The
-        // earlier "increment a trigger and watch it inside the reader"
-        // relay broke on iOS 26 when LazyVStack had unloaded the bottom
-        // marker — the .onChange would fire but the scroll wouldn't
-        // happen. Direct access avoids the issue.
-        ScrollViewReader { proxy in
-            ZStack(alignment: .bottom) {
-                transcript(proxy: proxy)
-                    .background(Palette.background.ignoresSafeArea())
-                    .onAppear {
-                        if isFreshChat == nil {
-                            isFreshChat = hasLoaded && messages.isEmpty
-                        }
+        // The transcript is fully declarative: `defaultScrollAnchor`
+        // pins the first layout to the bottom and `scrollPosition`
+        // exposes the current anchor id as state. The scroll-to-bottom
+        // button mutates that binding instead of calling into a
+        // ScrollViewProxy, which removes the imperative path that used
+        // to race with layout-in-flight.
+        ZStack(alignment: .bottom) {
+            transcript
+                .background(Palette.background.ignoresSafeArea())
+                .onAppear {
+                    if isFreshChat == nil {
+                        isFreshChat = hasLoaded && messages.isEmpty
                     }
-                    .topBarBlurFade(height: 135)
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        topBar
-                            .padding(.horizontal, 20)
-                            .padding(.top, 6)
-                            .padding(.bottom, 8)
-                    }
-                    .safeAreaInset(edge: .bottom, spacing: 0) {
-                        bottomChrome
-                    }
+                    wireBridgeTranscription()
+                }
+                .topBarBlurFade(height: 135)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    topBar
+                        .padding(.horizontal, 20)
+                        .padding(.top, 6)
+                        .padding(.bottom, 8)
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    bottomChrome
+                }
 
-                // Sits above the composer without affecting its layout, so
-                // appearing/disappearing animates only the bubble itself
-                // (scale + opacity) and never nudges the composer.
-                scrollToBottomButton(proxy: proxy)
-                    .padding(.bottom, bottomChromeHeight + 10)
-                    .allowsHitTesting(showScrollToBottom)
+            // Sits above the composer without affecting its layout, so
+            // appearing/disappearing animates only the bubble itself
+            // (scale + opacity) and never nudges the composer.
+            scrollToBottomButton
+                .padding(.bottom, bottomChromeHeight + 10)
+                .allowsHitTesting(showScrollToBottom)
 
-                recordingLayer
-            }
+            recordingLayer
         }
             .toolbar(.hidden, for: .navigationBar)
             .navigationBarBackButtonHidden(true)
@@ -163,15 +187,21 @@ struct ChatDetailView: View {
 
     // MARK: Transcript
 
-    private func transcript(proxy: ScrollViewProxy) -> some View {
-        // Top-anchored natural flow: oldest message at the top, newest
-        // appended below. When the chat is short enough to fit, content
-        // sits at the top of the viewport (which is what the user wants
-        // for empty/new chats). The hoisted ScrollViewReader anchors
-        // the latest message to the bottom on initial load and on every
-        // new message appended after that.
+    private var transcript: some View {
+        // Messaging-style scroll: `defaultScrollAnchor(.bottom)` pins
+        // the first layout to the bottom edge and keeps content glued
+        // there while it grows (streaming, new appended messages),
+        // unless the user has scrolled away. A 1pt sentinel at the end
+        // of the stack is the canonical "you are at the tail" marker.
+        //
+        // Eager `VStack` (not `LazyVStack`) on purpose: tall assistant
+        // rows (timeline + markdown + file pills) interact badly with
+        // LazyVStack's just-in-time materialization here, where rows
+        // that should be entering the viewport pop in suddenly
+        // instead of sliding under the chrome. `renderedMessages` is
+        // already capped at 250, so eager rendering is bounded.
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 22) {
                 Color.clear.frame(height: 8)
                 if hasLoaded {
                     ForEach(renderedMessages, id: \.id) { msg in
@@ -186,11 +216,15 @@ struct ChatDetailView: View {
                         .onAppear { alreadySeenMessageIds.insert(msg.id) }
                     }
                 }
-                Color.clear.frame(height: 30).id("transcript-bottom")
+                Color.clear.frame(height: 30)
+                Color.clear.frame(height: 1).id(ChatScroll.tail)
             }
             .padding(.horizontal, 20)
+            .scrollTargetLayout()
         }
         .scrollIndicators(.hidden)
+        .defaultScrollAnchor(.bottom)
+        .scrollPosition(id: $bottomId, anchor: .bottom)
         .simultaneousGesture(
             TapGesture().onEnded {
                 #if canImport(UIKit)
@@ -201,43 +235,43 @@ struct ChatDetailView: View {
                 #endif
             }
         )
-        // Robust "are we at the bottom?" derived from the raw scroll
-        // geometry: max scrollable offset accounts for both top and
-        // bottom contentInsets so the calculation works regardless of
-        // how SwiftUI translates the composer's safeAreaInset into the
-        // ScrollView's reported insets.
-        .onScrollGeometryChange(for: Bool.self) { geom in
-            let maxOffset = geom.contentSize.height
-                - geom.containerSize.height
-                + geom.contentInsets.top
-                + geom.contentInsets.bottom
-            return geom.contentOffset.y < maxOffset - 40
-        } action: { _, scrolledUp in
-            guard scrolledUp != showScrollToBottom else { return }
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
-                showScrollToBottom = scrolledUp
-            }
+        // Geometry feeds `hasOverflow`. We collect content/container/
+        // insets in one Equatable struct so SwiftUI filters out the
+        // sub-pixel updates that fire while the composer is animating
+        // its height.
+        .onScrollGeometryChange(for: ScrollMetrics.self) { geom in
+            ScrollMetrics(
+                content: geom.contentSize.height,
+                container: geom.containerSize.height,
+                insets: geom.contentInsets.top + geom.contentInsets.bottom
+            )
+        } action: { _, m in
+            contentHeight = m.content
+            viewportHeight = m.container
+            verticalInsets = m.insets
         }
         .onChange(of: hasLoaded, initial: true) { _, loaded in
             guard loaded, !didCaptureInitialSnapshot else { return }
             didCaptureInitialSnapshot = true
             alreadySeenMessageIds.formUnion(renderedMessages.map(\.id))
-            // No-op for short chats (content fits in viewport);
-            // anchors the latest message to the bottom for long
-            // chats so the user lands on what they were last
-            // reading instead of the top of the history.
-            DispatchQueue.main.async {
-                proxy.scrollTo("transcript-bottom", anchor: .bottom)
-            }
         }
-        .onChange(of: renderedMessages.last?.id) { _, newId in
-            guard didCaptureInitialSnapshot, newId != nil else { return }
-            // No `withAnimation`: the scroll spring competed with
-            // the bubble entrance in the same run loop and dropped
-            // frames. Short chats make this a no-op; long chats jump
-            // directly to the latest message without tweening.
-            proxy.scrollTo("transcript-bottom", anchor: .bottom)
+        .onChange(of: renderedMessages.count) { oldCount, newCount in
+            guard newCount > oldCount, !isAtBottom else { return }
+            unreadCount += (newCount - oldCount)
         }
+        .onChange(of: isAtBottom) { _, atBottom in
+            if atBottom { unreadCount = 0 }
+        }
+    }
+
+    private struct ScrollMetrics: Equatable {
+        let content: CGFloat
+        let container: CGFloat
+        let insets: CGFloat
+    }
+
+    private enum ChatScroll {
+        static let tail = "__chat_tail__"
     }
 
     private func shouldAnimateEntrance(for message: WireMessage) -> Bool {
@@ -403,16 +437,16 @@ struct ChatDetailView: View {
     // top bar buttons so it reads as part of the same chrome family.
     // Hidden state collapses scale to 0.6 + opacity to 0; springs back
     // when the transcript has scrolled away from the tail.
-    private func scrollToBottomButton(proxy: ScrollViewProxy) -> some View {
+    private var scrollToBottomButton: some View {
         Button {
             Haptics.tap()
-            // Target the last actual message (the bottom anchor is a
-            // Color.clear that LazyVStack may have unloaded while the
-            // user was up-scroll); falling back to the anchor id keeps
-            // empty/loading states well-defined.
-            let target = renderedMessages.last?.id ?? "transcript-bottom"
-            withAnimation(.easeOut(duration: 0.32)) {
-                proxy.scrollTo(target, anchor: .bottom)
+            // Mutating the `scrollPosition` binding is the supported
+            // way to programmatically anchor a view to the viewport
+            // edge. The sentinel is a 1pt Color.clear at the end of
+            // the LazyVStack, so its geometry is stable even while
+            // the last message is still streaming and growing.
+            withAnimation(.smooth(duration: 0.32)) {
+                bottomId = ChatScroll.tail
             }
         } label: {
             ZStack {
@@ -422,6 +456,16 @@ struct ChatDetailView: View {
                 Image(systemName: "arrow.down")
                     .font(BodyFont.system(size: 15, weight: .semibold))
                     .foregroundStyle(Palette.textPrimary)
+                if unreadCount > 0 {
+                    Text("\(unreadCount)")
+                        .font(BodyFont.manrope(size: 11, wght: 700))
+                        .foregroundStyle(Palette.textPrimary)
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Capsule().fill(Color.red))
+                        .offset(x: 14, y: -14)
+                        .transition(.scale.combined(with: .opacity))
+                }
             }
             .frame(width: 38, height: 38)
             .contentShape(Circle())
@@ -430,6 +474,7 @@ struct ChatDetailView: View {
         .scaleEffect(showScrollToBottom ? 1 : 0.6, anchor: .center)
         .opacity(showScrollToBottom ? 1 : 0)
         .animation(.spring(response: 0.34, dampingFraction: 0.82), value: showScrollToBottom)
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: unreadCount)
     }
 
     // MARK: Actions
@@ -473,6 +518,28 @@ struct ChatDetailView: View {
         voiceRecorder.start()
         withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
             recording = ActiveRecording(purpose: purpose, phase: .recording)
+        }
+    }
+
+    /// Hook the recorder up to the Mac bridge so `voiceRecorder.stop`
+    /// transcribes via Whisper on the daemon when the iPhone is paired.
+    /// Falls back to on-device Apple Speech inside `VoiceRecorder` if
+    /// the bridge throws. The recorder always writes m4a/AAC so the
+    /// MIME type is fixed.
+    private func wireBridgeTranscription() {
+        let store = self.store
+        voiceRecorder.bridgeTranscriber = { [weak store] url, language in
+            guard let store else {
+                throw BridgeStore.TranscriptionBridgeError.notConnected
+            }
+            let data = try Data(contentsOf: url)
+            let requestId = UUID().uuidString
+            return try await store.transcribeAudio(
+                requestId: requestId,
+                audioData: data,
+                mimeType: "audio/m4a",
+                language: language
+            )
         }
     }
 
