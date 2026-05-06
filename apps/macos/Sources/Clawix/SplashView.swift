@@ -3,16 +3,13 @@ import SwiftUI
 /// First-paint screen shown until the app's window has settled. Uses the
 /// same frosted-sidebar material that fills the real chrome behind the
 /// content panel, so the swap to `ContentView` is invisible. The brand
-/// mark is painted from frame 1 (no fade-in) and then hidden with a very
-/// quick fade-out before `onComplete` fires, so the icon never shares a
-/// frame with the laid-out window.
+/// mark is painted from frame 1 (no fade-in) and the swap to ContentView
+/// is a hard cut (no fade-out), so the splash just disappears the instant
+/// the real chrome is ready.
 struct SplashView: View {
     var onComplete: () -> Void
 
-    @State private var logoOpacity: CGFloat = 0.75
-
     private let hold: Double = 1.1
-    private let fadeOut: Double = 0.16
 
     var body: some View {
         ZStack {
@@ -21,15 +18,10 @@ struct SplashView: View {
                 .ignoresSafeArea()
 
             ClawixLogoIcon(size: 84)
-                .opacity(logoOpacity)
+                .opacity(0.75)
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
-                withAnimation(.easeIn(duration: fadeOut)) {
-                    logoOpacity = 0
-                }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + hold + fadeOut + 0.03) {
                 onComplete()
             }
         }
