@@ -30,23 +30,34 @@ enum StreamingFade {
     /// Characters past the last scheduled word (i.e. a trailing partial
     /// word still waiting for its closing whitespace) read as fully
     /// transparent so they don't pop in mid-word.
+    ///
+    /// Checkpoints arrive sorted by `prefixCount` (the schedule writes
+    /// them in append order with monotonically growing prefixes), so the
+    /// "first prefixCount > offset" lookup is a binary search. Critical
+    /// because this runs once per atom per animation frame: with 500
+    /// atoms at 120Hz a linear scan over 500 checkpoints stalls the
+    /// streaming pipeline.
     static func opacity(
         offset: Int,
         checkpoints: [StreamCheckpoint],
         now: Date
     ) -> Double {
         guard !checkpoints.isEmpty else { return 1.0 }
-        var addedAt: Date?
-        for cp in checkpoints {
-            if cp.prefixCount > offset {
-                addedAt = cp.addedAt
-                break
+        var lo = 0
+        var hi = checkpoints.count
+        while lo < hi {
+            let mid = (lo &+ hi) >> 1
+            if checkpoints[mid].prefixCount > offset {
+                hi = mid
+            } else {
+                lo = mid &+ 1
             }
         }
-        guard let stamp = addedAt else {
+        guard lo < checkpoints.count else {
             // Past the last scheduled word → still pending, hide it.
             return 0.0
         }
+        let stamp = checkpoints[lo].addedAt
         let elapsed = now.timeIntervalSince(stamp)
         if elapsed <= 0 { return 0.0 }
         if elapsed >= duration { return 1.0 }
