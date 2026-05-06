@@ -56,11 +56,23 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testSendPrompt() throws {
-        try roundTrip(.sendPrompt(chatId: "AB-123", text: "hello world\nwith newline"))
+        try roundTrip(.sendPrompt(chatId: "AB-123", text: "hello world\nwith newline", attachments: []))
+        try roundTrip(.sendPrompt(
+            chatId: "AB-123",
+            text: "look at this",
+            attachments: [
+                WireAttachment(
+                    id: "img-1",
+                    mimeType: "image/jpeg",
+                    filename: "screen.jpg",
+                    dataBase64: "ZmFrZQ=="
+                )
+            ]
+        ))
     }
 
     func testNewChat() throws {
-        try roundTrip(.newChat(chatId: "DE-456", text: "first message from the iPhone FAB"))
+        try roundTrip(.newChat(chatId: "DE-456", text: "first message from the iPhone FAB", attachments: []))
     }
 
     func testAuthOk() throws {
@@ -151,14 +163,23 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testWireFormatIsFlat() throws {
-        let frame = BridgeFrame(.sendPrompt(chatId: "abc", text: "hello"))
+        let frame = BridgeFrame(.sendPrompt(chatId: "abc", text: "hello", attachments: []))
         let data = try BridgeCoder.encode(frame)
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
         XCTAssertTrue(json.contains("\"schemaVersion\":\(bridgeSchemaVersion)"))
         XCTAssertTrue(json.contains("\"type\":\"sendPrompt\""))
         XCTAssertTrue(json.contains("\"chatId\":\"abc\""))
         XCTAssertTrue(json.contains("\"text\":\"hello\""))
+        XCTAssertFalse(json.contains("\"attachments\""))
         XCTAssertFalse(json.contains("\"payload\""))
+    }
+
+    func testLegacyPromptFramesDecodeWithoutAttachments() throws {
+        let data = """
+        {"schemaVersion":2,"type":"sendPrompt","chatId":"abc","text":"hello"}
+        """.data(using: .utf8)!
+        let frame = try BridgeCoder.decode(data)
+        XCTAssertEqual(frame.body, .sendPrompt(chatId: "abc", text: "hello", attachments: []))
     }
 
     /// v1 frames (no `clientKind` on `auth`) decode cleanly into v2.
