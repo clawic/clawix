@@ -84,6 +84,20 @@ public protocol EngineHost: AnyObject {
     /// reply to `listProjects`. Default impl returns empty so the
     /// in-process GUI server can opt out.
     func currentProjects() -> [WireProject]
+
+    /// Inbound `transcribeAudio` from a client. The host decodes the
+    /// base64 audio, runs Whisper on it, and calls `reply` with either
+    /// the transcript and `nil`, or an empty string and a short error
+    /// message. The bridge wraps that into a `transcriptionResult`
+    /// frame addressed to the same `requestId`. Hosts without a local
+    /// transcription engine reply with an error via the default impl.
+    func handleTranscribeAudio(
+        requestId: String,
+        audioBase64: String,
+        mimeType: String,
+        language: String?,
+        reply: @MainActor @escaping (_ text: String, _ errorMessage: String?) -> Void
+    )
 }
 
 // MARK: - Default no-op impls for desktop-only hooks
@@ -95,4 +109,13 @@ public extension EngineHost {
     func handlePairingStart() -> (qrJson: String, bearer: String)? { nil }
     func currentProjects() -> [WireProject] { [] }
     func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {}
+    func handleTranscribeAudio(
+        requestId: String,
+        audioBase64: String,
+        mimeType: String,
+        language: String?,
+        reply: @MainActor @escaping (String, String?) -> Void
+    ) {
+        reply("", "Transcription is not available on this host")
+    }
 }

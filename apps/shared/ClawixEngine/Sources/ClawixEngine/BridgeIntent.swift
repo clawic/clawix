@@ -86,10 +86,26 @@ public enum BridgeIntent {
         case .readFile(let path):
             session.send(BridgeFrame(BridgeFileReader.read(path: path)))
 
+        case .transcribeAudio(let requestId, let audioBase64, let mimeType, let language):
+            host?.handleTranscribeAudio(
+                requestId: requestId,
+                audioBase64: audioBase64,
+                mimeType: mimeType,
+                language: language,
+                reply: { [weak session] text, errorMessage in
+                    session?.send(BridgeFrame(.transcriptionResult(
+                        requestId: requestId,
+                        text: text,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+
         case .auth, .authOk, .authFailed, .versionMismatch,
              .chatsSnapshot, .chatUpdated, .messagesSnapshot,
              .messageAppended, .messageStreaming, .errorEvent,
-             .pairingPayload, .projectsSnapshot, .fileSnapshot:
+             .pairingPayload, .projectsSnapshot, .fileSnapshot,
+             .transcriptionResult:
             // Either already handled (auth) or server-only.
             break
         }
