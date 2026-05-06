@@ -118,24 +118,82 @@ public enum BridgeIntent {
 /// reason for missing files / binary blobs / undecodable bytes instead
 /// of leaking raw NSError descriptions, mark `.md` / `.markdown` files
 /// so the iPhone renders them with the assistant's markdown view.
+///
+/// In dummy / fixture mode, the rollouts reference paths that don't
+/// exist on this Mac (e.g. `/Users/demo/Code/Sample App/src/search/query.sql`).
+/// To keep the file viewer functional, set the env var
+/// `CLAWIX_FILE_FIXTURE_DIR=<dir>`. The reader then falls back, in order,
+/// to: (a) a real file mirrored under `<dir>/<absolute path>`, so the
+/// user can drop hand-crafted content for specific paths, and (b) a
+/// synthesized body inferred from the basename and extension, so every
+/// pill resolves to plausible content even without curation.
 public enum BridgeFileReader {
-    public static func read(path: String) -> BridgeBody {
-        let url = URL(fileURLWithPath: path)
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "File not found")
+
+    /// Opaque result used both by the bridge wire reply and the macOS
+    /// `FileViewerPanel`. Keeps the on-disk → fixture → synthesized
+    /// resolution in one place.
+    public struct Result: Sendable {
+        public let content: String?
+        public let isMarkdown: Bool
+        public let error: String?
+        public init(content: String?, isMarkdown: Bool, error: String?) {
+            self.content = content
+            self.isMarkdown = isMarkdown
+            self.error = error
         }
+    }
+
+    public static func read(path: String) -> BridgeBody {
+        let result = load(path: path)
+        return .fileSnapshot(
+            path: path,
+            content: result.content,
+            isMarkdown: result.isMarkdown,
+            error: result.error
+        )
+    }
+
+    public static func load(path: String) -> Result {
+        let url = URL(fileURLWithPath: path)
+        let onDisk = FileManager.default.fileExists(atPath: url.path)
+        let fixtureDir = ProcessInfo.processInfo.environment["CLAWIX_FILE_FIXTURE_DIR"]
+            .flatMap { $0.isEmpty ? nil : $0 }
+
+        if onDisk {
+            return decode(url: url, originalPath: path)
+        }
+
+        if let dir = fixtureDir {
+            let mirrored = URL(fileURLWithPath: dir)
+                .appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+            if FileManager.default.fileExists(atPath: mirrored.path) {
+                return decode(url: mirrored, originalPath: path)
+            }
+            let synthesized = FixtureFileSynthesizer.synthesize(for: path)
+            let isMarkdown = isMarkdownExtension(url.pathExtension)
+            return Result(content: synthesized, isMarkdown: isMarkdown, error: nil)
+        }
+
+        return Result(content: nil, isMarkdown: false, error: "File not found")
+    }
+
+    private static func decode(url: URL, originalPath: String) -> Result {
         guard let data = try? Data(contentsOf: url) else {
-            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "Couldn't read file")
+            return Result(content: nil, isMarkdown: false, error: "Couldn't read file")
         }
         if data.prefix(4096).contains(0) {
-            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "Preview not available for binary files")
+            return Result(content: nil, isMarkdown: false, error: "Preview not available for binary files")
         }
         guard let raw = String(data: data, encoding: .utf8)
                    ?? String(data: data, encoding: .utf16) else {
-            return .fileSnapshot(path: path, content: nil, isMarkdown: false, error: "Couldn't decode file as text")
+            return Result(content: nil, isMarkdown: false, error: "Couldn't decode file as text")
         }
-        let ext = url.pathExtension.lowercased()
-        let isMarkdown = ext == "md" || ext == "markdown"
-        return .fileSnapshot(path: path, content: raw, isMarkdown: isMarkdown, error: nil)
+        let ext = URL(fileURLWithPath: originalPath).pathExtension
+        return Result(content: raw, isMarkdown: isMarkdownExtension(ext), error: nil)
+    }
+
+    private static func isMarkdownExtension(_ ext: String) -> Bool {
+        let lower = ext.lowercased()
+        return lower == "md" || lower == "markdown"
     }
 }
