@@ -26,8 +26,45 @@ enum AssistantBlock: Equatable {
     case codeBlock(language: String, code: String)
 }
 
+/// Cached parse result. Wrapped in a class so it can live in
+/// `NSCache`, which only stores `AnyObject` values.
+private final class CachedAssistantBlocks {
+    let blocks: [AssistantBlock]
+    init(_ blocks: [AssistantBlock]) { self.blocks = blocks }
+}
+
 enum AssistantMarkdownParser {
+    /// Compiled once per process. The pattern is identical between
+    /// calls so paying the regex compile cost on every `numberedMatch`
+    /// invocation (which happens for every line of every paragraph
+    /// during streaming) is pure waste.
+    fileprivate static let numberedRegex: NSRegularExpression? =
+        try? NSRegularExpression(pattern: #"^(\d+)[.)]\s+"#)
+
+    /// Memoizes block lists keyed by the exact source string. The
+    /// SwiftUI body of `AssistantMarkdownView` re-runs whenever any
+    /// observed state in the chat detail mutates (a streaming chunk
+    /// arrives for *another* message, the user toggles reasoning on
+    /// some message, etc). Without this cache, every body cycle
+    /// re-parses the full markdown of every visible message. Capped
+    /// at 64 entries; NSCache evicts under memory pressure for free.
+    fileprivate static let cache: NSCache<NSString, CachedAssistantBlocks> = {
+        let c = NSCache<NSString, CachedAssistantBlocks>()
+        c.countLimit = 64
+        return c
+    }()
+
     static func parse(_ source: String) -> [AssistantBlock] {
+        let key = source as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached.blocks
+        }
+        let blocks = parseUncached(source)
+        cache.setObject(CachedAssistantBlocks(blocks), forKey: key)
+        return blocks
+    }
+
+    private static func parseUncached(_ source: String) -> [AssistantBlock] {
         var blocks: [AssistantBlock] = []
         let raw = source.replacingOccurrences(of: "\r\n", with: "\n")
         let lines = raw.components(separatedBy: "\n")
@@ -177,7 +214,7 @@ enum AssistantMarkdownParser {
     /// any run of whitespace, so leading spaces from `1.    Compilar`
     /// don't leak into the rendered text).
     private static func numberedMatch(in trimmed: String) -> (number: Int, contentStart: String.Index)? {
-        guard let regex = try? NSRegularExpression(pattern: #"^(\d+)[.)]\s+"#) else { return nil }
+        guard let regex = numberedRegex else { return nil }
         let nsRange = NSRange(trimmed.startIndex..., in: trimmed)
         guard let match = regex.firstMatch(in: trimmed, range: nsRange),
               let digitsRange = Range(match.range(at: 1), in: trimmed),
