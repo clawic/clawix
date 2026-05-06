@@ -95,18 +95,31 @@ private struct WorkSummaryHeaderView: View {
                 expanded.toggle()
             }
         } label: {
-            TimelineView(.periodic(from: .now, by: isStreaming ? 1.0 : 3600)) { ctx in
+            // While streaming, the elapsed-seconds string ticks once a
+            // second via `TimelineView`. After the turn ends, the
+            // header is static, so we drop the TimelineView entirely
+            // rather than parking it at a 1-hour cadence: SwiftUI no
+            // longer keeps a CADisplayLink wired up for a label that
+            // never changes again.
+            if isStreaming {
+                TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
+                    HStack(spacing: 6) {
+                        Text(headerText(now: ctx.date))
+                            .font(BodyFont.system(size: 13, weight: .regular))
+                            .foregroundStyle(Palette.textSecondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+            } else {
                 HStack(spacing: 6) {
-                    Text(headerText(now: ctx.date))
+                    Text(headerText(now: Date()))
                         .font(BodyFont.system(size: 13, weight: .regular))
                         .foregroundStyle(Palette.textSecondary)
-                    if !isStreaming {
-                        Image(systemName: "chevron.right")
-                            .font(BodyFont.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Palette.textTertiary)
-                            .rotationEffect(.degrees(expanded ? 90 : 0))
-                            .animation(.easeOut(duration: 0.16), value: expanded)
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(BodyFont.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Palette.textTertiary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                        .animation(.easeOut(duration: 0.16), value: expanded)
                 }
                 .contentShape(Rectangle())
             }
