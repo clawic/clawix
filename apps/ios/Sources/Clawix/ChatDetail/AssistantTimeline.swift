@@ -48,7 +48,7 @@ struct AssistantTimelineView: View {
                     case .reasoning(_, let text):
                         if !text.isEmpty {
                             Text(text)
-                                .font(Typography.bodyFont)
+                                .font(Typography.chatBodyFont)
                                 .foregroundStyle(Palette.textPrimary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .lineSpacing(3)

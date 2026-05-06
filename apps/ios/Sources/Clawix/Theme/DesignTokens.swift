@@ -65,6 +65,7 @@ enum Typography {
     static let titleFont       = BodyFont.system(size: 22, weight: .semibold)
     static let bodyFont        = BodyFont.system(size: 16)
     static let bodyEmphasized  = BodyFont.system(size: 16, weight: .medium)
+    static let chatBodyFont    = BodyFont.system(size: 16.5)
     static let secondaryFont   = BodyFont.system(size: 14)
     static let captionFont     = BodyFont.system(size: 12)
     static let monoFont        = BodyFont.system(size: 14, design: .monospaced)

@@ -646,12 +646,12 @@ private struct UserBubble: View {
         HStack {
             Spacer(minLength: 48)
             Text(text)
-                .font(Typography.bodyFont)
+                .font(Typography.chatBodyFont)
                 .tracking(-0.2)
                 .foregroundStyle(Palette.userBubbleText)
                 .multilineTextAlignment(.leading)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 14)
+                .padding(.horizontal, 17)
+                .padding(.vertical, 13)
                 .background(
                     RoundedRectangle(cornerRadius: AppLayout.userBubbleRadius, style: .continuous)
                         .fill(Palette.userBubbleFill)

@@ -227,7 +227,7 @@ struct AssistantMarkdownView: View {
 
         case .paragraph(let attr):
             Text(styledInline(attr))
-                .font(Typography.bodyFont)
+                .font(Typography.chatBodyFont)
                 .tracking(-0.2)
                 .foregroundStyle(Palette.textPrimary)
                 .lineSpacing(3)
@@ -239,11 +239,11 @@ struct AssistantMarkdownView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("•")
-                            .font(Typography.bodyFont)
+                            .font(Typography.chatBodyFont)
                             .foregroundStyle(Palette.textPrimary)
                             .frame(width: 8, alignment: .leading)
                         Text(styledInline(item))
-                            .font(Typography.bodyFont)
+                            .font(Typography.chatBodyFont)
                             .tracking(-0.2)
                             .foregroundStyle(Palette.textPrimary)
                             .lineSpacing(3)
@@ -268,11 +268,11 @@ struct AssistantMarkdownView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(start + idx).")
-                            .font(Typography.bodyFont)
+                            .font(Typography.chatBodyFont)
                             .foregroundStyle(Palette.textPrimary)
                             .frame(width: 18, alignment: .trailing)
                         Text(styledInline(item))
-                            .font(Typography.bodyFont)
+                            .font(Typography.chatBodyFont)
                             .tracking(-0.2)
                             .foregroundStyle(Palette.textPrimary)
                             .lineSpacing(3)
@@ -340,8 +340,8 @@ private struct AssistantCodeBlockView: View {
                                 .foregroundStyle(Color(white: 0.78))
                                 .transition(.opacity)
                         } else {
-                            CopyIconView(color: Color(white: 0.65), lineWidth: 0.85)
-                                .frame(width: 14, height: 14)
+                            CopyIconView(color: Color(white: 0.65), lineWidth: 1.55)
+                                .frame(width: 16, height: 16)
                                 .transition(.opacity)
                         }
                     }
