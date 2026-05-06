@@ -18,6 +18,8 @@ struct ComposerView: View {
     @Binding var text: String
     @Binding var attachments: [ComposerAttachment]
     let onSend: () -> Void
+    var onMicTap: () -> Void = {}
+    var onVoiceTap: () -> Void = {}
     var autofocusOnAppear: Bool = false
     /// `true` when the chat already has messages and the composer should
     /// shed its "first prompt" generosity (slightly tighter pill, smaller
@@ -315,20 +317,20 @@ struct ComposerView: View {
             .transition(.scale.combined(with: .opacity))
         } else {
             HStack(spacing: 16) {
-                Button(action: { Haptics.tap() }) {
-                    MicIcon(lineWidth: 5)
+                Button(action: onMicTap) {
+                    MicIcon(lineWidth: 6)
                         .foregroundColor(Color(white: 0.6))
-                        .frame(width: 18, height: 18)
+                        .frame(width: 20, height: 20)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Mic")
 
-                Button(action: { Haptics.tap() }) {
+                Button(action: onVoiceTap) {
                     VoiceWaveformIcon()
                         .foregroundColor(Color.black)
-                        .frame(width: 16, height: 16)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 19, height: 19)
+                        .frame(width: 31.5, height: 31.5)
                         .background(Circle().fill(Color.white))
                 }
                 .buttonStyle(.plain)
