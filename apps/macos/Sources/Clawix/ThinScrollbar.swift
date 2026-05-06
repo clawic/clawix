@@ -32,12 +32,20 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
         scrollView.hasVerticalScroller = axes.contains(.vertical)
         scrollView.hasHorizontalScroller = axes.contains(.horizontal)
         scrollView.borderType = .noBorder
-        scrollView.autohidesScrollers = true
-        scrollView.scrollerStyle = .overlay
+        // Legacy style: the overlay style runs a private NSScrollerImp
+        // collapse/expand animation on the scroller's layer that we can't
+        // intercept from the public NSView API. The collapse shrinks the
+        // bar's bounds while idle, which clips our right-anchored knob's
+        // left edge. Legacy doesn't collapse, so the knob stays at its
+        // full width regardless of hover. The bar still effectively
+        // disappears when content fits because `drawKnob()` short-circuits
+        // at `knobProportion >= 0.999`.
+        scrollView.autohidesScrollers = false
+        scrollView.scrollerStyle = .legacy
         scrollView.verticalScrollElasticity = .allowed
 
         let scroller = ThinScroller()
-        scroller.scrollerStyle = .overlay
+        scroller.scrollerStyle = .legacy
         scroller.controlSize = .regular
         // The document view (NSHostingView) is layer-backed by SwiftUI,
         // and on macOS layer-backed siblings always composite above

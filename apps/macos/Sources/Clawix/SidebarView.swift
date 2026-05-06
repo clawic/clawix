@@ -376,7 +376,10 @@ struct SidebarView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 6)
 
-                ThinScrollView(trailingGutter: 14) {
+                // Legacy mode reserves the scroller's 14pt column outside
+                // the clipView, so the gutter only needs the small breathing
+                // strip between content and that column.
+                ThinScrollView(trailingGutter: 4) {
                     sidebarScrollContent(snapshot: makeSnapshot())
                 }
 
