@@ -7,7 +7,8 @@ struct ComposerView: View {
 
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var composer: ComposerState
-    @StateObject private var voice = VoiceRecorder()
+    @EnvironmentObject private var dictation: DictationCoordinator
+    @State private var sendOnStop = false
     @State private var addMenuOpen = false
     @State private var addMenuHover = false
     @State private var permissionsMenuOpen = false
@@ -171,18 +172,18 @@ struct ComposerView: View {
             .anchorPreference(key: ModelButtonAnchorKey.self, value: .bounds) { $0 }
             .hoverHint(L10n.t("Change model"))
 
-            if voice.state == .transcribing {
+            if dictation.state == .transcribing {
                 TranscribingSpinner()
                     .frame(width: 28, height: 28)
                     .accessibilityLabel("Transcribing voice note")
             } else {
                 Button {
-                    voice.start(locale: appState.preferredLanguage.speechRecognitionLocale)
+                    startVoice()
                 } label: {
-                    MicIcon()
+                    MicIcon(lineWidth: 1.5)
                         .foregroundColor(.white)
                         .opacity(micHover ? 0.96 : 0.62)
-                        .frame(width: 14, height: 14)
+                        .frame(width: 20, height: 20)
                         .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
                 }
@@ -227,12 +228,12 @@ struct ComposerView: View {
         HStack(spacing: 6) {
             plusButton
 
-            VoiceWaveform(levels: voice.levels)
+            VoiceWaveform(levels: dictation.levels)
                 .frame(maxWidth: .infinity)
                 .frame(height: 28)
                 .padding(.horizontal, 4)
 
-            Text(voice.formattedElapsed)
+            Text(dictation.formattedElapsed)
                 .font(BodyFont.system(size: 12.5, design: .monospaced))
                 .foregroundColor(Color(white: 0.78))
                 .monospacedDigit()
@@ -242,7 +243,7 @@ struct ComposerView: View {
                 stopAndAppendTranscription()
             } label: {
                 Image(systemName: "stop.fill")
-                    .font(BodyFont.system(size: 11, weight: .bold))
+                    .font(BodyFont.system(size: 13, weight: .bold))
                     .foregroundColor(Color(white: 0.92))
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color(white: 0.22)))
@@ -255,7 +256,7 @@ struct ComposerView: View {
                 stopAndSend()
             } label: {
                 Image(systemName: "arrow.up")
-                    .font(BodyFont.system(size: 13, weight: .bold))
+                    .font(BodyFont.system(size: 15, weight: .bold))
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(Color.white))
@@ -377,19 +378,32 @@ struct ComposerView: View {
         .hoverHint(L10n.t("Turn off plan mode"))
     }
 
-    private func stopAndAppendTranscription() {
-        voice.stop { text in
+    private func startVoice() {
+        // The completion fires once when transcription finishes. We
+        // capture `$sendOnStop` so the same closure can implement both
+        // the "stop" and "stop + send" buttons: the buttons toggle the
+        // bool, the completion reads it, and we reset it on consumption.
+        sendOnStop = false
+        let language = appState.preferredLanguage.whisperLanguageCode
+        let pendingSend = $sendOnStop
+        dictation.startFromComposer(language: language) { text in
             appendTranscribedText(text)
+            if pendingSend.wrappedValue,
+               !composer.text.trimmingCharacters(in: .whitespaces).isEmpty {
+                appState.sendMessage()
+            }
+            pendingSend.wrappedValue = false
         }
     }
 
+    private func stopAndAppendTranscription() {
+        sendOnStop = false
+        dictation.stop()
+    }
+
     private func stopAndSend() {
-        voice.stop { text in
-            appendTranscribedText(text)
-            if !composer.text.trimmingCharacters(in: .whitespaces).isEmpty {
-                appState.sendMessage()
-            }
-        }
+        sendOnStop = true
+        dictation.stop()
     }
 
     private func appendTranscribedText(_ text: String) {
@@ -464,7 +478,7 @@ struct ComposerView: View {
                 }
 
                 Group {
-                    if voice.state == .recording {
+                    if dictation.state == .recording {
                         recordingToolbar
                     } else {
                         normalToolbar
