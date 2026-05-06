@@ -23,13 +23,20 @@ let package = Package(
         .library(name: "ClawixEngine", targets: ["ClawixEngine"])
     ],
     dependencies: [
-        .package(path: "../ClawixCore")
+        .package(path: "../ClawixCore"),
+        // On-device Whisper inference. CoreML-backed, runs on the
+        // Apple Neural Engine on Apple Silicon. Used by the macOS
+        // GUI for the in-app dictation flow and by the LaunchAgent
+        // daemon when an iPhone client requests a transcription
+        // through the bridge.
+        .package(url: "https://github.com/argmaxinc/WhisperKit", from: "0.9.0")
     ],
     targets: [
         .target(
             name: "ClawixEngine",
             dependencies: [
-                .product(name: "ClawixCore", package: "ClawixCore")
+                .product(name: "ClawixCore", package: "ClawixCore"),
+                .product(name: "WhisperKit", package: "WhisperKit")
             ],
             path: "Sources/ClawixEngine"
         )
