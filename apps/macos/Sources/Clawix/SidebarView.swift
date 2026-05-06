@@ -1805,14 +1805,15 @@ private struct ProjectAccordion: View, Equatable {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 3)
-                .onHover { newChatHovered = $0 }
+                .sidebarHover { newChatHovered = $0 }
                 .help(L10n.t("New chat in this project"))
             }
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(hovered || menuOpen ? Color.white.opacity(0.04) : Color.clear)
             )
-            .onHover { hovered = $0 }
+            .padding(.trailing, 3)
+            .sidebarHover { hovered = $0 }
             .animation(.easeOut(duration: 0.10), value: hovered || menuOpen)
             .animation(.easeOut(duration: 0.12), value: newChatHovered)
             .animation(.easeOut(duration: 0.12), value: menuHovered)
