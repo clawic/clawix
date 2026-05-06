@@ -259,7 +259,7 @@ struct SidebarView: View {
                 )
                 SidebarAccordion(
                     expanded: pinnedExpanded,
-                    targetHeight: CGFloat(snapshot.pinned.count) * 32 + 8
+                    targetHeight: CGFloat(snapshot.pinned.count) * 32
                         + SidebarRowMetrics.sectionEdgePadding
                 ) {
                     PinnedReorderableList(
@@ -293,7 +293,7 @@ struct SidebarView: View {
                             Text("No chats")
                                 .font(BodyFont.system(size: 13.5, weight: .light))
                                 .foregroundColor(Color(white: 0.40))
-                                .padding(.leading, 36)
+                                .padding(.leading, 34)
                                 .padding(.vertical, 4)
                         } else {
                             let currentChatId = selectedChatId
@@ -445,7 +445,7 @@ struct SidebarView: View {
                             .font(BodyFont.system(size: 13.5, weight: .light))
                             .foregroundColor(Color(white: 0.40))
                     }
-                    .padding(.leading, 36)
+                    .padding(.leading, 34)
                     .padding(.vertical, 4)
                 } else {
                     let currentChatId = selectedChatId
@@ -2090,13 +2090,16 @@ private struct ProjectAccordion: View, Equatable {
                     menuOpen ? anchor : nil
                 }
 
-                // Pencil. start a new chat in this project (always visible)
+                // Pencil. start a new chat in this project (always visible).
+                // 28x28 hit area around a 12.2pt glyph: the cursor catches
+                // the button as soon as it nears the icon, no need to land
+                // exactly on the strokes.
                 Button(action: onNewChat) {
                     ComposeIcon()
                         .stroke(newChatHovered ? Color(white: 0.94) : Color(white: 0.50),
                                 style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
-                        .frame(width: 11.2, height: 11.2)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 12.2, height: 12.2)
+                        .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -2197,7 +2200,10 @@ private enum SidebarRowMetrics {
     /// section frame and the next section header is not glued to it.
     /// Lives inside the accordion (not as a standalone spacer) so it
     /// rides the height transition without an extra animated element.
-    static let sectionEdgePadding: CGFloat = 15.6
+    /// Same value applied to every top-level collapsible section
+    /// (Pinned, Chats, All chats, Projects, Archived) so the gap below
+    /// each open section reads identically.
+    static let sectionEdgePadding: CGFloat = 23.6
 
     static func recentChats(count: Int, spacing: CGFloat = chatSpacing) -> CGFloat {
         guard count > 0 else { return 0 }
