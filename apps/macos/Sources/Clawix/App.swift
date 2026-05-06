@@ -67,6 +67,11 @@ struct ClawixApp: App {
         AppLanguage.bootstrap()
         // Register Manrope before any SwiftUI view resolves Font.custom("Manrope-…").
         BodyFont.register()
+        // One-shot migration of pre-existing UserDefaults values from the
+        // old `SidebarOrganizationMode` key into the new `SidebarViewMode`
+        // + `ProjectSortMode` keys. Idempotent — does nothing on a fresh
+        // install or after the legacy key has been cleared.
+        SidebarPrefs.migrateLegacySidebarPrefs()
         _appState = StateObject(wrappedValue: AppState())
     }
 

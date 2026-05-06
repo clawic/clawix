@@ -1,8 +1,31 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-enum SidebarOrganizationMode: String { case byProject, recentProjects, chronological }
-enum SidebarSortMode: String { case creation, updated }
+/// Private UTI used by project rows in the sidebar's "Custom" sort mode.
+/// Conforms to `.data` (NOT `.text`) so existing drop targets that listen
+/// for chat drags (`.text`) don't visually highlight when a project is
+/// being dragged for reordering.
+extension UTType {
+    static let clawixProjectId = UTType(importedAs: "com.clawix.project-id")
+}
+
+/// Top-level layout of the chat list. Either group chats under their
+/// project (with a "Chats" bucket for the projectless ones) or render a
+/// single flat chronological list.
+enum SidebarViewMode: String { case grouped, chronological }
+
+/// How projects are ordered when `viewMode == .grouped`. `.custom` lets
+/// the user drag-reorder the list; the order is persisted via
+/// `ProjectOrdersRepository`.
+enum ProjectSortMode: String { case recent, creation, name, custom }
+
+/// Legacy mode kept only for one-shot migration. Older builds wrote
+/// values from this enum into `SidebarOrganizationMode`. Removed from the
+/// UI; `migrateLegacySidebarPrefs()` translates remaining values into
+/// `SidebarViewMode` + `ProjectSortMode` on first launch.
+private enum LegacySidebarOrganizationMode: String {
+    case byProject, recentProjects, chronological
+}
 
 /// UserDefaults suite used to persist sidebar preferences across launches.
 /// Same suite already used for the main window frame and browser state.
@@ -16,6 +39,39 @@ enum SidebarPrefs {
         if store.object(forKey: key) == nil { return fallback }
         return store.bool(forKey: key)
     }
+
+    /// Translate the old `SidebarOrganizationMode` value (if present) into
+    /// the new `SidebarViewMode` + `ProjectSortMode` keys, then delete the
+    /// legacy key so subsequent launches are no-ops. Idempotent.
+    /// Mappings:
+    ///   byProject       -> grouped + custom (insertion-order ≈ manual)
+    ///   recentProjects  -> grouped + recent
+    ///   chronological   -> chronological (sort key untouched)
+    static func migrateLegacySidebarPrefs() {
+        let legacyKey = "SidebarOrganizationMode"
+        guard let raw = store.string(forKey: legacyKey),
+              let legacy = LegacySidebarOrganizationMode(rawValue: raw) else {
+            return
+        }
+        // Don't clobber values the user has already set explicitly via the
+        // new UI on a previous launch.
+        let viewKey = "SidebarViewMode"
+        let sortKey = "ProjectSortMode"
+        let alreadyMigrated = store.string(forKey: viewKey) != nil
+        if !alreadyMigrated {
+            switch legacy {
+            case .byProject:
+                store.set(SidebarViewMode.grouped.rawValue, forKey: viewKey)
+                store.set(ProjectSortMode.custom.rawValue, forKey: sortKey)
+            case .recentProjects:
+                store.set(SidebarViewMode.grouped.rawValue, forKey: viewKey)
+                store.set(ProjectSortMode.recent.rawValue, forKey: sortKey)
+            case .chronological:
+                store.set(SidebarViewMode.chronological.rawValue, forKey: viewKey)
+            }
+        }
+        store.removeObject(forKey: legacyKey)
+    }
 }
 
 struct SidebarView: View {
@@ -28,10 +84,10 @@ struct SidebarView: View {
     @State private var projectsHeaderHovered: Bool = false
     @State private var newProjectMenuOpen: Bool = false
     @State private var organizeMenuOpen: Bool = false
-    @AppStorage("SidebarOrganizationMode", store: SidebarPrefs.store)
-    private var organizationModeRaw: String = SidebarOrganizationMode.byProject.rawValue
-    @AppStorage("SidebarSortMode", store: SidebarPrefs.store)
-    private var sortModeRaw: String = SidebarSortMode.updated.rawValue
+    @AppStorage("SidebarViewMode", store: SidebarPrefs.store)
+    private var viewModeRaw: String = SidebarViewMode.grouped.rawValue
+    @AppStorage("ProjectSortMode", store: SidebarPrefs.store)
+    private var projectSortModeRaw: String = ProjectSortMode.recent.rawValue
     @State private var pinnedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarPinnedExpanded", default: true)
     @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarChronoExpanded", default: true)
     @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
@@ -39,8 +95,12 @@ struct SidebarView: View {
     @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarArchivedExpanded", default: false)
     @State private var chronoLimit: Int = 15
 
-    private var organizationMode: SidebarOrganizationMode {
-        SidebarOrganizationMode(rawValue: organizationModeRaw) ?? .byProject
+    private var viewMode: SidebarViewMode {
+        SidebarViewMode(rawValue: viewModeRaw) ?? .grouped
+    }
+
+    private var projectSortMode: ProjectSortMode {
+        ProjectSortMode(rawValue: projectSortModeRaw) ?? .recent
     }
 
     /// One-shot derivation of every list the sidebar needs from
@@ -147,7 +207,7 @@ struct SidebarView: View {
                 }
             }
 
-            if organizationMode == .chronological {
+            if viewMode == .chronological {
                 chronoHeader
                     .padding(.leading, 16)
                     .padding(.trailing, 9)
@@ -421,8 +481,8 @@ struct SidebarView: View {
                     let popupWidth: CGFloat = 232
                     OrganizeMenuPopup(
                         isPresented: $organizeMenuOpen,
-                        organizationModeRaw: $organizationModeRaw,
-                        sortModeRaw: $sortModeRaw
+                        viewModeRaw: $viewModeRaw,
+                        projectSortModeRaw: $projectSortModeRaw
                     )
                     .frame(width: popupWidth)
                     .anchoredPopupPlacement(
@@ -2261,66 +2321,83 @@ private struct OrganizeMenuAnchorKey: PreferenceKey {
     }
 }
 
-/// Two-section dropdown: organization mode and sort field. Each row shows a
-/// check on the active option; selections persist via the caller's
-/// `@AppStorage`-backed bindings, so the popup itself is stateless.
+/// Two-section dropdown: top-level view mode (Grouped vs Chronological)
+/// and project sort field. The "Sort projects by" section is hidden when
+/// the user is in chronological mode (no projects to sort). Selections
+/// persist via the caller's `@AppStorage`-backed bindings, so the popup
+/// itself is stateless.
 private struct OrganizeMenuPopup: View {
     @Binding var isPresented: Bool
-    @Binding var organizationModeRaw: String
-    @Binding var sortModeRaw: String
+    @Binding var viewModeRaw: String
+    @Binding var projectSortModeRaw: String
+
+    private var isGrouped: Bool {
+        viewModeRaw == SidebarViewMode.grouped.rawValue
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader("Organize")
             OrganizeMenuRow(
                 icon: .folderOpen,
-                label: "By project",
-                isSelected: organizationModeRaw == SidebarOrganizationMode.byProject.rawValue
+                label: "Grouped by project",
+                isSelected: viewModeRaw == SidebarViewMode.grouped.rawValue
             ) {
-                organizationModeRaw = SidebarOrganizationMode.byProject.rawValue
-                isPresented = false
-            }
-            OrganizeMenuRow(
-                icon: .folderOpen,
-                label: "Recent projects",
-                isSelected: organizationModeRaw == SidebarOrganizationMode.recentProjects.rawValue
-            ) {
-                organizationModeRaw = SidebarOrganizationMode.recentProjects.rawValue
+                viewModeRaw = SidebarViewMode.grouped.rawValue
                 isPresented = false
             }
             OrganizeMenuRow(
                 icon: .system("clock"),
                 label: "Chronological list",
-                isSelected: organizationModeRaw == SidebarOrganizationMode.chronological.rawValue
+                isSelected: viewModeRaw == SidebarViewMode.chronological.rawValue
             ) {
-                organizationModeRaw = SidebarOrganizationMode.chronological.rawValue
+                viewModeRaw = SidebarViewMode.chronological.rawValue
                 isPresented = false
             }
 
-            MenuStandardDivider()
-                .padding(.vertical, 5)
+            if isGrouped {
+                MenuStandardDivider()
+                    .padding(.vertical, 5)
 
-            ModelMenuHeader("Sort by")
-            OrganizeMenuRow(
-                icon: .system("plus.circle"),
-                label: "Creation",
-                isSelected: sortModeRaw == SidebarSortMode.creation.rawValue
-            ) {
-                sortModeRaw = SidebarSortMode.creation.rawValue
-                isPresented = false
-            }
-            OrganizeMenuRow(
-                icon: .system("pencil.circle"),
-                label: "Updated",
-                isSelected: sortModeRaw == SidebarSortMode.updated.rawValue
-            ) {
-                sortModeRaw = SidebarSortMode.updated.rawValue
-                isPresented = false
+                ModelMenuHeader("Sort projects by")
+                OrganizeMenuRow(
+                    icon: .system("clock.arrow.circlepath"),
+                    label: "Recent",
+                    isSelected: projectSortModeRaw == ProjectSortMode.recent.rawValue
+                ) {
+                    projectSortModeRaw = ProjectSortMode.recent.rawValue
+                    isPresented = false
+                }
+                OrganizeMenuRow(
+                    icon: .system("plus.circle"),
+                    label: "Created",
+                    isSelected: projectSortModeRaw == ProjectSortMode.creation.rawValue
+                ) {
+                    projectSortModeRaw = ProjectSortMode.creation.rawValue
+                    isPresented = false
+                }
+                OrganizeMenuRow(
+                    icon: .system("textformat"),
+                    label: "Name",
+                    isSelected: projectSortModeRaw == ProjectSortMode.name.rawValue
+                ) {
+                    projectSortModeRaw = ProjectSortMode.name.rawValue
+                    isPresented = false
+                }
+                OrganizeMenuRow(
+                    icon: .system("line.3.horizontal"),
+                    label: "Custom",
+                    isSelected: projectSortModeRaw == ProjectSortMode.custom.rawValue
+                ) {
+                    projectSortModeRaw = ProjectSortMode.custom.rawValue
+                    isPresented = false
+                }
             }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .menuStandardBackground()
         .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+        .animation(.easeOut(duration: 0.18), value: isGrouped)
     }
 }
 
