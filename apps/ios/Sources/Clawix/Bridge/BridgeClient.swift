@@ -433,7 +433,7 @@ final class BridgeClient: NSObject {
             }
         case .messageAppended(let chatId, let message):
             if winner?.id == candidate.id {
-                store.messagesByChat[chatId, default: []].append(message)
+                store.applyMessageAppended(chatId: chatId, message: message)
             }
         case .messageStreaming(let chatId, let messageId, let content, let reasoning, let finished):
             if winner?.id == candidate.id {

@@ -103,11 +103,59 @@ final class BridgeStore {
         // through as long as at least one image is attached, mirroring
         // how the Codex CLI accepts dragged images without a prompt.
         guard !trimmed.isEmpty || !attachments.isEmpty else { return }
+        // Optimistic append: surface the user bubble before the bridge
+        // round-trip resolves. The server eventually replies with a
+        // `messageAppended` carrying its own canonical id; the
+        // `local-` prefix on this placeholder lets `applyMessageAppended`
+        // swap the row in-place instead of appending a duplicate.
+        let optimistic = WireMessage(
+            id: "local-\(UUID().uuidString)",
+            role: .user,
+            content: trimmed,
+            timestamp: Date()
+        )
+        messagesByChat[chatId, default: []].append(optimistic)
         if pendingNewChats.remove(chatId) != nil {
             client?.sendNewChat(chatId: chatId, text: trimmed, attachments: attachments)
         } else {
             client?.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         }
+    }
+
+    /// Apply a server-confirmed message append. If a matching local
+    /// optimistic user bubble exists (`id` prefixed `local-`, same
+    /// `role` and `content`), the server payload is merged onto it
+    /// while preserving the placeholder's `id`. Keeping the id stable
+    /// means SwiftUI's `ForEach(id: \.id)` does not unmount/remount
+    /// the row, so the entrance animation that already played at
+    /// optimistic-append time does not run a second time on ack.
+    /// Anything else (assistant messages, brand-new chats from
+    /// elsewhere, retries) appends at the tail like before.
+    @MainActor
+    func applyMessageAppended(chatId: String, message: WireMessage) {
+        var current = messagesByChat[chatId] ?? []
+        if message.role == .user,
+           let idx = current.firstIndex(where: {
+               $0.id.hasPrefix("local-")
+                   && $0.role == .user
+                   && $0.content == message.content
+           }) {
+            let placeholderId = current[idx].id
+            current[idx] = WireMessage(
+                id: placeholderId,
+                role: message.role,
+                content: message.content,
+                reasoningText: message.reasoningText,
+                streamingFinished: message.streamingFinished,
+                isError: message.isError,
+                timestamp: message.timestamp,
+                timeline: message.timeline,
+                workSummary: message.workSummary
+            )
+        } else {
+            current.append(message)
+        }
+        messagesByChat[chatId] = current
     }
 
     /// Mints a fresh chat id for the FAB-driven "new chat" flow. The
