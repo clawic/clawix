@@ -357,45 +357,45 @@ struct SidebarView: View {
                 // arrives as 0 and never recovers.
                 if projectsExpanded {
                     let currentChatId = selectedChatId
-                    // `LazyVStack` instead of `VStack` so accordion bodies
-                    // for projects scrolled out of view never instantiate.
-                    // Visible projects still re-evaluate normally; the
-                    // saving is the long tail of off-screen ones (~70-90
-                    // out of ~100 in a typical sidebar).
-                    LazyVStack(alignment: .leading, spacing: 4) {
-                        ForEach(sortedProjects(snapshot: snapshot)) { project in
-                            ChatDropTarget { droppedId in
-                                appState.moveChatToProject(chatId: droppedId, projectId: project.id)
-                                return true
-                            } content: {
-                                ProjectAccordion(
-                                    project: project,
-                                    expanded: expandedProjects.contains(project.id),
-                                    chats: snapshot.byProject[project.id] ?? [],
-                                    loading: appState.loadingProjects.contains(project.id),
-                                    onToggle: {
-                                        if expandedProjects.contains(project.id) {
-                                            expandedProjects.remove(project.id)
-                                        } else {
-                                            expandedProjects.insert(project.id)
-                                            Task { await appState.loadThreadsForProject(project) }
-                                        }
-                                    },
-                                    onMenuToggle: {
-                                        projectMenuOpenId = projectMenuOpenId == project.id ? nil : project.id
-                                    },
-                                    onNewChat: {
-                                        appState.startNewChat(in: project)
-                                    },
-                                    menuOpen: projectMenuOpenId == project.id,
-                                    selectedChatId: currentChatId,
-                                    chatCallbacks: { recentChatCallbacks(for: $0, archived: false) }
+                    let projectsList = sortedProjects(snapshot: snapshot)
+                    Group {
+                        if projectSortMode == .custom {
+                            // `ProjectReorderableList` adds drag-and-drop
+                            // gap zones between every row and persists the
+                            // resulting order via `appState.reorderProject`.
+                            // It uses a non-lazy `VStack` because measuring
+                            // row frames for the drag chip needs every row
+                            // to be in the layout tree.
+                            ProjectReorderableList(
+                                appState: appState,
+                                projects: projectsList
+                            ) { project in
+                                projectRow(
+                                    project,
+                                    snapshot: snapshot,
+                                    currentChatId: currentChatId
                                 )
-                                .equatable()
+                            }
+                        } else {
+                            // `LazyVStack` instead of `VStack` so accordion
+                            // bodies for projects scrolled out of view never
+                            // instantiate. Visible projects still re-evaluate
+                            // normally; the saving is the long tail of
+                            // off-screen ones (~70-90 out of ~100 in a
+                            // typical sidebar).
+                            LazyVStack(alignment: .leading, spacing: 4) {
+                                ForEach(projectsList) { project in
+                                    projectRow(
+                                        project,
+                                        snapshot: snapshot,
+                                        currentChatId: currentChatId
+                                    )
+                                }
                             }
                         }
                     }
                     .padding(.leading, 8)
+                    .padding(.bottom, SidebarRowMetrics.sectionEdgePadding)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
@@ -3214,19 +3214,22 @@ final class DragChipPanel {
     /// it the panel's frame clips the shadow flush at the chip edge.
     private static let shadowInset: CGFloat = 24
 
-    init(chat: Chat, grabAnchor: CGPoint, width: CGFloat) {
+    /// Designated init. Takes any SwiftUI view as the chip body so the
+    /// same panel can render either a chat row preview or a project row
+    /// preview. `fallbackHeight` is the height used when the hosting
+    /// view's `fittingSize` isn't available yet (a measurement race
+    /// every chip type works around).
+    init(content: AnyView, grabAnchor: CGPoint, width: CGFloat, fallbackHeight: CGFloat) {
         self.grabAnchor = grabAnchor
-        let chip = DragChipView(chat: chat, width: width, shadowInset: Self.shadowInset)
-        host = NSHostingView(rootView: AnyView(chip))
+        host = NSHostingView(rootView: content)
         host.layoutSubtreeIfNeeded()
         // Width is pinned to the row's measured width plus the shadow
         // inset on each side so the shadow doesn't get clipped at the
-        // panel edge. Height comes from the natural fitting size; 32 +
-        // 2*inset is the documented row height plus the same inset, used
-        // as a safe fallback if the measurement isn't ready yet.
+        // panel edge. Height comes from the natural fitting size, or
+        // `fallbackHeight + 2*inset` if measurement isn't ready yet.
         let measured = host.fittingSize
         let panelWidth = measured.width > 0 ? measured.width : width + Self.shadowInset * 2
-        let panelHeight = measured.height > 0 ? measured.height : 32 + Self.shadowInset * 2
+        let panelHeight = measured.height > 0 ? measured.height : fallbackHeight + Self.shadowInset * 2
         let size = CGSize(width: panelWidth, height: panelHeight)
 
         panel = NSPanel(
@@ -3248,6 +3251,16 @@ final class DragChipPanel {
         panel.ignoresMouseEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.contentView = host
+    }
+
+    convenience init(chat: Chat, grabAnchor: CGPoint, width: CGFloat) {
+        let chip = DragChipView(chat: chat, width: width, shadowInset: Self.shadowInset)
+        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 32)
+    }
+
+    convenience init(project: Project, grabAnchor: CGPoint, width: CGFloat) {
+        let chip = ProjectDragChipView(project: project, width: width, shadowInset: Self.shadowInset)
+        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 32)
     }
 
     func show() {
@@ -3336,4 +3349,321 @@ private struct DragChipView: View {
     }
 }
 
+// MARK: - Project drag-reorder ("Custom" sort mode)
 
+/// Visual content of the project drag chip. Mirrors the project header
+/// row (folder icon + name) so the user reads it as the same line they
+/// just picked up. Same chrome as `DragChipView` so chat and project
+/// chips composite identically over the desktop background.
+private struct ProjectDragChipView: View {
+    let project: Project
+    let width: CGFloat
+    let shadowInset: CGFloat
+
+    var body: some View {
+        HStack(spacing: 8) {
+            FolderMorphIcon(size: 14.5, progress: 0, lineWidthScale: 1.027)
+                .foregroundColor(Color(white: 0.5))
+                .frame(width: 15, height: 15)
+            Text(project.name)
+                .font(BodyFont.system(size: 13.5, weight: .light))
+                .foregroundColor(Color(white: 0.74))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 10)
+        .padding(.vertical, 6)
+        .background(
+            ZStack {
+                VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
+                Color.white.opacity(0.035)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        )
+        .padding(.trailing, 3)
+        .frame(width: width, alignment: .leading)
+        .shadow(color: .black.opacity(0.22), radius: 9, x: 0, y: 4)
+        .padding(shadowInset)
+    }
+}
+
+/// Bubbles each project row's frame (window coords, top-left origin)
+/// up so `ProjectReorderableList` can compute the cursor's offset
+/// within the row at drag start (mirrors `PinnedRowFrameKey`).
+private struct ProjectRowFrameKey: PreferenceKey {
+    static var defaultValue: [UUID: CGRect] = [:]
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+/// Reference-type bag for per-row frames. Same trick as
+/// `PinnedRowFrameStore`: mutating `byId` doesn't go through `@State`
+/// so the per-frame preference firehose during accordion expansion
+/// doesn't invalidate SwiftUI on every layout pass.
+private final class ProjectRowFrameStore: ObservableObject {
+    var byId: [UUID: CGRect] = [:]
+}
+
+/// File-private constant outside the generic type — Swift forbids
+/// static stored properties on generic types.
+private let projectReorderMoveAnimation: Animation = .easeInOut(duration: 0.20)
+
+/// Wraps the projects ForEach with custom drag-reorder. Active only when
+/// `projectSortMode == .custom`; in other modes the parent renders the
+/// rows directly so dragging is impossible (it would conflict with the
+/// computed sort). Mirrors `PinnedReorderableList`'s structure: gap
+/// placeholders between rows, a borderless `DragChipPanel` that follows
+/// the cursor, and edge auto-scroll via `PinnedDragAutoScroller`.
+private struct ProjectReorderableList<RowContent: View>: View {
+    let appState: AppState
+    let projects: [Project]
+    @ViewBuilder let row: (Project) -> RowContent
+
+    @State private var draggingId: UUID? = nil
+    @State private var targetIndex: Int? = nil
+    @State private var mouseUpMonitor: Any? = nil
+    @State private var dragChipPanel: DragChipPanel? = nil
+    @StateObject private var rowFrames = ProjectRowFrameStore()
+    @StateObject private var scrollBox = EnclosingScrollViewBox()
+    @State private var autoScroller: PinnedDragAutoScroller? = nil
+
+    /// Vertical breathing room between projects when no drag is active.
+    /// Matches the `LazyVStack` spacing in the parent's non-custom
+    /// branch so switching modes doesn't shift the layout.
+    private let baseSpacing: CGFloat = 4
+    /// Open-gap height during drag. Approximates a collapsed accordion's
+    /// header height so the source's collapse and the gap's opening
+    /// cancel out and the list height stays stable.
+    private let gapHeight: CGFloat = 32
+    /// Threshold for splitting a row into top-half / bottom-half slot
+    /// zones. Used by the row-level drop delegate to choose between
+    /// "gap above this row" and "gap below this row" depending on
+    /// where the cursor is vertically.
+    private let rowHeight: CGFloat = 32
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(projects.enumerated()), id: \.element.id) { (i, project) in
+                slotZone(project: project, slot: i)
+            }
+            trailingSlotZone
+        }
+        .background(EnclosingScrollViewLocator(box: scrollBox).allowsHitTesting(false))
+        .onAppear { installMouseUpMonitor() }
+        .onDisappear {
+            cleanupDragChip()
+            removeMouseUpMonitor()
+        }
+        .onPreferenceChange(ProjectRowFrameKey.self) { rowFrames.byId = $0 }
+        .onChange(of: projects.map(\.id)) { _, _ in
+            // Defensive sweep: any external mutation to the projects
+            // array (rename, delete, Codex roots refresh) clears
+            // lingering drag state so a stale gap can never persist.
+            guard draggingId != nil || targetIndex != nil else {
+                cleanupDragChip()
+                return
+            }
+            cleanupDragChip()
+            targetIndex = nil
+            draggingId = nil
+        }
+    }
+
+    @ViewBuilder
+    private func slotZone(project: Project, slot: Int) -> some View {
+        let isDragging = draggingId == project.id
+        VStack(alignment: .leading, spacing: 0) {
+            gapPlaceholder(at: slot)
+                .contentShape(Rectangle())
+                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+            row(project)
+                .background(WindowDragInhibitor())
+                .opacity(isDragging ? 0 : 1)
+                .frame(height: isDragging ? 0 : nil, alignment: .top)
+                .clipped()
+                .allowsHitTesting(!isDragging)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: ProjectRowFrameKey.self,
+                            value: [project.id: proxy.frame(in: .global)]
+                        )
+                    }
+                )
+                .onDrag {
+                    handleDragStart(project: project)
+                    let provider = NSItemProvider()
+                    provider.registerDataRepresentation(
+                        forTypeIdentifier: UTType.clawixProjectId.identifier,
+                        visibility: .ownProcess
+                    ) { completion in
+                        let data = project.id.uuidString.data(using: .utf8)
+                        completion(data, nil)
+                        return nil
+                    }
+                    return provider
+                } preview: {
+                    // 1pt transparent: macOS animates the system drag
+                    // preview settling at drop for ~500ms; we hand it
+                    // nothing visible so the only chip the user sees
+                    // is our `DragChipPanel`, which closes instantly.
+                    Color.clear.frame(width: 1, height: 1)
+                }
+                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                    computeSlot: { y in y < rowHeight / 2 ? slot : slot + 1 },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+        }
+    }
+
+    @ViewBuilder
+    private var trailingSlotZone: some View {
+        let slot = projects.count
+        VStack(alignment: .leading, spacing: 0) {
+            gapPlaceholder(at: slot)
+                .contentShape(Rectangle())
+                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+            // Extra strip so dropping "at the end" doesn't require
+            // landing on the last row's bottom-half pixel-perfectly.
+            Color.clear
+                .frame(height: 14)
+                .contentShape(Rectangle())
+                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
+                ))
+        }
+    }
+
+    @ViewBuilder
+    private func gapPlaceholder(at index: Int) -> some View {
+        let isOpen = targetIndex == index
+        let isFirst = index == 0
+        let isLast = index == projects.count
+        let baseHeight: CGFloat = (isFirst || isLast) ? 0 : baseSpacing
+        Color.clear.frame(height: isOpen ? gapHeight : baseHeight)
+    }
+
+    private func handleDragStart(project: Project) {
+        let src = projects.firstIndex(where: { $0.id == project.id })
+        targetIndex = src
+        draggingId = project.id
+        let (anchor, width) = grabAnchor(for: project)
+        dragChipPanel?.close()
+        dragChipPanel = DragChipPanel(project: project, grabAnchor: anchor, width: width)
+        dragChipPanel?.show()
+        autoScroller?.stop()
+        let scroller = PinnedDragAutoScroller(box: scrollBox)
+        scroller.start()
+        autoScroller = scroller
+    }
+
+    private func grabAnchor(for project: Project) -> (CGPoint, CGFloat) {
+        let fallbackWidth: CGFloat = 240
+        guard let rowFrame = rowFrames.byId[project.id] else {
+            return (CGPoint(x: 30, y: 16), fallbackWidth)
+        }
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              let contentView = window.contentView
+        else {
+            return (CGPoint(x: 30, y: 16), rowFrame.width)
+        }
+        let cursorScreen = NSEvent.mouseLocation
+        let cursorInWindow = window.convertPoint(fromScreen: cursorScreen)
+        let cursorSwiftUI = CGPoint(
+            x: cursorInWindow.x,
+            y: contentView.frame.height - cursorInWindow.y
+        )
+        let dx = cursorSwiftUI.x - rowFrame.origin.x
+        let dy = cursorSwiftUI.y - rowFrame.origin.y
+        return (CGPoint(x: dx, y: dy), rowFrame.width)
+    }
+
+    private func cleanupDragChip() {
+        dragChipPanel?.close()
+        dragChipPanel = nil
+        autoScroller?.stop()
+        autoScroller = nil
+    }
+
+    private func setTarget(slot: Int) {
+        guard draggingId != nil else { return }
+        guard targetIndex != slot else { return }
+        withAnimation(projectReorderMoveAnimation) {
+            targetIndex = slot
+        }
+    }
+
+    private func performReorder(uuid: UUID, beforeIndex: Int) {
+        cleanupDragChip()
+        let beforeProjectId: UUID? = (beforeIndex < projects.count) ? projects[beforeIndex].id : nil
+        appState.reorderProject(projectId: uuid, beforeProjectId: beforeProjectId)
+        targetIndex = nil
+        draggingId = nil
+    }
+
+    private func installMouseUpMonitor() {
+        guard mouseUpMonitor == nil else { return }
+        mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp]) { event in
+            DispatchQueue.main.async {
+                cleanupDragChip()
+                guard draggingId != nil || targetIndex != nil else { return }
+                targetIndex = nil
+                draggingId = nil
+            }
+            return event
+        }
+    }
+
+    private func removeMouseUpMonitor() {
+        if let m = mouseUpMonitor {
+            NSEvent.removeMonitor(m)
+            mouseUpMonitor = nil
+        }
+    }
+}
+
+private struct ProjectRowDropDelegate: DropDelegate {
+    let computeSlot: (CGFloat) -> Int
+    let onSet: (Int) -> Void
+    let onPerform: (UUID, Int) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.clawixProjectId])
+    }
+
+    func dropEntered(info: DropInfo) {
+        onSet(computeSlot(info.location.y))
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        onSet(computeSlot(info.location.y))
+        return DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let slot = computeSlot(info.location.y)
+        guard let provider = info.itemProviders(for: [.clawixProjectId]).first else { return false }
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.clawixProjectId.identifier) { data, _ in
+            guard let data,
+                  let s = String(data: data, encoding: .utf8),
+                  let uuid = UUID(uuidString: s) else { return }
+            DispatchQueue.main.async {
+                onPerform(uuid, slot)
+            }
+        }
+        return true
+    }
+}
