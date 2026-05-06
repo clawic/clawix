@@ -14,16 +14,22 @@ struct PairingView: View {
     var body: some View {
         ZStack {
             Palette.background.ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 24) {
-                Spacer()
-                logoBlock
+            VStack(spacing: 0) {
+                qrHero
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 24)
+                    .padding(.bottom, 36)
+                titleBlock
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 24)
                 instructions
                 if let lastError {
                     Text(lastError)
                         .font(Typography.captionFont)
                         .foregroundStyle(Color.red.opacity(0.85))
+                        .padding(.top, 12)
                 }
-                Spacer()
+                Spacer(minLength: 24)
                 scanButton
             }
             .padding(.horizontal, AppLayout.screenHorizontalPadding)
@@ -41,21 +47,26 @@ struct PairingView: View {
         }
     }
 
-    private var logoBlock: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: "qrcode.viewfinder")
-                .font(BodyFont.system(size: 28, weight: .regular))
-                .foregroundStyle(Palette.textPrimary)
-                .frame(width: 72, height: 72)
-                .glassCircle()
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Pair with your Mac")
                 .font(AppFont.system(size: 30, weight: .bold))
+                .tracking(-0.4)
                 .foregroundStyle(Palette.textPrimary)
             Text("Open Clawix on your Mac, choose Window > Pair iPhone, and scan the QR with this device.")
                 .font(Typography.bodyFont)
                 .foregroundStyle(Palette.textSecondary)
                 .lineSpacing(2)
         }
+    }
+
+    // Oversized QR mark sitting directly on the black canvas: no glass
+    // bubble, no chrome. Each data module pulses on its own diagonal phase
+    // so the matrix reads as a wave sweeping across, while the three
+    // finder corners breathe gently to keep the icon feeling alive.
+    private var qrHero: some View {
+        AnimatedQRIcon(size: 156)
+            .foregroundStyle(Palette.textPrimary)
     }
 
     private var instructions: some View {
@@ -87,18 +98,14 @@ struct PairingView: View {
             Haptics.send()
             showScanner = true
         }) {
-            HStack(spacing: 8) {
-                Image(systemName: "qrcode.viewfinder")
-                    .font(BodyFont.system(size: 16, weight: .semibold))
-                Text("Scan QR")
-                    .font(Typography.bodyEmphasized)
-            }
-            .foregroundStyle(Color.black)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                Capsule(style: .continuous).fill(Color.white)
-            )
+            Text("Scan QR")
+                .font(Typography.bodyEmphasized)
+                .foregroundStyle(Color.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    Capsule(style: .continuous).fill(Color.white)
+                )
         }
         .buttonStyle(.plain)
     }
