@@ -12,7 +12,7 @@ struct ChatView: View {
     @State private var branchSearch = ""
 
     private var chat: Chat? {
-        appState.chats.first { $0.id == chatId }
+        appState.chat(byId: chatId)
     }
 
     var body: some View {
