@@ -15,7 +15,13 @@ enum ClawixBinary {
     static func resolve() -> ClawixBinaryInfo? {
         for candidate in candidatePaths() {
             if FileManager.default.isExecutableFile(atPath: candidate.path) {
-                return ClawixBinaryInfo(path: candidate, version: probeVersion(at: candidate))
+                // Skipping the synchronous version probe here on purpose:
+                // `Process.waitUntilExit()` pumps the runloop, which in
+                // turn lets SwiftUI commit a view-graph update mid-init
+                // and trip an `AG::Graph::value_set` precondition (the
+                // app aborts before the first frame). The `.version`
+                // field has no consumers in this target.
+                return ClawixBinaryInfo(path: candidate, version: nil)
             }
         }
         return nil
