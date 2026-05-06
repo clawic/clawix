@@ -57,6 +57,7 @@ struct ClawixApp: App {
     @StateObject private var appState: AppState
     @StateObject private var updater = UpdaterController()
     @StateObject private var windowState = WindowState()
+    @StateObject private var dictation = DictationCoordinator.shared
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -73,6 +74,9 @@ struct ClawixApp: App {
         // install or after the legacy key has been cleared.
         SidebarPrefs.migrateLegacySidebarPrefs()
         _appState = StateObject(wrappedValue: AppState())
+        // TEMP: dictation init disabled while debugging frozen-input bug.
+        // HotkeyManager.shared.register(coordinator: DictationCoordinator.shared)
+        // DictationOverlay.shared.install(coordinator: DictationCoordinator.shared)
     }
 
     var body: some Scene {
@@ -82,6 +86,7 @@ struct ClawixApp: App {
                 .environmentObject(appState.composer)
                 .environmentObject(updater)
                 .environmentObject(windowState)
+                .environmentObject(dictation)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until
@@ -146,6 +151,7 @@ struct ClawixApp: App {
 
 private struct MenuBarContent: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var micPrefs = MicrophonePreferences.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -155,6 +161,24 @@ private struct MenuBarContent: View {
         .keyboardShortcut("o")
 
         Divider()
+
+        Menu(L10n.t("Audio Input")) {
+            if micPrefs.devices.isEmpty {
+                Text(L10n.t("No input devices"))
+            } else {
+                ForEach(micPrefs.devices) { device in
+                    Button {
+                        micPrefs.selectPreferred(uid: device.uid)
+                    } label: {
+                        if device.uid == micPrefs.activeUID {
+                            Label(device.name, systemImage: "checkmark")
+                        } else {
+                            Text(device.name)
+                        }
+                    }
+                }
+            }
+        }
 
         Button(L10n.t("Pair iPhone…")) {
             openWindow(id: "clawix-pair")
