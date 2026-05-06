@@ -222,6 +222,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // file handles. Restore it now so the user does not have to
         // re-enable "Run bridge in background" after every update.
         BackgroundBridgeService.shared.restoreAfterUpdateIfNeeded()
+        // Register the system-wide QuickAsk hotkey. The default combo
+        // (⌃⌥⌘K) is set in `QuickAskHotkey.defaultValue`; the user
+        // can change it from Settings → QuickAsk.
+        QuickAskController.shared.install()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

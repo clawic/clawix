@@ -7,6 +7,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case appearance
     case configuration
     case personalization
+    case dictation
+    case quickAsk
     case mcp
     case git
     case environments
@@ -23,6 +25,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .appearance:       return "Appearance"
         case .configuration:    return "Settings"
         case .personalization:  return "Personalization"
+        case .dictation:        return "Voice to Text"
+        case .quickAsk:         return "QuickAsk"
         case .mcp:              return "MCP servers"
         case .git:              return "Git"
         case .environments:     return "Environments"
@@ -39,6 +43,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .appearance:       return "circle.lefthalf.filled"
         case .configuration:    return "slider.horizontal.3"
         case .personalization:  return "person.crop.circle"
+        case .dictation:        return "mic.fill"
+        case .quickAsk:         return "command"
         case .mcp:              return "server.rack"
         case .git:              return "arrow.triangle.branch"
         case .environments:     return "macwindow"
@@ -151,6 +157,8 @@ struct SettingsContent: View {
                     case .appearance:      AppearancePage()
                     case .configuration:   ConfigurationPage()
                     case .personalization: PersonalizationPage()
+                    case .dictation:       DictationSettingsPage()
+                    case .quickAsk:        QuickAskSettingsPage()
                     case .git:             GitPage()
                     case .environments:    EnvironmentsPage()
                     case .browserUsage:    BrowserUsagePage()
