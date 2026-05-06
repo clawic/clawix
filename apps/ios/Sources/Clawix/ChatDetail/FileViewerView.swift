@@ -1,8 +1,5 @@
 import SwiftUI
 import ClawixCore
-#if canImport(UIKit)
-import UIKit
-#endif
 
 // Read-only viewer for the file pills under the assistant message. The
 // iPhone has no filesystem access to the Mac's working tree, so the
@@ -118,15 +115,5 @@ struct FileViewerView: View {
             .foregroundStyle(Palette.textPrimary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .lineSpacing(2)
-    }
-
-    // MARK: Actions
-
-    private func copyContents() {
-        guard case .loaded(let text, _) = snapshot else { return }
-        #if canImport(UIKit)
-        UIPasteboard.general.string = text
-        #endif
-        Haptics.success()
     }
 }
