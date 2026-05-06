@@ -279,26 +279,34 @@ struct PillToggle: View {
     private let knobSize: CGFloat = 16
     private let inset: CGFloat = 2
 
+    private var knobOffset: CGFloat {
+        isOn ? trackWidth - knobSize - inset : inset
+    }
+
+    private var trackFill: Color {
+        isOn ? Color(red: 0.16, green: 0.46, blue: 0.98) : Color(white: 0.22)
+    }
+
     var body: some View {
-        Button {
-            isOn.toggle()
-        } label: {
-            ZStack(alignment: .leading) {
-                Capsule(style: .continuous)
-                    .fill(isOn
-                          ? Color(red: 0.16, green: 0.46, blue: 0.98)
-                          : Color(white: 0.22))
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: knobSize, height: knobSize)
-                    .shadow(color: .black.opacity(0.20), radius: 1, x: 0, y: 1)
-                    .offset(x: isOn ? trackWidth - knobSize - inset : inset)
-            }
-            .frame(width: trackWidth, height: trackHeight)
-            .contentShape(Capsule(style: .continuous))
+        ZStack(alignment: .leading) {
+            Capsule(style: .continuous)
+                .fill(trackFill)
+            Circle()
+                .fill(Color.white)
+                .frame(width: knobSize, height: knobSize)
+                .shadow(color: .black.opacity(0.20), radius: 1, x: 0, y: 1)
+                .offset(x: knobOffset)
         }
-        .buttonStyle(.plain)
-        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isOn)
+        .frame(width: trackWidth, height: trackHeight)
+        .contentShape(Capsule(style: .continuous))
+        .onTapGesture {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.68)) {
+                isOn.toggle()
+            }
+        }
+        .accessibilityElement()
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(isOn ? Text("On") : Text("Off"))
     }
 }
 

@@ -46,9 +46,7 @@ private struct PluginRow: View {
 
             Spacer()
 
-            Toggle("", isOn: $plugin.isEnabled)
-                .toggleStyle(.switch)
-                .labelsHidden()
+            PillToggle(isOn: $plugin.isEnabled)
                 .accessibilityLabel(L10n.a11yPluginToggle(name: plugin.name, isOn: plugin.isEnabled))
         }
         .padding(.horizontal, 16)
