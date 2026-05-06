@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ClawixEngine
 
 /// Right-sidebar file preview that mirrors the Codex Desktop reference:
 /// a breadcrumb row with `<folder> › <file>` and trailing actions, and a
@@ -278,40 +279,46 @@ struct FileViewerPanel: View {
     }
 
     private static func load(url: URL) -> (LoadedBody, String) {
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            return (.unavailable(
-                String(localized: "File not found",
-                       bundle: AppLocale.bundle,
-                       locale: AppLocale.current)
-            ), "")
+        // Delegate to the shared resolver so dummy / fixture mode (which
+        // sets `CLAWIX_FILE_FIXTURE_DIR`) returns the same synthesized
+        // content the iPhone gets over the bridge.
+        let result = BridgeFileReader.load(path: url.path)
+        if let error = result.error {
+            return (.unavailable(localizedReason(error)), "")
         }
-        guard let data = try? Data(contentsOf: url) else {
-            return (.unavailable(
-                String(localized: "Couldn't read file",
-                       bundle: AppLocale.bundle,
-                       locale: AppLocale.current)
-            ), "")
+        guard let raw = result.content else {
+            return (.unavailable(localizedReason("File not found")), "")
         }
-        if data.prefix(4096).contains(0) {
-            return (.unavailable(
-                String(localized: "Preview not available for binary files",
-                       bundle: AppLocale.bundle,
-                       locale: AppLocale.current)
-            ), "")
-        }
-        guard let raw = String(data: data, encoding: .utf8)
-                   ?? String(data: data, encoding: .utf16) else {
-            return (.unavailable(
-                String(localized: "Couldn't decode file as text",
-                       bundle: AppLocale.bundle,
-                       locale: AppLocale.current)
-            ), "")
-        }
-        let ext = url.pathExtension.lowercased()
-        if ext == "md" || ext == "markdown" {
+        if result.isMarkdown {
             return (.markdown(MarkdownParser.parse(raw)), raw)
         }
         return (.plain(raw), raw)
+    }
+
+    /// The shared reader returns canonical English reasons; map them
+    /// back to the bundle-localized strings so the macOS UI stays
+    /// translated.
+    private static func localizedReason(_ english: String) -> String {
+        switch english {
+        case "File not found":
+            return String(localized: "File not found",
+                          bundle: AppLocale.bundle,
+                          locale: AppLocale.current)
+        case "Couldn't read file":
+            return String(localized: "Couldn't read file",
+                          bundle: AppLocale.bundle,
+                          locale: AppLocale.current)
+        case "Preview not available for binary files":
+            return String(localized: "Preview not available for binary files",
+                          bundle: AppLocale.bundle,
+                          locale: AppLocale.current)
+        case "Couldn't decode file as text":
+            return String(localized: "Couldn't decode file as text",
+                          bundle: AppLocale.bundle,
+                          locale: AppLocale.current)
+        default:
+            return english
+        }
     }
 }
 
