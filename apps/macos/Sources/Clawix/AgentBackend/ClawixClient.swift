@@ -89,7 +89,15 @@ actor ClawixClient {
         proc.executableURL = binary.path
         proc.arguments = ["app-server", "--listen", "stdio://"]
         var env = ProcessInfo.processInfo.environment
-        env[backendHomeEnvName] = nil
+        // Dummy mode injects CLAWIX_BACKEND_HOME pointing at an
+        // ephemeral directory wiped on each launch. Honour it as the
+        // backend's home so rollouts and sessions land there instead
+        // of the user's real config dir.
+        if let override = env["CLAWIX_BACKEND_HOME"], !override.isEmpty {
+            env[backendHomeEnvName] = override
+        } else {
+            env[backendHomeEnvName] = nil
+        }
         // Share the user's existing backend auth, sessions, and config.
         proc.environment = env
 

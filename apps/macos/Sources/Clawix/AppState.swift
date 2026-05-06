@@ -1016,6 +1016,12 @@ final class AppState: ObservableObject {
 
     func loadThreadsFromRuntime() async {
         guard let clawix, case .ready = clawix.status else { return }
+        // When a thread fixture drives the sidebar (showcase / E2E /
+        // demo recordings), the runtime is intentionally empty and a
+        // runtime sweep here would call `applyThreads([])`, wiping the
+        // curated dataset. The fixture is the source of truth for the
+        // whole session.
+        if AgentThreadStore.fixtureThreads() != nil { return }
         do {
             let pageSize = 160
             var collected: [AgentThreadSummary] = []
@@ -1546,13 +1552,35 @@ final class AppState: ObservableObject {
         let oldByThread = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
             chat.clawixThreadId.map { ($0, chat) }
         })
+        let oldArchivedByThread = Dictionary(uniqueKeysWithValues: archivedChats.compactMap { chat in
+            chat.clawixThreadId.map { ($0, chat) }
+        })
 
         let sorted = threads.sorted { $0.updatedAt > $1.updatedAt }
-        chats = sorted.map { thread in
-            chatFromThread(thread,
-                           old: oldByThread[thread.id],
-                           projectByPath: projectByPath,
-                           pinnedSet: pinnedSet)
+        var nextChats: [Chat] = []
+        var nextArchived: [Chat] = []
+        nextChats.reserveCapacity(sorted.count)
+        for thread in sorted {
+            let old = oldByThread[thread.id] ?? oldArchivedByThread[thread.id]
+            let chat = chatFromThread(thread,
+                                      old: old,
+                                      projectByPath: projectByPath,
+                                      pinnedSet: pinnedSet)
+            if chat.isArchived {
+                nextArchived.append(chat)
+            } else {
+                nextChats.append(chat)
+            }
+        }
+        chats = nextChats
+        // Only overwrite archivedChats when the payload actually carries
+        // archived rows (fixture / showcase mode). The runtime path calls
+        // `applyThreads` with `archived: false` only, so an empty
+        // `nextArchived` here means "no info", not "the archived list is
+        // empty" — preserve whatever `loadArchivedChats` already cached.
+        if !nextArchived.isEmpty {
+            archivedChats = Array(nextArchived.prefix(Self.archivedSidebarLimit))
+            archivedLoaded = true
         }
 
         let threadToChat = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
@@ -1987,21 +2015,42 @@ final class AppState: ObservableObject {
 
     func ensureSelectedChat(triggerHistoryHydration: Bool = true) {
         guard case let .chat(id) = currentRoute,
-              let idx = chats.firstIndex(where: { $0.id == id }) else { return }
-        if triggerHistoryHydration && !chats[idx].historyHydrated {
-            hydrateHistoryIfNeeded(chatIndex: idx)
+              let chat = chat(byId: id) else { return }
+        if triggerHistoryHydration && !chat.historyHydrated {
+            hydrateHistoryIfNeeded(chatId: id)
         }
     }
 
-    private func hydrateHistoryIfNeeded(chatIndex: Int) {
-        let chat = chats[chatIndex]
-        guard !chat.historyHydrated else { return }
+    /// Find a chat by id across both the active and archived lists. The
+    /// sidebar's archived section opens chats via the same `.chat(id)`
+    /// route, so any view that resolves the current chat must accept ids
+    /// from either bucket.
+    func chat(byId id: UUID) -> Chat? {
+        if let chat = chats.first(where: { $0.id == id }) { return chat }
+        return archivedChats.first(where: { $0.id == id })
+    }
+
+    /// Apply `mutate` to whichever array currently holds the chat. No-op
+    /// if the id is unknown. Used by hydration paths that need to write
+    /// back into the chat regardless of its archived state.
+    private func mutateChat(id: UUID, _ mutate: (inout Chat) -> Void) {
+        if let idx = chats.firstIndex(where: { $0.id == id }) {
+            mutate(&chats[idx])
+        } else if let idx = archivedChats.firstIndex(where: { $0.id == id }) {
+            mutate(&archivedChats[idx])
+        }
+    }
+
+    private func hydrateHistoryIfNeeded(chatId: UUID) {
+        guard let chat = chat(byId: chatId), !chat.historyHydrated else { return }
         if !chat.hasGitRepo, let cwd = chat.cwd {
             let git = GitInspector.inspect(cwd: cwd)
-            chats[chatIndex].hasGitRepo = git.hasRepo
-            chats[chatIndex].branch = git.branch
-            chats[chatIndex].availableBranches = git.branches
-            chats[chatIndex].uncommittedFiles = git.uncommittedFiles
+            mutateChat(id: chatId) { c in
+                c.hasGitRepo = git.hasRepo
+                c.branch = git.branch
+                c.availableBranches = git.branches
+                c.uncommittedFiles = git.uncommittedFiles
+            }
         }
         // Resolve the rollout path. The first-paint snapshot loaded
         // from SQLite carries `rolloutPath == nil` until `applyThreads`
@@ -2018,12 +2067,12 @@ final class AppState: ObservableObject {
         if resolvedPath == nil, let tid = chat.clawixThreadId {
             resolvedPath = AppState.rolloutPath(forThreadId: tid)
             if let resolvedPath {
-                chats[chatIndex].rolloutPath = resolvedPath
+                mutateChat(id: chatId) { c in c.rolloutPath = resolvedPath }
             }
         }
         if let path = resolvedPath {
             let result = RolloutReader.readWithStatus(path: path)
-            chats[chatIndex].messages = result.entries.map { e in
+            let messages = result.entries.map { e in
                 ChatMessage(
                     role: e.role == .user ? .user : .assistant,
                     content: e.text,
@@ -2033,8 +2082,11 @@ final class AppState: ObservableObject {
                     timeline: e.timeline
                 )
             }
-            chats[chatIndex].lastTurnInterrupted = result.lastTurnInterrupted
-            chats[chatIndex].historyHydrated = true
+            mutateChat(id: chatId) { c in
+                c.messages = messages
+                c.lastTurnInterrupted = result.lastTurnInterrupted
+                c.historyHydrated = true
+            }
         }
         if let threadId = chat.clawixThreadId, let clawix {
             Task { @MainActor in
@@ -2093,47 +2145,56 @@ final class AppState: ObservableObject {
     /// and the user only sees the "no messages loaded" empty state.
     /// Idempotent: subsequent calls for the same chat are no-ops.
     func hydrateHistoryFromBridge(chatId: UUID) {
-        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
-        hydrateHistoryIfNeeded(chatIndex: idx)
+        guard chat(byId: chatId) != nil else { return }
+        hydrateHistoryIfNeeded(chatId: chatId)
     }
 
     func applyDaemonChats(_ wireChats: [WireChat]) {
         let oldById = Dictionary(uniqueKeysWithValues: chats.map { ($0.id, $0) })
         let oldArchivedById = Dictionary(uniqueKeysWithValues: archivedChats.map { ($0.id, $0) })
-        chats = wireChats.compactMap { wire in
+        let nextChats: [Chat] = wireChats.compactMap { wire in
             guard let id = UUID(uuidString: wire.id) else { return nil }
             guard !wire.isArchived else { return nil }
             return chat(from: wire, old: oldById[id] ?? oldArchivedById[id])
         }
-        archivedChats = wireChats.compactMap { wire in
+        let nextArchived: [Chat] = wireChats.compactMap { wire in
             guard let id = UUID(uuidString: wire.id), wire.isArchived else { return nil }
             return chat(from: wire, old: oldArchivedById[id] ?? oldById[id])
+        }
+        // Animate diff so insertions / removals slide into the
+        // sidebar. The accordion's `ForEach(chats)` provides the
+        // per-row transition.
+        withAnimation(.easeOut(duration: 0.20)) {
+            chats = nextChats
+            archivedChats = nextArchived
         }
     }
 
     func applyDaemonChat(_ wire: WireChat) {
         guard let id = UUID(uuidString: wire.id) else { return }
-        if wire.isArchived {
-            let old = chats.first(where: { $0.id == id }) ?? archivedChats.first(where: { $0.id == id })
-            chats.removeAll { $0.id == id }
-            let chat = chat(from: wire, old: old)
-            if let idx = archivedChats.firstIndex(where: { $0.id == id }) {
-                archivedChats[idx] = chat
-            } else {
-                archivedChats.insert(chat, at: 0)
+        withAnimation(.easeOut(duration: 0.20)) {
+            if wire.isArchived {
+                let old = chats.first(where: { $0.id == id }) ?? archivedChats.first(where: { $0.id == id })
+                chats.removeAll { $0.id == id }
+                let chat = chat(from: wire, old: old)
+                if let idx = archivedChats.firstIndex(where: { $0.id == id }) {
+                    archivedChats[idx] = chat
+                } else {
+                    archivedChats.insert(chat, at: 0)
+                }
+                return
             }
-            return
-        }
-        if let archivedIndex = archivedChats.firstIndex(where: { $0.id == id }) {
-            let chat = chat(from: wire, old: archivedChats[archivedIndex])
-            archivedChats.remove(at: archivedIndex)
-            chats.insert(chat, at: 0)
-            return
-        }
-        if let idx = chats.firstIndex(where: { $0.id == id }) {
-            chats[idx] = chat(from: wire, old: chats[idx])
-        } else {
-            chats.insert(chat(from: wire, old: nil), at: 0)
+            if let archivedIndex = archivedChats.firstIndex(where: { $0.id == id }) {
+                let chat = chat(from: wire, old: archivedChats[archivedIndex])
+                archivedChats.remove(at: archivedIndex)
+                chats.insert(chat, at: 0)
+                return
+            }
+            if let idx = chats.firstIndex(where: { $0.id == id }) {
+                chats[idx] = chat(from: wire, old: chats[idx])
+            } else {
+                chats.insert(chat(from: wire, old: nil), at: 0)
+            }
         }
     }
 
@@ -2943,6 +3004,11 @@ final class AppState: ObservableObject {
     /// First expand triggers the network round-trip; subsequent toggles
     /// reuse the cached list unless `force` is set.
     func loadArchivedChats(force: Bool = false) async {
+        // Fixture / showcase mode is the source of truth for the
+        // archived list — `applyThreads` already populates
+        // `archivedChats` from the seeded JSON. Hitting the runtime here
+        // would wipe that curated set with the (empty) real backend.
+        if AgentThreadStore.fixtureThreads() != nil { return }
         guard let clawix, case .ready = clawix.status else { return }
         if archivedLoading { return }
         if archivedLoaded && !force { return }

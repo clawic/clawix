@@ -37,11 +37,18 @@ enum BackendStateReader {
             .appendingPathComponent(".codex/.codex-global-state.json")
     }
 
-    static func read() -> BackendState {
+    /// Resolves the canonical URL the reader will actually open. Honors
+    /// the `CLAWIX_DESKTOP_STATE_FIXTURE` override so a watcher pointed
+    /// here observes the same file the reader observes.
+    static var sourceURL: URL {
         let env = ProcessInfo.processInfo.environment
-        let url = env["CLAWIX_DESKTOP_STATE_FIXTURE"]
+        return env["CLAWIX_DESKTOP_STATE_FIXTURE"]
             .map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
             ?? defaultURL
+    }
+
+    static func read() -> BackendState {
+        let url = sourceURL
         guard
             let data = try? Data(contentsOf: url),
             let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
