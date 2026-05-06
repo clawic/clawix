@@ -4,9 +4,16 @@ import UniformTypeIdentifiers
 /// Private UTI used by project rows in the sidebar's "Custom" sort mode.
 /// Conforms to `.data` (NOT `.text`) so existing drop targets that listen
 /// for chat drags (`.text`) don't visually highlight when a project is
-/// being dragged for reordering.
+/// being dragged for reordering. We declare a `conformingTo` parent
+/// explicitly so the type has a working conformance graph even when the
+/// app bundle's `Info.plist` doesn't ship a `UTExportedTypeDeclarations`
+/// entry — `UTType(importedAs:)` without conformance returns a tentative
+/// type that SwiftUI's `.onDrop(of:)` filter treats as inert.
 extension UTType {
-    static let clawixProjectId = UTType(importedAs: "com.clawix.project-id")
+    static let clawixProjectId = UTType(
+        exportedAs: "com.clawix.project-id",
+        conformingTo: .data
+    )
 }
 
 /// Top-level layout of the chat list. Either group chats under their
@@ -93,7 +100,7 @@ struct SidebarView: View {
     @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
     @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
     @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarArchivedExpanded", default: false)
-    @State private var chronoLimit: Int = 15
+    @State private var chronoLimit: Int = 100
 
     private var viewMode: SidebarViewMode {
         SidebarViewMode(rawValue: viewModeRaw) ?? .grouped
@@ -662,7 +669,8 @@ struct SidebarView: View {
     private var chronoHeader: some View {
         sidebarHeader(title: "All chats",
                       showCollapseAll: false,
-                      showNewChat: true,
+                      showAddProject: false,
+                      showNewChat: false,
                       leadingIcon: AnyView(
                           Image(systemName: "bubble.left")
                               .font(BodyFont.system(size: 11, weight: .regular))
@@ -674,6 +682,7 @@ struct SidebarView: View {
     private func sidebarHeader(
         title: LocalizedStringKey,
         showCollapseAll: Bool,
+        showAddProject: Bool = true,
         showNewChat: Bool,
         alwaysShow: Bool = false,
         leadingIcon: AnyView? = nil,
@@ -691,9 +700,8 @@ struct SidebarView: View {
             withAnimation(SidebarSection.toggleAnimation) { expanded.wrappedValue.toggle() }
         }
         // Each action icon is laid out in a 22pt slot with 2pt spacing.
-        // `organize` and `new-project` are always present, the other two
-        // are gated by their respective flags.
-        let iconCount = (showCollapseAll ? 1 : 0) + 2 + (showNewChat ? 1 : 0)
+        // `organize` is always present; the others are gated by their flags.
+        let iconCount = (showCollapseAll ? 1 : 0) + 1 + (showAddProject ? 1 : 0) + (showNewChat ? 1 : 0)
         let iconsWidth = CGFloat(iconCount) * 22 + CGFloat(max(iconCount - 1, 0)) * 2
         // Trailing clearance leaves a 6pt visual gap between the right
         // hairline and the leading edge of the icon group when hovered.
@@ -738,9 +746,12 @@ struct SidebarView: View {
             let firstDelay = SidebarSection.trailingIconsFirstDelay
             let stagger = SidebarSection.trailingIconsStagger
             let collapseAllDelay = firstDelay
-            let organizeDelay = firstDelay + Double(showCollapseAll ? 1 : 0) * stagger
-            let newProjectDelay = firstDelay + Double(showCollapseAll ? 2 : 1) * stagger
-            let newChatDelay = firstDelay + Double(showCollapseAll ? 3 : 2) * stagger
+            let organizeSlot = (showCollapseAll ? 1 : 0)
+            let newProjectSlot = organizeSlot + 1
+            let newChatSlot = newProjectSlot + (showAddProject ? 1 : 0)
+            let organizeDelay = firstDelay + Double(organizeSlot) * stagger
+            let newProjectDelay = firstDelay + Double(newProjectSlot) * stagger
+            let newChatDelay = firstDelay + Double(newChatSlot) * stagger
             HStack(spacing: 2) {
                 if showCollapseAll {
                     let allCollapsed = expandedProjects.isEmpty
@@ -761,16 +772,18 @@ struct SidebarView: View {
                 }
                 organizeButton
                     .hoverStaggerFade(visible: iconsVisible, appearDelay: organizeDelay)
-                HeaderHoverIcon(tooltip: "Add new project") {
-                    newProjectMenuOpen.toggle()
-                } label: { color in
-                    FolderAddIcon(size: 15.5, plusStrokeWidth: 1.4)
-                        .foregroundColor(color)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
+                if showAddProject {
+                    HeaderHoverIcon(tooltip: "Add new project") {
+                        newProjectMenuOpen.toggle()
+                    } label: { color in
+                        FolderAddIcon(size: 15.5, plusStrokeWidth: 1.4)
+                            .foregroundColor(color)
+                            .frame(width: 22, height: 22)
+                            .contentShape(Rectangle())
+                    }
+                    .anchorPreference(key: NewProjectAnchorKey.self, value: .bounds) { $0 }
+                    .hoverStaggerFade(visible: iconsVisible, appearDelay: newProjectDelay)
                 }
-                .anchorPreference(key: NewProjectAnchorKey.self, value: .bounds) { $0 }
-                .hoverStaggerFade(visible: iconsVisible, appearDelay: newProjectDelay)
                 if showNewChat {
                     HeaderHoverIcon(tooltip: "New chat") {
                         appState.currentRoute = .home
@@ -1801,7 +1814,10 @@ struct RecentChatRow: View, Equatable {
                     Text(ageLabel)
                         .font(BodyFont.system(size: 11))
                         .foregroundColor(Color(white: 0.55))
-                        .frame(width: 28)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .frame(minWidth: 28, alignment: .trailing)
+                        .padding(.trailing, 5)
                         .transition(.opacity)
                 }
             }
@@ -1977,17 +1993,22 @@ private struct SidebarChatRowSpinner: View {
     @State private var rotation: Double = 0
 
     var body: some View {
-        Circle()
-            .trim(from: 0.0, to: 0.82)
-            .stroke(Color(white: 0.55),
-                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
-            .frame(width: 11, height: 11)
-            .rotationEffect(.degrees(rotation))
-            .onAppear {
-                withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
-                    rotation = 360
-                }
+        ZStack {
+            Circle()
+                .stroke(Color(white: 0.55).opacity(0.22),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+            Circle()
+                .trim(from: 0.0, to: 0.79)
+                .stroke(Color(white: 0.55),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+                .rotationEffect(.degrees(rotation))
+        }
+        .frame(width: 11, height: 11)
+        .onAppear {
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                rotation = 360
             }
+        }
     }
 }
 
@@ -2048,24 +2069,28 @@ private struct ProjectAccordion: View, Equatable {
         RenderProbe.tick("ProjectAccordion")
         return VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 0) {
-                Button(action: { withAnimation(.easeOut(duration: 0.28)) { onToggle() } }) {
-                    HStack(spacing: 8) {
-                        FolderMorphIcon(size: 14.5, progress: expanded ? 1 : 0, lineWidthScale: 1.027)
-                            .foregroundColor(Color(white: 0.5))
-                            .frame(width: 15, height: 15)
-                            .animation(.easeOut(duration: 0.28), value: expanded)
-                        Text(project.name)
-                            .font(BodyFont.system(size: 13.5, weight: .light))
-                            .foregroundColor(Color(white: 0.94))
-                            .lineLimit(1)
-                        Spacer(minLength: 6)
-                    }
-                    .padding(.leading, 8)
-                    .padding(.trailing, 10)
-                    .padding(.vertical, 6)
-                    .contentShape(Rectangle())
+                // Tap-gesture instead of `Button`. A `Button` would consume
+                // mouseDown and starve the parent's `.onDrag` (custom sort
+                // mode reorders by dragging this row), the same reason
+                // `RecentChatRow` uses `.onTapGesture` for selection.
+                HStack(spacing: 8) {
+                    FolderMorphIcon(size: 14.5, progress: expanded ? 1 : 0, lineWidthScale: 1.027)
+                        .foregroundColor(Color(white: 0.5))
+                        .frame(width: 15, height: 15)
+                        .animation(.easeOut(duration: 0.28), value: expanded)
+                    Text(project.name)
+                        .font(BodyFont.system(size: 13.5, weight: .light))
+                        .foregroundColor(Color(white: 0.94))
+                        .lineLimit(1)
+                    Spacer(minLength: 6)
                 }
-                .buttonStyle(.plain)
+                .padding(.leading, 8)
+                .padding(.trailing, 10)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.28)) { onToggle() }
+                }
 
                 // Ellipsis (hover/menu open) — anchors the dropdown.
                 // `.disabled` instead of `.allowsHitTesting` so the button's
