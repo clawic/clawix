@@ -497,23 +497,41 @@ private struct UnarchiveIconShape: Shape {
 struct ArchiveUnarchiveMorphIcon: View {
     var size: CGFloat = 12
     var hovered: Bool
+    /// True when the cursor is over the icon's own hit area (not the
+    /// surrounding row). Mirrors the pin button's pattern: hovering the
+    /// row triggers the morph animation, but the box's stroke colour
+    /// only jumps to full white when the cursor lands on the icon
+    /// itself, signalling that the click target is the icon.
+    var iconHovered: Bool = false
 
     @State private var slotProgress: Double = 0
     @State private var bodyProgress: Double = 0
-    @State private var containerProgress: Double = 0
     @State private var shaftProgress: Double = 0
     @State private var headProgress: Double = 0
+    /// Pending hover-in trigger. The morph starts only after the cursor
+    /// has rested on the row for `hoverInDelay`, so brushing over the
+    /// archived list doesn't flash the arrow. Cancelled if the cursor
+    /// leaves before the delay expires.
+    @State private var pendingHoverIn: DispatchWorkItem?
+
+    private let hoverInDelay: TimeInterval = 0.3
 
     var body: some View {
-        let s = size / 24
-        let strokeWidth = (1.5 - 0.45 * containerProgress) * s
-        // Strokes morph from currentColor-equivalent (white 0.85) to a
-        // darker grey (white 0.53). Computed per frame so SwiftUI's
-        // animation interpolates smoothly through the @State driver.
-        let strokeColor = Color(white: 0.85 - 0.32 * containerProgress)
-        let arrowColor = Color(white: 0.85)
-        let style = StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round)
-        let arrowStyle = StrokeStyle(lineWidth: 1.5 * s, lineCap: .round, lineJoin: .round)
+        // Box stroke sits at the same intermediate opacity as the pin
+        // icon (slightly above white 0.5 so the silhouette still reads
+        // when only the lid is closed) and only goes full bright when
+        // the icon itself is hovered. The morph animation no longer
+        // dims the box — the row-hover state opens the hole, the box
+        // keeps its resting weight.
+        let strokeColor = iconHovered ? Color(white: 0.94) : Color(white: 0.55)
+        let arrowColor = Color(white: 0.96)
+        // Stroke width matches the section header's ArchiveIcon (1.28pt
+        // fixed) so the per-row morph reads at the same visual weight as
+        // the "Archived" section icon. Without this, the formula-derived
+        // 1.5 * (size/24) ≈ 1.03pt makes the row icon look thinner and
+        // therefore "smaller" than the header.
+        let style = StrokeStyle(lineWidth: 1.28, lineCap: .round, lineJoin: .round)
+        let arrowStyle = StrokeStyle(lineWidth: 1.28, lineCap: .round, lineJoin: .round)
 
         ZStack {
             ArchiveMorphLidShape()
@@ -541,8 +559,17 @@ struct ArchiveUnarchiveMorphIcon: View {
                 .stroke(arrowColor, style: arrowStyle)
         }
         .frame(width: size, height: size)
+        .animation(.easeOut(duration: 0.16), value: iconHovered)
         .onChange(of: hovered) { _, isHovering in
-            animate(toHover: isHovering)
+            pendingHoverIn?.cancel()
+            pendingHoverIn = nil
+            if isHovering {
+                let work = DispatchWorkItem { animate(toHover: true) }
+                pendingHoverIn = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + hoverInDelay, execute: work)
+            } else {
+                animate(toHover: false)
+            }
         }
     }
 
@@ -552,7 +579,6 @@ struct ArchiveUnarchiveMorphIcon: View {
             // Hover order: slot collapses → body opens → arrow grows.
             withAnimation(.easeOut(duration: 0.14)) { slotProgress = target }
             withAnimation(.easeOut(duration: 0.30).delay(0.06)) { bodyProgress = target }
-            withAnimation(.easeOut(duration: 0.32)) { containerProgress = target }
             withAnimation(.easeOut(duration: 0.26).delay(0.14)) { shaftProgress = target }
             withAnimation(.easeOut(duration: 0.22).delay(0.18)) { headProgress = target }
         } else {
@@ -560,7 +586,6 @@ struct ArchiveUnarchiveMorphIcon: View {
             withAnimation(.easeOut(duration: 0.18)) { shaftProgress = target }
             withAnimation(.easeOut(duration: 0.18)) { headProgress = target }
             withAnimation(.easeOut(duration: 0.18).delay(0.06)) { bodyProgress = target }
-            withAnimation(.easeOut(duration: 0.18).delay(0.06)) { containerProgress = target }
             withAnimation(.easeOut(duration: 0.14).delay(0.22)) { slotProgress = target }
         }
     }

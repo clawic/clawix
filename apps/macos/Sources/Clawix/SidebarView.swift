@@ -1741,6 +1741,7 @@ struct RecentChatRow: View, Equatable {
     @State private var hovered = false
     @State private var pinHovered = false
     @State private var archiveHovered = false
+    @State private var unarchiveHovered = false
 
     /// Closures are deliberately excluded from equality: they are recreated
     /// every parent render but capture `appState` (a stable reference) and
@@ -1765,53 +1766,70 @@ struct RecentChatRow: View, Equatable {
 
     @ViewBuilder
     private var trailingStatusView: some View {
-        Group {
-            if chat.hasActiveTurn {
-                SidebarChatRowSpinner()
-                    .frame(width: 14, height: 14)
-                    .padding(.trailing, 2)
-                    .transition(.opacity.combined(with: .scale(scale: 0.7)))
-            } else if hovered && !archivedRow {
-                Button(action: callbacks.onArchive) {
-                    ArchiveIcon(size: 14.5)
-                        .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
+        // Archive layered on top of the default trailing content
+        // (spinner / dot / age label) and fades in/out via opacity so
+        // it reads as a smooth crossfade on hover instead of a hard
+        // view swap. Hit testing follows visibility so the button only
+        // catches the cursor while the row is hovered.
+        let archiveVisible = hovered && !archivedRow && !chat.hasActiveTurn
+
+        ZStack(alignment: .trailing) {
+            Group {
+                if chat.hasActiveTurn {
+                    SidebarChatRowSpinner()
                         .frame(width: 14, height: 14)
+                        .frame(width: 28)
+                        .transition(.opacity.combined(with: .scale(scale: 0.7)))
+                } else if !archivedRow && chat.lastTurnInterrupted {
+                    // Amber dot. Distinct from the unread-completion blue
+                    // dot so the user can tell at a glance "the assistant
+                    // didn't finish" from "the assistant finished while I
+                    // was elsewhere".
+                    Circle()
+                        .fill(Color(red: 1.0, green: 0.78, blue: 0.30))
+                        .frame(width: 7, height: 7)
+                        .frame(width: 28, height: 14)
+                        .help(L10n.t("Last turn interrupted"))
+                        .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
+                } else if !archivedRow && chat.hasUnreadCompletion {
+                    Circle()
+                        .fill(Palette.pastelBlue)
+                        .frame(width: 7, height: 7)
+                        .frame(width: 28, height: 14)
+                        .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
+                } else {
+                    Text(ageLabel)
+                        .font(BodyFont.system(size: 11))
+                        .foregroundColor(Color(white: 0.55))
+                        .frame(width: 28)
+                        .transition(.opacity)
+                }
+            }
+            .opacity(archiveVisible ? 0 : 1)
+            .animation(.smooth(duration: 0.55, extraBounce: 0), value: chat.hasActiveTurn)
+            .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.hasUnreadCompletion)
+            .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.lastTurnInterrupted)
+
+            if !archivedRow {
+                // Always rendered so the opacity fade is smooth and the
+                // hit area exists from the start. The 22x22 frame around
+                // the 15.5pt icon gives a generous halo so the cursor
+                // catches the button before it lands on the glyph.
+                Button(action: callbacks.onArchive) {
+                    ArchiveIcon(size: 15.5)
+                        .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
+                        .frame(width: 28, height: 22)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .sidebarHover { archiveHovered = $0 }
                 .help(L10n.t("Archive"))
-                .padding(.trailing, 2)
-                .transition(.opacity)
-            } else if !archivedRow && chat.lastTurnInterrupted {
-                // Amber dot. Distinct from the unread-completion blue
-                // dot so the user can tell at a glance "the assistant
-                // didn't finish" from "the assistant finished while I
-                // was elsewhere".
-                Circle()
-                    .fill(Color(red: 1.0, green: 0.78, blue: 0.30))
-                    .frame(width: 7, height: 7)
-                    .frame(width: 14, height: 14)
-                    .padding(.trailing, 2)
-                    .help(L10n.t("Last turn interrupted"))
-                    .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
-            } else if !archivedRow && chat.hasUnreadCompletion {
-                Circle()
-                    .fill(Palette.pastelBlue)
-                    .frame(width: 7, height: 7)
-                    .frame(width: 14, height: 14)
-                    .padding(.trailing, 2)
-                    .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
-            } else {
-                Text(ageLabel)
-                    .font(BodyFont.system(size: 11))
-                    .foregroundColor(Color(white: 0.55))
-                    .transition(.opacity)
+                .opacity(archiveVisible ? 1 : 0)
+                .allowsHitTesting(archiveVisible)
             }
         }
-        .animation(.smooth(duration: 0.55, extraBounce: 0), value: chat.hasActiveTurn)
-        .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.hasUnreadCompletion)
-        .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.lastTurnInterrupted)
+        .animation(.easeOut(duration: 0.16), value: archiveVisible)
+        .animation(.easeOut(duration: 0.12), value: archiveHovered)
     }
 
     var body: some View {
@@ -1828,7 +1846,7 @@ struct RecentChatRow: View, Equatable {
             trailingStatusView
         }
         .padding(.leading, 8 + indent)
-        .padding(.trailing, 9)
+        .padding(.trailing, 3)
         .padding(.vertical, 7)
         .contentShape(Rectangle())
         .background(
@@ -1893,16 +1911,31 @@ struct RecentChatRow: View, Equatable {
                 .frame(width: 14, height: 14)
         case .unarchive:
             unarchiveButton()
+                .offset(y: 1)
         }
     }
 
     private func unarchiveButton() -> some View {
+        // Leading slot, so growing the layout frame would push the
+        // title right. Pad outwards to a 28x22 halo for the hit
+        // shape, then pad back inwards by the same amount so the
+        // parent HStack still allocates 14x14. Matches the generous
+        // hover catch of the archive button on the right.
         Button(action: callbacks.onUnarchive) {
-            ArchiveUnarchiveMorphIcon(size: 15.5, hovered: hovered)
+            ArchiveUnarchiveMorphIcon(
+                size: 16.5,
+                hovered: hovered,
+                iconHovered: unarchiveHovered
+            )
                 .frame(width: 14, height: 14)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
                 .contentShape(Rectangle())
+                .padding(.horizontal, -7)
+                .padding(.vertical, -4)
         }
         .buttonStyle(.plain)
+        .sidebarHover { unarchiveHovered = $0 }
         .help(L10n.t("Unarchive"))
     }
 
@@ -1947,8 +1980,8 @@ private struct SidebarChatRowSpinner: View {
         Circle()
             .trim(from: 0.0, to: 0.82)
             .stroke(Color(white: 0.55),
-                    style: StrokeStyle(lineWidth: 1.0, lineCap: .round))
-            .frame(width: 9, height: 9)
+                    style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            .frame(width: 11, height: 11)
             .rotationEffect(.degrees(rotation))
             .onAppear {
                 withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
