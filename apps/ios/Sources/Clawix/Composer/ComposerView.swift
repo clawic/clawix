@@ -104,7 +104,7 @@ struct ComposerView: View {
                     showAttachmentSheet = false
                 }
             )
-            .presentationDetents([.fraction(0.55), .large])
+            .presentationDetents([.height(260), .large])
             .presentationDragIndicator(.visible)
             .presentationBackground(Palette.surface)
         }
