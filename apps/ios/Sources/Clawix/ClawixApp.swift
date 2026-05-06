@@ -189,8 +189,35 @@ private struct RootView: View {
                                     var newPath = NavigationPath()
                                     newPath.append(RootNav.project(cwd))
                                     path = newPath
+                                },
+                                onNewChat: {
+                                    // Swap the current chat for a fresh
+                                    // one in place, with animations
+                                    // disabled so the new conversation
+                                    // appears as a screen reset rather
+                                    // than a navigation push. Any earlier
+                                    // breadcrumb (e.g. project) is kept.
+                                    let newId = store.startNewChat()
+                                    var t = Transaction()
+                                    t.disablesAnimations = true
+                                    withTransaction(t) {
+                                        if !path.isEmpty {
+                                            path.removeLast()
+                                        }
+                                        path.append(RootNav.chat(newId))
+                                    }
                                 }
                             )
+                            // Force a fresh subtree on chat-id change so
+                            // the in-place swap performed by the
+                            // new-chat button (removeLast + append in
+                            // the same transaction) tears down the
+                            // previous ChatDetailView and ComposerView
+                            // instead of reusing them. Without this,
+                            // the composer's `didAutofocus` and the
+                            // detail's `isFreshChat` carry over from
+                            // the prior chat and autofocus never fires.
+                            .id(id)
                         case .project(let cwd):
                             let project = DerivedProject.from(chats: store.chats.filter { !$0.isArchived })
                                 .first(where: { $0.cwd == cwd })
