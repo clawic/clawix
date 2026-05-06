@@ -472,6 +472,15 @@ final class ClawixService: ObservableObject {
                     if let mid = activeTurnByChat[chatId]?.assistantMessageId {
                         appState?.completeWorkSummary(chatId: chatId, messageId: mid, endedAt: Date())
                     }
+                    // Flip `streamingFinished` here, NOT on agentMessage
+                    // item completion: the model may emit an intermediate
+                    // agentMessage (a preamble) before tool calls and a
+                    // separate final answer afterwards, so item-level
+                    // completion isn't a reliable end-of-turn signal.
+                    // Pass `finalText: nil` so we trust the accumulated
+                    // deltas instead of replacing `content` with just the
+                    // last segment (which would erase the preamble).
+                    appState?.markAssistantCompleted(chatId: chatId, finalText: nil)
                     activeTurnByChat.removeValue(forKey: chatId)
                     appState?.markChat(chatId: chatId, hasActiveTurn: false)
                     // The turn finished without consuming the question
@@ -535,9 +544,13 @@ final class ClawixService: ObservableObject {
         else { return }
 
         if payload.item.type == "agentMessage" {
-            if completed {
-                appState?.markAssistantCompleted(chatId: chatId, finalText: payload.item.text)
-            }
+            // Don't flip `streamingFinished` here. A turn can include an
+            // intermediate agentMessage (preamble like "Voy a listar
+            // ...") before any tool runs, plus a separate final-answer
+            // agentMessage. If we flipped on item-completed, the timeline
+            // would collapse mid-turn and the preamble would be wiped by
+            // the canonical-text replacement when the second item lands.
+            // The end-of-turn flip lives in `nTurnCompleted` instead.
             return
         }
 

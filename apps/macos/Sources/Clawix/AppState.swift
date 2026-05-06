@@ -1947,6 +1947,10 @@ final class AppState: ObservableObject {
     /// message. If it has any visible content, freeze it as finished so the
     /// shimmer stops but the partial answer stays.
     func finalizeOrRemoveAssistantPlaceholder(chatId: UUID) {
+        // Flush coalesced deltas first so the `isEmpty` check below sees
+        // the actual streamed content instead of an empty string from
+        // the placeholder.
+        flushPendingAssistantTextDeltas(chatId: chatId)
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].hasActiveTurn = false
         guard let last = chats[idx].messages.indices.last,
@@ -2356,7 +2360,72 @@ final class AppState: ObservableObject {
         return msg.id
     }
 
+    /// Pending text deltas keyed by chat ID. The bridge can fire many
+    /// `nAgentMsgDelta` notifications per main-runloop tick (the daemon
+    /// emits per-token); mutating `chats` once per token publishes
+    /// `@Published var chats` once per token, which invalidates every
+    /// subscribed view body in the transcript per token. Buffering and
+    /// applying once per tick collapses that to a single publish per
+    /// frame, dropping invalidation work by ~10x without changing the
+    /// observable streaming semantics (the user still sees per-word
+    /// fades because the StreamCheckpoint schedule keeps its leaky-
+    /// bucket spacing inside `applyAssistantTextDelta`).
+    ///
+    /// Only the assistant's text content is coalesced. Reasoning deltas
+    /// interleave with tool-item events and have to land in arrival
+    /// order against the timeline, so they keep their per-call publish.
+    private var pendingAssistantTextBuffers: [UUID: String] = [:]
+    private var assistantTextFlushScheduled = false
+
     func appendAssistantDelta(chatId: UUID, delta: String) {
+        if delta.isEmpty { return }
+        pendingAssistantTextBuffers[chatId, default: ""] += delta
+        scheduleAssistantTextFlush()
+    }
+
+    private func scheduleAssistantTextFlush() {
+        guard !assistantTextFlushScheduled else { return }
+        assistantTextFlushScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            self?.flushPendingAssistantTextDeltas()
+        }
+    }
+
+    /// Flush every chat's pending text. Called once per main-runloop
+    /// tick by the scheduler. Safe to call directly when an external
+    /// event needs the buffer drained synchronously (e.g. before
+    /// finalizing a turn).
+    func flushPendingAssistantTextDeltas() {
+        assistantTextFlushScheduled = false
+        guard !pendingAssistantTextBuffers.isEmpty else { return }
+        let buffers = pendingAssistantTextBuffers
+        pendingAssistantTextBuffers.removeAll(keepingCapacity: true)
+        for (chatId, delta) in buffers where !delta.isEmpty {
+            applyAssistantTextDelta(chatId: chatId, delta: delta)
+        }
+    }
+
+    /// Drain a single chat's buffered deltas synchronously. Call this
+    /// before any code path that reads or replaces
+    /// `messages[last].content` on that chat (turn completion, daemon
+    /// rehydrate, interrupt) so the buffer never lags behind the
+    /// authoritative state.
+    func flushPendingAssistantTextDeltas(chatId: UUID) {
+        guard let delta = pendingAssistantTextBuffers.removeValue(forKey: chatId),
+              !delta.isEmpty
+        else { return }
+        applyAssistantTextDelta(chatId: chatId, delta: delta)
+    }
+
+    /// Drop any pending text for a chat without applying it. Used when
+    /// the daemon hands us the canonical content (`applyDaemonStreaming`,
+    /// `appendDaemonMessage`) so we don't double-append after the
+    /// authoritative replace.
+    private func dropPendingAssistantText(chatId: UUID) {
+        pendingAssistantTextBuffers.removeValue(forKey: chatId)
+    }
+
+    private func applyAssistantTextDelta(chatId: UUID, delta: String) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }),
               let last = chats[idx].messages.indices.last,
               chats[idx].messages[last].role == .assistant
