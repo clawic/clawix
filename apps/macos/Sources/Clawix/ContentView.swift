@@ -995,13 +995,13 @@ private struct ShortcutGlyph: View {
 struct SidebarToggleIcon: View {
     enum Side { case left, right }
     var side: Side
-    var size: CGFloat = 16
+    var size: CGFloat = 18
     var color: Color = Color(white: 0.55)
 
     var body: some View {
         Canvas { ctx, sz in
             let s = min(sz.width, sz.height) / 24
-            let lineW: CGFloat = 1.575 * s
+            let lineW: CGFloat = 1.575 * s + 0.25
             let stroke = StrokeStyle(lineWidth: lineW, lineCap: .round, lineJoin: .round)
 
             // Outer rounded rectangle (square-ish, with softer corners).
@@ -1030,9 +1030,9 @@ struct SidebarToggleIcon: View {
 /// same eased curve as the rest of the sidebar chrome.
 struct SidebarToggleButton: View {
     let side: SidebarToggleIcon.Side
-    var size: CGFloat = 16
+    var size: CGFloat = 18
     var hitSize: CGFloat? = nil
-    var defaultOpacity: Double = 0.55
+    var defaultOpacity: Double = 0.45
     var hoverOpacity: Double = 0.96
     let accessibilityLabel: LocalizedStringKey
     let action: () -> Void
