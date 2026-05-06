@@ -48,10 +48,9 @@ struct FileViewerView: View {
 
     private var topBar: some View {
         HStack(spacing: 8) {
-            GlassIconButton(systemName: "xmark", action: { dismiss() })
             titlePill
             Spacer()
-            GlassIconButton(systemName: "doc.on.doc", action: copyContents)
+            GlassIconButton(systemName: "xmark", action: { dismiss() })
         }
     }
 
