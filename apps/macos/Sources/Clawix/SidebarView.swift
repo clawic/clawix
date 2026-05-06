@@ -172,14 +172,33 @@ struct SidebarView: View {
     }
 
     private func sortedProjects(snapshot: SidebarSnapshot) -> [Project] {
-        if organizationMode == .recentProjects {
+        switch projectSortMode {
+        case .recent:
             return appState.projects.sorted { lhs, rhs in
                 let l = snapshot.recentDateByProject[lhs.id] ?? .distantPast
                 let r = snapshot.recentDateByProject[rhs.id] ?? .distantPast
                 return l > r
             }
+        case .creation:
+            return appState.projects
+        case .name:
+            return appState.projects.sorted {
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
+        case .custom:
+            let positionById: [UUID: Int] = Dictionary(
+                uniqueKeysWithValues: appState.manualProjectOrder.enumerated().map { ($1, $0) }
+            )
+            let naturalIdx: [UUID: Int] = Dictionary(
+                uniqueKeysWithValues: appState.projects.enumerated().map { ($1.id, $0) }
+            )
+            return appState.projects.sorted { lhs, rhs in
+                let l = positionById[lhs.id] ?? Int.max
+                let r = positionById[rhs.id] ?? Int.max
+                if l != r { return l < r }
+                return (naturalIdx[lhs.id] ?? 0) < (naturalIdx[rhs.id] ?? 0)
+            }
         }
-        return appState.projects
     }
 
     @ViewBuilder

@@ -14,6 +14,17 @@ struct ProjectRecord: Codable, FetchableRecord, PersistableRecord {
     }
 }
 
+struct ProjectSortOrderRow: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "project_sort_order"
+    var projectId: String
+    var sortOrder: Int64
+
+    enum CodingKeys: String, CodingKey {
+        case projectId = "project_id"
+        case sortOrder = "sort_order"
+    }
+}
+
 struct PinnedThreadRow: Codable, FetchableRecord, PersistableRecord {
     static let databaseTableName = "pinned_threads"
     var threadId: String

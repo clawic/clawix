@@ -534,6 +534,10 @@ final class AppState: ObservableObject {
     @Published var automations: [Automation] = []
     @Published var projects: [Project] = []
     @Published var selectedProject: Project?
+    /// Manual ordering of projects for the sidebar's "Custom" sort mode.
+    /// IDs not present here fall back to natural order from `projects`.
+    /// Persisted via `ProjectOrdersRepository`.
+    @Published var manualProjectOrder: [UUID] = []
     @Published var selectedModel: String = "5.5"
     @Published var selectedIntelligence: IntelligenceLevel = .high
     @Published var selectedSpeed: SpeedLevel = .standard
@@ -669,6 +673,7 @@ final class AppState: ObservableObject {
     private var daemonBridgeClient: DaemonBridgeClient?
 
     private let projectsRepo = ProjectsRepository()
+    private let projectOrdersRepo = ProjectOrdersRepository()
     private let pinsRepo = PinsRepository()
     private let chatProjectsRepo = ChatProjectsRepository()
     private let metaRepo = MetaRepository()
@@ -2770,6 +2775,39 @@ final class AppState: ObservableObject {
         let orderedThreadIds = order.compactMap { chatsById[$0]?.clawixThreadId }
         pinsRepo.setOrder(orderedThreadIds)
         metaRepo.hasLocalPins = true
+    }
+
+    /// Move a project to a new slot in the manual ordering used by the
+    /// sidebar's "Custom" sort mode. Pass the project the moved row should
+    /// land *before*, or `nil` to drop at the end. Computing relative to a
+    /// sibling avoids the index-shift bug when the dragged row is above
+    /// its target. Persisted via `ProjectOrdersRepository`.
+    func reorderProject(projectId: UUID, beforeProjectId: UUID?) {
+        guard projectId != beforeProjectId else { return }
+        // Build a complete ordering of the currently-visible projects so
+        // the persisted list stays a superset of the live one. Projects
+        // not yet in `manualProjectOrder` keep their natural order from
+        // `projects` (creation/insertion order from `mergedProjects`).
+        var order = manualProjectOrder
+        let knownIds = Set(order)
+        let livedIds = Set(projects.map(\.id))
+        // Drop entries for projects that no longer exist (deleted /
+        // hidden Codex roots) so the persisted list never grows
+        // unbounded across launches.
+        order.removeAll { !livedIds.contains($0) }
+        // Append projects we've never positioned manually, in natural
+        // order, so we have a position for every live project.
+        for project in projects where !knownIds.contains(project.id) {
+            order.append(project.id)
+        }
+        order.removeAll { $0 == projectId }
+        if let beforeProjectId, let idx = order.firstIndex(of: beforeProjectId) {
+            order.insert(projectId, at: idx)
+        } else {
+            order.append(projectId)
+        }
+        manualProjectOrder = order
+        projectOrdersRepo.setOrder(order)
     }
 
     // MARK: - Project assignment
