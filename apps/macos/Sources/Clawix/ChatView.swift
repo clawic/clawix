@@ -1573,16 +1573,16 @@ private struct LinkPreviewCard: View {
 /// source. The renderer hands that offset to `StreamingFade` so each
 /// character ramps from 0→1 opacity in step with the delta that brought
 /// it in.
-private struct AnnotatedAtom {
+private struct AnnotatedAtom: Equatable {
     let atom: AssistantMarkdown.Atom
     let offset: Int
 }
 
-private struct AnnotatedLine {
+private struct AnnotatedLine: Equatable {
     let atoms: [AnnotatedAtom]
 }
 
-private struct AnnotatedParagraph {
+private struct AnnotatedParagraph: Equatable {
     let lines: [AnnotatedLine]
 }
 
@@ -1644,6 +1644,52 @@ private func annotate(_ line: AssistantMarkdown.Line, with resolver: inout AtomO
     return AnnotatedLine(atoms: atoms)
 }
 
+/// Per-message identity cache for `parseBlocks` + `annotateBlocks`.
+/// Every delta to ANY message publishes `AppState.chats`, which
+/// invalidates every `AssistantMarkdownText` body in the chat. Without
+/// this cache, every old message in the transcript would re-parse its
+/// markdown on every token arrival; with the cache the body short-
+/// circuits when `text` is byte-equal to the last parsed value.
+///
+/// For the message that's currently streaming the cache also caches the
+/// full-text branch: an upstream `objectWillChange` (e.g. an unrelated
+/// `@Published` setter) can invalidate body without `text` actually
+/// growing, and we want those re-runs to skip the parse too. When `text`
+/// truly grew between calls we fall through to a full reparse — small
+/// (a typical assistant turn is a few KB), but the dominant cost in the
+/// streaming pipeline is downstream rendering, not this parse.
+private final class MarkdownParseCache: ObservableObject {
+    private var cachedText: String?
+    private var cachedBlocks: [AnnotatedBlock] = []
+    private var cachedParseMs: Double = 0
+    private var cachedAnnotateMs: Double = 0
+
+    struct Result {
+        let blocks: [AnnotatedBlock]
+        let cacheHit: Bool
+        let parseMs: Double
+        let annotateMs: Double
+    }
+
+    func parse(_ text: String) -> Result {
+        if let last = cachedText, last == text {
+            return Result(blocks: cachedBlocks, cacheHit: true,
+                          parseMs: cachedParseMs, annotateMs: cachedAnnotateMs)
+        }
+        let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+        let parsed = AssistantMarkdown.parseBlocks(text)
+        let parseT1 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+        let annotated = annotateBlocks(parsed, source: text)
+        let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+        cachedText = text
+        cachedBlocks = annotated
+        cachedParseMs = (parseT1 - parseT0) * 1000
+        cachedAnnotateMs = (parseT2 - parseT1) * 1000
+        return Result(blocks: annotated, cacheHit: false,
+                      parseMs: cachedParseMs, annotateMs: cachedAnnotateMs)
+    }
+}
+
 /// Renders assistant prose with the markdown subset Clawix emits:
 /// paragraphs, ATX headings, bullet/numbered lists, GitHub-style tables,
 /// fenced code blocks, plus inline `**bold**`, `*italic*`, `` `code` ``,
@@ -1663,21 +1709,20 @@ private struct AssistantMarkdownText: View {
     var checkpoints: [StreamCheckpoint] = []
     var streamingFinished: Bool = true
     @EnvironmentObject var appState: AppState
+    @StateObject private var parseCache = MarkdownParseCache()
     /// Bumped when the trailing fade window closes, so the body
     /// re-evaluates and tears down the `TimelineView` once nothing is
     /// animating any more.
     @State private var animationTick: Int = 0
 
     var body: some View {
-        let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let parsed = AssistantMarkdown.parseBlocks(text)
-        let parseT1 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let blocks = annotateBlocks(parsed, source: text)
-        let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let _ = streamingPerfLogEnabled && (!checkpoints.isEmpty || !streamingFinished)
-            ? logBodyTiming(parseMs: (parseT1 - parseT0) * 1000,
-                            annotateMs: (parseT2 - parseT1) * 1000,
-                            len: text.count, blockCount: parsed.count)
+        let parsed = parseCache.parse(text)
+        let blocks = parsed.blocks
+        let _ = streamingPerfLogEnabled && !parsed.cacheHit
+            && (!checkpoints.isEmpty || !streamingFinished)
+            ? logBodyTiming(parseMs: parsed.parseMs,
+                            annotateMs: parsed.annotateMs,
+                            len: text.count, blockCount: blocks.count)
             : ()
         let now = Date()
         let animating = StreamingFade.isAnimating(
@@ -1739,6 +1784,7 @@ private struct AssistantMarkdownText: View {
             ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                 appState.openLinkInBrowser(url)
             }
+            .equatable()
             .fixedSize(horizontal: false, vertical: true)
 
         case .heading(let level, let line):
@@ -1752,6 +1798,7 @@ private struct AssistantMarkdownText: View {
             ) { url in
                 appState.openLinkInBrowser(url)
             }
+            .equatable()
             .fixedSize(horizontal: false, vertical: true)
 
         case .bulletList(let items):
@@ -1766,6 +1813,7 @@ private struct AssistantMarkdownText: View {
                         ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                             appState.openLinkInBrowser(url)
                         }
+                        .equatable()
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -1783,6 +1831,7 @@ private struct AssistantMarkdownText: View {
                         ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                             appState.openLinkInBrowser(url)
                         }
+                        .equatable()
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -1875,6 +1924,7 @@ private struct AssistantTableView: View {
         ) { url in
             onLinkTap(url)
         }
+        .equatable()
         .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -2006,7 +2056,7 @@ private struct AssistantCodeBlockView: View {
 /// Each line is a wrapping flow of word / code / link atoms. Splitting by
 /// word lets the link atoms participate in line wrapping while letting us
 /// attach per-link `.onHover` and `.onTapGesture` modifiers.
-private struct ParagraphFlow: View {
+private struct ParagraphFlow: View, Equatable {
     let paragraph: AnnotatedParagraph
     let weight: Font.Weight
     let color: Color
@@ -2015,6 +2065,25 @@ private struct ParagraphFlow: View {
     var now: Date = .distantPast
     let onLinkTap: (URL) -> Void
 
+    /// Skip body re-evaluation when the rendered output cannot have
+    /// changed. Two `ParagraphFlow`s render identically when their
+    /// content/styling matches AND either there's no fade in flight
+    /// (checkpoints empty, or all settled at both `now`s) or `now` is
+    /// the same instant. The closure is excluded by design: its
+    /// behaviour is constant for the message lifetime, but a fresh
+    /// closure value lands on every parent body re-render.
+    static func == (lhs: ParagraphFlow, rhs: ParagraphFlow) -> Bool {
+        guard lhs.paragraph == rhs.paragraph,
+              lhs.weight == rhs.weight,
+              lhs.color == rhs.color,
+              lhs.fontSize == rhs.fontSize,
+              lhs.checkpoints == rhs.checkpoints else { return false }
+        guard let last = lhs.checkpoints.last else { return true }
+        let settledBy = last.addedAt.addingTimeInterval(StreamingFade.duration)
+        if settledBy < lhs.now && settledBy < rhs.now { return true }
+        return lhs.now == rhs.now
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(paragraph.lines.enumerated()), id: \.offset) { _, line in
@@ -2022,42 +2091,54 @@ private struct ParagraphFlow: View {
                     ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, annotated in
                         AtomView(
                             atom: annotated.atom,
-                            sourceOffset: annotated.offset,
+                            opacity: opacityFor(offset: annotated.offset),
                             weight: weight,
                             color: color,
                             fontSize: fontSize,
-                            checkpoints: checkpoints,
-                            now: now,
                             onLinkTap: onLinkTap
                         )
+                        .equatable()
                     }
                 }
             }
         }
     }
-}
 
-private struct AtomView: View {
-    let atom: AssistantMarkdown.Atom
-    let sourceOffset: Int
-    let weight: Font.Weight
-    let color: Color
-    var fontSize: CGFloat = 13.5
-    var checkpoints: [StreamCheckpoint] = []
-    var now: Date = .distantPast
-    let onLinkTap: (URL) -> Void
-
-    /// All characters in an atom belong to the same word (the parser
-    /// splits at whitespace), so the entire atom rides one opacity value
-    /// taken from its first character. Keeps per-frame work to a single
-    /// multiplier instead of rebuilding an attributed string.
-    private var atomOpacity: Double {
+    /// Hoists the per-atom opacity calculation out of `AtomView`. With
+    /// `.equatable()` the leaf only re-evaluates body when its `opacity`
+    /// (or atom content) actually changes, so the hundreds of settled
+    /// atoms above the trailing fade window stop re-rendering at every
+    /// `TimelineView` tick.
+    private func opacityFor(offset: Int) -> Double {
         guard !checkpoints.isEmpty else { return 1.0 }
         return StreamingFade.opacity(
-            offset: sourceOffset,
+            offset: offset,
             checkpoints: checkpoints,
             now: now
         )
+    }
+}
+
+/// Leaf renderer for a single styled token. Equatable on its visible
+/// inputs so SwiftUI can skip body re-evaluation when only the parent
+/// re-ran (e.g. the streaming `TimelineView` ticked but this atom is
+/// already fully faded in). The `onLinkTap` closure is intentionally
+/// excluded from `==`: its identity changes on every parent body
+/// re-render, but the behaviour is constant for the message lifetime.
+private struct AtomView: View, Equatable {
+    let atom: AssistantMarkdown.Atom
+    let opacity: Double
+    let weight: Font.Weight
+    let color: Color
+    var fontSize: CGFloat = 13.5
+    let onLinkTap: (URL) -> Void
+
+    static func == (lhs: AtomView, rhs: AtomView) -> Bool {
+        lhs.opacity == rhs.opacity
+            && lhs.atom == rhs.atom
+            && lhs.weight == rhs.weight
+            && lhs.color == rhs.color
+            && lhs.fontSize == rhs.fontSize
     }
 
     var body: some View {
@@ -2066,17 +2147,17 @@ private struct AtomView: View {
             Text(s)
                 .font(BodyFont.system(size: fontSize, weight: weight))
                 .foregroundColor(color)
-                .opacity(atomOpacity)
+                .opacity(opacity)
         case .bold(let s):
             Text(s)
                 .font(BodyFont.system(size: fontSize, weight: .semibold))
                 .foregroundColor(color)
-                .opacity(atomOpacity)
+                .opacity(opacity)
         case .italic(let s):
             Text(s)
                 .font(BodyFont.system(size: fontSize, weight: weight).italic())
                 .foregroundColor(color)
-                .opacity(atomOpacity)
+                .opacity(opacity)
         case .code(let s):
             Text(s)
                 .font(BodyFont.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
@@ -2089,10 +2170,10 @@ private struct AtomView: View {
                 )
                 .padding(.horizontal, 2)
                 .offset(y: -3)
-                .opacity(atomOpacity)
+                .opacity(opacity)
         case .link(let label, let url, let isBareUrl):
             LinkAtom(label: label, url: url, isBareUrl: isBareUrl, weight: weight, onTap: onLinkTap)
-                .opacity(atomOpacity)
+                .opacity(opacity)
         }
     }
 }
@@ -2245,7 +2326,7 @@ enum AssistantMarkdown {
         let atoms: [Atom]
     }
 
-    enum Atom {
+    enum Atom: Equatable {
         case word(String)        // plain token + trailing whitespace
         case bold(String)        // **strong** token + trailing whitespace
         case italic(String)      // *em* / _em_ token + trailing whitespace
