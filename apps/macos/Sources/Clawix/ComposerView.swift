@@ -11,6 +11,9 @@ struct ComposerView: View {
     @State private var addMenuOpen = false
     @State private var addMenuHover = false
     @State private var permissionsMenuOpen = false
+    @State private var permissionsHover = false
+    @State private var permissionsLinger = false
+    @State private var permissionsLingerTask: Task<Void, Never>?
     @State private var modelMenuOpen = false
     @State private var contextHover = false
     @State private var micHover = false
@@ -127,28 +130,7 @@ struct ComposerView: View {
                     ))
             }
 
-            Button {
-                permissionsMenuOpen.toggle()
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: appState.permissionMode.iconName)
-                        .font(BodyFont.system(size: 11, weight: .regular))
-                    Text(appState.permissionMode.label)
-                        .font(BodyFont.system(size: 11.5))
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(BodyFont.system(size: 8, weight: .semibold))
-                }
-                .fixedSize(horizontal: true, vertical: false)
-                .foregroundColor(appState.permissionMode.accent)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 4)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L10n.a11yChangePermissions(label: appState.permissionMode.label))
-            .anchorPreference(key: PermissionsButtonAnchorKey.self, value: .bounds) { $0 }
-            .hoverHint(L10n.t("Change permissions"))
+            permissionsPill
 
             Spacer()
 
@@ -176,7 +158,7 @@ struct ComposerView: View {
                         .font(BodyFont.system(size: 11.5))
                         .foregroundColor(Color(white: 0.55))
                     Image(systemName: "chevron.down")
-                        .font(BodyFont.system(size: 8, weight: .semibold))
+                        .font(BodyFont.system(size: 10, weight: .bold))
                         .foregroundColor(Color(white: 0.55))
                 }
                 .padding(.horizontal, 6)
@@ -305,6 +287,63 @@ struct ComposerView: View {
         .accessibilityLabel(L10n.t("Add"))
         .anchorPreference(key: PlusButtonAnchorKey.self, value: .bounds) { $0 }
         .hoverHint(L10n.t("Add"))
+    }
+
+    /// Permissions selector. Collapsed state is just the mode icon at 50%
+    /// white, so the toolbar reads as quiet chrome. On hover (or while the
+    /// popup is open) the label + chevron animate in and the icon picks up
+    /// the mode accent color, becoming a full clickable dropdown.
+    private var permissionsPill: some View {
+        let expanded = permissionsMenuOpen || permissionsHover || permissionsLinger
+        return Button {
+            permissionsMenuOpen.toggle()
+        } label: {
+            Group {
+                if expanded {
+                    HStack(spacing: 5) {
+                        Image(systemName: appState.permissionMode.iconName)
+                            .font(BodyFont.system(size: 13, weight: .medium))
+                        Text(appState.permissionMode.label)
+                            .font(BodyFont.system(size: 11.5))
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(BodyFont.system(size: 10, weight: .bold))
+                    }
+                    .foregroundColor(appState.permissionMode.accent)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .transition(.asymmetric(
+                        insertion: AnyTransition.opacity
+                            .combined(with: AnyTransition.offset(y: 4)),
+                        removal: AnyTransition.opacity
+                    ))
+                } else {
+                    Image(systemName: appState.permissionMode.iconName)
+                        .font(BodyFont.system(size: 13, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.5))
+                        .transition(.opacity)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { permissionsHover = $0 }
+        .animation(.easeOut(duration: 0.18), value: expanded)
+        .accessibilityLabel(L10n.a11yChangePermissions(label: appState.permissionMode.label))
+        .anchorPreference(key: PermissionsButtonAnchorKey.self, value: .bounds) { $0 }
+        .hoverHint(L10n.t("Change permissions"))
+        .onChange(of: appState.permissionMode) {
+            permissionsLingerTask?.cancel()
+            permissionsLinger = true
+            let task = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 900_000_000)
+                if !Task.isCancelled {
+                    permissionsLinger = false
+                }
+            }
+            permissionsLingerTask = task
+        }
     }
 
     /// Pill that mirrors the chrome of the permissions pill but renders
