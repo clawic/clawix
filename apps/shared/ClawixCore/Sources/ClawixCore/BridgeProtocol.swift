@@ -142,6 +142,21 @@ public enum BridgeBody: Equatable, Sendable {
     /// ("File not found", "Couldn't decode file as text", etc.).
     case fileSnapshot(path: String, content: String?, isMarkdown: Bool, error: String?)
 
+    /// Voice-to-text request from the iPhone companion. The audio blob
+    /// travels base64-encoded inline (same shape as `WireAttachment`)
+    /// because the bridge transport is text-only WebSocket frames; for a
+    /// few seconds of compressed audio (m4a/AAC) it stays well under any
+    /// practical size. `requestId` is a client-minted correlation token
+    /// so the iPhone can match the answer to the right pending request
+    /// without needing a per-chat queue. `language` is an optional
+    /// Whisper language code (e.g. "en", "es"); `nil` means auto-detect.
+    case transcribeAudio(requestId: String, audioBase64: String, mimeType: String, language: String?)
+    /// Reply to `transcribeAudio`. On success `text` is the transcript
+    /// and `errorMessage` is nil. On failure (decode error, no model
+    /// downloaded, transcription crash) `text` is empty and
+    /// `errorMessage` carries a short reason for display.
+    case transcriptionResult(requestId: String, text: String, errorMessage: String?)
+
     fileprivate var typeTag: String {
         switch self {
         case .auth:               return "auth"
@@ -169,6 +184,8 @@ public enum BridgeBody: Equatable, Sendable {
         case .projectsSnapshot:   return "projectsSnapshot"
         case .readFile:           return "readFile"
         case .fileSnapshot:       return "fileSnapshot"
+        case .transcribeAudio:    return "transcribeAudio"
+        case .transcriptionResult: return "transcriptionResult"
         }
     }
 
@@ -183,6 +200,7 @@ public enum BridgeBody: Equatable, Sendable {
         case projects
         case path, isMarkdown, error
         case attachments
+        case requestId, audioBase64, mimeType, language, errorMessage
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
@@ -254,6 +272,15 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encodeIfPresent(content, forKey: .content)
             try c.encode(isMarkdown, forKey: .isMarkdown)
             try c.encodeIfPresent(error, forKey: .error)
+        case .transcribeAudio(let requestId, let audioBase64, let mimeType, let language):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(audioBase64, forKey: .audioBase64)
+            try c.encode(mimeType, forKey: .mimeType)
+            try c.encodeIfPresent(language, forKey: .language)
+        case .transcriptionResult(let requestId, let text, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(text, forKey: .text)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
         }
     }
 
@@ -348,6 +375,19 @@ public enum BridgeBody: Equatable, Sendable {
                 content: try c.decodeIfPresent(String.self, forKey: .content),
                 isMarkdown: try c.decodeIfPresent(Bool.self, forKey: .isMarkdown) ?? false,
                 error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
+        case "transcribeAudio":
+            return .transcribeAudio(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                audioBase64: try c.decode(String.self, forKey: .audioBase64),
+                mimeType: try c.decode(String.self, forKey: .mimeType),
+                language: try c.decodeIfPresent(String.self, forKey: .language)
+            )
+        case "transcriptionResult":
+            return .transcriptionResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                text: try c.decode(String.self, forKey: .text),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
             )
         default:
             throw BridgeDecodingError.unknownType(type)

@@ -162,6 +162,34 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.errorEvent(code: "internal", message: "boom"))
     }
 
+    func testTranscribeAudio() throws {
+        try roundTrip(.transcribeAudio(
+            requestId: "req-1",
+            audioBase64: "ZmFrZUF1ZGlv",
+            mimeType: "audio/m4a",
+            language: "en"
+        ))
+        try roundTrip(.transcribeAudio(
+            requestId: "req-2",
+            audioBase64: "AAAA",
+            mimeType: "audio/wav",
+            language: nil
+        ))
+    }
+
+    func testTranscriptionResult() throws {
+        try roundTrip(.transcriptionResult(
+            requestId: "req-1",
+            text: "hello world",
+            errorMessage: nil
+        ))
+        try roundTrip(.transcriptionResult(
+            requestId: "req-2",
+            text: "",
+            errorMessage: "no model downloaded"
+        ))
+    }
+
     func testWireFormatIsFlat() throws {
         let frame = BridgeFrame(.sendPrompt(chatId: "abc", text: "hello", attachments: []))
         let data = try BridgeCoder.encode(frame)
