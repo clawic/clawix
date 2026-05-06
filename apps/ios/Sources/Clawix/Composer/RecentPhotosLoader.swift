@@ -1,0 +1,120 @@
+import Foundation
+#if canImport(UIKit)
+import UIKit
+import Photos
+
+// Loads thumbnails of the most recent photos in the user's library for
+// the horizontal strip in the attachment sheet. Authorization is
+// requested with `.addOnly` first because most attachment flows don't
+// need full read access — but the strip itself does, since it shows
+// pre-existing photos. We fall back to `.readWrite` so the user only
+// sees one OS prompt.
+//
+// Thumbnails are loaded on a background queue, decoded to a small
+// in-memory size, and pushed to the main actor as they arrive. The
+// loader is one-shot: SwiftUI re-creates it when the sheet opens, so
+// we don't bother caching across presentations.
+
+@Observable
+final class RecentPhotosLoader {
+    enum Authorization: Equatable {
+        case undetermined
+        case denied
+        case limited
+        case authorized
+    }
+
+    var authorization: Authorization = .undetermined
+    var assets: [PHAsset] = []
+    var thumbnails: [String: UIImage] = [:]
+
+    private let imageManager = PHCachingImageManager()
+    private let thumbnailSize = CGSize(width: 360, height: 360)
+
+    @MainActor
+    func start() async {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized:
+            authorization = .authorized
+            await fetchRecent()
+        case .limited:
+            authorization = .limited
+            await fetchRecent()
+        case .denied, .restricted:
+            authorization = .denied
+        case .notDetermined:
+            let granted = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            switch granted {
+            case .authorized:
+                authorization = .authorized
+                await fetchRecent()
+            case .limited:
+                authorization = .limited
+                await fetchRecent()
+            default:
+                authorization = .denied
+            }
+        @unknown default:
+            authorization = .denied
+        }
+    }
+
+    @MainActor
+    private func fetchRecent() async {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        options.fetchLimit = 60
+        let result = PHAsset.fetchAssets(with: options)
+        var batch: [PHAsset] = []
+        result.enumerateObjects { asset, _, _ in batch.append(asset) }
+        self.assets = batch
+        for asset in batch {
+            requestThumbnail(asset)
+        }
+    }
+
+    private func requestThumbnail(_ asset: PHAsset) {
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .opportunistic
+        options.resizeMode = .fast
+        options.isNetworkAccessAllowed = true
+        let key = asset.localIdentifier
+        imageManager.requestImage(
+            for: asset,
+            targetSize: thumbnailSize,
+            contentMode: .aspectFill,
+            options: options
+        ) { [weak self] image, _ in
+            guard let self, let image else { return }
+            Task { @MainActor in
+                self.thumbnails[key] = image
+            }
+        }
+    }
+
+    /// Loads a full-resolution image for one asset, ready to attach.
+    /// Returns nil if the asset is iCloud-only and the network fetch
+    /// fails or the user denies download.
+    func loadFullImage(for asset: PHAsset) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isSynchronous = false
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = true
+            options.resizeMode = .none
+            imageManager.requestImage(
+                for: asset,
+                targetSize: PHImageManagerMaximumSize,
+                contentMode: .default,
+                options: options
+            ) { image, info in
+                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if degraded { return }
+                continuation.resume(returning: image)
+            }
+        }
+    }
+}
+#endif
