@@ -225,6 +225,7 @@ private struct SettingsCard<Content: View>: View {
                         .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
                 )
         )
+        .liftWhenSettingsDropdownOpen()
     }
 }
 
@@ -318,17 +319,18 @@ private struct DropdownRow<T: Hashable>: View {
     var iconForOption: ((T) -> AnyView?)? = nil
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        EqualSplitRow(spacing: 14) {
             RowLabel(title: title, detail: detail)
-            Spacer(minLength: 12)
             SettingsDropdown(
                 options: options,
                 selection: $selection,
-                iconForOption: iconForOption
+                iconForOption: iconForOption,
+                fillsWidth: true
             )
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+        .liftWhenSettingsDropdownOpen()
     }
 }
 
@@ -343,6 +345,9 @@ struct SettingsDropdown<T: Hashable>: View {
     @Binding var selection: T
     var iconForOption: ((T) -> AnyView?)? = nil
     var minWidth: CGFloat = 240
+    /// When true, the trigger stretches to fill its parent's width
+    /// (used by row wrappers that allocate a 50% slot for the dropdown).
+    var fillsWidth: Bool = false
 
     @State private var isOpen = false
     @State private var hovered = false
@@ -370,7 +375,9 @@ struct SettingsDropdown<T: Hashable>: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .frame(minWidth: minWidth, alignment: .leading)
+            .frame(minWidth: fillsWidth ? 0 : minWidth,
+                   maxWidth: fillsWidth ? .infinity : nil,
+                   alignment: .leading)
             .background(
                 Capsule(style: .continuous)
                     .fill(hovered || isOpen
@@ -404,6 +411,83 @@ struct SettingsDropdown<T: Hashable>: View {
             .allowsHitTesting(isOpen)
         }
         .animation(MenuStyle.openAnimation, value: isOpen)
+        // Bubbles "any descendant dropdown is open" up the view tree so
+        // wrappers (row, card, page) can apply `.zIndex` and keep the
+        // popup above later siblings that would otherwise paint on top.
+        .preference(key: SettingsDropdownOpenKey.self, value: isOpen)
+    }
+}
+
+/// Bubbles up "is any descendant `SettingsDropdown` currently open?".
+/// Combined via OR so a single open dropdown anywhere in the subtree wins.
+struct SettingsDropdownOpenKey: PreferenceKey {
+    static var defaultValue: Bool = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
+extension View {
+    /// Lifts this view above its layout siblings while any descendant
+    /// `SettingsDropdown` is open, so the open popup paints over later
+    /// siblings (next row, next card, next section). Apply on every
+    /// layout level that has siblings the popup might extend into.
+    func liftWhenSettingsDropdownOpen() -> some View {
+        modifier(LiftWhenSettingsDropdownOpenModifier())
+    }
+}
+
+private struct LiftWhenSettingsDropdownOpenModifier: ViewModifier {
+    @State private var hasOpenDropdown = false
+    func body(content: Content) -> some View {
+        content
+            .zIndex(hasOpenDropdown ? 1 : 0)
+            .onPreferenceChange(SettingsDropdownOpenKey.self) { hasOpenDropdown = $0 }
+    }
+}
+
+/// Splits the available row width into two equal halves with a fixed
+/// spacing in between. Used by every settings row that pairs a label
+/// with a control (dropdown, button, etc.) so the trigger always reads
+/// as 50% of the row width.
+///
+/// Plain `HStack` with two `.frame(maxWidth: .infinity)` children does
+/// NOT split 50/50 — SwiftUI honours each child's intrinsic minimum
+/// before it distributes leftover slack, and the dropdown's icon +
+/// chevron + padding give it a larger floor than the label, which
+/// pushes the visual ratio to roughly 35/65 in practice.
+struct EqualSplitRow: Layout {
+    var spacing: CGFloat = 14
+
+    func sizeThatFits(proposal: ProposedViewSize,
+                      subviews: Subviews,
+                      cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let width = proposal.width ?? 0
+        let half = max(0, (width - spacing) / 2)
+        let childProposal = ProposedViewSize(width: half, height: nil)
+        let leftSize = subviews[0].sizeThatFits(childProposal)
+        let rightSize = subviews[1].sizeThatFits(childProposal)
+        return CGSize(width: width, height: max(leftSize.height, rightSize.height))
+    }
+
+    func placeSubviews(in bounds: CGRect,
+                       proposal: ProposedViewSize,
+                       subviews: Subviews,
+                       cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let half = max(0, (bounds.width - spacing) / 2)
+        let childProposal = ProposedViewSize(width: half, height: nil)
+        subviews[0].place(
+            at: CGPoint(x: bounds.minX, y: bounds.midY),
+            anchor: .leading,
+            proposal: childProposal
+        )
+        subviews[1].place(
+            at: CGPoint(x: bounds.minX + half + spacing, y: bounds.midY),
+            anchor: .leading,
+            proposal: childProposal
+        )
     }
 }
 
@@ -1740,6 +1824,7 @@ private struct ConfigurationPage: View {
                 .buttonStyle(.plain)
             }
             .padding(.bottom, 8)
+            .liftWhenSettingsDropdownOpen()
 
             SettingsCard {
                 DropdownRow(
