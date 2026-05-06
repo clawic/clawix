@@ -145,13 +145,19 @@ struct ContentView: View {
                     }
                     .frame(width: leftSidebarWidth)
                     .overlay(alignment: .trailing) {
+                        // Straddle the trailing edge: 5 pt inside the
+                        // sidebar, 5 pt outside (over the content column)
+                        // so hover detection is symmetric around the edge.
                         SidebarResizeHandle(
                             widthRaw: $leftSidebarWidthRaw,
                             hovered: $sidebarResizeHovered
                         )
                         .frame(width: 10)
+                        .offset(x: 5)
+                        .zIndex(1)
                     }
                     .transition(.move(edge: .leading).combined(with: .opacity))
+                    .zIndex(1)
                 }
 
                 // Content column (chrome + routed content). Hidden when
@@ -245,6 +251,9 @@ struct ContentView: View {
                                         .allowsHitTesting(false)
                                 }
                                 .overlay(alignment: .leading) {
+                                    // Mirror of the left handle: straddle
+                                    // the leading edge (5 pt outside / 5 pt
+                                    // inside) for symmetric hover.
                                     SidebarResizeHandle(
                                         widthRaw: $rightSidebarWidthRaw,
                                         hovered: $rightSidebarResizeHovered,
@@ -252,7 +261,10 @@ struct ContentView: View {
                                         maxWidthOverride: dynamicRightSidebarMaxWidth
                                     )
                                     .frame(width: 10)
+                                    .offset(x: -5)
+                                    .zIndex(1)
                                 }
+                                .zIndex(1)
                         }
                     }
                     .transition(.move(edge: .trailing).combined(with: .opacity))
