@@ -27,6 +27,8 @@ struct ChatDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var composerText: String = ""
+    @State private var composerAttachments: [ComposerAttachment] = []
+    @State private var composerResetToken: Int = 0
     @State private var expandedReasoning: Set<String> = []
     @State private var showProjectPicker: Bool = false
     // Ids that have already been laid out at least once. Initial
@@ -43,6 +45,27 @@ struct ChatDetailView: View {
     // with `hasLoaded == false`, keeping autofocus limited to fresh
     // conversations.
     @State private var isFreshChat: Bool? = nil
+    // Floating "scroll to bottom" affordance state. Toggled from the
+    // ScrollView's geometry: shown when the user has scrolled away from
+    // the tail by more than ~40pt, hidden as soon as they return.
+    @State private var showScrollToBottom: Bool = false
+    // Measured height of the bottom chrome (composer + its padding) so
+    // the floating bubble can sit just above it without depending on a
+    // hardcoded offset that drifts when the composer grows multiline.
+    @State private var bottomChromeHeight: CGFloat = 0
+    // Recording state. nil = composer mode; non-nil = the recording
+    // overlay is up. The phase distinguishes "live capture" from the
+    // post-stop transcribing animation that the mic flow runs before
+    // dropping the recognised text back into the composer.
+    @State private var recording: ActiveRecording? = nil
+    // Token to ignore stale transcribe completions if the user
+    // cancels/restarts mid-flight.
+    @State private var transcriptionToken: Int = 0
+    // Drives the live audio capture + on-device transcription. Owned
+    // by the chat so the levels survive across the recording/paused
+    // transitions and we can stop/cancel from any of the overlay
+    // callbacks without re-creating the recorder.
+    @StateObject private var voiceRecorder = VoiceRecorder()
 
     private var chat: WireChat? { store.chat(chatId) }
     private var messages: [WireMessage] { store.messages(for: chatId) }
@@ -268,10 +291,17 @@ struct ChatDetailView: View {
     private var bottomChrome: some View {
         ComposerView(
             text: $composerText,
+            attachments: $composerAttachments,
             onSend: send,
-            autofocusOnAppear: isFreshChat ?? false
+            onMicTap: { startRecording(.transcribeToText) },
+            onVoiceTap: { startRecording(.sendAsAudio) },
+            autofocusOnAppear: isFreshChat ?? false,
+            compact: !messages.isEmpty,
+            resetToken: composerResetToken
         )
-            .padding(.bottom, 6)
+            .opacity(recording == nil ? 1 : 0)
+            .allowsHitTesting(recording == nil)
+            .padding(.bottom, 12)
             .background(
                 LinearGradient(
                     colors: [Palette.background.opacity(0), Palette.background],
@@ -298,15 +328,127 @@ struct ChatDetailView: View {
 
     private func send() {
         let text = composerText
-        store.sendPrompt(chatId: chatId, text: text)
-        // iOS 26 SwiftUI bug: clearing the binding synchronously inside
-        // the button action while the TextField is focused can leave the
-        // UITextView display stale even though state is already empty.
-        // Deferring one run loop forces the visual reset.
-        DispatchQueue.main.async {
-            composerText = ""
+        let attachmentSnapshot = composerAttachments
+        // Clear synchronously so a second tap immediately sees an empty
+        // binding (canSend → false) and cannot fire a duplicate send.
+        // The composer also remounts its TextField on `composerResetToken`
+        // so the underlying UITextView never lingers with stale text.
+        composerText = ""
+        composerAttachments = []
+        composerResetToken &+= 1
+        // Encode JPEG bytes off-main; the bridge call back on the main
+        // actor only fires once we have all the wire payloads ready.
+        Task.detached(priority: .userInitiated) {
+            let wire = attachmentSnapshot.compactMap { $0.wireAttachment() }
+            await MainActor.run {
+                store.sendPrompt(chatId: chatId, text: text, attachments: wire)
+            }
         }
     }
+
+    // MARK: Recording flow
+
+    private func startRecording(_ purpose: RecordingOverlay.Purpose) {
+        guard recording == nil else { return }
+        Haptics.tap()
+        voiceRecorder.start()
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+            recording = ActiveRecording(purpose: purpose, phase: .recording)
+        }
+    }
+
+    private func cancelRecording() {
+        guard recording != nil else { return }
+        Haptics.tap()
+        transcriptionToken &+= 1
+        voiceRecorder.cancel()
+        withAnimation(.spring(response: 0.30, dampingFraction: 0.88)) {
+            recording = nil
+        }
+    }
+
+    // Square stop button. Mic flow runs the transcription animation
+    // (text lands in the composer for editing). Voice flow pauses the
+    // take so the user can keep talking when they hit play, send the
+    // captured audio with the up-arrow, or discard with the cancel
+    // pill above the capsule.
+    private func stopRecording(_ active: ActiveRecording) {
+        switch active.purpose {
+        case .transcribeToText:
+            beginTranscribing(autoSend: false)
+        case .sendAsAudio:
+            pauseRecording()
+        }
+    }
+
+    // Up-arrow send button. Both flows go through on-device
+    // transcription; the only difference is that mic mode hands the
+    // text back to the composer for editing while voice mode submits
+    // it as a chat prompt straight away.
+    private func sendRecording(_ active: ActiveRecording) {
+        switch active.purpose {
+        case .transcribeToText:
+            beginTranscribing(autoSend: true)
+        case .sendAsAudio:
+            beginTranscribing(autoSend: true)
+        }
+    }
+
+    private func pauseRecording() {
+        guard var current = recording, current.phase == .recording else { return }
+        voiceRecorder.pause()
+        current.phase = .paused
+        withAnimation(.spring(response: 0.30, dampingFraction: 0.88)) {
+            recording = current
+        }
+    }
+
+    private func resumeRecording() {
+        guard var current = recording, current.phase == .paused else { return }
+        Haptics.tap()
+        voiceRecorder.resume()
+        current.phase = .recording
+        withAnimation(.spring(response: 0.30, dampingFraction: 0.88)) {
+            recording = current
+        }
+    }
+
+    private func beginTranscribing(autoSend: Bool) {
+        guard var current = recording else { return }
+        guard current.phase == .recording || current.phase == .paused else { return }
+        current.phase = .transcribing
+        withAnimation(.spring(response: 0.30, dampingFraction: 0.88)) {
+            recording = current
+        }
+        transcriptionToken &+= 1
+        let token = transcriptionToken
+        voiceRecorder.stop { transcript in
+            guard token == transcriptionToken else { return }
+            guard recording?.phase == .transcribing else { return }
+            let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+            if autoSend && !trimmed.isEmpty {
+                composerText = trimmed
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                    recording = nil
+                }
+                send()
+            } else {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                    recording = nil
+                    if !trimmed.isEmpty {
+                        composerText = trimmed
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Recording overlay state owned by the chat. Equatable so the
+// `.animation(_:value:)` modifier can detect transitions cleanly.
+private struct ActiveRecording: Equatable {
+    var purpose: RecordingOverlay.Purpose
+    var phase: RecordingOverlay.Phase
 }
 
 // MARK: - Message rendering
