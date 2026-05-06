@@ -703,6 +703,7 @@ struct SidebarView: View {
                 CollapsibleSectionLabel(title: title,
                                         expanded: expanded.wrappedValue,
                                         hovered: projectsHeaderHovered,
+                                        trailingIconsActive: iconsVisible,
                                         chevronLeadingPadding: 2,
                                         leadingIcon: leadingIcon,
                                         trailingIconsClearance: trailingClearance)
@@ -1448,11 +1449,17 @@ private struct SectionDisclosureChevron: View {
 private struct CollapsibleSectionLabel: View {
     let title: LocalizedStringKey
     let expanded: Bool
-    /// Row-wide hover state owned by the parent header. Hairline retraction,
-    /// chevron reveal and label brightening all key off this single value so
-    /// the entire collapsible row (text, hairlines, trailing icon group)
-    /// shares one hover region instead of each piece tracking its own.
+    /// Row-wide hover state owned by the parent header. Chevron reveal and
+    /// label brightening key off this. `trailingIconsActive` (which also
+    /// stays true while a header dropdown is open) drives the right hairline
+    /// retraction so the bar doesn't snap back under still-visible icons
+    /// when the cursor enters a popup.
     let hovered: Bool
+    /// True when the trailing action icons are visible — i.e. hover OR an
+    /// anchored dropdown is open. Drives the right hairline retraction
+    /// only; the chevron and label color stay keyed to `hovered` so the
+    /// disclosure arrow still hides on hover-out.
+    var trailingIconsActive: Bool? = nil
     var chevronLeadingPadding: CGFloat = 2
     var leadingIcon: AnyView? = nil
     /// On hover, retract the right hairline by this many points to clear
@@ -1486,6 +1493,7 @@ private struct CollapsibleSectionLabel: View {
                         .scaleEffect(expanded ? 0 : 1, anchor: .center)
                         .opacity(expanded ? 0 : 1)
                         .animation(.easeOut(duration: 0.16), value: expanded)
+                        .offset(y: 0.5)
                     SectionTitleHairline(visible: expanded, anchor: .trailing)
                 }
                 .frame(width: 15, height: 15, alignment: .center)
@@ -1502,14 +1510,21 @@ private struct CollapsibleSectionLabel: View {
                 // back smoothly. Without the delay the line visibly crosses
                 // still-fading icons; with too short a duration after the
                 // delay it reads as a snap, not an animation.
+                let trailingActive = trailingIconsActive ?? hovered
                 SectionTitleHairline(visible: expanded, anchor: .leading)
                     .padding(.leading, hovered ? chevronLeadingPadding + 10 : 0)
-                    .padding(.trailing, hovered ? trailingIconsClearance : 0)
                     .animation(
                         hovered
                             ? .timingCurve(0.16, 1, 0.3, 1, duration: 0.18)
                             : .timingCurve(0.16, 1, 0.3, 1, duration: 0.26).delay(0.10),
                         value: hovered
+                    )
+                    .padding(.trailing, trailingActive ? trailingIconsClearance : 0)
+                    .animation(
+                        trailingActive
+                            ? .timingCurve(0.16, 1, 0.3, 1, duration: 0.18)
+                            : .timingCurve(0.16, 1, 0.3, 1, duration: 0.26).delay(0.10),
+                        value: trailingActive
                     )
                 SectionDisclosureChevron(expanded: expanded, hovered: hovered)
                     .offset(x: chevronLeadingPadding - 11)
