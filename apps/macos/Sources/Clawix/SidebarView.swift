@@ -1823,7 +1823,12 @@ private struct ProjectAccordion: View, Equatable {
                         spacing: SidebarRowMetrics.projectChatSpacing
                     )
             ) {
-                VStack(alignment: .leading, spacing: 3) {
+                // `LazyVStack` so a project with many chats doesn't pay
+                // for instantiating off-screen rows. The accordion's
+                // `targetHeight` provides the bounded frame, and the
+                // surrounding `ThinScrollView` is the scroll context that
+                // actually drives lazy materialisation.
+                LazyVStack(alignment: .leading, spacing: 3) {
                     if chats.isEmpty {
                         HStack(spacing: 6) {
                             if loading {
