@@ -218,6 +218,9 @@ struct SidebarChatContextMenuContent: View {
         case "pencil":
             PencilIconView(color: MenuStyle.rowIcon, lineWidth: 1.0)
                 .frame(width: 11, height: 11)
+        case "doc.on.doc":
+            CopyIconViewSquircle(color: MenuStyle.rowIcon, lineWidth: 1.0)
+                .frame(width: 11, height: 11)
         case "circle.fill":
             // Unread dot uses the same pastel blue as the sidebar indicator
             // so the menu reads as "this is the unread state".
