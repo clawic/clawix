@@ -1476,7 +1476,6 @@ struct RecentChatRow: View, Equatable {
     @State private var hovered = false
     @State private var pinHovered = false
     @State private var archiveHovered = false
-    @State private var unarchiveHovered = false
 
     /// Closures are deliberately excluded from equality: they are recreated
     /// every parent render but capture `appState` (a stable reference) and
@@ -1515,7 +1514,7 @@ struct RecentChatRow: View, Equatable {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .onHover { archiveHovered = $0 }
+                .sidebarHover { archiveHovered = $0 }
                 .help(L10n.t("Archive"))
                 .padding(.trailing, 2)
                 .transition(.opacity)
@@ -1563,7 +1562,7 @@ struct RecentChatRow: View, Equatable {
             Spacer(minLength: 8)
             trailingStatusView
         }
-        .padding(.leading, 10 + indent)
+        .padding(.leading, 8 + indent)
         .padding(.trailing, 9)
         .padding(.vertical, 7)
         .contentShape(Rectangle())
@@ -1634,12 +1633,11 @@ struct RecentChatRow: View, Equatable {
 
     private func unarchiveButton() -> some View {
         Button(action: callbacks.onUnarchive) {
-            ArchiveUnarchiveMorphIcon(size: 15.5, hovered: unarchiveHovered)
+            ArchiveUnarchiveMorphIcon(size: 15.5, hovered: hovered)
                 .frame(width: 14, height: 14)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { unarchiveHovered = $0 }
         .help(L10n.t("Unarchive"))
     }
 
