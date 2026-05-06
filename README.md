@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./media/readme-banner.webp" alt="Clawix — Native macOS client for Codex">
+  <img src="./media/readme-banner.webp" alt="Clawix, the open-source interface for agents">
 </p>
 
 # Clawix
@@ -11,12 +11,25 @@
 >
 > Use it only for local evaluation, ideally on an isolated machine, VM, or sandboxed environment. Assume things can fail, data can break, and migrations may not exist yet.
 
-Clawix is a native macOS client (SwiftUI) for the [`codex`](https://github.com/openai/codex) CLI. It reads `~/.codex/auth.json`, drives `codex login` / `logout`, and connects to the JSON-RPC app-server the CLI exposes for threads, messages, and events.
+Clawix is a native client for the [`codex`](https://github.com/openai/codex) CLI. It reads `~/.codex/auth.json`, drives `codex login` / `logout`, and connects to the JSON-RPC app-server the CLI exposes for threads, messages, and events. The macOS app ships today, with an iOS companion on the way.
 
-This repository is a monorepo. Apps live under `apps/`:
+This repository is a monorepo. Apps live under `apps/`.
 
-- `apps/macos/` — macOS client (this is what currently exists).
-- `apps/ios/` — iOS client (placeholder for a future port).
+## macOS app
+
+<p align="center">
+  <img src="./media/readme-mac-mockup.webp" alt="Clawix on macOS, chat with file references and composer">
+</p>
+
+Native SwiftUI client. Project sidebar with chat history and inline search, file references for `apply_patch` operations, model picker, native chrome, signed and notarized builds with [Sparkle](https://sparkle-project.org) self-updates. Source under [`apps/macos/`](./apps/macos).
+
+## iOS app
+
+<p align="center">
+  <img src="./media/readme-mobile-mockup.webp" alt="Clawix iOS companion, projects sidebar and chat detail" width="640">
+</p>
+
+A native iOS companion is on the way. It pairs with the Mac over a local bridge so projects, chats and streaming history stay in sync. Pick up a thread on the phone, keep typing on the Mac. Source under [`apps/ios/`](./apps/ios).
 
 ## Download
 
@@ -79,3 +92,13 @@ The Clawix name, logo, app icon, custom icons, custom typefaces, SVG marks,
 brand assets, screenshots, marketing assets, and visual identity are reserved
 and are not licensed under MIT. See [NOTICE](./NOTICE) and
 [TRADEMARKS.md](./TRADEMARKS.md).
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=clawic%2Fclawix&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=clawic/clawix&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=clawic/clawix&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=clawic/clawix&type=date&legend=top-left" />
+ </picture>
+</a>
