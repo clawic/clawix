@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Hardened-runtime entitlements for the notarized release build.
+
+        audio-input: required by AVCaptureDevice and AVAudioEngine when
+        the binary is signed with `--options runtime`. Without this
+        entitlement the audio tap on the input node returns silence even
+        if the user granted Microphone access in System Settings.
+    -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>

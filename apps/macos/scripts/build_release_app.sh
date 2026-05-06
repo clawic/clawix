@@ -247,11 +247,14 @@ if [[ -f "$HELPER_BIN" ]]; then
 fi
 
 echo "==> Signing app binary + bundle (identity: $DEVELOPER_ID_IDENTITY)"
+ENTITLEMENTS_FILE="${SCRIPT_DIR:-$(dirname "$0")}/Clawix.entitlements"
 codesign --force --options runtime --timestamp \
+         --entitlements "$ENTITLEMENTS_FILE" \
          --sign "$DEVELOPER_ID_IDENTITY" \
          "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}"
 
 codesign --force --options runtime --timestamp \
+         --entitlements "$ENTITLEMENTS_FILE" \
          --sign "$DEVELOPER_ID_IDENTITY" \
          --identifier "$BUNDLE_ID" \
          "$BUNDLE_DIR"
