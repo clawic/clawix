@@ -10,9 +10,16 @@ struct ToolGroupView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // Currently-running commands: render each one verbatim with
-            // the live "Running" prefix so the user can read what
-            // Clawix is doing right now.
+            // Chronological order: completed items happened first (they
+            // had to finish before the next one could start in Codex's
+            // sequential tool flow), so their aggregate rows go on top.
+            // The currently-running command is the freshest action and
+            // always renders at the bottom of the group, matching how
+            // the user mentally appends "what Clawix is doing right now"
+            // below "what Clawix already did".
+            ForEach(aggregateRows) { row in
+                aggregateRow(row)
+            }
             ForEach(runningCommands) { item in
                 if case .command(let text, _) = item.kind, let cmd = text, !cmd.isEmpty {
                     inlineRow(
@@ -20,12 +27,6 @@ struct ToolGroupView: View {
                         body: cmd
                     )
                 }
-            }
-            // Everything else (completed commands, file changes, web,
-            // tool calls, image gen/view) collapses into one or more
-            // aggregate rows the way Clawix does.
-            ForEach(aggregateRows) { row in
-                aggregateRow(row)
             }
         }
     }
@@ -84,6 +85,12 @@ struct ToolGroupView: View {
         var dynamicTools: [String] = []
         var imageGenerations = 0
         var imageViews = 0
+        // browser-use plugin: count `js` calls that drove the in-app
+        // browser separately from plain Node REPL calls (setup, errors,
+        // js_reset). One row per bucket; jsReset folds into the REPL one
+        // because Codex's UI doesn't surface it as its own pill.
+        var jsBrowserCount = 0
+        var jsReplCount = 0
 
         for item in items {
             switch item.kind {
@@ -118,6 +125,12 @@ struct ToolGroupView: View {
                 imageGenerations += 1
             case .imageView:
                 imageViews += 1
+            case .jsCall(_, .browser):
+                jsBrowserCount += 1
+            case .jsCall(_, .repl):
+                jsReplCount += 1
+            case .jsReset:
+                jsReplCount += 1
             }
         }
 
@@ -159,11 +172,38 @@ struct ToolGroupView: View {
                 text: L10n.modifiedFiles(fileChanges)
             ))
         }
-        if browserUsed {
+        // "Used the browser" pill. Backed both by the legacy `browserUsed`
+        // flag (older `dynamicTool` shape from MCP integrations that
+        // returned a screenshot) and the new `jsBrowserCount` from the
+        // browser-use plugin classifier. When several `js` calls in the
+        // same tools group all drove the browser the row counts them as
+        // `Used the browser N times`, matching how MCP rows already work.
+        let totalBrowser = jsBrowserCount + (browserUsed ? 1 : 0)
+        if totalBrowser > 0 {
+            let text: String
+            if totalBrowser <= 1 {
+                text = String(localized: "Used the browser", bundle: AppLocale.bundle, locale: AppLocale.current)
+            } else {
+                text = L10n.usedToolTimes("the browser", totalBrowser)
+            }
             rows.append(AggregateRow(
                 id: "browser",
                 icon: "clawix.cursor",
-                text: String(localized: "Used the browser", bundle: AppLocale.bundle, locale: AppLocale.current)
+                text: text
+            ))
+        }
+        // "Used Node Repl" pill. Plain JS REPL invocations and js_reset
+        // events both land here so a run of `Used Node Repl` reads as one
+        // counted row (Codex's UI does the same: `js_reset` doesn't get
+        // its own pill).
+        if jsReplCount > 0 {
+            let text = jsReplCount <= 1
+                ? L10n.usedTool("Node Repl")
+                : L10n.usedToolTimes("Node Repl", jsReplCount)
+            rows.append(AggregateRow(
+                id: "nodeRepl",
+                icon: "command",
+                text: text
             ))
         }
         if webSearchCount > 0 {
@@ -237,6 +277,13 @@ struct ToolGroupView: View {
                 case "clawix.folderStack":
                     FolderStackIcon(size: 17)
                         .offset(y: 3.5)
+                case "command":
+                    // `⌘` glyph for `Used Node Repl`, mirroring Codex's
+                    // own UI. SF Symbol's `command` is Apple's canonical
+                    // mark; rendering at 13pt medium matches the visual
+                    // weight of the other custom icons in this row set.
+                    Image(systemName: "command")
+                        .font(.system(size: 13, weight: .medium))
                 default:
                     Image(systemName: row.icon)
                         .font(BodyFont.system(size: 11.5))

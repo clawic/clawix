@@ -93,6 +93,27 @@ extension WorkItem {
             return WireWorkItem(id: id, kind: "imageGeneration", status: status)
         case .imageView:
             return WireWorkItem(id: id, kind: "imageView", status: status)
+        case .jsCall, .jsReset:
+            // The daemon's wire schema still describes browser-use as MCP
+            // calls against the synthetic `node_repl` server. Round-trip
+            // to that shape so persisted state and the daemon stay in
+            // sync until the bridge gains a dedicated discriminator. The
+            // flavour (browser vs repl) is recomputed from the rollout
+            // when the chat is rehydrated, so dropping it on the way out
+            // is harmless: the live timeline already painted the right
+            // pill, and any reload fetches the JS code straight from
+            // disk and reclassifies.
+            let tool: String = {
+                if case .jsReset = kind { return "js_reset" }
+                return "js"
+            }()
+            return WireWorkItem(
+                id: id,
+                kind: "mcpTool",
+                status: status,
+                mcpServer: "node_repl",
+                mcpTool: tool
+            )
         }
     }
 }

@@ -151,6 +151,19 @@ enum WorkItemKind: Equatable {
     case dynamicTool(name: String)
     case imageGeneration
     case imageView
+    /// One `js` invocation against the Codex Node REPL plugin
+    /// (`browser-use@openai-bundled`). `flavor` records whether the JS
+    /// drove the in-app browser (`tab.*`, `agent.browser.*`, …) or was a
+    /// plain REPL block / errored before reaching the browser API.
+    case jsCall(title: String?, flavor: JSCallFlavor)
+    /// Standalone `js_reset` invocation that re-initialises the Node REPL
+    /// runtime. Always grouped with REPL flavour calls in the timeline.
+    case jsReset
+}
+
+enum JSCallFlavor: Equatable {
+    case browser
+    case repl
 }
 
 enum CommandActionKind: String, Equatable {
@@ -171,6 +184,13 @@ enum TimelineFamily: Equatable {
     /// `Used Revenuecat` calls collapse, but `Used Revenuecat` followed
     /// by `Used Linear` does not.
     case mcpTool(server: String)
+    /// Node REPL calls that DROVE the in-app browser. Kept separate from
+    /// `.jsRepl` so a run of `Used the browser` pills doesn't get glued
+    /// to a trailing setup/error call rendered as `Used Node Repl`.
+    case jsBrowser
+    /// Plain Node REPL calls (setup, recovery, REPL-only JS) AND
+    /// `js_reset` events. The reset is always REPL-flavour by definition.
+    case jsRepl
     case other
 
     static func from(_ kind: WorkItemKind) -> TimelineFamily {
@@ -179,6 +199,9 @@ enum TimelineFamily: Equatable {
         case .fileChange:             return .fileChange
         case .webSearch:              return .webSearch
         case .mcpTool(let server, _): return .mcpTool(server: server)
+        case .jsCall(_, .browser):    return .jsBrowser
+        case .jsCall(_, .repl):       return .jsRepl
+        case .jsReset:                return .jsRepl
         default:                      return .other
         }
     }
@@ -2215,6 +2238,9 @@ final class AppState: ObservableObject {
               let idx = chats.firstIndex(where: { $0.id == id }),
               let msg = chatMessage(from: message)
         else { return }
+        // The daemon's wire message is authoritative; any locally
+        // buffered delta would double-append on top of it.
+        dropPendingAssistantText(chatId: id)
         if let existing = chats[idx].messages.firstIndex(where: { $0.id == msg.id }) {
             chats[idx].messages[existing] = msg
         } else {

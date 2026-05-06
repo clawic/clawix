@@ -129,6 +129,13 @@ enum RolloutReader {
         // prefer the end event because it carries `parsed_cmd`, but if
         // the file is truncated we still surface the start.
         var seenCallIds = Set<String>()
+        // For `name == "js"` function_calls we need both the input
+        // arguments (which carry `code` and `title`) and the
+        // mcp_tool_call_end result (which carries the success/error
+        // payload used to refine the browser/repl flavour). The two
+        // events arrive in order on the same call_id, so we stash the
+        // function_call payload here and resolve at mcp_tool_call_end.
+        var pendingJS: [String: PendingJSCall] = [:]
         // cwd captured from `session_meta`. Used to resolve relative
         // paths emitted by `apply_patch` (the new custom_tool_call shape
         // writes paths like `cualquiera.md`, not absolute) so the
@@ -228,16 +235,34 @@ enum RolloutReader {
 
             case ("response_item", "function_call"):
                 let name = payload["name"] as? String ?? ""
-                guard name == "exec_command" else { continue }
-                // call_id sits at the payload top level; the inner
-                // `arguments` JSON only carries cmd/workdir/etc.
                 let callId = payload["call_id"] as? String ?? UUID().uuidString
-                if seenCallIds.contains(callId) { continue }
-                if pending == nil {
-                    pending = PendingAssistant(timestamp: timestamp)
+                switch name {
+                case "exec_command":
+                    if seenCallIds.contains(callId) { continue }
+                    if pending == nil {
+                        pending = PendingAssistant(timestamp: timestamp)
+                    }
+                    pending?.appendCommand(id: callId, text: nil, actions: [])
+                    seenCallIds.insert(callId)
+                case "js":
+                    // Stash the args; the mcp_tool_call_end branch is
+                    // where we actually emit the WorkItem (so we can
+                    // factor the success/error result into the flavour).
+                    let parsed = decodeJSArguments(payload["arguments"])
+                    pendingJS[callId] = PendingJSCall(
+                        title: parsed.title,
+                        code: parsed.code,
+                        isReset: false
+                    )
+                case "js_reset":
+                    pendingJS[callId] = PendingJSCall(
+                        title: nil,
+                        code: "",
+                        isReset: true
+                    )
+                default:
+                    continue
                 }
-                pending?.appendCommand(id: callId, text: nil, actions: [])
-                seenCallIds.insert(callId)
 
             case ("event_msg", "patch_apply_end"):
                 let callId = payload["call_id"] as? String ?? UUID().uuidString
@@ -323,11 +348,33 @@ enum RolloutReader {
                 if pending == nil {
                     pending = PendingAssistant(timestamp: timestamp)
                 }
+                // The browser-use plugin runs every call (including
+                // js_reset) through the synthetic `node_repl` MCP server.
+                // Route those by JS-flavour classification so the timeline
+                // reads `Used the browser` / `Used Node Repl` exactly the
+                // way Codex's own UI does. Other MCP servers fall through
+                // to the legacy image-aware path below.
+                if server == "node_repl" {
+                    let pendingCall = pendingJS.removeValue(forKey: callId)
+                    let kind: WorkItemKind
+                    if tool == "js_reset" || pendingCall?.isReset == true {
+                        kind = .jsReset
+                    } else {
+                        let flavor = classifyJSCall(
+                            code: pendingCall?.code ?? "",
+                            result: payload["result"]
+                        )
+                        kind = .jsCall(title: pendingCall?.title, flavor: flavor)
+                    }
+                    pending?.appendOther(
+                        WorkItem(id: callId, kind: kind, status: .completed)
+                    )
+                    continue
+                }
                 // Clawix relabels MCP calls whose result carries a screenshot
-                // as "navegador" usage (the browser-use plugin pipes a
-                // playwright screenshot back through node_repl). Detect that
-                // shape and emit a dynamicTool so the renderer says
-                // "Se han usado the browser" instead of "Node Repl · js".
+                // as "navegador" usage. Kept as a defensive fallback for
+                // older or third-party MCP integrations that piped a
+                // screenshot back through a non-`node_repl` server name.
                 let kind: WorkItemKind
                 if mcpResultHasImage(payload["result"]) {
                     kind = .dynamicTool(name: "the browser")
@@ -425,6 +472,109 @@ enum RolloutReader {
             paths.append(path)
         }
         return paths
+    }
+
+    /// In-flight `js` / `js_reset` function_call captured from the
+    /// rollout while we wait for its paired `mcp_tool_call_end`. Holds
+    /// the args we'll need at emission time (the `code` for browser-API
+    /// substring matching, the title for any future expand-to-detail UI).
+    fileprivate struct PendingJSCall {
+        let title: String?
+        let code: String
+        let isReset: Bool
+    }
+
+    /// Decode the `arguments` blob of a `js` function_call into title +
+    /// code. The CLI always serialises arguments as a JSON-encoded
+    /// string at the payload top level, so we double-decode here. Any
+    /// malformed shape collapses to an empty result so the WorkItem
+    /// still renders (just without a title and unable to discriminate
+    /// flavour by code substrings).
+    fileprivate static func decodeJSArguments(_ raw: Any?) -> (title: String?, code: String) {
+        guard let str = raw as? String,
+              let data = str.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return (nil, "")
+        }
+        let title = (obj["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        let code = obj["code"] as? String ?? ""
+        return (title, code)
+    }
+
+    /// Decide whether a single `js` invocation drove the in-app browser
+    /// (Playwright / agent.browser API / setup of the browser-use
+    /// runtime) or was a plain Node REPL block — including failed calls
+    /// that errored before reaching browser code. Mirrors the heuristic
+    /// Codex's official UI uses to label each call as `Used the browser`
+    /// vs `Used Node Repl`.
+    fileprivate static func classifyJSCall(code: String, result: Any?) -> JSCallFlavor {
+        // Errored calls (`'snap' has already been declared`, `Tab N is
+        // not part of browser session`, kernel timeouts, etc.) go to the
+        // REPL bucket even when their `code` would normally tag them as
+        // browser. Codex's UI does the same: a JS error throws away the
+        // browser-call framing because no browser work actually landed.
+        if jsResultLooksLikeError(result) {
+            return .repl
+        }
+        if codeUsesBrowserAPI(code) {
+            return .browser
+        }
+        return .repl
+    }
+
+    /// Substrings that, when present in a `js` invocation's `code`,
+    /// signal the call drove the in-app browser. Kept narrow on purpose
+    /// — every entry maps to a real method on `tab.*` / `agent.browser.*`
+    /// or to the bootstrap path (`setupAtlasRuntime`, the plugin client
+    /// import). Add new entries when the plugin grows API surface.
+    private static let browserAPISubstrings: [String] = [
+        "tab.goto", "tab.playwright", "tab.cua", "tab.dom_cua",
+        "tab.clipboard", "tab.dev",
+        "tab.url(", "tab.title(",
+        "tab.back(", "tab.forward(", "tab.reload(", "tab.close(",
+        "agent.browser",
+        "browser-client.mjs",
+        "setupAtlasRuntime"
+    ]
+
+    private static func codeUsesBrowserAPI(_ code: String) -> Bool {
+        guard !code.isEmpty else { return false }
+        return browserAPISubstrings.contains { code.contains($0) }
+    }
+
+    /// Common JS REPL error / control messages that indicate the call
+    /// failed before reaching the browser. These are the verbatim
+    /// strings the `node_repl` MCP server returns inside `result.Ok.content[0].text`
+    /// when the runtime throws or the browser session is unreachable.
+    private static let jsErrorMarkers: [String] = [
+        "is not defined",
+        "already been declared",
+        "No active Codex browser",
+        "is not part of browser session",
+        "js execution timed out",
+        "kernel reset",
+        "ReferenceError",
+        "SyntaxError",
+        "TypeError"
+    ]
+
+    /// True when an `mcp_tool_call_end` result for `node_repl` looks like
+    /// a JS error rather than a successful browser/REPL call. We only
+    /// treat very short text-only bodies as errors — long output (DOM
+    /// snapshots, JSON dumps) and multi-item content (text + screenshot
+    /// image) are always success.
+    private static func jsResultLooksLikeError(_ raw: Any?) -> Bool {
+        guard let result = raw as? [String: Any] else { return false }
+        let payload = (result["Ok"] as? [String: Any])
+                   ?? (result["Err"] as? [String: Any])
+                   ?? result
+        guard let content = payload["content"] as? [[String: Any]] else { return false }
+        if content.count != 1 { return false }
+        guard let first = content.first,
+              (first["type"] as? String) == "text",
+              let text = first["text"] as? String else { return false }
+        if text.count > 1500 { return false }
+        return jsErrorMarkers.contains { text.contains($0) }
     }
 
     /// True when an mcp_tool_call_end result carries an image item. Clawix
