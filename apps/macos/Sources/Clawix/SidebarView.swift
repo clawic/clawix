@@ -134,6 +134,7 @@ struct SidebarView: View {
                 SidebarAccordion(
                     expanded: pinnedExpanded,
                     targetHeight: CGFloat(snapshot.pinned.count) * 32 + 8
+                        + SidebarRowMetrics.sectionEdgePadding
                 ) {
                     PinnedReorderableList(
                         appState: appState,
@@ -144,22 +145,22 @@ struct SidebarView: View {
                     .padding(.leading, 8)
                     .padding(.trailing, 0)
                 }
-                AnimatedSidebarDivider(visible: pinnedExpanded)
             }
 
             if organizationMode == .chronological {
                 chronoHeader
-                    .padding(.leading, 18)
+                    .padding(.leading, 16)
                     .padding(.trailing, 9)
                     .padding(.top, 6)
                     .padding(.bottom, 4)
-                    .onHover { projectsHeaderHovered = $0 }
+                    .sidebarHover { projectsHeaderHovered = $0 }
                 let chronoCount = min(snapshot.chrono.count, chronoLimit)
                 SidebarAccordion(
                     expanded: chronoExpanded,
                     targetHeight: snapshot.chrono.isEmpty
                         ? 26
                         : SidebarRowMetrics.recentChats(count: chronoCount)
+                            + SidebarRowMetrics.sectionEdgePadding
                 ) {
                     VStack(alignment: .leading, spacing: 2) {
                         if snapshot.chrono.isEmpty {
@@ -183,7 +184,6 @@ struct SidebarView: View {
                     }
                     .padding(.leading, 8)
                 }
-                AnimatedSidebarDivider(visible: chronoExpanded)
             } else {
                 let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
                 if !projectlessChats.isEmpty {
@@ -198,6 +198,7 @@ struct SidebarView: View {
                     SidebarAccordion(
                         expanded: noProjectExpanded,
                         targetHeight: SidebarRowMetrics.recentChats(count: projectlessChats.count)
+                            + SidebarRowMetrics.sectionEdgePadding
                     ) {
                         let currentChatId = selectedChatId
                         VStack(alignment: .leading, spacing: 2) {
@@ -213,11 +214,10 @@ struct SidebarView: View {
                         }
                         .padding(.leading, 8)
                     }
-                    AnimatedSidebarDivider(visible: noProjectExpanded)
                 }
 
                 projectsHeader
-                    .padding(.leading, 18)
+                    .padding(.leading, 16)
                     .padding(.trailing, 9)
                     .padding(.top, 6)
                     .padding(.bottom, 4)
@@ -272,7 +272,6 @@ struct SidebarView: View {
                     .padding(.leading, 8)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
-                AnimatedSidebarDivider(visible: projectsExpanded)
             }
 
             archivedSection
@@ -307,6 +306,7 @@ struct SidebarView: View {
             targetHeight: appState.archivedChats.isEmpty
                 ? 26
                 : SidebarRowMetrics.recentChats(count: appState.archivedChats.count)
+                    + SidebarRowMetrics.sectionEdgePadding
         ) {
             VStack(alignment: .leading, spacing: 2) {
                 if appState.archivedChats.isEmpty {
@@ -337,7 +337,6 @@ struct SidebarView: View {
             }
             .padding(.leading, 8)
         }
-        AnimatedSidebarDivider(visible: archivedExpanded)
     }
 
     var body: some View {
@@ -376,14 +375,6 @@ struct SidebarView: View {
                 .padding(.leading, 6)
                 .padding(.trailing, 22)
                 .padding(.top, 6)
-
-                Rectangle()
-                    .fill(Color.white.opacity(0.06))
-                    .frame(height: 1)
-                    .padding(.leading, 18)
-                    .padding(.trailing, 22)
-                    .padding(.top, 8)
-                    .padding(.bottom, 6)
 
                 // Legacy mode reserves the scroller's 14pt column outside
                 // the clipView, so the gutter only needs the small breathing
@@ -531,34 +522,14 @@ struct SidebarView: View {
         expanded: Binding<Bool>,
         leadingIcon: AnyView? = nil
     ) -> some View {
-        let isExpanded = expanded.wrappedValue
-        let leadingPadding: CGFloat = leadingIcon != nil ? 18 : 22
-        return Button(action: {
-            withAnimation(SidebarSection.toggleAnimation) { expanded.wrappedValue.toggle() }
-        }) {
-            HStack(spacing: 0) {
-                CollapsibleSectionLabel(
-                    title: title,
-                    expanded: isExpanded,
-                    leadingIcon: leadingIcon
-                )
-                Spacer()
-            }
-            .frame(height: 24)
-            .padding(.leading, leadingPadding)
-            .padding(.trailing, 11)
-            .padding(.top, 6)
-            .padding(.bottom, 4)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        BasicSectionHeader(title: title, expanded: expanded, leadingIcon: leadingIcon)
     }
 
     private var projectsHeader: some View {
         sidebarHeader(title: "Projects",
                       showCollapseAll: true,
                       showNewChat: false,
-                      leadingIcon: AnyView(FolderMorphIcon(size: 13.5, progress: 0, lineWidthScale: 0.82)),
+                      leadingIcon: AnyView(FolderMorphIcon(size: 14.5, progress: 0, lineWidthScale: 1.027)),
                       expanded: $projectsExpanded)
     }
 
@@ -566,7 +537,6 @@ struct SidebarView: View {
         sidebarHeader(title: "All chats",
                       showCollapseAll: false,
                       showNewChat: true,
-                      alwaysShow: true,
                       leadingIcon: AnyView(
                           Image(systemName: "bubble.left")
                               .font(BodyFont.system(size: 11, weight: .regular))
@@ -594,12 +564,22 @@ struct SidebarView: View {
             guard let expanded else { return }
             withAnimation(SidebarSection.toggleAnimation) { expanded.wrappedValue.toggle() }
         }
+        // Each action icon is laid out in a 22pt slot with 2pt spacing.
+        // `organize` and `new-project` are always present, the other two
+        // are gated by their respective flags.
+        let iconCount = (showCollapseAll ? 1 : 0) + 2 + (showNewChat ? 1 : 0)
+        let iconsWidth = CGFloat(iconCount) * 22 + CGFloat(max(iconCount - 1, 0)) * 2
+        // Trailing clearance leaves a 6pt visual gap between the right
+        // hairline and the leading edge of the icon group when hovered.
+        let trailingClearance: CGFloat = iconsWidth + 6
         HStack(spacing: 4) {
             if let expanded {
                 CollapsibleSectionLabel(title: title,
                                         expanded: expanded.wrappedValue,
+                                        hovered: projectsHeaderHovered,
                                         chevronLeadingPadding: 2,
-                                        leadingIcon: leadingIcon)
+                                        leadingIcon: leadingIcon,
+                                        trailingIconsClearance: trailingClearance)
             } else {
                 HStack(spacing: 0) {
                     if let leadingIcon {
@@ -612,8 +592,28 @@ struct SidebarView: View {
                         .font(BodyFont.system(size: 13.5, weight: .light))
                         .foregroundColor(Color(white: 0.88))
                 }
+                Spacer()
             }
-            Spacer()
+        }
+        .frame(height: 24)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if expanded != nil { toggle() }
+        }
+        // Action icons live as a trailing overlay so they don't reserve
+        // layout space when invisible: the right hairline inside the
+        // label fills the row to its trailing edge, then animates a
+        // trailing inset on hover to clear the icons that fade in.
+        // Each icon fades in with its own staggered delay so the group
+        // cascades after the chevron; on hover-out they all clear at
+        // once via the disappear branch of `hoverStaggerFade`.
+        .overlay(alignment: .trailing) {
+            let firstDelay = SidebarSection.trailingIconsFirstDelay
+            let stagger = SidebarSection.trailingIconsStagger
+            let collapseAllDelay = firstDelay
+            let organizeDelay = firstDelay + Double(showCollapseAll ? 1 : 0) * stagger
+            let newProjectDelay = firstDelay + Double(showCollapseAll ? 2 : 1) * stagger
+            let newChatDelay = firstDelay + Double(showCollapseAll ? 3 : 2) * stagger
             HStack(spacing: 2) {
                 if showCollapseAll {
                     let allCollapsed = expandedProjects.isEmpty
@@ -630,8 +630,10 @@ struct SidebarView: View {
                         .foregroundColor(color)
                         .frame(width: 22, height: 22)
                     }
+                    .hoverStaggerFade(visible: iconsVisible, appearDelay: collapseAllDelay)
                 }
                 organizeButton
+                    .hoverStaggerFade(visible: iconsVisible, appearDelay: organizeDelay)
                 HeaderHoverIcon(tooltip: "Add new project") {
                     newProjectMenuOpen.toggle()
                 } label: { color in
@@ -641,6 +643,7 @@ struct SidebarView: View {
                         .contentShape(Rectangle())
                 }
                 .anchorPreference(key: NewProjectAnchorKey.self, value: .bounds) { $0 }
+                .hoverStaggerFade(visible: iconsVisible, appearDelay: newProjectDelay)
                 if showNewChat {
                     HeaderHoverIcon(tooltip: "New chat") {
                         appState.currentRoute = .home
@@ -651,16 +654,10 @@ struct SidebarView: View {
                             .frame(width: 11.2, height: 11.2)
                             .frame(width: 22, height: 22)
                     }
+                    .hoverStaggerFade(visible: iconsVisible, appearDelay: newChatDelay)
                 }
             }
-            .opacity(iconsVisible ? 1 : 0)
             .disabled(!iconsVisible)
-            .animation(.easeOut(duration: 0.12), value: iconsVisible)
-        }
-        .frame(height: 24)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if expanded != nil { toggle() }
         }
     }
 
@@ -795,7 +792,7 @@ private struct SettingsBottomButton: View {
             open.toggle()
         } label: {
             HStack(spacing: 11) {
-                SettingsIcon(size: 19)
+                SettingsIcon(size: 19, lineWidth: 0.7)
                     .frame(width: 20)
                     .foregroundColor(open ? .white : Color(white: 0.78))
                 Text("Settings")
@@ -812,7 +809,7 @@ private struct SettingsBottomButton: View {
             )
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
         .accessibilityLabel("Settings")
         .accessibilityAddTraits(open ? .isSelected : [])
     }
@@ -1078,7 +1075,7 @@ private struct SettingsAccountRow: View {
             .background(MenuRowHover(active: hovered))
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
         .disabled(action == nil)
     }
 }
@@ -1116,8 +1113,8 @@ private struct SidebarButton: View {
                     if let shape = customShape {
                         shape
                             .stroke(iconColor,
-                                    style: StrokeStyle(lineWidth: 1.15, lineCap: .round, lineJoin: .round))
-                            .frame(width: 11.3, height: 11.3)
+                                    style: StrokeStyle(lineWidth: customShapeStroke, lineCap: .round, lineJoin: .round))
+                            .frame(width: customShapeSize, height: customShapeSize)
                             .frame(width: 15, height: 15)
                     } else {
                         Image(systemName: icon)
@@ -1251,28 +1248,41 @@ enum SidebarSection {
     /// end. Decoupled from `toggleAnimation` on purpose: the section
     /// height keeps a softer in-out, the chevron reads as more crisp.
     static let chevronRotation: Animation = .timingCurve(0.16, 1, 0.3, 1, duration: 0.22)
+    /// Hover fade-in for the disclosure chevron. Small delay on appear
+    /// so the arrow doesn't flash in the instant the cursor lands; fade
+    /// out is immediate so the row clears as soon as hover ends.
+    static let chevronHoverAppearDelay: Double = 0.06
+    static let chevronHoverFadeIn: Animation = .easeOut(duration: 0.14)
+    static let chevronHoverFadeOut: Animation = .easeOut(duration: 0.10)
+    /// Trailing action icons cascade in after the chevron and fade out
+    /// together without delay.
+    static let trailingIconsFirstDelay: Double = 0.16
+    static let trailingIconsStagger: Double = 0.05
+    static let trailingIconsFadeIn: Animation = .easeOut(duration: 0.14)
+    static let trailingIconsFadeOut: Animation = .easeOut(duration: 0.10)
 }
 
-/// Hairline that appears above and below an expanded sidebar section.
-/// Snapped to instant on open/close so the row reveal stays in lockstep
-/// with the rest of the section. Trailing padding is `8` (not `22`) to
-/// land at the same x as the top hairline below the search row: the
-/// scroll wrapper that hosts these dividers already adds a 14pt trailing
-/// gutter for the scrollbar, so 14 + 8 = 22 matches the chrome edge.
-private struct AnimatedSidebarDivider: View {
+/// Hover fade with an optional delay only on appear; on disappear the
+/// fade is immediate so a group of staggered icons clears at once.
+private struct HoverStaggerFade: ViewModifier {
     let visible: Bool
+    let appearDelay: Double
+    var fadeIn: Animation = SidebarSection.trailingIconsFadeIn
+    var fadeOut: Animation = SidebarSection.trailingIconsFadeOut
 
-    var body: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.06))
-            .frame(height: visible ? 1 : 0)
-            .scaleEffect(x: visible ? 1 : 0, y: 1, anchor: .leading)
+    func body(content: Content) -> some View {
+        content
             .opacity(visible ? 1 : 0)
-            .padding(.leading, 18)
-            .padding(.trailing, 8)
-            .padding(.top, visible ? 6 : 0)
-            .padding(.bottom, visible ? 4 : 0)
-            .animation(nil, value: visible)
+            .animation(
+                visible ? fadeIn.delay(appearDelay) : fadeOut,
+                value: visible
+            )
+    }
+}
+
+extension View {
+    fileprivate func hoverStaggerFade(visible: Bool, appearDelay: Double) -> some View {
+        modifier(HoverStaggerFade(visible: visible, appearDelay: appearDelay))
     }
 }
 
@@ -1294,7 +1304,12 @@ private struct SectionDisclosureChevron: View {
             .rotationEffect(.degrees(expanded ? 90 : 0))
             .animation(SidebarSection.chevronRotation, value: expanded)
             .opacity(hovered ? 1 : 0)
-            .animation(.easeOut(duration: 0.12), value: hovered)
+            .animation(
+                hovered
+                    ? SidebarSection.chevronHoverFadeIn.delay(SidebarSection.chevronHoverAppearDelay)
+                    : SidebarSection.chevronHoverFadeOut,
+                value: hovered
+            )
     }
 }
 
@@ -1307,10 +1322,17 @@ private struct SectionDisclosureChevron: View {
 private struct CollapsibleSectionLabel: View {
     let title: LocalizedStringKey
     let expanded: Bool
-    var chevronLeadingPadding: CGFloat = 6
+    /// Row-wide hover state owned by the parent header. Hairline retraction,
+    /// chevron reveal and label brightening all key off this single value so
+    /// the entire collapsible row (text, hairlines, trailing icon group)
+    /// shares one hover region instead of each piece tracking its own.
+    let hovered: Bool
+    var chevronLeadingPadding: CGFloat = 2
     var leadingIcon: AnyView? = nil
-
-    @State private var hovered = false
+    /// On hover, retract the right hairline by this many points to clear
+    /// the trailing action icons (organize / new project / new chat). Pass
+    /// 0 (default) for headers without a trailing icon group.
+    var trailingIconsClearance: CGFloat = 0
 
     /// Collapsed sections read as part of the top button list (`New chat`,
     /// `Search`), so they borrow that brighter palette. Expanded sections
@@ -1332,23 +1354,125 @@ private struct CollapsibleSectionLabel: View {
     var body: some View {
         HStack(spacing: 0) {
             if let leadingIcon {
-                leadingIcon
-                    .foregroundColor(iconColor)
-                    .frame(width: 15, height: 15, alignment: .center)
-                    .scaleEffect(expanded ? 0 : 1, anchor: .center)
-                    .opacity(expanded ? 0 : 1)
-                    .animation(.easeOut(duration: 0.16), value: expanded)
-                    .padding(.trailing, 11)
+                ZStack {
+                    leadingIcon
+                        .foregroundColor(iconColor)
+                        .scaleEffect(expanded ? 0 : 1, anchor: .center)
+                        .opacity(expanded ? 0 : 1)
+                        .animation(.easeOut(duration: 0.16), value: expanded)
+                    SectionTitleHairline(visible: expanded, anchor: .trailing)
+                }
+                .frame(width: 15, height: 15, alignment: .center)
+                .padding(.trailing, 11)
             }
             Text(title)
                 .font(BodyFont.system(size: 13.5, weight: .light))
                 .foregroundColor(labelColor)
-            SectionDisclosureChevron(expanded: expanded, hovered: hovered)
-                .padding(.leading, chevronLeadingPadding)
+            ZStack(alignment: .leading) {
+                // Asymmetric animation: contract fast on hover-in to clear
+                // room for the trailing icons (collapse all, organize, new
+                // project, new chat); on hover-out, wait for those icons to
+                // finish their `trailingIconsFadeOut` (0.10s) and then sweep
+                // back smoothly. Without the delay the line visibly crosses
+                // still-fading icons; with too short a duration after the
+                // delay it reads as a snap, not an animation.
+                SectionTitleHairline(visible: expanded, anchor: .leading)
+                    .padding(.leading, hovered ? chevronLeadingPadding + 10 : 0)
+                    .padding(.trailing, hovered ? trailingIconsClearance : 0)
+                    .animation(
+                        hovered
+                            ? .timingCurve(0.16, 1, 0.3, 1, duration: 0.18)
+                            : .timingCurve(0.16, 1, 0.3, 1, duration: 0.26).delay(0.10),
+                        value: hovered
+                    )
+                SectionDisclosureChevron(expanded: expanded, hovered: hovered)
+                    .offset(x: chevronLeadingPadding - 11)
+            }
+            .frame(height: 15)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 11)
         }
-        .contentShape(Rectangle())
-        .onHover { hovered = $0 }
         .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+}
+
+/// Collapsible section header without a trailing icon group (Pinned,
+/// Chats with no project, Archived). Owns its own row-wide hover so the
+/// label, chevron and hairlines all light up together when the cursor
+/// enters anywhere inside the row, including the hairline tails — not
+/// just the inner text+chevron region.
+private struct BasicSectionHeader: View {
+    let title: LocalizedStringKey
+    @Binding var expanded: Bool
+    let leadingIcon: AnyView?
+
+    @State private var hovered = false
+
+    var body: some View {
+        let leadingPadding: CGFloat = leadingIcon != nil ? 16 : 20
+        Button(action: {
+            withAnimation(SidebarSection.toggleAnimation) { expanded.toggle() }
+        }) {
+            HStack(spacing: 0) {
+                CollapsibleSectionLabel(
+                    title: title,
+                    expanded: expanded,
+                    hovered: hovered,
+                    leadingIcon: leadingIcon
+                )
+                Spacer()
+            }
+            .frame(height: 24)
+            .padding(.leading, leadingPadding)
+            .padding(.trailing, 11)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+}
+
+/// Hairline that flanks an expanded section title (left + right). Sits
+/// vertically centered with the text and grows outward from the word so
+/// the open state reads as a labeled separator. `anchor` controls the
+/// scale origin: `.trailing` for the left hairline (grows leftward away
+/// from the title), `.leading` for the right hairline. Fade-in matches
+/// the section expand timing.
+private struct SectionTitleHairline: View {
+    let visible: Bool
+    let anchor: UnitPoint
+
+    var body: some View {
+        // White-opacity stops (not Color.clear) so the gradient never
+        // tints toward gray during interpolation. Solid is held for the
+        // first ~70% nearest the word and only fades in the tail third.
+        let solid = Color.white.opacity(0.22)
+        let mid = Color.white.opacity(0.16)
+        let clear = Color.white.opacity(0)
+        let stops: [Gradient.Stop] = anchor == .trailing
+            ? [
+                .init(color: clear, location: 0.0),
+                .init(color: mid, location: 0.30),
+                .init(color: solid, location: 0.55),
+                .init(color: solid, location: 1.0)
+            ]
+            : [
+                .init(color: solid, location: 0.0),
+                .init(color: solid, location: 0.45),
+                .init(color: mid, location: 0.70),
+                .init(color: clear, location: 1.0)
+            ]
+        Rectangle()
+            .fill(LinearGradient(gradient: Gradient(stops: stops),
+                                 startPoint: .leading,
+                                 endPoint: .trailing))
+            .frame(height: 0.5)
+            .scaleEffect(x: visible ? 1 : 0, y: 1, anchor: anchor)
+            .opacity(visible ? 1 : 0)
+            .animation(.easeOut(duration: 0.22), value: visible)
     }
 }
 
@@ -1373,7 +1497,7 @@ private struct HeaderHoverIcon<Label: View>: View {
         }
         .buttonStyle(.plain)
         .help(tooltip)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
         .animation(.easeOut(duration: 0.12), value: hovered)
     }
 }
@@ -1570,11 +1694,11 @@ struct RecentChatRow: View, Equatable {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(rowBackground)
         )
+        .padding(.trailing, 3)
         .onTapGesture(perform: callbacks.onSelect)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
         .animation(.easeOut(duration: 0.12), value: hovered)
         .animation(.easeOut(duration: 0.12), value: pinHovered)
-        .animation(.easeOut(duration: 0.12), value: unarchiveHovered)
         // Window has `isMovableByWindowBackground = true`, so without an
         // NSView in the row that returns `mouseDownCanMoveWindow = false`
         // AppKit hijacks mouseDown for a window drag and SwiftUI's
@@ -1898,6 +2022,12 @@ private enum SidebarRowMetrics {
     static let projectChatSpacing: CGFloat = 3
     /// "No chats" / "Loading…" placeholder row inside a project accordion.
     static let projectEmptyState: CGFloat = 24
+    /// Trailing buffer baked into a collapsible section's accordion
+    /// `targetHeight` so the last row's pill is not clipped against the
+    /// section frame and the next section header is not glued to it.
+    /// Lives inside the accordion (not as a standalone spacer) so it
+    /// rides the height transition without an extra animated element.
+    static let sectionEdgePadding: CGFloat = 15.6
 
     static func recentChats(count: Int, spacing: CGFloat = chatSpacing) -> CGFloat {
         guard count > 0 else { return 0 }
@@ -2024,7 +2154,7 @@ private struct PinnedRow: View {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(hovered ? Color.white.opacity(0.035) : Color.clear)
         )
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
         .contextMenu {
             Button("Unpin chat")     {}
             Button("Rename chat")     {}
@@ -3016,44 +3146,54 @@ final class DragChipPanel {
     }
 }
 
-/// Visual content of the drag chip. Mirrors a `RecentChatRow` (pin icon
-/// + title + age) so the user reads it as the line they picked up.
+/// Visual content of the drag chip. Mirrors a hovered `RecentChatRow`
+/// (pin icon + title + archive icon) so the user reads it as the exact
+/// line they just picked up. Width is the row's measured width, padding
+/// and corner radius mirror `RecentChatRow.body`, and the background
+/// pairs the sidebar's `VisualEffectBlur` with the same hover overlay
+/// (`Color.white.opacity(0.035)`) so the chip composites against the
+/// desktop the same way the row composites against the sidebar.
+/// No stroke; any extra outline shifts the perceived width away from
+/// the row underneath.
 private struct DragChipView: View {
     let chat: Chat
-
-    private var ageLabel: String {
-        L10n.relativeAge(elapsed: Date().timeIntervalSince(chat.createdAt))
-    }
+    let width: CGFloat
+    /// Transparent breathing room around the chip so the drop shadow
+    /// extends beyond the host panel's content view bounds without
+    /// being clipped.
+    let shadowInset: CGFloat
 
     var body: some View {
         HStack(spacing: 10) {
             PinIcon(size: 12.5)
-                .foregroundColor(Color(white: 0.85))
+                .foregroundColor(Color(white: 0.5))
                 .frame(width: 14, height: 14)
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
                 .font(BodyFont.system(size: 13.5, weight: .light))
-                .foregroundColor(Color(white: 0.94))
+                .foregroundColor(Color(white: 0.74))
                 .lineLimit(1)
             Spacer(minLength: 8)
-            Text(ageLabel)
-                .font(BodyFont.system(size: 11))
-                .foregroundColor(Color(white: 0.6))
+            ArchiveIcon(size: 14.5)
+                .foregroundColor(Color(white: 0.5))
+                .frame(width: 14, height: 14)
+                .padding(.trailing, 2)
         }
         .padding(.leading, 10)
         .padding(.trailing, 9)
         .padding(.vertical, 7)
-        .frame(width: 280, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color(white: 0.16).opacity(0.96))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                )
+            ZStack {
+                VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
+                Color.white.opacity(0.035)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         )
-        .shadow(color: .black.opacity(0.40), radius: 14, x: 0, y: 8)
+        .padding(.trailing, 3)
+        .frame(width: width, alignment: .leading)
+        .shadow(color: .black.opacity(0.22), radius: 9, x: 0, y: 4)
+        .padding(shadowInset)
     }
 }
 
