@@ -36,11 +36,20 @@ struct RecordingWaveform: View {
     @State private var startTime: Date = .now
     @State private var pausedElapsed: Double = 0
     @State private var pausedAt: Date? = nil
+    // Wall-clock instant of the most recent `levels.append`. The real-
+    // path scroll is computed relative to this, NOT to `startTime`, so
+    // the rightmost bar enters exactly when a new sample lands. Driving
+    // it off elapsed time alone made every level-timer tick teleport
+    // all bars by ~1 pitch because the AVAudioRecorder polling clock
+    // (Timer, ~200ms) and SwiftUI's animation clock (TimelineView)
+    // drift independently.
+    @State private var lastBarAt: Date = .now
+    @State private var lastLevelCount: Int = 0
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isActive)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isActive)) { context in
             Canvas { ctx, size in
-                draw(in: ctx, size: size, elapsed: currentElapsed(now: context.date))
+                draw(in: ctx, size: size, now: context.date)
             }
         }
         .mask(
@@ -55,6 +64,12 @@ struct RecordingWaveform: View {
                 endPoint: .trailing
             )
         )
+        .onChange(of: levels.count) { _, newCount in
+            if newCount != lastLevelCount {
+                lastBarAt = .now
+                lastLevelCount = newCount
+            }
+        }
         .onChange(of: isActive) { _, nowActive in
             // Freeze the scroll exactly where it was when the take is
             // paused, then resume from that same offset on the next
@@ -63,6 +78,7 @@ struct RecordingWaveform: View {
                 if let pausedAt {
                     let drift = Date.now.timeIntervalSince(pausedAt)
                     startTime = startTime.addingTimeInterval(drift)
+                    lastBarAt = lastBarAt.addingTimeInterval(drift)
                 }
                 pausedAt = nil
             } else {
@@ -72,24 +88,33 @@ struct RecordingWaveform: View {
         }
     }
 
-    private func currentElapsed(now: Date) -> Double {
-        if isActive {
-            return max(0, now.timeIntervalSince(startTime))
-        } else {
-            return max(0, pausedElapsed)
-        }
-    }
-
-    private func draw(in ctx: GraphicsContext, size: CGSize, elapsed: Double) {
+    private func draw(in ctx: GraphicsContext, size: CGSize, now: Date) {
         let pitch = barWidth + barSpacing
         // +2 so a freshly spawned bar can ride in from beyond the
         // right edge without popping.
         let count = max(1, Int(ceil(size.width / pitch)) + 2)
         let centerY = size.height / 2
 
-        let progressed = elapsed * barsPerSecond
-        let realCount = Int(floor(progressed))
-        let phase = CGFloat(progressed - floor(progressed))
+        let phase: CGFloat
+        let realCount: Int
+        if levels.isEmpty {
+            // Synthetic preview path: scroll keeps marching forward at
+            // a fixed cadence because there is no real data to anchor
+            // it to.
+            let elapsed = isActive ? max(0, now.timeIntervalSince(startTime)) : pausedElapsed
+            let progressed = elapsed * barsPerSecond
+            realCount = Int(floor(progressed))
+            phase = CGFloat(progressed - floor(progressed))
+        } else {
+            // Real path: phase is the time since the last level
+            // landed, expressed as a fraction of one bar's pitch.
+            // Clamp at 1 so a stalled recorder freezes the scroll
+            // instead of leaving the rightmost bar drifting off into
+            // the void.
+            let dt = max(0, now.timeIntervalSince(lastBarAt))
+            phase = CGFloat(min(dt * barsPerSecond, 1.0))
+            realCount = levels.count
+        }
 
         for slot in 0..<count {
             let x = size.width - (CGFloat(slot) + phase) * pitch - barWidth / 2
@@ -99,12 +124,8 @@ struct RecordingWaveform: View {
             let amp: Double
             let alpha: Double
             if !levels.isEmpty {
-                // Real path: slot 0 = most recent sample. Older samples
-                // walk left until they fall off the buffer's head, at
-                // which point the column reverts to a placeholder.
-                let bufferIdx = levels.count - 1 - slot
-                if bufferIdx >= 0 {
-                    amp = max(Double(levels[bufferIdx]), 0.04)
+                if realIdx >= 0 && realIdx < levels.count {
+                    amp = max(Double(levels[realIdx]), 0.04)
                     alpha = realOpacity
                 } else {
                     amp = placeholderAmp
