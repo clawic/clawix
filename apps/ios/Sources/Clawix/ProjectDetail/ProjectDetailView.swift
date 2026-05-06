@@ -54,8 +54,8 @@ struct ProjectDetailView: View {
         .topBarBlurFade(height: 130)
         .safeAreaInset(edge: .top, spacing: 0) {
             topBar
-                .padding(.horizontal, 12)
-                .padding(.top, 4)
+                .padding(.horizontal, 20)
+                .padding(.top, 6)
                 .padding(.bottom, 8)
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -73,37 +73,37 @@ struct ProjectDetailView: View {
                 },
                 onDismiss: { showProjectPicker = false }
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.fraction(0.55), .large])
             .presentationDragIndicator(.visible)
-            .presentationBackground(Palette.background)
+            .presentationBackground(Palette.surface)
             .preferredColorScheme(.dark)
         }
     }
 
     // MARK: Top bar
 
-    // Slightly more compact than the home top bar so the chrome reads
-    // as "drilled into a project" rather than peer-level. The chevron
-    // on the back button is bumped up a touch so it stays legible at
-    // the smaller circle size.
-    private static let pillHeight: CGFloat = 42
-
+    // Mirrors ChatDetailView's top bar so drilling from chat → project
+    // (or vice versa) doesn't shift the chrome's geometry. The 1pt
+    // vertical padding on the side circles lets the HStack settle at
+    // the chip's 48pt height while the visible glass circles stay 46.
     private var topBar: some View {
         HStack(spacing: 8) {
             GlassIconButton(
                 systemName: "chevron.left",
-                size: Self.pillHeight,
-                iconSize: 19,
-                iconWeight: .semibold,
+                size: 46,
+                iconSize: 20,
                 action: handleBack
             )
+            .padding(.vertical, 1)
             titlePill
             Spacer()
             GlassIconButton(
                 systemName: "ellipsis",
-                size: Self.pillHeight,
+                size: 46,
+                iconSize: 20,
                 action: {}
             )
+            .padding(.vertical, 1)
         }
     }
 
@@ -118,18 +118,19 @@ struct ProjectDetailView: View {
             showProjectPicker = true
         } label: {
             HStack(spacing: 8) {
-                FolderClosedIcon(size: 17, weight: 2.1)
+                FolderClosedIcon(size: 20, weight: 1.4)
                     .foregroundStyle(Palette.textPrimary)
                 Text(project.name)
-                    .font(BodyFont.system(size: 16, weight: .semibold))
+                    .font(BodyFont.manrope(size: 17, wght: 500))
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
                 Image(systemName: "chevron.down")
-                    .font(BodyFont.system(size: 10, weight: .bold))
+                    .font(BodyFont.system(size: 10, weight: .semibold))
                     .foregroundStyle(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
-            .frame(height: Self.pillHeight)
+            .frame(height: 48)
             .glassCapsule()
             .contentShape(Capsule())
         }
@@ -189,7 +190,7 @@ struct ProjectPickerSheet: View {
             LazyVStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.horizontal, AppLayout.screenHorizontalPadding)
-                    .padding(.top, 18)
+                    .padding(.top, 28)
                     .padding(.bottom, 10)
 
                 ForEach(Array(projects.enumerated()), id: \.element.id) { index, project in
@@ -216,7 +217,7 @@ struct ProjectPickerSheet: View {
             }
         }
         .scrollIndicators(.hidden)
-        .background(Palette.background)
+        .background(Palette.surface.ignoresSafeArea())
     }
 
     private var header: some View {
@@ -236,18 +237,11 @@ private struct ProjectPickerRow: View {
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 24, alignment: .center)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(project.name)
-                    .font(Typography.bodyFont)
-                    .tracking(-0.2)
-                    .foregroundStyle(Palette.textPrimary)
-                    .lineLimit(1)
-                Text(project.cwd)
-                    .font(Typography.captionFont)
-                    .foregroundStyle(Palette.textTertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
+            Text(project.name)
+                .font(Typography.bodyFont)
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textPrimary)
+                .lineLimit(1)
 
             Spacer(minLength: 8)
 

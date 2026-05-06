@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // Manrope wrapper for all body copy.
 //
@@ -15,6 +18,31 @@ enum BodyFont {
             return Font.system(size: size, weight: weight, design: .monospaced)
         }
         return Font.custom("\(familyPrefix)-\(suffix(for: weight))", size: size)
+    }
+
+    /// Variable-axis variant for the rare cases that need a weight
+    /// that doesn't match a named instance (e.g. 450 between Regular
+    /// and Medium). On non-UIKit platforms it falls back to the
+    /// nearest named cut.
+    static func manrope(size: CGFloat, wght: CGFloat) -> Font {
+        #if canImport(UIKit)
+        let wghtTag = 0x77676874 // 'wght'
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: "\(familyPrefix)-Regular",
+            UIFontDescriptor.AttributeName(rawValue: "NSCTFontVariationAttribute"): [wghtTag: wght],
+        ])
+        return Font(UIFont(descriptor: descriptor, size: size))
+        #else
+        let nearest: String
+        switch wght {
+        case ..<350: nearest = "Light"
+        case ..<450: nearest = "Regular"
+        case ..<550: nearest = "Medium"
+        case ..<650: nearest = "SemiBold"
+        default: nearest = "Bold"
+        }
+        return Font.custom("\(familyPrefix)-\(nearest)", size: size)
+        #endif
     }
 
     private static func suffix(for weight: Font.Weight) -> String {
