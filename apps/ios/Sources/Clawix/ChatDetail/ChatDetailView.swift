@@ -71,21 +71,25 @@ struct ChatDetailView: View {
 
     private var chat: WireChat? { store.chat(chatId) }
     private var messages: [WireMessage] { store.messages(for: chatId) }
+    /// Cached `DerivedProject.from(chats:)` result. The previous code
+    /// recomputed it twice per body (once for `derivedProject`, once
+    /// for the project picker sheet) which, with `@Observable`,
+    /// happened on every state change in the chat detail. The cache
+    /// is rebuilt only when `store.chats` actually changes (Equatable
+    /// diff via `.onChange`); reads from `body` are O(1) lookup.
+    @State private var cachedAllProjects: [DerivedProject] = []
     // Project for the open conversation, derived from the chat `cwd`.
     // nil means the title pill falls back to the chat title and does
     // not open the project picker.
     private var derivedProject: DerivedProject? {
         guard let cwd = chat?.cwd, !cwd.isEmpty else { return nil }
-        return DerivedProject.from(chats: store.chats.filter { !$0.isArchived })
-            .first(where: { $0.cwd == cwd })
+        return cachedAllProjects.first(where: { $0.cwd == cwd })
     }
-    private var allProjects: [DerivedProject] {
-        DerivedProject.from(chats: store.chats.filter { !$0.isArchived })
-    }
-    // Defensive cap: a chat with thousands of messages would spend
-    // seconds laying out the LazyVStack on first scroll-to-bottom and
-    // can lock the main thread during that window. Render only the
-    // tail; "load older" can come later.
+    private var allProjects: [DerivedProject] { cachedAllProjects }
+    // Defensive cap: the transcript renders eagerly (VStack) so rows
+    // don't pop in from a lazy materialization gap. A chat with
+    // thousands of messages would lock the main thread on mount, so
+    // only the tail is rendered; "load older" can come later.
     private var renderedMessages: [WireMessage] {
         let cap = 250
         if messages.count <= cap { return messages }
@@ -149,6 +153,11 @@ struct ChatDetailView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Palette.surface)
                 .preferredColorScheme(.dark)
+            }
+            .onChange(of: store.chats, initial: true) { _, newChats in
+                cachedAllProjects = DerivedProject.from(
+                    chats: newChats.filter { !$0.isArchived }
+                )
             }
     }
 
