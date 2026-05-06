@@ -371,11 +371,12 @@ private struct PinIconShape: Shape {
 /// `.foregroundColor` and scales cleanly without a PDF asset round trip.
 struct ArchiveIcon: View {
     var size: CGFloat = 14
+    var lineWidth: CGFloat? = nil
 
     var body: some View {
         ArchiveIconShape()
             .stroke(style: StrokeStyle(
-                lineWidth: 1.5 * (size / 24),
+                lineWidth: lineWidth ?? (1.5 * (size / 24)),
                 lineCap: .round,
                 lineJoin: .round
             ))

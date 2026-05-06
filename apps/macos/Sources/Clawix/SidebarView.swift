@@ -129,7 +129,7 @@ struct SidebarView: View {
                 sectionHeader(
                     "Pinned",
                     expanded: $pinnedExpanded,
-                    leadingIcon: AnyView(PinIcon(size: 14.5))
+                    leadingIcon: AnyView(PinIcon(size: 15.0, lineWidth: 1.5))
                 )
                 SidebarAccordion(
                     expanded: pinnedExpanded,
@@ -187,7 +187,7 @@ struct SidebarView: View {
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
                             Image(systemName: "bubble.left")
-                                .font(BodyFont.system(size: 11.5, weight: .regular))
+                                .font(BodyFont.system(size: 11.5, weight: .light))
                         )
                     )
                     SidebarAccordion(
@@ -295,7 +295,7 @@ struct SidebarView: View {
         sectionHeader(
             "Archived",
             expanded: $archivedExpanded,
-            leadingIcon: AnyView(ArchiveIcon(size: 14.5))
+            leadingIcon: AnyView(ArchiveIcon(size: 16.5, lineWidth: 1.28))
         )
         SidebarAccordion(
             expanded: archivedExpanded,
@@ -345,12 +345,16 @@ struct SidebarView: View {
                     SidebarButton(title: "New chat",
                                   icon: "square.and.pencil",
                                   customShape: AnyShape(ComposeIcon()),
+                                  customShapeSize: 12.8,
+                                  customShapeStroke: 1.25,
                                   route: .home,
                                   actionOnly: true,
                                   shortcut: "⌘N")
                     SidebarButton(title: "Search",
                                   icon: "magnifyingglass",
                                   customShape: AnyShape(SearchIconShape()),
+                                  customShapeSize: 13.8,
+                                  customShapeStroke: 1.65,
                                   route: .search,
                                   shortcut: "⌘F")
                     /*
@@ -364,7 +368,7 @@ struct SidebarView: View {
                                   shortcut: "⌘⇧A")
                     */
                 }
-                .padding(.leading, 8)
+                .padding(.leading, 6)
                 .padding(.trailing, 22)
                 .padding(.top, 6)
 
@@ -1080,6 +1084,8 @@ private struct SidebarButton: View {
     let title: String
     let icon: String
     var customShape: AnyShape? = nil
+    var customShapeSize: CGFloat = 11.3
+    var customShapeStroke: CGFloat = 1.15
     let route: SidebarRoute
     var actionOnly: Bool = false
     var shortcut: String? = nil
@@ -1640,9 +1646,9 @@ struct RecentChatRow: View, Equatable {
         // briefly loses hover, the icon flips back to non hit testable, and
         // the cursor falls through, producing the flicker the user reported.
         Button(action: callbacks.onTogglePin) {
-            PinIcon(size: 12.5)
+            PinIcon(size: 15.0, lineWidth: 1.5)
                 .foregroundColor(color)
-                .frame(width: 14, height: 14)
+                .frame(width: 15, height: 15)
                 .contentShape(Rectangle())
                 .opacity(visible ? 1 : 0)
         }
@@ -1745,8 +1751,8 @@ private struct ProjectAccordion: View, Equatable {
             HStack(spacing: 0) {
                 Button(action: { withAnimation(.easeOut(duration: 0.28)) { onToggle() } }) {
                     HStack(spacing: 8) {
-                        FolderMorphIcon(size: 12.5, progress: expanded ? 1 : 0)
-                            .foregroundColor(Color(white: 0.78))
+                        FolderMorphIcon(size: 14.5, progress: expanded ? 1 : 0, lineWidthScale: 1.027)
+                            .foregroundColor(Color(white: 0.5))
                             .frame(width: 15, height: 15)
                             .animation(.easeOut(duration: 0.28), value: expanded)
                         Text(project.name)
@@ -1755,7 +1761,8 @@ private struct ProjectAccordion: View, Equatable {
                             .lineLimit(1)
                         Spacer(minLength: 6)
                     }
-                    .padding(.horizontal, 10)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 10)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
@@ -1778,7 +1785,7 @@ private struct ProjectAccordion: View, Equatable {
                 .buttonStyle(.plain)
                 .opacity(hovered || menuOpen ? 1 : 0)
                 .disabled(!(hovered || menuOpen))
-                .onHover { menuHovered = $0 }
+                .sidebarHover { menuHovered = $0 }
                 .help(L10n.t("More options"))
                 .anchorPreference(key: ProjectMenuAnchorKey.self, value: .bounds) { anchor in
                     menuOpen ? anchor : nil
