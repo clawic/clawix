@@ -33,6 +33,7 @@ struct ChatDetailView: View {
     @State private var composerResetToken: Int = 0
     @State private var expandedReasoning: Set<String> = []
     @State private var showProjectPicker: Bool = false
+    @State private var showActionsMenu: Bool = false
     // Ids that have already been laid out at least once. Initial
     // snapshot fills this on first hasLoaded; new messages appended
     // afterwards are NOT in here on creation, so they animate in.
@@ -188,11 +189,27 @@ struct ChatDetailView: View {
     // MARK: Transcript
 
     private var transcript: some View {
-        // Messaging-style scroll: `defaultScrollAnchor(.bottom)` pins
-        // the first layout to the bottom edge and keeps content glued
-        // there while it grows (streaming, new appended messages),
-        // unless the user has scrolled away. A 1pt sentinel at the end
-        // of the stack is the canonical "you are at the tail" marker.
+        // Messaging-style scroll built on the iOS 18 split
+        // `defaultScrollAnchor(_:for:)` API. Each role gets its own
+        // anchor so the three concerns don't fight each other:
+        //
+        //   * `.alignment   = .top`    → when the transcript is shorter
+        //                                than the viewport (fresh chat
+        //                                with one or two bubbles), it
+        //                                sits at the top edge instead
+        //                                of being pinned to the bottom
+        //                                with empty space above.
+        //   * `.initialOffset = .bottom` → opening an existing chat
+        //                                whose history overflows lands
+        //                                directly at the latest message.
+        //   * `.sizeChanges = .bottom` → while streaming, sending or
+        //                                receiving new content, the
+        //                                viewport stays glued to the
+        //                                tail unless the user has
+        //                                scrolled away.
+        //
+        // The 1pt `Color.clear` sentinel at the end of the stack is the
+        // canonical "you are at the tail" marker for `scrollPosition`.
         //
         // Eager `VStack` (not `LazyVStack`) on purpose: tall assistant
         // rows (timeline + markdown + file pills) interact badly with
@@ -223,7 +240,9 @@ struct ChatDetailView: View {
             .scrollTargetLayout()
         }
         .scrollIndicators(.hidden)
-        .defaultScrollAnchor(.bottom)
+        .defaultScrollAnchor(.top, for: .alignment)
+        .defaultScrollAnchor(.bottom, for: .initialOffset)
+        .defaultScrollAnchor(.bottom, for: .sizeChanges)
         .scrollPosition(id: $bottomId, anchor: .bottom)
         .simultaneousGesture(
             TapGesture().onEnded {
@@ -324,9 +343,10 @@ struct ChatDetailView: View {
             }
             .buttonStyle(.plain)
 
-            Button(action: {
+            Button {
                 Haptics.tap()
-            }) {
+                showActionsMenu = true
+            } label: {
                 Image(systemName: "ellipsis")
                     .font(BodyFont.system(size: 20, weight: .semibold))
                     .foregroundStyle(Palette.textPrimary)
@@ -334,8 +354,30 @@ struct ChatDetailView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .popover(isPresented: $showActionsMenu, arrowEdge: .top) {
+                ChatActionsMenu(
+                    onRename: {
+                        showActionsMenu = false
+                        handleRename()
+                    },
+                    onArchive: {
+                        showActionsMenu = false
+                        handleArchive()
+                    }
+                )
+                .presentationCompactAdaptation(.popover)
+            }
         }
         .glassCapsule()
+    }
+
+    private func handleRename() {
+        // Wire-up pending: protocol does not yet expose renameChat.
+    }
+
+    private func handleArchive() {
+        // Wire-up pending: BridgeClient does not yet expose archiveChat
+        // outbound from iOS.
     }
 
     private func handleBack() {
