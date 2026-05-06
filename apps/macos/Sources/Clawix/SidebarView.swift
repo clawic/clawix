@@ -166,6 +166,53 @@ struct SidebarView: View {
         makeRecentChatCallbacks(appState: appState, chat: chat, archived: archived)
     }
 
+    /// One project row inside the sidebar's grouped view: the existing
+    /// `ChatDropTarget` (so chats can be dragged onto a project to be
+    /// reassigned) wrapping a `ProjectAccordion`. Extracted so both the
+    /// `LazyVStack` (regular sort modes) and `ProjectReorderableList`
+    /// (custom sort mode) call sites render identical content.
+    @ViewBuilder
+    private func projectRow(
+        _ project: Project,
+        snapshot: SidebarSnapshot,
+        currentChatId: UUID?
+    ) -> some View {
+        ChatDropTarget { droppedId in
+            appState.moveChatToProject(chatId: droppedId, projectId: project.id)
+            return true
+        } content: {
+            ProjectAccordion(
+                project: project,
+                expanded: expandedProjects.contains(project.id),
+                chats: snapshot.byProject[project.id] ?? [],
+                onToggle: {
+                    if expandedProjects.contains(project.id) {
+                        expandedProjects.remove(project.id)
+                    } else {
+                        expandedProjects.insert(project.id)
+                        // Fire-and-forget refresh. The accordion already
+                        // has its rows from the SQLite snapshot; this
+                        // diff-merges any updates the daemon has beyond
+                        // what the pre-warm caught, animated.
+                        Task.detached(priority: .userInitiated) {
+                            await appState.loadThreadsForProject(project)
+                        }
+                    }
+                },
+                onMenuToggle: {
+                    projectMenuOpenId = projectMenuOpenId == project.id ? nil : project.id
+                },
+                onNewChat: {
+                    appState.startNewChat(in: project)
+                },
+                menuOpen: projectMenuOpenId == project.id,
+                selectedChatId: currentChatId,
+                chatCallbacks: { recentChatCallbacks(for: $0, archived: false) }
+            )
+            .equatable()
+        }
+    }
+
     private var selectedChatId: UUID? {
         if case let .chat(id) = appState.currentRoute { return id }
         return nil
@@ -1902,7 +1949,6 @@ private struct ProjectAccordion: View, Equatable {
     let project: Project
     let expanded: Bool
     let chats: [Chat]
-    let loading: Bool
     let onToggle: () -> Void
     let onMenuToggle: () -> Void
     let onNewChat: () -> Void
@@ -1924,7 +1970,6 @@ private struct ProjectAccordion: View, Equatable {
         lhs.project.id == rhs.project.id
             && lhs.project.name == rhs.project.name
             && lhs.expanded == rhs.expanded
-            && lhs.loading == rhs.loading
             && lhs.menuOpen == rhs.menuOpen
             && lhs.selectedChatId == rhs.selectedChatId
             && Self.chatsEqual(lhs.chats, rhs.chats)
@@ -2037,17 +2082,11 @@ private struct ProjectAccordion: View, Equatable {
                 // actually drives lazy materialisation.
                 LazyVStack(alignment: .leading, spacing: 3) {
                     if chats.isEmpty {
-                        HStack(spacing: 6) {
-                            if loading {
-                                SidebarChatRowSpinner()
-                                    .frame(width: 9, height: 9)
-                            }
-                            Text(loading ? "Loading…" : "No chats")
-                                .font(BodyFont.system(size: 11))
-                                .foregroundColor(Color(white: 0.40))
-                        }
-                        .padding(.leading, 30)
-                        .padding(.vertical, 4)
+                        Text("No chats")
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Color(white: 0.40))
+                            .padding(.leading, 30)
+                            .padding(.vertical, 4)
                     }
                     ForEach(chats) { chat in
                         RecentChatRow(
@@ -2057,6 +2096,10 @@ private struct ProjectAccordion: View, Equatable {
                             callbacks: chatCallbacks(chat)
                         )
                         .equatable()
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .top)),
+                            removal: .opacity
+                        ))
                     }
                 }
             }
