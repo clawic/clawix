@@ -54,4 +54,44 @@ final class SnapshotRepository: @unchecked Sendable {
             }
         }
     }
+
+    /// Returns every persisted per-project row, ordered so each
+    /// project's most-recent chats come first. Loaded on first paint
+    /// so every accordion has content available before the runtime
+    /// answers a single RPC.
+    func loadAllProjectIndexed() -> [SidebarSnapshotProjectRow] {
+        (try? db.read { db in
+            try SidebarSnapshotProjectRow.fetchAll(db, sql: """
+                SELECT * FROM sidebar_snapshot_project
+                ORDER BY project_path ASC, updated_at DESC
+            """)
+        }) ?? []
+    }
+
+    /// Replace the entire per-project index in one transaction. Called
+    /// after every applyThreads/mergeThreads with the in-memory chats
+    /// already filtered to those that belong to a known project.
+    func replaceProjectIndex(_ rows: [SidebarSnapshotProjectRow]) {
+        try? db.write { db in
+            try db.execute(sql: "DELETE FROM sidebar_snapshot_project")
+            for row in rows {
+                try row.insert(db)
+            }
+        }
+    }
+
+    /// Replace the rows for a single project. Used by the per-project
+    /// background refresh so a fresh fetch for one folder doesn't have
+    /// to rewrite every other project's rows.
+    func replaceProjectIndexFor(path: String, rows: [SidebarSnapshotProjectRow]) {
+        try? db.write { db in
+            try db.execute(
+                sql: "DELETE FROM sidebar_snapshot_project WHERE project_path = ?",
+                arguments: [path]
+            )
+            for row in rows where row.projectPath == path {
+                try row.insert(db)
+            }
+        }
+    }
 }

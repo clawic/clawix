@@ -125,3 +125,32 @@ struct SidebarSnapshotRow: Codable, FetchableRecord, PersistableRecord {
         case capturedAt = "captured_at"
     }
 }
+
+// Per-project mirror of `SidebarSnapshotRow`. `projectPath` is
+// non-optional here: rows live in `sidebar_snapshot_project` only when
+// a chat's project is resolved. Feeds the per-project accordion's
+// first paint so opening any folder is instant.
+struct SidebarSnapshotProjectRow: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "sidebar_snapshot_project"
+    var threadId: String
+    var chatUuid: String
+    var title: String
+    var cwd: String?
+    var projectPath: String
+    var updatedAt: Int64
+    var archived: Int64
+    var pinned: Int64
+    var capturedAt: Int64
+
+    enum CodingKeys: String, CodingKey {
+        case threadId = "thread_id"
+        case chatUuid = "chat_uuid"
+        case title
+        case cwd
+        case projectPath = "project_path"
+        case updatedAt = "updated_at"
+        case archived
+        case pinned
+        case capturedAt = "captured_at"
+    }
+}

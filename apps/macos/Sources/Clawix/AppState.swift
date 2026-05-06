@@ -600,13 +600,6 @@ final class AppState: ObservableObject {
     /// active page is currently painting at that edge.
     @Published var browserPageBackgroundColors: [UUID: Color] = [:]
     @Published var recentSessions: [ClawixSessionSummary] = []
-    /// Project ids whose chats are currently being lazy-loaded from the
-    /// runtime. The sidebar uses this to render a per-project spinner.
-    @Published var loadingProjects: Set<UUID> = []
-    /// Project ids we've already lazy-loaded at least once during this
-    /// session. Prevents re-firing the same query on every accordion
-    /// toggle. Cleared if the user explicitly refreshes.
-    private var lazyLoadedProjects: Set<UUID> = []
     @Published var clawixBackendStatus: ClawixService.Status = .idle
     /// Snapshot of the user's primary/secondary rate-limit windows as
     /// reported by the backend (`account/rateLimits/read` once at boot,
@@ -690,6 +683,15 @@ final class AppState: ObservableObject {
     /// data.
     private let snapshotEnabled: Bool = (AgentThreadStore.fixtureThreads() == nil)
     private var backendState: BackendState = .empty
+    /// File-descriptor watcher for `~/.codex/.codex-global-state.json`.
+    /// Refreshes `backendState` (and the projects list) off the main
+    /// thread whenever Codex rewrites that file, so the live state in
+    /// memory stays current without re-reading from disk on every
+    /// `applyThreads` / `mergeThreads`.
+    private var backendStateWatcher: DispatchSourceFileSystemObject?
+    /// File descriptor backing `backendStateWatcher`. -1 when no watcher
+    /// is installed (file missing, dummy mode, etc.).
+    private var backendStateFD: Int32 = -1
 
     /// Resolves session ids to thread names by aggregating the runtime
     /// session index (~/.codex/session_index.jsonl) and the app's own
@@ -766,6 +768,8 @@ final class AppState: ObservableObject {
         self.titleGenerator = nil
 
         backendState = BackendStateReader.read()
+        installBackendStateWatcher()
+        manualProjectOrder = projectOrdersRepo.orderedIds()
         loadMockData()
         if let fixtureThreads = AgentThreadStore.fixtureThreads() {
             applyThreads(fixtureThreads)
@@ -810,7 +814,6 @@ final class AppState: ObservableObject {
             $projects.dropFirst().sink { _ in RenderProbe.tick("AppState.projects") },
             $selectedProject.dropFirst().sink { _ in RenderProbe.tick("AppState.selectedProject") },
             $currentRoute.dropFirst().sink { _ in RenderProbe.tick("AppState.currentRoute") },
-            $loadingProjects.dropFirst().sink { _ in RenderProbe.tick("AppState.loadingProjects") },
             $pendingPlanQuestions.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingPlanQuestions") },
             $clawixBackendStatus.dropFirst().sink { _ in RenderProbe.tick("AppState.clawixBackendStatus") },
             $rateLimits.dropFirst().sink { _ in RenderProbe.tick("AppState.rateLimits") },
@@ -846,6 +849,14 @@ final class AppState: ObservableObject {
                     _ = firstThreadId
                 }
                 await self.seedArchivesIfNeeded()
+                // Refresh every project's chat list in the background
+                // so opening any folder is instant. The first paint
+                // already hydrated `chats[]` from the SQLite snapshot;
+                // this just diff-merges any updates the daemon has
+                // beyond what we persisted last session, animated.
+                Task.detached(priority: .utility) { [weak self] in
+                    await self?.preWarmAllProjects()
+                }
             }
         }
 
@@ -1017,7 +1028,9 @@ final class AppState: ObservableObject {
             // until every pinned id has been resolved. Without this the
             // sidebar drops pins whose updated_at falls outside the first
             // page (heavy users routinely have >1000 active threads).
-            let pinnedTargets = Set(BackendStateReader.read().pinnedThreadIds)
+            // Sourced from the in-memory cache kept fresh by
+            // `backendStateWatcher`.
+            let pinnedTargets = Set(backendState.pinnedThreadIds)
             var resolvedPins = Set<String>()
             // Safety cap so a corrupt cursor or a stale pin id doesn't
             // turn this into an unbounded sweep.
@@ -1049,30 +1062,139 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Pulls the threads belonging to a single project from the runtime
-    /// and merges them into `chats`. The runtime's global `thread/list`
-    /// is capped at 100 results, so projects whose recent activity sits
-    /// outside that window otherwise appear empty in the sidebar; this
-    /// fills them on demand when the user expands the accordion.
+    /// Refreshes the chat list for a single project in the background.
+    /// The sidebar's first paint already hydrated `chats[]` from the
+    /// SQLite snapshot, so this is purely a diff-merge: any chats the
+    /// runtime knows about but the snapshot didn't appear with the
+    /// usual insertion animation, and existing rows update in place.
+    /// Skipped when this project was refreshed less than
+    /// `projectRefreshDebounce` ago so a flurry of accordion toggles
+    /// or focus events doesn't hammer the runtime.
     func loadThreadsForProject(_ project: Project) async {
         guard let clawix, case .ready = clawix.status else { return }
-        if lazyLoadedProjects.contains(project.id) { return }
-        if loadingProjects.contains(project.id) { return }
-        loadingProjects.insert(project.id)
-        defer { loadingProjects.remove(project.id) }
+        if let last = lastProjectRefreshAt[project.path],
+           Date().timeIntervalSince(last) < Self.projectRefreshDebounce {
+            return
+        }
+        lastProjectRefreshAt[project.path] = Date()
         do {
             let threads = try await clawix.listThreads(
                 archived: false,
                 cwd: project.path,
-                limit: 200,
+                limit: Self.snapshotPerProjectCap,
                 useStateDbOnly: true
             )
-            mergeThreads(threads)
-            lazyLoadedProjects.insert(project.id)
+            withAnimation(.easeOut(duration: 0.20)) {
+                mergeThreads(threads)
+            }
+            persistProjectIndexFor(project)
         } catch {
             appendRuntimeStatusError("Could not load threads for project \(project.name): \(error)")
         }
     }
+
+    /// Refreshes every known project's chat list in parallel (capped
+    /// at `preWarmConcurrency` simultaneous requests so the loopback
+    /// JSON-RPC pipe doesn't saturate). Diff-merges into `chats[]`
+    /// inside an animation so newly-discovered threads slide into the
+    /// accordion instead of popping in.
+    private func preWarmAllProjects() async {
+        let snapshot = self.projects
+        guard !snapshot.isEmpty else { return }
+        await withTaskGroup(of: Void.self) { group in
+            var iterator = snapshot.makeIterator()
+            var inFlight = 0
+            while inFlight < Self.preWarmConcurrency, let next = iterator.next() {
+                group.addTask { [weak self] in
+                    await self?.refreshProjectIndex(next)
+                }
+                inFlight += 1
+            }
+            for await _ in group {
+                if let next = iterator.next() {
+                    group.addTask { [weak self] in
+                        await self?.refreshProjectIndex(next)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Background-only project refresh used by `preWarmAllProjects`.
+    /// Identical to `loadThreadsForProject` but silent on error: the
+    /// pre-warm is best-effort, an occasional failure on one project
+    /// shouldn't surface as a runtime status error. Runs on the main
+    /// actor because `AppState` is `@MainActor`-isolated; the heavy
+    /// network work happens inside the `await` and lands on a
+    /// background executor without blocking the main thread.
+    private func refreshProjectIndex(_ project: Project) async {
+        guard let clawix, case .ready = clawix.status else { return }
+        do {
+            let threads = try await clawix.listThreads(
+                archived: false,
+                cwd: project.path,
+                limit: Self.snapshotPerProjectCap,
+                useStateDbOnly: true
+            )
+            self.lastProjectRefreshAt[project.path] = Date()
+            withAnimation(.easeOut(duration: 0.20)) {
+                self.mergeThreads(threads)
+            }
+            self.persistProjectIndexFor(project)
+        } catch {
+            // Best-effort: the SQLite snapshot already hydrated this
+            // project's chats. A failed pre-warm just means the user
+            // opens the folder with slightly stale data.
+        }
+    }
+
+    /// Persists the in-memory chats for a single project to
+    /// `sidebar_snapshot_project`. Called after a per-project refresh
+    /// so the next cold start hydrates this project from the freshest
+    /// data we have seen, without rewriting every other project's rows.
+    private func persistProjectIndexFor(_ project: Project) {
+        guard snapshotEnabled else { return }
+        let now = Int64(Date().timeIntervalSince1970)
+        let cap = Self.snapshotPerProjectCap
+        var bucket: [SidebarSnapshotProjectRow] = []
+        for chat in chats where !chat.isArchived
+            && chat.projectId == project.id {
+            guard let threadId = chat.clawixThreadId else { continue }
+            bucket.append(SidebarSnapshotProjectRow(
+                threadId: threadId,
+                chatUuid: chat.id.uuidString,
+                title: chat.title,
+                cwd: chat.cwd,
+                projectPath: project.path,
+                updatedAt: Int64(chat.createdAt.timeIntervalSince1970),
+                archived: 0,
+                pinned: chat.isPinned ? 1 : 0,
+                capturedAt: now
+            ))
+        }
+        bucket.sort { $0.updatedAt > $1.updatedAt }
+        let trimmed = Array(bucket.prefix(cap))
+        let path = project.path
+        let repo = snapshotRepo
+        Task.detached(priority: .background) {
+            repo.replaceProjectIndexFor(path: path, rows: trimmed)
+        }
+    }
+
+    /// Tracks the last successful per-project refresh so accordion
+    /// toggles or focus events don't fire a fresh RPC every time.
+    private var lastProjectRefreshAt: [String: Date] = [:]
+    /// Skip a per-project refresh if the previous one finished less
+    /// than this many seconds ago. Tuned so a user toggling an
+    /// accordion shut and back open feels instant without a redundant
+    /// round-trip, while still picking up changes the daemon makes
+    /// outside the bridge's notification path.
+    private static let projectRefreshDebounce: TimeInterval = 2.0
+    /// Maximum simultaneous per-project refreshes during pre-warm.
+    /// Three is the empirical sweet spot: fewer leaves users with 30+
+    /// projects waiting tens of seconds for the last one; more
+    /// saturates the loopback RPC pipe.
+    private static let preWarmConcurrency = 3
 
     private func mergedProjects() -> [Project] {
         let localPaths = Set(projectsRepo.all().map(\.path).filter { !$0.isEmpty })
@@ -1151,6 +1273,7 @@ final class AppState: ObservableObject {
         // Refresh in-memory derived state so SwiftUI rerenders without
         // waiting for the next runtime reload.
         pinnedOrder = []
+        manualProjectOrder = []
         projects = mergedProjects()
         titlesRepo.reload()
         Task { @MainActor in
@@ -1159,28 +1282,32 @@ final class AppState: ObservableObject {
     }
 
     /// First-paint pre-population of `chats[]` and `pinnedOrder` from
-    /// the SQLite snapshot of the last applied state. Reads at most
-    /// `firstPaintLimit` rows so a huge thread history doesn't slow the
-    /// initial paint; the rest is filled in when applyThreads runs.
-    /// No-op when the snapshot is empty (the caller leaves chats empty
-    /// like before, and the runtime fills them via applyThreads).
+    /// the SQLite snapshots of the last applied state. Two layers:
+    /// 1. `sidebar_snapshot` (top-N globally-recent) gives Pinned +
+    ///    Chronological an immediate, high-fidelity first paint.
+    /// 2. `sidebar_snapshot_project` adds every other chat we know
+    ///    about per project, deduplicated against (1). The result is
+    ///    that every accordion in the sidebar already has its rows in
+    ///    memory before any RPC fires, so expanding a folder is
+    ///    instant on cold start.
+    /// No-op when both snapshots are empty (fresh install).
     private func applySnapshotForFirstPaint() {
         guard snapshotEnabled else { return }
         // Populate projects unconditionally so the sidebar's project
         // sections are present from the very first paint, even on a
         // fresh install where the snapshot is still empty.
         projects = mergedProjects()
-        let firstPaintLimit = 200
-        let rows = snapshotRepo.loadTop(limit: firstPaintLimit)
-        guard !rows.isEmpty else { return }
-
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
 
-        let restored: [Chat] = rows.compactMap { row in
-            guard let id = UUID(uuidString: row.chatUuid) else { return nil }
-            let projectId = row.projectPath
-                .flatMap { path in projectByPath[path]?.id }
-            return Chat(
+        var restored: [Chat] = []
+        var seenThreadIds = Set<String>()
+
+        let firstPaintLimit = 200
+        let topRows = snapshotRepo.loadTop(limit: firstPaintLimit)
+        for row in topRows {
+            guard let id = UUID(uuidString: row.chatUuid) else { continue }
+            let projectId = row.projectPath.flatMap { path in projectByPath[path]?.id }
+            restored.append(Chat(
                 id: id,
                 title: row.title,
                 messages: [],
@@ -1198,8 +1325,47 @@ final class AppState: ObservableObject {
                 branch: nil,
                 availableBranches: [],
                 uncommittedFiles: nil
-            )
+            ))
+            seenThreadIds.insert(row.threadId)
         }
+
+        // Per-project rows. Skip anything already restored from the
+        // global snapshot; the goal is to fill in chats that were
+        // outside the top-N global cut but are still the freshest in
+        // their project. `project_path` is non-optional in this table,
+        // so we drop rows whose project is no longer known (the user
+        // hid the workspace root or removed the local project).
+        let projectRows = snapshotRepo.loadAllProjectIndexed()
+        for row in projectRows where !seenThreadIds.contains(row.threadId) {
+            guard let id = UUID(uuidString: row.chatUuid) else { continue }
+            guard let project = projectByPath[row.projectPath] else { continue }
+            restored.append(Chat(
+                id: id,
+                title: row.title,
+                messages: [],
+                createdAt: Date(timeIntervalSince1970: TimeInterval(row.updatedAt)),
+                clawixThreadId: row.threadId,
+                rolloutPath: nil,
+                historyHydrated: false,
+                hasActiveTurn: false,
+                projectId: project.id,
+                isArchived: row.archived != 0,
+                isPinned: row.pinned != 0,
+                hasUnreadCompletion: false,
+                cwd: row.cwd,
+                hasGitRepo: false,
+                branch: nil,
+                availableBranches: [],
+                uncommittedFiles: nil
+            ))
+            seenThreadIds.insert(row.threadId)
+        }
+
+        guard !restored.isEmpty else { return }
+
+        // Single sort by recency so Pinned and Chronological land in
+        // the order the runtime would have produced.
+        restored.sort { $0.createdAt > $1.createdAt }
         chats = restored
 
         let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds
@@ -1209,10 +1375,18 @@ final class AppState: ObservableObject {
         pinnedOrder = pinIds.compactMap { threadToChat[$0] }
     }
 
-    /// Rewrite the SQLite snapshot from the current in-memory `chats`
+    /// Rewrite the SQLite snapshots from the current in-memory `chats`
     /// list. Called after every applyThreads / mergeThreads. Skipped
     /// when fixtures drive the threads list so tests stay deterministic.
-    /// The actual write goes off-main via GRDB's serialized queue.
+    /// The actual writes go off-main via GRDB's serialized queue.
+    ///
+    /// Two snapshots:
+    ///  - `sidebar_snapshot`: every chat (Pinned + Chrono first paint).
+    ///  - `sidebar_snapshot_project`: capped per-project so the next
+    ///    cold start can hydrate every accordion's contents before any
+    ///    RPC fires. Cap aligns with the per-project `listThreads`
+    ///    limit so the persisted set is never larger than what a
+    ///    refresh would replace.
     private func persistSidebarSnapshot() {
         guard snapshotEnabled else { return }
         let projectsById = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
@@ -1231,14 +1405,137 @@ final class AppState: ObservableObject {
                 capturedAt: now
             )
         }
+
+        // Per-project view: chats whose project is resolved, archived
+        // ones dropped (sidebar accordions never list them). Group by
+        // project_path, sort each bucket by recency, truncate to the
+        // per-project cap.
+        let perProjectCap = Self.snapshotPerProjectCap
+        let globalCap = Self.snapshotGlobalCap
+        var bucketed: [String: [SidebarSnapshotProjectRow]] = [:]
+        for chat in chats where !chat.isArchived {
+            guard let threadId = chat.clawixThreadId else { continue }
+            guard
+                let projectId = chat.projectId,
+                let project = projectsById[projectId]
+            else { continue }
+            let row = SidebarSnapshotProjectRow(
+                threadId: threadId,
+                chatUuid: chat.id.uuidString,
+                title: chat.title,
+                cwd: chat.cwd,
+                projectPath: project.path,
+                updatedAt: Int64(chat.createdAt.timeIntervalSince1970),
+                archived: 0,
+                pinned: chat.isPinned ? 1 : 0,
+                capturedAt: now
+            )
+            bucketed[project.path, default: []].append(row)
+        }
+        var perProjectRows: [SidebarSnapshotProjectRow] = []
+        for var bucket in bucketed.values {
+            bucket.sort { $0.updatedAt > $1.updatedAt }
+            perProjectRows.append(contentsOf: bucket.prefix(perProjectCap))
+        }
+        if perProjectRows.count > globalCap {
+            perProjectRows.sort { $0.updatedAt > $1.updatedAt }
+            perProjectRows = Array(perProjectRows.prefix(globalCap))
+        }
+
         let repo = snapshotRepo
         Task.detached(priority: .background) {
             repo.replaceAll(rows)
+            repo.replaceProjectIndex(perProjectRows)
+        }
+    }
+
+    /// Per-project cap when persisting `sidebar_snapshot_project`.
+    /// Matches the runtime's per-project `listThreads` limit so the
+    /// persisted set is never larger than what a refresh replaces.
+    private static let snapshotPerProjectCap = 200
+    /// Hard global cap on `sidebar_snapshot_project` rows. Bounds disk
+    /// use for power users with hundreds of workspace roots.
+    private static let snapshotGlobalCap = 5000
+
+    /// Installs a `DispatchSource` watcher on
+    /// `~/.codex/.codex-global-state.json` so changes (Codex bumping
+    /// pins, the user adding a workspace root, etc.) refresh the
+    /// in-memory `backendState` without main-thread I/O. Idempotent;
+    /// re-arms itself on `.delete` / `.rename` since many writers use
+    /// atomic rename. No-op when the file doesn't exist (dummy mode,
+    /// fresh install before Codex has written it).
+    private func installBackendStateWatcher() {
+        backendStateWatcher?.cancel()
+        backendStateWatcher = nil
+        if backendStateFD >= 0 {
+            close(backendStateFD)
+            backendStateFD = -1
+        }
+        let url = BackendStateReader.sourceURL
+        let fd = open(url.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: [.write, .delete, .rename, .extend, .attrib],
+            queue: DispatchQueue.global(qos: .utility)
+        )
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            let events = source.data
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if events.contains(.delete) || events.contains(.rename) {
+                    // Atomic rename / delete: re-arm against the canonical
+                    // path so we keep tracking the new inode.
+                    self.installBackendStateWatcher()
+                }
+                self.refreshBackendStateFromDisk()
+            }
+        }
+        source.setCancelHandler {
+            close(fd)
+        }
+        backendStateFD = fd
+        backendStateWatcher = source
+        source.resume()
+    }
+
+    /// Re-reads the global state file off-main, then applies the result
+    /// on `MainActor`. Updates `projects` and `pinnedOrder` so newly
+    /// added workspace roots and pin changes show up without a relaunch.
+    private func refreshBackendStateFromDisk() {
+        Task.detached(priority: .utility) { [weak self] in
+            let next = BackendStateReader.read()
+            await MainActor.run {
+                guard let self else { return }
+                self.backendState = next
+                let oldProjects = self.projects
+                let nextProjects = self.mergedProjects()
+                if oldProjects != nextProjects {
+                    withAnimation(.easeOut(duration: 0.20)) {
+                        self.projects = nextProjects
+                    }
+                }
+                // Refresh the pinned ordering: if pins came from Codex
+                // (no local override yet) and the file just changed,
+                // the in-memory order must follow.
+                if !self.metaRepo.hasLocalPins {
+                    let threadToChat = Dictionary(uniqueKeysWithValues: self.chats.compactMap { chat in
+                        chat.clawixThreadId.map { ($0, chat.id) }
+                    })
+                    let nextPinned = self.backendState.pinnedThreadIds.compactMap { threadToChat[$0] }
+                    if nextPinned != self.pinnedOrder {
+                        self.pinnedOrder = nextPinned
+                    }
+                }
+            }
         }
     }
 
     private func applyThreads(_ threads: [AgentThreadSummary]) {
-        backendState = BackendStateReader.read()
+        // `backendState` is kept fresh by `backendStateWatcher` (see
+        // installBackendStateWatcher). Re-reading here on every apply
+        // would block the main thread on disk I/O for no benefit.
         projects = mergedProjects()
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
         let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds
@@ -1271,7 +1568,9 @@ final class AppState: ObservableObject {
     /// replacing the whole list. Used by per-project lazy loads so they
     /// don't wipe chats from other projects already in memory.
     private func mergeThreads(_ threads: [AgentThreadSummary]) {
-        backendState = BackendStateReader.read()
+        // Same as `applyThreads`: `backendState` is kept current off
+        // the main thread by `backendStateWatcher`. Avoids the sync
+        // disk read that used to sit on the folder-expansion hot path.
         projects = mergedProjects()
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
         let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds

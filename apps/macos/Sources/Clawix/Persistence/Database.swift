@@ -69,6 +69,8 @@ final class Database {
             try db.execute(sql: "DELETE FROM session_titles")
             try db.execute(sql: "DELETE FROM hidden_codex_roots")
             try db.execute(sql: "DELETE FROM sidebar_snapshot")
+            try db.execute(sql: "DELETE FROM sidebar_snapshot_project")
+            try db.execute(sql: "DELETE FROM project_sort_order")
             try db.execute(sql: "DELETE FROM meta WHERE key IN ('has_local_pins','archives_seeded')")
         }
     }
@@ -172,6 +174,54 @@ final class Database {
             try db.execute(sql: """
                 CREATE INDEX sidebar_snapshot_order_idx
                     ON sidebar_snapshot(pinned DESC, updated_at DESC)
+            """)
+        }
+
+        // Per-project sidebar index. The `sidebar_snapshot` table above
+        // captures the top-N globally-recent chats for the first paint
+        // of Pinned + Chronological. That set isn't enough to render
+        // every project's accordion instantly: a chat that's old
+        // globally can still be the freshest chat in its project and
+        // must appear there without waiting for a per-project RPC.
+        // This table stores up to ~200 recent chats per project, keyed
+        // by thread id so it deduplicates against the global table on
+        // hydration. `project_path` is NOT NULL on purpose: rows here
+        // only exist for chats whose project is resolved.
+        migrator.registerMigration("v5_sidebar_snapshot_project") { db in
+            try db.execute(sql: """
+                CREATE TABLE sidebar_snapshot_project (
+                    thread_id    TEXT PRIMARY KEY NOT NULL,
+                    chat_uuid    TEXT NOT NULL,
+                    title        TEXT NOT NULL,
+                    cwd          TEXT,
+                    project_path TEXT NOT NULL,
+                    updated_at   INTEGER NOT NULL,
+                    archived     INTEGER NOT NULL DEFAULT 0,
+                    pinned       INTEGER NOT NULL DEFAULT 0,
+                    captured_at  INTEGER NOT NULL
+                )
+            """)
+            try db.execute(sql: """
+                CREATE INDEX sidebar_snapshot_project_path_idx
+                    ON sidebar_snapshot_project(project_path, updated_at DESC)
+            """)
+        }
+
+        // Manual project ordering for the sidebar's "Custom" sort mode.
+        // Keyed by stable Project UUID (path-derived, see StableProjectID)
+        // so it works for both Codex-sourced and locally created projects.
+        // Values use 1000-step gaps like pinned threads so single-row
+        // moves don't have to renumber the table.
+        migrator.registerMigration("v6_project_sort_order") { db in
+            try db.execute(sql: """
+                CREATE TABLE project_sort_order (
+                    project_id TEXT PRIMARY KEY NOT NULL,
+                    sort_order INTEGER NOT NULL
+                )
+            """)
+            try db.execute(sql: """
+                CREATE INDEX project_sort_order_idx
+                    ON project_sort_order(sort_order)
             """)
         }
 
