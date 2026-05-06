@@ -24,6 +24,7 @@ struct ChatDetailView: View {
     let onBack: () -> Void
     var onOpenFile: (String) -> Void = { _ in }
     var onOpenProject: (String) -> Void = { _ in }
+    var onNewChat: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
     @State private var composerText: String = ""
@@ -210,20 +211,53 @@ struct ChatDetailView: View {
     // MARK: Top bar
 
     private var topBar: some View {
+        // titlePill is 48pt tall on purpose (slightly bigger than the
+        // 46pt side circles). Padding the back button and actionPill by
+        // 1pt vertical keeps their visible glass circles at 46 while
+        // letting the HStack settle at 48 so the chip actually grows.
+        // Without the padding, HStack centering would absorb the
+        // difference and the chip would visually look the same height.
         HStack(spacing: 8) {
-            GlassIconButton(systemName: "chevron.left", size: 42, action: handleBack)
+            GlassIconButton(systemName: "chevron.left", size: 46, iconSize: 20, action: handleBack)
+                .padding(.vertical, 1)
             titlePill
 
             Spacer()
 
-            if chat?.hasActiveTurn == true {
-                workingPill
-                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
-            }
-
-            GlassIconButton(systemName: "ellipsis", size: 42, action: {})
+            actionPill
+                .padding(.vertical, 1)
         }
-        .animation(.easeOut(duration: 0.18), value: chat?.hasActiveTurn)
+    }
+
+    // Right-side double pill that mirrors the home `actionPill`: two
+    // icon buttons share a single glass capsule so they read as one
+    // floating affordance. Compose lives on the left as the primary
+    // action (start a fresh conversation), ellipsis on the right.
+    private var actionPill: some View {
+        HStack(spacing: 0) {
+            Button(action: {
+                Haptics.send()
+                onNewChat()
+            }) {
+                ComposeIcon(size: 20)
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 48, height: 46)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
+                Haptics.tap()
+            }) {
+                Image(systemName: "ellipsis")
+                    .font(BodyFont.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 48, height: 46)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .glassCapsule()
     }
 
     private func handleBack() {
@@ -243,47 +277,24 @@ struct ChatDetailView: View {
                 showProjectPicker = true
             } label: {
                 HStack(spacing: 8) {
-                    FolderClosedIcon(size: 17, weight: 2.1)
+                    FolderClosedIcon(size: 20, weight: 1.4)
                         .foregroundStyle(Palette.textPrimary)
                     Text(project.name)
-                        .font(BodyFont.system(size: 16, weight: .semibold))
+                        .font(BodyFont.manrope(size: 17, wght: 500))
                         .foregroundStyle(Palette.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Image(systemName: "chevron.down")
-                        .font(BodyFont.system(size: 10, weight: .bold))
+                        .font(BodyFont.system(size: 10, weight: .semibold))
                         .foregroundStyle(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
-                .frame(height: 42)
+                .frame(height: 48)
                 .glassCapsule()
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
-        } else {
-            Text(chat?.title ?? "Chat")
-                .font(BodyFont.system(size: 16, weight: .semibold))
-                .foregroundStyle(Palette.textPrimary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .padding(.horizontal, 18)
-                .frame(height: 42)
-                .glassCapsule()
         }
-    }
-
-    private var workingPill: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(Color(red: 0.30, green: 0.78, blue: 0.45))
-                .frame(width: 7, height: 7)
-            Text("Working")
-                .font(BodyFont.system(size: 13, weight: .medium))
-                .foregroundStyle(Palette.textPrimary)
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 36)
-        .glassCapsule()
     }
 
     // MARK: Bottom chrome
