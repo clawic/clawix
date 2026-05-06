@@ -40,6 +40,11 @@ struct ComposerView: View {
     @State private var showCamera: Bool = false
     @State private var showLibraryPicker: Bool = false
     @State private var isExpanded: Bool = false
+    /// Cached "should the expand affordance show?" derived from `text`.
+    /// Computing it inside `body` was scanning the entire string on
+    /// every keystroke even for short prompts; this drives the same
+    /// affordance from a single `.onChange` so the body stays cheap.
+    @State private var showExpandButton: Bool = false
     @Namespace private var glassNS
 
     private var canSend: Bool {
@@ -70,8 +75,13 @@ struct ComposerView: View {
         // child's first appearance, so this view can initially see
         // `autofocusOnAppear: false`. The small delay lets the push
         // transition settle before the keyboard animates in.
-        .onAppear { tryAutofocus() }
+        .onAppear {
+            tryAutofocus()
+            recomputeShowExpand(text)
+        }
         .onChange(of: autofocusOnAppear) { _, _ in tryAutofocus() }
+        .onChange(of: text) { _, newValue in recomputeShowExpand(newValue) }
+        .onChange(of: resetToken) { _, _ in recomputeShowExpand(text) }
         .sheet(isPresented: $showAttachmentSheet) {
             AttachmentSheetView(
                 onCamera: {
@@ -279,12 +289,27 @@ struct ComposerView: View {
         .frame(maxWidth: .infinity, minHeight: 37, alignment: .leading)
     }
 
-    private var showExpandButton: Bool {
-        // Only surface the expand affordance once the pill is naturally
-        // tall enough that the top-right icon doesn't collide with the
-        // bottom-right send/mic cluster (≥ 3 visual lines).
-        let newlines = text.filter { $0 == "\n" }.count
-        return newlines >= 2 || text.count > 90
+    /// Recomputes the expand-affordance visibility from the current
+    /// `text`. Called from `.onChange(of: text)` and once on appear so
+    /// the pill is naturally tall enough (≥ 3 visual lines) before the
+    /// icon shows. Cheap to compute, but cheap × every keystroke turns
+    /// into measurable jank for long prompts; staying out of `body`
+    /// means the keystroke path no longer scans the whole string.
+    private func recomputeShowExpand(_ value: String) {
+        let newShow: Bool
+        if value.count > 90 {
+            newShow = true
+        } else {
+            var newlines = 0
+            for ch in value where ch == "\n" {
+                newlines += 1
+                if newlines >= 2 { break }
+            }
+            newShow = newlines >= 2
+        }
+        if newShow != showExpandButton {
+            showExpandButton = newShow
+        }
     }
 
     private var expandButton: some View {
