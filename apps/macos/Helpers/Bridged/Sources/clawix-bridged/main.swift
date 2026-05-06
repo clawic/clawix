@@ -207,6 +207,47 @@ final class DaemonEngineHost: EngineHost {
         handleSendPrompt(chatId: chatId, text: text, attachments: attachments)
     }
 
+    func handleTranscribeAudio(
+        requestId: String,
+        audioBase64: String,
+        mimeType: String,
+        language: String?,
+        reply: @MainActor @escaping (String, String?) -> Void
+    ) {
+        // Audio blobs from the iPhone arrive base64-encoded inside the
+        // bridge frame because the WebSocket transport is text-only.
+        // Spool to a per-request file in the same /tmp tree the image
+        // attachment path uses, then hand the file to WhisperKit.
+        let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGED_DEFAULTS_SUITE"]
+        let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
+        let activeRaw = defaults.string(forKey: DictationModelManager.activeModelDefaultsKey) ?? ""
+        let model = DictationModel(rawValue: activeRaw) ?? .default
+
+        Task { @MainActor in
+            let ext = audioExtension(mimeType: mimeType)
+            let root = URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("clawix-attachments", isDirectory: true)
+                .appendingPathComponent("dictation", isDirectory: true)
+            let url = root.appendingPathComponent("\(requestId).\(ext)")
+            do {
+                try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+                guard let data = Data(base64Encoded: audioBase64) else {
+                    reply("", "Audio decode failed")
+                    return
+                }
+                try data.write(to: url, options: .atomic)
+                let text = try await TranscriptionService.shared.transcribe(
+                    fileURL: url,
+                    using: model,
+                    language: language
+                )
+                reply(text, nil)
+            } catch {
+                reply("", error.localizedDescription)
+            }
+        }
+    }
+
     func handleArchiveChat(chatId: UUID, archived: Bool) {
         let chatIdString = chatId.uuidString
         guard let threadId = threadByChat[chatIdString] else { return }
@@ -1024,6 +1065,24 @@ enum RolloutHistory {
             && !sawClose
             && lastEventAt.map { now.timeIntervalSince($0) > 30 } == true
         return (messages, interrupted)
+    }
+}
+
+// MARK: - Inline audio attachments
+
+/// Maps a MIME type from a bridge `transcribeAudio` frame to the file
+/// extension WhisperKit's `AVAudioFile` decoder expects. The list is
+/// the codec set the iPhone composer can produce out of the box.
+private func audioExtension(mimeType: String) -> String {
+    switch mimeType.lowercased() {
+    case "audio/wav", "audio/x-wav", "audio/wave":     return "wav"
+    case "audio/m4a", "audio/mp4", "audio/x-m4a":      return "m4a"
+    case "audio/aac":                                  return "aac"
+    case "audio/mpeg", "audio/mp3":                    return "mp3"
+    case "audio/ogg", "audio/opus":                    return "ogg"
+    case "audio/flac":                                 return "flac"
+    case "audio/caf", "audio/x-caf":                   return "caf"
+    default:                                           return "m4a"
     }
 }
 
