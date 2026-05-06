@@ -2363,10 +2363,11 @@ private struct PinnedReorderableList: View, Equatable {
     /// ~500ms settle animation.
     @State private var dragChipPanel: DragChipPanel? = nil
     /// Each row reports its window-coord frame here so `handleDragStart`
-    /// can compute the cursor's offset within the row at drag start. The
-    /// chip is anchored to that offset so the cursor stays at the same
-    /// point of the chip the user originally clicked.
-    @State private var rowFramesById: [UUID: CGRect] = [:]
+    /// can compute the cursor's offset within the row at drag start.
+    /// Reference-type bag (no `@Published`) so mutating `byId` is
+    /// invisible to SwiftUI and the per-frame preference firehose
+    /// stays cheap.
+    @StateObject private var rowFrames = PinnedRowFrameStore()
     /// Holds a weak ref to the surrounding sidebar `NSScrollView`,
     /// captured by `EnclosingScrollViewLocator` once the view enters
     /// the AppKit hierarchy. Drives the edge auto-scroll while a
@@ -2402,11 +2403,15 @@ private struct PinnedReorderableList: View, Equatable {
             }
             trailingSlotZone
         }
-        // Animations are applied explicitly per-call (`withAnimation`) so
-        // start/drop are instant while only the gap slide during hover
-        // interpolates. `.animation(_:value:)` wouldn't honour the
-        // `disablesAnimations` flag on `Transaction`, so we can't use it
-        // here without also fading the source row.
+        // Animations are applied explicitly per-call (`withAnimation`)
+        // so start/drop are instant while only the gap slide during
+        // hover interpolates. The `withAnimation(moveAnimation)` in
+        // `setTarget` opens a transaction scoped to that closure: it
+        // animates the resulting `targetIndex` change (gap height) and
+        // closes when the closure returns. Subsequent state mutations
+        // in `performReorder` (plain assignments) do not inherit it,
+        // so the row insertion lands instant without any extra
+        // transaction trickery.
         .background(EnclosingScrollViewLocator(box: scrollBox).allowsHitTesting(false))
         .onAppear { installMouseUpMonitor() }
         .onDisappear {
@@ -2414,7 +2419,7 @@ private struct PinnedReorderableList: View, Equatable {
             cleanupDragChip()
             removeMouseUpMonitor()
         }
-        .onPreferenceChange(PinnedRowFrameKey.self) { rowFramesById = $0 }
+        .onPreferenceChange(PinnedRowFrameKey.self) { rowFrames.byId = $0 }
         .onChange(of: pinned.map(\.id)) { _, _ in
             // Defensive cleanup: any pinned-array reorder (ours or an
             // external sync) clears lingering drag state. Belt-and-
@@ -2542,9 +2547,9 @@ private struct PinnedReorderableList: View, Equatable {
         // at drag start. Carrying this through to the panel keeps the
         // cursor at the same point on the chip the user originally
         // clicked, instead of a fixed right-of-cursor offset.
-        let anchor = grabAnchor(for: chat)
+        let (anchor, width) = grabAnchor(for: chat)
         dragChipPanel?.close()
-        dragChipPanel = DragChipPanel(chat: chat, grabAnchor: anchor)
+        dragChipPanel = DragChipPanel(chat: chat, grabAnchor: anchor, width: width)
         dragChipPanel?.show()
         // Edge auto-scroll. The same 60Hz cursor poll the chip uses to
         // follow the cursor also drives this; nudges the surrounding
@@ -2557,13 +2562,16 @@ private struct PinnedReorderableList: View, Equatable {
         autoScroller = scroller
     }
 
-    /// Cursor offset (in chip-local coords, top-left origin) at drag
-    /// start. Falls back to a sensible default if we don't yet have a
-    /// frame measurement for this row (defensive only — every row reports
-    /// its frame on appear).
-    private func grabAnchor(for chat: Chat) -> CGPoint {
-        guard let rowFrame = rowFramesById[chat.id] else {
-            return CGPoint(x: 30, y: 16)
+    /// Cursor offset (in chip-local coords, top-left origin) and the
+    /// row's measured width at drag start. The anchor keeps the cursor
+    /// pinned to the same point on the chip the user clicked, and the
+    /// width sizes the chip 1:1 with the row underneath. Falls back to
+    /// sensible defaults if we don't yet have a frame measurement
+    /// (defensive only — every row reports its frame on appear).
+    private func grabAnchor(for chat: Chat) -> (CGPoint, CGFloat) {
+        let fallbackWidth: CGFloat = 240
+        guard let rowFrame = rowFrames.byId[chat.id] else {
+            return (CGPoint(x: 30, y: 16), fallbackWidth)
         }
         // Compute the offset entirely in SwiftUI window coordinates
         // (top-left origin) to avoid screen<->window conversion errors
@@ -2573,7 +2581,7 @@ private struct PinnedReorderableList: View, Equatable {
         guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
               let contentView = window.contentView
         else {
-            return CGPoint(x: 30, y: 16)
+            return (CGPoint(x: 30, y: 16), rowFrame.width)
         }
         let cursorScreen = NSEvent.mouseLocation
         // Screen -> window (still bottom-left origin).
@@ -2586,7 +2594,7 @@ private struct PinnedReorderableList: View, Equatable {
         // Anchor in chip-local coords (top-left).
         let dx = cursorSwiftUI.x - rowFrame.origin.x
         let dy = cursorSwiftUI.y - rowFrame.origin.y
-        return CGPoint(x: dx, y: dy)
+        return (CGPoint(x: dx, y: dy), rowFrame.width)
     }
 
     private func cleanupDragChip() {
@@ -2632,18 +2640,13 @@ private struct PinnedReorderableList: View, Equatable {
         cancelPendingClear()
         cleanupDragChip()
         let beforeChatId: UUID? = (beforeIndex < pinned.count) ? pinned[beforeIndex].id : nil
-        // Force-instant: the last `setTarget` during the drag opened an
-        // animation transaction (`withAnimation(moveAnimation)`); without
-        // an explicit nil-animation transaction here the source row's
-        // opacity/frame restore inherits that easeOut and fades in over
-        // 200ms instead of snapping back the moment the drop lands.
-        var t = Transaction()
-        t.disablesAnimations = true
-        withTransaction(t) {
-            appState.reorderPinned(chatId: uuid, beforeChatId: beforeChatId)
-            targetIndex = nil
-            draggingId = nil
-        }
+        // Plain assignments. `setTarget`'s `withAnimation(moveAnimation)`
+        // closure has already returned by the time the drop fires, so
+        // there is no live transaction to override here. Row at new
+        // index, no gap, source uncollapsed, all in one frame.
+        appState.reorderPinned(chatId: uuid, beforeChatId: beforeChatId)
+        targetIndex = nil
+        draggingId = nil
     }
 
     private func installMouseUpMonitor() {
@@ -2938,15 +2941,25 @@ final class DragChipPanel {
     /// Cursor offset within the chip (chip-local, top-left origin)
     /// captured at drag start.
     private let grabAnchor: CGPoint
+    /// Transparent margin around the chip body inside the panel so the
+    /// drop shadow (radius 14 + y offset 8) has room to render. Without
+    /// it the panel's frame clips the shadow flush at the chip edge.
+    private static let shadowInset: CGFloat = 24
 
-    init(chat: Chat, grabAnchor: CGPoint) {
+    init(chat: Chat, grabAnchor: CGPoint, width: CGFloat) {
         self.grabAnchor = grabAnchor
-        let chip = DragChipView(chat: chat)
+        let chip = DragChipView(chat: chat, width: width, shadowInset: Self.shadowInset)
         host = NSHostingView(rootView: AnyView(chip))
         host.layoutSubtreeIfNeeded()
-        let size = host.fittingSize.width > 0
-            ? host.fittingSize
-            : CGSize(width: 240, height: 32)
+        // Width is pinned to the row's measured width plus the shadow
+        // inset on each side so the shadow doesn't get clipped at the
+        // panel edge. Height comes from the natural fitting size; 32 +
+        // 2*inset is the documented row height plus the same inset, used
+        // as a safe fallback if the measurement isn't ready yet.
+        let measured = host.fittingSize
+        let panelWidth = measured.width > 0 ? measured.width : width + Self.shadowInset * 2
+        let panelHeight = measured.height > 0 ? measured.height : 32 + Self.shadowInset * 2
+        let size = CGSize(width: panelWidth, height: panelHeight)
 
         panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: size),
@@ -2959,6 +2972,11 @@ final class DragChipPanel {
         panel.hasShadow = false
         panel.level = .popUpMenu
         panel.isMovableByWindowBackground = false
+        // Borderless panels still inherit a default fade-out from
+        // `orderOut(_:)`. Force `.none` so the chip disappears the same
+        // frame the drop lands; otherwise the chip lingers for a beat
+        // and reads as "the row I just dropped is animating in".
+        panel.animationBehavior = .none
         panel.ignoresMouseEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.contentView = host
@@ -2981,13 +2999,17 @@ final class DragChipPanel {
     private func updatePosition() {
         let cursor = NSEvent.mouseLocation
         let frame = panel.frame
-        // grabAnchor is in chip-local coords, top-left origin. Translate
-        // to AppKit screen coords (bottom-left origin) so the cursor
-        // stays at the same point on the chip the user originally
+        // grabAnchor is in chip-local coords, top-left origin. The chip
+        // sits inset by `shadowInset` inside the panel (so the shadow
+        // has room to render), so the cursor's target point in
+        // panel-local coords is shifted by that inset on both axes.
+        // Translate to AppKit screen coords (bottom-left origin) so the
+        // cursor stays at the same point on the chip the user originally
         // clicked when the drag began.
+        let inset = Self.shadowInset
         let new = NSRect(
-            x: cursor.x - grabAnchor.x,
-            y: cursor.y - (frame.height - grabAnchor.y),
+            x: cursor.x - grabAnchor.x - inset,
+            y: cursor.y - (frame.height - grabAnchor.y - inset),
             width: frame.width,
             height: frame.height
         )
