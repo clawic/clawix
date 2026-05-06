@@ -131,6 +131,24 @@ final class BridgeClient: NSObject {
         send(BridgeFrame(.readFile(path: path)), on: winner)
     }
 
+    func transcribeAudio(
+        requestId: String,
+        audioBase64: String,
+        mimeType: String,
+        language: String?
+    ) {
+        guard let winner else { return }
+        send(
+            BridgeFrame(.transcribeAudio(
+                requestId: requestId,
+                audioBase64: audioBase64,
+                mimeType: mimeType,
+                language: language
+            )),
+            on: winner
+        )
+    }
+
     // MARK: - Bonjour browser
 
     private func startBrowser() {
@@ -439,10 +457,18 @@ final class BridgeClient: NSObject {
                     store.fileSnapshots[path] = .failed(reason: error ?? "Unknown error")
                 }
             }
+        case .transcriptionResult(let requestId, let text, let errorMessage):
+            if winner?.id == candidate.id {
+                store.applyTranscriptionResult(
+                    requestId: requestId,
+                    text: text,
+                    errorMessage: errorMessage
+                )
+            }
         case .auth, .listChats, .openChat, .sendPrompt, .newChat,
              .readFile, .editPrompt, .archiveChat, .unarchiveChat,
              .pinChat, .unpinChat, .pairingStart, .listProjects,
-             .pairingPayload, .projectsSnapshot:
+             .pairingPayload, .projectsSnapshot, .transcribeAudio:
             // Outbound-from-desktop or server-to-desktop frames the
             // iPhone client neither emits nor consumes. Ignore.
             break

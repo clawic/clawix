@@ -49,6 +49,22 @@ final class BridgeStore {
     @ObservationIgnored
     private var client: BridgeClient?
 
+    /// In-flight transcription requests keyed by `requestId`. Each
+    /// continuation resumes when the matching `transcriptionResult`
+    /// frame arrives. Same lifecycle as the network message: if the
+    /// bridge tears down before the reply lands, we resume them with
+    /// an error in `clearPendingTranscriptions()`.
+    @ObservationIgnored
+    private var pendingTranscriptions: [String: CheckedContinuation<String, Error>] = [:]
+
+    /// Drives `SnapshotCache.save` after a quiet 500ms window. Each
+    /// call cancels the previous in-flight task; streaming bursts and
+    /// rapid chat updates collapse into a single write. The actual
+    /// IO runs on a background priority Task to keep the main thread
+    /// out of the file-system path entirely.
+    @ObservationIgnored
+    private var persistTask: Task<Void, Never>?
+
     init() {}
 
     @MainActor
@@ -108,6 +124,55 @@ final class BridgeStore {
         return id
     }
 
+    /// Send an audio blob to the Mac for transcription. Suspends until
+    /// the daemon answers with the corresponding `transcriptionResult`
+    /// frame. Throws on bridge error or daemon-reported failure.
+    /// `requestId` should be a fresh UUID per call so the answer can
+    /// be routed back to the right caller.
+    @MainActor
+    func transcribeAudio(
+        requestId: String,
+        audioData: Data,
+        mimeType: String,
+        language: String?
+    ) async throws -> String {
+        guard let client else {
+            throw TranscriptionBridgeError.notConnected
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            pendingTranscriptions[requestId] = continuation
+            client.transcribeAudio(
+                requestId: requestId,
+                audioBase64: audioData.base64EncodedString(),
+                mimeType: mimeType,
+                language: language
+            )
+        }
+    }
+
+    /// Resolve a pending transcription with the daemon's reply. Called
+    /// by `BridgeClient` when it decodes a `transcriptionResult` frame.
+    @MainActor
+    func applyTranscriptionResult(requestId: String, text: String, errorMessage: String?) {
+        guard let cont = pendingTranscriptions.removeValue(forKey: requestId) else { return }
+        if let errorMessage, !errorMessage.isEmpty {
+            cont.resume(throwing: TranscriptionBridgeError.daemonError(errorMessage))
+        } else {
+            cont.resume(returning: text)
+        }
+    }
+
+    /// Drain pending transcriptions when the bridge connection drops.
+    /// Resumes each continuation with `notConnected` so the iOS view
+    /// model can fall back or surface an error.
+    @MainActor
+    func clearPendingTranscriptions() {
+        for (_, cont) in pendingTranscriptions {
+            cont.resume(throwing: TranscriptionBridgeError.notConnected)
+        }
+        pendingTranscriptions.removeAll()
+    }
+
     /// Kick off (or refresh) the read of a file on the Mac. Idempotent:
     /// re-tapping a pill while a request is in flight is a no-op, but a
     /// second tap on a `.failed` row retries.
@@ -129,6 +194,19 @@ final class BridgeStore {
     func chat(_ chatId: String) -> WireChat? {
         chats.first { $0.id == chatId }
     }
+
+    enum TranscriptionBridgeError: Error, LocalizedError {
+        case notConnected
+        case daemonError(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .notConnected: return "Not connected to the Mac bridge"
+            case .daemonError(let msg): return msg
+            }
+        }
+    }
+
 
     static func mock() -> BridgeStore {
         let s = BridgeStore()
