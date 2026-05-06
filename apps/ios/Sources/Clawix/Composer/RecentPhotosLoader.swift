@@ -31,6 +31,17 @@ final class RecentPhotosLoader {
     private let imageManager = PHCachingImageManager()
     private let thumbnailSize = CGSize(width: 360, height: 360)
 
+    /// Thumbnails arrive one-by-one from `PHCachingImageManager`. Each
+    /// callback used to mutate `thumbnails` directly, which made
+    /// `@Observable` notify the grid 60 times in a row when the sheet
+    /// opens. We collect into `pendingThumbs` and drain into
+    /// `thumbnails` on a 200ms debounce so the grid re-renders ~5×
+    /// instead of 60×.
+    @ObservationIgnored
+    private var pendingThumbs: [String: UIImage] = [:]
+    @ObservationIgnored
+    private var thumbsFlushScheduled: Bool = false
+
     @MainActor
     func start() async {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -89,9 +100,34 @@ final class RecentPhotosLoader {
         ) { [weak self] image, _ in
             guard let self, let image else { return }
             Task { @MainActor in
-                self.thumbnails[key] = image
+                self.pendingThumbs[key] = image
+                self.scheduleThumbsFlush()
             }
         }
+    }
+
+    @MainActor
+    private func scheduleThumbsFlush() {
+        guard !thumbsFlushScheduled else { return }
+        thumbsFlushScheduled = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            self?.flushPendingThumbs()
+        }
+    }
+
+    @MainActor
+    private func flushPendingThumbs() {
+        thumbsFlushScheduled = false
+        guard !pendingThumbs.isEmpty else { return }
+        // One assignment per drain so `@Observable` notifies once
+        // regardless of how many thumbnails landed in this window.
+        var merged = thumbnails
+        for (k, v) in pendingThumbs {
+            merged[k] = v
+        }
+        pendingThumbs.removeAll(keepingCapacity: true)
+        thumbnails = merged
     }
 
     /// Loads a full-resolution image for one asset, ready to attach.
