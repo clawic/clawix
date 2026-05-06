@@ -165,7 +165,7 @@ struct ComposerView: View {
                 HStack(spacing: 4) {
                     if appState.selectedSpeed == .fast {
                         Image(systemName: "bolt.fill")
-                            .font(BodyFont.system(size: 10, weight: .semibold))
+                            .font(BodyFont.system(size: 12, weight: .bold))
                             .foregroundColor(Color(white: 0.92))
                             .accessibilityHidden(true)
                     }
@@ -214,7 +214,7 @@ struct ComposerView: View {
             if activeTurnInChat {
                 Button { appState.interruptActiveTurn() } label: {
                     Image(systemName: "stop.fill")
-                        .font(BodyFont.system(size: 12, weight: .bold))
+                        .font(BodyFont.system(size: 14, weight: .bold))
                         .foregroundColor(Color(white: 0.06))
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(Color.white))
@@ -225,7 +225,7 @@ struct ComposerView: View {
             } else {
                 Button { appState.sendMessage() } label: {
                     Image(systemName: "arrow.up")
-                        .font(BodyFont.system(size: 13, weight: .bold))
+                        .font(BodyFont.system(size: 15, weight: .bold))
                         .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(canSend ? Color.white : Color.white.opacity(0.14)))
@@ -290,7 +290,7 @@ struct ComposerView: View {
             addMenuOpen.toggle()
         } label: {
             Image(systemName: "plus")
-                .font(BodyFont.system(size: 14, weight: .regular))
+                .font(BodyFont.system(size: 16, weight: .medium))
                 .foregroundColor(.white)
                 .opacity(active ? 0.96 : 0.62)
                 .frame(width: 28, height: 28)
@@ -1515,18 +1515,18 @@ struct CompactMenuToggle: View {
     private let knobInset: CGFloat = 2
 
     var body: some View {
-        ZStack(alignment: isOn ? .trailing : .leading) {
+        ZStack(alignment: .leading) {
             Capsule()
                 .fill(isOn ? Color(white: 0.92) : Color(white: 0.30))
             Circle()
                 .fill(isOn ? Color(white: 0.18) : Color(white: 0.96))
                 .frame(width: knobSize, height: knobSize)
-                .padding(.horizontal, knobInset)
+                .offset(x: isOn ? trackWidth - knobSize - knobInset : knobInset)
         }
         .frame(width: trackWidth, height: trackHeight)
         .contentShape(Capsule())
         .onTapGesture {
-            withAnimation(.easeOut(duration: 0.14)) { isOn.toggle() }
+            withAnimation(.spring(response: 0.26, dampingFraction: 0.72)) { isOn.toggle() }
         }
         .accessibilityElement()
         .accessibilityAddTraits(.isButton)
