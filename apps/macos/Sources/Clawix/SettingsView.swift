@@ -275,7 +275,7 @@ struct PillToggle: View {
         Button {
             isOn.toggle()
         } label: {
-            ZStack(alignment: isOn ? .trailing : .leading) {
+            ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
                     .fill(isOn
                           ? Color(red: 0.16, green: 0.46, blue: 0.98)
@@ -283,14 +283,14 @@ struct PillToggle: View {
                 Circle()
                     .fill(Color.white)
                     .frame(width: knobSize, height: knobSize)
-                    .padding(.horizontal, inset)
                     .shadow(color: .black.opacity(0.20), radius: 1, x: 0, y: 1)
+                    .offset(x: isOn ? trackWidth - knobSize - inset : inset)
             }
             .frame(width: trackWidth, height: trackHeight)
             .contentShape(Capsule(style: .continuous))
         }
         .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.18), value: isOn)
+        .animation(.spring(response: 0.28, dampingFraction: 0.72), value: isOn)
     }
 }
 
