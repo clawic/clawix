@@ -32,6 +32,12 @@ struct ThinkingShimmer: View {
                 }
             }
             .foregroundStyle(Palette.textPrimary)
+            // Composes the per-character `Text` views into a single
+            // offscreen layer per frame so the wave animation does not
+            // force SwiftUI to re-evaluate `n` view structs every tick.
+            // Crucial during streaming, where this view co-exists with
+            // a long transcript that re-renders on each chunk.
+            .drawingGroup()
         }
         .accessibilityLabel(text)
     }
