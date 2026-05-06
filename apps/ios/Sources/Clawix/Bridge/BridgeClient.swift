@@ -443,7 +443,10 @@ final class BridgeClient: NSObject {
             store.connection = .error(message: "Update Clawix on the Mac")
             candidate.connection.cancel()
         case .chatsSnapshot(let chats):
-            if winner?.id == candidate.id { store.chats = chats }
+            if winner?.id == candidate.id {
+                store.chats = chats
+                store.persistSnapshotDebounced()
+            }
         case .chatUpdated(let chat):
             if winner?.id == candidate.id {
                 if let idx = store.chats.firstIndex(where: { $0.id == chat.id }) {
@@ -451,14 +454,17 @@ final class BridgeClient: NSObject {
                 } else {
                     store.chats.append(chat)
                 }
+                store.persistSnapshotDebounced()
             }
         case .messagesSnapshot(let chatId, let messages):
             if winner?.id == candidate.id {
                 store.messagesByChat[chatId] = messages
+                store.persistSnapshotDebounced()
             }
         case .messageAppended(let chatId, let message):
             if winner?.id == candidate.id {
                 store.applyMessageAppended(chatId: chatId, message: message)
+                store.persistSnapshotDebounced()
             }
         case .messageStreaming(let chatId, let messageId, let content, let reasoning, let finished):
             if winner?.id == candidate.id {

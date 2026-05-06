@@ -81,6 +81,12 @@ struct ClawixApp: App {
             return
         }
         #endif
+        // Warm the home + most-recent chats from the on-disk snapshot
+        // BEFORE the bridge race kicks off. The user lands on a
+        // populated chat list / detail screen instead of a blank one
+        // while we negotiate WebSocket + auth. The bridge later
+        // overwrites this with the canonical state.
+        store.loadCachedSnapshot()
         if client == nil {
             let c = BridgeClient(store: store)
             store.attach(client: c)
@@ -102,6 +108,7 @@ struct ClawixApp: App {
     private func handleUnpair() {
         client?.disconnect()
         CredentialStore.shared.clear()
+        SnapshotCache.clear()
         store.chats = []
         store.messagesByChat = [:]
         store.openChatId = nil

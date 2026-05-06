@@ -255,6 +255,38 @@ final class BridgeStore {
         }
     }
 
+    /// Restore the on-disk snapshot if one exists. Called once at
+    /// startup before the bridge connects, so the home screen and any
+    /// recently-opened chat detail render their last-known state
+    /// instantly while the WebSocket race is still in flight. The
+    /// bridge's own `chatsSnapshot` / `messagesSnapshot` frames will
+    /// shortly overwrite this with the canonical truth.
+    @MainActor
+    func loadCachedSnapshot() {
+        guard chats.isEmpty, messagesByChat.isEmpty else { return }
+        guard let payload = SnapshotCache.load() else { return }
+        chats = payload.chats
+        messagesByChat = payload.messagesByChat
+    }
+
+    /// Schedule a persist of the current chats + messages snapshot
+    /// after 500ms of quiet. Streaming chunks and rapid chat updates
+    /// collapse into a single write; the IO runs on a background
+    /// queue so the main thread is never blocked. Safe to call from
+    /// any of the bridge inbound paths after a mutation.
+    @MainActor
+    func persistSnapshotDebounced() {
+        persistTask?.cancel()
+        persistTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let self else { return }
+            let chatsSnap = self.chats
+            let messagesSnap = self.messagesByChat
+            Task.detached(priority: .background) {
+                SnapshotCache.save(chats: chatsSnap, messages: messagesSnap)
+            }
+        }
+    }
 
     static func mock() -> BridgeStore {
         let s = BridgeStore()
