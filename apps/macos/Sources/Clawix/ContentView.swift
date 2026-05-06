@@ -175,7 +175,9 @@ struct ContentView: View {
                         case .home:          MainContentView()
                         case .search:
                             MainContentView()
-                                .overlay(SearchPopoverOverlay().offset(x: -300, y: -70))
+                                .overlay(alignment: .center) {
+                                    SearchPopoverOverlay()
+                                }
                         case .plugins:       MainContentView()
                         case .automations:   AutomationsView()
                         case .project:       MainContentView()
@@ -439,7 +441,7 @@ private struct ContentTopChrome: View {
 
     private var currentChat: Chat? {
         if case .chat(let id) = appState.currentRoute {
-            return appState.chats.first(where: { $0.id == id })
+            return appState.chat(byId: id)
         }
         return nil
     }
@@ -859,11 +861,22 @@ private struct ChatActionsMenu: View {
 
 private struct SearchPopoverOverlay: View {
     @EnvironmentObject var appState: AppState
+    @FocusState private var queryFocused: Bool
+
+    private static let popupCornerRadius: CGFloat = 26
+    private static let popupStrokeColor = Color.white.opacity(0.18)
+    private static let popupStrokeWidth: CGFloat = 0.9
 
     private var pinnedChats: [Chat] {
         appState.chats
             .filter { $0.isPinned && !$0.isArchived }
             .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private var filteredPinnedChats: [Chat] {
+        let q = appState.searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return pinnedChats }
+        return pinnedChats.filter { $0.title.lowercased().contains(q) }
     }
 
     private func projectName(for chat: Chat) -> String? {
@@ -873,43 +886,99 @@ private struct SearchPopoverOverlay: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Find chats")
-                .font(BodyFont.system(size: 13))
-                .foregroundColor(MenuStyle.headerText)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 14)
+            searchField
+            divider
+            content
+        }
+        .frame(width: 560, alignment: .leading)
+        .background(
+            ZStack {
+                VisualEffectBlur(material: .hudWindow,
+                                 blendingMode: .withinWindow,
+                                 state: .active)
+                MenuStyle.fill
+            }
+            .clipShape(RoundedRectangle(cornerRadius: Self.popupCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Self.popupCornerRadius, style: .continuous)
+                    .stroke(Self.popupStrokeColor, lineWidth: Self.popupStrokeWidth)
+            )
+            .shadow(color: MenuStyle.shadowColor,
+                    radius: MenuStyle.shadowRadius,
+                    x: 0, y: MenuStyle.shadowOffsetY)
+        )
+        .background(MenuOutsideClickWatcher(isPresented: searchOpenBinding))
+        .onAppear { queryFocused = true }
+    }
 
-            if !pinnedChats.isEmpty {
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            SearchIcon(size: 14)
+                .foregroundColor(Color(white: 0.55))
+            TextField("Search chats", text: $appState.searchQuery)
+                .textFieldStyle(.plain)
+                .font(BodyFont.system(size: 15))
+                .foregroundColor(Color(white: 0.94))
+                .focused($queryFocused)
+            if !appState.searchQuery.isEmpty {
+                Button {
+                    appState.searchQuery = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(BodyFont.system(size: 13))
+                        .foregroundColor(Color(white: 0.45))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.06))
+            .frame(height: 1)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            let pinned = filteredPinnedChats
+            if !pinned.isEmpty {
                 Text("Pinned chats")
                     .font(BodyFont.system(size: 11.5))
                     .foregroundColor(MenuStyle.headerText)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
                     .padding(.bottom, 4)
 
                 VStack(spacing: 0) {
-                    ForEach(Array(pinnedChats.prefix(9).enumerated()), id: \.element.id) { index, chat in
+                    ForEach(Array(pinned.prefix(9).enumerated()), id: \.element.id) { index, chat in
                         SearchPinnedRow(
                             title: chat.title,
                             projectName: projectName(for: chat),
                             shortcutNumber: index + 1,
-                            isFirst: index == 0,
+                            isFirst: index == 0 && appState.searchQuery.isEmpty,
                             onSelect: { appState.currentRoute = .chat(chat.id) }
                         )
                     }
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, 8)
+            } else if !appState.searchQuery.isEmpty {
+                Text("No matches")
+                    .font(BodyFont.system(size: 13))
+                    .foregroundColor(MenuStyle.rowSubtle)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 18)
             } else {
                 Text("You do not have any pinned chats yet")
                     .font(BodyFont.system(size: 13))
                     .foregroundColor(MenuStyle.rowSubtle)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 18)
             }
         }
-        .frame(width: 560, alignment: .leading)
-        .menuStandardBackground()
-        .background(MenuOutsideClickWatcher(isPresented: searchOpenBinding))
     }
 
     private var searchOpenBinding: Binding<Bool> {
@@ -935,8 +1004,7 @@ private struct SearchPinnedRow: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            Image(systemName: "macwindow")
-                .font(BodyFont.system(size: 13))
+            PinIcon(size: 13, lineWidth: 1.0)
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
 
