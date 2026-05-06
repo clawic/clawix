@@ -1265,11 +1265,21 @@ private struct RecentDictationRow: View {
                     withAnimation(.easeOut(duration: 0.18)) { copied = false }
                 }
             } label: {
-                Image(systemName: copied ? "checkmark" : "square.on.square")
-                    .font(BodyFont.system(size: 12))
-                    .foregroundColor(Color(white: copyHovered ? 0.94 : 0.60))
-                    .frame(width: 28, height: 28)
-                    .contentShape(Rectangle())
+                Group {
+                    if copied {
+                        Image(systemName: "checkmark")
+                            .font(BodyFont.system(size: 12))
+                    } else {
+                        CopyIconViewSquircle(
+                            color: Color(white: copyHovered ? 0.94 : 0.60),
+                            lineWidth: 1.0
+                        )
+                        .frame(width: 13, height: 13)
+                    }
+                }
+                .foregroundColor(Color(white: copyHovered ? 0.94 : 0.60))
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .onHover { copyHovered = $0 }

@@ -171,17 +171,25 @@ struct PlanCardView: View {
         rotationDegrees: Double = 0,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(BodyFont.system(size: 12, weight: .medium))
-                .foregroundColor(Color(white: hovered.wrappedValue ? 1.0 : 0.62))
-                .frame(width: 26, height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.white.opacity(hovered.wrappedValue ? 0.07 : 0))
-                )
-                .rotationEffect(.degrees(rotationDegrees))
-                .animation(.easeOut(duration: 0.18), value: rotationDegrees)
+        let tint = Color(white: hovered.wrappedValue ? 1.0 : 0.62)
+        return Button(action: action) {
+            Group {
+                if systemName == "square.on.square" {
+                    CopyIconViewSquircle(color: tint, lineWidth: 1.0)
+                        .frame(width: 13, height: 13)
+                } else {
+                    Image(systemName: systemName)
+                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .foregroundColor(tint)
+                }
+            }
+            .frame(width: 26, height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.white.opacity(hovered.wrappedValue ? 0.07 : 0))
+            )
+            .rotationEffect(.degrees(rotationDegrees))
+            .animation(.easeOut(duration: 0.18), value: rotationDegrees)
         }
         .buttonStyle(.plain)
         .onHover { hovered.wrappedValue = $0 }
