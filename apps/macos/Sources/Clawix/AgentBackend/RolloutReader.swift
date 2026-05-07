@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 // Reads a Clawix rollout JSONL file and reconstructs the visible chat
 // history with the same structure the live streaming pipeline produces:
@@ -18,6 +19,13 @@ struct RolloutHistoryEntry {
     let text: String
     let timestamp: Date
     let timeline: [AssistantTimelineEntry]
+    /// Image attachments referenced by this entry. Populated for user
+    /// messages whose JSONL event carries an optional
+    /// `images: [{filename, mimeType}]` array — each filename is read
+    /// from `CLAWIX_IMAGE_FIXTURE_DIR` and base64-encoded so the daemon
+    /// can ship the bytes inline on the wire. Empty for typed messages
+    /// and for assistant entries.
+    let attachments: [WireAttachment]
 }
 
 enum RolloutReader {
@@ -141,6 +149,11 @@ enum RolloutReader {
         // writes paths like `cualquiera.md`, not absolute) so the
         // ChangedFileCard pill can find the file on disk.
         var sessionCwd: String? = nil
+        // session id captured from `session_meta.payload.id`. Used to
+        // build the absolute filesystem path for `imagegen` outputs,
+        // which Codex stores under
+        // `~/.codex/generated_images/<sessionId>/<callId>.png`.
+        var sessionId: String? = nil
 
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -167,9 +180,15 @@ enum RolloutReader {
             guard let payload = obj["payload"] as? [String: Any] else { continue }
             let inner = payload["type"] as? String
 
-            if kind == "session_meta", sessionCwd == nil,
-               let cwd = payload["cwd"] as? String, !cwd.isEmpty {
-                sessionCwd = cwd
+            if kind == "session_meta" {
+                if sessionCwd == nil,
+                   let cwd = payload["cwd"] as? String, !cwd.isEmpty {
+                    sessionCwd = cwd
+                }
+                if sessionId == nil,
+                   let id = payload["id"] as? String, !id.isEmpty {
+                    sessionId = id
+                }
             }
 
             switch (kind, inner) {
@@ -184,6 +203,7 @@ enum RolloutReader {
                     // Clawix re-injects internal scaffolding ("# In app
                     // browser:", "<turn_aborted>", …) into the response
                     // history as fake user_messages — skip those.
+                    let attachments = Self.loadImageAttachments(from: payload["images"])
                     if !trimmed.isEmpty,
                        !trimmed.hasPrefix("<turn_aborted>"),
                        !containsRequestMarker(trimmed) {
@@ -191,7 +211,8 @@ enum RolloutReader {
                             role: .user,
                             text: trimmed,
                             timestamp: timestamp,
-                            timeline: []
+                            timeline: [],
+                            attachments: attachments
                         ))
                     } else if containsRequestMarker(trimmed),
                               let extracted = extractRequestFromBrowserWrapper(trimmed) {
@@ -199,7 +220,18 @@ enum RolloutReader {
                             role: .user,
                             text: extracted,
                             timestamp: timestamp,
-                            timeline: []
+                            timeline: [],
+                            attachments: attachments
+                        ))
+                    } else if trimmed.isEmpty, !attachments.isEmpty {
+                        // Attachment-only user message: no text body, but
+                        // the bubble still needs to render the thumbnails.
+                        out.append(RolloutHistoryEntry(
+                            role: .user,
+                            text: "",
+                            timestamp: timestamp,
+                            timeline: [],
+                            attachments: attachments
                         ))
                     }
                 }
@@ -325,8 +357,21 @@ enum RolloutReader {
                 if pending == nil {
                     pending = PendingAssistant(timestamp: timestamp)
                 }
+                let imagePath: String? = sessionId.map { sid in
+                    FileManager.default.homeDirectoryForCurrentUser
+                        .appendingPathComponent(".codex", isDirectory: true)
+                        .appendingPathComponent("generated_images", isDirectory: true)
+                        .appendingPathComponent(sid, isDirectory: true)
+                        .appendingPathComponent("\(callId).png")
+                        .path
+                }
                 pending?.appendOther(
-                    WorkItem(id: callId, kind: .imageGeneration, status: .completed)
+                    WorkItem(
+                        id: callId,
+                        kind: .imageGeneration,
+                        status: .completed,
+                        generatedImagePath: imagePath
+                    )
                 )
 
             case ("event_msg", "view_image_tool_call"):
@@ -609,6 +654,60 @@ enum RolloutReader {
     private static func containsRequestMarker(_ text: String) -> Bool {
         requestMarkers.contains { text.contains($0) }
     }
+
+    /// Resolve the optional `images: [{filename, mimeType}]` array from a
+    /// `user_message` payload into inline-base64 `WireAttachment`s so the
+    /// daemon can ship them on the wire when the iPhone hydrates the
+    /// chat. Files are read from `CLAWIX_IMAGE_FIXTURE_DIR` (set by
+    /// `dummy.sh` to `<workspace>/dummy/images/`); missing or empty
+    /// entries are dropped silently so a typo in a fixture doesn't break
+    /// the whole chat hydrate. nil / non-array `images` returns [], so
+    /// real Codex rollouts (which never carry this field) are no-ops.
+    fileprivate static func loadImageAttachments(from raw: Any?) -> [WireAttachment] {
+        guard let arr = raw as? [[String: Any]], !arr.isEmpty else { return [] }
+        guard let dirString = ProcessInfo.processInfo.environment["CLAWIX_IMAGE_FIXTURE_DIR"],
+              !dirString.isEmpty else {
+            return []
+        }
+        let dir = URL(fileURLWithPath: dirString, isDirectory: true)
+        var out: [WireAttachment] = []
+        for entry in arr {
+            guard let filename = (entry["filename"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !filename.isEmpty else { continue }
+            // Defensive against fixture authors writing absolute paths or
+            // `..` traversal: treat the basename only so the load is
+            // always rooted at CLAWIX_IMAGE_FIXTURE_DIR.
+            let base = (filename as NSString).lastPathComponent
+            let fileURL = dir.appendingPathComponent(base)
+            guard let data = try? Data(contentsOf: fileURL), !data.isEmpty else { continue }
+            let mime = (entry["mimeType"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                ?? Self.guessMimeType(forFilename: base)
+            let id = (entry["id"] as? String) ?? UUID().uuidString
+            let kindRaw = (entry["kind"] as? String) ?? "image"
+            let kind: WireAttachmentKind = (kindRaw == "audio") ? .audio : .image
+            out.append(WireAttachment(
+                id: id,
+                kind: kind,
+                mimeType: mime,
+                filename: base,
+                dataBase64: data.base64EncodedString()
+            ))
+        }
+        return out
+    }
+
+    private static func guessMimeType(forFilename name: String) -> String {
+        let ext = (name as NSString).pathExtension.lowercased()
+        switch ext {
+        case "png":  return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "gif":  return "image/gif"
+        case "webp": return "image/webp"
+        case "heic": return "image/heic"
+        default:     return "image/png"
+        }
+    }
 }
 
 /// Mutable accumulator for a single assistant turn while we walk the
@@ -621,9 +720,17 @@ private struct PendingAssistant {
     var finalText: String = ""
 
     mutating func appendText(_ text: String, isFinal: Bool) {
-        // Each agent_message becomes its own paragraph in the timeline,
-        // rendered as a `.reasoning` block (same style as body text).
-        timeline.append(.reasoning(id: UUID(), text: text))
+        // Each agent_message lands as a `.message` entry in the
+        // timeline, mirroring the live streaming pipeline (where
+        // `nAgentMsgDelta` extends a trailing `.message` block). If the
+        // last entry already is a `.message`, extend it so a single
+        // assistant turn split across multiple `agent_message` lines
+        // doesn't render as multiple paragraphs.
+        if case .message(let lastId, let existing) = timeline.last {
+            timeline[timeline.count - 1] = .message(id: lastId, text: existing + "\n\n" + text)
+        } else {
+            timeline.append(.message(id: UUID(), text: text))
+        }
         if isFinal {
             finalText = text
         }
@@ -685,27 +792,37 @@ private struct PendingAssistant {
     func finalize() -> RolloutHistoryEntry {
         // Mirror the live streaming pipeline: ChatMessage.content holds
         // the last final_answer text. Commentary-only turns fall back to
-        // the last reasoning chunk so the body never goes invisible (the
+        // the last `.message` (agent text) chunk, then to the last
+        // `.reasoning` chunk, so the body never goes invisible (the
         // renderer collapses the timeline behind the chevron once the
         // turn is finished).
         let body: String
         if !finalText.isEmpty {
             body = finalText
         } else {
-            var lastReasoning = ""
+            var fallback = ""
             for entry in timeline.reversed() {
-                if case .reasoning(_, let text) = entry {
-                    lastReasoning = text
+                if case .message(_, let text) = entry {
+                    fallback = text
                     break
                 }
             }
-            body = lastReasoning
+            if fallback.isEmpty {
+                for entry in timeline.reversed() {
+                    if case .reasoning(_, let text) = entry {
+                        fallback = text
+                        break
+                    }
+                }
+            }
+            body = fallback
         }
         return RolloutHistoryEntry(
             role: .assistant,
             text: body,
             timestamp: timestamp,
-            timeline: timeline
+            timeline: timeline,
+            attachments: []
         )
     }
 }
