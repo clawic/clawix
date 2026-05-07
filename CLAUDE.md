@@ -148,6 +148,40 @@ Edge cases the lint does not cover, watch by hand:
 
 When a new component draws its own radius (canvas, hand-painting in a `GeometryReader`, etc.) route it through `RoundedRectangle` or `Path(roundedRect:cornerSize:style: .continuous)`. Do not invent circular Bézier curves by hand.
 
+## Segmented selectors: always `SlidingSegmented`
+
+App-wide standard for any 2-N mutually-exclusive choice picker (e.g. "Used / Remaining", "Queue / Drive", "Inline / Detached", "STDIO / HTTP streaming", merge methods, transport modes). The canonical component lives in `apps/macos/Sources/Clawix/SettingsView.swift` as `SlidingSegmented<T>` and is the only correct way to render this pattern.
+
+What `SlidingSegmented` looks like:
+
+- Outer container: `RoundedRectangle(cornerRadius: 13, style: .continuous)` with `Color.black.opacity(0.30)` fill and a 0.5pt `Color.white.opacity(0.10)` stroke.
+- Indicator: a single `RoundedRectangle(cornerRadius: 10, style: .continuous)` filled `Color.white.opacity(0.10)`. There is exactly ONE indicator in the tree, positioned by `.offset` based on the selected index. There is no per-chip background that fades in/out.
+- Inner radius is concentric to the outer (outer 13 − padding 3 = 10), so the highlight squircle nests visually inside the track squircle.
+- Selected text: `Palette.textPrimary` weight `.medium`. Unselected: `Palette.textSecondary` weight `.regular`. Same font size across both.
+
+Animation:
+
+- The indicator slides between options with `.snappy(duration: 0.32, extraBounce: 0)` applied as `.animation(animation, value: selection)` directly on the indicator's offset modifier. Quick, no bounce, no overshoot.
+- **Forbidden**: `matchedGeometryEffect` for the indicator. It's unreliable when the binding writes through `@AppStorage` on macOS (the indicator stops sliding and snaps). The "single indicator with `.offset`" pattern is the only reliable approach.
+- **Forbidden**: `withAnimation` inside the chip Button action. The animation lives on the indicator view, driven by `value: selection`, so the curve fires whether the change comes from a tap, a hotkey, or a `@AppStorage` round-trip.
+
+Sizing:
+
+- Height fixed (default 30, override via `height:`); width comes from the parent. In a row layout (label + Spacer + segmented) pin it with `.frame(width: 190)` (or any width that fits the longest label without truncating). When the selector should fill its container — full-width form fields like MCP transport — leave the width unset and the inner `GeometryReader` handles the math.
+- All chips have equal width by construction. If labels differ in length, size the segmented to the longest one — never let one chip be visibly wider than another.
+
+Persistence:
+
+- Whenever a segmented choice should survive across app launches (display modes, view filters, preferred transports, anything the user has expressed a preference for), back the binding with `@AppStorage` and a stable key prefixed `clawix.<area>.<setting>` (e.g. `"clawix.settings.usage.displayMode"`). Use a `RawRepresentable<String>` enum so SwiftUI serializes it directly. **Default**: pick the option a first-time user is most likely to want — usually the more informative or less destructive one.
+
+When migrating existing selectors:
+
+- `SegmentedRow<T>` (settings row pattern with label + detail on the left, segmented on the right) already wraps `SlidingSegmented` internally. New rows of this shape should use `SegmentedRow`, not roll their own.
+- Any custom segmented control that uses `Capsule()` for the indicator, multiple per-chip backgrounds with `if isOn { ... }`, or `matchedGeometryEffect` — replace it with `SlidingSegmented`. Don't keep the old shape "for now".
+- Multi-option pickers that need decorative icons per option (e.g. theme switcher: sun/moon/laptop) are not yet first-class in `SlidingSegmented`. When you need that, extend `SlidingSegmented` with optional icon support rather than reintroducing the per-chip-capsule pattern.
+
+`Picker(selection:)` with `.pickerStyle(.segmented)` is forbidden anywhere in the app — it ignores the squircle convention and the curve doesn't match. Always `SlidingSegmented`.
+
 ## Custom icons (project canon)
 
 The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph that has a strong identity in the UI: documents, folders, terminal, globe, mic, search, branch, pin, archive, copy, pencil, branch-arrows, sidebar toggle, etc. They live in `apps/macos/Sources/Clawix/` next to the rest of the views and are exported as plain `View` types (e.g. `FileChipIcon`, `TerminalIcon`, `GlobeIcon`, `FolderOpenIcon`, `MicIcon`, `SearchIcon`, `CursorIcon`).
