@@ -65,6 +65,24 @@ final class BridgeStore {
     var connection: ConnectionState = .unpaired
     var chats: [WireChat] = []
     var messagesByChat: [String: [WireMessage]] = [:]
+    /// Pagination state per chat. `true` means the daemon has older
+    /// messages we haven't pulled yet; the chat detail view shows the
+    /// scroll-up sentinel and triggers `loadOlderMessages` when it
+    /// materializes. Reset on every `messagesSnapshot` (the snapshot is
+    /// the new baseline). Absent / `false` is treated as "no older
+    /// history known" — covers chats we just opened, chats the legacy
+    /// daemon served without pagination metadata, and chats hydrated
+    /// from the on-disk snapshot cache before reconnect.
+    var hasMoreByChat: [String: Bool] = [:]
+    /// `true` while a `loadOlderMessages` round trip is in flight for
+    /// the chat. Guards against firing duplicate requests when the
+    /// scroll-up sentinel re-materializes (a single onAppear can fire
+    /// twice during fast scrolls). Cleared by `applyMessagesPage`.
+    var loadingOlderByChat: [String: Bool] = [:]
+    /// Cursor for the next `loadOlderMessages` call: id of the oldest
+    /// message currently held for the chat. Recomputed from
+    /// `messagesByChat[chatId].first` after every snapshot/page apply.
+    var oldestKnownIdByChat: [String: String] = [:]
     var openChatId: String?
     var fileSnapshots: [String: FileSnapshotState] = [:]
     /// Cache of generated images keyed by absolute path on the Mac.
@@ -82,6 +100,17 @@ final class BridgeStore {
 
     @ObservationIgnored
     private var client: BridgeClient?
+
+    /// Mock-only stand-in for the bridge's `loadOlderMessages` round
+    /// trip. Set by `BridgeStore.mock()` so designer-preview launches
+    /// (`CLAWIX_MOCK=1`) can exercise the scroll-up flow without a
+    /// paired Mac. Receives the same `(chatId, beforeMessageId)` pair
+    /// the real client would send and is responsible for invoking
+    /// `applyMessagesPage` (with whatever delay it likes) to flip the
+    /// in-flight flag back off. `@MainActor` because the apply method
+    /// it ultimately calls is main-actor isolated.
+    @ObservationIgnored
+    var mockLoadOlderHandler: (@MainActor (String, String) -> Void)?
 
     /// In-flight transcription requests keyed by `requestId`. Each
     /// continuation resumes when the matching `transcriptionResult`
@@ -172,6 +201,125 @@ final class BridgeStore {
     /// optimistic-append time does not run a second time on ack.
     /// Anything else (assistant messages, brand-new chats from
     /// elsewhere, retries) appends at the tail like before.
+    /// Replace the chat's message list with a server-delivered snapshot
+    /// while preserving the ids of any local optimistic user bubbles
+    /// already on screen. Without the id-preserving step the snapshot
+    /// the daemon emits when a brand-new chat materializes would swap
+    /// the placeholder's `local-...` id for the server id; the
+    /// `ForEach(id: \.id)` in the transcript would then unmount and
+    /// remount the bubble, replaying its entrance animation a second
+    /// time. Matching by `role == .user` + content mirrors what
+    /// `applyMessageAppended` does on subsequent turns.
+    @MainActor
+    func applyMessagesSnapshot(chatId: String, messages: [WireMessage], hasMore: Bool? = nil) {
+        // Reset pagination state regardless: the snapshot is the new
+        // baseline. Done before the equality short-circuit because
+        // `hasMore` may have flipped (legacy daemon → paged daemon
+        // mid-session, or vice versa) without the message array
+        // changing. Treat absent metadata as "no older history known"
+        // so legacy peers keep their old eager behaviour.
+        hasMoreByChat[chatId] = hasMore ?? false
+        loadingOlderByChat[chatId] = false
+        oldestKnownIdByChat[chatId] = messages.first?.id
+        // Short-circuit when the incoming snapshot is structurally
+        // identical to what we already hold. `@Observable` would
+        // otherwise invalidate every subscriber on the reassignment
+        // even when the rendered output is the same, and the chat
+        // transcript reanchors its ScrollView during that invalidation
+        // window, surfacing as a visible jump on chat entry.
+        if let current = messagesByChat[chatId], current == messages {
+            return
+        }
+        let placeholders = (messagesByChat[chatId] ?? []).filter {
+            $0.id.hasPrefix("local-") && $0.role == .user
+        }
+        let reconciled: [WireMessage]
+        if placeholders.isEmpty {
+            reconciled = messages
+        } else {
+            var consumed: Set<String> = []
+            reconciled = messages.map { msg in
+                guard msg.role == .user,
+                      let placeholder = placeholders.first(where: {
+                          !consumed.contains($0.id) && $0.content == msg.content
+                      })
+                else { return msg }
+                consumed.insert(placeholder.id)
+                return WireMessage(
+                    id: placeholder.id,
+                    role: msg.role,
+                    content: msg.content,
+                    reasoningText: msg.reasoningText,
+                    streamingFinished: msg.streamingFinished,
+                    isError: msg.isError,
+                    timestamp: msg.timestamp,
+                    timeline: msg.timeline,
+                    workSummary: msg.workSummary,
+                    audioRef: msg.audioRef,
+                    attachments: msg.attachments
+                )
+            }
+        }
+        messagesByChat[chatId] = reconciled
+        oldestKnownIdByChat[chatId] = reconciled.first?.id
+        #if canImport(UIKit)
+        for msg in reconciled {
+            ingestInlineAttachments(messageId: msg.id, attachments: msg.attachments)
+        }
+        #endif
+    }
+
+    /// Apply a server-delivered page of older messages. Prepended to
+    /// the existing array, deduped by id (a `messageAppended` for a
+    /// streamed message could land in the same window the server
+    /// sliced the page from). Updates the cursor to the new oldest
+    /// id and clears the in-flight flag. An empty page with
+    /// `hasMore: false` is the canonical "you reached the start" reply
+    /// — also covers the case where the cursor was invalidated by an
+    /// `editPrompt` that truncated the chat between requests.
+    @MainActor
+    func applyMessagesPage(chatId: String, messages: [WireMessage], hasMore: Bool) {
+        loadingOlderByChat[chatId] = false
+        hasMoreByChat[chatId] = hasMore
+        guard !messages.isEmpty else { return }
+        var current = messagesByChat[chatId] ?? []
+        let existingIds = Set(current.map(\.id))
+        let prepend = messages.filter { !existingIds.contains($0.id) }
+        guard !prepend.isEmpty else { return }
+        current.insert(contentsOf: prepend, at: 0)
+        messagesByChat[chatId] = current
+        oldestKnownIdByChat[chatId] = current.first?.id
+        #if canImport(UIKit)
+        for msg in prepend {
+            ingestInlineAttachments(messageId: msg.id, attachments: msg.attachments)
+        }
+        #endif
+    }
+
+    /// Ask the daemon for the next page of older messages if (and only
+    /// if) we have a cursor, the daemon told us there are more, and we
+    /// don't already have a page in flight. Called by the chat detail
+    /// view's scroll-up sentinel; the iOS-26 `LazyVStack` materializes
+    /// it whenever it enters the viewport, so this is on the hot path
+    /// and must short-circuit cheaply.
+    @MainActor
+    func requestOlderIfNeeded(chatId: String) {
+        guard hasMoreByChat[chatId] == true else { return }
+        guard loadingOlderByChat[chatId] != true else { return }
+        guard let cursor = oldestKnownIdByChat[chatId] else { return }
+        loadingOlderByChat[chatId] = true
+        if let client {
+            client.loadOlderMessages(chatId: chatId, beforeMessageId: cursor)
+        } else if let mockLoadOlderHandler {
+            mockLoadOlderHandler(chatId, cursor)
+        } else {
+            // No bridge attached and no mock handler: cancel the
+            // in-flight flag so the next sentinel firing can retry
+            // (e.g. once the bridge connects).
+            loadingOlderByChat[chatId] = false
+        }
+    }
+
     @MainActor
     func applyMessageAppended(chatId: String, message: WireMessage) {
         var current = messagesByChat[chatId] ?? []
