@@ -12,13 +12,15 @@ import ClawixEngine
 /// file so the page is self-contained.
 struct DictationSettingsPage: View {
 
+    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var dictation: DictationCoordinator
     @ObservedObject private var hotkey = HotkeyManagerObservable.shared
     @ObservedObject private var micPrefs = MicrophonePreferences.shared
 
     @AppStorage(DictationCoordinator.injectDefaultsKey) private var injectText = true
     @AppStorage(DictationCoordinator.restoreClipboardDefaultsKey) private var restoreClipboard = true
-    @AppStorage("dictation.language") private var language = "auto"
+    @AppStorage(DictationCoordinator.autoEnterDefaultsKey) private var autoEnter = false
+    @AppStorage(DictationCoordinator.languageDefaultsKey) private var language = "auto"
 
     @State private var permissions = PermissionsSnapshot()
     @State private var refreshTimer: Timer?
@@ -43,7 +45,7 @@ struct DictationSettingsPage: View {
                     title: "Behaviour",
                     detail: "Hold to push-to-talk, tap to toggle, or both",
                     options: [
-                        (DictationHotkeyMode.hybrid,     "Hybrid (recommended)"),
+                        (DictationHotkeyMode.hybrid,     "Hybrid"),
                         (DictationHotkeyMode.pushToTalk, "Push-to-talk"),
                         (DictationHotkeyMode.toggle,     "Toggle")
                     ],
@@ -56,14 +58,22 @@ struct DictationSettingsPage: View {
 
             DSPSectionLabel(title: "Audio Input")
             DSPCard {
-                MicrophoneSelectorRow(micPrefs: micPrefs)
+                MicrophoneSelectorRow(
+                    micPrefs: micPrefs,
+                    dictation: dictation,
+                    micPermission: permissions.microphone
+                )
             }
 
             DSPSectionLabel(title: "Model")
             DSPCard {
                 ForEach(Array(DictationModel.allCases.enumerated()), id: \.offset) { idx, model in
                     if idx > 0 { DSPCardDivider() }
-                    DictationModelRow(model: model)
+                    DictationModelRow(
+                        model: model,
+                        manager: dictation.modelManager,
+                        appState: appState
+                    )
                 }
             }
 
@@ -86,6 +96,12 @@ struct DictationSettingsPage: View {
                     title: "Restore previous clipboard",
                     detail: "After pasting, put the original clipboard contents back",
                     isOn: $restoreClipboard
+                )
+                DSPCardDivider()
+                DSPToggleRow(
+                    title: "Press Return after pasting",
+                    detail: "Auto-submit the transcript in chat fields and forms",
+                    isOn: $autoEnter
                 )
             }
 
@@ -117,10 +133,13 @@ struct DictationSettingsPage: View {
                 DSPCardDivider()
                 PermissionRow(
                     title: "Input Monitoring",
-                    detail: "Keeps the global hotkey responsive when Clawix is in the background",
+                    detail: "Lets the global hotkey work while another app has focus",
                     status: permissions.inputMonitoring,
                     request: {
                         DictationPermissions.requestInputMonitoring()
+                        // The grant lands async; the periodic timer
+                        // below picks it up and re-registers the
+                        // global monitor on the next tick.
                         refreshPermissions()
                     },
                     openSettings: { DictationPermissions.openInputMonitoringSettings() }
@@ -154,9 +173,18 @@ struct DictationSettingsPage: View {
     }
 
     private func refreshPermissions() {
+        let previousInputMon = permissions.inputMonitoring
         permissions.microphone = DictationPermissions.microphone()
         permissions.accessibility = DictationPermissions.accessibility()
         permissions.inputMonitoring = DictationPermissions.inputMonitoring()
+        // If Input Monitoring was just granted (transition from
+        // .notDetermined/.denied to .granted), re-arm the hotkey so
+        // the global monitor comes online without a relaunch.
+        if previousInputMon != .granted, permissions.inputMonitoring == .granted {
+            HotkeyManager.shared.bootstrapIfPermitted(
+                coordinator: DictationCoordinator.shared
+            )
+        }
     }
 
     private struct PermissionsSnapshot {
@@ -170,35 +198,45 @@ struct DictationSettingsPage: View {
 
 private struct DictationModelRow: View {
     let model: DictationModel
-    @EnvironmentObject private var dictation: DictationCoordinator
+    @ObservedObject var manager: DictationModelManager
+    let appState: AppState
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) {
-                    Text(model.displayName)
-                        .font(BodyFont.system(size: 12.5))
-                        .foregroundColor(Palette.textPrimary)
-                    if dictation.modelManager.activeModel == model {
-                        Text("Active")
-                            .font(BodyFont.system(size: 10, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(Color(red: 0.16, green: 0.46, blue: 0.98))
-                            )
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 8) {
+                        Text(model.displayName)
+                            .font(BodyFont.system(size: 12.5))
+                            .foregroundColor(Palette.textPrimary)
+                        if manager.activeModel == model {
+                            Text("Active")
+                                .font(BodyFont.system(size: 10, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color(red: 0.16, green: 0.46, blue: 0.98))
+                                )
+                        }
                     }
+                    Text(sizeLabel)
+                        .font(BodyFont.system(size: 11))
+                        .foregroundColor(Palette.textSecondary)
                 }
-                Text(sizeLabel)
-                    .font(BodyFont.system(size: 11))
-                    .foregroundColor(Palette.textSecondary)
+
+                Spacer(minLength: 12)
+
+                trailingControl
             }
 
-            Spacer(minLength: 12)
-
-            trailingControl
+            if let error = manager.downloadErrors[model] {
+                Text("Download failed: \(error)")
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(Color(red: 0.94, green: 0.45, blue: 0.45))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -211,27 +249,57 @@ private struct DictationModelRow: View {
 
     @ViewBuilder
     private var trailingControl: some View {
-        let installed = dictation.modelManager.installedModels.contains(model)
-        let downloading = dictation.modelManager.isDownloading(model)
-        if downloading {
-            ProgressView(value: dictation.modelManager.downloadProgress[model] ?? 0)
-                .frame(width: 120)
+        let installed = manager.installedModels.contains(model)
+        let downloading = manager.isDownloading(model)
+        let deleting = manager.isDeleting(model)
+        if deleting {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .controlSize(.small)
+                    .progressViewStyle(.circular)
+                Text("Deleting…")
+                    .font(BodyFont.system(size: 12, weight: .medium))
+                    .foregroundColor(Palette.textSecondary)
+            }
+        } else if downloading {
+            HStack(spacing: 10) {
+                DSPDownloadProgressBar(value: manager.downloadProgress[model] ?? 0)
+                DSPSecondaryButton(label: "Cancel") {
+                    manager.cancel(model)
+                }
+            }
         } else if installed {
             HStack(spacing: 8) {
-                if dictation.modelManager.activeModel != model {
+                if manager.activeModel != model {
                     DSPSecondaryButton(label: "Use") {
-                        dictation.modelManager.setActive(model)
+                        manager.setActive(model)
                     }
                 }
                 DSPSecondaryButton(label: "Delete") {
-                    dictation.modelManager.delete(model)
+                    requestDeleteConfirmation()
                 }
             }
         } else {
             DSPSecondaryButton(label: "Download") {
-                dictation.modelManager.download(model)
+                manager.download(model)
             }
         }
+    }
+
+    private func requestDeleteConfirmation() {
+        let gb = String(format: "%.1f", Double(model.approximateBytes) / 1_000_000_000)
+        let body = LocalizedStringKey(
+            "\(model.displayName) will be removed from disk (~\(gb) GB freed). You can re-download it any time. This cannot be undone."
+        )
+        appState.pendingConfirmation = ConfirmationRequest(
+            title: "Delete this model?",
+            body: body,
+            confirmLabel: "Delete",
+            isDestructive: true,
+            onConfirm: { [model, manager] in
+                manager.delete(model)
+            }
+        )
     }
 }
 
@@ -368,7 +436,7 @@ private struct DSPDropdownRow<T: Hashable>: View {
     @Binding var selection: T
 
     var body: some View {
-        EqualSplitRow(spacing: 14) {
+        SettingsRow {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(BodyFont.system(size: 12.5))
@@ -380,15 +448,43 @@ private struct DSPDropdownRow<T: Hashable>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        } trailing: {
             SettingsDropdown(
                 options: options,
                 selection: $selection,
                 fillsWidth: true
             )
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
         .liftWhenSettingsDropdownOpen()
+    }
+}
+
+/// Capsule-on-capsule progress bar so the inner fill keeps its rounded
+/// ends instead of inheriting the half-circle look the default
+/// `ProgressView(value:)` falls into at low percentages on macOS.
+///
+/// WhisperKit's progress callback fires once per network chunk, so the
+/// raw `value` lands in visible jumps. The fill width is animated with
+/// an `easeInOut` curve to interpolate between those steps and keep the
+/// motion continuous instead of stuttering.
+private struct DSPDownloadProgressBar: View {
+    let value: Double
+
+    private let trackWidth: CGFloat = 90
+    private let trackHeight: CGFloat = 7
+
+    var body: some View {
+        let clamped = min(max(value, 0), 1)
+        ZStack(alignment: .leading) {
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(0.10))
+            Capsule(style: .continuous)
+                .fill(Color.white)
+                .frame(width: max(trackHeight, trackWidth * clamped))
+                .opacity(clamped > 0 ? 1 : 0)
+                .animation(.easeInOut(duration: 0.6), value: clamped)
+        }
+        .frame(width: trackWidth, height: trackHeight)
     }
 }
 
@@ -424,9 +520,13 @@ private struct DSPSecondaryButton: View {
 /// automatically.
 private struct MicrophoneSelectorRow: View {
     @ObservedObject var micPrefs: MicrophonePreferences
+    @ObservedObject var dictation: DictationCoordinator
+    let micPermission: DictationPermissions.Status
+
+    @StateObject private var meter = MicLevelMeterModel()
 
     var body: some View {
-        EqualSplitRow(spacing: 14) {
+        SettingsRow {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Microphone")
                     .font(BodyFont.system(size: 12.5))
@@ -436,23 +536,55 @@ private struct MicrophoneSelectorRow: View {
                     .foregroundColor(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
+        } trailing: {
             if micPrefs.devices.isEmpty {
                 Text("No input devices")
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
                 SettingsDropdown(
                     options: dropdownOptions,
                     selection: dropdownBinding,
+                    trailingAccessory: {
+                        AnyView(
+                            MicLevelTinyMeter(meter: meter, active: isMeterActive)
+                        )
+                    },
                     fillsWidth: true
                 )
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
         .liftWhenSettingsDropdownOpen()
+        .onAppear { syncCapture() }
+        .onDisappear { meter.stop() }
+        .onChange(of: micPrefs.activeUID) { _, _ in restartCapture() }
+        .onChange(of: dictation.state) { _, _ in syncCapture() }
+        .onChange(of: micPermission) { _, _ in syncCapture() }
+    }
+
+    private var isMeterActive: Bool {
+        micPermission == .granted && dictation.state == .idle
+    }
+
+    private func syncCapture() {
+        if isMeterActive {
+            meter.start(deviceID: micPrefs.activeDeviceID())
+        } else {
+            meter.stop()
+        }
+    }
+
+    private func restartCapture() {
+        meter.stop()
+        // AVAudioEngine needs the input node fully torn down before a
+        // new device can be bound; 60 ms is the empirical floor that
+        // avoids "device in use" on built-in mics without being
+        // perceptible to the user.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+            if isMeterActive {
+                meter.start(deviceID: micPrefs.activeDeviceID())
+            }
+        }
     }
 
     private var dropdownOptions: [(String, String)] {
@@ -489,7 +621,23 @@ final class HotkeyManagerObservable: ObservableObject {
         didSet { HotkeyManager.shared.mode = mode }
     }
     @Published var trigger: DictationHotkeyTrigger {
-        didSet { HotkeyManager.shared.trigger = trigger }
+        didSet {
+            let previous = oldValue
+            HotkeyManager.shared.trigger = trigger
+            // When the user turns the hotkey on from Settings, drive
+            // the Input Monitoring TCC flow explicitly so the consent
+            // dialog appears with this Settings sheet on screen. The
+            // trigger setter already retries `register()` after we
+            // set it, but `register()` silently skips the global
+            // monitor on `.notDetermined`/`.denied`. The explicit
+            // request below is what surfaces the prompt and/or sends
+            // the user to System Settings.
+            if previous == .off, trigger != .off {
+                HotkeyManager.shared.requestPermissionAndRegister(
+                    coordinator: DictationCoordinator.shared
+                )
+            }
+        }
     }
 
     private init() {
