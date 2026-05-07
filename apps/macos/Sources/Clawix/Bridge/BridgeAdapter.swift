@@ -32,7 +32,9 @@ extension ChatMessage {
             isError: isError,
             timestamp: timestamp,
             timeline: timeline.map { $0.toWire() },
-            workSummary: workSummary?.toWire()
+            workSummary: workSummary?.toWire(),
+            audioRef: audioRef,
+            attachments: attachments
         )
     }
 }
@@ -42,6 +44,8 @@ extension AssistantTimelineEntry {
         switch self {
         case .reasoning(let id, let text):
             return .reasoning(id: id.uuidString, text: text)
+        case .message(let id, let text):
+            return .message(id: id.uuidString, text: text)
         case .tools(let id, let items):
             return .tools(id: id.uuidString, items: items.map { $0.toWire() })
         }
@@ -90,7 +94,12 @@ extension WorkItem {
                 dynamicToolName: name
             )
         case .imageGeneration:
-            return WireWorkItem(id: id, kind: "imageGeneration", status: status)
+            return WireWorkItem(
+                id: id,
+                kind: "imageGeneration",
+                status: status,
+                generatedImagePath: generatedImagePath
+            )
         case .imageView:
             return WireWorkItem(id: id, kind: "imageView", status: status)
         case .jsCall, .jsReset:
