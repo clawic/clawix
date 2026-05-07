@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ApplicationServices
 
 /// Pastes a transcribed string into whatever app currently owns the
 /// keyboard focus. Strategy mirrors what most dictation tools settle on
@@ -10,7 +11,10 @@ import AppKit
 /// 3. Synthesize Cmd+V via `CGEvent` so the focused field receives a
 ///    standard paste event (Electron, Cocoa, web textareas all
 ///    respond).
-/// 4. Restore the snapshot after a delay long enough for the receiving
+/// 4. Optionally synthesize an auto-send key (plain Return, Shift+Return,
+///    Cmd+Return) ~150 ms after the paste so the field has fully
+///    consumed the inserted text.
+/// 5. Restore the snapshot after a delay long enough for the receiving
 ///    app to actually apply the paste before we overwrite it.
 ///
 /// Requires Accessibility permission for `CGEvent.post(tap:)` to
@@ -35,21 +39,21 @@ enum TextInjector {
     }
 
     /// Place `text` on the pasteboard, fire Cmd+V, optionally fire
-    /// Return after the paste lands, and restore the previous
+    /// an auto-send key after the paste lands, and restore the previous
     /// pasteboard contents after `restoreAfter` seconds.
     ///
-    /// `restoreAfter` is intentionally generous (1.5 s by default)
-    /// because the receiving app's paste handler isn't synchronous.
-    /// `autoEnter` posts an unmodified Return ~150 ms after the paste,
-    /// late enough that the focused field has finished applying the
-    /// inserted text but before the clipboard is restored — this is
-    /// what makes "dictate then send" work in chat fields like the
-    /// Clawix composer or web inputs that submit on Enter.
+    /// `addSpaceBefore` queries Accessibility for the character to the
+    /// left of the focused caret. If it's an alphanumeric, we prepend
+    /// " " to the text so dictating into the middle of an existing
+    /// paragraph doesn't run words together. Best-effort: any AX
+    /// failure (sandboxed app, no AX support, no insertion point)
+    /// silently skips the heuristic so the paste still happens.
     static func inject(
         text: String,
         restorePrevious: Bool = true,
-        autoEnter: Bool = false,
-        restoreAfter: TimeInterval = 1.5
+        autoSendKey: DictationAutoSendKey = .none,
+        restoreAfter: TimeInterval = 1.5,
+        addSpaceBefore: Bool = false
     ) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw InjectError.empty }
@@ -57,17 +61,24 @@ enum TextInjector {
             throw InjectError.accessibilityNotGranted
         }
 
+        let payload: String
+        if addSpaceBefore, shouldPrependSpace() {
+            payload = " " + text
+        } else {
+            payload = text
+        }
+
         let pasteboard = NSPasteboard.general
         let snapshot = pasteboard.snapshot()
 
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        pasteboard.setString(payload, forType: .string)
 
         postCommandV()
 
-        if autoEnter {
+        if autoSendKey != .none {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                postReturn()
+                postReturn(flags: autoSendKey.modifierFlags)
             }
         }
 
@@ -98,15 +109,88 @@ enum TextInjector {
         cmdUp?.post(tap: .cghidEventTap)
     }
 
-    /// Post an unmodified Return key. Some chat fields submit on Enter
-    /// only when the keystroke is delivered separately from the paste,
-    /// so this is called from a delayed dispatch after `postCommandV`.
-    private static func postReturn() {
+    /// Post a Return key, optionally with modifier flags. With no
+    /// flags, regular Enter (chat fields like Slack/WhatsApp web). With
+    /// shift, the same key but flagged as Shift+Return (Linear/Things).
+    /// With command, Cmd+Return (Linear, ChatGPT desktop, GitHub PR
+    /// comments). Some chat fields submit only when the keystroke is
+    /// delivered separately from the paste, so this is called from a
+    /// delayed dispatch after `postCommandV`.
+    private static func postReturn(flags: CGEventFlags) {
         let source = CGEventSource(stateID: .combinedSessionState)
         let down = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true)
         let up = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false)
+        if !flags.isEmpty {
+            down?.flags = flags
+            up?.flags = flags
+        }
         down?.post(tap: .cghidEventTap)
         up?.post(tap: .cghidEventTap)
+    }
+
+    // MARK: - Accessibility heuristic for "Add Space Before"
+
+    /// Query the focused element's text + selection range; if the
+    /// character immediately before the caret is alphanumeric, return
+    /// `true` so the caller prepends a space. Quietly returns `false`
+    /// on every failure path (no AX, no focused element, no value
+    /// attribute, range at start, etc.) so a problematic app can never
+    /// break the paste.
+    private static func shouldPrependSpace() -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+
+        var focused: CFTypeRef?
+        let focusStatus = AXUIElementCopyAttributeValue(
+            systemWide,
+            kAXFocusedUIElementAttribute as CFString,
+            &focused
+        )
+        guard focusStatus == .success, let element = focused else { return false }
+        let focusedElement = element as! AXUIElement
+
+        // 1. Read the selected text range — this gives us the caret
+        // position in characters. AXValue wraps a CFRange.
+        var rangeValue: CFTypeRef?
+        let rangeStatus = AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXSelectedTextRangeAttribute as CFString,
+            &rangeValue
+        )
+        guard rangeStatus == .success, let rv = rangeValue else { return false }
+        var range = CFRange(location: 0, length: 0)
+        let axValue = rv as! AXValue
+        guard AXValueGetValue(axValue, .cfRange, &range) else { return false }
+        guard range.location > 0 else { return false }
+
+        // 2. Read the full text value. Many apps expose `kAXValueAttribute`
+        // on the focused field. Some don't, in which case we bail.
+        var valueRef: CFTypeRef?
+        let valueStatus = AXUIElementCopyAttributeValue(
+            focusedElement,
+            kAXValueAttribute as CFString,
+            &valueRef
+        )
+        guard valueStatus == .success, let value = valueRef as? String else { return false }
+
+        // 3. Look at the character immediately before the caret.
+        // `range.location` is in UTF-16 code units (CFString-style),
+        // which lines up with `String.utf16` indexing.
+        let utf16 = value.utf16
+        let beforeIndex = range.location - 1
+        guard beforeIndex >= 0, beforeIndex < utf16.count else { return false }
+        let utf16Index = utf16.index(utf16.startIndex, offsetBy: beforeIndex)
+        let unit = utf16[utf16Index]
+        // Reconstruct as Character to make alphanumeric tests
+        // straightforward across multilingual input. If the unit is a
+        // surrogate half we just bail; this code path is for the
+        // common case (BMP text).
+        guard let scalar = Unicode.Scalar(unit) else { return false }
+        let char = Character(scalar)
+        // Treat letters, digits and most "word" punctuation (apostrophe,
+        // letter-with-mark) as alphanumeric. Whitespace and ASCII
+        // punctuation that already implies a separator (".", ",", ":",
+        // ";", "!", "?", "(", ")", "[", "]", quotes) → no extra space.
+        return char.isLetter || char.isNumber
     }
 }
 
