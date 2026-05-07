@@ -37,7 +37,7 @@ struct WorkSummaryHeader: View {
             TimelineView(.periodic(from: .now, by: summary.isActive ? 1.0 : 3600)) { ctx in
                 HStack(spacing: 6) {
                     Text(L10n.workedFor(seconds: summary.elapsedSeconds(asOf: ctx.date)))
-                        .font(BodyFont.system(size: 13, weight: .regular))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Color(white: 0.55))
                     Image(systemName: "chevron.right")
                         .font(BodyFont.system(size: 10, weight: .semibold))

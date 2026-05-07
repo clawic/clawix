@@ -36,13 +36,13 @@ struct LiveWorkingHeader: View {
     private var label: some View {
         if timelineCount <= 1 {
             Text(L10n.working)
-                .font(BodyFont.system(size: 13, weight: .regular))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(white: 0.55))
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
                 Text(L10n.workingFor(seconds: summary.elapsedSeconds(asOf: ctx.date)))
-                    .font(BodyFont.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

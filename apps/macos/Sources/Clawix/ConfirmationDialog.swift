@@ -66,7 +66,7 @@ struct ConfirmationDialog: View {
             .padding(.bottom, 14)
 
             Text(request.body)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(white: 0.78))
                 .fixedSize(horizontal: false, vertical: true)
                 .lineSpacing(2)

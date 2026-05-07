@@ -112,7 +112,7 @@ struct FileViewerPanel: View {
     private var breadcrumbRow: some View {
         HStack(spacing: 6) {
             Text(folderName)
-                .font(BodyFont.system(size: 12))
+                .font(BodyFont.system(size: 12, wght: 500))
                 .foregroundColor(Color(white: 0.55))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -120,7 +120,7 @@ struct FileViewerPanel: View {
                 .font(BodyFont.system(size: 9, weight: .semibold))
                 .foregroundColor(Color(white: 0.35))
             Text(fileName)
-                .font(BodyFont.system(size: 12, weight: .regular))
+                .font(BodyFont.system(size: 12, wght: 500))
                 .foregroundColor(Color(white: 0.85))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -188,7 +188,7 @@ struct FileViewerPanel: View {
                 FileChipIcon(size: 30)
                     .foregroundColor(Color(white: 0.40))
                 Text(reason)
-                    .font(BodyFont.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                     .multilineTextAlignment(.center)
             }

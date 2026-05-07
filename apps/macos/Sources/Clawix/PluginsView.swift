@@ -37,10 +37,10 @@ private struct PluginRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(plugin.name)
-                    .font(BodyFont.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Text(plugin.description)
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Palette.textTertiary)
             }
 

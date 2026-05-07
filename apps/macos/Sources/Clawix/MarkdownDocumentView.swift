@@ -166,7 +166,7 @@ struct MarkdownDocumentView: View {
 
         case .paragraph(let attr):
             Text(styledInline(attr))
-                .font(BodyFont.system(size: 14))
+                .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Palette.textPrimary.opacity(0.92))
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
@@ -178,11 +178,11 @@ struct MarkdownDocumentView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("•")
-                            .font(BodyFont.system(size: 14))
+                            .font(BodyFont.system(size: 14, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 8, alignment: .leading)
                         Text(styledInline(item))
-                            .font(BodyFont.system(size: 14))
+                            .font(BodyFont.system(size: 14, wght: 500))
                             .foregroundColor(Palette.textPrimary.opacity(0.92))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
@@ -198,11 +198,11 @@ struct MarkdownDocumentView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("\(idx + 1).")
-                            .font(BodyFont.system(size: 14))
+                            .font(BodyFont.system(size: 14, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                             .fixedSize()
                         Text(styledInline(item))
-                            .font(BodyFont.system(size: 14))
+                            .font(BodyFont.system(size: 14, wght: 500))
                             .foregroundColor(Palette.textPrimary.opacity(0.92))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
@@ -223,8 +223,8 @@ struct MarkdownDocumentView: View {
         switch level {
         case 1:  return BodyFont.system(size: 26, weight: .bold)
         case 2:  return BodyFont.system(size: 20, weight: .bold)
-        case 3:  return BodyFont.system(size: 16, weight: .semibold)
-        default: return BodyFont.system(size: 14, weight: .semibold)
+        case 3:  return BodyFont.system(size: 16, wght: 700)
+        default: return BodyFont.system(size: 14, wght: 700)
         }
     }
 
@@ -286,7 +286,7 @@ private struct CodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(language.isEmpty ? "code" : language)
-                    .font(BodyFont.system(size: 11.5, weight: .regular))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
                 Button(action: toggleWrap) {

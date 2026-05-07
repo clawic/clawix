@@ -33,12 +33,12 @@ struct ChangedFileCard: View {
             iconBadge
             VStack(alignment: .leading, spacing: 4) {
                 Text(fileName)
-                    .font(BodyFont.system(size: 14, weight: .semibold))
+                    .font(BodyFont.system(size: 14, wght: 700))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(subtitle)
-                    .font(BodyFont.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }
             Spacer(minLength: 8)
@@ -94,7 +94,7 @@ struct ChangedFileCard: View {
             Text(String(localized: "Open",
                         bundle: AppLocale.bundle,
                         locale: AppLocale.current))
-                .font(BodyFont.system(size: 14, weight: .regular))
+                .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.94))
                 // SwiftUI Text on macOS hijacks the I-beam cursor and
                 // swallows taps over its glyphs. Pass-through so the

@@ -30,7 +30,7 @@ struct ProjectPickerView: View {
                                         .fill(Palette.cardFill)
                                 )
                             Text("Add project…")
-                                .font(BodyFont.system(size: 13))
+                                .font(BodyFont.system(size: 13, wght: 500))
                                 .foregroundColor(Palette.textSecondary)
                             Spacer()
                         }
@@ -72,10 +72,10 @@ private struct ProjectRow: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(project.name)
-                        .font(BodyFont.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                     Text(project.path)
-                        .font(BodyFont.system(size: 11))
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Palette.textTertiary)
                 }
 

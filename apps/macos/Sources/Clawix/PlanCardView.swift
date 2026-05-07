@@ -120,12 +120,12 @@ struct PlanCardView: View {
             Group {
                 if completed {
                     Text(String(localized: "Plan", bundle: AppLocale.bundle, locale: AppLocale.current))
-                        .font(BodyFont.system(size: 14, weight: .semibold))
+                        .font(BodyFont.system(size: 14, wght: 700))
                         .foregroundColor(Color(white: 0.94))
                 } else {
                     ThinkingShimmer(
                         text: String(localized: "Writing plan", bundle: AppLocale.bundle, locale: AppLocale.current),
-                        font: BodyFont.system(size: 14, weight: .semibold),
+                        font: BodyFont.system(size: 14, wght: 700),
                         baseOpacity: 0.55,
                         peakOpacity: 1.0
                     )
@@ -237,7 +237,7 @@ struct PlanCardView: View {
             withAnimation(.easeOut(duration: 0.22)) { collapsed = false }
         } label: {
             Text(String(localized: "Expand plan", bundle: AppLocale.bundle, locale: AppLocale.current))
-                .font(BodyFont.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Color(white: 0.10))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -375,7 +375,7 @@ private struct PlanBlocksView: View {
                 .fixedSize(horizontal: false, vertical: true)
         case .heading3(let s):
             inlineText(s)
-                .font(BodyFont.system(size: 15, weight: .semibold))
+                .font(BodyFont.system(size: 15, wght: 700))
                 .foregroundColor(Color(white: 0.95))
                 .padding(.top, isFirst ? 0 : 14)
                 .padding(.bottom, 2)
@@ -383,10 +383,10 @@ private struct PlanBlocksView: View {
         case .bullet(let s):
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("•")
-                    .font(BodyFont.system(size: 14))
+                    .font(BodyFont.system(size: 14, wght: 500))
                     .foregroundColor(Color(white: 0.78))
                 inlineText(s)
-                    .font(BodyFont.system(size: 14))
+                    .font(BodyFont.system(size: 14, wght: 500))
                     .foregroundColor(Color(white: 0.86))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -394,7 +394,7 @@ private struct PlanBlocksView: View {
             .padding(.leading, 4)
         case .paragraph(let s):
             inlineText(s)
-                .font(BodyFont.system(size: 14))
+                .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.78))
                 .padding(.top, 12)
                 .fixedSize(horizontal: false, vertical: true)
@@ -420,7 +420,7 @@ enum PlanInline {
             guard !run.isEmpty else { return }
             var piece = AttributedString(run)
             if bold {
-                piece.font = BodyFont.system(size: 14, weight: .semibold)
+                piece.font = BodyFont.system(size: 14, wght: 700)
                 piece.foregroundColor = Color(white: 0.97)
             }
             result.append(piece)

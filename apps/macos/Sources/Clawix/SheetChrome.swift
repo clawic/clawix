@@ -28,7 +28,7 @@ struct SheetPrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(BodyFont.system(size: 13.5, weight: .regular))
+            .font(BodyFont.system(size: 13.5, wght: 500))
             .foregroundColor(.black)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -54,7 +54,7 @@ private struct SheetCancelButtonLabel: View {
 
     var body: some View {
         configuration.label
-            .font(BodyFont.system(size: 13.5, weight: .regular))
+            .font(BodyFont.system(size: 13.5, wght: 500))
             .foregroundColor(Color(white: configuration.isPressed ? 0.70 : 0.94))
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -84,7 +84,7 @@ private struct SheetDestructiveButtonLabel: View {
 
     var body: some View {
         configuration.label
-            .font(BodyFont.system(size: 13, weight: .medium))
+            .font(BodyFont.system(size: 13, wght: 600))
             .foregroundColor(Color(red: 0.95, green: 0.42, blue: 0.42)
                 .opacity(configuration.isPressed ? 0.75 : 1.0))
             .padding(.horizontal, 14)
@@ -103,7 +103,7 @@ struct SheetTextFieldStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .textFieldStyle(.plain)
-            .font(BodyFont.system(size: 14))
+            .font(BodyFont.system(size: 14, wght: 500))
             .foregroundColor(Color(white: 0.96))
             .padding(.horizontal, 14)
             .padding(.vertical, 11)

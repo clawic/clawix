@@ -20,7 +20,7 @@ struct ChatRenameSheet: View {
                         .font(BodyFont.system(size: 20, weight: .medium))
                         .foregroundColor(Color(white: 0.97))
                     Text("Keep it short and recognizable")
-                        .font(BodyFont.system(size: 13))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Color(white: 0.55))
                 }
                 Spacer()

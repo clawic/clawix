@@ -212,7 +212,7 @@ private struct ZoomControl: View {
                 .padding(.leading, 6)
 
             Text("\(percent)%")
-                .font(BodyFont.system(size: 14, weight: .medium))
+                .font(BodyFont.system(size: 14, wght: 600))
                 .foregroundColor(Color(white: 0.94))
                 .monospacedDigit()
                 .frame(minWidth: 64)

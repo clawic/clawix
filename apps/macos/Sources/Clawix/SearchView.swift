@@ -13,7 +13,7 @@ struct SearchView: View {
                 SearchIcon(size: 13)
                     .foregroundColor(Palette.textTertiary)
                 TextField("Search in conversations…", text: $appState.searchQuery)
-                    .font(BodyFont.system(size: 14))
+                    .font(BodyFont.system(size: 14, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                     .textFieldStyle(.plain)
                     .focused($fieldFocused)
@@ -78,7 +78,7 @@ private struct SearchResultRow: View {
             FileChipIcon(size: 13)
                 .foregroundColor(Palette.textTertiary)
             Text(text)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textSecondary)
             Spacer()
         }
@@ -130,7 +130,7 @@ func emptyState(_ message: String, icon: String) -> some View {
         }
         .foregroundColor(Palette.textTertiary)
         Text(message)
-            .font(BodyFont.system(size: 13))
+            .font(BodyFont.system(size: 13, wght: 500))
             .foregroundColor(Palette.textTertiary)
             .multilineTextAlignment(.center)
         Spacer()

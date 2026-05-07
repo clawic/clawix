@@ -23,10 +23,10 @@ struct PairWindowView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 18) {
             Text("Pair iPhone")
-                .font(BodyFont.system(size: 16, weight: .semibold))
+                .font(BodyFont.system(size: 16, wght: 700))
                 .foregroundStyle(Color.white.opacity(0.94))
             Text("Open Clawix on your iPhone and scan this code while both devices are on the same WiFi.")
-                .font(BodyFont.system(size: 12))
+                .font(BodyFont.system(size: 12, wght: 500))
                 .foregroundStyle(Color.white.opacity(0.55))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
@@ -60,12 +60,12 @@ struct PairWindowView: View {
             HStack(spacing: 10) {
                 Button(action: rotate) {
                     Text("Rotate token")
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                 }
                 .buttonStyle(.borderless)
                 Button(action: copyPayload) {
                     Text("Copy payload")
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                 }
                 .buttonStyle(.borderless)
             }
@@ -86,7 +86,7 @@ struct PairWindowView: View {
     private func row(label: String, value: String) -> some View {
         HStack {
             Text(label)
-                .font(BodyFont.system(size: 11, weight: .medium))
+                .font(BodyFont.system(size: 11, wght: 600))
                 .foregroundStyle(Color.white.opacity(0.45))
                 .frame(width: 50, alignment: .leading)
             Text(value)

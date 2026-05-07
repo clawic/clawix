@@ -47,7 +47,7 @@ struct AutomationsView: View {
                             Text("Learn more")
                                 .foregroundColor(Color(red: 0.35, green: 0.58, blue: 0.96))
                         }
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                     }
                     .padding(.bottom, 30)
 
@@ -68,7 +68,7 @@ struct AutomationsView: View {
                     Image(systemName: "plus")
                         .font(BodyFont.system(size: 10, weight: .bold))
                     Text("New automation")
-                        .font(BodyFont.system(size: 11, weight: .medium))
+                        .font(BodyFont.system(size: 11, wght: 600))
                 }
                 .foregroundColor(Color(white: 0.12))
                 .padding(.horizontal, 10)
@@ -109,7 +109,7 @@ private struct AutomationSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 13) {
             Text(section.title)
-                .font(BodyFont.system(size: 12, weight: .medium))
+                .font(BodyFont.system(size: 12, wght: 600))
                 .foregroundColor(Palette.textSecondary)
 
             LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
@@ -134,7 +134,7 @@ private struct AutomationCardView: View {
                 .frame(width: 18, height: 18, alignment: .leading)
 
             Text(card.text)
-                .font(BodyFont.system(size: 12, weight: .semibold))
+                .font(BodyFont.system(size: 12, wght: 700))
                 .foregroundColor(Palette.textPrimary)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)

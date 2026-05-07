@@ -43,7 +43,7 @@ private struct LoginCard: View {
                     .multilineTextAlignment(.center)
 
                 Text("Sign in to recover access to your chats and projects.")
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -59,13 +59,13 @@ private struct LoginCard: View {
                 if inProgress {
                     HStack(spacing: 8) {
                         Text("We've opened the browser. Come back here when you've confirmed.")
-                            .font(BodyFont.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     Button(action: { appState.auth.cancelLogin() }) {
                         Text("Cancel")
-                            .font(BodyFont.system(size: 12, weight: .medium))
+                            .font(BodyFont.system(size: 12, wght: 600))
                             .foregroundColor(Color(white: 0.78))
                     }
                     .buttonStyle(.plain)
@@ -74,7 +74,7 @@ private struct LoginCard: View {
 
             if let error {
                 Text(error)
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Color(red: 0.95, green: 0.45, blue: 0.45))
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -83,7 +83,7 @@ private struct LoginCard: View {
 
             if !hasBinary {
                 Text("Could not locate the required binary. Set its path under Settings → Advanced settings.")
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineLimit(nil)
@@ -149,7 +149,7 @@ private struct PrimaryLoginButton: View {
                     Text("Sign in")
                 }
             }
-            .font(BodyFont.system(size: 13.5, weight: .semibold))
+            .font(BodyFont.system(size: 13.5, wght: 700))
             .foregroundColor(.black)
             .padding(.horizontal, 22)
             .padding(.vertical, 11)
