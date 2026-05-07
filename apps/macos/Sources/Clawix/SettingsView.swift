@@ -2054,6 +2054,12 @@ private struct PersonalizationPage: View {
     @State private var personality: String = "Pragmatic"
     @State private var expanded: Bool = false
     @State private var instructions: String = ""
+    @State private var savedSnapshot: String = ""
+    @State private var loadError: String? = nil
+    @State private var saveError: String? = nil
+    @State private var didLoad: Bool = false
+
+    private var isDirty: Bool { instructions != savedSnapshot }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -2082,48 +2088,86 @@ private struct PersonalizationPage: View {
             Text("Custom instructions")
                 .font(BodyFont.system(size: 13, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
-            Text("Provide extra instructions and context that Clawix should keep in mind for this project. Learn more")
+            Text("Give Codex extra instructions and context for your project. Learn more")
                 .font(BodyFont.system(size: 11))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.bottom, 14)
 
             ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color(white: 0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                    )
                 TextEditor(text: $instructions)
                     .font(BodyFont.system(size: 12, design: .monospaced))
                     .scrollContentBackground(.hidden)
                     .padding(10)
-                    .frame(minHeight: 300)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color(white: 0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                            )
-                    )
+                    .disabled(!didLoad && loadError == nil)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 ExpandIconButton { expanded = true }
                     .padding(8)
             }
+            .frame(height: 240)
 
-            HStack {
+            HStack(spacing: 10) {
+                if let loadError {
+                    Text("Could not load AGENTS.md: \(loadError)")
+                        .font(BodyFont.system(size: 11))
+                        .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.55))
+                } else if let saveError {
+                    Text("Save failed: \(saveError)")
+                        .font(BodyFont.system(size: 11))
+                        .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.55))
+                } else if isDirty {
+                    Text("Unsaved changes")
+                        .font(BodyFont.system(size: 11))
+                        .foregroundColor(Palette.textSecondary)
+                }
                 Spacer()
-                Button {} label: {
+                Button { save() } label: {
                     Text("Save")
                         .font(BodyFont.system(size: 12, weight: .medium))
-                        .foregroundColor(Palette.textSecondary)
+                        .foregroundColor(isDirty ? Palette.textPrimary : Palette.textSecondary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.white.opacity(isDirty ? 0.12 : 0.06))
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(!isDirty)
             }
             .padding(.top, 14)
         }
+        .onAppear { load() }
         .sheet(isPresented: $expanded) {
             InstructionsExpandedSheet(text: $instructions, isPresented: $expanded)
+        }
+    }
+
+    private func load() {
+        do {
+            let text = try CodexInstructionsFile.read()
+            instructions = text
+            savedSnapshot = text
+            loadError = nil
+            didLoad = true
+        } catch {
+            loadError = error.localizedDescription
+            didLoad = false
+        }
+    }
+
+    private func save() {
+        do {
+            try CodexInstructionsFile.write(instructions)
+            savedSnapshot = instructions
+            saveError = nil
+        } catch {
+            saveError = error.localizedDescription
         }
     }
 }
