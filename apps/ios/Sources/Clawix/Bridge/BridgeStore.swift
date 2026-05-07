@@ -255,30 +255,138 @@ final class BridgeStore {
         openChatId = nil
     }
 
+    /// Optimistic state-only side of a send: append the user bubble
+    /// and flip `hasActiveTurn = true` in the same SwiftUI tick the
+    /// caller cleared the composer text. Decoupled from
+    /// `dispatchPrompt` so `ChatDetailView` can run this synchronously
+    /// while the heavy `wireAttachment()` JPEG encoding stays on a
+    /// detached task. Without this split, the icon would animate
+    /// arrow → waveform → stop because `canSend` flipped one tick
+    /// before `hasActiveTurn` did.
+    ///
+    /// Pass `attachmentCount` so the optimistic preview matches the
+    /// `[image] text` format the Mac echoes back; otherwise the daemon
+    /// echo would not align with the local placeholder and the bubble
+    /// would be duplicated on round-trip. Image previews go through
+    /// `attachmentImagesByMessageId` which is the actual thing the
+    /// `UserBubble` renders above the text.
     @MainActor
-    func sendPrompt(chatId: String, text: String, attachments: [WireAttachment] = []) {
+    @discardableResult
+    func beginPendingTurn(
+        chatId: String,
+        text: String,
+        attachmentCount: Int = 0
+    ) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Allow attachment-only sends: an empty text body still goes
-        // through as long as at least one image is attached, mirroring
-        // how the Codex CLI accepts dragged images without a prompt.
-        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
-        // Optimistic append: surface the user bubble before the bridge
-        // round-trip resolves. The server eventually replies with a
-        // `messageAppended` carrying its own canonical id; the
-        // `local-` prefix on this placeholder lets `applyMessageAppended`
-        // swap the row in-place instead of appending a duplicate.
+        guard !trimmed.isEmpty || attachmentCount > 0 else { return nil }
+        let preview = previewForUserBubble(text: trimmed, attachmentCount: attachmentCount)
+        let messageId = "local-\(UUID().uuidString)"
         let optimistic = WireMessage(
-            id: "local-\(UUID().uuidString)",
+            id: messageId,
             role: .user,
-            content: trimmed,
+            content: preview,
             timestamp: Date()
         )
         messagesByChat[chatId, default: []].append(optimistic)
+        if let idx = chats.firstIndex(where: { $0.id == chatId }) {
+            chats[idx].hasActiveTurn = true
+            chats[idx].lastTurnInterrupted = false
+            bridgeDbg.notice("beginPendingTurn EXISTING id=\(chatId, privacy: .public) msgId=\(messageId, privacy: .public) totalChats=\(self.chats.count, privacy: .public)")
+        } else {
+            // newChat path: the chat doesn't exist locally yet because
+            // the daemon hasn't echoed it back. Synthesize a stub so
+            // `chat?.hasActiveTurn` reads true; the daemon's later
+            // `chatUpdated` replaces this row by id.
+            let titleSeed = trimmed.isEmpty
+                ? (attachmentCount == 1 ? "Image" : "Images")
+                : String(trimmed.prefix(40))
+            chats.append(WireChat(
+                id: chatId,
+                title: titleSeed,
+                createdAt: Date(),
+                hasActiveTurn: true,
+                lastMessageAt: Date(),
+                lastMessagePreview: String(preview.prefix(140)),
+                cwd: pendingNewChatCwds[chatId]
+            ))
+            bridgeDbg.notice("beginPendingTurn SYNTH id=\(chatId, privacy: .public) msgId=\(messageId, privacy: .public) totalChats=\(self.chats.count, privacy: .public)")
+        }
+        return messageId
+    }
+
+    /// Build the same `[image] text` style preview the Mac side emits
+    /// for the user bubble. Used for both the optimistic insert and to
+    /// match against the daemon echo so the placeholder gets reused
+    /// instead of duplicated.
+    private func previewForUserBubble(text: String, attachmentCount: Int) -> String {
+        guard attachmentCount > 0 else { return text }
+        let label = attachmentCount == 1 ? "[image]" : "[\(attachmentCount) images]"
+        return text.isEmpty ? label : "\(label) \(text)"
+    }
+
+    #if canImport(UIKit)
+    /// Stash the inline image previews against the optimistic
+    /// `WireMessage.id` returned by `beginPendingTurn` so the
+    /// `UserBubble` can render them above the text. The placeholder id
+    /// survives `applyMessageAppended` so this entry stays valid after
+    /// the daemon echo.
+    @MainActor
+    func attachLocalImages(messageId: String, images: [UIImage]) {
+        guard !images.isEmpty else { return }
+        attachmentImagesByMessageId[messageId] = images
+    }
+    #endif
+
+    /// Network side of a send: emit the bridge frame. Safe to call
+    /// after `beginPendingTurn` has already populated the optimistic
+    /// state, or stand-alone (in which case it also calls into
+    /// `beginPendingTurn` first so attachment-only sends still surface
+    /// their bubble).
+    @MainActor
+    func dispatchPrompt(chatId: String, text: String, attachments: [WireAttachment] = []) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
+        // Idempotent: if `beginPendingTurn` already ran (the typical
+        // path from the chat detail), the chat's `hasActiveTurn` is
+        // already true and the bubble is already there. The check
+        // below is for stand-alone callers that bypass the synchronous
+        // prep step (e.g. mock harnesses); attachment-only sends are
+        // handled here too.
+        if let idx = chats.firstIndex(where: { $0.id == chatId }),
+           !chats[idx].hasActiveTurn {
+            beginPendingTurn(
+                chatId: chatId,
+                text: trimmed,
+                attachmentCount: attachments.count
+            )
+        }
         if pendingNewChats.remove(chatId) != nil {
+            // The synthesized stub already carries this cwd, so the
+            // hint has done its job.
+            pendingNewChatCwds.removeValue(forKey: chatId)
+            let connected = (client != nil)
+            bridgeDbg.notice("dispatchPrompt NEWCHAT id=\(chatId, privacy: .public) clientAttached=\(connected, privacy: .public)")
             client?.sendNewChat(chatId: chatId, text: trimmed, attachments: attachments)
         } else {
+            bridgeDbg.notice("dispatchPrompt SEND id=\(chatId, privacy: .public)")
             client?.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         }
+    }
+
+    /// Convenience for callers that don't need to split optimistic
+    /// state from network dispatch (mock/test paths). Production
+    /// `ChatDetailView.send()` uses the split form so the composer
+    /// icon transitions arrow → stop in a single tick.
+    @MainActor
+    func sendPrompt(chatId: String, text: String, attachments: [WireAttachment] = []) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
+        beginPendingTurn(
+            chatId: chatId,
+            text: trimmed,
+            attachmentCount: attachments.count
+        )
+        dispatchPrompt(chatId: chatId, text: trimmed, attachments: attachments)
     }
 
     /// Apply a server-confirmed message append. If a matching local
@@ -523,11 +631,21 @@ final class BridgeStore {
     /// to `[]` so the detail view treats the chat as "loaded, empty"
     /// rather than gating on a snapshot that will never arrive (the
     /// chat doesn't exist on the Mac yet).
+    ///
+    /// `cwd` carries the project context the user was sitting in when
+    /// they tapped "new chat" (chat detail's `+` button while inside a
+    /// folder). Stashed against the new id so the optimistic stub
+    /// `beginPendingTurn` synthesizes already shows up in that folder's
+    /// list, instead of disappearing into the projectless bucket until
+    /// the daemon's echo lands. Pass `nil` from the home FAB.
     @MainActor
-    func startNewChat() -> String {
+    func startNewChat(cwd: String? = nil) -> String {
         let id = UUID().uuidString
         pendingNewChats.insert(id)
         messagesByChat[id] = []
+        if let cwd, !cwd.isEmpty {
+            pendingNewChatCwds[id] = cwd
+        }
         return id
     }
 
@@ -598,6 +716,14 @@ final class BridgeStore {
             bridgeDbg.notice("applyChatUpdate APPEND id=\(chat.id, privacy: .public) hasActiveTurn=\(chat.hasActiveTurn, privacy: .public) totalChats=\(self.chats.count, privacy: .public)")
         }
     }
+
+    /// Snapshot of cwds the user attached to in-flight `newChat`s via
+    /// `startNewChat(cwd:)`. Consumed by `beginPendingTurn` so the
+    /// synthesized `WireChat` carries the folder hint immediately. The
+    /// daemon's later `chatUpdated` is the canonical truth and
+    /// replaces it.
+    @ObservationIgnored
+    private var pendingNewChatCwds: [String: String] = [:]
 
     /// Send an audio blob to the Mac for transcription. Suspends until
     /// the daemon answers with the corresponding `transcriptionResult`
