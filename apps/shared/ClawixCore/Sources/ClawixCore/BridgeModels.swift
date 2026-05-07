@@ -5,27 +5,62 @@ public enum WireRole: String, Codable, Equatable, Sendable {
     case assistant
 }
 
-/// One image attached to a `sendPrompt` / `newChat` frame. The payload
-/// rides inline as base64 because the bridge speaks JSON over WebSocket
-/// (no multipart). The daemon decodes the bytes, writes them to a
-/// turn-scoped temp file, and forwards the path to Codex as a
-/// `localImage` user input item.
+/// What an attachment represents on the wire. `.image` is the legacy
+/// kind: the daemon spools the bytes and forwards the path to Codex as
+/// a `localImage` user input item. `.audio` means the attachment is a
+/// voice clip belonging to the user message; the daemon transcribes it
+/// with Whisper, uses the transcript as the prompt text Codex sees, and
+/// stores the audio for later replay so the chat history shows a
+/// playable bubble. Old peers without `kind` decode as `.image` so
+/// existing image-only flows keep working unchanged.
+public enum WireAttachmentKind: String, Codable, Equatable, Sendable {
+    case image
+    case audio
+}
+
+/// One attachment piggy-backing on a `sendPrompt` / `newChat` frame. The
+/// payload rides inline as base64 because the bridge speaks JSON over
+/// WebSocket (no multipart). The daemon's behaviour depends on `kind`:
+/// images are forwarded to Codex as `localImage`; audio is transcribed
+/// (the transcript becomes the prompt text) and stored for replay.
 ///
 /// `filename` is advisory: the daemon uses its extension when picking
-/// the on-disk suffix, defaulting to `.jpg` if none is supplied. Old
-/// peers that don't carry attachments simply omit the field entirely;
-/// new peers receiving a frame without it default to an empty array.
+/// the on-disk suffix, defaulting to `.jpg` for images and `.m4a` for
+/// audio if none is supplied. Old peers that don't carry attachments
+/// simply omit the field entirely; new peers receiving a frame without
+/// it default to an empty array.
 public struct WireAttachment: Codable, Equatable, Sendable {
     public let id: String
+    public let kind: WireAttachmentKind
     public let mimeType: String
     public let filename: String?
     public let dataBase64: String
 
-    public init(id: String, mimeType: String, filename: String?, dataBase64: String) {
+    public init(
+        id: String,
+        kind: WireAttachmentKind = .image,
+        mimeType: String,
+        filename: String?,
+        dataBase64: String
+    ) {
         self.id = id
+        self.kind = kind
         self.mimeType = mimeType
         self.filename = filename
         self.dataBase64 = dataBase64
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, kind, mimeType, filename, dataBase64
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.kind = try c.decodeIfPresent(WireAttachmentKind.self, forKey: .kind) ?? .image
+        self.mimeType = try c.decode(String.self, forKey: .mimeType)
+        self.filename = try c.decodeIfPresent(String.self, forKey: .filename)
+        self.dataBase64 = try c.decode(String.self, forKey: .dataBase64)
     }
 }
 
