@@ -20,10 +20,10 @@ struct QuickAskSettingsPage: View {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Shortcut")
-                            .font(BodyFont.system(size: 12.5))
+                            .font(BodyFont.system(size: 12.5, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                         Text("Press this combo from any app to summon the QuickAsk panel.")
-                            .font(BodyFont.system(size: 11))
+                            .font(BodyFont.system(size: 11, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -42,10 +42,10 @@ struct QuickAskSettingsPage: View {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Reset to default")
-                            .font(BodyFont.system(size: 12.5))
+                            .font(BodyFont.system(size: 12.5, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                         Text("Restores ⌃⌥⌘K, the shipped default.")
-                            .font(BodyFont.system(size: 11))
+                            .font(BodyFont.system(size: 11, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                     }
                     Spacer(minLength: 12)
@@ -62,10 +62,10 @@ struct QuickAskSettingsPage: View {
                 HStack(alignment: .center, spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Open the panel now")
-                            .font(BodyFont.system(size: 12.5))
+                            .font(BodyFont.system(size: 12.5, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                         Text("Same as pressing the shortcut. Drag the panel anywhere on screen — its position is remembered.")
-                            .font(BodyFont.system(size: 11))
+                            .font(BodyFont.system(size: 11, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -107,7 +107,7 @@ private struct ShortcutRecorder: View {
                         lineWidth: 0.7)
 
             Text(recording ? "Type a shortcut…" : hotkey.displayString)
-                .font(BodyFont.system(size: 12.5, weight: .medium))
+                .font(BodyFont.system(size: 12.5, wght: 600))
                 .foregroundColor(recording ? Color(red: 0.66, green: 0.78, blue: 1.0) : Palette.textPrimary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
@@ -222,7 +222,7 @@ private struct QASHeader: View {
                 .font(BodyFont.system(size: 22, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
             Text("Floating composer that appears anywhere on screen with a global shortcut. Drag it where you want, ask, dismiss with Esc.")
-                .font(BodyFont.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5, wght: 500))
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.bottom, 26)
@@ -233,7 +233,7 @@ private struct QASSectionLabel: View {
     let title: LocalizedStringKey
     var body: some View {
         Text(title)
-            .font(BodyFont.system(size: 13, weight: .medium))
+            .font(BodyFont.system(size: 13, wght: 600))
             .foregroundColor(Palette.textPrimary)
             .padding(.bottom, 14)
             .padding(.top, 28)
@@ -269,7 +269,7 @@ private struct QASSecondaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(BodyFont.system(size: 12, weight: .medium))
+                .font(BodyFont.system(size: 12, wght: 600))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
