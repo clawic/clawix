@@ -68,17 +68,46 @@ enum DictationHotkeyTrigger: String, CaseIterable, Codable {
     }
 }
 
-/// Watches global `flagsChanged` events for the configured modifier
-/// trigger and translates press/release into start/stop calls on the
-/// `DictationCoordinator`. Hold-vs-tap routing follows the user's
-/// `DictationHotkeyMode`.
+/// Watches global `flagsChanged` events for any of the configured
+/// modifier triggers and translates press/release into start/stop
+/// calls on the `DictationCoordinator`. Hold-vs-tap routing follows
+/// each binding's own `DictationHotkeyMode`.
+///
+/// Two simultaneous bindings are supported (Shortcut 1 + Shortcut 2)
+/// so a power user can have, say, Right ⌘ for hybrid quick toggles
+/// AND Fn for deliberate push-to-talk. Each binding owns its own
+/// hold/tap state machine so they can be active at the same time
+/// without interference.
 @MainActor
 final class HotkeyManager {
 
     static let shared = HotkeyManager()
 
+    /// Per-binding mutable state, owned by the manager. Two of these
+    /// live at once — one for Shortcut 1, one for Shortcut 2. Carried
+    /// in a class so `handle()` can mutate via reference without
+    /// having to look up by index every event.
+    private final class Binding {
+        let slot: Int
+        var pressedAt: Date?
+        var isPressed: Bool = false
+        var wasIdleAtKeyDown: Bool = false
+        let triggerKey: String
+        let modeKey: String
+
+        init(slot: Int, triggerKey: String, modeKey: String) {
+            self.slot = slot
+            self.triggerKey = triggerKey
+            self.modeKey = modeKey
+        }
+    }
+
     static let modeDefaultsKey = "dictation.hotkeyMode"
     static let triggerDefaultsKey = "dictation.hotkeyTrigger"
+    /// Second-binding keys. `.off` by default so existing users see
+    /// no behavior change unless they opt in.
+    static let mode2DefaultsKey = "dictation.hotkey2Mode"
+    static let trigger2DefaultsKey = "dictation.hotkey2Trigger"
 
     /// Threshold above which a press counts as "held" instead of
     /// "tapped" in `.hybrid` mode. 500 ms is comfortable: short enough
@@ -90,14 +119,8 @@ final class HotkeyManager {
     private weak var coordinator: DictationCoordinator?
     private var globalMonitor: Any?
     private var localMonitor: Any?
-    private var pressedAt: Date?
-    private var isPressed = false
-    /// Snapshot of `coordinator.state == .idle` taken on each keyDown.
-    /// `keyUp` reads it to disambiguate "tap that just started a new
-    /// session" (leave running) from "tap on an already-running session"
-    /// (stop). Without this, hybrid mode can't toggle off with a tap —
-    /// the original logic only stopped on a hold release.
-    private var wasIdleAtKeyDown = false
+
+    private let bindings: [Binding]
 
     private static let debugLogPath = "/tmp/clawix-hotkey.log"
 
@@ -117,6 +140,10 @@ final class HotkeyManager {
 
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        self.bindings = [
+            Binding(slot: 1, triggerKey: Self.triggerDefaultsKey, modeKey: Self.modeDefaultsKey),
+            Binding(slot: 2, triggerKey: Self.trigger2DefaultsKey, modeKey: Self.mode2DefaultsKey)
+        ]
         // One-shot migration. Earlier builds defaulted the trigger to
         // `.rightCommand`, which fires on every Right ⌘ press and felt
         // like a runaway. Force the trigger to `.off` once so the
@@ -127,30 +154,65 @@ final class HotkeyManager {
             defaults.set(DictationHotkeyTrigger.off.rawValue, forKey: Self.triggerDefaultsKey)
             defaults.set(true, forKey: migrationKey)
         }
+        // Default the second slot to off explicitly so the picker has
+        // a value to render on first launch.
+        if defaults.object(forKey: Self.trigger2DefaultsKey) == nil {
+            defaults.set(DictationHotkeyTrigger.off.rawValue, forKey: Self.trigger2DefaultsKey)
+        }
     }
 
+    // MARK: - Public mode/trigger accessors (slot 1)
+
     var mode: DictationHotkeyMode {
-        get {
-            DictationHotkeyMode(rawValue: defaults.string(forKey: Self.modeDefaultsKey) ?? "")
-                ?? .hybrid
-        }
-        set { defaults.set(newValue.rawValue, forKey: Self.modeDefaultsKey) }
+        get { mode(forSlot: 1) }
+        set { setMode(newValue, forSlot: 1) }
     }
 
     var trigger: DictationHotkeyTrigger {
-        get {
-            DictationHotkeyTrigger(rawValue: defaults.string(forKey: Self.triggerDefaultsKey) ?? "")
-                ?? .off
-        }
-        set {
-            defaults.set(newValue.rawValue, forKey: Self.triggerDefaultsKey)
-            // If the user just enabled a trigger and the coordinator is
-            // already known, retry registration. The global monitor may
-            // have been skipped at bootstrap (Input Monitoring not yet
-            // granted) and the user may have just granted it.
-            if newValue != .off, let coordinator {
-                register(coordinator: coordinator)
-            }
+        get { trigger(forSlot: 1) }
+        set { setTrigger(newValue, forSlot: 1) }
+    }
+
+    // MARK: - Public mode/trigger accessors (slot 2)
+
+    var mode2: DictationHotkeyMode {
+        get { mode(forSlot: 2) }
+        set { setMode(newValue, forSlot: 2) }
+    }
+
+    var trigger2: DictationHotkeyTrigger {
+        get { trigger(forSlot: 2) }
+        set { setTrigger(newValue, forSlot: 2) }
+    }
+
+    // MARK: - Generic per-slot helpers
+
+    private func binding(forSlot slot: Int) -> Binding {
+        bindings[slot - 1]
+    }
+
+    private func mode(forSlot slot: Int) -> DictationHotkeyMode {
+        let key = binding(forSlot: slot).modeKey
+        return DictationHotkeyMode(rawValue: defaults.string(forKey: key) ?? "") ?? .hybrid
+    }
+
+    private func setMode(_ value: DictationHotkeyMode, forSlot slot: Int) {
+        defaults.set(value.rawValue, forKey: binding(forSlot: slot).modeKey)
+    }
+
+    private func trigger(forSlot slot: Int) -> DictationHotkeyTrigger {
+        let key = binding(forSlot: slot).triggerKey
+        return DictationHotkeyTrigger(rawValue: defaults.string(forKey: key) ?? "") ?? .off
+    }
+
+    private func setTrigger(_ value: DictationHotkeyTrigger, forSlot slot: Int) {
+        defaults.set(value.rawValue, forKey: binding(forSlot: slot).triggerKey)
+        // If the user just enabled a trigger and the coordinator is
+        // already known, retry registration. The global monitor may
+        // have been skipped at bootstrap (Input Monitoring not yet
+        // granted) and the user may have just granted it.
+        if value != .off, let coordinator {
+            register(coordinator: coordinator)
         }
     }
 
@@ -174,7 +236,10 @@ final class HotkeyManager {
     /// works while Clawix itself is frontmost.
     func register(coordinator: DictationCoordinator) {
         self.coordinator = coordinator
-        Self.debug("register() trigger=\(trigger.rawValue) mode=\(mode.rawValue) inputMon=\(DictationPermissions.inputMonitoring())")
+        // The custom-cancel shortcut shares the Input Monitoring grant
+        // with this manager, so register at the same lifecycle point.
+        CancelHotkey.shared.register(coordinator: coordinator)
+        Self.debug("register() trigger1=\(trigger.rawValue) trigger2=\(trigger2.rawValue) inputMon=\(DictationPermissions.inputMonitoring())")
         if localMonitor == nil {
             localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
                 guard let self else { return event }
@@ -205,6 +270,11 @@ final class HotkeyManager {
     /// with the Settings window in focus.
     func bootstrapIfPermitted(coordinator: DictationCoordinator) {
         register(coordinator: coordinator)
+        // Push the model into the GPU cache early so the first real
+        // dictation of the session doesn't pay the cold-load tax.
+        // Honors `dictation.prewarmOnLaunch`; skipped silently when
+        // the model isn't downloaded.
+        coordinator.prewarmIfEnabled()
     }
 
     /// Settings entry called when the user picks a non-`.off` trigger.
@@ -232,19 +302,24 @@ final class HotkeyManager {
     // MARK: - Private
 
     private func handle(event: NSEvent, scope: String) {
-        let trigger = self.trigger
-        Self.debug(String(format: "handle scope=%@ keyCode=0x%X rawFlags=0x%lX trigger=%@ wantKeyCode=0x%X coordinator=%@",
-                          scope, event.keyCode, event.modifierFlags.rawValue, trigger.rawValue, trigger.keyCode,
-                          coordinator == nil ? "nil" : "ok"))
         guard let coordinator else { return }
-        guard trigger != .off else { return }
-        guard event.keyCode == trigger.keyCode else { return }
-        let down = isModifierDown(event: event, trigger: trigger)
-        Self.debug("match down=\(down) state=\(coordinator.state)")
-        if down {
-            keyDown(coordinator: coordinator)
-        } else {
-            keyUp(coordinator: coordinator)
+        // Iterate every binding, dispatch to whichever matches the
+        // event's keyCode. Two simultaneous bindings could in theory
+        // share a keyCode (would be a UX bug — Settings should warn
+        // and prevent it) but the loop is robust to it: only the
+        // first matching binding fires.
+        for binding in bindings {
+            let trig = trigger(forSlot: binding.slot)
+            guard trig != .off else { continue }
+            guard event.keyCode == trig.keyCode else { continue }
+            let down = isModifierDown(event: event, trigger: trig)
+            Self.debug(String(format: "match slot=%d down=%@ scope=%@", binding.slot, String(down), scope))
+            if down {
+                keyDown(coordinator: coordinator, binding: binding)
+            } else {
+                keyUp(coordinator: coordinator, binding: binding)
+            }
+            return
         }
     }
 
@@ -271,13 +346,14 @@ final class HotkeyManager {
         }
     }
 
-    private func keyDown(coordinator: DictationCoordinator) {
-        guard !isPressed else { return }
-        isPressed = true
+    private func keyDown(coordinator: DictationCoordinator, binding: Binding) {
+        guard !binding.isPressed else { return }
+        binding.isPressed = true
+        let mode = mode(forSlot: binding.slot)
         switch mode {
         case .pushToTalk, .hybrid:
-            pressedAt = Date()
-            wasIdleAtKeyDown = coordinator.state == .idle
+            binding.pressedAt = Date()
+            binding.wasIdleAtKeyDown = coordinator.state == .idle
             // Start recording on the press. In hybrid we decide at
             // key-up whether to also stop (held = push to talk),
             // toggle off (tapped on a running session), or leave it
@@ -290,17 +366,18 @@ final class HotkeyManager {
         }
     }
 
-    private func keyUp(coordinator: DictationCoordinator) {
-        guard isPressed else { return }
-        isPressed = false
+    private func keyUp(coordinator: DictationCoordinator, binding: Binding) {
+        guard binding.isPressed else { return }
+        binding.isPressed = false
+        let mode = mode(forSlot: binding.slot)
         switch mode {
         case .pushToTalk:
             coordinator.stop()
         case .hybrid:
-            let elapsed: TimeInterval = pressedAt.map { Date().timeIntervalSince($0) } ?? 0
-            pressedAt = nil
-            let wasIdle = wasIdleAtKeyDown
-            wasIdleAtKeyDown = false
+            let elapsed: TimeInterval = binding.pressedAt.map { Date().timeIntervalSince($0) } ?? 0
+            binding.pressedAt = nil
+            let wasIdle = binding.wasIdleAtKeyDown
+            binding.wasIdleAtKeyDown = false
             if elapsed >= holdThreshold {
                 // Held: push-to-talk style.
                 coordinator.stop()
