@@ -54,7 +54,7 @@ private struct SidebarItemPill: View {
                 leadingIcon
 
                 Text(displayTitle)
-                    .font(BodyFont.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(isActive ? .white : Color(white: 0.78))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -463,7 +463,7 @@ struct BrowserURLField: View {
             TextField("", text: $draft, onCommit: commit)
                 .textFieldStyle(.plain)
                 .focused($isFocused)
-                .font(BodyFont.system(size: 12.5))
+                .font(BodyFont.system(size: 12.5, wght: 500))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .onChange(of: isFocused) { _, focused in

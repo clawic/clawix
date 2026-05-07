@@ -81,13 +81,13 @@ struct BrowserView: View {
                 .font(BodyFont.system(size: 28, weight: .light))
                 .foregroundColor(Color(white: 0.40))
             Text("No tabs open")
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(white: 0.55))
             Button {
                 appState.newBrowserTab()
             } label: {
                 Text("New tab")
-                    .font(BodyFont.system(size: 12, weight: .medium))
+                    .font(BodyFont.system(size: 12, wght: 600))
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
