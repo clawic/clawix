@@ -50,7 +50,7 @@ struct PairingView: View {
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Pair with your Mac")
-                .font(AppFont.system(size: 30, weight: .bold))
+                .font(BodyFont.system(size: 30, weight: .bold))
                 .tracking(-0.4)
                 .foregroundStyle(Palette.textPrimary)
             Text("Open Clawix on your Mac, choose Window > Pair iPhone, and scan the QR with this device.")

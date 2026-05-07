@@ -1,219 +1,251 @@
 import SwiftUI
 
-/// Custom QR mark used in place of SF Symbol `qrcode` / `qrcode.viewfinder`.
-/// Drawn on a 13x13 module grid: simple rounded squares at the three finder
-/// corners, plus a sparse field of inset rounded "dots" with a visible gap
-/// between neighbours, so the icon reads as an abstract QR rather than a
-/// dense matrix.
-struct QRIcon: View {
-    var size: CGFloat = 28
-
-    var body: some View {
-        QRIconShape()
-            .fill(style: FillStyle(eoFill: true, antialiased: true))
-            .frame(width: size, height: size)
-    }
-}
-
-struct QRIconShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let g = CGFloat(QRIconLayout.grid)
-        let s = min(rect.width, rect.height) / g
-        let dx = (rect.width  - g * s) / 2
-        let dy = (rect.height - g * s) / 2
-
-        var path = Path()
-
-        for (fx, fy) in QRIconLayout.finders {
-            QRIconLayout.appendFinder(to: &path, fx: CGFloat(fx), fy: CGFloat(fy), s: s, dx: dx, dy: dy)
-        }
-
-        let inset = QRIconLayout.moduleInset * s
-        let moduleSide = s - 2 * inset
-        let moduleCorner = QRIconLayout.moduleRadiusRatio * moduleSide
-        for (mx, my) in QRIconLayout.modules {
-            path.addRoundedRect(
-                in: CGRect(
-                    x: dx + CGFloat(mx) * s + inset,
-                    y: dy + CGFloat(my) * s + inset,
-                    width: moduleSide,
-                    height: moduleSide
-                ),
-                cornerSize: CGSize(width: moduleCorner, height: moduleCorner),
-                style: .continuous
-            )
-        }
-
-        return path
-    }
-}
-
-/// Shared 13x13 grid coordinates for both static and animated renderings.
-enum QRIconLayout {
-    static let grid: Int = 13
-
-    // Top-left module of each 3x3 finder square.
-    static let finders: [(Int, Int)] = [(0, 0), (10, 0), (0, 10)]
-    static let finderSide: CGFloat = 3
-    static let finderRadiusRatio: CGFloat = 0.40
-
-    // Each data module is drawn inset inside its grid cell so adjacent
-    // modules show a clear gap. The corner radius is expressed as a
-    // fraction of the inset module side, not of the grid cell.
-    static let moduleInset: CGFloat = 0.10
-    static let moduleRadiusRatio: CGFloat = 0.45
-
-    // Pre-computed data modules: deterministic ~42% density pseudo-random
-    // fill in the remaining grid cells. Excludes the 4x4 finder + separator
-    // zones at the three QR corners.
-    static let modules: [(Int, Int)] = {
-        var result: [(Int, Int)] = []
-        for x in 0..<grid {
-            for y in 0..<grid {
-                if isFinderZone(x: x, y: y) { continue }
-                if isDataFilled(x: x, y: y) {
-                    result.append((x, y))
-                }
-            }
-        }
-        return result
-    }()
-
-    static func appendFinder(to path: inout Path, fx: CGFloat, fy: CGFloat, s: CGFloat, dx: CGFloat, dy: CGFloat) {
-        let side = finderSide * s
-        path.addRoundedRect(
-            in: CGRect(x: dx + fx * s, y: dy + fy * s, width: side, height: side),
-            cornerSize: CGSize(width: finderRadiusRatio * side, height: finderRadiusRatio * side),
-            style: .continuous
-        )
-    }
-
-    private static func isFinderZone(x: Int, y: Int) -> Bool {
-        // 4x4 zone = 3x3 finder + 1 module separator on the inner sides.
-        (x <= 3 && y <= 3) ||
-        (x >= 9 && y <= 3) ||
-        (x <= 3 && y >= 9)
-    }
-
-    private static func isDataFilled(x: Int, y: Int) -> Bool {
-        var h: UInt32 = 2_166_136_261
-        h = (h ^ UInt32(truncatingIfNeeded: x &* 73_856_093)) &* 16_777_619
-        h = (h ^ UInt32(truncatingIfNeeded: y &* 19_349_663)) &* 16_777_619
-        h = (h ^ UInt32(truncatingIfNeeded: (x &+ 1) &* (y &+ 7) &* 83_492_791)) &* 16_777_619
-        return (h & 0xFFFF) < UInt32(0xFFFF) * 42 / 100
-    }
-
-    /// Stable per-module phase in [0, 1) used by the animated variant so
-    /// each dot breathes on its own offset without forming a directional
-    /// wave across the grid.
-    static func modulePhase(x: Int, y: Int) -> Double {
-        var h: UInt32 = 2_166_136_261
-        h = (h ^ UInt32(truncatingIfNeeded: x &* 2_654_435_761)) &* 16_777_619
-        h = (h ^ UInt32(truncatingIfNeeded: y &* 40_503)) &* 16_777_619
-        h = (h ^ UInt32(truncatingIfNeeded: (x &+ 11) &* (y &+ 31))) &* 16_777_619
-        return Double(h & 0xFFFF) / Double(0xFFFF)
-    }
-}
-
-/// Animated variant. Every dot keeps its position and just grows/shrinks
-/// slightly on a simple sine curve. Each dot has its own small phase so
-/// the icon twinkles softly without forming a directional wave; the three
-/// finder squares share a slower, in-unison breath.
+/// Animated QR mark used in place of SF Symbol `qrcode` /
+/// `qrcode.viewfinder` on the pairing screen. Authentic 3-layer
+/// finders (filled border + transparent gap + inner squircle), gradient
+/// viewfinder corner brackets fading out from each icon corner, and a
+/// soft top-to-bottom scan wave that modulates dot opacity and scale.
+/// All curves use `style: .continuous` (squircle, never circular arcs).
 struct AnimatedQRIcon: View {
-    var size: CGFloat = 28
-    var period: Double = 2.6
+    var size: CGFloat = 156
+    var period: Double = 3.0
 
     var body: some View {
         TimelineView(.animation) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            Canvas(
-                opaque: false,
-                colorMode: .nonLinear,
-                rendersAsynchronously: false
-            ) { ctx, sz in
-                Self.render(into: &ctx, size: sz, time: t, period: period)
+            Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: false) { ctx, sz in
+                QRIconRenderer.render(into: &ctx, size: sz, time: t, period: period)
             }
         }
         .frame(width: size, height: size)
     }
+}
 
-    private static func render(
+private enum QRIconRenderer {
+    static let grid: Int = 13
+
+    static func render(
         into ctx: inout GraphicsContext,
         size sz: CGSize,
         time t: TimeInterval,
         period: Double
     ) {
-        let g = CGFloat(QRIconLayout.grid)
-        let s = min(sz.width, sz.height) / g
-        let dx = (sz.width  - g * s) / 2
-        let dy = (sz.height - g * s) / 2
+        let bracketRect = CGRect(origin: .zero, size: sz)
+            .insetBy(dx: sz.width * 0.025, dy: sz.height * 0.025)
+        let qrRect = CGRect(origin: .zero, size: sz)
+            .insetBy(dx: sz.width * 0.10, dy: sz.height * 0.10)
 
-        let finderScale = scaleAt(time: t, period: period * 1.25, phase: 0, range: 0.05)
-        let finderSide = QRIconLayout.finderSide * s
-        let finderCorner = QRIconLayout.finderRadiusRatio * finderSide
-        for (fx, fy) in QRIconLayout.finders {
-            let originX = dx + CGFloat(fx) * s
-            let originY = dy + CGFloat(fy) * s
-            let scaledSide = finderSide * finderScale
-            let scaledCorner = finderCorner * finderScale
-            let r = CGRect(
-                x: originX + (finderSide - scaledSide) / 2,
-                y: originY + (finderSide - scaledSide) / 2,
-                width: scaledSide,
-                height: scaledSide
-            )
-            let p = Path(
-                roundedRect: r,
-                cornerSize: CGSize(width: scaledCorner, height: scaledCorner),
-                style: .continuous
-            )
-            ctx.fill(p, with: .style(.foreground))
-        }
+        drawScanBrackets(into: &ctx, in: bracketRect)
+        drawFinders(into: &ctx, in: qrRect)
+        drawWaveDots(into: &ctx, in: qrRect, time: t, period: period)
+    }
 
-        let inset = QRIconLayout.moduleInset * s
-        let moduleSide = s - 2 * inset
-        let moduleCorner = QRIconLayout.moduleRadiusRatio * moduleSide
-        for (mx, my) in QRIconLayout.modules {
-            let phase = QRIconLayout.modulePhase(x: mx, y: my)
-            let scale = scaleAt(time: t, period: period, phase: phase, range: 0.18)
-            let cellOriginX = dx + CGFloat(mx) * s
-            let cellOriginY = dy + CGFloat(my) * s
-            let cx = cellOriginX + s / 2
-            let cy = cellOriginY + s / 2
-            let scaledSide = moduleSide * scale
-            let scaledCorner = moduleCorner * scale
-            let r = CGRect(
-                x: cx - scaledSide / 2,
-                y: cy - scaledSide / 2,
-                width: scaledSide,
-                height: scaledSide
+    // MARK: viewfinder corner brackets
+
+    /// Stroke the full perimeter of a continuous-style rounded rect once
+    /// per icon corner, each time with its own radial gradient centered
+    /// at that corner. The stroke width is constant, so the bracket
+    /// thickness is uniform; the gradient kills the stroke past a short
+    /// radius, so what remains is four bright corner arcs that fade out
+    /// toward the middle of each edge instead of meeting up.
+    private static func drawScanBrackets(into ctx: inout GraphicsContext, in rect: CGRect) {
+        let cornerRadius = rect.width * 0.20
+        let stroke = max(1.4, rect.width * 0.012)
+
+        let perimeter = Path(
+            roundedRect: rect,
+            cornerSize: CGSize(width: cornerRadius, height: cornerRadius),
+            style: .continuous
+        )
+
+        let endRadius = rect.width * 0.34
+        let gradient = Gradient(stops: [
+            .init(color: .white.opacity(0.90), location: 0.00),
+            .init(color: .white.opacity(0.85), location: 0.30),
+            .init(color: .white.opacity(0.30), location: 0.70),
+            .init(color: .white.opacity(0.00), location: 1.00),
+        ])
+
+        let cornerCenters: [CGPoint] = [
+            CGPoint(x: rect.minX, y: rect.minY),
+            CGPoint(x: rect.maxX, y: rect.minY),
+            CGPoint(x: rect.minX, y: rect.maxY),
+            CGPoint(x: rect.maxX, y: rect.maxY),
+        ]
+
+        for center in cornerCenters {
+            ctx.stroke(
+                perimeter,
+                with: .radialGradient(
+                    gradient,
+                    center: center,
+                    startRadius: 0,
+                    endRadius: endRadius
+                ),
+                style: StrokeStyle(lineWidth: stroke, lineCap: .round, lineJoin: .round)
             )
-            let p = Path(
-                roundedRect: r,
-                cornerSize: CGSize(width: scaledCorner, height: scaledCorner),
-                style: .continuous
-            )
-            ctx.fill(p, with: .style(.foreground))
         }
     }
 
-    /// Maps a time + per-element phase to a scale factor that breathes
-    /// between `1 - range` and `1` along a simple sine curve.
-    private static func scaleAt(time t: TimeInterval, period: Double, phase: Double, range: Double) -> Double {
-        let v = sin((t / period + phase) * 2 * .pi)
-        let unit = v * 0.5 + 0.5
-        return (1.0 - range) + range * unit
+    // MARK: finder marks
+
+    /// Three layers, all `.continuous`: a thin filled border, a punched
+    /// hole inside it (even-odd fill), and a smaller filled squircle in
+    /// the center, deliberately leaving a generous gap between the
+    /// border's inner edge and the inner squircle.
+    private static func drawFinders(into ctx: inout GraphicsContext, in rect: CGRect) {
+        let g = CGFloat(grid)
+        let s = min(rect.width, rect.height) / g
+        let dx = rect.minX + (rect.width  - g * s) / 2
+        let dy = rect.minY + (rect.height - g * s) / 2
+
+        let borderFraction: CGFloat = 0.18
+        let innerSizeRatio: CGFloat = 0.30
+        let innerOpacity: Double = 0.65
+
+        for (fx, fy) in [(0, 0), (10, 0), (0, 10)] {
+            let outerRect = CGRect(
+                x: dx + CGFloat(fx) * s,
+                y: dy + CGFloat(fy) * s,
+                width: 3 * s,
+                height: 3 * s
+            )
+            let outerCorner = 0.30 * outerRect.width
+
+            let holeInset = outerRect.width * borderFraction
+            let holeRect = outerRect.insetBy(dx: holeInset, dy: holeInset)
+            let holeCorner = max(1.0, 0.28 * holeRect.width)
+
+            var ring = Path()
+            ring.addRoundedRect(
+                in: outerRect,
+                cornerSize: CGSize(width: outerCorner, height: outerCorner),
+                style: .continuous
+            )
+            ring.addRoundedRect(
+                in: holeRect,
+                cornerSize: CGSize(width: holeCorner, height: holeCorner),
+                style: .continuous
+            )
+            ctx.fill(ring, with: .style(.foreground), style: FillStyle(eoFill: true, antialiased: true))
+
+            let innerSide = outerRect.width * innerSizeRatio
+            let innerRect = CGRect(
+                x: outerRect.midX - innerSide / 2,
+                y: outerRect.midY - innerSide / 2,
+                width: innerSide,
+                height: innerSide
+            )
+            let innerCorner = innerSide * 0.32
+            ctx.fill(
+                Path(
+                    roundedRect: innerRect,
+                    cornerSize: CGSize(width: innerCorner, height: innerCorner),
+                    style: .continuous
+                ),
+                with: .color(.white.opacity(innerOpacity))
+            )
+        }
     }
+
+    // MARK: wave-of-opacity-and-scale dots
+
+    /// A virtual scan line travels from above the icon to below it on a
+    /// constant linear cadence. Each dot's opacity and scale rise
+    /// together as the wave's centerline passes its row, falling back
+    /// to a quiet idle state otherwise. The brightness/scale curve is a
+    /// quintic smoothstep so peaks feel rounded, not pulsed. The wave
+    /// starts and ends fully outside the icon so the loop wrap-around
+    /// lands on a frame where every dot is at base — the seam is
+    /// invisible.
+    private static func drawWaveDots(
+        into ctx: inout GraphicsContext,
+        in rect: CGRect,
+        time t: TimeInterval,
+        period: Double
+    ) {
+        let g = CGFloat(grid)
+        let s = min(rect.width, rect.height) / g
+        let dx = rect.minX + (rect.width  - g * s) / 2
+        let dy = rect.minY + (rect.height - g * s) / 2
+
+        let inset = s * 0.05
+        let baseSide = s - 2 * inset
+        let baseCorner = 0.40 * baseSide
+
+        let cycle = CGFloat((t / period).truncatingRemainder(dividingBy: 1.0))
+        let bandHalf = rect.height * 0.20
+        let waveStart = rect.minY - bandHalf * 2
+        let waveEnd   = rect.maxY + bandHalf * 2
+        let waveY = waveStart + (waveEnd - waveStart) * cycle
+
+        let baseOpacity: Double = 0.62
+        let peakOpacity: Double = 1.00
+        let baseScale: Double = 0.93
+        let peakScale: Double = 1.07
+
+        for (mx, my) in standardDots {
+            let cellCenterX = dx + CGFloat(mx) * s + s / 2
+            let cellCenterY = dy + CGFloat(my) * s + s / 2
+            let dist = abs(cellCenterY - waveY)
+            let n = max(0, min(1, 1 - Double(dist / bandHalf)))
+            // Quintic smoothstep: 6n^5 - 15n^4 + 10n^3.
+            let smooth = n * n * n * (n * (6 * n - 15) + 10)
+
+            let opacity = baseOpacity + (peakOpacity - baseOpacity) * smooth
+            let scale = baseScale + (peakScale - baseScale) * smooth
+
+            let scaledSide = baseSide * CGFloat(scale)
+            let scaledCorner = baseCorner * CGFloat(scale)
+            let r = CGRect(
+                x: cellCenterX - scaledSide / 2,
+                y: cellCenterY - scaledSide / 2,
+                width: scaledSide,
+                height: scaledSide
+            )
+            ctx.fill(
+                Path(
+                    roundedRect: r,
+                    cornerSize: CGSize(width: scaledCorner, height: scaledCorner),
+                    style: .continuous
+                ),
+                with: .color(.white.opacity(opacity))
+            )
+        }
+    }
+
+    // MARK: dot field (deterministic ~46% density, finder zones excluded)
+
+    private static func deterministicHash(x: Int, y: Int) -> UInt32 {
+        var h: UInt32 = 2_166_136_261
+        h = (h ^ UInt32(truncatingIfNeeded: x &* 73_856_093)) &* 16_777_619
+        h = (h ^ UInt32(truncatingIfNeeded: y &* 19_349_663)) &* 16_777_619
+        h = (h ^ UInt32(truncatingIfNeeded: (x &+ 1) &* (y &+ 7) &* 83_492_791)) &* 16_777_619
+        return h
+    }
+
+    private static func isFinderZone(x: Int, y: Int) -> Bool {
+        (x <= 3 && y <= 3) || (x >= 9 && y <= 3) || (x <= 3 && y >= 9)
+    }
+
+    static let standardDots: [(Int, Int)] = {
+        var out: [(Int, Int)] = []
+        for x in 0..<grid {
+            for y in 0..<grid {
+                if isFinderZone(x: x, y: y) { continue }
+                let h = deterministicHash(x: x, y: y) & 0xFFFF
+                if h < UInt32(0xFFFF) * 46 / 100 {
+                    out.append((x, y))
+                }
+            }
+        }
+        return out
+    }()
 }
 
-#Preview("QR icon") {
-    VStack(spacing: 24) {
-        QRIcon(size: 28)
-        QRIcon(size: 60)
-        QRIcon(size: 96)
-        AnimatedQRIcon(size: 220)
-    }
-    .foregroundStyle(.white)
-    .padding(40)
-    .background(Color.black)
+#Preview("AnimatedQRIcon") {
+    AnimatedQRIcon(size: 220)
+        .foregroundStyle(.white)
+        .padding(40)
+        .background(Color.black)
 }
