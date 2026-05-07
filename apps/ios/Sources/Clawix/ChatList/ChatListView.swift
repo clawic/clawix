@@ -30,9 +30,13 @@ struct ChatListView: View {
     @State private var searchText: String = ""
     @State private var showAllProjects = false
     @State private var showSettings = false
+    @State private var searchChatLimit: Int = 20
     @FocusState private var searchFocused: Bool
 
     private let visibleProjectCount = 5
+    private let searchChatLimitInitial = 20
+    private let searchChatLimitStep = 20
+    private let searchProjectLimit = 8
 
     private var visibleChats: [WireChat] {
         store.chats
@@ -66,26 +70,55 @@ struct ChatListView: View {
     private var filteredProjects: [DerivedProject] {
         guard isSearching else { return projects }
         let q = searchText.lowercased()
-        return projects.filter { $0.name.lowercased().contains(q) || $0.cwd.lowercased().contains(q) }
+        return projects.filter { project in
+            let label = store.projectDisplayName(cwd: project.cwd, fallback: project.name).lowercased()
+            return label.contains(q)
+                || project.name.lowercased().contains(q)
+                || project.cwd.lowercased().contains(q)
+        }
+    }
+
+    private var displayedFilteredChats: [WireChat] {
+        Array(filteredChats.prefix(searchChatLimit))
+    }
+
+    private var displayedFilteredProjects: [DerivedProject] {
+        Array(filteredProjects.prefix(searchProjectLimit))
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                Color.clear.frame(height: 20)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    Color.clear.frame(height: 20).id("top")
 
-                if isSearching {
-                    searchResults
-                } else {
-                    projectsSection
-                    chatsSection
+                    if isSearching {
+                        searchResults
+                    } else {
+                        projectsSection
+                        chatsSection
+                    }
+
+                    Color.clear.frame(height: 80)
                 }
-
-                Color.clear.frame(height: 80)
+            }
+            .scrollIndicators(.hidden)
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .onChange(of: searchActive) { _, _ in
+                searchChatLimit = searchChatLimitInitial
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
+                    proxy.scrollTo("top", anchor: .top)
+                }
+            }
+            .onChange(of: searchText) { _, _ in
+                searchChatLimit = searchChatLimitInitial
+            }
+            .onChange(of: isSearching) { _, _ in
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                    proxy.scrollTo("top", anchor: .top)
+                }
             }
         }
-        .scrollIndicators(.hidden)
-        .scrollEdgeEffectStyle(.soft, for: .top)
         .background(Palette.background.ignoresSafeArea())
         .topBarBlurFade(height: 135)
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -102,6 +135,7 @@ struct ChatListView: View {
         .sheet(isPresented: $showAllProjects) {
             AllProjectsSheet(
                 projects: projects,
+                store: store,
                 onSelect: { project in
                     showAllProjects = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
@@ -259,7 +293,10 @@ struct ChatListView: View {
                         Haptics.tap()
                         onOpenProject(project.cwd)
                     } label: {
-                        ProjectRow(project: project)
+                        ProjectRow(
+                            project: project,
+                            displayName: store.projectDisplayName(cwd: project.cwd, fallback: project.name)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -300,14 +337,8 @@ struct ChatListView: View {
                     .padding(.horizontal, AppLayout.screenHorizontalPadding)
                     .padding(.bottom, 12)
 
-                ForEach(Array(visibleChats.enumerated()), id: \.element.id) { index, chat in
+                ForEach(visibleChats) { chat in
                     chatRowButton(chat)
-                    if index < visibleChats.count - 1 {
-                        Rectangle()
-                            .fill(Palette.borderSubtle)
-                            .frame(height: 0.5)
-                            .padding(.leading, AppLayout.screenHorizontalPadding)
-                    }
                 }
             }
         }
@@ -321,24 +352,32 @@ struct ChatListView: View {
     // the matched word brightened against a dimmed snippet.
     @ViewBuilder
     private var searchResults: some View {
+        let projectsShown = displayedFilteredProjects
+        let chatsShown = displayedFilteredChats
+        let lastChatId = chatsShown.last?.id
+
         VStack(alignment: .leading, spacing: 0) {
-            if !filteredProjects.isEmpty {
-                ForEach(filteredProjects) { project in
+            if !projectsShown.isEmpty {
+                ForEach(projectsShown) { project in
                     Button {
                         Haptics.tap()
                         onOpenProject(project.cwd)
                     } label: {
-                        SearchProjectRow(project: project, query: searchText)
+                        SearchProjectRow(
+                            project: project,
+                            displayName: store.projectDisplayName(cwd: project.cwd, fallback: project.name),
+                            query: searchText
+                        )
                     }
                     .buttonStyle(.plain)
                 }
-                if !filteredChats.isEmpty {
+                if !chatsShown.isEmpty {
                     Color.clear.frame(height: 6)
                 }
             }
 
-            if !filteredChats.isEmpty {
-                ForEach(Array(filteredChats.enumerated()), id: \.element.id) { index, chat in
+            if !chatsShown.isEmpty {
+                ForEach(chatsShown) { chat in
                     Button {
                         Haptics.tap()
                         onOpen(chat.id)
@@ -346,11 +385,13 @@ struct ChatListView: View {
                         SearchChatRow(chat: chat, query: searchText)
                     }
                     .buttonStyle(.plain)
-                    if index < filteredChats.count - 1 {
-                        Rectangle()
-                            .fill(Palette.borderSubtle)
-                            .frame(height: 0.5)
-                            .padding(.leading, AppLayout.screenHorizontalPadding)
+                    .onAppear {
+                        // Auto-paginate: when the last currently-rendered
+                        // chat row enters the viewport, extend the cap so
+                        // the next chunk streams in without a tap.
+                        guard chat.id == lastChatId else { return }
+                        guard filteredChats.count > searchChatLimit else { return }
+                        searchChatLimit += searchChatLimitStep
                     }
                 }
             }
@@ -373,7 +414,7 @@ struct ChatListView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .font(AppFont.system(size: 16, weight: .semibold))
+            .font(BodyFont.system(size: 18, weight: .bold))
             .tracking(-0.4)
             .foregroundStyle(Palette.textPrimary)
             .padding(.top, 8)
@@ -384,7 +425,7 @@ struct ChatListView: View {
             Haptics.tap()
             onOpen(chat.id)
         } label: {
-            ChatRow(chat: chat)
+            ChatRow(chat: chat, isUnread: store.isUnread(chatId: chat.id))
         }
         .buttonStyle(.plain)
     }
@@ -432,14 +473,15 @@ struct DerivedProject: Identifiable, Hashable {
 
 private struct ProjectRow: View {
     let project: DerivedProject
+    let displayName: String
 
     var body: some View {
         HStack(spacing: 12) {
             FolderClosedIcon(size: 20)
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 24, alignment: .center)
-            Text(project.name)
-                .font(Typography.bodyFont)
+            Text(displayName)
+                .font(BodyFont.system(size: 17))
                 .tracking(-0.2)
                 .foregroundStyle(Palette.textPrimary)
                 .lineLimit(1)
@@ -460,16 +502,45 @@ private struct ProjectRow: View {
 
 struct ChatRow: View {
     let chat: WireChat
+    /// `true` when the chat finished its last assistant turn while the
+    /// user wasn't viewing it. Drives the soft-blue dot pinned to the
+    /// trailing edge. Owned by `BridgeStore.unreadChatIds`; the call
+    /// site reads it once so we don't pull the whole store into the
+    /// row's observation graph.
+    var isUnread: Bool = false
 
     var body: some View {
-        Text(chat.title)
-            .font(Typography.bodyFont)
-            .tracking(-0.2)
-            .foregroundStyle(Palette.textPrimary)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, AppLayout.screenHorizontalPadding)
-            .padding(.vertical, 14)
+        HStack(spacing: 8) {
+            titleView
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if showsUnreadDot {
+                Circle()
+                    .fill(Palette.unreadDot)
+                    .frame(width: 8, height: 8)
+                    .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, AppLayout.screenHorizontalPadding)
+        .padding(.vertical, 14)
+        .animation(.spring(response: 0.45, dampingFraction: 0.72), value: chat.hasActiveTurn)
+        .animation(.spring(response: 0.45, dampingFraction: 0.72), value: showsUnreadDot)
+    }
+
+    @ViewBuilder
+    private var titleView: some View {
+        if chat.hasActiveTurn {
+            ChatTitleShimmer(text: chat.title)
+        } else {
+            Text(chat.title)
+                .font(BodyFont.system(size: 17))
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textPrimary)
+                .lineLimit(1)
+        }
+    }
+
+    private var showsUnreadDot: Bool {
+        isUnread && !chat.hasActiveTurn
     }
 }
 
@@ -484,6 +555,7 @@ struct ChatRow: View {
 
 private struct SearchProjectRow: View {
     let project: DerivedProject
+    let displayName: String
     let query: String
 
     var body: some View {
@@ -492,7 +564,7 @@ private struct SearchProjectRow: View {
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 24, alignment: .center)
             SearchHighlight.titleText(
-                project.name,
+                displayName,
                 query: query,
                 color: Palette.textPrimary
             )
@@ -559,8 +631,8 @@ private enum SearchHighlight {
         compose(
             source,
             query: query,
-            baseFont: BodyFont.system(size: 15, weight: .regular),
-            matchFont: BodyFont.system(size: 15, weight: .semibold),
+            baseFont: BodyFont.system(size: 17, weight: .regular),
+            matchFont: BodyFont.system(size: 17, weight: .semibold),
             baseColor: color.opacity(0.88),
             matchColor: color
         )
@@ -573,8 +645,8 @@ private enum SearchHighlight {
         compose(
             source,
             query: query,
-            baseFont: BodyFont.system(size: 11, weight: .regular),
-            matchFont: BodyFont.system(size: 11, weight: .regular),
+            baseFont: BodyFont.system(size: 13, weight: .regular),
+            matchFont: BodyFont.system(size: 13, weight: .regular),
             baseColor: Palette.textTertiary,
             matchColor: Palette.textPrimary
         )
@@ -652,6 +724,7 @@ private enum SearchHighlight {
 
 private struct AllProjectsSheet: View {
     let projects: [DerivedProject]
+    let store: BridgeStore
     let onSelect: (DerivedProject) -> Void
     let onDismiss: () -> Void
 
@@ -667,7 +740,10 @@ private struct AllProjectsSheet: View {
                                 Haptics.tap()
                                 onSelect(project)
                             } label: {
-                                ProjectRow(project: project)
+                                ProjectRow(
+                            project: project,
+                            displayName: store.projectDisplayName(cwd: project.cwd, fallback: project.name)
+                        )
                             }
                             .buttonStyle(.plain)
                         }
@@ -959,21 +1035,21 @@ private struct NewChatFAB: View {
             action()
         }) {
             HStack(spacing: 8) {
-                ComposeIcon(size: 17)
+                ComposeIcon(size: 18)
                     .foregroundStyle(Color.black)
                 Text("Chat")
-                    .font(AppFont.system(size: 16, weight: .semibold))
+                    .font(BodyFont.system(size: 18, weight: .semibold))
                     .foregroundStyle(Color.black)
             }
-            .padding(.leading, 17.5)
-            .padding(.trailing, 16.5)
-            .frame(height: 50)
+            .padding(.leading, 19)
+            .padding(.trailing, 18)
+            .frame(height: 54)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
                     .fill(Color.white)
             )
             .shadow(color: Color.black.opacity(0.32), radius: 18, y: 8)
-            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("New chat")
