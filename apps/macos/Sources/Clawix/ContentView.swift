@@ -119,7 +119,7 @@ struct ContentView: View {
             // corners of the content panel reveal the sidebar colour
             // (not a transparent gap to the wallpaper).
             VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow, state: .active)
-                .overlay(Color.black.opacity(0.08))
+                .overlay(Color.black.opacity(0.26))
                 .ignoresSafeArea()
 
             if !appState.auth.isLoggedIn {
