@@ -151,17 +151,58 @@ final class DaemonEngineHost: EngineHost {
 
     func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment]) {
         let chatIdString = chatId.uuidString
+        // Split image vs audio attachments. Images go to Codex as
+        // `localImage` items; audio is transcribed via Whisper, stored
+        // for future replay, and the transcript becomes (or augments)
+        // the prompt text the model sees. Order is preserved within
+        // each kind, which is enough since the iPhone composer never
+        // mixes images with audio in the same send today.
+        let imageAttachments = attachments.filter { $0.kind == .image }
+        let audioAttachments = attachments.filter { $0.kind == .audio }
         Task { @MainActor in
             do {
                 let threadId = try await ensureThread(chatId: chatIdString, firstPrompt: text)
-                let imagePaths = AttachmentSpooler.write(attachments: attachments, threadId: threadId)
-                let preview = userMessagePreview(text: text, imageCount: imagePaths.count)
+                let imagePaths = AttachmentSpooler.write(
+                    attachments: imageAttachments,
+                    scope: threadId,
+                    log: { BridgedLog.write($0) }
+                )
+                // Transcribe + persist each audio attachment in order.
+                // The user message ID is minted up-front so the audio
+                // store entry can carry it (helps the GUI's own
+                // hydrate path attach the bubble back without having
+                // to re-match by content).
+                let userMessageId = UUID().uuidString
+                let audioRef = try await ingestAudioAttachments(
+                    audioAttachments,
+                    threadId: threadId,
+                    chatId: chatIdString,
+                    messageId: userMessageId,
+                    providedTranscript: text
+                )
+                // Audio's transcript replaces the text input when the
+                // user sent only a voice clip (the iPhone composer
+                // sends `text == transcript` already, but defending
+                // against an empty `text` field is cheap and lets the
+                // shape stay simple for future surfaces that ship an
+                // audio-only prompt).
+                let promptText: String = {
+                    if !text.isEmpty { return text }
+                    if let audioRef, !audioRef.transcript.isEmpty { return audioRef.transcript }
+                    return text
+                }()
+                let preview = userMessagePreview(
+                    text: promptText,
+                    imageCount: imagePaths.count,
+                    hasAudio: audioRef != nil
+                )
                 appendMessage(chatId: chatIdString, message: WireMessage(
-                    id: UUID().uuidString,
+                    id: userMessageId,
                     role: .user,
                     content: preview,
                     streamingFinished: true,
-                    timestamp: Date()
+                    timestamp: Date(),
+                    audioRef: audioRef?.wireRef
                 ))
                 updateChat(chatId: chatIdString) { chat in
                     chat.hasActiveTurn = true
@@ -170,9 +211,9 @@ final class DaemonEngineHost: EngineHost {
                     chat.lastMessagePreview = String(preview.prefix(140))
                 }
                 var input: [TurnStartUserInput] = []
-                if !text.isEmpty { input.append(.text(text)) }
+                if !promptText.isEmpty { input.append(.text(promptText)) }
                 for path in imagePaths { input.append(.localImage(path: path)) }
-                if input.isEmpty { input.append(.text(text)) }
+                if input.isEmpty { input.append(.text(promptText)) }
                 let result = try await backend.send(
                     method: "turn/start",
                     params: TurnStartParams(
@@ -192,9 +233,89 @@ final class DaemonEngineHost: EngineHost {
         }
     }
 
-    private func userMessagePreview(text: String, imageCount: Int) -> String {
+    /// Whisper-transcribe each audio attachment, persist the bytes via
+    /// `AudioMessageStore`, and return a wire-ready ref pointing at the
+    /// most recent (or only) clip. Today the iPhone composer ships at
+    /// most one audio per send; the loop is defensive in case a future
+    /// surface chains multiple takes. Order is preserved by the caller
+    /// reading the array in order, so the last entry wins as the
+    /// canonical audioRef on the user message.
+    private func ingestAudioAttachments(
+        _ attachments: [WireAttachment],
+        threadId: String,
+        chatId: String,
+        messageId: String,
+        providedTranscript: String
+    ) async throws -> AudioStoreEntry? {
+        guard !attachments.isEmpty else { return nil }
+        // The iPhone composer transcribes locally (via the existing
+        // `transcribeAudio` frame) before sending so the user sees the
+        // bubble go up at the speed of network, not the speed of
+        // Whisper. We honour that transcript: if the client already
+        // provided one, the daemon stores it without re-running the
+        // model. Only when the client shipped audio without text (a
+        // future "raw audio prompt" surface) does the daemon fall back
+        // to its own Whisper run so the audio store sidecar still
+        // carries something useful for the hydrate-decoration path.
+        let normalizedTranscript = providedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        var fallbackTranscript: String? = nil
+        if normalizedTranscript.isEmpty {
+            let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGED_DEFAULTS_SUITE"]
+            let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
+            let activeRaw = defaults.string(forKey: DictationModelManager.activeModelDefaultsKey) ?? ""
+            let model = DictationModel(rawValue: activeRaw) ?? .default
+            // Only run Whisper for the first attachment; multi-clip
+            // turns aren't a thing today and concatenating partial
+            // transcripts across clips would lose ordering anyway.
+            if let first = attachments.first, let data = Data(base64Encoded: first.dataBase64) {
+                let tmpDir = URL(fileURLWithPath: NSTemporaryDirectory())
+                    .appendingPathComponent("clawix-attachments", isDirectory: true)
+                    .appendingPathComponent("ingest", isDirectory: true)
+                try? FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+                let ext = AudioMessageStore.fileExtension(for: first.mimeType)
+                let tmpURL = tmpDir.appendingPathComponent("\(first.id).\(ext)")
+                try? data.write(to: tmpURL, options: .atomic)
+                if let transcript = try? await TranscriptionService.shared.transcribe(
+                    fileURL: tmpURL,
+                    using: model,
+                    language: nil
+                ) {
+                    fallbackTranscript = transcript
+                }
+                try? FileManager.default.removeItem(at: tmpURL)
+            }
+        }
+
+        var lastEntry: AudioStoreEntry?
+        for attachment in attachments {
+            guard let data = Data(base64Encoded: attachment.dataBase64) else {
+                BridgedLog.write("audio attachment decode failed id=\(attachment.id)")
+                continue
+            }
+            let entry = try await AudioMessageStore.shared.ingest(
+                threadId: threadId,
+                chatId: chatId,
+                messageId: messageId,
+                audioData: data,
+                mimeType: attachment.mimeType,
+                transcript: normalizedTranscript.isEmpty ? (fallbackTranscript ?? "") : normalizedTranscript
+            )
+            lastEntry = entry
+        }
+        return lastEntry
+    }
+
+    private func userMessagePreview(text: String, imageCount: Int, hasAudio: Bool = false) -> String {
+        // The chat row preview shows the same text Codex actually
+        // received as the prompt; if there are images the count gets
+        // inlined the way the macOS composer already does. Audio
+        // messages don't add a tag because the transcript already is
+        // the visible content and surfaces (chat row, timeline) read
+        // cleaner without a "[voice]" prefix muddying user prompts.
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard imageCount > 0 else { return text }
+        guard imageCount > 0 else {
+            return hasAudio && trimmed.isEmpty ? "[voice]" : text
+        }
         let label = imageCount == 1 ? "[image]" : "[\(imageCount) images]"
         return trimmed.isEmpty ? label : "\(label) \(text)"
     }
@@ -205,6 +326,22 @@ final class DaemonEngineHost: EngineHost {
         // chat's pre-allocated UUID. The actual run path is identical
         // to a regular send: ensureThread creates the thread on demand.
         handleSendPrompt(chatId: chatId, text: text, attachments: attachments)
+    }
+
+    func handleRequestAudio(
+        audioId: String,
+        reply: @MainActor @escaping (String?, String?, String?) -> Void
+    ) {
+        // The bridge thread posts this; jump back to MainActor for the
+        // reply send so the session.send path stays single-actor like
+        // the other handlers.
+        Task { @MainActor in
+            if let payload = await AudioMessageStore.shared.data(forAudioId: audioId) {
+                reply(payload.data.base64EncodedString(), payload.mimeType, nil)
+            } else {
+                reply(nil, nil, "Audio no longer available")
+            }
+        }
     }
 
     func handleTranscribeAudio(
@@ -248,6 +385,50 @@ final class DaemonEngineHost: EngineHost {
         }
     }
 
+    func handleInterruptTurn(chatId: UUID) {
+        let chatIdString = chatId.uuidString
+        guard let threadId = threadByChat[chatIdString],
+              let turnId = activeTurnByThread[threadId]
+        else { return }
+        // Clear UI-side state first so the iPhone shimmer disappears the
+        // moment the frame round-trips back. The backend cancel is
+        // fire-and-forget; any deltas already in flight for this turn
+        // are gated by `activeTurnByThread`/`activeAssistantIdByThread`.
+        activeTurnByThread[threadId] = nil
+        if let assistantId = activeAssistantIdByThread[threadId] {
+            // Mirror the macOS behaviour: if the assistant placeholder
+            // is still empty (no streamed content), drop it; otherwise
+            // freeze it as finished so the partial answer stays.
+            let messages = existingMessages(chatId: chatIdString)
+            if let msg = messages.first(where: { $0.id == assistantId }),
+               msg.content.isEmpty && msg.reasoningText.isEmpty {
+                updateSnapshot(chatId: chatIdString) { snap in
+                    snap.messages.removeAll { $0.id == assistantId }
+                }
+            } else {
+                updateMessage(chatId: chatIdString, messageId: assistantId) {
+                    $0.streamingFinished = true
+                }
+            }
+            activeAssistantIdByThread[threadId] = nil
+        }
+        updateChat(chatId: chatIdString) {
+            $0.hasActiveTurn = false
+            $0.lastTurnInterrupted = true
+        }
+        Task { @MainActor in
+            do {
+                _ = try await backend.send(
+                    method: "turn/interrupt",
+                    params: TurnInterruptParams(threadId: threadId, turnId: turnId),
+                    expecting: EmptyResponse.self
+                )
+            } catch {
+                BridgedLog.write("turn/interrupt failed \(error)")
+            }
+        }
+    }
+
     func handleArchiveChat(chatId: UUID, archived: Bool) {
         let chatIdString = chatId.uuidString
         guard let threadId = threadByChat[chatIdString] else { return }
@@ -270,6 +451,31 @@ final class DaemonEngineHost: EngineHost {
                     $0.isArchived = archived
                     if archived { $0.isPinned = false }
                 }
+            } catch {
+                appendError(chatId: chatIdString, message: "\(error)")
+            }
+        }
+    }
+
+    func handleRenameChat(chatId: UUID, title: String) {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let chatIdString = chatId.uuidString
+        guard let threadId = threadByChat[chatIdString] else { return }
+        // Optimistic local update so any client subscribed to this
+        // session sees the new title before the runtime ack lands. The
+        // bus will republish via `chatUpdated`, which all peers (the
+        // initiating iPhone included) treat as the canonical state.
+        updateChat(chatId: chatIdString) {
+            $0.title = trimmed
+        }
+        Task { @MainActor in
+            do {
+                _ = try await backend.send(
+                    method: "thread/name/set",
+                    params: ThreadSetNameParams(threadId: threadId, name: trimmed),
+                    expecting: EmptyResponse.self
+                )
             } catch {
                 appendError(chatId: chatIdString, message: "\(error)")
             }
@@ -391,12 +597,40 @@ final class DaemonEngineHost: EngineHost {
         else { return }
         let result = RolloutHistory.read(path: URL(fileURLWithPath: path))
         guard !result.messages.isEmpty || result.lastTurnInterrupted else { return }
-        updateSnapshot(chatId: chatId) { snap in
-            snap.messages = result.messages
-            snap.chat.lastTurnInterrupted = result.lastTurnInterrupted
-            if let last = result.messages.last {
-                snap.chat.lastMessageAt = last.timestamp
-                snap.chat.lastMessagePreview = String(last.content.prefix(140))
+        // Audio refs from previous sessions live in the AudioMessageStore.
+        // Rollout rebuild mints fresh message ids so we can't key by id;
+        // instead we walk audio entries (chronological) and pair them up
+        // with rebuilt user_messages, prefering content-equality and
+        // breaking ties by ordinal. Missing entries decay gracefully:
+        // the user message just shows without a bubble, the bytes are
+        // still on disk and `requestAudio` still works if a client knows
+        // the audioId from another route.
+        Task { @MainActor in
+            let audioEntries = await AudioMessageStore.shared.entries(forThread: threadId)
+            var decorated = result.messages
+            if !audioEntries.isEmpty {
+                var unmatched = audioEntries
+                for idx in decorated.indices where decorated[idx].role == .user {
+                    let content = decorated[idx].content
+                    let pickIdx: Int? = {
+                        if let exact = unmatched.firstIndex(where: { $0.transcript == content }) {
+                            return exact
+                        }
+                        return unmatched.indices.first
+                    }()
+                    if let pickIdx {
+                        decorated[idx].audioRef = unmatched[pickIdx].wireRef
+                        unmatched.remove(at: pickIdx)
+                    }
+                }
+            }
+            self.updateSnapshot(chatId: chatId) { snap in
+                snap.messages = decorated
+                snap.chat.lastTurnInterrupted = result.lastTurnInterrupted
+                if let last = decorated.last {
+                    snap.chat.lastMessageAt = last.timestamp
+                    snap.chat.lastMessagePreview = String(last.content.prefix(140))
+                }
             }
         }
     }
@@ -844,6 +1078,11 @@ struct ThreadUnarchiveParams: Encodable {
     let threadId: String
 }
 
+struct ThreadSetNameParams: Encodable {
+    let threadId: String
+    let name: String
+}
+
 struct ThreadListParams: Encodable {
     let archived: Bool?
     let cursor: String?
@@ -926,6 +1165,11 @@ struct TurnStartParams: Encodable {
 
 struct TurnStartResult: Decodable {
     let turn: TurnHandle
+}
+
+struct TurnInterruptParams: Encodable {
+    let threadId: String
+    let turnId: String
 }
 
 struct TurnHandle: Decodable {
@@ -1086,58 +1330,5 @@ private func audioExtension(mimeType: String) -> String {
     }
 }
 
-// MARK: - Inline image attachments
-
-/// Materializes inline image attachments coming off the bridge as on-disk
-/// files Codex can pick up via 'localImage' user input items. Files live
-/// in a per-thread subdir of `NSTemporaryDirectory()/clawix-attachments`
-/// so they are easy to spot, easy to delete, and grouped together if
-/// debugging is needed. We never delete them eagerly: the thread may be
-/// resumed minutes later and the rollout still references the path. The
-/// system reaps `NSTemporaryDirectory()` on its own schedule, which is
-/// good enough for a chat companion.
-enum AttachmentSpooler {
-    static func write(attachments: [WireAttachment], threadId: String) -> [String] {
-        guard !attachments.isEmpty else { return [] }
-        let root = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("clawix-attachments", isDirectory: true)
-            .appendingPathComponent(threadId, isDirectory: true)
-        do {
-            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        } catch {
-            BridgedLog.write("attachment dir failed \(error)")
-            return []
-        }
-        var paths: [String] = []
-        for attachment in attachments {
-            guard let data = Data(base64Encoded: attachment.dataBase64) else {
-                BridgedLog.write("attachment decode failed id=\(attachment.id)")
-                continue
-            }
-            let ext = preferredExtension(filename: attachment.filename, mimeType: attachment.mimeType)
-            let url = root.appendingPathComponent("\(attachment.id).\(ext)")
-            do {
-                try data.write(to: url, options: .atomic)
-                paths.append(url.path)
-            } catch {
-                BridgedLog.write("attachment write failed \(error)")
-            }
-        }
-        return paths
-    }
-
-    private static func preferredExtension(filename: String?, mimeType: String) -> String {
-        if let filename, let dotRange = filename.range(of: ".", options: .backwards) {
-            let candidate = String(filename[dotRange.upperBound...]).lowercased()
-            if !candidate.isEmpty, candidate.count <= 5 { return candidate }
-        }
-        switch mimeType.lowercased() {
-        case "image/png": return "png"
-        case "image/heic": return "heic"
-        case "image/heif": return "heif"
-        case "image/webp": return "webp"
-        case "image/gif":  return "gif"
-        default: return "jpg"
-        }
-    }
-}
+// `AttachmentSpooler` lives in ClawixCore so the macOS GUI bridge and
+// this daemon share the same temp-file layout for inline image inputs.
