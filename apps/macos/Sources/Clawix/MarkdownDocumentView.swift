@@ -200,7 +200,7 @@ struct MarkdownDocumentView: View {
                         Text("\(idx + 1).")
                             .font(BodyFont.system(size: 14))
                             .foregroundColor(Palette.textPrimary)
-                            .frame(width: 20, alignment: .leading)
+                            .fixedSize()
                         Text(styledInline(item))
                             .font(BodyFont.system(size: 14))
                             .foregroundColor(Palette.textPrimary.opacity(0.92))

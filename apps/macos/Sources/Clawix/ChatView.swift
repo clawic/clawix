@@ -428,6 +428,9 @@ private struct MessageRow: View {
                     if !parsed.images.isEmpty || !parsed.files.isEmpty {
                         UserMentionPreviews(parsed: parsed)
                     }
+                    if let audioRef = message.audioRef {
+                        UserAudioBubble(audioRef: audioRef)
+                    }
                     if !parsed.text.isEmpty {
                         let paragraphs = parsed.text
                             .replacingOccurrences(of: "\r\n", with: "\n")
@@ -502,13 +505,14 @@ private struct MessageRow: View {
                     }
                 }
 
-                if !message.content.isEmpty {
+                // After the turn ends and the chevron is collapsed, the
+                // timeline is hidden and the bubble shows only the
+                // canonical assistant body. The timeline already contains
+                // every `.message` entry that streamed in, so don't
+                // render `content` a second time while the timeline is on
+                // screen — that would duplicate the prose.
+                if !showTimeline, !message.content.isEmpty {
                     let segments = PlanSegmenter.segments(from: message.content)
-                    // The streaming fade is keyed by character offsets
-                    // into `message.content`, so it only lines up cleanly
-                    // when the body is a single, contiguous text segment.
-                    // The instant a Plan card splits the body we skip the
-                    // fade rather than render misaligned ramps.
                     let onlyTextSegment: Bool = {
                         guard segments.count == 1, case .text = segments[0] else { return false }
                         return true
@@ -627,9 +631,58 @@ private struct MessageRow: View {
                 streamingFinished: message.streamingFinished
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+        case .message(let entryId, let text):
+            messageEntryBody(entryId: entryId, text: text)
+                .frame(maxWidth: .infinity, alignment: .leading)
         case .tools(_, let items):
             ToolGroupView(items: items)
                 .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Render a `.message` timeline entry. Mirrors how the bubble used
+    /// to render `message.content` (PlanSegmenter + AssistantMarkdownText)
+    /// so a preamble that flowed through `nAgentMsgDelta` reads exactly
+    /// the same as the final answer once collapsed. The streaming fade
+    /// only attaches when this is the single, trailing `.message` entry
+    /// AND the body is a contiguous text segment, because
+    /// `streamCheckpoints` are character offsets over the full
+    /// concatenated message body.
+    @ViewBuilder
+    private func messageEntryBody(entryId: UUID, text: String) -> some View {
+        let segments = PlanSegmenter.segments(from: text)
+        let isTrailingMessage: Bool = {
+            guard case .message(let lastId, _) = message.timeline.last else { return false }
+            return lastId == entryId
+        }()
+        let messageEntryCount = message.timeline.reduce(0) { acc, e in
+            if case .message = e { return acc + 1 } else { return acc }
+        }
+        let onlyTextSegment: Bool = {
+            guard segments.count == 1, case .text = segments[0] else { return false }
+            return true
+        }()
+        let useCheckpoints =
+            isTrailingMessage && messageEntryCount == 1 && onlyTextSegment
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                switch segment {
+                case .text(let body):
+                    AssistantMarkdownText(
+                        text: body,
+                        weight: message.isError ? .regular : .light,
+                        color: message.isError
+                            ? Color(red: 0.95, green: 0.45, blue: 0.45)
+                            : Palette.textPrimary,
+                        checkpoints: useCheckpoints ? message.streamCheckpoints : [],
+                        streamingFinished: message.streamingFinished
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                case .plan(let body, let completed):
+                    PlanCardView(content: body, completed: completed)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
     }
 
@@ -1823,11 +1876,11 @@ private struct AssistantMarkdownText: View {
         case .numberedList(let items):
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(idx + 1).")
                             .font(BodyFont.system(size: 13.5, weight: weight))
                             .foregroundColor(color)
-                            .frame(width: 20, alignment: .leading)
+                            .fixedSize()
                         ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
                             appState.openLinkInBrowser(url)
                         }
