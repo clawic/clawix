@@ -52,7 +52,16 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testOpenChat() throws {
-        try roundTrip(.openChat(chatId: "AB-123"))
+        try roundTrip(.openChat(chatId: "AB-123", limit: nil))
+        try roundTrip(.openChat(chatId: "AB-123", limit: 60))
+    }
+
+    func testLoadOlderMessages() throws {
+        try roundTrip(.loadOlderMessages(
+            chatId: "AB-123",
+            beforeMessageId: "msg-oldest-known",
+            limit: 40
+        ))
     }
 
     func testSendPrompt() throws {
@@ -126,7 +135,40 @@ final class BridgeFrameRoundTripTests: XCTestCase {
                 timestamp: .init(timeIntervalSince1970: 1_700_000_020)
             )
         ]
-        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs))
+        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs, hasMore: nil))
+        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs, hasMore: true))
+        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs, hasMore: false))
+    }
+
+    func testMessagesPage() throws {
+        let msgs = [
+            WireMessage(id: "old-1", role: .user, content: "older", timestamp: .init(timeIntervalSince1970: 1_700_000_005)),
+            WireMessage(id: "old-2", role: .assistant, content: "older reply", streamingFinished: true, timestamp: .init(timeIntervalSince1970: 1_700_000_006))
+        ]
+        try roundTrip(.messagesPage(chatId: "uuid-1", messages: msgs, hasMore: true))
+        try roundTrip(.messagesPage(chatId: "uuid-1", messages: [], hasMore: false))
+    }
+
+    /// Old peers (clients without paginated `openChat`) MUST keep
+    /// decoding cleanly under the current schema: `limit` is missing,
+    /// the field defaults to nil, and the server treats it as "send
+    /// the whole transcript". Same story for `messagesSnapshot`
+    /// missing `hasMore` — decodes as nil, the iPhone treats it as
+    /// "no scroll-up available".
+    func testLegacyOpenChatDecodesWithoutLimit() throws {
+        let data = """
+        {"schemaVersion":\(bridgeSchemaVersion),"type":"openChat","chatId":"abc"}
+        """.data(using: .utf8)!
+        let frame = try BridgeCoder.decode(data)
+        XCTAssertEqual(frame.body, .openChat(chatId: "abc", limit: nil))
+    }
+
+    func testLegacyMessagesSnapshotDecodesWithoutHasMore() throws {
+        let data = """
+        {"schemaVersion":\(bridgeSchemaVersion),"type":"messagesSnapshot","chatId":"abc","messages":[]}
+        """.data(using: .utf8)!
+        let frame = try BridgeCoder.decode(data)
+        XCTAssertEqual(frame.body, .messagesSnapshot(chatId: "abc", messages: [], hasMore: nil))
     }
 
     func testMessageAppended() throws {
@@ -188,6 +230,60 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             text: "",
             errorMessage: "no model downloaded"
         ))
+    }
+
+    func testRequestAudio() throws {
+        try roundTrip(.requestAudio(audioId: "audio-abc"))
+    }
+
+    func testAudioSnapshot() throws {
+        try roundTrip(.audioSnapshot(
+            audioId: "audio-abc",
+            audioBase64: "ZmFrZUF1ZGlv",
+            mimeType: "audio/m4a",
+            errorMessage: nil
+        ))
+        try roundTrip(.audioSnapshot(
+            audioId: "audio-missing",
+            audioBase64: nil,
+            mimeType: nil,
+            errorMessage: "Audio no longer available"
+        ))
+    }
+
+    func testSendPromptCarriesAudioAttachment() throws {
+        let audio = WireAttachment(
+            id: "att-1",
+            kind: .audio,
+            mimeType: "audio/m4a",
+            filename: "voice.m4a",
+            dataBase64: "AAAAAA=="
+        )
+        try roundTrip(.sendPrompt(chatId: "uuid-1", text: "hola", attachments: [audio]))
+    }
+
+    func testWireMessageCarriesAudioRef() throws {
+        let msg = WireMessage(
+            id: "m-voice",
+            role: .user,
+            content: "hola transcripto",
+            timestamp: .init(timeIntervalSince1970: 1_700_000_400),
+            audioRef: WireAudioRef(id: "audio-abc", mimeType: "audio/m4a", durationMs: 3200)
+        )
+        try roundTrip(.messageAppended(chatId: "uuid-1", message: msg))
+    }
+
+    /// Old peers without `kind` should decode as image attachments so
+    /// existing v2 senders keep working when v3 daemons receive them.
+    func testWireAttachmentLegacyDecodeDefaultsToImage() throws {
+        let legacy = """
+        {"id":"att-1","mimeType":"image/jpeg","filename":"photo.jpg","dataBase64":"AAAA"}
+        """
+        let attachment = try BridgeCoder.decoder.decode(
+            WireAttachment.self,
+            from: Data(legacy.utf8)
+        )
+        XCTAssertEqual(attachment.kind, .image)
     }
 
     func testWireFormatIsFlat() throws {
