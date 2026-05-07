@@ -90,6 +90,17 @@ final class BridgeStore {
     /// inline markdown renderer (`![](file:...)` / `![](/Users/.../*.png)`)
     /// so the same path resolved from two angles only round-trips once.
     var generatedImagesByPath: [String: GeneratedImageState] = [:]
+    #if canImport(UIKit)
+    /// Inline image previews for user messages that this device sent
+    /// during the current session. Keyed by `WireMessage.id`. The
+    /// `messageAppended` echo from the Mac merges onto the local-* id
+    /// (see `applyMessageAppended`), so the preview survives the round
+    /// trip without re-keying. Cleared when the chat is dropped from
+    /// `messagesByChat` (relaunch, manual delete) — we deliberately do
+    /// NOT persist these blobs because they would balloon the snapshot
+    /// cache and the photo lives on the Mac side anyway.
+    var attachmentImagesByMessageId: [String: [UIImage]] = [:]
+    #endif
 
     /// Chat ids minted locally by the FAB that haven't yet been
     /// flushed to the Mac. The first `sendPrompt` for an id in this
@@ -339,13 +350,54 @@ final class BridgeStore {
                 isError: message.isError,
                 timestamp: message.timestamp,
                 timeline: message.timeline,
-                workSummary: message.workSummary
+                workSummary: message.workSummary,
+                audioRef: message.audioRef,
+                attachments: message.attachments
             )
+            #if canImport(UIKit)
+            ingestInlineAttachments(messageId: placeholderId, attachments: message.attachments)
+            #endif
         } else {
             current.append(message)
+            #if canImport(UIKit)
+            ingestInlineAttachments(messageId: message.id, attachments: message.attachments)
+            #endif
         }
         messagesByChat[chatId] = current
     }
+
+    #if canImport(UIKit)
+    /// Decode the inline base64 image bytes attached to a hydrated
+    /// message and push them into `attachmentImagesByMessageId` so the
+    /// `UserBubble` renders the same `[image]` thumbnails the user
+    /// originally saw. No-op when the array is empty (typed messages,
+    /// assistant turns, or peers that never sent attachments). Skips
+    /// silently if the bytes are unreadable so a malformed fixture
+    /// doesn't bring down the chat.
+    private func ingestInlineAttachments(messageId: String, attachments: [WireAttachment]) {
+        guard !attachments.isEmpty else { return }
+        // Don't overwrite a locally-cached preview from this device's
+        // own send: that copy has the original `UIImage` and round-tripping
+        // through base64 can drop fidelity.
+        if attachmentImagesByMessageId[messageId] != nil { return }
+        var images: [UIImage] = []
+        for att in attachments where att.kind == .image {
+            // `.ignoreUnknownCharacters` so newlines / whitespace inside
+            // the base64 (e.g. when the bytes were inlined as a Swift
+            // multiline string for the standalone `CLAWIX_MOCK=1` flow)
+            // don't reject the otherwise-valid payload.
+            guard let data = Data(
+                    base64Encoded: att.dataBase64,
+                    options: .ignoreUnknownCharacters
+                  ),
+                  let image = UIImage(data: data) else { continue }
+            images.append(image)
+        }
+        if !images.isEmpty {
+            attachmentImagesByMessageId[messageId] = images
+        }
+    }
+    #endif
 
     /// Mints a fresh chat id for the FAB-driven "new chat" flow. The
     /// id is queued as pending so the next `sendPrompt(chatId:text:)`
