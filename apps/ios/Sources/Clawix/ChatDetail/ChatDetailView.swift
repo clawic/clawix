@@ -33,7 +33,8 @@ struct ChatDetailView: View {
     @State private var composerResetToken: Int = 0
     @State private var expandedReasoning: Set<String> = []
     @State private var showProjectPicker: Bool = false
-    @State private var showActionsMenu: Bool = false
+    @State private var showRenameAlert: Bool = false
+    @State private var renameDraft: String = ""
     // Ids that have already been laid out at least once. Initial
     // snapshot fills this on first hasLoaded; new messages appended
     // afterwards are NOT in here on creation, so they animate in.
@@ -42,6 +43,14 @@ struct ChatDetailView: View {
     // Until then, every row renders without an entrance animation
     // so the snapshot doesn't slide in as if the user typed it.
     @State private var didCaptureInitialSnapshot: Bool = false
+    // Drives the entrance fade of the transcript ScrollView only
+    // (background and chrome render at full opacity from the first
+    // frame). Stays false until `hasLoaded` flips and one layout tick
+    // has elapsed, so the ForEach materializing and the ScrollView
+    // reanchoring to the bottom both happen invisibly. Idempotent:
+    // once true, never returns to false within this view instance,
+    // so streamed messages don't trigger a re-fade.
+    @State private var transcriptVisible: Bool = false
     // Captured on first render: true for a newly-created conversation
     // because the FAB seeds `messagesByChat[id] = []` before this view
     // mounts, so it is already loaded and empty. Existing chats start
@@ -63,6 +72,12 @@ struct ChatDetailView: View {
     // button while the user is reading history above. Resets to 0 the
     // moment the user is back at the tail.
     @State private var unreadCount: Int = 0
+    // Last tail message id observed by the unread tracker. Lets us
+    // distinguish "appended a new turn" (bump badge) from "prepended a
+    // page of history" (do not). With pagination, a `messages.count`
+    // increase can come from either direction; only changes to the
+    // last id mean a new tail.
+    @State private var unreadAnchorId: String? = nil
     // Measured height of the bottom chrome (composer + its padding) so
     // the floating bubble can sit just above it without depending on a
     // hardcoded offset that drifts when the composer grows multiline.
@@ -80,6 +95,11 @@ struct ChatDetailView: View {
     // transitions and we can stop/cancel from any of the overlay
     // callbacks without re-creating the recorder.
     @StateObject private var voiceRecorder = VoiceRecorder()
+    #if canImport(UIKit)
+    // Drives the fullscreen image viewer. Set when the user taps a
+    // thumbnail above their bubble; cleared by the viewer's own dismiss.
+    @State private var imageViewer: ImageViewerSelection?
+    #endif
 
     private var chat: WireChat? { store.chat(chatId) }
     private var messages: [WireMessage] { store.messages(for: chatId) }
@@ -98,16 +118,13 @@ struct ChatDetailView: View {
         return cachedAllProjects.first(where: { $0.cwd == cwd })
     }
     private var allProjects: [DerivedProject] { cachedAllProjects }
-    // Defensive cap: the transcript renders eagerly (VStack) so rows
-    // don't pop in from a lazy materialization gap. A chat with
-    // thousands of messages would lock the main thread on mount, so
-    // only the tail is rendered; "load older" can come later.
-    private var renderedMessages: [WireMessage] {
-        let cap = 250
-        if messages.count <= cap { return messages }
-        return Array(messages.suffix(cap))
-    }
     private var hasLoaded: Bool { store.hasLoadedMessages(chatId) }
+    /// Scroll-up trigger zone in points. While the user is within this
+    /// many points of the top of the transcript AND the daemon has
+    /// older history available, the store fires `loadOlderMessages`.
+    /// Re-entrancy is gated by `loadingOlderByChat`, so the geometry
+    /// callback can fire freely without burning round trips.
+    private static let loadOlderThreshold: CGFloat = 200
 
     // Derived scroll predicates. Keeping them computed (vs. @State)
     // means a single source of truth and no risk of going stale.
@@ -165,6 +182,7 @@ struct ChatDetailView: View {
                 ProjectPickerSheet(
                     projects: allProjects,
                     currentCwd: chat?.cwd ?? "",
+                    store: store,
                     onSelect: { selected in
                         showProjectPicker = false
                         guard selected.cwd != chat?.cwd else { return }
@@ -183,6 +201,24 @@ struct ChatDetailView: View {
                 cachedAllProjects = DerivedProject.from(
                     chats: newChats.filter { !$0.isArchived }
                 )
+            }
+            #if canImport(UIKit)
+            .fullScreenCover(item: $imageViewer) { selection in
+                ImageViewerView(
+                    images: selection.images,
+                    startIndex: selection.startIndex
+                )
+                .preferredColorScheme(.dark)
+            }
+            #endif
+            .alert("Rename chat", isPresented: $showRenameAlert) {
+                TextField("Chat title", text: $renameDraft)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled()
+                Button("Cancel", role: .cancel) {}
+                Button("Save", action: commitRename)
+            } message: {
+                Text("Choose a new name for this chat.")
             }
     }
 
@@ -215,19 +251,46 @@ struct ChatDetailView: View {
         // rows (timeline + markdown + file pills) interact badly with
         // LazyVStack's just-in-time materialization here, where rows
         // that should be entering the viewport pop in suddenly
-        // instead of sliding under the chrome. `renderedMessages` is
-        // already capped at 250, so eager rendering is bounded.
+        // instead of sliding under the chrome. The transcript stays
+        // bounded by pagination (`bridgeInitialPageLimit` on first
+        // paint, page-by-page on scroll-up) instead of a hard cap.
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
+                // Spinner that surfaces while a `loadOlderMessages`
+                // round trip is in flight. Sits above the messages so
+                // the user gets feedback the moment the scroll-up
+                // sentinel fires; collapses to zero height when idle
+                // so the layout doesn't reserve dead space.
+                if store.loadingOlderByChat[chatId] == true {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Palette.textTertiary)
+                        Spacer()
+                    }
+                    .frame(height: 28)
+                    .transition(.opacity)
+                }
                 Color.clear.frame(height: 8)
                 if hasLoaded {
-                    ForEach(renderedMessages, id: \.id) { msg in
+                    ForEach(messages, id: \.id) { msg in
                         MessageView(
                             message: msg,
+                            attachmentImages: store.attachmentImagesByMessageId[msg.id] ?? [],
                             isReasoningExpanded: expandedReasoning.contains(msg.id),
                             toggleReasoning: { toggleReasoning(messageId: msg.id) },
                             onOpenFile: onOpenFile,
-                            shouldAnimateEntrance: shouldAnimateEntrance(for: msg)
+                            onOpenImage: { startIndex, images in
+                                #if canImport(UIKit)
+                                imageViewer = ImageViewerSelection(
+                                    images: images,
+                                    startIndex: startIndex
+                                )
+                                #endif
+                            },
+                            shouldAnimateEntrance: shouldAnimateEntrance(for: msg),
+                            store: store
                         )
                         .id(msg.id)
                         .onAppear { alreadySeenMessageIds.insert(msg.id) }
@@ -254,39 +317,82 @@ struct ChatDetailView: View {
                 #endif
             }
         )
-        // Geometry feeds `hasOverflow`. We collect content/container/
-        // insets in one Equatable struct so SwiftUI filters out the
-        // sub-pixel updates that fire while the composer is animating
-        // its height.
+        // Geometry feeds `hasOverflow` AND the scroll-up trigger for
+        // pagination. We collect content/container/insets/offset in
+        // one Equatable struct so SwiftUI filters out the sub-pixel
+        // updates that fire while the composer is animating its
+        // height. `offsetY` becoming small (user near the top, with
+        // overflow above the threshold) is the "load older" signal;
+        // the store dedupes so the callback can fire freely.
         .onScrollGeometryChange(for: ScrollMetrics.self) { geom in
             ScrollMetrics(
                 content: geom.contentSize.height,
                 container: geom.containerSize.height,
-                insets: geom.contentInsets.top + geom.contentInsets.bottom
+                insets: geom.contentInsets.top + geom.contentInsets.bottom,
+                offsetY: geom.contentOffset.y
             )
         } action: { _, m in
             contentHeight = m.content
             viewportHeight = m.container
             verticalInsets = m.insets
+            // Threshold check: only fire when there is real overflow
+            // (no point pulling more for a chat that fits in the
+            // viewport) and the user is genuinely near the top.
+            let nearTop = m.offsetY < Self.loadOlderThreshold
+            let realOverflow = m.content > m.container - m.insets + 1
+            if hasLoaded, nearTop, realOverflow {
+                store.requestOlderIfNeeded(chatId: chatId)
+            }
         }
         .onChange(of: hasLoaded, initial: true) { _, loaded in
             guard loaded, !didCaptureInitialSnapshot else { return }
             didCaptureInitialSnapshot = true
-            alreadySeenMessageIds.formUnion(renderedMessages.map(\.id))
+            alreadySeenMessageIds.formUnion(messages.map(\.id))
+            unreadAnchorId = messages.last?.id
         }
-        .onChange(of: renderedMessages.count) { oldCount, newCount in
+        .onChange(of: hasLoaded, initial: true) { _, loaded in
+            guard loaded, !transcriptVisible else { return }
+            // Wait one frame so the ForEach materializes and the
+            // ScrollView resolves its `.bottom` initialOffset before
+            // we fade the transcript in. Without this pause the flip
+            // races the first composition and the reanchor is visible.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 16_000_000)
+                transcriptVisible = true
+            }
+        }
+        .onChange(of: contentHeight) { _, h in
+            // Safety net: in chats with little content the geometry
+            // callback may settle in the same frame as the sleep
+            // above; whichever fires first wins thanks to the guard.
+            guard !transcriptVisible, hasLoaded, h > 0 else { return }
+            transcriptVisible = true
+        }
+        .onChange(of: messages.count) { oldCount, newCount in
             guard newCount > oldCount, !isAtBottom else { return }
-            unreadCount += (newCount - oldCount)
+            // Only count new messages at the tail toward the unread
+            // badge. Pages prepended at the head also grow `count`,
+            // but they're history the user is intentionally pulling
+            // and shouldn't bump the new-message indicator.
+            let oldLastId = unreadAnchorId
+            let newLastId = messages.last?.id
+            if let newLastId, newLastId != oldLastId {
+                unreadCount += 1
+                unreadAnchorId = newLastId
+            }
         }
         .onChange(of: isAtBottom) { _, atBottom in
             if atBottom { unreadCount = 0 }
         }
+        .opacity(transcriptVisible ? 1 : 0)
+        .animation(.easeOut(duration: 0.14), value: transcriptVisible)
     }
 
     private struct ScrollMetrics: Equatable {
         let content: CGFloat
         let container: CGFloat
         let insets: CGFloat
+        let offsetY: CGFloat
     }
 
     private enum ChatScroll {
@@ -343,9 +449,25 @@ struct ChatDetailView: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                Haptics.tap()
-                showActionsMenu = true
+            Menu {
+                Button {
+                    handleRename()
+                } label: {
+                    if let img = MenuIconImage.pencil {
+                        Label { Text("Rename") } icon: { Image(uiImage: img) }
+                    } else {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                }
+                Button {
+                    handleArchive()
+                } label: {
+                    if let img = MenuIconImage.archive {
+                        Label { Text("Archive") } icon: { Image(uiImage: img) }
+                    } else {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+                }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(BodyFont.system(size: 20, weight: .semibold))
@@ -353,26 +475,25 @@ struct ChatDetailView: View {
                     .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .popover(isPresented: $showActionsMenu, arrowEdge: .top) {
-                ChatActionsMenu(
-                    onRename: {
-                        showActionsMenu = false
-                        handleRename()
-                    },
-                    onArchive: {
-                        showActionsMenu = false
-                        handleArchive()
-                    }
-                )
-                .presentationCompactAdaptation(.popover)
-            }
+            .menuOrder(.fixed)
+            .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
         }
         .glassCapsule()
     }
 
     private func handleRename() {
-        // Wire-up pending: protocol does not yet expose renameChat.
+        renameDraft = chat?.title ?? ""
+        // Defer one tick so the popover dismissal animation finishes
+        // before the alert pops in. Without it, iOS sometimes drops
+        // the alert request entirely while the popover is still
+        // collapsing.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            showRenameAlert = true
+        }
+    }
+
+    private func commitRename() {
+        store.renameChat(chatId: chatId, newTitle: renameDraft)
     }
 
     private func handleArchive() {
@@ -399,7 +520,7 @@ struct ChatDetailView: View {
                 HStack(spacing: 8) {
                     FolderClosedIcon(size: 20, weight: 1.4)
                         .foregroundStyle(Palette.textPrimary)
-                    Text(project.name)
+                    Text(store.projectDisplayName(cwd: project.cwd, fallback: project.name))
                         .font(BodyFont.manrope(size: 17, wght: 500))
                         .foregroundStyle(Palette.textPrimary)
                         .lineLimit(1)
@@ -426,6 +547,8 @@ struct ChatDetailView: View {
             onSend: send,
             onMicTap: { startRecording(.transcribeToText) },
             onVoiceTap: { startRecording(.sendAsAudio) },
+            onStop: { store.interruptTurn(chatId: chatId) },
+            hasActiveTurn: chat?.hasActiveTurn ?? false,
             autofocusOnAppear: isFreshChat ?? false,
             compact: !messages.isEmpty,
             resetToken: composerResetToken
@@ -542,12 +665,31 @@ struct ChatDetailView: View {
         composerText = ""
         composerAttachments = []
         composerResetToken &+= 1
+        // Flip the chat's `hasActiveTurn` synchronously, in the same
+        // SwiftUI tick that `composerText = ""` makes `canSend` go
+        // false. Without this, the trailing glyph would animate
+        // arrow → waveform → stop because the network dispatch (and
+        // the flag flip) only landed one tick later via the detached
+        // task below. The attachment count flows in here too so the
+        // optimistic preview matches the Mac echo and the bubble does
+        // not duplicate when the round-trip lands.
+        let optimisticId = store.beginPendingTurn(
+            chatId: chatId,
+            text: text,
+            attachmentCount: attachmentSnapshot.count
+        )
+        if let optimisticId, !attachmentSnapshot.isEmpty {
+            store.attachLocalImages(
+                messageId: optimisticId,
+                images: attachmentSnapshot.map(\.preview)
+            )
+        }
         // Encode JPEG bytes off-main; the bridge call back on the main
         // actor only fires once we have all the wire payloads ready.
         Task.detached(priority: .userInitiated) {
             let wire = attachmentSnapshot.compactMap { $0.wireAttachment() }
             await MainActor.run {
-                store.sendPrompt(chatId: chatId, text: text, attachments: wire)
+                store.dispatchPrompt(chatId: chatId, text: text, attachments: wire)
             }
         }
     }
@@ -570,6 +712,12 @@ struct ChatDetailView: View {
     /// MIME type is fixed.
     private func wireBridgeTranscription() {
         let store = self.store
+        // Forward the system language as a Whisper hint so Spanish
+        // audio decodes as Spanish instead of falling through to the
+        // model's English prefill default. The recorder owns the value
+        // so the on-device Apple Speech fallback (a different code
+        // path) keeps using the same locale.
+        voiceRecorder.bridgeLanguage = Self.systemWhisperLanguage()
         voiceRecorder.bridgeTranscriber = { [weak store] url, language in
             guard let store else {
                 throw BridgeStore.TranscriptionBridgeError.notConnected
@@ -583,6 +731,17 @@ struct ChatDetailView: View {
                 language: language
             )
         }
+    }
+
+    /// Two-letter language code for the user's preferred system
+    /// language, formatted for Whisper (lowercase, base code only:
+    /// "es-ES" → "es"). Returns `nil` if we can't read it, in which
+    /// case the daemon falls back to auto-detection.
+    private static func systemWhisperLanguage() -> String? {
+        let preferred = Locale.preferredLanguages.first ?? Locale.current.identifier
+        let code = Locale(identifier: preferred).language.languageCode?.identifier
+        guard let code, !code.isEmpty else { return nil }
+        return code.lowercased()
     }
 
     private func cancelRecording() {
@@ -644,30 +803,94 @@ struct ChatDetailView: View {
     private func beginTranscribing(autoSend: Bool) {
         guard var current = recording else { return }
         guard current.phase == .recording || current.phase == .paused else { return }
+        let purpose = current.purpose
         current.phase = .transcribing
         withAnimation(.spring(response: 0.30, dampingFraction: 0.88)) {
             recording = current
         }
         transcriptionToken &+= 1
         let token = transcriptionToken
-        voiceRecorder.stop { transcript in
-            guard token == transcriptionToken else { return }
-            guard recording?.phase == .transcribing else { return }
-            let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-            if autoSend && !trimmed.isEmpty {
-                composerText = trimmed
+        // sendAsAudio: keep the m4a around long enough to ship it as
+        // an attachment alongside the transcript. The bridge dispatcher
+        // is in charge of deleting the file after the encode is done.
+        // Other purposes use the legacy stop(_:) which deletes inline.
+        if purpose == .sendAsAudio && autoSend {
+            voiceRecorder.stopAndKeep { transcript, audioURL in
+                guard token == transcriptionToken else { return }
+                guard recording?.phase == .transcribing else { return }
+                let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                let urlForSend = audioURL
                 withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
                     recording = nil
                 }
-                send()
-            } else {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-                    recording = nil
-                    if !trimmed.isEmpty {
-                        composerText = trimmed
+                if let urlForSend {
+                    sendVoiceNote(audioURL: urlForSend, transcript: trimmed)
+                } else if !trimmed.isEmpty {
+                    composerText = trimmed
+                    send()
+                }
+            }
+        } else {
+            voiceRecorder.stop { transcript in
+                guard token == transcriptionToken else { return }
+                guard recording?.phase == .transcribing else { return }
+                let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                if autoSend && !trimmed.isEmpty {
+                    composerText = trimmed
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        recording = nil
+                    }
+                    send()
+                } else {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                        recording = nil
+                        if !trimmed.isEmpty {
+                            composerText = trimmed
+                        }
                     }
                 }
             }
+        }
+    }
+
+    /// sendAsAudio submission: bundles the m4a bytes as a `kind=audio`
+    /// attachment in the same `sendPrompt` the daemon receives, with
+    /// the Whisper transcript as the prompt text. The daemon stores
+    /// the bytes against the user message so the chat history shows a
+    /// playable bubble on every surface; the transcript is what Codex
+    /// actually consumes.
+    private func sendVoiceNote(audioURL: URL, transcript: String) {
+        let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let data = try? Data(contentsOf: audioURL) else {
+            try? FileManager.default.removeItem(at: audioURL)
+            if !trimmedTranscript.isEmpty {
+                composerText = trimmedTranscript
+                send()
+            }
+            return
+        }
+        let attachment = WireAttachment(
+            id: UUID().uuidString,
+            kind: .audio,
+            mimeType: "audio/m4a",
+            filename: audioURL.lastPathComponent,
+            dataBase64: data.base64EncodedString()
+        )
+        let chatId = self.chatId
+        let store = self.store
+        // Optimistic bubble appears immediately. The transcript is the
+        // visible text; attachmentCount=0 keeps the bridge preview
+        // formatter from prefixing "[image]" markers.
+        store.beginPendingTurn(chatId: chatId, text: trimmedTranscript)
+        Task.detached(priority: .userInitiated) {
+            await MainActor.run {
+                store.dispatchPrompt(
+                    chatId: chatId,
+                    text: trimmedTranscript,
+                    attachments: [attachment]
+                )
+            }
+            try? FileManager.default.removeItem(at: audioURL)
         }
     }
 }
@@ -683,21 +906,52 @@ private struct ActiveRecording: Equatable {
 
 private struct MessageView: View {
     let message: WireMessage
+    var attachmentImages: [UIImage] = []
     let isReasoningExpanded: Bool
     let toggleReasoning: () -> Void
     var onOpenFile: (String) -> Void = { _ in }
+    var onOpenImage: (Int, [UIImage]) -> Void = { _, _ in }
     var shouldAnimateEntrance: Bool = false
+    var store: BridgeStore? = nil
 
     var body: some View {
         if message.role == .user {
-            UserBubble(text: message.content, animateEntrance: shouldAnimateEntrance)
+            VStack(alignment: .trailing, spacing: 6) {
+                if let audioRef = message.audioRef, let store {
+                    UserAudioBubble(audioRef: audioRef, store: store)
+                }
+                UserBubble(
+                    text: message.content,
+                    attachmentImages: attachmentImages,
+                    animateEntrance: shouldAnimateEntrance,
+                    onOpenImage: onOpenImage
+                )
+            }
         } else {
             assistantBlock
         }
     }
 
     private var assistantBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // Inline images Codex generated for this turn. Two sources are
+        // merged inside `paths(from:)`: workitem-level paths and
+        // markdown links the model wrote into the body. The body is
+        // stripped of the latter so the user doesn't see the raw
+        // `![](file:/Users/.../*.png)` text on top of the rendered
+        // tile. While the turn is still streaming, `strip` also hides
+        // any unfinished `[…` / `![…` opener so the link materialises
+        // in one go when the closing paren lands instead of being
+        // typed character by character on screen.
+        let isStreaming = !message.streamingFinished
+        let inlinePaths = AssistantInlineImageSources.paths(from: message)
+        let needsStrip = !inlinePaths.isEmpty || isStreaming
+        let proseSource = needsStrip
+            ? AssistantInlineImageSources.strip(
+                message.content,
+                isStreaming: isStreaming
+            )
+            : message.content
+        return VStack(alignment: .leading, spacing: 12) {
             // Full-Mac parity: timeline interleaves reasoning chunks
             // with tool-group rows, plus the elapsed-time disclosure
             // header summarizing the whole turn. Skipped when neither
@@ -719,9 +973,17 @@ private struct MessageView: View {
                 )
             }
 
-            if !message.content.isEmpty {
-                AssistantMarkdownView(text: message.content)
+            if !proseSource.isEmpty {
+                AssistantMarkdownView(text: proseSource)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if !inlinePaths.isEmpty, let store {
+                AssistantInlineImagesView(
+                    paths: inlinePaths,
+                    store: store,
+                    onOpen: onOpenImage
+                )
             }
 
             ChangedFilePills(timeline: message.timeline, onOpen: onOpenFile)
@@ -729,6 +991,7 @@ private struct MessageView: View {
             if !message.streamingFinished {
                 ThinkingShimmer(text: "Thinking")
                     .padding(.top, 2)
+                    .onAppear { Haptics.tap() }
             }
             if message.streamingFinished && !message.content.isEmpty {
                 MessageActions(content: message.content)
@@ -748,32 +1011,77 @@ private struct MessageView: View {
 // state to its final pose so they appear in place without motion.
 private struct UserBubble: View {
     let text: String
+    let attachmentImages: [UIImage]
     let animateEntrance: Bool
+    let onOpenImage: (Int, [UIImage]) -> Void
 
     @State private var fadedIn: Bool
     @State private var translatedIn: Bool
 
-    init(text: String, animateEntrance: Bool) {
+    init(
+        text: String,
+        attachmentImages: [UIImage] = [],
+        animateEntrance: Bool,
+        onOpenImage: @escaping (Int, [UIImage]) -> Void = { _, _ in }
+    ) {
         self.text = text
+        self.attachmentImages = attachmentImages
         self.animateEntrance = animateEntrance
+        self.onOpenImage = onOpenImage
         _fadedIn = State(initialValue: !animateEntrance)
         _translatedIn = State(initialValue: !animateEntrance)
+    }
+
+    /// Strips the `[image]` / `[N images]` preview prefix the bridge
+    /// inserts to keep the chat-list lastMessage readable. The image
+    /// thumbnails above the bubble already say "this turn carried
+    /// photos"; repeating it as text inside the bubble looks like a
+    /// stutter, so we render only the user's actual caption (or hide
+    /// the bubble entirely when the message was attachment-only).
+    private var displayText: String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let patterns = ["[image]", "[images]"]
+        for prefix in patterns where trimmed.hasPrefix(prefix) {
+            let rest = String(trimmed.dropFirst(prefix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return rest
+        }
+        if trimmed.hasPrefix("["), let close = trimmed.firstIndex(of: "]") {
+            let label = trimmed[trimmed.index(after: trimmed.startIndex)..<close]
+            if label.hasSuffix(" images") || label.hasSuffix(" image") {
+                let rest = String(trimmed[trimmed.index(after: close)...])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return rest
+            }
+        }
+        return text
     }
 
     var body: some View {
         HStack {
             Spacer(minLength: 48)
-            Text(text)
-                .font(Typography.chatBodyFont)
-                .tracking(-0.2)
-                .foregroundStyle(Palette.userBubbleText)
-                .multilineTextAlignment(.leading)
-                .padding(.horizontal, 17)
-                .padding(.vertical, 13)
-                .background(
-                    RoundedRectangle(cornerRadius: AppLayout.userBubbleRadius, style: .continuous)
-                        .fill(Palette.userBubbleFill)
-                )
+            VStack(alignment: .trailing, spacing: 8) {
+                if !attachmentImages.isEmpty {
+                    AttachmentThumbnails(
+                        images: attachmentImages,
+                        onTap: { idx in onOpenImage(idx, attachmentImages) }
+                    )
+                }
+                let visible = displayText
+                if !visible.isEmpty {
+                    Text(visible)
+                        .font(Typography.chatBodyFont)
+                        .tracking(-0.2)
+                        .foregroundStyle(Palette.userBubbleText)
+                        .multilineTextAlignment(.leading)
+                        .padding(.horizontal, 17)
+                        .padding(.vertical, 13)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppLayout.userBubbleRadius, style: .continuous)
+                                .fill(Palette.userBubbleFill)
+                        )
+                }
+            }
         }
         .opacity(fadedIn ? 1 : 0)
         // Large offset so the bubble visually starts from the composer
@@ -793,6 +1101,57 @@ private struct UserBubble: View {
         }
     }
 }
+
+/// Image previews stacked above the user bubble. Mirrors the composer's
+/// chip aspect ratio so the photo "rises" into the conversation
+/// without resizing — the chip the user picked in the composer becomes
+/// the bubble thumbnail in place. Single image fills the trailing
+/// edge; two or more lay out as a wrapping row capped at 220pt wide
+/// each so they stay legible without dominating short captions.
+private struct AttachmentThumbnails: View {
+    let images: [UIImage]
+    let onTap: (Int) -> Void
+
+    var body: some View {
+        if images.count == 1, let single = images.first {
+            Button {
+                Haptics.tap()
+                onTap(0)
+            } label: {
+                Image(uiImage: single)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: 240, maxHeight: 320)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        } else {
+            HStack(alignment: .center, spacing: 6) {
+                ForEach(images.indices, id: \.self) { idx in
+                    Button {
+                        Haptics.tap()
+                        onTap(idx)
+                    } label: {
+                        Image(uiImage: images[idx])
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 140, height: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+#if canImport(UIKit)
+struct ImageViewerSelection: Identifiable {
+    let id = UUID()
+    let images: [UIImage]
+    let startIndex: Int
+}
+#endif
 
 private struct MessageActions: View {
     let content: String
