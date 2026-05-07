@@ -2064,12 +2064,17 @@ private struct PersonalizationPage: View {
                     title: "Personality",
                     detail: "Choose a default tone for Clawix's responses",
                     options: [
-                        ("Pragmatic", L10n.t("Pragmatic")),
                         ("Friendly", L10n.t("Friendly")),
-                        ("Concise", L10n.t("Concise")),
-                        ("Technical", L10n.t("Technical"))
+                        ("Pragmatic", L10n.t("Pragmatic"))
                     ],
-                    selection: $personality
+                    selection: $personality,
+                    descriptionForOption: { key in
+                        switch key {
+                        case "Friendly":  return L10n.t("Warm, collaborative, and helpful")
+                        case "Pragmatic": return L10n.t("Concise, task-focused, and direct")
+                        default:          return nil
+                        }
+                    }
                 )
             }
             .padding(.bottom, 28)
