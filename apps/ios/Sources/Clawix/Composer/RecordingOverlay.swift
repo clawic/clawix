@@ -43,8 +43,10 @@ struct RecordingOverlay: View {
     var body: some View {
         VStack(spacing: 16) {
             cancelButton
-            mainPill
-                .frame(maxWidth: .infinity)
+            HStack(alignment: .center, spacing: 8) {
+                primaryControlBubble
+                mainPill
+            }
         }
         .padding(.horizontal, 14)
     }
@@ -55,8 +57,8 @@ struct RecordingOverlay: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
-                Image(systemName: "arrow.down")
-                    .font(BodyFont.system(size: 16, weight: .semibold))
+                Image(systemName: "xmark")
+                    .font(BodyFont.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.white)
             }
             .frame(width: 44, height: 44)
@@ -64,6 +66,73 @@ struct RecordingOverlay: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Cancel recording")
+    }
+
+    // Stop / resume bubble. Sits next to the waveform pill as its own
+    // glass circle, mirroring the `+` attachments button on the
+    // composer — the waveform pill stays focused on the level meter and
+    // the send affordance, the destructive control lives outside it.
+    @ViewBuilder
+    private var primaryControlBubble: some View {
+        switch phase {
+        case .recording:
+            stopBubble
+        case .paused:
+            resumeBubble
+        case .transcribing:
+            disabledStopBubble
+        }
+    }
+
+    private var stopBubble: some View {
+        Button(action: triggerStop) {
+            ZStack {
+                Circle()
+                    .fill(.clear)
+                    .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Color.white)
+                    .frame(width: 14, height: 14)
+            }
+            .frame(width: 46, height: 46)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Stop recording")
+    }
+
+    private var resumeBubble: some View {
+        Button(action: triggerResume) {
+            ZStack {
+                Circle()
+                    .fill(.clear)
+                    .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
+                Image(systemName: "play.fill")
+                    .font(BodyFont.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .offset(x: 1)
+            }
+            .frame(width: 46, height: 46)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Resume recording")
+    }
+
+    // Non-interactive placeholder during transcription so the bubble
+    // keeps its slot next to the pill instead of collapsing the layout
+    // when the take ends.
+    private var disabledStopBubble: some View {
+        ZStack {
+            Circle()
+                .fill(.clear)
+                .glassEffect(.regular.tint(Color.black.opacity(0.30)), in: Circle())
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(Color(white: 0.55))
+                .frame(width: 14, height: 14)
+        }
+        .frame(width: 46, height: 46)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -79,66 +148,35 @@ struct RecordingOverlay: View {
     }
 
     private var recordingPill: some View {
-        let isPaused = (phase == .paused)
-        return HStack(spacing: 8) {
-            primaryControlButton(isPaused: isPaused)
-            RecordingWaveform(isActive: !isPaused, levels: levels)
+        HStack(spacing: 8) {
+            RecordingWaveform(isActive: phase == .recording, levels: levels)
                 .frame(maxWidth: .infinity)
                 .frame(height: 34)
                 .padding(.horizontal, 4)
             sendCircle(enabled: true, action: triggerSend)
         }
-        .padding(.horizontal, 6)
+        .padding(.leading, 14)
+        .padding(.trailing, 6)
         .padding(.vertical, 6)
         .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Capsule(style: .continuous))
     }
 
     private var transcribingPill: some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 10) {
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(Color.white.opacity(0.75))
-                    .scaleEffect(0.9)
-                Text("Transcribing")
-                    .font(Typography.bodyFont)
-                    .foregroundStyle(Palette.textSecondary)
-            }
-            .padding(.leading, 16)
+        HStack(spacing: 10) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(Color.white.opacity(0.75))
+                .scaleEffect(0.9)
+            Text("Transcribing")
+                .font(Typography.bodyFont)
+                .foregroundStyle(Palette.textSecondary)
             Spacer(minLength: 0)
             sendCircle(enabled: false, action: {})
         }
-        .padding(.trailing, 7)
-        .padding(.vertical, 4)
-        .frame(minHeight: 50)
+        .padding(.leading, 14)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
         .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Capsule(style: .continuous))
-    }
-
-    // Square stop / triangle resume. Tapping it depends on the phase:
-    // recording -> stop (transcribe or pause); paused -> resume the
-    // take so the user can keep talking.
-    private func primaryControlButton(isPaused: Bool) -> some View {
-        Button(action: { isPaused ? triggerResume() : triggerStop() }) {
-            ZStack {
-                Circle()
-                    .fill(.clear)
-                    .glassEffect(.regular.tint(Color.black.opacity(0.55)), in: Circle())
-                if isPaused {
-                    Image(systemName: "play.fill")
-                        .font(BodyFont.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .offset(x: 1)
-                } else {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(Color.white)
-                        .frame(width: 14, height: 14)
-                }
-            }
-            .frame(width: 46, height: 46)
-            .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(isPaused ? "Resume recording" : "Stop recording")
     }
 
     private func sendCircle(enabled: Bool, action: @escaping () -> Void) -> some View {
