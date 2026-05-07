@@ -73,7 +73,14 @@ struct ClawixApp: App {
         // + `ProjectSortMode` keys. Idempotent — does nothing on a fresh
         // install or after the legacy key has been cleared.
         SidebarPrefs.migrateLegacySidebarPrefs()
-        _appState = StateObject(wrappedValue: AppState())
+        let state = AppState()
+        // Hand the QuickAsk HUD a back-reference into the live AppState
+        // so it can submit prompts into the real chat list and surface
+        // streaming replies inline. Done here (instead of from a view's
+        // .onAppear) so the panel works the very first time the user
+        // hits the global hotkey, even before any window appears.
+        QuickAskController.shared.attach(appState: state)
+        _appState = StateObject(wrappedValue: state)
         // Dictation hotkey + overlay are wired from
         // `applicationDidFinishLaunching`, NOT here. Calling
         // `addGlobalMonitorForEvents(matching: .flagsChanged)` from
