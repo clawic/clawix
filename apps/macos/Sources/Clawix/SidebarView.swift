@@ -294,7 +294,7 @@ struct SidebarView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if snapshot.chrono.isEmpty {
                             Text("No chats")
-                                .font(BodyFont.system(size: 13.5, weight: .light))
+                                .font(BodyFont.system(size: 13.5, wght: 500))
                                 .foregroundColor(Color(white: 0.40))
                                 .padding(.leading, 34)
                                 .padding(.vertical, 4)
@@ -321,7 +321,7 @@ struct SidebarView: View {
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
                             Image(systemName: "bubble.left")
-                                .font(BodyFont.system(size: 11.5, weight: .light))
+                                .font(BodyFont.system(size: 11.5, wght: 500))
                         )
                     )
                     SidebarAccordion(
@@ -445,7 +445,7 @@ struct SidebarView: View {
                                 .frame(width: 9, height: 9)
                         }
                         Text(appState.archivedLoading ? "Loading…" : "No archived chats")
-                            .font(BodyFont.system(size: 13.5, weight: .light))
+                            .font(BodyFont.system(size: 13.5, wght: 500))
                             .foregroundColor(Color(white: 0.40))
                     }
                     .padding(.leading, 34)
@@ -669,7 +669,7 @@ struct SidebarView: View {
                       showNewChat: false,
                       leadingIcon: AnyView(
                           Image(systemName: "bubble.left")
-                              .font(BodyFont.system(size: 11, weight: .regular))
+                              .font(BodyFont.system(size: 11, wght: 500))
                       ),
                       expanded: $chronoExpanded)
     }
@@ -720,8 +720,8 @@ struct SidebarView: View {
                             .padding(.trailing, 11)
                     }
                     Text(title)
-                        .font(BodyFont.system(size: 13.5, weight: .light))
-                        .foregroundColor(Color(white: 0.88))
+                        .font(BodyFont.system(size: 13.5, wght: 500))
+                        .foregroundColor(Color(white: 0.92))
                 }
                 Spacer()
             }
@@ -932,8 +932,8 @@ private struct SettingsBottomButton: View {
                     .frame(width: 20)
                     .foregroundColor(open ? .white : Color(white: 0.78))
                 Text("Settings")
-                    .font(BodyFont.system(size: 13.5, weight: .light))
-                    .foregroundColor(open ? .white : Color(white: 0.88))
+                    .font(BodyFont.system(size: 13.5, wght: 500))
+                    .foregroundColor(open ? .white : Color(white: 0.92))
                 Spacer()
             }
             .padding(.horizontal, 10)
@@ -951,6 +951,10 @@ private struct SettingsBottomButton: View {
     }
 
     private var backgroundFill: Color {
+        // Sidebar tabs (open/selected and hover) use white-opacity so the
+        // full-row glow stays soft; the wallpaper-tint side effect is
+        // accepted here because the user prefers the look to a stable
+        // solid gray.
         if open    { return Color.white.opacity(0.06) }
         if hovered { return Color.white.opacity(0.035) }
         return .clear
@@ -1254,24 +1258,24 @@ private struct SidebarButton: View {
                             .frame(width: 15, height: 15)
                     } else {
                         Image(systemName: icon)
-                            .font(BodyFont.system(size: 13.5, weight: .regular))
+                            .font(BodyFont.system(size: 13.5, wght: 500))
                             .frame(width: 15)
                             .foregroundColor(iconColor)
                     }
                 }
                 Text(localizedTitle)
-                    .font(BodyFont.system(size: 13.5, weight: .light))
+                    .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(labelColor)
                 Spacer(minLength: 6)
                 if let shortcut {
                     Text(shortcut)
-                        .font(BodyFont.system(size: 11, weight: .regular))
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Color(white: 0.78))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(Color.white.opacity(0.09))
+                                .fill(Color(white: 0.32))
                         )
                         .opacity(hovered ? 1 : 0)
                 }
@@ -1297,10 +1301,13 @@ private struct SidebarButton: View {
     }
 
     private var labelColor: Color {
-        isSelected ? .white : Color(white: 0.88)
+        isSelected ? .white : Color(white: 0.92)
     }
 
     private var backgroundFill: Color {
+        // Sidebar tabs (selected and hover) both use white-opacity so the
+        // full-row glow stays soft; user preference outweighs the
+        // wallpaper-tint side effect here.
         if isSelected { return Color.white.opacity(0.06) }
         if hovered    { return Color.white.opacity(0.035) }
         return .clear
@@ -1434,7 +1441,7 @@ private struct SectionDisclosureChevron: View {
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(BodyFont.system(size: 9.5, weight: .semibold))
+            .font(BodyFont.system(size: 9.5, wght: 700))
             .foregroundColor(Color(white: 0.78))
             .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -1483,7 +1490,7 @@ private struct CollapsibleSectionLabel: View {
         if expanded {
             return Color(white: hovered ? 0.78 : 0.55)
         }
-        return Color(white: hovered ? 0.96 : 0.88)
+        return Color(white: hovered ? 0.96 : 0.92)
     }
 
     private var iconColor: Color {
@@ -1509,7 +1516,7 @@ private struct CollapsibleSectionLabel: View {
                 .padding(.trailing, 11)
             }
             Text(title)
-                .font(BodyFont.system(size: 13.5, weight: .light))
+                .font(BodyFont.system(size: 13.5, wght: 500))
                 .foregroundColor(labelColor)
             ZStack(alignment: .leading) {
                 // Asymmetric animation: contract fast on hover-in to clear
@@ -1596,11 +1603,13 @@ private struct SectionTitleHairline: View {
     let anchor: UnitPoint
 
     var body: some View {
-        // White-opacity stops (not Color.clear) so the gradient never
-        // tints toward gray during interpolation. Solid is held for the
-        // first ~70% nearest the word and only fades in the tail third.
-        let solid = Color.white.opacity(0.22)
-        let mid = Color.white.opacity(0.16)
+        // Solid grays for the visible portion so the line doesn't take its
+        // tone from the wallpaper through the translucent sidebar. The
+        // endpoint stays alpha-0 because a hairline that disappears must
+        // fade somewhere; the fade is local to the tail third while the
+        // first ~70% nearest the word renders as a true solid line.
+        let solid = Color(white: 0.42)
+        let mid = Color(white: 0.36)
         let clear = Color.white.opacity(0)
         let stops: [Gradient.Stop] = anchor == .trailing
             ? [
@@ -1808,7 +1817,7 @@ struct RecentChatRow: View, Equatable {
                         .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
                 } else {
                     Text(ageLabel)
-                        .font(BodyFont.system(size: 11))
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Color(white: 0.55))
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
@@ -1851,8 +1860,8 @@ struct RecentChatRow: View, Equatable {
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
-                .font(BodyFont.system(size: 13.5, weight: .light))
-                .foregroundColor(isSelected ? .white : Color(white: 0.74))
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(isSelected ? .white : Color(white: 0.82))
                 .lineLimit(1)
             Spacer(minLength: 8)
             trailingStatusView
@@ -1918,7 +1927,7 @@ struct RecentChatRow: View, Equatable {
             )
         case .bubble:
             Image(systemName: "bubble.left")
-                .font(BodyFont.system(size: 10.5))
+                .font(BodyFont.system(size: 10.5, wght: 500))
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
         case .unarchive:
@@ -1972,6 +1981,8 @@ struct RecentChatRow: View, Equatable {
     }
 
     private var rowBackground: Color {
+        // Both selected and hover use white-opacity so the chat-row glow
+        // stays soft and consistent with the rest of the sidebar tabs.
         if isSelected { return Color.white.opacity(0.05) }
         if hovered && !suppressHoverStyling { return Color.white.opacity(0.035) }
         return .clear
@@ -1991,7 +2002,7 @@ private struct SidebarChatRowSpinner: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color(white: 0.55).opacity(0.22),
+                .stroke(Color(white: 0.40),
                         style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
             Circle()
                 .trim(from: 0.0, to: 0.79)
@@ -2075,7 +2086,7 @@ private struct ProjectAccordion: View, Equatable {
                         .frame(width: 15, height: 15)
                         .animation(.easeOut(duration: 0.28), value: expanded)
                     Text(project.name)
-                        .font(BodyFont.system(size: 13.5, weight: .light))
+                        .font(BodyFont.system(size: 13.5, wght: 500))
                         .foregroundColor(Color(white: 0.94))
                         .lineLimit(1)
                     Spacer(minLength: 6)
@@ -2097,7 +2108,7 @@ private struct ProjectAccordion: View, Equatable {
                 // disappears.
                 Button(action: onMenuToggle) {
                     Image(systemName: "ellipsis")
-                        .font(BodyFont.system(size: 12.5, weight: .medium))
+                        .font(BodyFont.system(size: 12.5, wght: 600))
                         .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
@@ -2155,7 +2166,7 @@ private struct ProjectAccordion: View, Equatable {
                 LazyVStack(alignment: .leading, spacing: 3) {
                     if chats.isEmpty {
                         Text("No chats")
-                            .font(BodyFont.system(size: 11))
+                            .font(BodyFont.system(size: 11, wght: 500))
                             .foregroundColor(Color(white: 0.40))
                             .padding(.leading, 30)
                             .padding(.vertical, 4)
@@ -2241,20 +2252,56 @@ private enum SidebarRowMetrics {
 /// height stayed at 0 — visually the header looked like it drifted and
 /// the chats arrived late "from below" once the second transaction caught
 /// up.
+///
+/// `targetHeight` is a heuristic (row count × estimated row height +
+/// section padding) that lands the open-state geometry on the same
+/// transaction as the header. A hidden measurement twin runs in
+/// parallel and reports the actual intrinsic content height; we take
+/// `max(targetHeight, measuredHeight)` so the floor is always the real
+/// content size. Without this, line-height drift between the heuristic
+/// and the rendered text (Archived at 15+ rows) clipped the last row
+/// because `.clipped()` honours `targetHeight`, not intrinsic height.
 private struct SidebarAccordion<Content: View>: View {
     let expanded: Bool
     let targetHeight: CGFloat
     @ViewBuilder let content: () -> Content
+    @State private var measuredHeight: CGFloat = 0
 
     var body: some View {
-        content()
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(height: expanded ? targetHeight : 0, alignment: .top)
-            .clipped()
-            .animation(nil, value: expanded)
-            .animation(nil, value: targetHeight)
-            .allowsHitTesting(expanded)
-            .accessibilityHidden(!expanded)
+        let h = max(targetHeight, measuredHeight)
+        VStack(spacing: 0) {
+            content()
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear {
+                                NSLog("[SidebarAccordion] onAppear measured=\(proxy.size.height) target=\(targetHeight)")
+                                if proxy.size.height > measuredHeight {
+                                    measuredHeight = proxy.size.height
+                                }
+                            }
+                            .onChange(of: proxy.size.height) { _, newH in
+                                NSLog("[SidebarAccordion] onChange measured=\(newH) target=\(targetHeight)")
+                                if newH > measuredHeight {
+                                    measuredHeight = newH
+                                }
+                            }
+                    }
+                )
+        }
+        .frame(height: expanded ? h : 0, alignment: .top)
+        .clipped()
+        .allowsHitTesting(expanded)
+        .accessibilityHidden(!expanded)
+        .animation(nil, value: expanded)
+        .animation(nil, value: h)
+    }
+}
+
+private struct SidebarAccordionHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
@@ -2322,8 +2369,8 @@ private struct PinnedRow: View {
                         style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
                 .frame(width: 14, height: 14)
             Text(item.title)
-                .font(BodyFont.system(size: 14, weight: .light))
-                .foregroundColor(Color(white: 0.92))
+                .font(BodyFont.system(size: 14, wght: 500))
+                .foregroundColor(Color(white: 0.94))
                 .lineLimit(1)
             Spacer(minLength: 8)
             if hovered {
@@ -2331,7 +2378,7 @@ private struct PinnedRow: View {
                     // archivar chat
                 } label: {
                     Image(systemName: "archivebox")
-                        .font(BodyFont.system(size: 12.5, weight: .regular))
+                        .font(BodyFont.system(size: 12.5, wght: 500))
                         .foregroundColor(Color(white: 0.72))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
@@ -2340,7 +2387,7 @@ private struct PinnedRow: View {
                 .help(L10n.t("Archive chat"))
             } else {
                 Text(item.age)
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Color(white: 0.45))
             }
         }
@@ -3423,8 +3470,8 @@ private struct DragChipView: View {
             Text(chat.title.isEmpty
                  ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
                  : chat.title)
-                .font(BodyFont.system(size: 13.5, weight: .light))
-                .foregroundColor(Color(white: 0.74))
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(Color(white: 0.82))
                 .lineLimit(1)
             Spacer(minLength: 8)
             ArchiveIcon(size: 14.5)
@@ -3466,8 +3513,8 @@ private struct ProjectDragChipView: View {
                 .foregroundColor(Color(white: 0.5))
                 .frame(width: 15, height: 15)
             Text(project.name)
-                .font(BodyFont.system(size: 13.5, weight: .light))
-                .foregroundColor(Color(white: 0.74))
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(Color(white: 0.82))
                 .lineLimit(1)
             Spacer(minLength: 8)
         }
