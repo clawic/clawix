@@ -239,117 +239,105 @@ enum AssistantMarkdownParser {
 /// so the user sees fenced code in proper code blocks, headings as
 /// headings, and inline `code` / **bold** / *italic* / [link](url) all
 /// styled correctly.
+///
+/// Selection model: contiguous prose blocks (paragraphs, headings,
+/// lists) coalesce into a single `SelectableProseTextView` so the
+/// user can long-press anywhere in the reply and drag the selection
+/// across blocks like in a normal page. Code blocks stay separate
+/// because they keep their own fenced chrome (language label + copy
+/// button) and their own selectable text view inside.
 struct AssistantMarkdownView: View {
     let text: String
 
+    /// A run of consecutive blocks that should share one selection
+    /// surface. Code blocks always stand alone; everything else
+    /// (paragraphs, headings, bullet/numbered lists) coalesces.
+    private enum BlockGroup {
+        case prose([AssistantBlock])
+        case code(language: String, code: String)
+    }
+
     var body: some View {
         let blocks = AssistantMarkdownParser.parse(text)
+        let groups = Self.groupForSelection(blocks)
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block)
+            ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
+                groupView(group)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     @ViewBuilder
-    private func blockView(_ block: AssistantBlock) -> some View {
-        switch block {
-        case .heading(let level, let text):
-            Text(text)
-                .font(headingFont(level))
-                .foregroundStyle(Palette.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, level <= 2 ? 4 : 0)
-
-        case .paragraph(let attr):
-            Text(styledInline(attr))
-                .font(Typography.chatBodyFont)
-                .tracking(-0.2)
-                .foregroundStyle(Palette.textPrimary)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-
-        case .bulletList(let items):
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text("•")
-                            .font(Typography.chatBodyFont)
-                            .foregroundStyle(Palette.textPrimary)
-                            .frame(width: 8, alignment: .leading)
-                        Text(styledInline(item))
-                            .font(Typography.chatBodyFont)
-                            .tracking(-0.2)
-                            .foregroundStyle(Palette.textPrimary)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
-                    }
+    private func groupView(_ group: BlockGroup) -> some View {
+        switch group {
+        case .prose(let blocks):
+            #if canImport(UIKit)
+            SelectableProseTextView(blocks: blocks)
+            #else
+            // Non-UIKit fallback (previews / macOS catalyst): render
+            // each block as before so the code keeps compiling.
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                    Text(blockFallbackText(block))
+                        .font(Typography.chatBodyFont)
+                        .foregroundStyle(Palette.textPrimary)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
                 }
             }
+            #endif
 
-        case .numberedList(let start, let items):
-            // Render the explicit number from the source so a list whose
-            // items are separated by paragraph continuations (parsed as
-            // many single-item lists) still numbers correctly: each list
-            // remembers where its source said it started, instead of
-            // always restarting at 1 via `idx + 1`.
-            //
-            // Padding tuned for mobile: right-aligned marker so periods
-            // line up across single/double-digit numbers, narrower frame
-            // (18 vs 22) and tighter HStack spacing (6 vs 10) so the
-            // indent is ~24pt total instead of ~32pt.
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(start + idx).")
-                            .font(Typography.chatBodyFont)
-                            .foregroundStyle(Palette.textPrimary)
-                            .frame(width: 18, alignment: .trailing)
-                        Text(styledInline(item))
-                            .font(Typography.chatBodyFont)
-                            .tracking(-0.2)
-                            .foregroundStyle(Palette.textPrimary)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
-                    }
-                }
-            }
-
-        case .codeBlock(let language, let code):
+        case .code(let language, let code):
             AssistantCodeBlockView(language: language, code: code)
         }
     }
 
-    private func headingFont(_ level: Int) -> Font {
-        switch level {
-        case 1:  return AppFont.system(size: 22, weight: .bold)
-        case 2:  return AppFont.system(size: 19, weight: .bold)
-        case 3:  return AppFont.system(size: 17, weight: .semibold)
-        default: return AppFont.system(size: 16, weight: .semibold)
-        }
-    }
-
-    /// Tints inline `code` runs of an `AttributedString`.
-    /// `inlinePresentationIntent.contains(.code)` is the system-defined
-    /// indicator the markdown parser emits for backtick spans.
-    /// We don't paint a `backgroundColor` chip here on purpose: SwiftUI
-    /// `Text` runs render that as a sharp-edged rectangle (no squircle
-    /// possible per-run), which breaks the project-wide continuous-corner
-    /// language. Contrast comes from monospaced font + warm-white tint.
-    private func styledInline(_ source: AttributedString) -> AttributedString {
-        var out = source
-        for run in out.runs {
-            if run.inlinePresentationIntent?.contains(.code) == true {
-                out[run.range].font = .system(size: 14.5, design: .monospaced)
-                out[run.range].foregroundColor = Color(white: 0.94)
+    private static func groupForSelection(_ blocks: [AssistantBlock]) -> [BlockGroup] {
+        var groups: [BlockGroup] = []
+        var pendingProse: [AssistantBlock] = []
+        for block in blocks {
+            if case .codeBlock(let language, let code) = block {
+                if !pendingProse.isEmpty {
+                    groups.append(.prose(pendingProse))
+                    pendingProse.removeAll()
+                }
+                groups.append(.code(language: language, code: code))
+            } else {
+                pendingProse.append(block)
             }
         }
-        return out
+        if !pendingProse.isEmpty {
+            groups.append(.prose(pendingProse))
+        }
+        return groups
     }
+
+    #if !canImport(UIKit)
+    private func blockFallbackText(_ block: AssistantBlock) -> AttributedString {
+        switch block {
+        case .heading(_, let t), .paragraph(let t):
+            return t
+        case .bulletList(let items):
+            return items.reduce(into: AttributedString()) { acc, item in
+                if !acc.characters.isEmpty { acc.append(AttributedString("\n")) }
+                acc.append(AttributedString("• "))
+                acc.append(item)
+            }
+        case .numberedList(let start, let items):
+            var idx = start
+            return items.reduce(into: AttributedString()) { acc, item in
+                if !acc.characters.isEmpty { acc.append(AttributedString("\n")) }
+                acc.append(AttributedString("\(idx). "))
+                acc.append(item)
+                idx += 1
+            }
+        case .codeBlock(_, let code):
+            return AttributedString(code)
+        }
+    }
+    #endif
 }
 
 /// Fenced code block: dark surface, monospaced body, header row with the
