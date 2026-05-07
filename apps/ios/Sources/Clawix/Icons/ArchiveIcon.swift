@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Custom archivebox glyph used in chat action menus. Outline language
-/// matches the rest of the Clawix icon family: 24-grid viewBox, hairline
-/// stroke that scales with `size`, rounded caps and joins. Reads as a
-/// shoebox with a separate lid: top band carrying a center notch, lower
-/// body framing a small handle slit.
+/// Custom archivebox glyph used in chat action menus. Direct port of the
+/// macOS sidebar's `ArchiveIcon` so the iOS dropdown renders the same
+/// canonical Clawix mark instead of a generic SF Symbol look-alike. The
+/// shape is two stacked rounded boxes (lid + body) with a centered handle
+/// slit; outlined with a hairline stroke that scales with `size`.
 struct ArchiveIconView: View {
     let color: Color
     let lineWidth: CGFloat
@@ -35,21 +35,26 @@ private struct ArchiveIconShape: Shape {
 
         var path = Path()
 
-        // Lid: rounded rectangle 3..21 x 4..9, radius 1.5
-        path.addRoundedRect(
-            in: CGRect(x: dx + 3 * s, y: dy + 4 * s, width: 18 * s, height: 5 * s),
-            cornerSize: CGSize(width: 1.5 * s, height: 1.5 * s)
-        )
+        path.move(to: p(3.25, 5.6))
+        path.addArc(tangent1End: p(3.25, 4.2),  tangent2End: p(4.65, 4.2),  radius: 1.4 * s)
+        path.addLine(to: p(19.35, 4.2))
+        path.addArc(tangent1End: p(20.75, 4.2), tangent2End: p(20.75, 5.6), radius: 1.4 * s)
+        path.addLine(to: p(20.75, 7.6))
+        path.addArc(tangent1End: p(20.75, 8.8), tangent2End: p(19.55, 8.8), radius: 1.2 * s)
+        path.addLine(to: p(4.45, 8.8))
+        path.addArc(tangent1End: p(3.25, 8.8),  tangent2End: p(3.25, 7.6),  radius: 1.2 * s)
+        path.closeSubpath()
 
-        // Body: 4..20 x 9..20, radius 1.5
-        path.addRoundedRect(
-            in: CGRect(x: dx + 4 * s, y: dy + 9 * s, width: 16 * s, height: 11 * s),
-            cornerSize: CGSize(width: 1.5 * s, height: 1.5 * s)
-        )
+        path.move(to: p(4, 9))
+        path.addLine(to: p(20, 9))
+        path.addLine(to: p(20, 16.6))
+        path.addArc(tangent1End: p(20, 20.2), tangent2End: p(16.4, 20.2), radius: 3.6 * s)
+        path.addLine(to: p(7.6, 20.2))
+        path.addArc(tangent1End: p(4, 20.2),  tangent2End: p(4, 16.6),    radius: 3.6 * s)
+        path.closeSubpath()
 
-        // Handle slit: short horizontal stroke centered at y=14
-        path.move(to: p(9.5, 13.5))
-        path.addLine(to: p(14.5, 13.5))
+        path.move(to: p(10, 12.6))
+        path.addLine(to: p(14, 12.6))
 
         return path
     }
