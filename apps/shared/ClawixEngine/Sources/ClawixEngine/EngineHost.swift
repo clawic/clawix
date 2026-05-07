@@ -65,6 +65,12 @@ public protocol EngineHost: AnyObject {
     /// trip is in flight.
     func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment])
 
+    /// Inbound `interruptTurn` from a client. Stop the in-flight turn
+    /// for `chatId` if any: clear `hasActiveTurn`, mark the turn
+    /// interrupted so late deltas are dropped, and ask the backend to
+    /// cancel. Mirrors the Mac composer's stop button.
+    func handleInterruptTurn(chatId: UUID)
+
     // MARK: - v2 desktop-only hooks (LaunchAgent daemon will override)
 
     /// Edit a previous user message in place and re-run the turn.
@@ -74,6 +80,11 @@ public protocol EngineHost: AnyObject {
 
     func handleArchiveChat(chatId: UUID, archived: Bool)
     func handlePinChat(chatId: UUID, pinned: Bool)
+
+    /// Rename `chatId` to `title`. Daemon writes through to the runtime
+    /// (Codex `thread/name/set`) and republishes the chat snapshot so
+    /// every subscriber sees the new name.
+    func handleRenameChat(chatId: UUID, title: String)
 
     /// Mint a new pairing payload (token + QR JSON) and return it via
     /// the completion. The bridge translates this into a
@@ -98,6 +109,29 @@ public protocol EngineHost: AnyObject {
         language: String?,
         reply: @MainActor @escaping (_ text: String, _ errorMessage: String?) -> Void
     )
+
+    /// Inbound `requestAudio` from a client. The host looks up the
+    /// audio bytes by the supplied `audioId` (typically minted by the
+    /// daemon at ingest time and surfaced on a `WireMessage.audioRef`)
+    /// and calls `reply` with either `(audioBase64, mimeType, nil)` or
+    /// `(nil, nil, errorMessage)`. Hosts that don't store audio reply
+    /// via the default impl with a "not available" error.
+    func handleRequestAudio(
+        audioId: String,
+        reply: @MainActor @escaping (_ audioBase64: String?, _ mimeType: String?, _ errorMessage: String?) -> Void
+    )
+
+    /// Inbound `requestGeneratedImage` from a client. The host resolves
+    /// `path` to an actual file on disk, ensures the path stays inside
+    /// `~/.codex/generated_images/` (or the host's equivalent sandbox)
+    /// to avoid arbitrary file reads, and calls `reply` with either
+    /// `(dataBase64, mimeType, nil)` or `(nil, nil, errorMessage)`. The
+    /// default impl handles the standard Codex layout so most hosts
+    /// don't need to override.
+    func handleRequestGeneratedImage(
+        path: String,
+        reply: @MainActor @escaping (_ dataBase64: String?, _ mimeType: String?, _ errorMessage: String?) -> Void
+    )
 }
 
 // MARK: - Default no-op impls for desktop-only hooks
@@ -106,9 +140,11 @@ public extension EngineHost {
     func handleEditPrompt(chatId: UUID, messageId: UUID, text: String) {}
     func handleArchiveChat(chatId: UUID, archived: Bool) {}
     func handlePinChat(chatId: UUID, pinned: Bool) {}
+    func handleRenameChat(chatId: UUID, title: String) {}
     func handlePairingStart() -> (qrJson: String, bearer: String)? { nil }
     func currentProjects() -> [WireProject] { [] }
     func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {}
+    func handleInterruptTurn(chatId: UUID) {}
     func handleTranscribeAudio(
         requestId: String,
         audioBase64: String,
@@ -117,5 +153,18 @@ public extension EngineHost {
         reply: @MainActor @escaping (String, String?) -> Void
     ) {
         reply("", "Transcription is not available on this host")
+    }
+    func handleRequestAudio(
+        audioId: String,
+        reply: @MainActor @escaping (String?, String?, String?) -> Void
+    ) {
+        reply(nil, nil, "Audio replay is not available on this host")
+    }
+    func handleRequestGeneratedImage(
+        path: String,
+        reply: @MainActor @escaping (String?, String?, String?) -> Void
+    ) {
+        let result = GeneratedImageReader.read(path: path)
+        reply(result.dataBase64, result.mimeType, result.errorMessage)
     }
 }
