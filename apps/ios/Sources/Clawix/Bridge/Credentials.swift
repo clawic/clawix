@@ -60,6 +60,11 @@ struct PairingPayload: Codable {
     var token: String
     var macName: String?
     var tailscaleHost: String?
+    /// Optional 9-character short code the Mac embeds alongside the
+    /// long bearer in v0.1.1+. The QR scan path ignores it because
+    /// the long bearer is enough to authenticate, but parsing it
+    /// keeps the payload future-compatible.
+    var shortCode: String?
 
     static func parse(_ raw: String) -> PairingPayload? {
         guard let data = raw.data(using: .utf8) else { return nil }

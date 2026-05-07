@@ -292,9 +292,14 @@ final class BridgeClient: NSObject {
             )
         }
 
-        if candidates.isEmpty {
-            store.connection = .error(message: "Pairing has no host")
-        }
+        // No direct host means this pairing came in via the short-code
+        // flow, which deliberately leaves the host empty: the `browser`
+        // launched above will feed Bonjour-resolved candidates into
+        // `handleBrowse` as soon as the Mac advertises itself on the
+        // current Wi-Fi. Stay in `.connecting` until that happens; the
+        // per-candidate timeouts + `scheduleReconnect` keep retrying
+        // forever, which is the right behaviour when the user roams
+        // between networks.
     }
 
     private func makeEndpoint(host: String, port: Int) -> NWEndpoint {

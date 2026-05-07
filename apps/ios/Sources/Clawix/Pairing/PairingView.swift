@@ -9,6 +9,7 @@ struct PairingView: View {
     let onPaired: (Credentials) -> Void
 
     @State private var showScanner = false
+    @State private var showShortCode = false
     @State private var lastError: String?
 
     var body: some View {
@@ -31,6 +32,8 @@ struct PairingView: View {
                 }
                 Spacer(minLength: 24)
                 scanButton
+                shortCodeButton
+                    .padding(.top, 12)
             }
             .padding(.horizontal, AppLayout.screenHorizontalPadding)
             .padding(.bottom, 32)
@@ -43,6 +46,15 @@ struct PairingView: View {
                     lastError = msg
                     showScanner = false
                 }
+            )
+        }
+        .sheet(isPresented: $showShortCode) {
+            ShortCodePairingView(
+                onPaired: { creds in
+                    showShortCode = false
+                    onPaired(creds)
+                },
+                onCancel: { showShortCode = false }
             )
         }
     }
@@ -106,6 +118,21 @@ struct PairingView: View {
                 .background(
                     Capsule(style: .continuous).fill(Color.white)
                 )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var shortCodeButton: some View {
+        Button(action: {
+            Haptics.tap()
+            lastError = nil
+            showShortCode = true
+        }) {
+            Text("Type a code instead")
+                .font(Typography.bodyFont)
+                .foregroundStyle(Palette.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
     }
