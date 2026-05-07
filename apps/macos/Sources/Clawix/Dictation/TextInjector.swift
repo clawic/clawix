@@ -34,13 +34,21 @@ enum TextInjector {
         }
     }
 
-    /// Place `text` on the pasteboard, fire Cmd+V, and restore the
-    /// previous pasteboard contents after `restoreAfter` seconds.
+    /// Place `text` on the pasteboard, fire Cmd+V, optionally fire
+    /// Return after the paste lands, and restore the previous
+    /// pasteboard contents after `restoreAfter` seconds.
+    ///
     /// `restoreAfter` is intentionally generous (1.5 s by default)
     /// because the receiving app's paste handler isn't synchronous.
+    /// `autoEnter` posts an unmodified Return ~150 ms after the paste,
+    /// late enough that the focused field has finished applying the
+    /// inserted text but before the clipboard is restored — this is
+    /// what makes "dictate then send" work in chat fields like the
+    /// Clawix composer or web inputs that submit on Enter.
     static func inject(
         text: String,
         restorePrevious: Bool = true,
+        autoEnter: Bool = false,
         restoreAfter: TimeInterval = 1.5
     ) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -56,6 +64,12 @@ enum TextInjector {
         pasteboard.setString(text, forType: .string)
 
         postCommandV()
+
+        if autoEnter {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                postReturn()
+            }
+        }
 
         if restorePrevious {
             DispatchQueue.main.asyncAfter(deadline: .now() + restoreAfter) {
@@ -82,6 +96,17 @@ enum TextInjector {
         vDown?.post(tap: .cghidEventTap)
         vUp?.post(tap: .cghidEventTap)
         cmdUp?.post(tap: .cghidEventTap)
+    }
+
+    /// Post an unmodified Return key. Some chat fields submit on Enter
+    /// only when the keystroke is delivered separately from the paste,
+    /// so this is called from a delayed dispatch after `postCommandV`.
+    private static func postReturn() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let down = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true)
+        let up = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false)
+        down?.post(tap: .cghidEventTap)
+        up?.post(tap: .cghidEventTap)
     }
 }
 

@@ -5,10 +5,18 @@ import ApplicationServices
 import IOKit.hid
 
 /// Lightweight wrapper around the three TCC permissions the dictation
-/// flow needs: Microphone for capturing audio, Accessibility for
-/// posting the synthetic Cmd+V that pastes the transcript, and Input
-/// Monitoring (implicit on `.cghidEventTap`) so the hotkey listener
-/// keeps working when Clawix isn't frontmost.
+/// flow needs:
+///
+/// - **Microphone** — capturing audio from the input device.
+/// - **Input Monitoring** — required by `NSEvent.addGlobalMonitorForEvents`
+///   when the hotkey listener watches modifier keys system-wide. Without
+///   it, calling `addGlobalMonitorForEvents(matching: .flagsChanged)` on
+///   macOS 26 (Tahoe) freezes event delivery to the app until the TCC
+///   flow resolves — the "frozen-input bug" we hit when registering the
+///   monitor eagerly from `App.init()` without first checking the grant.
+/// - **Accessibility** — required by `TextInjector` to post the
+///   synthetic Cmd+V that pastes the transcribed text into the
+///   foreground app once recording stops.
 ///
 /// The check helpers never throw and never block — they read the TCC
 /// state and return it. The "open" helpers send the user to the right
@@ -81,6 +89,8 @@ enum DictationPermissions {
 
     // MARK: - Input Monitoring
 
+    /// IOKit reports a tri-state directly, so unlike `accessibility()`
+    /// we don't need to remember whether a prompt has been shown.
     static func inputMonitoring() -> Status {
         switch IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) {
         case kIOHIDAccessTypeGranted: return .granted
@@ -89,9 +99,10 @@ enum DictationPermissions {
         }
     }
 
-    /// Shows the system "would like to monitor your keyboard" prompt.
-    /// The grant only takes effect after the user relaunches the app,
-    /// which is standard macOS behaviour for this TCC bucket.
+    /// Triggers the system "would like to monitor your keyboard" prompt.
+    /// The grant takes effect immediately on the next call but does not
+    /// re-arm previously-installed monitors — call `register()` again
+    /// afterwards.
     @discardableResult
     static func requestInputMonitoring() -> Bool {
         IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
