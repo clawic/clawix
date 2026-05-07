@@ -25,6 +25,12 @@ enum Palette {
     // response is what gives the conversation its rhythm.
     static let userBubbleFill = Color(white: 0.92)
     static let userBubbleText = Color(white: 0.05)
+
+    // Soft-blue used at the right edge of a chat row whose last
+    // assistant turn finished while the user wasn't looking. Same
+    // hue as the desktop's `Palette.pastelBlue` so the unread cue
+    // reads as one cross-platform language.
+    static let unreadDot = Color(red: 0.45, green: 0.65, blue: 1.0)
 }
 
 enum MenuStyle {

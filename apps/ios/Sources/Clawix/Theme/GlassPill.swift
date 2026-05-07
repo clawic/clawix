@@ -43,6 +43,7 @@ struct GlassIconButton: View {
 
     private let glyph: Glyph
     private let size: CGFloat
+    private let tint: Color?
     private let action: () -> Void
 
     init(
@@ -50,20 +51,24 @@ struct GlassIconButton: View {
         size: CGFloat = 44,
         iconSize: CGFloat = 17,
         iconWeight: Font.Weight = .semibold,
+        tint: Color? = nil,
         action: @escaping () -> Void
     ) {
         self.glyph = .system(name: systemName, size: iconSize, weight: iconWeight)
         self.size = size
+        self.tint = tint
         self.action = action
     }
 
     init<Icon: View>(
         size: CGFloat = 44,
+        tint: Color? = nil,
         action: @escaping () -> Void,
         @ViewBuilder icon: () -> Icon
     ) {
         self.glyph = .custom(AnyView(icon()))
         self.size = size
+        self.tint = tint
         self.action = action
     }
 
@@ -73,15 +78,26 @@ struct GlassIconButton: View {
             action()
         }) {
             ZStack {
-                Circle()
-                    .fill(.clear)
-                    .glassEffect(.regular, in: Circle())
+                glassBackground
                 glyphView
             }
             .frame(width: size, height: size)
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var glassBackground: some View {
+        if let tint {
+            Circle()
+                .fill(.clear)
+                .glassEffect(.regular.tint(tint), in: Circle())
+        } else {
+            Circle()
+                .fill(.clear)
+                .glassEffect(.regular, in: Circle())
+        }
     }
 
     @ViewBuilder
