@@ -37,7 +37,7 @@ if [[ -n "$env_file" ]]; then
     set +a
 fi
 
-BUNDLE_ID_IOS="${BUNDLE_ID_IOS:-com.example.clawix.ios}"
+BUNDLE_ID_IOS="${BUNDLE_ID_IOS:-com.example.clawix}"
 SIGN_IDENTITY_IOS="${SIGN_IDENTITY_IOS:-}"
 DEVELOPMENT_TEAM_IOS="${DEVELOPMENT_TEAM_IOS:-}"
 
