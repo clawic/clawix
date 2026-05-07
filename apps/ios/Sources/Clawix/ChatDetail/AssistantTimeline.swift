@@ -53,6 +53,14 @@ struct AssistantTimelineView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .lineSpacing(3)
                         }
+                    case .message(_, let text):
+                        if !text.isEmpty {
+                            Text(text)
+                                .font(Typography.chatBodyFont)
+                                .foregroundStyle(Palette.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .lineSpacing(3)
+                        }
                     case .tools(_, let items):
                         ToolGroupRowsView(items: items)
                     }
