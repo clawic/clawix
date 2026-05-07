@@ -70,9 +70,37 @@ public final class BridgeBus {
 
     /// Client called `openChat`. Returns the current snapshot of
     /// messages so the session can reply with `messagesSnapshot`.
-    public func subscribe(chatId: String) -> [WireMessage] {
+    /// When `limit` is set, only the trailing N messages are returned
+    /// alongside `hasMore: true` if there are older messages on the
+    /// server's side. `limit == nil` preserves the legacy "ship the
+    /// whole transcript" behaviour for old peers and produces
+    /// `hasMore: false`.
+    public func subscribe(chatId: String, limit: Int? = nil) -> (messages: [WireMessage], hasMore: Bool) {
         subscribedChatIds.insert(chatId)
-        return host?.bridgeChatsCurrent.first(where: { $0.id == chatId })?.messages ?? []
+        let all = host?.bridgeChatsCurrent.first(where: { $0.id == chatId })?.messages ?? []
+        guard let limit, limit > 0, all.count > limit else {
+            return (all, false)
+        }
+        return (Array(all.suffix(limit)), true)
+    }
+
+    /// Pull a page of older messages anchored before `beforeMessageId`.
+    /// Returns the slice that ends exactly before the cursor, oldest
+    /// first, plus `hasMore` set when there is at least one older
+    /// message on the server's side. If the cursor cannot be found
+    /// (chat truncated by `editPrompt` between requests, message id
+    /// from a stale view), the function returns `([], false)` so the
+    /// client treats it as "nothing older".
+    public func page(chatId: String, before beforeMessageId: String, limit: Int) -> (messages: [WireMessage], hasMore: Bool) {
+        guard limit > 0 else { return ([], false) }
+        let all = host?.bridgeChatsCurrent.first(where: { $0.id == chatId })?.messages ?? []
+        guard let cursorIdx = all.firstIndex(where: { $0.id == beforeMessageId }) else {
+            return ([], false)
+        }
+        let lower = max(0, cursorIdx - limit)
+        let slice = Array(all[lower..<cursorIdx])
+        let hasMore = lower > 0
+        return (slice, hasMore)
     }
 
     public func unsubscribe(chatId: String) {
@@ -118,9 +146,12 @@ public final class BridgeBus {
                 } else if prev?.messageCount != proj.messageCount {
                     // Count decreased (rare: turn cancelled with placeholder
                     // dropped) or first observation. Send full snapshot.
+                    // `hasMore: nil` tells the iPhone "this is a whole
+                    // transcript, reset any pagination state you held".
                     emit(BridgeFrame(.messagesSnapshot(
                         chatId: snap.id,
-                        messages: snap.messages
+                        messages: snap.messages,
+                        hasMore: nil
                     )))
                 }
 
