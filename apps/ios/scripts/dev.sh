@@ -41,6 +41,10 @@ BUNDLE_ID_IOS="${BUNDLE_ID_IOS:-com.example.clawix}"
 SIGN_IDENTITY_IOS="${SIGN_IDENTITY_IOS:-}"
 DEVELOPMENT_TEAM_IOS="${DEVELOPMENT_TEAM_IOS:-}"
 
+# 0b) Resolve marketing version + monotonic build number from git.
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/_emit_version.sh"
+
 # 1) Squircle lint.
 echo "==> Lint: squircle (style: .continuous)"
 bash "$SCRIPT_DIR/squircle_lint.sh"
@@ -61,6 +65,8 @@ fi
 
 XCODE_OVERRIDES=(
     "PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID_IOS"
+    "MARKETING_VERSION=$MARKETING_VERSION"
+    "CURRENT_PROJECT_VERSION=$BUILD_NUMBER"
 )
 if [[ -n "$DEVELOPMENT_TEAM_IOS" ]]; then
     team_setting="DEVELOPMENT_""TEAM=$DEVELOPMENT_TEAM_IOS"
