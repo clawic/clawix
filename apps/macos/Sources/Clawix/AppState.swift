@@ -50,6 +50,16 @@ struct ChatMessage: Identifiable {
     var reasoningCheckpoints: [UUID: [StreamCheckpoint]]
     /// Per-reasoning-entry pending partial-word tails.
     var reasoningPendingTails: [UUID: String]
+    /// Pointer to the persisted voice clip the user dictated this
+    /// message with. nil for typed prompts and for assistant replies.
+    var audioRef: WireAudioRef?
+    /// Inline image attachments hydrated from a rollout that referenced
+    /// images on disk (dummy fixtures use `dummy/images/<filename>`;
+    /// real Codex sessions can carry image inputs via `localImage`).
+    /// Empty for live-streamed assistants and typed user messages
+    /// without media. Daemon ships these on the wire so iOS can render
+    /// `[image]` thumbnails on the same bubble.
+    var attachments: [WireAttachment]
 
     init(
         id: UUID = UUID(),
@@ -64,7 +74,9 @@ struct ChatMessage: Identifiable {
         streamCheckpoints: [StreamCheckpoint] = [],
         streamPendingTail: String = "",
         reasoningCheckpoints: [UUID: [StreamCheckpoint]] = [:],
-        reasoningPendingTails: [UUID: String] = [:]
+        reasoningPendingTails: [UUID: String] = [:],
+        audioRef: WireAudioRef? = nil,
+        attachments: [WireAttachment] = []
     ) {
         self.id = id
         self.role = role
@@ -79,6 +91,8 @@ struct ChatMessage: Identifiable {
         self.streamPendingTail = streamPendingTail
         self.reasoningCheckpoints = reasoningCheckpoints
         self.reasoningPendingTails = reasoningPendingTails
+        self.audioRef = audioRef
+        self.attachments = attachments
     }
 
     enum MessageRole { case user, assistant }
@@ -139,6 +153,14 @@ struct WorkItem: Equatable, Identifiable {
     let id: String
     var kind: WorkItemKind
     var status: WorkItemStatus
+    /// Absolute path on this Mac of the PNG Codex's `imagegen` tool wrote
+    /// for this call. Filled in by `RolloutReader` when it sees an
+    /// `image_generation_end` event paired with the rollout's session
+    /// id; clients fetch the bytes via `requestGeneratedImage`. Nil
+    /// for non-image kinds and for live-streamed items (the JSON-RPC
+    /// `item` payload doesn't carry the path; rehydration from the
+    /// rollout fills it in on the next chat open).
+    var generatedImagePath: String? = nil
 }
 
 enum WorkItemStatus: Equatable { case inProgress, completed, failed }
@@ -1913,52 +1935,169 @@ final class AppState: ObservableObject {
     }
 
     /// Entry point used by the bridge that exposes the desktop app to the
-    /// iOS companion. Mirrors the user-message half of `sendMessage()` but
-    /// takes the chat id and text as parameters rather than reading from
-    /// the composer; attachments and new-chat creation are out of scope
-    /// for the MVP.
+    /// iOS companion. Mirrors the user-message half of `sendMessage()`
+    /// but takes the chat id, text and inline attachments as parameters
+    /// rather than reading from the composer.
+    ///
+    /// `attachments` carries images the iPhone composer encoded inline.
+    /// They are spooled to a chat-scoped temp dir and forwarded as
+    /// `localImage` items either through `daemonBridgeClient` (which
+    /// reships the wire `WireAttachment`s to `clawix-bridged`) or
+    /// straight into the in-process `ClawixService`. Sending an
+    /// attachment-only message (empty `text`) is supported so the
+    /// composer can ship a photo with no caption.
     @MainActor
-    func sendUserMessageFromBridge(chatId: UUID, text: String) {
+    func sendUserMessageFromBridge(
+        chatId: UUID,
+        text: String,
+        attachments: [WireAttachment] = []
+    ) {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
 
-        let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
+        let imageAttachments = attachments.filter { $0.kind == .image }
+        let audioAttachments = attachments.filter { $0.kind == .audio }
+        let preview = bridgeUserPreview(
+            text: trimmed,
+            imageCount: imageAttachments.count,
+            hasAudio: !audioAttachments.isEmpty
+        )
+        let userMsg = ChatMessage(role: .user, content: preview, timestamp: Date())
         chats[idx].messages.append(userMsg)
         // Sending a fresh prompt closes any earlier interrupted-turn
         // pill: the user has acknowledged the gap and is moving on.
         chats[idx].lastTurnInterrupted = false
 
+        // Audio attachments are stored locally (so the chat history
+        // can replay the clip later) and never shipped to the model:
+        // Codex doesn't accept audio, the iPhone composer already
+        // transcribed via the `transcribeAudio` frame, and we use that
+        // transcript as the prompt text.
+        if !audioAttachments.isEmpty {
+            ingestAudioFromBridge(
+                attachments: audioAttachments,
+                chatId: chatId,
+                messageId: userMsg.id,
+                transcript: trimmed
+            )
+        }
+
         if let daemonBridgeClient {
-            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed)
+            // The daemon spools the attachments itself and emits
+            // `localImage` paths to Codex; we just forward the raw
+            // wire payload over loopback.
+            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         } else if let clawix {
+            let imagePaths = AttachmentSpooler.write(
+                attachments: imageAttachments,
+                scope: chatId.uuidString
+            )
             Task { @MainActor in
-                await clawix.sendUserMessage(chatId: chatId, text: trimmed)
+                await clawix.sendUserMessage(
+                    chatId: chatId,
+                    text: trimmed,
+                    imagePaths: imagePaths
+                )
                 self.clawixBackendStatus = clawix.status
             }
         }
     }
 
+    /// Persist audio attachments coming off the bridge into
+    /// `AudioMessageStore` and patch the user message with the
+    /// resulting `audioRef` once the bytes land. Runs detached so the
+    /// optimistic message bubble shows immediately; the bubble's
+    /// playable state lights up as soon as ingest finishes.
+    private func ingestAudioFromBridge(
+        attachments: [WireAttachment],
+        chatId: UUID,
+        messageId: UUID,
+        transcript: String
+    ) {
+        guard let attachment = attachments.first else { return }
+        guard let data = Data(base64Encoded: attachment.dataBase64) else { return }
+        let mime = attachment.mimeType
+        // The local in-process server doesn't track Codex thread ids by
+        // chat id (that lives inside `clawix`). Use the chat UUID as a
+        // stable thread anchor instead — the store only uses it to
+        // group entries for hydrate-time matching, which we don't
+        // exercise in the in-process path (no rollout rebuild here).
+        let threadId = chatId.uuidString
+        let chatIdString = chatId.uuidString
+        let messageIdString = messageId.uuidString
+        Task { [weak self] in
+            do {
+                let entry = try await AudioMessageStore.shared.ingest(
+                    threadId: threadId,
+                    chatId: chatIdString,
+                    messageId: messageIdString,
+                    audioData: data,
+                    mimeType: mime,
+                    transcript: transcript
+                )
+                await MainActor.run {
+                    guard let self else { return }
+                    guard let cIdx = self.chats.firstIndex(where: { $0.id == chatId }),
+                          let mIdx = self.chats[cIdx].messages.firstIndex(where: { $0.id == messageId })
+                    else { return }
+                    self.chats[cIdx].messages[mIdx].audioRef = entry.wireRef
+                }
+            } catch {
+                // Soft fail: the user message is still in the chat;
+                // the bubble simply won't have a play button.
+            }
+        }
+    }
+
+    /// Render a short preview for the optimistic user bubble that the
+    /// macOS chat list (and the iPhone companion via bridge echo) shows
+    /// while the turn is still running. Mirrors the daemon's preview so
+    /// attachment counts read consistently across surfaces.
+    private func bridgeUserPreview(text: String, imageCount: Int, hasAudio: Bool = false) -> String {
+        guard imageCount > 0 else {
+            return hasAudio && text.isEmpty ? "[voice]" : text
+        }
+        let label = imageCount == 1 ? "[image]" : "[\(imageCount) images]"
+        return text.isEmpty ? label : "\(label) \(text)"
+    }
+
     /// Bridge entry point for "tap the New Chat FAB on the iPhone": the
     /// client pre-mints the UUID and ships the first prompt in one shot.
     /// We create a Chat with that exact id, append the user message, and
-    /// kick the turn off through whichever runtime is active. Mirrors the
-    /// home-route branch of `sendMessage()` (lines around 1488), minus
-    /// composer attachments / project pill which the iPhone doesn't have
-    /// yet.
+    /// kick the turn off through whichever runtime is active. Mirrors
+    /// the home-route branch of `sendMessage()` (lines around 1488),
+    /// extended to forward inline image attachments to the active
+    /// runtime via the same path `sendUserMessageFromBridge` uses.
     @MainActor
-    func newChatFromBridge(chatId: UUID, text: String) {
+    func newChatFromBridge(
+        chatId: UUID,
+        text: String,
+        attachments: [WireAttachment] = []
+    ) {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
         // Idempotency: if the chat somehow already exists (re-delivery
         // or client retry), fall through to the "append to existing"
         // path so we don't duplicate it.
         if chats.contains(where: { $0.id == chatId }) {
-            sendUserMessageFromBridge(chatId: chatId, text: trimmed)
+            sendUserMessageFromBridge(chatId: chatId, text: trimmed, attachments: attachments)
             return
         }
-        let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
-        let titleSeed = String(trimmed.prefix(40))
+        let imageAttachments = attachments.filter { $0.kind == .image }
+        let audioAttachments = attachments.filter { $0.kind == .audio }
+        let preview = bridgeUserPreview(
+            text: trimmed,
+            imageCount: imageAttachments.count,
+            hasAudio: !audioAttachments.isEmpty
+        )
+        let userMsg = ChatMessage(role: .user, content: preview, timestamp: Date())
+        let titleSeed: String = {
+            if !trimmed.isEmpty { return String(trimmed.prefix(40)) }
+            if !imageAttachments.isEmpty { return imageAttachments.count == 1 ? "Image" : "Images" }
+            if !audioAttachments.isEmpty { return "Voice note" }
+            return "Conversation"
+        }()
         let newChat = Chat(
             id: chatId,
             title: titleSeed,
@@ -2001,14 +2140,25 @@ final class AppState: ObservableObject {
     /// Called by ComposerView's Stop button.
     func interruptActiveTurn() {
         guard case let .chat(id) = currentRoute else { return }
+        interruptActiveTurn(chatId: id)
+    }
+
+    /// Stop the in-flight turn for `chatId` regardless of the current
+    /// route. Used by the iPhone bridge so a remote stop affects the
+    /// right chat even when the Mac UI is focused on a different one.
+    func interruptActiveTurn(chatId: UUID) {
         // Update UI synchronously so the "Thinking" shimmer disappears
         // immediately on click. The backend interrupt is fire-and-forget;
         // late-arriving deltas for this turn are dropped by ClawixService
         // via its interruptedTurnIds gate.
-        finalizeOrRemoveAssistantPlaceholder(chatId: id)
+        finalizeOrRemoveAssistantPlaceholder(chatId: chatId)
+        if let daemonBridgeClient {
+            daemonBridgeClient.interruptTurn(chatId: chatId)
+            return
+        }
         guard let clawix else { return }
         Task { @MainActor in
-            await clawix.interruptCurrentTurn(chatId: id)
+            await clawix.interruptCurrentTurn(chatId: chatId)
         }
     }
 
@@ -2161,7 +2311,8 @@ final class AppState: ObservableObject {
                     reasoningText: "",
                     streamingFinished: true,
                     timestamp: e.timestamp,
-                    timeline: e.timeline
+                    timeline: e.timeline,
+                    attachments: e.attachments
                 )
             }
             mutateChat(id: chatId) { c in
