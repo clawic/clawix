@@ -317,19 +317,20 @@ private struct DropdownRow<T: Hashable>: View {
     let options: [(T, String)]
     @Binding var selection: T
     var iconForOption: ((T) -> AnyView?)? = nil
+    var descriptionForOption: ((T) -> String?)? = nil
 
     var body: some View {
-        EqualSplitRow(spacing: 14) {
+        SettingsRow {
             RowLabel(title: title, detail: detail)
+        } trailing: {
             SettingsDropdown(
                 options: options,
                 selection: $selection,
                 iconForOption: iconForOption,
+                descriptionForOption: descriptionForOption,
                 fillsWidth: true
             )
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
         .liftWhenSettingsDropdownOpen()
     }
 }
@@ -344,9 +345,18 @@ struct SettingsDropdown<T: Hashable>: View {
     let options: [(T, String)]
     @Binding var selection: T
     var iconForOption: ((T) -> AnyView?)? = nil
-    var minWidth: CGFloat = 240
-    /// When true, the trigger stretches to fill its parent's width
-    /// (used by row wrappers that allocate a 50% slot for the dropdown).
+    var descriptionForOption: ((T) -> String?)? = nil
+    /// Optional view rendered inside the trigger, between the label
+    /// and the chevron. Used by the Microphone row to inline the
+    /// level meter with the device name.
+    var trailingAccessory: (() -> AnyView)? = nil
+    /// Minimum capsule width. The trigger will only ever be wider than
+    /// this if its content (longest option's text + icon + chevron +
+    /// padding) requires it.
+    var minWidth: CGFloat = 160
+    /// Kept for source compatibility with existing call sites; the
+    /// trigger now sizes adaptively to its content, so this flag is a
+    /// no-op. It can be deleted once nothing references it.
     var fillsWidth: Bool = false
 
     @State private var isOpen = false
@@ -361,23 +371,33 @@ struct SettingsDropdown<T: Hashable>: View {
             isOpen.toggle()
         } label: {
             HStack(spacing: 10) {
-                if let icon = iconForOption?(selection) {
-                    icon
+                // ZStack overlays a phantom layer (every option's
+                // label, hidden) on top of the visible current
+                // selection. The ZStack's intrinsic width is the max
+                // of its children's widths, so the capsule is exactly
+                // wide enough to display the LONGEST option without
+                // truncation, regardless of which one is currently
+                // selected. Keeps the trigger from jumping width when
+                // the user picks a longer option.
+                ZStack(alignment: .leading) {
+                    ForEach(Array(options.enumerated()), id: \.offset) { _, opt in
+                        triggerLabel(option: opt.0, label: opt.1)
+                            .opacity(0)
+                            .accessibilityHidden(true)
+                    }
+                    triggerLabel(option: selection, label: currentLabel)
                 }
-                Text(currentLabel)
-                    .font(BodyFont.system(size: 13))
-                    .foregroundColor(Palette.textPrimary)
-                    .lineLimit(1)
                 Spacer(minLength: 8)
+                if let accessory = trailingAccessory?() {
+                    accessory
+                }
                 Image(systemName: "chevron.down")
-                    .font(BodyFont.system(size: 11, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .frame(minWidth: fillsWidth ? 0 : minWidth,
-                   maxWidth: fillsWidth ? .infinity : nil,
-                   alignment: .leading)
+            .frame(minWidth: minWidth, alignment: .leading)
             .background(
                 Capsule(style: .continuous)
                     .fill(hovered || isOpen
@@ -398,6 +418,7 @@ struct SettingsDropdown<T: Hashable>: View {
                         selection: $selection,
                         isOpen: $isOpen,
                         iconForOption: iconForOption,
+                        descriptionForOption: descriptionForOption,
                         minWidth: buttonFrame.width
                     )
                     .anchoredPopupPlacement(
@@ -415,6 +436,20 @@ struct SettingsDropdown<T: Hashable>: View {
         // wrappers (row, card, page) can apply `.zIndex` and keep the
         // popup above later siblings that would otherwise paint on top.
         .preference(key: SettingsDropdownOpenKey.self, value: isOpen)
+    }
+
+    @ViewBuilder
+    private func triggerLabel(option: T, label: String) -> some View {
+        HStack(spacing: 10) {
+            if let icon = iconForOption?(option) {
+                icon
+            }
+            Text(label)
+                .font(BodyFont.system(size: 13))
+                .foregroundColor(Palette.textPrimary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
     }
 }
 
@@ -446,48 +481,25 @@ private struct LiftWhenSettingsDropdownOpenModifier: ViewModifier {
     }
 }
 
-/// Splits the available row width into two equal halves with a fixed
-/// spacing in between. Used by every settings row that pairs a label
-/// with a control (dropdown, button, etc.) so the trigger always reads
-/// as 50% of the row width.
-///
-/// Plain `HStack` with two `.frame(maxWidth: .infinity)` children does
-/// NOT split 50/50 — SwiftUI honours each child's intrinsic minimum
-/// before it distributes leftover slack, and the dropdown's icon +
-/// chevron + padding give it a larger floor than the label, which
-/// pushes the visual ratio to roughly 35/65 in practice.
-struct EqualSplitRow: Layout {
-    var spacing: CGFloat = 14
+/// Standard settings row with a label on the left and a control
+/// (dropdown, button, etc.) on the right. The label takes whatever
+/// horizontal space is left after the trailing control sizes itself
+/// to its natural content. This keeps every dropdown wide enough for
+/// its longest option and lets rows that share the trailing slot with
+/// extra widgets (e.g. the Audio Input meter next to the device
+/// dropdown) grow as needed without forcing a global percentage.
+struct SettingsRow<Leading: View, Trailing: View>: View {
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var trailing: Trailing
 
-    func sizeThatFits(proposal: ProposedViewSize,
-                      subviews: Subviews,
-                      cache: inout ()) -> CGSize {
-        guard subviews.count == 2 else { return .zero }
-        let width = proposal.width ?? 0
-        let half = max(0, (width - spacing) / 2)
-        let childProposal = ProposedViewSize(width: half, height: nil)
-        let leftSize = subviews[0].sizeThatFits(childProposal)
-        let rightSize = subviews[1].sizeThatFits(childProposal)
-        return CGSize(width: width, height: max(leftSize.height, rightSize.height))
-    }
-
-    func placeSubviews(in bounds: CGRect,
-                       proposal: ProposedViewSize,
-                       subviews: Subviews,
-                       cache: inout ()) {
-        guard subviews.count == 2 else { return }
-        let half = max(0, (bounds.width - spacing) / 2)
-        let childProposal = ProposedViewSize(width: half, height: nil)
-        subviews[0].place(
-            at: CGPoint(x: bounds.minX, y: bounds.midY),
-            anchor: .leading,
-            proposal: childProposal
-        )
-        subviews[1].place(
-            at: CGPoint(x: bounds.minX + half + spacing, y: bounds.midY),
-            anchor: .leading,
-            proposal: childProposal
-        )
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            leading
+                .frame(maxWidth: .infinity, alignment: .leading)
+            trailing
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 }
 
@@ -503,9 +515,15 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
     @Binding var selection: T
     @Binding var isOpen: Bool
     var iconForOption: ((T) -> AnyView?)? = nil
+    var descriptionForOption: ((T) -> String?)? = nil
     let minWidth: CGFloat
 
     @State private var hoveredIndex: Int? = nil
+
+    private var hasAnyDescription: Bool {
+        guard let resolver = descriptionForOption else { return false }
+        return options.contains { resolver($0.0)?.isEmpty == false }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -514,23 +532,39 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                     selection = opt.0
                     isOpen = false
                 } label: {
-                    HStack(spacing: 10) {
+                    HStack(alignment: hasAnyDescription ? .top : .center, spacing: 10) {
                         if let icon = iconForOption?(opt.0) {
                             icon
                         }
-                        Text(opt.1)
-                            .font(BodyFont.system(size: 12.5))
-                            .foregroundColor(MenuStyle.rowText)
-                            .lineLimit(1)
+                        if hasAnyDescription {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(opt.1)
+                                    .font(BodyFont.system(size: 13, weight: .medium))
+                                    .foregroundColor(MenuStyle.rowText)
+                                    .lineLimit(1)
+                                if let desc = descriptionForOption?(opt.0), !desc.isEmpty {
+                                    Text(desc)
+                                        .font(BodyFont.system(size: 11.5))
+                                        .foregroundColor(MenuStyle.rowSubtle)
+                                        .lineLimit(1)
+                                }
+                            }
+                        } else {
+                            Text(opt.1)
+                                .font(BodyFont.system(size: 12.5))
+                                .foregroundColor(MenuStyle.rowText)
+                                .lineLimit(1)
+                        }
                         Spacer(minLength: 8)
                         if opt.0 == selection {
                             Image(systemName: "checkmark")
-                                .font(BodyFont.system(size: 10, weight: .semibold))
+                                .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(MenuStyle.rowText)
+                                .padding(.top, hasAnyDescription ? 3 : 0)
                         }
                     }
                     .padding(.horizontal, MenuStyle.rowHorizontalPadding)
-                    .padding(.vertical, MenuStyle.rowVerticalPadding)
+                    .padding(.vertical, hasAnyDescription ? 8 : MenuStyle.rowVerticalPadding)
                     .background(MenuRowHover(active: hoveredIndex == idx))
                     .contentShape(Rectangle())
                 }
