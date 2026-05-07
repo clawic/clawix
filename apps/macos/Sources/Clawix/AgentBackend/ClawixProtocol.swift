@@ -217,9 +217,32 @@ typealias ThreadResumeResult = ThreadStartResult
 
 // MARK: - turn/start
 
-struct TurnStartUserInput: Encodable {
-    let type: String                 // "text"
-    let text: String
+/// One element of `turn/start`'s `input` array. Codex's app-server
+/// protocol accepts a small discriminated union of input items. We
+/// support `text` for the prompt body and `localImage` for inline image
+/// attachments materialized to temp files (the daemon's wire protocol
+/// uses the same shape, see `clawix-bridged`'s mirror enum). Encoding
+/// is hand-rolled because Codable's default derivation would emit both
+/// fields for every case.
+enum TurnStartUserInput: Encodable {
+    case text(String)
+    case localImage(path: String)
+
+    private enum Keys: String, CodingKey {
+        case type, text, path
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: Keys.self)
+        switch self {
+        case .text(let body):
+            try c.encode("text", forKey: .type)
+            try c.encode(body, forKey: .text)
+        case .localImage(let path):
+            try c.encode("localImage", forKey: .type)
+            try c.encode(path, forKey: .path)
+        }
+    }
 }
 
 struct TurnStartParams: Encodable {

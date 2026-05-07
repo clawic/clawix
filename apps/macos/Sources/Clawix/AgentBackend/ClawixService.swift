@@ -186,7 +186,12 @@ final class ClawixService: ObservableObject {
     /// Send a prompt for an existing chat. Creates the underlying thread
     /// the first time. Returns immediately after enqueuing the turn —
     /// streaming results arrive via notifications.
-    func sendUserMessage(chatId: UUID, text: String) async {
+    ///
+    /// `imagePaths` carries optional inline image inputs already
+    /// materialised on disk (see `AttachmentSpooler`). They are emitted
+    /// after the text item so Codex sees the prompt body first; sending
+    /// only images (empty `text`) is supported.
+    func sendUserMessage(chatId: UUID, text: String, imagePaths: [String] = []) async {
         guard status == .ready else { return }
 
         do {
@@ -195,11 +200,19 @@ final class ClawixService: ObservableObject {
             let effort = appState?.clawixEffort
             let serviceTier = appState?.clawixServiceTier
             let collab = planCollaborationMode(modelSlug: modelSlug, effort: effort)
+            var input: [TurnStartUserInput] = []
+            if !text.isEmpty { input.append(.text(text)) }
+            for path in imagePaths { input.append(.localImage(path: path)) }
+            // Codex requires at least one input item; if both fields are
+            // empty this is a no-op caller bug, but we still pass an
+            // empty text so the runtime returns a clean error rather than
+            // silently dropping the turn.
+            if input.isEmpty { input.append(.text(text)) }
             let result = try await client.send(
                 method: ClawixMethod.turnStart,
                 params: TurnStartParams(
                     threadId: threadId,
-                    input: [TurnStartUserInput(type: "text", text: text)],
+                    input: input,
                     model: modelSlug,
                     effort: effort,
                     serviceTier: serviceTier,
@@ -353,13 +366,14 @@ final class ClawixService: ObservableObject {
         let cwd = appState?.threadCwd ?? FileManager.default.homeDirectoryForCurrentUser.path
         let modelSlug = appState?.clawixModelSlug
         let serviceTier = appState?.clawixServiceTier
+        let permissionMode = appState?.permissionMode ?? .defaultPermissions
         let result = try await client.send(
             method: ClawixMethod.threadStart,
             params: ThreadStartParams(
                 cwd: cwd,
                 model: modelSlug,
-                approvalPolicy: "never",
-                sandbox: "workspace-write",
+                approvalPolicy: permissionMode.codexApprovalPolicy,
+                sandbox: permissionMode.codexSandbox,
                 personality: nil,
                 serviceTier: serviceTier,
                 collaborationMode: nil
@@ -558,7 +572,27 @@ final class ClawixService: ObservableObject {
         ensureAssistantPlaceholder(chatId: chatId, turnId: payload.turnId)
         guard let messageId = activeTurnByChat[chatId]?.assistantMessageId else { return }
         let status: WorkItemStatus = mapWorkStatus(payload.item.status, completed: completed)
-        let item = WorkItem(id: payload.item.id, kind: kind, status: status)
+        // For `imageGeneration` items, build the deterministic on-disk
+        // path Codex uses
+        // (`~/.codex/generated_images/<threadId>/<callId>.png`) so the
+        // bridge can serve the bytes without waiting for the rollout
+        // to be re-read on the next chat open. The path may not exist
+        // yet during `inProgress`; the iPhone retries on snapshot.
+        var generatedImagePath: String? = nil
+        if case .imageGeneration = kind {
+            generatedImagePath = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".codex", isDirectory: true)
+                .appendingPathComponent("generated_images", isDirectory: true)
+                .appendingPathComponent(payload.threadId, isDirectory: true)
+                .appendingPathComponent("\(payload.item.id).png")
+                .path
+        }
+        let item = WorkItem(
+            id: payload.item.id,
+            kind: kind,
+            status: status,
+            generatedImagePath: generatedImagePath
+        )
         appState?.upsertWorkItem(chatId: chatId, messageId: messageId, item: item)
     }
 
