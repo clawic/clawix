@@ -1824,8 +1824,7 @@ private struct FontSizeRow: View {
 // MARK: - Settings page
 
 private struct ConfigurationPage: View {
-    @State private var approvalPolicy: String = "On request"
-    @State private var sandbox: String = "Read only"
+    @EnvironmentObject var appState: AppState
     @State private var depsEnabled: Bool = true
     @State private var configScope: String = "User settings"
 
@@ -1869,19 +1868,24 @@ private struct ConfigurationPage: View {
             .padding(.bottom, 8)
             .liftWhenSettingsDropdownOpen()
 
+            SectionLabel(title: "Permissions")
             SettingsCard {
-                DropdownRow(
-                    title: "Approval policy",
-                    detail: "Choose when Clawix asks for approval",
-                    options: [("On request", "On request"), ("Always", "Always"), ("Never", "Never")],
-                    selection: $approvalPolicy
+                PermissionToggleRow(
+                    mode: .defaultPermissions,
+                    title: "Default permissions",
+                    detail: "By default, Clawix can read and edit files in your workspace. It can request additional access when needed."
                 )
                 CardDivider()
-                DropdownRow(
-                    title: "Sandbox configuration",
-                    detail: "Choose how much Clawix can do when running commands",
-                    options: [("Read only", "Read only"), ("Workspace write", "Workspace write"), ("Full access", "Full access")],
-                    selection: $sandbox
+                PermissionToggleRow(
+                    mode: .autoReview,
+                    title: "Automatic review",
+                    detail: "Clawix can read and edit files in your workspace. Clawix automatically reviews requests for additional access. Auto-review may make mistakes. Learn more about the elevated risks."
+                )
+                CardDivider()
+                PermissionToggleRow(
+                    mode: .fullAccess,
+                    title: "Full access",
+                    detail: "When Clawix runs with full access, it can edit any file on your computer and run commands over the network without your authorization. This significantly increases the risk of data loss, leaks, or unexpected behavior. Learn more about the elevated risks."
                 )
             }
 
@@ -1915,6 +1919,27 @@ private struct ConfigurationPage: View {
                 ReinstallRow()
             }
         }
+    }
+}
+
+/// Visual toggle that behaves like a radio inside the Permissions group:
+/// tapping an inactive row promotes its mode to the active one; tapping
+/// the already-active row is a no-op so there's always a mode selected.
+private struct PermissionToggleRow: View {
+    @EnvironmentObject var appState: AppState
+    let mode: PermissionMode
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
+
+    var body: some View {
+        let binding = Binding<Bool>(
+            get: { appState.permissionMode == mode },
+            set: { newValue in
+                guard newValue else { return }
+                appState.permissionMode = mode
+            }
+        )
+        ToggleRow(title: title, detail: detail, isOn: binding)
     }
 }
 
