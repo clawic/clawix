@@ -45,7 +45,10 @@ final class DaemonBridgeClient {
     }
 
     func openChat(_ chatId: UUID) {
-        send(.openChat(chatId: chatId.uuidString))
+        // Desktop client wants the whole transcript: it's the
+        // co-located GUI talking to its own daemon, no point
+        // paginating loopback-local data.
+        send(.openChat(chatId: chatId.uuidString, limit: nil))
     }
 
     func sendPrompt(chatId: UUID, text: String, attachments: [WireAttachment] = []) {
@@ -58,6 +61,10 @@ final class DaemonBridgeClient {
 
     func unarchiveChat(_ chatId: UUID) {
         send(.unarchiveChat(chatId: chatId.uuidString))
+    }
+
+    func interruptTurn(chatId: UUID) {
+        send(.interruptTurn(chatId: chatId.uuidString))
     }
 
     private func handle(_ state: NWConnection.State) {
@@ -109,8 +116,11 @@ final class DaemonBridgeClient {
             appState?.applyDaemonChats(chats)
         case .chatUpdated(let chat):
             appState?.applyDaemonChat(chat)
-        case .messagesSnapshot(let chatId, let messages):
+        case .messagesSnapshot(let chatId, let messages, _):
             appState?.applyDaemonMessages(chatId: chatId, messages: messages)
+        case .messagesPage:
+            // Desktop client never requests paginated history.
+            break
         case .messageAppended(let chatId, let message):
             appState?.appendDaemonMessage(chatId: chatId, message: message)
         case .messageStreaming(let chatId, let messageId, let content, let reasoningText, let finished):
