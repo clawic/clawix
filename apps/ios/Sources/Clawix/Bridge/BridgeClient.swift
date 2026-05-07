@@ -1,9 +1,16 @@
 import Foundation
 import Network
 import ClawixCore
+import os
 #if canImport(UIKit)
 import UIKit
 #endif
+
+/// Companion logger to `BridgeStore`'s. Same subsystem so a single
+/// `log show` predicate captures the whole timeline. Remove with the
+/// rest of the diagnostic plumbing once the new-chat-disappears bug
+/// is closed.
+fileprivate let clientDbg = Logger(subsystem: "clawix.bridge.dbg", category: "client")
 
 /// Bridge client for the iOS companion. Speaks WebSocket to the Mac
 /// over `NWConnection + NWProtocolWebSocket`, the same primitive the
@@ -138,7 +145,26 @@ final class BridgeClient: NSObject {
 
     func openChat(_ chatId: String) {
         guard let winner else { return }
-        send(BridgeFrame(.openChat(chatId: chatId)), on: winner)
+        // Always opt into pagination on the iPhone: the initial paint
+        // only needs the trailing window; older history streams in via
+        // `loadOlderMessages` if the user scrolls up. Old daemons that
+        // don't understand `limit` ignore it and send the whole
+        // transcript, which still works (`hasMore` arrives as nil and
+        // the store treats that as "no scroll-up available").
+        send(BridgeFrame(.openChat(chatId: chatId, limit: bridgeInitialPageLimit)), on: winner)
+    }
+
+    /// Fetch the next page of older messages for `chatId`. The cursor
+    /// is the id of the oldest message the iPhone currently has; the
+    /// daemon replies with `messagesPage` carrying the slice prior to
+    /// it (oldest first). No-op when not yet connected.
+    func loadOlderMessages(chatId: String, beforeMessageId: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.loadOlderMessages(
+            chatId: chatId,
+            beforeMessageId: beforeMessageId,
+            limit: bridgeOlderPageLimit
+        )), on: winner)
     }
 
     func sendPrompt(chatId: String, text: String, attachments: [WireAttachment]) {
@@ -147,8 +173,22 @@ final class BridgeClient: NSObject {
     }
 
     func sendNewChat(chatId: String, text: String, attachments: [WireAttachment]) {
-        guard let winner else { return }
+        guard let winner else {
+            clientDbg.notice("sendNewChat DROPPED (no winner) id=\(chatId, privacy: .public)")
+            return
+        }
+        clientDbg.notice("TX newChat id=\(chatId, privacy: .public) winner=\(winner.label, privacy: .public)")
         send(BridgeFrame(.newChat(chatId: chatId, text: text, attachments: attachments)), on: winner)
+    }
+
+    func interruptTurn(chatId: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.interruptTurn(chatId: chatId)), on: winner)
+    }
+
+    func renameChat(chatId: String, title: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.renameChat(chatId: chatId, title: title)), on: winner)
     }
 
     func readFile(path: String) {
@@ -172,6 +212,16 @@ final class BridgeClient: NSObject {
             )),
             on: winner
         )
+    }
+
+    func requestAudio(audioId: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.requestAudio(audioId: audioId)), on: winner)
+    }
+
+    func requestGeneratedImage(path: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.requestGeneratedImage(path: path)), on: winner)
     }
 
     // MARK: - Bonjour browser
@@ -340,6 +390,7 @@ final class BridgeClient: NSObject {
             candidate.timeoutWork?.cancel()
             candidate.timeoutWork = nil
             if winner?.id == candidate.id {
+                clientDbg.notice("WINNER DROPPED label=\(candidate.label, privacy: .public) — restarting race")
                 // Active connection died, restart the race.
                 winner = nil
                 stopKeepalive()
@@ -444,21 +495,34 @@ final class BridgeClient: NSObject {
             candidate.connection.cancel()
         case .chatsSnapshot(let chats):
             if winner?.id == candidate.id {
-                store.chats = chats
+                clientDbg.notice("RX chatsSnapshot count=\(chats.count, privacy: .public) winner=\(candidate.label, privacy: .public)")
+                store.applyChatsSnapshot(chats)
                 store.persistSnapshotDebounced()
+            } else {
+                clientDbg.notice("RX chatsSnapshot DROPPED (not winner) cand=\(candidate.label, privacy: .public)")
             }
         case .chatUpdated(let chat):
             if winner?.id == candidate.id {
-                if let idx = store.chats.firstIndex(where: { $0.id == chat.id }) {
-                    store.chats[idx] = chat
-                } else {
-                    store.chats.append(chat)
-                }
+                clientDbg.notice("RX chatUpdated id=\(chat.id, privacy: .public) hasActiveTurn=\(chat.hasActiveTurn, privacy: .public)")
+                store.applyChatUpdate(chat)
                 store.persistSnapshotDebounced()
             }
-        case .messagesSnapshot(let chatId, let messages):
+        case .messagesSnapshot(let chatId, let messages, let hasMore):
             if winner?.id == candidate.id {
-                store.messagesByChat[chatId] = messages
+                store.applyMessagesSnapshot(
+                    chatId: chatId,
+                    messages: messages,
+                    hasMore: hasMore
+                )
+                store.persistSnapshotDebounced()
+            }
+        case .messagesPage(let chatId, let messages, let hasMore):
+            if winner?.id == candidate.id {
+                store.applyMessagesPage(
+                    chatId: chatId,
+                    messages: messages,
+                    hasMore: hasMore
+                )
                 store.persistSnapshotDebounced()
             }
         case .messageAppended(let chatId, let message):
@@ -505,10 +569,31 @@ final class BridgeClient: NSObject {
                     errorMessage: errorMessage
                 )
             }
-        case .auth, .listChats, .openChat, .sendPrompt, .newChat,
-             .readFile, .editPrompt, .archiveChat, .unarchiveChat,
-             .pinChat, .unpinChat, .pairingStart, .listProjects,
-             .pairingPayload, .projectsSnapshot, .transcribeAudio:
+        case .audioSnapshot(let audioId, let audioBase64, let mimeType, let errorMessage):
+            if winner?.id == candidate.id {
+                store.applyAudioSnapshot(
+                    audioId: audioId,
+                    audioBase64: audioBase64,
+                    mimeType: mimeType,
+                    errorMessage: errorMessage
+                )
+            }
+        case .generatedImageSnapshot(let path, let dataBase64, let mimeType, let errorMessage):
+            if winner?.id == candidate.id {
+                store.applyGeneratedImageSnapshot(
+                    path: path,
+                    dataBase64: dataBase64,
+                    mimeType: mimeType,
+                    errorMessage: errorMessage
+                )
+            }
+        case .auth, .listChats, .openChat, .loadOlderMessages,
+             .sendPrompt, .newChat,
+             .interruptTurn, .readFile, .editPrompt, .archiveChat,
+             .unarchiveChat, .pinChat, .unpinChat, .renameChat,
+             .pairingStart, .listProjects, .pairingPayload,
+             .projectsSnapshot, .transcribeAudio,
+             .requestAudio, .requestGeneratedImage:
             // Outbound-from-desktop or server-to-desktop frames the
             // iPhone client neither emits nor consumes. Ignore.
             break
@@ -553,6 +638,7 @@ final class BridgeClient: NSObject {
         candidates.removeAll()
         reconnectAttempt = 0
         store.connection = .connected(macName: macName, via: candidate.route)
+        clientDbg.notice("PROMOTE winner=\(candidate.label, privacy: .public) mac=\(macName ?? "?", privacy: .public)")
         startKeepalive()
         send(BridgeFrame(.listChats), on: candidate)
     }
