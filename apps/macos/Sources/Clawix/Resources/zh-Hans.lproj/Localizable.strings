@@ -39,6 +39,7 @@
 "Archive" = "归档";
 "Archive chat" = "归档对话";
 "Archive chats" = "归档对话";
+"Archived chats" = "已归档的对话";
 "Arguments" = "参数";
 "Ask Clawix anything. Type @ to mention files" = "向 Clawix 提任何问题。输入 @ 使用插件或引用文件";
 "Ask for follow-up changes" = "请求后续修改";
@@ -55,6 +56,7 @@
 "Branch out" = "分支";
 "Branches" = "分支";
 "Browser" = "浏览器";
+"Browser usage" = "浏览器使用";
 "By project" = "按项目";
 "Cancel" = "取消";
 "Change branch" = "切换分支";
@@ -170,8 +172,10 @@
 "Forward" = "前进";
 "Friendly" = "友好";
 "Full access" = "完全访问";
+"General" = "通用";
 "General usage limits" = "常规使用限制";
 "Generating response" = "正在生成回复";
+"Git" = "Git";
 "Helpful" = "有用";
 "Hide right sidebar" = "隐藏右侧边栏";
 "Hide sidebar" = "隐藏侧边栏";
@@ -257,6 +261,7 @@
 "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected." = "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.";
 "Personal account" = "个人账户";
 "Personality" = "个性";
+"Personalization" = "个性化";
 "Pin" = "置顶";
 "Pin chat" = "置顶对话";
 "Pinned" = "已置顶";
@@ -277,6 +282,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "为你的项目向 Clawix 提供额外指令和上下文。了解更多";
 "Queue" = "队列";
 "Quick Chat" = "快速对话";
+"QuickAsk" = "QuickAsk";
 "Quit \\(appDisplayName)" = "退出 \\(appDisplayName)";
 "Reasoning" = "推理过程";
 "Record voice note" = "录制语音备注";
@@ -376,6 +382,7 @@
 "Untitled" = "无标题";
 "Update" = "Update";
 "Updated" = "按更新时间";
+"Usage" = "使用情况";
 "Usage limit" = "使用上限";
 "Usage limits for %@" = "%@ 的使用上限";
 "Use an existing folder" = "使用现有文件夹";
@@ -387,6 +394,7 @@
 "Used the browser" = "已使用浏览器";
 "Variables" = "变量";
 "Version" = "版本";
+"Voice to Text" = "语音转文字";
 "Waiting for confirmation…" = "正在等待确认…";
 "We've opened the browser. Come back here when you've confirmed." = "We've opened the browser. Come back here when you've confirmed.";
 "Website" = "网站";
@@ -402,6 +410,7 @@
 "Working" = "工作中";
 "Working directory" = "工作目录";
 "Working for %@" = "工作中 %@";
+"Worktrees" = "Worktrees";
 "Writing plan" = "写作计划";
 "You do not have any pinned chats yet" = "你还没有置顶聊天";
 "You: %@" = "你：%@";

@@ -39,6 +39,7 @@
 "Archive" = "Archive";
 "Archive chat" = "Archive chat";
 "Archive chats" = "Archive chats";
+"Archived chats" = "Archived chats";
 "Arguments" = "Arguments";
 "Ask Clawix anything. Type @ to mention files" = "Ask Clawix anything. Type @ to mention files";
 "Ask for follow-up changes" = "Ask for follow-up changes";
@@ -55,6 +56,7 @@
 "Branch out" = "Branch out";
 "Branches" = "Branches";
 "Browser" = "Browser";
+"Browser usage" = "Browser usage";
 "By project" = "By project";
 "Cancel" = "Cancel";
 "Change branch" = "Change branch";
@@ -170,8 +172,10 @@
 "Forward" = "Forward";
 "Friendly" = "Friendly";
 "Full access" = "Full access";
+"General" = "General";
 "General usage limits" = "General usage limits";
 "Generating response" = "Generating response";
+"Git" = "Git";
 "Helpful" = "Helpful";
 "Hide right sidebar" = "Hide right sidebar";
 "Hide sidebar" = "Hide sidebar";
@@ -257,6 +261,7 @@
 "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected." = "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.";
 "Personal account" = "Personal account";
 "Personality" = "Personality";
+"Personalization" = "Personalization";
 "Pin" = "Pin";
 "Pin chat" = "Pin chat";
 "Pinned" = "Pinned";
@@ -277,6 +282,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more";
 "Queue" = "Queue";
 "Quick Chat" = "Quick Chat";
+"QuickAsk" = "QuickAsk";
 "Quit \\(appDisplayName)" = "Quit \\(appDisplayName)";
 "Reasoning" = "Reasoning";
 "Record voice note" = "Record voice note";
@@ -376,6 +382,7 @@
 "Untitled" = "Untitled";
 "Update" = "Update";
 "Updated" = "Updated";
+"Usage" = "Usage";
 "Usage limit" = "Usage limit";
 "Usage limits for %@" = "Usage limits for %@";
 "Use an existing folder" = "Use an existing folder";
@@ -387,6 +394,7 @@
 "Used the browser" = "Used the browser";
 "Variables" = "Variables";
 "Version" = "Version";
+"Voice to Text" = "Voice to Text";
 "Waiting for confirmation…" = "Waiting for confirmation…";
 "We've opened the browser. Come back here when you've confirmed." = "We've opened the browser. Come back here when you've confirmed.";
 "Website" = "Website";
@@ -402,6 +410,7 @@
 "Working" = "Working";
 "Working directory" = "Working directory";
 "Working for %@" = "Working for %@";
+"Worktrees" = "Worktrees";
 "Writing plan" = "Writing plan";
 "You do not have any pinned chats yet" = "You do not have any pinned chats yet";
 "You: %@" = "You: %@";

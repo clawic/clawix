@@ -39,6 +39,7 @@
 "Archive" = "Архивировать";
 "Archive chat" = "Архивировать чат";
 "Archive chats" = "Архивировать чаты";
+"Archived chats" = "Архивные чаты";
 "Arguments" = "Аргументы";
 "Ask Clawix anything. Type @ to mention files" = "Спросите Clawix о чём угодно. Введите @, чтобы использовать плагины или упомянуть файлы";
 "Ask for follow-up changes" = "Запросить дополнительные изменения";
@@ -55,6 +56,7 @@
 "Branch out" = "Разветвить";
 "Branches" = "Ветки";
 "Browser" = "Браузер";
+"Browser usage" = "Использование браузера";
 "By project" = "По проекту";
 "Cancel" = "Отменить";
 "Change branch" = "Сменить ветку";
@@ -170,8 +172,10 @@
 "Forward" = "Вперёд";
 "Friendly" = "Дружелюбный";
 "Full access" = "Полный доступ";
+"General" = "Основные";
 "General usage limits" = "Общие лимиты использования";
 "Generating response" = "Создание ответа";
+"Git" = "Git";
 "Helpful" = "Полезно";
 "Hide right sidebar" = "Скрыть правую панель";
 "Hide sidebar" = "Скрыть боковую панель";
@@ -257,6 +261,7 @@
 "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected." = "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.";
 "Personal account" = "Личный аккаунт";
 "Personality" = "Характер";
+"Personalization" = "Персонализация";
 "Pin" = "Закрепить";
 "Pin chat" = "Закрепить чат";
 "Pinned" = "Закреплённые";
@@ -277,6 +282,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Дайте Clawix дополнительные инструкции и контекст для проекта. Подробнее";
 "Queue" = "Очередь";
 "Quick Chat" = "Быстрый чат";
+"QuickAsk" = "QuickAsk";
 "Quit \\(appDisplayName)" = "Закрыть \\(appDisplayName)";
 "Reasoning" = "Рассуждение";
 "Record voice note" = "Записать голосовую заметку";
@@ -376,6 +382,7 @@
 "Untitled" = "Без заголовка";
 "Update" = "Update";
 "Updated" = "По обновлению";
+"Usage" = "Использование";
 "Usage limit" = "Лимит";
 "Usage limits for %@" = "Лимиты для %@";
 "Use an existing folder" = "Использовать существующую папку";
@@ -387,6 +394,7 @@
 "Used the browser" = "Использовался браузер";
 "Variables" = "Переменные";
 "Version" = "Версия";
+"Voice to Text" = "Голос в текст";
 "Waiting for confirmation…" = "Ожидание подтверждения…";
 "We've opened the browser. Come back here when you've confirmed." = "We've opened the browser. Come back here when you've confirmed.";
 "Website" = "Веб-сайт";
@@ -402,6 +410,7 @@
 "Working" = "Работает";
 "Working directory" = "Рабочий каталог";
 "Working for %@" = "Работает %@";
+"Worktrees" = "Worktrees";
 "Writing plan" = "План написания";
 "You do not have any pinned chats yet" = "У вас пока нет закреплённых чатов";
 "You: %@" = "Вы: %@";

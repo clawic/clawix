@@ -39,6 +39,7 @@
 "Archive" = "보관";
 "Archive chat" = "채팅 보관";
 "Archive chats" = "채팅 보관";
+"Archived chats" = "보관된 채팅";
 "Arguments" = "인수";
 "Ask Clawix anything. Type @ to mention files" = "Clawix에게 무엇이든 물어보세요. @를 입력해 플러그인을 사용하거나 파일을 언급하세요";
 "Ask for follow-up changes" = "후속 변경 요청";
@@ -55,6 +56,7 @@
 "Branch out" = "분기";
 "Branches" = "브랜치";
 "Browser" = "브라우저";
+"Browser usage" = "브라우저 사용";
 "By project" = "프로젝트별";
 "Cancel" = "취소";
 "Change branch" = "브랜치 변경";
@@ -170,8 +172,10 @@
 "Forward" = "앞으로";
 "Friendly" = "친근";
 "Full access" = "전체 액세스";
+"General" = "일반";
 "General usage limits" = "일반 사용 한도";
 "Generating response" = "응답 생성 중";
+"Git" = "Git";
 "Helpful" = "도움됨";
 "Hide right sidebar" = "오른쪽 사이드바 숨기기";
 "Hide sidebar" = "사이드바 숨기기";
@@ -257,6 +261,7 @@
 "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected." = "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.";
 "Personal account" = "개인 계정";
 "Personality" = "성격";
+"Personalization" = "개인화";
 "Pin" = "고정";
 "Pin chat" = "채팅 고정";
 "Pinned" = "고정됨";
@@ -277,6 +282,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "프로젝트에 대한 추가 지침과 컨텍스트를 Clawix에 제공하세요. 자세히 알아보기";
 "Queue" = "대기열";
 "Quick Chat" = "빠른 채팅";
+"QuickAsk" = "QuickAsk";
 "Quit \\(appDisplayName)" = "\\(appDisplayName) 종료";
 "Reasoning" = "추론";
 "Record voice note" = "음성 메모 녹음";
@@ -376,6 +382,7 @@
 "Untitled" = "제목 없음";
 "Update" = "Update";
 "Updated" = "업데이트순";
+"Usage" = "사용량";
 "Usage limit" = "사용 한도";
 "Usage limits for %@" = "%@의 사용 한도";
 "Use an existing folder" = "기존 폴더 사용";
@@ -387,6 +394,7 @@
 "Used the browser" = "브라우저를 사용했습니다";
 "Variables" = "변수";
 "Version" = "버전";
+"Voice to Text" = "음성 입력";
 "Waiting for confirmation…" = "확인 대기 중…";
 "We've opened the browser. Come back here when you've confirmed." = "We've opened the browser. Come back here when you've confirmed.";
 "Website" = "웹사이트";
@@ -402,6 +410,7 @@
 "Working" = "작업 중";
 "Working directory" = "작업 디렉터리";
 "Working for %@" = "%@ 작업 중";
+"Worktrees" = "Worktrees";
 "Writing plan" = "작성 계획";
 "You do not have any pinned chats yet" = "아직 고정된 채팅이 없습니다";
 "You: %@" = "사용자: %@";

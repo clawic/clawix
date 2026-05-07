@@ -39,6 +39,7 @@
 "Archive" = "アーカイブ";
 "Archive chat" = "チャットをアーカイブ";
 "Archive chats" = "チャットをアーカイブ";
+"Archived chats" = "アーカイブされたチャット";
 "Arguments" = "引数";
 "Ask Clawix anything. Type @ to mention files" = "Clawixに何でも聞いてください。@ でプラグインやファイル参照を呼び出せます";
 "Ask for follow-up changes" = "追加の変更を依頼";
@@ -55,6 +56,7 @@
 "Branch out" = "分岐";
 "Branches" = "ブランチ";
 "Browser" = "ブラウザ";
+"Browser usage" = "ブラウザ利用";
 "By project" = "プロジェクト別";
 "Cancel" = "キャンセル";
 "Change branch" = "ブランチを切替";
@@ -170,8 +172,10 @@
 "Forward" = "進む";
 "Friendly" = "フレンドリー";
 "Full access" = "フルアクセス";
+"General" = "一般";
 "General usage limits" = "全般的な使用制限";
 "Generating response" = "応答を生成中";
+"Git" = "Git";
 "Helpful" = "役立つ";
 "Hide right sidebar" = "右サイドバーを非表示";
 "Hide sidebar" = "サイドバーを非表示";
@@ -257,6 +261,7 @@
 "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected." = "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.";
 "Personal account" = "個人アカウント";
 "Personality" = "パーソナリティ";
+"Personalization" = "パーソナライズ";
 "Pin" = "ピン留め";
 "Pin chat" = "チャットをピン留め";
 "Pinned" = "ピン留め";
@@ -277,6 +282,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "プロジェクト向けに追加の指示とコンテキストを Clawix に渡します。詳細";
 "Queue" = "キュー";
 "Quick Chat" = "クイックチャット";
+"QuickAsk" = "QuickAsk";
 "Quit \\(appDisplayName)" = "\\(appDisplayName)を終了";
 "Reasoning" = "推論";
 "Record voice note" = "音声メモを録音";
@@ -376,6 +382,7 @@
 "Untitled" = "無題";
 "Update" = "Update";
 "Updated" = "更新順";
+"Usage" = "利用状況";
 "Usage limit" = "使用上限";
 "Usage limits for %@" = "%@ の使用上限";
 "Use an existing folder" = "既存のフォルダを使用";
@@ -387,6 +394,7 @@
 "Used the browser" = "ブラウザを使用しました";
 "Variables" = "変数";
 "Version" = "バージョン";
+"Voice to Text" = "音声入力";
 "Waiting for confirmation…" = "確認を待機中…";
 "We've opened the browser. Come back here when you've confirmed." = "We've opened the browser. Come back here when you've confirmed.";
 "Website" = "Webサイト";
@@ -402,6 +410,7 @@
 "Working" = "実行中";
 "Working directory" = "作業ディレクトリ";
 "Working for %@" = "%@ 実行中";
+"Worktrees" = "Worktrees";
 "Writing plan" = "書き込みプラン";
 "You do not have any pinned chats yet" = "ピン留めしたチャットはまだありません";
 "You: %@" = "あなた: %@";

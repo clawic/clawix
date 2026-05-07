@@ -39,6 +39,7 @@
 "Archive" = "Archivia";
 "Archive chat" = "Archivia chat";
 "Archive chats" = "Archivia chat";
+"Archived chats" = "Chat archiviate";
 "Arguments" = "Argomenti";
 "Ask Clawix anything. Type @ to mention files" = "Chiedi a Clawix qualsiasi cosa. Digita @ per usare i plugin o citare file";
 "Ask for follow-up changes" = "Chiedi modifiche successive";
@@ -55,6 +56,7 @@
 "Branch out" = "Diramare";
 "Branches" = "Rami";
 "Browser" = "Browser";
+"Browser usage" = "Utilizzo del browser";
 "By project" = "Per progetto";
 "Cancel" = "Annulla";
 "Change branch" = "Cambia branch";
@@ -170,8 +172,10 @@
 "Forward" = "Avanti";
 "Friendly" = "Amichevole";
 "Full access" = "Accesso completo";
+"General" = "Generale";
 "General usage limits" = "Limiti di utilizzo generali";
 "Generating response" = "Generazione risposta";
+"Git" = "Git";
 "Helpful" = "Utile";
 "Hide right sidebar" = "Nascondi barra laterale destra";
 "Hide sidebar" = "Nascondi barra laterale";
@@ -257,6 +261,7 @@
 "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected." = "Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.";
 "Personal account" = "Account personale";
 "Personality" = "Personalità";
+"Personalization" = "Personalizzazione";
 "Pin" = "Fissa";
 "Pin chat" = "Fissa la chat";
 "Pinned" = "Fissati";
@@ -277,6 +282,7 @@
 "Provide extra instructions and context that Clawix should keep in mind for this project. Learn more" = "Fornisci a Clawix istruzioni aggiuntive e contesto per il progetto. Scopri di più";
 "Queue" = "Coda";
 "Quick Chat" = "Chat rapida";
+"QuickAsk" = "QuickAsk";
 "Quit \\(appDisplayName)" = "Esci da \\(appDisplayName)";
 "Reasoning" = "Ragionamento";
 "Record voice note" = "Registra nota vocale";
@@ -376,6 +382,7 @@
 "Untitled" = "Senza titolo";
 "Update" = "Update";
 "Updated" = "Aggiornamento";
+"Usage" = "Utilizzo";
 "Usage limit" = "Limite d’uso";
 "Usage limits for %@" = "Limiti d’uso per %@";
 "Use an existing folder" = "Usa una cartella esistente";
@@ -387,6 +394,7 @@
 "Used the browser" = "È stato usato il browser";
 "Variables" = "Variabili";
 "Version" = "Versione";
+"Voice to Text" = "Da voce a testo";
 "Waiting for confirmation…" = "In attesa di conferma…";
 "We've opened the browser. Come back here when you've confirmed." = "We've opened the browser. Come back here when you've confirmed.";
 "Website" = "Sito web";
@@ -402,6 +410,7 @@
 "Working" = "In esecuzione";
 "Working directory" = "Directory di lavoro";
 "Working for %@" = "In esecuzione da %@";
+"Worktrees" = "Worktrees";
 "Writing plan" = "Piano di scrittura";
 "You do not have any pinned chats yet" = "Non hai ancora chat fissate";
 "You: %@" = "Tu: %@";
