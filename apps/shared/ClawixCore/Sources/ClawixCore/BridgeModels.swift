@@ -318,6 +318,21 @@ public struct WireMessage: Codable, Equatable, Sendable {
     /// Aggregated tool-call summary for the turn (the elapsed-time
     /// disclosure header). nil when the assistant did no tool work.
     public var workSummary: WireWorkSummary?
+    /// When this user message was originally captured as a voice clip,
+    /// `audioRef` carries the lookup id the daemon stores it under in
+    /// its audio sidecar. Clients render a playable audio bubble next
+    /// to (or in place of) the transcript and fetch the bytes on first
+    /// tap via the `requestAudio` frame. nil for typed prompts and for
+    /// every assistant message.
+    public var audioRef: WireAudioRef?
+    /// Inline image (or audio) attachments belonging to this message.
+    /// Empty for live-streamed assistant messages and for typed user
+    /// messages without media. Populated when hydrating history from
+    /// a rollout that referenced images on disk: the daemon reads the
+    /// bytes, base64-encodes them, and ships them so the client can
+    /// render the same `[image]` thumbnails the user originally saw.
+    /// Old peers that don't know about this field decode an empty array.
+    public var attachments: [WireAttachment]
 
     public init(
         id: String,
@@ -328,7 +343,9 @@ public struct WireMessage: Codable, Equatable, Sendable {
         isError: Bool = false,
         timestamp: Date,
         timeline: [WireTimelineEntry] = [],
-        workSummary: WireWorkSummary? = nil
+        workSummary: WireWorkSummary? = nil,
+        audioRef: WireAudioRef? = nil,
+        attachments: [WireAttachment] = []
     ) {
         self.id = id
         self.role = role
@@ -339,13 +356,16 @@ public struct WireMessage: Codable, Equatable, Sendable {
         self.timestamp = timestamp
         self.timeline = timeline
         self.workSummary = workSummary
+        self.audioRef = audioRef
+        self.attachments = attachments
     }
 
-    // Decodes legacy payloads (without `timeline` / `workSummary`)
-    // gracefully. Both fields default to empty so an old Mac talking to
-    // a new iPhone (or vice versa during a phased rollout) still works.
+    // Decodes legacy payloads (without `timeline` / `workSummary` /
+    // `audioRef` / `attachments`) gracefully. Each new field defaults
+    // so an old Mac talking to a new iPhone (or vice versa during a
+    // phased rollout) still works.
     private enum CodingKeys: String, CodingKey {
-        case id, role, content, reasoningText, streamingFinished, isError, timestamp, timeline, workSummary
+        case id, role, content, reasoningText, streamingFinished, isError, timestamp, timeline, workSummary, audioRef, attachments
     }
 
     public init(from decoder: Decoder) throws {
@@ -359,5 +379,25 @@ public struct WireMessage: Codable, Equatable, Sendable {
         self.timestamp = try c.decode(Date.self, forKey: .timestamp)
         self.timeline = try c.decodeIfPresent([WireTimelineEntry].self, forKey: .timeline) ?? []
         self.workSummary = try c.decodeIfPresent(WireWorkSummary.self, forKey: .workSummary)
+        self.audioRef = try c.decodeIfPresent(WireAudioRef.self, forKey: .audioRef)
+        self.attachments = try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
+    }
+}
+
+/// Lightweight pointer the daemon attaches to user messages that came
+/// in as a voice clip. `id` is the lookup key for `requestAudio`;
+/// `mimeType` and `durationMs` let clients render the bubble (duration
+/// label, codec hint) without having to download the bytes first. The
+/// transcript itself stays in `WireMessage.content` so search and the
+/// rollout history keep working without any audio-aware extra plumbing.
+public struct WireAudioRef: Codable, Equatable, Sendable {
+    public let id: String
+    public let mimeType: String
+    public let durationMs: Int
+
+    public init(id: String, mimeType: String, durationMs: Int) {
+        self.id = id
+        self.mimeType = mimeType
+        self.durationMs = durationMs
     }
 }
