@@ -109,16 +109,19 @@ struct StreamCheckpoint: Equatable {
 }
 
 /// One block in an assistant message's chronological timeline.
-/// Reasoning summary deltas land in `.reasoning`; tool items
+/// Reasoning summary deltas land in `.reasoning`; agent message text
+/// (preambles, intermediate prose) lands in `.message`; tool items
 /// (`commandExecution`, `fileChange`, …) land in the trailing `.tools`
-/// group until the next reasoning delta opens a fresh chunk.
+/// group until the next reasoning/message delta opens a fresh chunk.
 enum AssistantTimelineEntry: Identifiable, Equatable {
     case reasoning(id: UUID, text: String)
+    case message(id: UUID, text: String)
     case tools(id: UUID, items: [WorkItem])
 
     var id: UUID {
         switch self {
         case .reasoning(let id, _): return id
+        case .message(let id, _):   return id
         case .tools(let id, _):     return id
         }
     }
@@ -2106,11 +2109,28 @@ final class AppState: ObservableObject {
         )
         chats.insert(newChat, at: 0)
 
+        if !audioAttachments.isEmpty {
+            ingestAudioFromBridge(
+                attachments: audioAttachments,
+                chatId: chatId,
+                messageId: userMsg.id,
+                transcript: trimmed
+            )
+        }
+
         if let daemonBridgeClient {
-            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed)
+            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         } else if let clawix {
+            let imagePaths = AttachmentSpooler.write(
+                attachments: imageAttachments,
+                scope: chatId.uuidString
+            )
             Task { @MainActor in
-                await clawix.sendUserMessage(chatId: chatId, text: trimmed)
+                await clawix.sendUserMessage(
+                    chatId: chatId,
+                    text: trimmed,
+                    imagePaths: imagePaths
+                )
                 self.clawixBackendStatus = clawix.status
             }
         }
@@ -2524,7 +2544,8 @@ final class AppState: ObservableObject {
             streamingFinished: wire.streamingFinished,
             isError: wire.isError,
             timestamp: wire.timestamp,
-            timeline: wire.timeline.compactMap(timelineEntry(from:))
+            timeline: wire.timeline.compactMap(timelineEntry(from:)),
+            audioRef: wire.audioRef
         )
     }
 
@@ -2532,6 +2553,8 @@ final class AppState: ObservableObject {
         switch wire {
         case .reasoning(let id, let text):
             return UUID(uuidString: id).map { .reasoning(id: $0, text: text) }
+        case .message(let id, let text):
+            return UUID(uuidString: id).map { .message(id: $0, text: text) }
         case .tools(let id, let items):
             guard let uuid = UUID(uuidString: id) else { return nil }
             return .tools(id: uuid, items: items.compactMap(workItem(from:)))
@@ -2580,7 +2603,12 @@ final class AppState: ObservableObject {
         default:
             return nil
         }
-        return WorkItem(id: wire.id, kind: kind, status: status)
+        return WorkItem(
+            id: wire.id,
+            kind: kind,
+            status: status,
+            generatedImagePath: wire.generatedImagePath
+        )
     }
 
     // MARK: - ClawixService callbacks
@@ -2687,6 +2715,19 @@ final class AppState: ObservableObject {
         else { return }
         let t0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
         chats[idx].messages[last].content += delta
+        // Mirror into the chronological timeline so message text
+        // interleaves with reasoning and tool groups in arrival order
+        // instead of always rendering after them as a separate block.
+        let timeline = chats[idx].messages[last].timeline
+        if let lastEntry = timeline.last,
+           case .message(let existingId, let existing) = lastEntry {
+            chats[idx].messages[last].timeline[timeline.count - 1] =
+                .message(id: existingId, text: existing + delta)
+        } else {
+            chats[idx].messages[last].timeline.append(
+                .message(id: UUID(), text: delta)
+            )
+        }
         let cps = chats[idx].messages[last].streamCheckpoints
         let lastAt = cps.last?.addedAt ?? .distantPast
         let result = StreamingFade.ingest(
@@ -2721,6 +2762,12 @@ final class AppState: ObservableObject {
     private var lastDeltaArrivalTime: Double = 0
 
     func appendReasoningDelta(chatId: UUID, delta: String) {
+        // Drain any pending agent-message deltas FIRST so the text the
+        // model emitted before this reasoning chunk lands in the timeline
+        // ahead of the new `.reasoning` entry. Without this, buffered text
+        // applied a runloop tick later would appear after reasoning that
+        // arrived later in the stream.
+        flushPendingAssistantTextDeltas(chatId: chatId)
         guard let idx = chats.firstIndex(where: { $0.id == chatId }),
               let last = chats[idx].messages.indices.last,
               chats[idx].messages[last].role == .assistant
@@ -2969,6 +3016,11 @@ final class AppState: ObservableObject {
     /// on the given assistant message. Lazily creates the WorkSummary if
     /// the start event was missed.
     func upsertWorkItem(chatId: UUID, messageId: UUID, item: WorkItem) {
+        // Drain any pending agent-message deltas FIRST so any text the
+        // model emitted before this tool call lands in the timeline ahead
+        // of the new `.tools` entry. Otherwise the buffered preamble
+        // (flushed on the next runloop tick) would render after the tool.
+        flushPendingAssistantTextDeltas(chatId: chatId)
         mutateMessage(chatId: chatId, messageId: messageId) { msg in
             if msg.workSummary == nil {
                 msg.workSummary = WorkSummary(startedAt: Date(), endedAt: nil, items: [])
@@ -4027,15 +4079,72 @@ extension AppState: EngineHost {
     }
 
     public func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment]) {
-        // The Mac GUI doesn't currently surface inline image attachments
-        // from its in-process server path — only the iPhone does, and
-        // those go through the daemon. Drop the array silently here so
-        // existing GUI flows stay text-only without throwing.
-        sendUserMessageFromBridge(chatId: chatId, text: text)
+        sendUserMessageFromBridge(chatId: chatId, text: text, attachments: attachments)
     }
 
     public func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {
-        newChatFromBridge(chatId: chatId, text: text)
+        newChatFromBridge(chatId: chatId, text: text, attachments: attachments)
+    }
+
+    public func handleInterruptTurn(chatId: UUID) {
+        interruptActiveTurn(chatId: chatId)
+    }
+
+    public func handleRequestAudio(
+        audioId: String,
+        reply: @MainActor @escaping (String?, String?, String?) -> Void
+    ) {
+        Task { @MainActor in
+            if let payload = await AudioMessageStore.shared.data(forAudioId: audioId) {
+                reply(payload.data.base64EncodedString(), payload.mimeType, nil)
+            } else {
+                reply(nil, nil, "Audio no longer available")
+            }
+        }
+    }
+
+    /// In-process Whisper handler for the iPhone's `transcribeAudio`
+    /// frame. Without this, the default `EngineHost` extension would
+    /// answer "Transcription is not available on this host" and the
+    /// iPhone would fall back to (or hang on) Apple Speech. Mirrors
+    /// the daemon path: spool the bytes to a temp file, hand the URL
+    /// to `TranscriptionService` (WhisperKit) with the model the user
+    /// picked in Settings, then forward the text or a friendly error.
+    public func handleTranscribeAudio(
+        requestId: String,
+        audioBase64: String,
+        mimeType: String,
+        language: String?,
+        reply: @MainActor @escaping (String, String?) -> Void
+    ) {
+        Task { @MainActor in
+            guard let data = Data(base64Encoded: audioBase64) else {
+                reply("", "Audio decode failed")
+                return
+            }
+            let tmpDir = URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent("clawix-attachments", isDirectory: true)
+                .appendingPathComponent("dictation", isDirectory: true)
+            do {
+                try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+                let ext = AudioMessageStore.fileExtension(for: mimeType)
+                let url = tmpDir.appendingPathComponent("\(requestId).\(ext)")
+                try data.write(to: url, options: .atomic)
+                let activeRaw = UserDefaults.standard.string(
+                    forKey: DictationModelManager.activeModelDefaultsKey
+                ) ?? ""
+                let model = DictationModel(rawValue: activeRaw) ?? .default
+                let text = try await TranscriptionService.shared.transcribe(
+                    fileURL: url,
+                    using: model,
+                    language: language
+                )
+                try? FileManager.default.removeItem(at: url)
+                reply(text, nil)
+            } catch {
+                reply("", error.localizedDescription)
+            }
+        }
     }
 
     private static func bridgeSnapshot(from chat: Chat) -> BridgeChatSnapshot {
