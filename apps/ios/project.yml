@@ -46,6 +46,7 @@ targets:
         UIUserInterfaceStyle: Dark
         NSCameraUsageDescription: "Used to scan the Clawix pairing QR code shown on your Mac, and to capture photos to attach to your Codex prompts."
         NSPhotoLibraryUsageDescription: "Used to attach photos from your library to your Codex prompts."
+        NSPhotoLibraryAddUsageDescription: "Used to save images from your conversations to your photo library."
         NSMicrophoneUsageDescription: "Used to record voice prompts and dictate messages to Codex."
         NSSpeechRecognitionUsageDescription: "Used to transcribe your voice messages on-device into editable text."
         NSLocalNetworkUsageDescription: "Used to talk to Clawix running on your Mac over the local network."

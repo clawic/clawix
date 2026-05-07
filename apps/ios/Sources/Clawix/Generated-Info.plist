@@ -37,6 +37,8 @@
 	<string>Used to talk to Clawix running on your Mac over the local network.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Used to record voice prompts and dictate messages to Codex.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Used to save images from your conversations to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to attach photos from your library to your Codex prompts.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
