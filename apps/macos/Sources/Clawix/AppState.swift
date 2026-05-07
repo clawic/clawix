@@ -590,6 +590,12 @@ final class AppState: ObservableObject {
             if case let .chat(id) = currentRoute {
                 daemonBridgeClient?.openChat(id)
             }
+            // Scope only outlives the search popup itself; once the user
+            // navigates anywhere else the chip gets cleared so the next
+            // open lands on the unscoped pinned-chats view.
+            if currentRoute != .search, searchScopedProjectId != nil {
+                searchScopedProjectId = nil
+            }
         }
     }
     @Published var searchQuery: String = ""
@@ -665,6 +671,13 @@ final class AppState: ObservableObject {
     @Published var pinnedItems: [PinnedItem] = []
     @Published var isLeftSidebarOpen: Bool = true
     @Published var isCommandPaletteOpen: Bool = false
+    /// When non-nil, the global search popup is currently scoped to
+    /// this project. The sidebar's per-project "View all" footer sets
+    /// this and routes to `.search` so the same popup the user already
+    /// likes (`SearchPopoverOverlay`) doubles as the project's "all
+    /// chats" surface, with the project name shown as a removable
+    /// filter chip.
+    @Published var searchScopedProjectId: UUID? = nil
     /// When `true`, the right sidebar takes over the full width of the
     /// content area (everything to the right of the left sidebar),
     /// completely covering the main view. The persisted column width is
@@ -1195,6 +1208,37 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Fetches a generous slice of a project's threads — enough to
+    /// power the per-project "View all" popup — and merges them into
+    /// `chats[]` so navigation lands on a fully populated chat. The
+    /// sidebar accordion's per-project cap is intentionally tiny (10);
+    /// this routine bypasses that cap and the debounce because the
+    /// user explicitly asked to see everything in this folder.
+    /// `useStateDbOnly` keeps the call latency down to a SQLite read.
+    func loadAllThreadsForProject(_ project: Project) async {
+        // Fixture / dummy mode: `chats[]` is already pre-loaded from
+        // the seeded thread fixture, and the runtime backend that
+        // would otherwise serve `listThreads` is ephemeral. Skipping
+        // the round-trip avoids replacing the curated dataset with an
+        // empty result on the first popup open.
+        if AgentThreadStore.fixtureThreads() != nil { return }
+        guard let clawix, case .ready = clawix.status else { return }
+        do {
+            let threads = try await clawix.listThreads(
+                archived: false,
+                cwd: project.path,
+                limit: Self.popupFullProjectFetchLimit,
+                useStateDbOnly: true
+            )
+            withAnimation(.easeOut(duration: 0.20)) {
+                mergeThreads(threads)
+            }
+            persistProjectIndexFor(project)
+        } catch {
+            appendRuntimeStatusError("Could not load threads for project \(project.name): \(error)")
+        }
+    }
+
     /// Refreshes every known project's chat list in parallel (capped
     /// at `preWarmConcurrency` simultaneous requests so the loopback
     /// JSON-RPC pipe doesn't saturate). Diff-merges into `chats[]`
@@ -1551,13 +1595,24 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Per-project cap when persisting `sidebar_snapshot_project`.
-    /// Matches the runtime's per-project `listThreads` limit so the
-    /// persisted set is never larger than what a refresh replaces.
-    private static let snapshotPerProjectCap = 200
+    /// Per-project cap when persisting `sidebar_snapshot_project` and
+    /// the matching `listThreads` limit. The sidebar accordion only
+    /// renders 5 chats by default and 10 after "Show more", so caching
+    /// past 10 is wasted work — anything beyond that is reachable
+    /// through the per-project "View all" popup, which fetches its own
+    /// page on open. Keeps the in-memory `chats[]` list and the
+    /// `sidebar_snapshot_project` table tight even for power users
+    /// with thousands of conversations per workspace root.
+    static let snapshotPerProjectCap = 10
     /// Hard global cap on `sidebar_snapshot_project` rows. Bounds disk
     /// use for power users with hundreds of workspace roots.
     private static let snapshotGlobalCap = 5000
+    /// Page size for the per-project "View all" popup fetch. Generous
+    /// enough that a typical workspace fully materialises on open
+    /// (so the popup's local title filter sees every chat) without
+    /// merging tens of thousands of rows for a power user — those
+    /// surface through subsequent server-side searches.
+    static let popupFullProjectFetchLimit = 500
 
     /// Installs a `DispatchSource` watcher on
     /// `~/.codex/.codex-global-state.json` so changes (Codex bumping
@@ -1935,6 +1990,70 @@ final class AppState: ObservableObject {
                 self.clawixBackendStatus = clawix.status
             }
         }
+    }
+
+    /// Submit a prompt from the QuickAsk HUD. Mirrors the home-route
+    /// branch of `sendMessage()` (same daemon vs in-process dispatch)
+    /// but takes the prompt directly so the main composer state is not
+    /// touched. When `chatId` is nil a fresh chat is created and inserted
+    /// at the top of the sidebar; the resolved id is returned so
+    /// QuickAskController can persist it across hotkey presses.
+    ///
+    /// [QUICKASK<->CHAT PARITY] This function and `sendMessage()` are
+    /// SISTER entry points to the same daemon dispatch. `sendMessage()`
+    /// implicitly runs `openChat` via `currentRoute.didSet` because it
+    /// switches the main route to `.chat(id)`. QuickAsk does NOT touch
+    /// `currentRoute` (it would yank the user out of the HUD), so this
+    /// function MUST call `daemonBridgeClient.openChat(resolvedId)` itself
+    /// before `sendPrompt`. Without it the daemon receives the prompt but
+    /// the BridgeBus has no subscription for this chatId, so
+    /// `messageStreaming` / `messageAppended` frames are filtered out and
+    /// the HUD never sees the assistant reply. References:
+    ///   - BridgeIntent.swift `.sendPrompt` case (no auto-subscribe)
+    ///   - BridgeBus.subscribe (idempotent set insert)
+    ///   - BridgeProtocol.swift comment on `.newChat` ("auto-subscribes")
+    ///   - sister bubble: `QuickAskMessageBubble` in QuickAskView.swift
+    @discardableResult
+    func submitQuickAsk(chatId: UUID?, text: String) -> UUID {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        precondition(!trimmed.isEmpty, "submitQuickAsk requires non-empty text")
+
+        let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
+        let resolvedId: UUID
+        if let id = chatId, let idx = chats.firstIndex(where: { $0.id == id }) {
+            chats[idx].messages.append(userMsg)
+            chats[idx].lastTurnInterrupted = false
+            resolvedId = id
+        } else {
+            let newChat = Chat(
+                id: UUID(),
+                title: String(trimmed.prefix(40)),
+                messages: [userMsg],
+                createdAt: Date(),
+                projectId: selectedProject?.id
+            )
+            chats.insert(newChat, at: 0)
+            resolvedId = newChat.id
+        }
+
+        if let daemonBridgeClient {
+            // sendMessage() reaches openChat implicitly via the
+            // currentRoute didSet; QuickAsk doesn't switch the route
+            // (the HUD stays on top of whatever the user was doing),
+            // so we have to subscribe this chat to the bridge bus
+            // explicitly. openChat is idempotent (Set.insert) so
+            // calling it on every submit is safe and also covers the
+            // re-subscribe-after-reconnect case.
+            daemonBridgeClient.openChat(resolvedId)
+            daemonBridgeClient.sendPrompt(chatId: resolvedId, text: trimmed)
+        } else if let clawix {
+            Task { @MainActor in
+                await clawix.sendUserMessage(chatId: resolvedId, text: trimmed)
+                self.clawixBackendStatus = clawix.status
+            }
+        }
+
+        return resolvedId
     }
 
     /// Entry point used by the bridge that exposes the desktop app to the
