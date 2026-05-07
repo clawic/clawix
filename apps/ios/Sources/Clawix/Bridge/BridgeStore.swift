@@ -102,6 +102,14 @@ final class BridgeStore {
     var attachmentImagesByMessageId: [String: [UIImage]] = [:]
     #endif
 
+    /// Per-cwd display-name overrides set by the user on this iPhone.
+    /// Persisted to UserDefaults under `Clawix.ProjectLabels.v1`. The
+    /// daemon doesn't model project entities yet, so a folder rename
+    /// is local until the bridge gets a `renameProject` frame; this
+    /// keeps the action useful (the user's chosen label sticks across
+    /// relaunches on this device) without lying about syncing.
+    var projectLabels: [String: String] = ProjectLabelsCache.load()
+
     /// Chat ids minted locally by the FAB that haven't yet been
     /// flushed to the Mac. The first `sendPrompt` for an id in this
     /// set is upgraded to a `newChat` frame so the Mac creates the
@@ -398,6 +406,46 @@ final class BridgeStore {
         }
     }
     #endif
+
+    /// Rename a project's display name on this device. The mapping is
+    /// keyed by `cwd` because that's the project's stable identity in
+    /// the iOS model (`DerivedProject.id == cwd`); the cwd itself is
+    /// untouched. Empty / whitespace-only names clear the override so
+    /// the project falls back to the cwd's last path component again.
+    @MainActor
+    func renameProject(cwd: String, newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            projectLabels.removeValue(forKey: cwd)
+        } else {
+            projectLabels[cwd] = trimmed
+        }
+        ProjectLabelsCache.save(projectLabels)
+    }
+
+    /// Resolve the display name for a project. Returns the user's
+    /// override if one has been set on this device, otherwise the
+    /// fallback (typically the cwd's last path component).
+    func projectDisplayName(cwd: String, fallback: String) -> String {
+        let custom = projectLabels[cwd]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let custom, !custom.isEmpty { return custom }
+        return fallback
+    }
+
+    /// Rename a chat. Updates the local title optimistically so the
+    /// chat list and detail header reflect the new name immediately,
+    /// then sends a `renameChat` frame to the Mac. The daemon writes
+    /// through to Codex (`thread/name/set`) and republishes via
+    /// `chatUpdated`, which is the canonical state.
+    @MainActor
+    func renameChat(chatId: String, newTitle: String) {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if let idx = chats.firstIndex(where: { $0.id == chatId }) {
+            chats[idx].title = trimmed
+        }
+        client?.renameChat(chatId: chatId, title: trimmed)
+    }
 
     /// Mints a fresh chat id for the FAB-driven "new chat" flow. The
     /// id is queued as pending so the next `sendPrompt(chatId:text:)`
