@@ -14,7 +14,7 @@ extension LocalModelsRuntimeInstaller: URLSessionDownloadDelegate {
             : Self.pinnedSizeBytes
         let progress = max(0, min(1, Double(totalBytesWritten) / Double(total)))
         Task { @MainActor in
-            self.state = .installing(progress: progress, downloadedBytes: totalBytesWritten)
+            self.updateDownloadProgress(progress: progress, downloadedBytes: totalBytesWritten)
         }
     }
 

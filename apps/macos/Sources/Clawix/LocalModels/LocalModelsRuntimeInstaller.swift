@@ -149,7 +149,11 @@ final class LocalModelsRuntimeInstaller: NSObject, ObservableObject {
         }
     }
 
-    private func resumeContinuation(with result: Result<URL, Error>) {
+    func updateDownloadProgress(progress: Double, downloadedBytes: Int64) {
+        state = .installing(progress: progress, downloadedBytes: downloadedBytes)
+    }
+
+    func resumeContinuation(with result: Result<URL, Error>) {
         guard let cont = continuation else { return }
         continuation = nil
         downloadTask = nil
