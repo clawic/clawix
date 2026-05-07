@@ -2,15 +2,20 @@ import Foundation
 import AppKit
 import SwiftUI
 
-/// Frameless, click-through-friendly NSPanel that paints the
-/// recording pill on top of every space and every fullscreen app. The
-/// panel itself owns no state; an `NSHostingView` rooted at
-/// `DictationOverlayView` reads the coordinator and animates state
-/// changes.
+/// Frameless `NSPanel` that hosts the dictation pill near the bottom
+/// of the active screen. The panel itself owns no state — an
+/// `NSHostingView` rooted at `DictationOverlayView` reads the shared
+/// `DictationCoordinator` and animates phase transitions.
 ///
-/// Patterned after `DragChipPanel` in `SidebarView.swift` so the
-/// chrome (level, collection behavior, opacity) matches what the rest
-/// of the app already does for floating UI.
+/// The panel is `.nonactivatingPanel` so showing it doesn't steal focus
+/// from the user's foreground app, and ships with `canJoinAllSpaces`
+/// + `fullScreenAuxiliary` so it floats over fullscreen apps too.
+///
+/// Mouse events are accepted (so the trailing stop button is tappable),
+/// but the SwiftUI hierarchy paints the pill in a small centred frame
+/// while the surrounding panel area stays transparent — empty SwiftUI
+/// regions don't grab clicks, so the chrome around the pill remains
+/// fully click-through to the app underneath.
 @MainActor
 final class DictationOverlay {
 
@@ -18,18 +23,21 @@ final class DictationOverlay {
 
     private var panel: NSPanel?
     private weak var coordinator: DictationCoordinator?
-    private var escMonitor: Any?
 
-    /// Bind the overlay to the coordinator. Show/hide happens through
-    /// the `overlayVisible` published flag; we observe it via SwiftUI
-    /// inside the panel content.
+    /// Panel content area. Width fits the Esc-confirmation toast
+    /// (296pt) with a small horizontal margin; height fits the toast
+    /// (38pt) + gap (10pt) + pill (40pt) plus a few pt of vertical
+    /// breathing room.
+    private static let panelSize = NSSize(width: 320, height: 100)
+
+    /// Bind the overlay to the coordinator. Show/hide is driven by the
+    /// `overlayVisible` published flag through `DictationOverlayHost`.
     func install(coordinator: DictationCoordinator) {
         self.coordinator = coordinator
         guard panel == nil else { return }
 
-        let size = NSSize(width: 260, height: 110)
         let panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: size),
+            contentRect: NSRect(origin: .zero, size: Self.panelSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true
@@ -47,10 +55,11 @@ final class DictationOverlay {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.acceptsMouseMovedEvents = false
-        // Strictly pass-through: the pill is purely informational
-        // chrome that never steals clicks from the app underneath.
-        // The user cancels with Esc (handled in `installEscMonitor`).
-        panel.ignoresMouseEvents = true
+        // Mouse events ARE accepted: the trailing stop button needs to
+        // receive taps. SwiftUI paints the pill in a centred 184×40
+        // frame and leaves the surrounding area transparent, so clicks
+        // outside the pill fall through to the app underneath.
+        panel.ignoresMouseEvents = false
 
         let view = DictationOverlayHost(coordinator: coordinator) { [weak self] visible in
             guard let self else { return }
@@ -70,58 +79,59 @@ final class DictationOverlay {
         guard let panel else { return }
         position(panel: panel)
         panel.orderFront(nil)
-        installEscMonitor()
+        armEscRegistrar()
     }
 
     func hide() {
         panel?.orderOut(nil)
-        removeEscMonitor()
+        disarmEscRegistrar()
     }
 
+    /// Anchor the panel near the bottom-centre of the active screen's
+    /// visible area. `visibleFrame.minY` already excludes the dock when
+    /// the dock is pinned, so a 24pt padding above that keeps the pill
+    /// dock-aware on every layout.
     private func position(panel: NSPanel) {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
         let area = screen.visibleFrame
         let width = panel.frame.width
         let height = panel.frame.height
         let x = area.midX - width / 2
-        // Sit ~80pt above the bottom of the visible area so the pill
-        // hovers near the dock without touching it. visibleFrame.minY
-        // is already the top of the dock when it's pinned, so this is
-        // dock-aware.
-        let y = area.minY + 80
+        let y = area.minY + 24
         panel.setFrame(
             NSRect(x: x, y: y, width: width, height: height),
             display: true
         )
     }
 
-    /// Esc cancels whatever session is in flight. Implemented as a
-    /// global+local key monitor pair while the overlay is visible so
-    /// the user can dismiss the pill no matter which app has focus,
-    /// without the panel having to grab clicks.
-    private func installEscMonitor() {
-        guard escMonitor == nil else { return }
-        escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 0x35 { // Esc
-                self?.coordinator?.cancel()
-                return nil
-            }
-            return event
+    /// Wire bare Esc system-wide for the lifetime of this session and
+    /// route every press through the coordinator's double-tap handler:
+    /// the first press raises the "Press ESC again to cancel" toast,
+    /// a second press inside the 1.5s window cancels.
+    ///
+    /// `addLocalMonitorForEvents` only delivers Esc while Clawix is
+    /// frontmost; the user dictating into another app would press Esc,
+    /// the foreground app would beep (no key consumer), and our
+    /// handler would never fire. Carbon's `RegisterEventHotKey`
+    /// (encapsulated in `DictationEscRegistrar`) intercepts the chord
+    /// regardless of frontmost app and consumes it, so no system
+    /// beep escapes either.
+    private func armEscRegistrar() {
+        DictationEscRegistrar.shared.onPress = { [weak self] in
+            self?.coordinator?.handleEscapeFromOverlay()
         }
+        DictationEscRegistrar.shared.arm()
     }
 
-    private func removeEscMonitor() {
-        if let escMonitor {
-            NSEvent.removeMonitor(escMonitor)
-            self.escMonitor = nil
-        }
+    private func disarmEscRegistrar() {
+        DictationEscRegistrar.shared.disarm()
     }
 }
 
-/// SwiftUI shim that watches `coordinator.overlayVisible` and pipes
-/// it back to the AppKit panel via a closure, so the panel's lifetime
-/// follows the coordinator's state without the view itself owning any
-/// AppKit references.
+/// SwiftUI shim that pipes `coordinator.overlayVisible` back to the
+/// AppKit panel through a closure. Keeps view code free of AppKit
+/// references and makes the overlay's lifetime follow coordinator
+/// state without any explicit show/hide call sites.
 private struct DictationOverlayHost: View {
     @ObservedObject var coordinator: DictationCoordinator
     let onVisibilityChange: (Bool) -> Void
