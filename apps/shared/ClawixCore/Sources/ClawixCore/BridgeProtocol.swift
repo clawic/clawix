@@ -13,7 +13,43 @@ import Foundation
 /// pairing handshake the GUI uses to ask the daemon for a fresh QR.
 /// v1 frames decode cleanly into v2 because every new field is optional
 /// and every new frame type is additive.
-public let bridgeSchemaVersion: Int = 2
+///
+/// v3 (2026-05): Voice notes. `WireAttachment` now carries a `kind`
+/// discriminator (`image` | `audio`) so the daemon can route audio
+/// blobs to Whisper instead of `localImage`. `WireMessage` carries an
+/// optional `audioRef` so the chat history shows a playable bubble for
+/// user messages that started life as a voice clip. New `requestAudio`
+/// / `audioSnapshot` frames let clients fetch the original audio bytes
+/// for replay. Old peers accept the new fields tolerantly because
+/// every addition is optional, but `schemaVersion` bumps so callers
+/// without the new frame types short-circuit cleanly with an "Update
+/// Clawix" empty state instead of silently failing on a missing case.
+///
+/// v4 (2026-05): Inline assistant images. `WireWorkItem` carries an
+/// optional `generatedImagePath` so clients know which PNG Codex wrote
+/// for an `imageGeneration` tool call. New `requestGeneratedImage` /
+/// `generatedImageSnapshot` frames let clients fetch the bytes by
+/// path (the daemon sandboxes reads to `~/.codex/generated_images`).
+/// Used both by the work-item path (turn 1: model called the
+/// `imagegen` tool) and by markdown-detected paths the model wrote
+/// inline (turn 2: model wrote `![](/Users/.../*.png)` after the
+/// user complained the image hadn't shown up). All additions are
+/// optional so v3 peers keep parsing.
+public let bridgeSchemaVersion: Int = 4
+
+/// Default count of trailing messages the server returns on
+/// `openChat(limit:)` when the client opts into pagination. 60 covers
+/// the last ~6-10 turns including their tool-call timelines and inline
+/// attachments without burning the first paint on a big chat. Older
+/// pages stream in via `loadOlderMessages` as the user scrolls up.
+public let bridgeInitialPageLimit: Int = 60
+
+/// Page size for each `loadOlderMessages` request fired by the client
+/// after the user scrolls near the top of the transcript. Smaller than
+/// the initial batch because (a) the user already saw the recent
+/// turns, (b) older history is the long tail and we want each pull to
+/// stay under ~300ms over LAN even when turns carry heavy timelines.
+public let bridgeOlderPageLimit: Int = 40
 
 /// Kind of client speaking on a session. Affects which frame types the
 /// server is willing to dispatch:
@@ -67,7 +103,18 @@ public enum BridgeBody: Equatable, Sendable {
     // MARK: - v1 outbound (iPhone -> Mac)
     case auth(token: String, deviceName: String?, clientKind: ClientKind?)
     case listChats
-    case openChat(chatId: String)
+    /// Open a chat for streaming. `limit` is optional: when set, the
+    /// server replies with the trailing N messages and a `hasMore`
+    /// flag so the client can lazily fetch older history via
+    /// `loadOlderMessages`. Old clients omit the field and receive the
+    /// full transcript like before; old servers receiving a frame with
+    /// `limit` ignore it because the field decodes via `decodeIfPresent`.
+    case openChat(chatId: String, limit: Int?)
+    /// Pull a window of older messages anchored at the oldest message
+    /// the client currently holds. `beforeMessageId` is exclusive
+    /// (clients have it already), `limit` is how many earlier rows to
+    /// fetch. Server replies with `messagesPage`.
+    case loadOlderMessages(chatId: String, beforeMessageId: String, limit: Int)
     /// Carries optional inline attachments alongside the prompt. The
     /// daemon writes each one to a turn-scoped temp file and forwards
     /// the resulting paths to Codex as `localImage` user input items.
@@ -82,6 +129,11 @@ public enum BridgeBody: Equatable, Sendable {
     /// auto-subscribes the new id so streaming deltas flow back without
     /// an extra `openChat`.
     case newChat(chatId: String, text: String, attachments: [WireAttachment])
+    /// Stop the active turn for `chatId` if any. Mirrors the macOS
+    /// composer's stop button: marks the turn interrupted, clears
+    /// `hasActiveTurn` on the chat, and asks the backend to cancel.
+    /// No-op when the chat has no in-flight turn.
+    case interruptTurn(chatId: String)
 
     // MARK: - v1 inbound (Mac -> iPhone)
     case authOk(macName: String?)
@@ -89,7 +141,17 @@ public enum BridgeBody: Equatable, Sendable {
     case versionMismatch(serverVersion: Int)
     case chatsSnapshot(chats: [WireChat])
     case chatUpdated(chat: WireChat)
-    case messagesSnapshot(chatId: String, messages: [WireMessage])
+    /// Replace the client's view of a chat with the server's. `hasMore`
+    /// is optional and only populated when the server honoured a paged
+    /// `openChat` (`limit != nil`); a `nil` value means "old server
+    /// path, no pagination metadata, treat as no older history". When
+    /// the client receives this it MUST reset its pagination state for
+    /// `chatId` because every snapshot is the new baseline.
+    case messagesSnapshot(chatId: String, messages: [WireMessage], hasMore: Bool?)
+    /// Reply to `loadOlderMessages`. `messages` is the slice prior to
+    /// the cursor (chronological order, oldest first); `hasMore` is
+    /// `false` when the slice reaches the start of the chat.
+    case messagesPage(chatId: String, messages: [WireMessage], hasMore: Bool)
     case messageAppended(chatId: String, message: WireMessage)
     /// Carries the full current state of the message (content +
     /// reasoning) every tick, not deltas. The iPhone replaces. Trades
@@ -116,6 +178,11 @@ public enum BridgeBody: Equatable, Sendable {
     /// Toggle the pinned flag.
     case pinChat(chatId: String)
     case unpinChat(chatId: String)
+    /// Rename a chat. Daemon writes the new name to the runtime
+    /// (`thread/name/set` JSON-RPC against Codex) and echoes the
+    /// updated `WireChat` back via `chatUpdated` so every other
+    /// connected client sees the new title.
+    case renameChat(chatId: String, title: String)
     /// Ask the daemon for a fresh pairing payload (token + QR JSON).
     /// Used by `PairWindowView` in the GUI.
     case pairingStart
@@ -157,19 +224,49 @@ public enum BridgeBody: Equatable, Sendable {
     /// `errorMessage` carries a short reason for display.
     case transcriptionResult(requestId: String, text: String, errorMessage: String?)
 
+    /// Ask the daemon for the bytes of a previously-stored voice clip.
+    /// `audioId` is the value the daemon put into the user message's
+    /// `audioRef.id`. Reply is `audioSnapshot`. Clients are expected to
+    /// cache the answer locally; the daemon's storage is the canonical
+    /// copy but the round trip is wasteful on every replay.
+    case requestAudio(audioId: String)
+    /// Reply to `requestAudio`. On success `audioBase64` carries the
+    /// raw bytes (m4a/AAC unless the user uploaded something else) and
+    /// `errorMessage` is nil. On failure (no longer on disk, never
+    /// existed) `audioBase64` is nil and `errorMessage` is a short
+    /// reason like "Audio no longer available".
+    case audioSnapshot(audioId: String, audioBase64: String?, mimeType: String?, errorMessage: String?)
+
+    /// Ask the daemon for the bytes of a generated image written by
+    /// Codex's `imagegen` tool (or any image the assistant referenced
+    /// by absolute path inside `~/.codex/generated_images`). The daemon
+    /// validates the path stays under that root and rejects anything
+    /// else with a "denied" error. `path` is the absolute filesystem
+    /// path on the Mac. Reply is `generatedImageSnapshot`.
+    case requestGeneratedImage(path: String)
+    /// Reply to `requestGeneratedImage`. On success `dataBase64` carries
+    /// the raw PNG (or whatever the file actually is, declared via
+    /// `mimeType`) and `errorMessage` is nil. On failure (file missing,
+    /// path outside the sandbox, decode error) `dataBase64` is nil and
+    /// `errorMessage` is a short reason for display.
+    case generatedImageSnapshot(path: String, dataBase64: String?, mimeType: String?, errorMessage: String?)
+
     fileprivate var typeTag: String {
         switch self {
         case .auth:               return "auth"
         case .listChats:          return "listChats"
         case .openChat:           return "openChat"
+        case .loadOlderMessages:  return "loadOlderMessages"
         case .sendPrompt:         return "sendPrompt"
         case .newChat:            return "newChat"
+        case .interruptTurn:      return "interruptTurn"
         case .authOk:             return "authOk"
         case .authFailed:         return "authFailed"
         case .versionMismatch:    return "versionMismatch"
         case .chatsSnapshot:      return "chatsSnapshot"
         case .chatUpdated:        return "chatUpdated"
         case .messagesSnapshot:   return "messagesSnapshot"
+        case .messagesPage:       return "messagesPage"
         case .messageAppended:    return "messageAppended"
         case .messageStreaming:   return "messageStreaming"
         case .errorEvent:         return "errorEvent"
@@ -178,6 +275,7 @@ public enum BridgeBody: Equatable, Sendable {
         case .unarchiveChat:      return "unarchiveChat"
         case .pinChat:            return "pinChat"
         case .unpinChat:          return "unpinChat"
+        case .renameChat:         return "renameChat"
         case .pairingStart:       return "pairingStart"
         case .pairingPayload:     return "pairingPayload"
         case .listProjects:       return "listProjects"
@@ -186,12 +284,16 @@ public enum BridgeBody: Equatable, Sendable {
         case .fileSnapshot:       return "fileSnapshot"
         case .transcribeAudio:    return "transcribeAudio"
         case .transcriptionResult: return "transcriptionResult"
+        case .requestAudio:       return "requestAudio"
+        case .audioSnapshot:      return "audioSnapshot"
+        case .requestGeneratedImage: return "requestGeneratedImage"
+        case .generatedImageSnapshot: return "generatedImageSnapshot"
         }
     }
 
     private enum FlatKeys: String, CodingKey {
         case token, deviceName, clientKind
-        case chatId, text, messageId
+        case chatId, text, messageId, title
         case macName, reason, serverVersion
         case chats, chat, messages, message
         case content, reasoningText, finished
@@ -201,6 +303,9 @@ public enum BridgeBody: Equatable, Sendable {
         case path, isMarkdown, error
         case attachments
         case requestId, audioBase64, mimeType, language, errorMessage
+        case audioId
+        case dataBase64
+        case limit, beforeMessageId, hasMore
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
@@ -212,8 +317,13 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encodeIfPresent(clientKind, forKey: .clientKind)
         case .listChats:
             break
-        case .openChat(let chatId):
+        case .openChat(let chatId, let limit):
             try c.encode(chatId, forKey: .chatId)
+            try c.encodeIfPresent(limit, forKey: .limit)
+        case .loadOlderMessages(let chatId, let beforeMessageId, let limit):
+            try c.encode(chatId, forKey: .chatId)
+            try c.encode(beforeMessageId, forKey: .beforeMessageId)
+            try c.encode(limit, forKey: .limit)
         case .sendPrompt(let chatId, let text, let attachments):
             try c.encode(chatId, forKey: .chatId)
             try c.encode(text, forKey: .text)
@@ -226,6 +336,8 @@ public enum BridgeBody: Equatable, Sendable {
             if !attachments.isEmpty {
                 try c.encode(attachments, forKey: .attachments)
             }
+        case .interruptTurn(let chatId):
+            try c.encode(chatId, forKey: .chatId)
         case .authOk(let macName):
             try c.encodeIfPresent(macName, forKey: .macName)
         case .authFailed(let reason):
@@ -236,9 +348,14 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encode(chats, forKey: .chats)
         case .chatUpdated(let chat):
             try c.encode(chat, forKey: .chat)
-        case .messagesSnapshot(let chatId, let messages):
+        case .messagesSnapshot(let chatId, let messages, let hasMore):
             try c.encode(chatId, forKey: .chatId)
             try c.encode(messages, forKey: .messages)
+            try c.encodeIfPresent(hasMore, forKey: .hasMore)
+        case .messagesPage(let chatId, let messages, let hasMore):
+            try c.encode(chatId, forKey: .chatId)
+            try c.encode(messages, forKey: .messages)
+            try c.encode(hasMore, forKey: .hasMore)
         case .messageAppended(let chatId, let message):
             try c.encode(chatId, forKey: .chatId)
             try c.encode(message, forKey: .message)
@@ -258,6 +375,9 @@ public enum BridgeBody: Equatable, Sendable {
         case .archiveChat(let chatId), .unarchiveChat(let chatId),
              .pinChat(let chatId), .unpinChat(let chatId):
             try c.encode(chatId, forKey: .chatId)
+        case .renameChat(let chatId, let title):
+            try c.encode(chatId, forKey: .chatId)
+            try c.encode(title, forKey: .title)
         case .pairingStart, .listProjects:
             break
         case .pairingPayload(let qrJson, let bearer):
@@ -281,6 +401,20 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encode(requestId, forKey: .requestId)
             try c.encode(text, forKey: .text)
             try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .requestAudio(let audioId):
+            try c.encode(audioId, forKey: .audioId)
+        case .audioSnapshot(let audioId, let audioBase64, let mimeType, let errorMessage):
+            try c.encode(audioId, forKey: .audioId)
+            try c.encodeIfPresent(audioBase64, forKey: .audioBase64)
+            try c.encodeIfPresent(mimeType, forKey: .mimeType)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .requestGeneratedImage(let path):
+            try c.encode(path, forKey: .path)
+        case .generatedImageSnapshot(let path, let dataBase64, let mimeType, let errorMessage):
+            try c.encode(path, forKey: .path)
+            try c.encodeIfPresent(dataBase64, forKey: .dataBase64)
+            try c.encodeIfPresent(mimeType, forKey: .mimeType)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
         }
     }
 
@@ -296,7 +430,16 @@ public enum BridgeBody: Equatable, Sendable {
         case "listChats":
             return .listChats
         case "openChat":
-            return .openChat(chatId: try c.decode(String.self, forKey: .chatId))
+            return .openChat(
+                chatId: try c.decode(String.self, forKey: .chatId),
+                limit: try c.decodeIfPresent(Int.self, forKey: .limit)
+            )
+        case "loadOlderMessages":
+            return .loadOlderMessages(
+                chatId: try c.decode(String.self, forKey: .chatId),
+                beforeMessageId: try c.decode(String.self, forKey: .beforeMessageId),
+                limit: try c.decode(Int.self, forKey: .limit)
+            )
         case "sendPrompt":
             return .sendPrompt(
                 chatId: try c.decode(String.self, forKey: .chatId),
@@ -309,6 +452,8 @@ public enum BridgeBody: Equatable, Sendable {
                 text: try c.decode(String.self, forKey: .text),
                 attachments: try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
             )
+        case "interruptTurn":
+            return .interruptTurn(chatId: try c.decode(String.self, forKey: .chatId))
         case "authOk":
             return .authOk(macName: try c.decodeIfPresent(String.self, forKey: .macName))
         case "authFailed":
@@ -322,7 +467,14 @@ public enum BridgeBody: Equatable, Sendable {
         case "messagesSnapshot":
             return .messagesSnapshot(
                 chatId: try c.decode(String.self, forKey: .chatId),
-                messages: try c.decode([WireMessage].self, forKey: .messages)
+                messages: try c.decode([WireMessage].self, forKey: .messages),
+                hasMore: try c.decodeIfPresent(Bool.self, forKey: .hasMore)
+            )
+        case "messagesPage":
+            return .messagesPage(
+                chatId: try c.decode(String.self, forKey: .chatId),
+                messages: try c.decode([WireMessage].self, forKey: .messages),
+                hasMore: try c.decode(Bool.self, forKey: .hasMore)
             )
         case "messageAppended":
             return .messageAppended(
@@ -356,6 +508,11 @@ public enum BridgeBody: Equatable, Sendable {
             return .pinChat(chatId: try c.decode(String.self, forKey: .chatId))
         case "unpinChat":
             return .unpinChat(chatId: try c.decode(String.self, forKey: .chatId))
+        case "renameChat":
+            return .renameChat(
+                chatId: try c.decode(String.self, forKey: .chatId),
+                title: try c.decode(String.self, forKey: .title)
+            )
         case "pairingStart":
             return .pairingStart
         case "pairingPayload":
@@ -387,6 +544,24 @@ public enum BridgeBody: Equatable, Sendable {
             return .transcriptionResult(
                 requestId: try c.decode(String.self, forKey: .requestId),
                 text: try c.decode(String.self, forKey: .text),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "requestAudio":
+            return .requestAudio(audioId: try c.decode(String.self, forKey: .audioId))
+        case "audioSnapshot":
+            return .audioSnapshot(
+                audioId: try c.decode(String.self, forKey: .audioId),
+                audioBase64: try c.decodeIfPresent(String.self, forKey: .audioBase64),
+                mimeType: try c.decodeIfPresent(String.self, forKey: .mimeType),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "requestGeneratedImage":
+            return .requestGeneratedImage(path: try c.decode(String.self, forKey: .path))
+        case "generatedImageSnapshot":
+            return .generatedImageSnapshot(
+                path: try c.decode(String.self, forKey: .path),
+                dataBase64: try c.decodeIfPresent(String.self, forKey: .dataBase64),
+                mimeType: try c.decodeIfPresent(String.self, forKey: .mimeType),
                 errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
             )
         default:
