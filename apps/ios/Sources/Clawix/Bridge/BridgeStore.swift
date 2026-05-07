@@ -1,6 +1,9 @@
 import Foundation
 import ClawixCore
 import Observation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @Observable
 final class BridgeStore {
@@ -33,11 +36,42 @@ final class BridgeStore {
         case failed(reason: String)
     }
 
+    /// State of an in-flight or cached request for an `imagegen` PNG
+    /// the assistant produced (or any image referenced by absolute
+    /// path under `~/.codex/generated_images`). Keyed by absolute path
+    /// on the Mac. The bridge serves the bytes via `requestGeneratedImage`
+    /// / `generatedImageSnapshot`; we cache the decoded image so a
+    /// single PNG painted in the timeline AND inline in the markdown
+    /// only round-trips once.
+    enum GeneratedImageState: Equatable {
+        case loading
+        #if canImport(UIKit)
+        case loaded(UIImage)
+        #else
+        case loaded(Data)
+        #endif
+        case failed(reason: String)
+
+        static func == (lhs: GeneratedImageState, rhs: GeneratedImageState) -> Bool {
+            switch (lhs, rhs) {
+            case (.loading, .loading): return true
+            case (.failed(let a), .failed(let b)): return a == b
+            case (.loaded, .loaded): return true
+            default: return false
+            }
+        }
+    }
+
     var connection: ConnectionState = .unpaired
     var chats: [WireChat] = []
     var messagesByChat: [String: [WireMessage]] = [:]
     var openChatId: String?
     var fileSnapshots: [String: FileSnapshotState] = [:]
+    /// Cache of generated images keyed by absolute path on the Mac.
+    /// Painted by the assistant timeline (workitem-driven) and by the
+    /// inline markdown renderer (`![](file:...)` / `![](/Users/.../*.png)`)
+    /// so the same path resolved from two angles only round-trips once.
+    var generatedImagesByPath: [String: GeneratedImageState] = [:]
 
     /// Chat ids minted locally by the FAB that haven't yet been
     /// flushed to the Mac. The first `sendPrompt` for an id in this
@@ -233,6 +267,62 @@ final class BridgeStore {
             fileSnapshots[path] = .loading
             client?.readFile(path: path)
         }
+    }
+
+    /// Kick off (or return cached) bytes for a generated image. Safe to
+    /// call from a SwiftUI body — repeated invocations while loading
+    /// are no-ops, and cached `.loaded` returns immediately. A second
+    /// call after `.failed` retries (the user can tap the placeholder
+    /// to reissue the fetch).
+    @MainActor
+    func requestGeneratedImage(path: String) -> GeneratedImageState {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return .failed(reason: "Empty path")
+        }
+        if let existing = generatedImagesByPath[trimmed] {
+            switch existing {
+            case .loading, .loaded:
+                return existing
+            case .failed:
+                break
+            }
+        }
+        generatedImagesByPath[trimmed] = .loading
+        client?.requestGeneratedImage(path: trimmed)
+        return .loading
+    }
+
+    /// Resolve a pending generated-image fetch with the daemon's reply.
+    /// Decodes the base64 bytes into a UIImage so the views can bind
+    /// to the cache without each one re-decoding. Failure messages are
+    /// stored verbatim so the placeholder can render the daemon's
+    /// reason ("Image not found", "Path is outside the sandbox", …).
+    @MainActor
+    func applyGeneratedImageSnapshot(
+        path: String,
+        dataBase64: String?,
+        mimeType: String?,
+        errorMessage: String?
+    ) {
+        if let errorMessage, !errorMessage.isEmpty {
+            generatedImagesByPath[path] = .failed(reason: errorMessage)
+            return
+        }
+        guard let dataBase64,
+              let data = Data(base64Encoded: dataBase64) else {
+            generatedImagesByPath[path] = .failed(reason: "Empty payload")
+            return
+        }
+        #if canImport(UIKit)
+        guard let image = UIImage(data: data) else {
+            generatedImagesByPath[path] = .failed(reason: "Couldn't decode image")
+            return
+        }
+        generatedImagesByPath[path] = .loaded(image)
+        #else
+        generatedImagesByPath[path] = .loaded(data)
+        #endif
     }
 
     func messages(for chatId: String) -> [WireMessage] {
