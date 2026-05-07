@@ -365,7 +365,7 @@ private struct UserFileMentionChip: View {
             FileChipIcon(size: 11)
                 .foregroundColor(Color(white: 0.78))
             Text(url.lastPathComponent)
-                .font(BodyFont.system(size: 14))
+                .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Palette.textPrimary)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -383,6 +383,28 @@ private struct UserFileMentionChip: View {
 
 // MARK: - Message row
 
+// [QUICKASK<->CHAT PARITY]
+//
+// This is the main chat's user/assistant bubble. There is a SECOND
+// surface that renders the same `ChatMessage` model: the QuickAsk HUD
+// bubble in `Sources/Clawix/QuickAsk/QuickAskView.swift`
+// (`QuickAskMessageBubble`).
+//
+// Both surfaces reuse `AssistantMarkdownText`
+// (Sources/Clawix/AgentBackend/AssistantMarkdownText.swift) and
+// `ThinkingShimmer` (Sources/Clawix/AgentBackend/ThinkingShimmer.swift)
+// so markdown parsing, streaming fade, error coloring and the
+// "thinking" indicator stay in lockstep. When you change message
+// format here (new segment kind, error styling, streaming behaviour),
+// check whether the HUD also needs the change.
+//
+// The HUD is intentionally simpler (no edit affordance, no work-summary
+// chevron, no tool-call timeline, no PlanCard segmenting, no link
+// preview card, no changed-file pills) so changes that are part of
+// the HUD's "minimal" mandate stay confined to MessageRow. The
+// dispatch counterpart of `sendMessage()` is `submitQuickAsk(...)`
+// in `AppState.swift`; see its doc for why QuickAsk must call
+// `openChat` explicitly.
 private struct MessageRow: View {
     let chatId: UUID
     let message: ChatMessage
@@ -440,7 +462,7 @@ private struct MessageRow: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
                                 Text(p)
-                                    .font(BodyFont.system(size: 13.5))
+                                    .font(BodyFont.system(size: 13.5, wght: 500))
                                     .foregroundColor(Palette.textPrimary)
                                     .lineSpacing(5)
                             }
@@ -733,7 +755,7 @@ private struct MessageRow: View {
 
     private var timestampLabel: some View {
         Text(formattedTimestamp)
-            .font(BodyFont.system(size: 11))
+            .font(BodyFont.system(size: 11, wght: 500))
             .foregroundColor(Color(white: 0.45))
             .padding(.horizontal, 4)
     }
@@ -821,7 +843,7 @@ private struct MessageActionIcon: View {
         case .copy(let showCheck):
             if showCheck {
                 Image(systemName: "checkmark")
-                    .font(BodyFont.system(size: 12, weight: .semibold))
+                    .font(BodyFont.system(size: 12, wght: 700))
                     .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
@@ -866,7 +888,7 @@ private struct UserMessageEditor: View {
                 Spacer(minLength: 0)
                 Button(action: onCancel) {
                     Text("Cancel")
-                        .font(BodyFont.system(size: 13))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
@@ -879,7 +901,7 @@ private struct UserMessageEditor: View {
 
                 Button(action: onSubmit) {
                     Text("Send")
-                        .font(BodyFont.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, wght: 600))
                         .foregroundColor(Color.black)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
@@ -919,10 +941,10 @@ private struct ChatFooterPill: View {
             HStack(spacing: 6) {
                 IconImage(icon, size: 12)
                 Text(label)
-                    .font(BodyFont.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5, wght: 500))
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
-                    .font(BodyFont.system(size: 9, weight: .semibold))
+                    .font(BodyFont.system(size: 9, wght: 700))
             }
             .foregroundColor(Color(white: (hovered || isOpen) ? 0.82 : 0.55))
             .padding(.horizontal, 4)
@@ -979,12 +1001,18 @@ private struct WorkLocallyRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 13))
+                Group {
+                    if icon == "chart.bar" || icon == "gauge.with.dots.needle.33percent" {
+                        UsageIcon(size: 14)
+                    } else {
+                        Image(systemName: icon)
+                            .font(BodyFont.system(size: 13, wght: 500))
+                    }
+                }
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(label)
-                    .font(BodyFont.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
@@ -993,7 +1021,7 @@ private struct WorkLocallyRow: View {
                     EmptyView()
                 case .check:
                     Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(MenuStyle.rowText)
                 case .chevron:
                     Image(systemName: "chevron.right")
@@ -1042,7 +1070,7 @@ private struct BranchPickerPopup: View {
                     text: $searchText
                 )
                 .textFieldStyle(.plain)
-                .font(BodyFont.system(size: 13.5))
+                .font(BodyFont.system(size: 13.5, wght: 500))
                 .foregroundColor(MenuStyle.rowText)
                 .focused($searchFocused)
             }
@@ -1097,19 +1125,19 @@ private struct BranchRow: View {
                     .padding(.top, 1)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(BodyFont.system(size: 13.5))
+                        .font(BodyFont.system(size: 13.5, wght: 500))
                         .foregroundColor(MenuStyle.rowText)
                         .lineLimit(1)
                     if let files = uncommittedFiles, files > 0 {
                         Text(uncommittedLabel(files))
-                            .font(BodyFont.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5, wght: 500))
                             .foregroundColor(MenuStyle.rowSubtle)
                     }
                 }
                 Spacer(minLength: 8)
                 if isCurrent {
                     Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 1)
                 }
@@ -1139,11 +1167,11 @@ private struct BranchCreateRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: "plus")
-                    .font(BodyFont.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(String(localized: "Create and switch to a new branch...", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(BodyFont.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
                 Spacer(minLength: 8)
@@ -1190,7 +1218,7 @@ private struct BranchCreateSheet: View {
                 Spacer(minLength: 12)
                 Button(action: onCancel) {
                     Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(Color(white: 0.70))
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
@@ -1202,7 +1230,7 @@ private struct BranchCreateSheet: View {
 
             HStack {
                 Text(String(localized: "Branch name", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Color(white: 0.78))
                 Spacer(minLength: 8)
                 Button {
@@ -1210,7 +1238,7 @@ private struct BranchCreateSheet: View {
                     // shape Clawix shows in screenshot.
                 } label: {
                     Text(String(localized: "Set prefix", bundle: AppLocale.bundle, locale: AppLocale.current))
-                        .font(BodyFont.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5, wght: 500))
                         .foregroundColor(Color(white: 0.55))
                 }
                 .buttonStyle(.plain)
@@ -1219,7 +1247,7 @@ private struct BranchCreateSheet: View {
 
             TextField("", text: $name)
                 .textFieldStyle(.plain)
-                .font(BodyFont.system(size: 14))
+                .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.95))
                 .focused($nameFocused)
                 .padding(.horizontal, 14)
@@ -1471,7 +1499,7 @@ private struct ForkedFromBanner: View {
                     BranchArrowsIconView(color: accent, lineWidth: 0.95)
                         .frame(width: 13, height: 13)
                     Text("Forked from conversation")
-                        .font(BodyFont.system(size: 12.5))
+                        .font(BodyFont.system(size: 12.5, wght: 500))
                         .foregroundColor(accent)
                         .underline(hovered, color: accent)
                 }
@@ -1571,12 +1599,12 @@ private struct LinkPreviewCard: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(BodyFont.system(size: 14, weight: .semibold))
+                    .font(BodyFont.system(size: 14, wght: 700))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Text(String(localized: "Website", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(BodyFont.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }
             Spacer(minLength: 8)
@@ -1584,7 +1612,7 @@ private struct LinkPreviewCard: View {
                 appState.openLinkInBrowser(url)
             } label: {
                 Text(String(localized: "Open", bundle: AppLocale.bundle, locale: AppLocale.current))
-                    .font(BodyFont.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Color(white: 0.94))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 7)
@@ -1616,698 +1644,6 @@ private struct LinkPreviewCard: View {
         .onAppear { appState.linkMetadata.ensureTitle(for: url) }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("\(title), Sitio web"))
-        .accessibilityAddTraits(.isLink)
-    }
-}
-
-// MARK: - Assistant markdown rendering
-
-/// Atom + the offset of its first character inside the original streamed
-/// source. The renderer hands that offset to `StreamingFade` so each
-/// character ramps from 0→1 opacity in step with the delta that brought
-/// it in.
-private struct AnnotatedAtom: Equatable {
-    let atom: AssistantMarkdown.Atom
-    let offset: Int
-}
-
-private struct AnnotatedLine: Equatable {
-    let atoms: [AnnotatedAtom]
-}
-
-private struct AnnotatedParagraph: Equatable {
-    let lines: [AnnotatedLine]
-}
-
-private enum AnnotatedBlock {
-    case paragraph(AnnotatedParagraph)
-    case heading(level: Int, line: AnnotatedLine)
-    case bulletList(items: [AnnotatedParagraph])
-    case numberedList(items: [AnnotatedParagraph])
-    case codeBlock(language: String, code: String)
-    case table(headers: [AnnotatedLine], rows: [[AnnotatedLine]])
-}
-
-private func annotateBlocks(_ blocks: [AssistantMarkdown.Block], source: String) -> [AnnotatedBlock] {
-    var resolver = AtomOffsetResolver(source: source)
-    return blocks.map { annotate($0, with: &resolver) }
-}
-
-private func annotate(_ block: AssistantMarkdown.Block, with resolver: inout AtomOffsetResolver) -> AnnotatedBlock {
-    switch block {
-    case .paragraph(let p):
-        return .paragraph(annotate(p, with: &resolver))
-    case .heading(let level, let line):
-        return .heading(level: level, line: annotate(line, with: &resolver))
-    case .bulletList(let items):
-        return .bulletList(items: items.map { annotate($0, with: &resolver) })
-    case .numberedList(let items):
-        return .numberedList(items: items.map { annotate($0, with: &resolver) })
-    case .codeBlock(let language, let code):
-        // The fenced body is rendered as a static block; we still walk the
-        // resolver past it so subsequent atoms keep their offsets aligned.
-        _ = resolver.locate(code)
-        return .codeBlock(language: language, code: code)
-    case .table(let headers, let rows):
-        let hs = headers.map { annotate($0, with: &resolver) }
-        let rs = rows.map { row in row.map { annotate($0, with: &resolver) } }
-        return .table(headers: hs, rows: rs)
-    }
-}
-
-private func annotate(_ paragraph: AssistantMarkdown.Paragraph, with resolver: inout AtomOffsetResolver) -> AnnotatedParagraph {
-    AnnotatedParagraph(lines: paragraph.lines.map { annotate($0, with: &resolver) })
-}
-
-private func annotate(_ line: AssistantMarkdown.Line, with resolver: inout AtomOffsetResolver) -> AnnotatedLine {
-    var atoms: [AnnotatedAtom] = []
-    atoms.reserveCapacity(line.atoms.count)
-    for atom in line.atoms {
-        let needle: String
-        switch atom {
-        case .word(let s):              needle = s
-        case .bold(let s):              needle = s
-        case .italic(let s):            needle = s
-        case .code(let s):              needle = s
-        case .link(let label, _, _):    needle = label
-        }
-        let offset = resolver.locate(needle)
-        atoms.append(AnnotatedAtom(atom: atom, offset: offset))
-    }
-    return AnnotatedLine(atoms: atoms)
-}
-
-/// Per-message identity cache for `parseBlocks` + `annotateBlocks`.
-/// Every delta to ANY message publishes `AppState.chats`, which
-/// invalidates every `AssistantMarkdownText` body in the chat. Without
-/// this cache, every old message in the transcript would re-parse its
-/// markdown on every token arrival; with the cache the body short-
-/// circuits when `text` is byte-equal to the last parsed value.
-///
-/// For the message that's currently streaming the cache also caches the
-/// full-text branch: an upstream `objectWillChange` (e.g. an unrelated
-/// `@Published` setter) can invalidate body without `text` actually
-/// growing, and we want those re-runs to skip the parse too. When `text`
-/// truly grew between calls we fall through to a full reparse — small
-/// (a typical assistant turn is a few KB), but the dominant cost in the
-/// streaming pipeline is downstream rendering, not this parse.
-private final class MarkdownParseCache: ObservableObject {
-    private var cachedText: String?
-    private var cachedBlocks: [AnnotatedBlock] = []
-    private var cachedParseMs: Double = 0
-    private var cachedAnnotateMs: Double = 0
-
-    struct Result {
-        let blocks: [AnnotatedBlock]
-        let cacheHit: Bool
-        let parseMs: Double
-        let annotateMs: Double
-    }
-
-    func parse(_ text: String) -> Result {
-        if let last = cachedText, last == text {
-            return Result(blocks: cachedBlocks, cacheHit: true,
-                          parseMs: cachedParseMs, annotateMs: cachedAnnotateMs)
-        }
-        let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let parsed = AssistantMarkdown.parseBlocks(text)
-        let parseT1 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let annotated = annotateBlocks(parsed, source: text)
-        let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        cachedText = text
-        cachedBlocks = annotated
-        cachedParseMs = (parseT1 - parseT0) * 1000
-        cachedAnnotateMs = (parseT2 - parseT1) * 1000
-        return Result(blocks: annotated, cacheHit: false,
-                      parseMs: cachedParseMs, annotateMs: cachedAnnotateMs)
-    }
-}
-
-/// Renders assistant prose with the markdown subset Clawix emits:
-/// paragraphs, ATX headings, bullet/numbered lists, GitHub-style tables,
-/// fenced code blocks, plus inline `**bold**`, `*italic*`, `` `code` ``,
-/// and `[label](url)` links. Each link is its own hoverable atom inside
-/// a flow layout so tap routes to the sidebar browser and a dotted hover
-/// underline tells the user it is interactive.
-///
-/// While the body is still streaming (or just finished and the trailing
-/// fade hasn't completed yet) the renderer wraps in `TimelineView` and
-/// applies a per-character opacity ramp from `StreamingFade`, so newly
-/// arrived characters glide in from invisible while older ones stay
-/// settled at full opacity.
-private struct AssistantMarkdownText: View {
-    let text: String
-    let weight: Font.Weight
-    let color: Color
-    var checkpoints: [StreamCheckpoint] = []
-    var streamingFinished: Bool = true
-    @EnvironmentObject var appState: AppState
-    @StateObject private var parseCache = MarkdownParseCache()
-    /// Bumped when the trailing fade window closes, so the body
-    /// re-evaluates and tears down the `TimelineView` once nothing is
-    /// animating any more.
-    @State private var animationTick: Int = 0
-
-    var body: some View {
-        let parsed = parseCache.parse(text)
-        let blocks = parsed.blocks
-        let _ = streamingPerfLogEnabled && !parsed.cacheHit
-            && (!checkpoints.isEmpty || !streamingFinished)
-            ? logBodyTiming(parseMs: parsed.parseMs,
-                            annotateMs: parsed.annotateMs,
-                            len: text.count, blockCount: blocks.count)
-            : ()
-        let now = Date()
-        let animating = StreamingFade.isAnimating(
-            checkpoints: checkpoints,
-            finished: streamingFinished,
-            now: now
-        )
-
-        Group {
-            if animating {
-                TimelineView(.animation) { ctx in
-                    blocksView(blocks, now: ctx.date)
-                }
-            } else {
-                blocksView(blocks, now: now)
-            }
-        }
-        .task(id: TickKey(timestamp: checkpoints.last?.addedAt, finished: streamingFinished)) {
-            await scheduleSettle()
-        }
-    }
-
-    private func scheduleSettle() async {
-        guard let last = checkpoints.last else { return }
-        let remaining = StreamingFade.duration - Date().timeIntervalSince(last.addedAt)
-        if remaining > 0 {
-            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
-        }
-        animationTick &+= 1
-    }
-
-    private func logBodyTiming(parseMs: Double, annotateMs: Double, len: Int, blockCount: Int) {
-        let line = String(
-            format: "body parse=%.2fms annotate=%.2fms len=%d blocks=%d cps=%d finished=%d",
-            parseMs, annotateMs, len, blockCount, checkpoints.count, streamingFinished ? 1 : 0
-        )
-        streamingPerfLog.log("\(line, privacy: .public)")
-    }
-
-    private struct TickKey: Hashable {
-        let timestamp: Date?
-        let finished: Bool
-    }
-
-    @ViewBuilder
-    private func blocksView(_ blocks: [AnnotatedBlock], now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block, now: now)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func blockView(_ block: AnnotatedBlock, now: Date) -> some View {
-        switch block {
-        case .paragraph(let p):
-            ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
-                appState.openLinkInBrowser(url)
-            }
-            .equatable()
-            .fixedSize(horizontal: false, vertical: true)
-
-        case .heading(let level, let line):
-            ParagraphFlow(
-                paragraph: AnnotatedParagraph(lines: [line]),
-                weight: .semibold,
-                color: color,
-                fontSize: headingFontSize(level),
-                checkpoints: checkpoints,
-                now: now
-            ) { url in
-                appState.openLinkInBrowser(url)
-            }
-            .equatable()
-            .fixedSize(horizontal: false, vertical: true)
-
-        case .bulletList(let items):
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Circle()
-                            .fill(color)
-                            .frame(width: 5, height: 5)
-                            .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + 4 }
-                            .frame(width: 10, alignment: .leading)
-                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
-                            appState.openLinkInBrowser(url)
-                        }
-                        .equatable()
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-            }
-
-        case .numberedList(let items):
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(idx + 1).")
-                            .font(BodyFont.system(size: 13.5, weight: weight))
-                            .foregroundColor(color)
-                            .fixedSize()
-                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
-                            appState.openLinkInBrowser(url)
-                        }
-                        .equatable()
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-            }
-
-        case .table(let headers, let rows):
-            AssistantTableView(
-                headers: headers,
-                rows: rows,
-                weight: weight,
-                color: color,
-                checkpoints: checkpoints,
-                now: now
-            ) { url in
-                appState.openLinkInBrowser(url)
-            }
-
-        case .codeBlock(let language, let code):
-            AssistantCodeBlockView(language: language, code: code)
-        }
-    }
-
-    private func headingFontSize(_ level: Int) -> CGFloat {
-        switch level {
-        case 1:  return 20
-        case 2:  return 17
-        case 3:  return 15
-        default: return 14
-        }
-    }
-}
-
-/// Table block rendered with the same look as the reference UI: column
-/// headers in semibold weight, hairline horizontal divider after every
-/// row, leading-aligned cells with generous vertical padding and no
-/// vertical separators. Columns size by intrinsic content via `Grid`.
-private struct AssistantTableView: View {
-    let headers: [AnnotatedLine]
-    let rows: [[AnnotatedLine]]
-    let weight: Font.Weight
-    let color: Color
-    var checkpoints: [StreamCheckpoint] = []
-    var now: Date = .distantPast
-    let onLinkTap: (URL) -> Void
-
-    private let divider = Color.white.opacity(0.14)
-    private let dividerThickness: CGFloat = 0.75
-    private let cellVPad: CGFloat = 7
-    private let cellHPad: CGFloat = 32
-
-    var body: some View {
-        let columnCount = max(headers.count, rows.map { $0.count }.max() ?? 0)
-        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0) {
-            GridRow {
-                ForEach(Array(headers.enumerated()), id: \.offset) { idx, cell in
-                    cellView(cell, weight: .semibold)
-                        .padding(.leading, idx == 0 ? 0 : cellHPad)
-                        .gridColumnAlignment(.leading)
-                }
-            }
-            .padding(.vertical, cellVPad)
-
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                Rectangle()
-                    .fill(divider)
-                    .frame(height: dividerThickness)
-                    .gridCellColumns(columnCount)
-                GridRow {
-                    ForEach(0..<columnCount, id: \.self) { idx in
-                        cellView(idx < row.count ? row[idx] : AnnotatedLine(atoms: []), weight: weight)
-                            .padding(.leading, idx == 0 ? 0 : cellHPad)
-                            .gridColumnAlignment(.leading)
-                    }
-                }
-                .padding(.vertical, cellVPad)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func cellView(_ line: AnnotatedLine, weight: Font.Weight) -> some View {
-        ParagraphFlow(
-            paragraph: AnnotatedParagraph(lines: [line]),
-            weight: weight,
-            color: color,
-            checkpoints: checkpoints,
-            now: now
-        ) { url in
-            onLinkTap(url)
-        }
-        .equatable()
-        .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-/// Fenced code block rendered with a header row showing the language
-/// label and a copy affordance, matching the file-preview code block
-/// style so multi-line snippets feel consistent across the app.
-private struct AssistantCodeBlockView: View {
-    let language: String
-    let code: String
-
-    @EnvironmentObject var appState: AppState
-    @State private var copied = false
-    @State private var hoverCopy = false
-    @State private var hoverWrap = false
-
-    private var wrapStateProgress: CGFloat {
-        appState.chatCodeBlockWordWrap ? 0 : 1
-    }
-    private var displayProgress: CGFloat {
-        hoverWrap ? (1 - wrapStateProgress) : wrapStateProgress
-    }
-    private var wrapForegroundColor: Color {
-        let on = appState.chatCodeBlockWordWrap
-        if hoverWrap { return Color(white: on ? 0.94 : 0.85) }
-        return Color(white: on ? 0.78 : 0.45)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Text(language.isEmpty ? "code" : language)
-                    .font(BodyFont.system(size: 11.5, weight: .regular))
-                    .foregroundColor(Color(white: 0.55))
-                Spacer(minLength: 8)
-                Button(action: toggleWrap) {
-                    WordWrapToggleIcon(
-                        progress: displayProgress,
-                        rightBarOpacity: hoverWrap ? 0.35 : 1,
-                        color: wrapForegroundColor,
-                        lineWidth: 1.1
-                    )
-                    .frame(width: 13, height: 13)
-                    .frame(width: 22, height: 22)
-                }
-                .buttonStyle(.plain)
-                .onHover { hoverWrap = $0 }
-                .animation(.easeInOut(duration: 0.22), value: hoverWrap)
-                .animation(.easeInOut(duration: 0.22), value: appState.chatCodeBlockWordWrap)
-                .help(appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap")
-                .accessibilityLabel(
-                    appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap"
-                )
-                Button(action: copyCode) {
-                    Group {
-                        if copied {
-                            Image(systemName: "checkmark")
-                                .font(BodyFont.system(size: 11, weight: .semibold))
-                                .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
-                        } else {
-                            CopyIconViewSquircle(
-                                color: Color(white: hoverCopy ? 0.88 : 0.55),
-                                lineWidth: 0.85
-                            )
-                            .frame(width: 14, height: 14)
-                        }
-                    }
-                    .frame(width: 22, height: 22)
-                }
-                .buttonStyle(.plain)
-                .onHover { hoverCopy = $0 }
-                .accessibilityLabel("Copy code")
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 10)
-            .padding(.bottom, 6)
-
-            codeBody
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(white: 0.10))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
-    }
-
-    @ViewBuilder
-    private var codeBody: some View {
-        if appState.chatCodeBlockWordWrap {
-            Text(code)
-                .font(BodyFont.system(size: 12.5, design: .monospaced))
-                .foregroundColor(Palette.textPrimary.opacity(0.94))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 14)
-                .padding(.bottom, 12)
-                .textSelection(.enabled)
-        } else {
-            ScrollView(.horizontal, showsIndicators: true) {
-                Text(code)
-                    .font(BodyFont.system(size: 12.5, design: .monospaced))
-                    .foregroundColor(Palette.textPrimary.opacity(0.94))
-                    .fixedSize(horizontal: true, vertical: false)
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 12)
-                    .textSelection(.enabled)
-            }
-        }
-    }
-
-    private func toggleWrap() {
-        appState.chatCodeBlockWordWrap.toggle()
-    }
-
-    private func copyCode() {
-        let pb = NSPasteboard.general
-        pb.clearContents()
-        pb.setString(code, forType: .string)
-        copied = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
-            copied = false
-        }
-    }
-}
-
-/// One paragraph laid out as a vertical stack of "lines" (split on `\n`).
-/// Each line is a wrapping flow of word / code / link atoms. Splitting by
-/// word lets the link atoms participate in line wrapping while letting us
-/// attach per-link `.onHover` and `.onTapGesture` modifiers.
-private struct ParagraphFlow: View, Equatable {
-    let paragraph: AnnotatedParagraph
-    let weight: Font.Weight
-    let color: Color
-    var fontSize: CGFloat = 13.5
-    var checkpoints: [StreamCheckpoint] = []
-    var now: Date = .distantPast
-    let onLinkTap: (URL) -> Void
-
-    /// Skip body re-evaluation when the rendered output cannot have
-    /// changed. Two `ParagraphFlow`s render identically when their
-    /// content/styling matches AND either there's no fade in flight
-    /// (checkpoints empty, or all settled at both `now`s) or `now` is
-    /// the same instant. The closure is excluded by design: its
-    /// behaviour is constant for the message lifetime, but a fresh
-    /// closure value lands on every parent body re-render.
-    static func == (lhs: ParagraphFlow, rhs: ParagraphFlow) -> Bool {
-        guard lhs.paragraph == rhs.paragraph,
-              lhs.weight == rhs.weight,
-              lhs.color == rhs.color,
-              lhs.fontSize == rhs.fontSize,
-              lhs.checkpoints == rhs.checkpoints else { return false }
-        guard let last = lhs.checkpoints.last else { return true }
-        let settledBy = last.addedAt.addingTimeInterval(StreamingFade.duration)
-        if settledBy < lhs.now && settledBy < rhs.now { return true }
-        return lhs.now == rhs.now
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(paragraph.lines.enumerated()), id: \.offset) { _, line in
-                FlowLayout(horizontalSpacing: 0, verticalSpacing: 6) {
-                    ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, annotated in
-                        AtomView(
-                            atom: annotated.atom,
-                            opacity: opacityFor(offset: annotated.offset),
-                            weight: weight,
-                            color: color,
-                            fontSize: fontSize,
-                            onLinkTap: onLinkTap
-                        )
-                        .equatable()
-                    }
-                }
-            }
-        }
-    }
-
-    /// Hoists the per-atom opacity calculation out of `AtomView`. With
-    /// `.equatable()` the leaf only re-evaluates body when its `opacity`
-    /// (or atom content) actually changes, so the hundreds of settled
-    /// atoms above the trailing fade window stop re-rendering at every
-    /// `TimelineView` tick.
-    private func opacityFor(offset: Int) -> Double {
-        guard !checkpoints.isEmpty else { return 1.0 }
-        return StreamingFade.opacity(
-            offset: offset,
-            checkpoints: checkpoints,
-            now: now
-        )
-    }
-}
-
-/// Leaf renderer for a single styled token. Equatable on its visible
-/// inputs so SwiftUI can skip body re-evaluation when only the parent
-/// re-ran (e.g. the streaming `TimelineView` ticked but this atom is
-/// already fully faded in). The `onLinkTap` closure is intentionally
-/// excluded from `==`: its identity changes on every parent body
-/// re-render, but the behaviour is constant for the message lifetime.
-private struct AtomView: View, Equatable {
-    let atom: AssistantMarkdown.Atom
-    let opacity: Double
-    let weight: Font.Weight
-    let color: Color
-    var fontSize: CGFloat = 13.5
-    let onLinkTap: (URL) -> Void
-
-    static func == (lhs: AtomView, rhs: AtomView) -> Bool {
-        lhs.opacity == rhs.opacity
-            && lhs.atom == rhs.atom
-            && lhs.weight == rhs.weight
-            && lhs.color == rhs.color
-            && lhs.fontSize == rhs.fontSize
-    }
-
-    var body: some View {
-        switch atom {
-        case .word(let s):
-            Text(s)
-                .font(BodyFont.system(size: fontSize, weight: weight))
-                .foregroundColor(color)
-                .opacity(opacity)
-        case .bold(let s):
-            Text(s)
-                .font(BodyFont.system(size: fontSize, weight: .semibold))
-                .foregroundColor(color)
-                .opacity(opacity)
-        case .italic(let s):
-            Text(s)
-                .font(BodyFont.system(size: fontSize, weight: weight).italic())
-                .foregroundColor(color)
-                .opacity(opacity)
-        case .code(let s):
-            Text(s)
-                .font(BodyFont.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
-                .foregroundColor(Color(white: 0.94))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.white.opacity(0.09))
-                )
-                .padding(.horizontal, 2)
-                .offset(y: -3)
-                .opacity(opacity)
-        case .link(let label, let url, let isBareUrl):
-            LinkAtom(label: label, url: url, isBareUrl: isBareUrl, weight: weight, onTap: onLinkTap)
-                .opacity(opacity)
-        }
-    }
-}
-
-/// Inline link with hover affordance: cursor flips to a pointing hand and
-/// a subtle dotted underline appears so the user can tell it is tappable.
-/// Tap routes through `onTap` (wired to `AppState.openLinkInBrowser`,
-/// which itself dispatches `file://` URLs to the file viewer) so the
-/// destination always lands in the right-sidebar panel instead of the
-/// system browser. The leading icon picks `FileChipIcon` for `file://`
-/// links and `GlobeIcon` for everything else, so a `[abrir markdown]
-/// (/abs/path.md)` chip reads as a document and a `[clawix.com]
-/// (https://…)` chip reads as a web link.
-private struct LinkAtom: View {
-    let label: String
-    let url: URL
-    let isBareUrl: Bool
-    let weight: Font.Weight
-    let onTap: (URL) -> Void
-
-    @State private var hovered = false
-    private let linkColor = Color(red: 0.42, green: 0.72, blue: 1.0)
-
-    var body: some View {
-        Button(action: { onTap(url) }) {
-            HStack(alignment: .center, spacing: 4) {
-                Group {
-                    if url.isFileURL {
-                        FileChipIcon(size: 15)
-                    } else {
-                        GlobeIcon(size: 15)
-                    }
-                }
-                .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
-                Text(label)
-                    .font(BodyFont.system(size: 14, weight: .medium))
-                    .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
-                    .underline(hovered, pattern: .dot, color: linkColor.opacity(0.85))
-            }
-            .padding(.horizontal, 3)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onContinuousHover { phase in
-            switch phase {
-            case .active:
-                hovered = true
-                NSCursor.pointingHand.set()
-            case .ended:
-                hovered = false
-            }
-        }
-        .hoverHint(url.isFileURL ? url.path : url.absoluteString)
-        .contextMenu {
-            if url.isFileURL {
-                Button("Open") { onTap(url) }
-                Button("Open with default app") {
-                    NSWorkspace.shared.open(url)
-                }
-                Button("Reveal in Finder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([url])
-                }
-                Divider()
-                Button("Copy path") {
-                    let pb = NSPasteboard.general
-                    pb.clearContents()
-                    pb.setString(url.path, forType: .string)
-                }
-            } else {
-                Button("Open in browser") { onTap(url) }
-                Button("Open in external browser") {
-                    NSWorkspace.shared.open(url)
-                }
-                Divider()
-                Button("Copy link") {
-                    let pb = NSPasteboard.general
-                    pb.clearContents()
-                    pb.setString(url.absoluteString, forType: .string)
-                }
-            }
-        }
         .accessibilityAddTraits(.isLink)
     }
 }
