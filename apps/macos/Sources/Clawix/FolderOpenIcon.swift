@@ -848,6 +848,10 @@ struct IconImage: View {
             PinIcon(size: size)
         case "arrow.triangle.branch":
             BranchIcon(size: size)
+        case "cursor":
+            CursorIcon(size: size)
+        case "chart.bar", "gauge.with.dots.needle.33percent":
+            UsageIcon(size: size)
         default:
             Image(systemName: name)
                 .font(BodyFont.system(size: size))

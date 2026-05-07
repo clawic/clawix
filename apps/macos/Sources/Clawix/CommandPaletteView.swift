@@ -206,7 +206,7 @@ struct CommandPaletteView: View {
     private var searchField: some View {
         TextField("Type a command", text: $query)
             .textFieldStyle(.plain)
-            .font(BodyFont.system(size: 16))
+            .font(BodyFont.system(size: 16, wght: 500))
             .foregroundColor(Color(white: 0.92))
             .focused($queryFocused)
             .padding(.horizontal, 22)
@@ -233,7 +233,7 @@ struct CommandPaletteView: View {
                     }
                     if filtered.isEmpty {
                         Text("No results")
-                            .font(BodyFont.system(size: 13))
+                            .font(BodyFont.system(size: 13, wght: 500))
                             .foregroundColor(Color(white: 0.45))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 28)
@@ -254,7 +254,7 @@ struct CommandPaletteView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .font(BodyFont.system(size: 12))
+            .font(BodyFont.system(size: 12, wght: 500))
             .foregroundColor(Color(white: 0.50))
             .padding(.horizontal, 22)
             .padding(.top, 10)
@@ -278,7 +278,7 @@ struct CommandPaletteView: View {
                 .foregroundColor(Color(white: 0.85))
                 .frame(width: 18, alignment: .center)
                 Text(item.title)
-                    .font(BodyFont.system(size: 14))
+                    .font(BodyFont.system(size: 14, wght: 500))
                     .foregroundColor(Color(white: 0.94))
                 Spacer(minLength: 12)
                 if let shortcut = item.shortcut {
@@ -327,7 +327,7 @@ private struct ShortcutChip: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(BodyFont.system(size: 11.5, weight: .regular))
+            .font(BodyFont.system(size: 11.5, wght: 500))
             .foregroundColor(Color(white: 0.62))
             .padding(.horizontal, 7)
             .padding(.vertical, 3)

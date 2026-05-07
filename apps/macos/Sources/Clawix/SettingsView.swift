@@ -4,17 +4,15 @@ import SwiftUI
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case general
-    case appearance
+    // case appearance  // hidden temporarily
     case configuration
     case personalization
     case dictation
     case quickAsk
+    case localModels
     case mcp
-    case git
-    case environments
-    case worktrees
+    // case git  // hidden temporarily
     case browserUsage
-    case archivedChats
     case usage
 
     var id: String { rawValue }
@@ -22,35 +20,31 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var title: LocalizedStringKey {
         switch self {
         case .general:          return "General"
-        case .appearance:       return "Appearance"
+        // case .appearance:       return "Appearance"
         case .configuration:    return "Settings"
         case .personalization:  return "Personalization"
         case .dictation:        return "Voice to Text"
         case .quickAsk:         return "QuickAsk"
+        case .localModels:      return "Local models"
         case .mcp:              return "MCP servers"
-        case .git:              return "Git"
-        case .environments:     return "Environments"
-        case .worktrees:        return "Worktrees"
+        // case .git:              return "Git"
         case .browserUsage:     return "Browser usage"
-        case .archivedChats:    return "Chats archivados"
-        case .usage:            return "Uso"
+        case .usage:            return "Usage"
         }
     }
 
     var iconName: String {
         switch self {
         case .general:          return "house"
-        case .appearance:       return "circle.lefthalf.filled"
+        // case .appearance:       return "circle.lefthalf.filled"
         case .configuration:    return "slider.horizontal.3"
         case .personalization:  return "person.crop.circle"
         case .dictation:        return "mic.fill"
         case .quickAsk:         return "command"
+        case .localModels:      return "cpu"
         case .mcp:              return "server.rack"
-        case .git:              return "arrow.triangle.branch"
-        case .environments:     return "macwindow"
-        case .worktrees:        return "rectangle.stack"
-        case .browserUsage:     return "globe"
-        case .archivedChats:    return "archivebox"
+        // case .git:              return "arrow.triangle.branch"
+        case .browserUsage:     return "cursor"
         case .usage:            return "chart.bar"
         }
     }
@@ -67,26 +61,27 @@ struct SettingsSidebar: View {
             Button {
                 appState.currentRoute = .home
             } label: {
-                HStack(spacing: 15) {
+                HStack(spacing: 11) {
                     Image(systemName: "arrow.left")
-                        .font(BodyFont.system(size: 12, weight: .medium))
-                        .frame(width: 16, alignment: .center)
+                        .font(BodyFont.system(size: 12, wght: 600))
+                        .frame(width: 15, alignment: .center)
+                        .foregroundColor(Color(white: backHovered ? 0.92 : 0.78))
                     Text("Back to app")
-                        .font(BodyFont.system(size: 13))
-                    Spacer(minLength: 10)
+                        .font(BodyFont.system(size: 13.5, wght: 500))
+                        .foregroundColor(Color(white: 0.92))
+                    Spacer(minLength: 6)
                 }
-                .foregroundColor(Color(white: 0.78))
-                .padding(.leading, 8)
-                .padding(.trailing, 12)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .contentShape(Rectangle())
                 .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(backHovered ? Color.white.opacity(0.05) : .clear)
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(backHovered ? Color.white.opacity(0.035) : .clear)
                 )
+                .animation(.easeOut(duration: 0.12), value: backHovered)
             }
             .buttonStyle(.plain)
-            .onHover { backHovered = $0 }
+            .sidebarHover { backHovered = $0 }
             .padding(.horizontal, 8)
             .padding(.top, 6)
             .padding(.bottom, 14)
@@ -114,32 +109,60 @@ private struct SettingsSidebarRow: View {
         Button {
             appState.settingsCategory = category
         } label: {
-            HStack(spacing: 15) {
-                IconImage(category.iconName, size: 13)
-                    .frame(width: 16, alignment: .center)
-                    .foregroundColor(isSelected ? .white : Color(white: 0.78))
+            HStack(spacing: 11) {
+                categoryIcon
+                    .frame(width: 15, alignment: .center)
+                    .foregroundColor(iconColor)
                 Text(category.title)
-                    .font(BodyFont.system(size: 13, weight: .light))
-                    .foregroundColor(isSelected ? .white : Color(white: 0.88))
-                Spacer(minLength: 10)
+                    .font(BodyFont.system(size: 13.5, wght: 500))
+                    .foregroundColor(labelColor)
+                Spacer(minLength: 6)
             }
-            .padding(.leading, 8)
-            .padding(.trailing, 12)
+            .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .contentShape(Rectangle())
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(backgroundFill)
             )
+            .animation(.easeOut(duration: 0.12), value: hovered)
         }
         .buttonStyle(.plain)
-        .onHover { hovered = $0 }
+        .sidebarHover { hovered = $0 }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var iconColor: Color {
+        if isSelected { return .white }
+        return Color(white: hovered ? 0.92 : 0.78)
+    }
+
+    private var labelColor: Color {
+        isSelected ? .white : Color(white: 0.92)
     }
 
     private var backgroundFill: Color {
-        if isSelected { return Color.white.opacity(0.07) }
+        if isSelected { return Color.white.opacity(0.06) }
         if hovered    { return Color.white.opacity(0.035) }
         return .clear
+    }
+
+    @ViewBuilder
+    private var categoryIcon: some View {
+        switch category {
+        case .configuration:
+            SettingsIcon(size: 19, lineWidth: 0.9)
+        case .browserUsage:
+            IconImage(category.iconName, size: 20)
+                .offset(y: 2)
+        // case .git:
+        //     IconImage(category.iconName, size: 14)
+        //         .offset(y: 1)
+        case .usage:
+            UsageIcon(size: 16, lineWidth: 1.7)
+        default:
+            IconImage(category.iconName, size: 13)
+        }
     }
 }
 
@@ -154,18 +177,16 @@ struct SettingsContent: View {
                 Group {
                     switch appState.settingsCategory {
                     case .general:         GeneralPage()
-                    case .appearance:      AppearancePage()
+                    // case .appearance:      AppearancePage()
                     case .configuration:   ConfigurationPage()
                     case .personalization: PersonalizationPage()
                     case .dictation:       DictationSettingsPage()
                     case .quickAsk:        QuickAskSettingsPage()
-                    case .git:             GitPage()
-                    case .environments:    EnvironmentsPage()
+                    case .localModels:     LocalModelsPage()
+                    // case .git:             GitPage()
                     case .browserUsage:    BrowserUsagePage()
-                    case .archivedChats:   ArchivedChatsPage()
                     case .usage:           UsagePage()
                     case .mcp:             MCPPage()
-                    default:               PlaceholderPage(category: appState.settingsCategory)
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -204,8 +225,9 @@ private struct SectionLabel: View {
     let title: LocalizedStringKey
     var body: some View {
         Text(title)
-            .font(BodyFont.system(size: 13, weight: .medium))
+            .font(BodyFont.system(size: 13, wght: 600))
             .foregroundColor(Palette.textPrimary)
+            .padding(.leading, 3)
             .padding(.bottom, 14)
             .padding(.top, 28)
     }
@@ -248,7 +270,7 @@ private struct RowLabel: View {
                 .foregroundColor(Palette.textPrimary)
             if let detail {
                 Text(detail)
-                    .font(BodyFont.system(size: 11))
+                    .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -398,6 +420,7 @@ struct SettingsDropdown<T: Hashable>: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
             .frame(minWidth: minWidth, alignment: .leading)
+            .fixedSize(horizontal: true, vertical: false)
             .background(
                 Capsule(style: .continuous)
                     .fill(hovered || isOpen
@@ -445,7 +468,7 @@ struct SettingsDropdown<T: Hashable>: View {
                 icon
             }
             Text(label)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textPrimary)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
@@ -539,12 +562,12 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                         if hasAnyDescription {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(opt.1)
-                                    .font(BodyFont.system(size: 13, weight: .medium))
+                                    .font(BodyFont.system(size: 13, wght: 600))
                                     .foregroundColor(MenuStyle.rowText)
                                     .lineLimit(1)
                                 if let desc = descriptionForOption?(opt.0), !desc.isEmpty {
                                     Text(desc)
-                                        .font(BodyFont.system(size: 11.5))
+                                        .font(BodyFont.system(size: 11.5, wght: 500))
                                         .foregroundColor(MenuStyle.rowSubtle)
                                         .lineLimit(1)
                                 }
@@ -611,44 +634,14 @@ private struct SegmentedRow<T: Hashable>: View {
     let detail: LocalizedStringKey?
     let options: [(T, String)]
     @Binding var selection: T
-    @Namespace private var indicatorNS
+    var width: CGFloat = 190
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             RowLabel(title: title, detail: detail)
             Spacer(minLength: 12)
-            HStack(spacing: 0) {
-                ForEach(Array(options.enumerated()), id: \.offset) { _, opt in
-                    let isOn = opt.0 == selection
-                    Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                            selection = opt.0
-                        }
-                    } label: {
-                        Text(opt.1)
-                            .font(BodyFont.system(size: 12, weight: .medium))
-                            .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
-                            .padding(.horizontal, 11)
-                            .padding(.vertical, 5)
-                            .background(
-                                ZStack {
-                                    if isOn {
-                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                            .fill(Color.white.opacity(0.10))
-                                            .matchedGeometryEffect(id: "segIndicator", in: indicatorNS)
-                                    }
-                                }
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(2)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.white.opacity(0.04))
-            )
+            SlidingSegmented(selection: $selection, options: options)
+                .frame(width: width)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -669,14 +662,14 @@ private struct ActionPillRow: View {
             HStack(spacing: 6) {
                 if let trailingDisabled {
                     Text(trailingDisabled)
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                 }
                 Button(action: onPrimary) {
                     Text(primaryLabel)
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
@@ -735,10 +728,10 @@ private struct GeneralPage: View {
             PageHeader(title: "General")
 
             Text("Work mode")
-                .font(BodyFont.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Palette.textPrimary)
             Text("Choose how much technical detail Clawix shows")
-                .font(BodyFont.system(size: 11))
+                .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.bottom, 14)
 
@@ -1008,10 +1001,10 @@ private struct PinsSourceInfoRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text("Pins source")
-                        .font(BodyFont.system(size: 13, weight: .regular))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Color(white: 0.94))
                     Text(isLocal ? "Local" : "Codex")
-                        .font(BodyFont.system(size: 11, weight: .medium))
+                        .font(BodyFont.system(size: 11, wght: 600))
                         .foregroundColor(isLocal ? Color(white: 0.94) : Color(white: 0.55))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 2)
@@ -1023,7 +1016,7 @@ private struct PinsSourceInfoRow: View {
                 Text(isLocal
                      ? "Pins are managed locally. Use Reset local overrides below to switch back to Codex's pins."
                      : "Pins are read from Codex on each launch. Pin or unpin from this app to take local control.")
-                    .font(BodyFont.system(size: 11))
+                    .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }
             Spacer(minLength: 12)
@@ -1043,7 +1036,7 @@ private struct HiddenCodexFoldersSection: View {
             if hidden.isEmpty {
                 HStack {
                     Text("No hidden folders. Right-click a Codex folder in the sidebar to hide it.")
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                         .foregroundColor(Color(white: 0.55))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer()
@@ -1077,10 +1070,10 @@ private struct HiddenFolderRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
                 Text((path as NSString).lastPathComponent)
-                    .font(BodyFont.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Color(white: 0.94))
                 Text(path)
-                    .font(BodyFont.system(size: 11))
+                    .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -1102,10 +1095,10 @@ private struct ResetLocalOverridesRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Reset local overrides")
-                    .font(BodyFont.system(size: 13, weight: .regular))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Color(white: 0.94))
                 Text("Permanently delete all local pins, archives, custom titles, project overrides and hidden Codex folders. The app will resync from Codex on next refresh. Codex's data is not affected.")
-                    .font(BodyFont.system(size: 11))
+                    .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1167,10 +1160,10 @@ private struct WorkModeCard: View {
                     )
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(BodyFont.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                     Text(subtitle)
-                        .font(BodyFont.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1217,7 +1210,7 @@ private struct ImportAgentRow: View {
                 SettingsIcon(size: 19)
                     .foregroundColor(Color(white: 0.86))
                 Text("2")
-                    .font(BodyFont.system(size: 9, weight: .bold))
+                    .font(BodyFont.system(size: 9, wght: 700))
                     .foregroundColor(.white)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
@@ -1226,16 +1219,16 @@ private struct ImportAgentRow: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text("Import another agent configuration")
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                 Text("Clawix detected useful preferences from another local agent on this Mac")
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
             Button {} label: {
                 Text("Import")
-                    .font(BodyFont.system(size: 12, weight: .medium))
+                    .font(BodyFont.system(size: 12, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
@@ -1314,7 +1307,7 @@ private struct DictionaryExpandableRow: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
-                                .font(BodyFont.system(size: 11, weight: .semibold))
+                                .font(BodyFont.system(size: 11, wght: 700))
                             Text("Add entry")
                                 .font(BodyFont.system(size: 12.5))
                         }
@@ -1350,14 +1343,14 @@ private struct DictionaryEntryField: View {
             TextField("", text: $text)
                 .textFieldStyle(.plain)
                 .focused($focused)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.leading, 12)
                 .padding(.vertical, 9)
             Spacer(minLength: 8)
             Button(action: onDelete) {
                 Image(systemName: "trash")
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Color(white: trashHovered ? 0.94 : 0.55))
                     .frame(width: 30, height: 30)
                     .contentShape(Rectangle())
@@ -1411,7 +1404,7 @@ private struct RecentDictationRow: View {
                 Group {
                     if copied {
                         Image(systemName: "checkmark")
-                            .font(BodyFont.system(size: 12))
+                            .font(BodyFont.system(size: 12, wght: 500))
                     } else {
                         CopyIconViewSquircle(
                             color: Color(white: copyHovered ? 0.94 : 0.60),
@@ -1462,10 +1455,10 @@ private struct AppearancePage: View {
                 HStack(alignment: .top, spacing: 14) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Theme")
-                            .font(BodyFont.system(size: 13))
+                            .font(BodyFont.system(size: 13, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                         Text("Use light, dark, or system appearance")
-                            .font(BodyFont.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                     }
                     Spacer(minLength: 12)
@@ -1541,9 +1534,9 @@ private struct ThemeChip: View {
         Button(action: onTap) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(BodyFont.system(size: 11))
+                    .font(BodyFont.system(size: 11, wght: 500))
                 Text(label)
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
             }
             .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
             .padding(.horizontal, 11)
@@ -1653,14 +1646,14 @@ private struct ThemeSubSection: View {
         SettingsCard {
             HStack(alignment: .center, spacing: 16) {
                 Text(title)
-                    .font(BodyFont.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Spacer(minLength: 8)
                 Text("Import")
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                 Text("Copy theme")
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                 SettingsDropdown(
                     options: [("Clawix", "Clawix"), ("Mono", "Mono"), ("Sans", "Sans")],
@@ -1695,7 +1688,7 @@ private struct ColorRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(title)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
             HStack(spacing: 8) {
@@ -1733,7 +1726,7 @@ private struct FontFieldRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(title)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
             Text(value)
@@ -1764,14 +1757,14 @@ private struct SliderRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Text(title)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
             Slider(value: $value, in: range)
                 .frame(width: 220)
                 .tint(Color(red: 0.30, green: 0.55, blue: 1.0))
             Text("\(Int(value))")
-                .font(BodyFont.system(size: 12))
+                .font(BodyFont.system(size: 12, wght: 500))
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: 28, alignment: .trailing)
         }
@@ -1787,10 +1780,10 @@ private struct FontSizeRow: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Interface font size")
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                 Text("Adjust the base size used for the Clawix interface")
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
@@ -1812,7 +1805,7 @@ private struct FontSizeRow: View {
                             )
                     )
                 Text("px")
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
         }
@@ -1836,7 +1829,7 @@ private struct ConfigurationPage: View {
             )
 
             Text("Custom config.toml settings")
-                .font(BodyFont.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.bottom, 14)
 
@@ -1856,7 +1849,7 @@ private struct ConfigurationPage: View {
                 Button {} label: {
                     HStack(spacing: 4) {
                         Text("Open config.toml")
-                            .font(BodyFont.system(size: 12))
+                            .font(BodyFont.system(size: 12, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                         Image(systemName: "arrow.up.right")
                             .font(BodyFont.system(size: 9, weight: .semibold))
@@ -1893,7 +1886,7 @@ private struct ConfigurationPage: View {
             SettingsCard {
                 HStack {
                     Text("Current version")
-                        .font(BodyFont.system(size: 13))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Palette.textPrimary)
                     Spacer()
                     Text(AppVersion.displayString)
@@ -1947,7 +1940,7 @@ private struct DeprecationBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.circle")
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.30))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
@@ -1958,7 +1951,7 @@ private struct DeprecationBanner: View {
                     Text(" instead.")
                         .foregroundColor(Color(white: 0.85))
                 }
-                .font(BodyFont.system(size: 12))
+                .font(BodyFont.system(size: 12, wght: 500))
                 HStack(spacing: 0) {
                     Text("Enable it with ").foregroundColor(Color(white: 0.75))
                     InlineCode("--enable multi_agent")
@@ -1966,16 +1959,16 @@ private struct DeprecationBanner: View {
                     InlineCode("[features].multi_agent")
                     Text(" in config.toml. See").foregroundColor(Color(white: 0.75))
                 }
-                .font(BodyFont.system(size: 11.5))
+                .font(BodyFont.system(size: 11.5, wght: 500))
                 HStack(spacing: 4) {
                     Image(systemName: "globe")
                         .font(BodyFont.system(size: 10))
                         .foregroundColor(Palette.pastelBlue)
                     Text("Toggle experimental features by editing the configuration file.")
-                        .font(BodyFont.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Palette.pastelBlue)
                     Text("for details.")
-                        .font(BodyFont.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Color(white: 0.75))
                 }
             }
@@ -2015,19 +2008,19 @@ private struct ReinstallRow: View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Reset and install workspace")
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                 Text("Removes the local package, fetches it fresh, and reloads the tools")
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
             Button {} label: {
                 HStack(spacing: 5) {
                     Image(systemName: "arrow.down.circle")
-                        .font(BodyFont.system(size: 11))
+                        .font(BodyFont.system(size: 11, wght: 500))
                     Text("Reinstall")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, wght: 600))
                 }
                 .foregroundColor(Color(red: 1.0, green: 0.55, blue: 0.45))
                 .padding(.horizontal, 12)
@@ -2086,10 +2079,10 @@ private struct PersonalizationPage: View {
             .padding(.bottom, 28)
 
             Text("Custom instructions")
-                .font(BodyFont.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Palette.textPrimary)
             Text("Give Codex extra instructions and context for your project. Learn more")
-                .font(BodyFont.system(size: 11))
+                .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.bottom, 14)
 
@@ -2103,7 +2096,9 @@ private struct PersonalizationPage: View {
                 TextEditor(text: $instructions)
                     .font(BodyFont.system(size: 12, design: .monospaced))
                     .scrollContentBackground(.hidden)
-                    .padding(10)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+                    .padding(.top, 32)
                     .disabled(!didLoad && loadError == nil)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 ExpandIconButton { expanded = true }
@@ -2114,21 +2109,21 @@ private struct PersonalizationPage: View {
             HStack(spacing: 10) {
                 if let loadError {
                     Text("Could not load AGENTS.md: \(loadError)")
-                        .font(BodyFont.system(size: 11))
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.55))
                 } else if let saveError {
                     Text("Save failed: \(saveError)")
-                        .font(BodyFont.system(size: 11))
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.55))
                 } else if isDirty {
                     Text("Unsaved changes")
-                        .font(BodyFont.system(size: 11))
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                 }
                 Spacer()
                 Button { save() } label: {
                     Text("Save")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, wght: 600))
                         .foregroundColor(isDirty ? Palette.textPrimary : Palette.textSecondary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -2204,12 +2199,12 @@ private struct InstructionsExpandedSheet: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Text("Custom instructions")
-                    .font(BodyFont.system(size: 14, weight: .semibold))
+                    .font(BodyFont.system(size: 14, wght: 700))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
                     Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(Color(white: 0.78))
                         .frame(width: 22, height: 22)
                         .background(
@@ -2240,7 +2235,7 @@ private struct InstructionsExpandedSheet: View {
                 Spacer()
                 Button { isPresented = false } label: {
                     Text("Done")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -2279,7 +2274,7 @@ private struct PlaceholderPage: View {
                         .font(BodyFont.system(size: 16))
                         .foregroundColor(Palette.textSecondary)
                     Text("Coming soon")
-                        .font(BodyFont.system(size: 13))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                     Spacer()
                 }
@@ -2292,8 +2287,14 @@ private struct PlaceholderPage: View {
 
 // MARK: - Uso page
 
+private enum UsageDisplayMode: String, CaseIterable {
+    case used
+    case remaining
+}
+
 private struct UsagePage: View {
     @EnvironmentObject var appState: AppState
+    @AppStorage("clawix.settings.usage.displayMode") private var displayMode: UsageDisplayMode = .used
 
     /// Per-bucket entries other than the base "codex" id (which mirrors
     /// the general snapshot we already render at the top). Sorted by
@@ -2305,29 +2306,47 @@ private struct UsagePage: View {
             .map { ($0.key, $0.value) }
     }
 
+    private var hasAnyBars: Bool {
+        let general = appState.rateLimits.map { $0.primary != nil || $0.secondary != nil } ?? false
+        return general || !perModelBuckets.isEmpty
+    }
+
+    private var usageOptions: [(UsageDisplayMode, String)] {
+        [(.used, "Used"), (.remaining, "Remaining")]
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: "Uso")
 
             if let snapshot = appState.rateLimits, snapshot.primary != nil || snapshot.secondary != nil {
-                Text("General usage limits")
-                    .font(BodyFont.system(size: 13, weight: .medium))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.bottom, 14)
+                HStack(alignment: .center) {
+                    Text("General usage limits")
+                        .font(BodyFont.system(size: 13, wght: 600))
+                        .foregroundColor(Palette.textPrimary)
+                        .padding(.leading, 3)
+                    Spacer()
+                    if hasAnyBars {
+                        SlidingSegmented(selection: $displayMode, options: usageOptions)
+                            .frame(width: 190)
+                    }
+                }
+                .padding(.bottom, 14)
 
                 SettingsCard {
-                    UsageBarStack(snapshot: snapshot)
+                    UsageBarStack(snapshot: snapshot, mode: displayMode)
                 }
             }
 
             ForEach(perModelBuckets, id: \.id) { entry in
                 Text(verbatim: SettingsLimitsFormatter.perModelSectionTitle(name: entry.snapshot.limitName ?? entry.id))
-                    .font(BodyFont.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
+                    .padding(.leading, 3)
                     .padding(.bottom, 14)
                     .padding(.top, 28)
                 SettingsCard {
-                    UsageBarStack(snapshot: entry.snapshot)
+                    UsageBarStack(snapshot: entry.snapshot, mode: displayMode)
                 }
             }
 
@@ -2344,6 +2363,7 @@ private struct UsagePage: View {
 
 private struct UsageBarStack: View {
     let snapshot: RateLimitSnapshot
+    let mode: UsageDisplayMode
 
     private var windows: [RateLimitWindow] {
         [snapshot.primary, snapshot.secondary].compactMap { $0 }
@@ -2358,7 +2378,8 @@ private struct UsageBarStack: View {
                 UsageBarRow(
                     title: SettingsLimitsFormatter.detailedWindowLabel(for: entry.element),
                     detail: SettingsLimitsFormatter.detailedResetLabel(for: entry.element),
-                    percent: entry.element.usedPercent
+                    percent: entry.element.usedPercent,
+                    mode: mode
                 )
             }
         }
@@ -2369,6 +2390,14 @@ private struct UsageBarRow: View {
     let title: String
     let detail: String
     let percent: Int
+    let mode: UsageDisplayMode
+
+    private var displayPercent: Int {
+        switch mode {
+        case .used: return percent
+        case .remaining: return max(0, 100 - percent)
+        }
+    }
 
     var body: some View {
         HStack(alignment: .center, spacing: 18) {
@@ -2377,7 +2406,7 @@ private struct UsageBarRow: View {
                     .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Palette.textPrimary)
                 Text(verbatim: detail)
-                    .font(BodyFont.system(size: 11))
+                    .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
@@ -2385,24 +2414,99 @@ private struct UsageBarRow: View {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 999, style: .continuous)
                         .fill(Color.white.opacity(0.10))
-                        .frame(width: 120, height: 5)
-                    RoundedRectangle(cornerRadius: 999, style: .continuous)
-                        .fill(Color.white.opacity(0.95))
-                        .frame(width: max(2, 120 * CGFloat(percent) / 100), height: 5)
+                        .frame(width: 90, height: 7)
+                    if displayPercent > 0 {
+                        RoundedRectangle(cornerRadius: 999, style: .continuous)
+                            .fill(Color.white.opacity(0.95))
+                            .frame(width: max(7, 90 * CGFloat(displayPercent) / 100), height: 7)
+                    }
                 }
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text(verbatim: "\(percent) %")
-                        .font(BodyFont.system(size: 13))
+                    Text(verbatim: "\(displayPercent) %")
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(.white)
-                    Text("used")
-                        .font(BodyFont.system(size: 11))
+                    Text(mode == .used ? "used" : "remaining")
+                        .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                 }
-                .frame(width: 56, alignment: .trailing)
+                .frame(width: 70, alignment: .trailing)
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
+    }
+}
+
+/// Canonical segmented selector for the macOS app.
+///
+/// Visual: outer squircle (cornerRadius 13, dark fill, hairline stroke)
+/// with a single inner squircle indicator (cornerRadius 10, white fill)
+/// that slides between options. No `Capsule()`, no `matchedGeometryEffect`
+/// (unreliable when the binding writes through `@AppStorage` on macOS).
+///
+/// The indicator's `.offset` is animated with `.snappy(duration: 0.32)`
+/// so the highlight glides left↔right instead of jumping or fading.
+///
+/// Sizing: height is fixed (default 30); width comes from the parent.
+/// In a row layout pin it with `.frame(width: 190)` (or any intrinsic
+/// width that fits all labels). When the selector should fill its
+/// container — full-width form fields, MCP transport, etc. — leave the
+/// width unset and the inner `GeometryReader` handles the math.
+///
+/// All chips have equal width by construction. If labels differ in
+/// length, size the segmented to the longest one.
+///
+/// Use this whenever you need a 2-N choice picker in the macOS chrome.
+/// Don't roll a new one with `Capsule` or `Picker(.segmented)`.
+struct SlidingSegmented<T: Hashable>: View {
+    @Binding var selection: T
+    let options: [(T, String)]
+    var animation: Animation = .snappy(duration: 0.32, extraBounce: 0)
+    var height: CGFloat = 30
+    var fontSize: CGFloat = 11.5
+
+    private var selectedIndex: CGFloat {
+        CGFloat(options.firstIndex(where: { $0.0 == selection }) ?? 0)
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let inset: CGFloat = 3
+            let chipW = max(0, (geo.size.width - inset * 2) / CGFloat(options.count))
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(Color.black.opacity(0.30))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                    )
+
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.white.opacity(0.10))
+                    .frame(width: chipW, height: height - inset * 2)
+                    .offset(x: inset + selectedIndex * chipW, y: inset)
+                    .animation(animation, value: selection)
+
+                HStack(spacing: 0) {
+                    ForEach(Array(options.enumerated()), id: \.offset) { _, opt in
+                        let isOn = opt.0 == selection
+                        Button {
+                            selection = opt.0
+                        } label: {
+                            Text(verbatim: opt.1)
+                                .font(BodyFont.system(size: fontSize, weight: isOn ? .medium : .regular))
+                                .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
+                                .frame(width: chipW, height: height - inset * 2)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(inset)
+            }
+        }
+        .frame(height: height)
     }
 }
 
@@ -2414,108 +2518,16 @@ private struct CreditRow: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: title)
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                 Text(detail)
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-    }
-}
-
-// MARK: - Chats archivados page
-
-private struct ArchivedChatsPage: View {
-    @EnvironmentObject var appState: AppState
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: "Chats archivados")
-
-            if appState.archivedChats.isEmpty {
-                Text(appState.archivedLoading ? "Loading…" : "You have no archived chats.")
-                    .font(BodyFont.system(size: 13))
-                    .foregroundColor(Palette.textSecondary)
-                    .padding(.top, 12)
-                    .padding(.leading, 14)
-            } else {
-                SettingsCard {
-                    ForEach(Array(appState.archivedChats.enumerated()), id: \.element.id) { idx, chat in
-                        ArchivedChatRow(chat: chat)
-                        if idx < appState.archivedChats.count - 1 {
-                            CardDivider()
-                        }
-                    }
-                }
-            }
-        }
-        .task {
-            await appState.loadArchivedChats()
-        }
-    }
-}
-
-private struct ArchivedChatRow: View {
-    let chat: Chat
-    @EnvironmentObject var appState: AppState
-
-    private static let relativeFormatter: RelativeDateTimeFormatter = {
-        let f = RelativeDateTimeFormatter()
-        f.unitsStyle = .full
-        return f
-    }()
-
-    private var subtitle: String {
-        let date = Self.relativeFormatter.localizedString(for: chat.createdAt, relativeTo: Date())
-        let project: String
-        if let pid = chat.projectId,
-           let match = appState.projects.first(where: { $0.id == pid }) {
-            project = match.name
-        } else {
-            project = "No project"
-        }
-        return "\(date) · \(project)"
-    }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(chat.title.isEmpty ? "Conversation" : chat.title)
-                    .font(BodyFont.system(size: 13))
-                    .foregroundColor(Palette.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Text(subtitle)
-                    .font(BodyFont.system(size: 11.5))
-                    .foregroundColor(Palette.textSecondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 12)
-            Button {
-                appState.unarchiveChat(chatId: chat.id)
-            } label: {
-                Text("Unarchive")
-                    .font(BodyFont.system(size: 12, weight: .medium))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                            )
-                    )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
     }
 }
 
@@ -2532,7 +2544,7 @@ private struct BrowserUsagePage: View {
 
             /*
             Text("Plugins")
-                .font(BodyFont.system(size: 13, weight: .medium))
+                .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Palette.textPrimary)
                 .padding(.bottom, 14)
 
@@ -2611,21 +2623,21 @@ private struct BrowserPluginRow: View {
                     )
                     .frame(width: 36, height: 36)
                 Image(systemName: "paperplane.fill")
-                    .font(BodyFont.system(size: 15, weight: .medium))
+                    .font(BodyFont.system(size: 15, wght: 600))
                     .foregroundColor(.white)
                     .rotationEffect(.degrees(-12))
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                 Text(detail)
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
             Image(systemName: "checkmark")
-                .font(BodyFont.system(size: 12, weight: .semibold))
+                .font(BodyFont.system(size: 12, wght: 700))
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.horizontal, 14)
@@ -2642,15 +2654,15 @@ private struct DomainListSection: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center) {
                 Text(title)
-                    .font(BodyFont.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button {} label: {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
-                            .font(BodyFont.system(size: 10, weight: .semibold))
+                            .font(BodyFont.system(size: 10, wght: 700))
                         Text("Add")
-                            .font(BodyFont.system(size: 12, weight: .medium))
+                            .font(BodyFont.system(size: 12, wght: 600))
                     }
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 12)
@@ -2667,7 +2679,7 @@ private struct DomainListSection: View {
                 .buttonStyle(.plain)
             }
             Text(subtitle)
-                .font(BodyFont.system(size: 11.5))
+                .font(BodyFont.system(size: 11.5, wght: 500))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.top, 4)
                 .padding(.bottom, 10)
@@ -2675,7 +2687,7 @@ private struct DomainListSection: View {
             HStack {
                 Spacer()
                 Text(emptyText)
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                 Spacer()
             }
@@ -2689,366 +2701,6 @@ private struct DomainListSection: View {
                             .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
                     )
             )
-        }
-    }
-}
-
-// MARK: - Entornos page
-
-private struct EnvironmentsPage: View {
-    @State private var selected: ProjectEntry? = nil
-
-    private let projects: [ProjectEntry] = [
-        .init(name: "New project"),
-    ]
-
-    var body: some View {
-        if let project = selected {
-            EnvironmentsDetail(project: project, onBack: { selected = nil })
-        } else {
-            EnvironmentsList(projects: projects, onSelect: { selected = $0 })
-        }
-    }
-}
-
-private struct ProjectEntry: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
-    var tag: String? = nil
-}
-
-private struct EnvironmentsList: View {
-    let projects: [ProjectEntry]
-    let onSelect: (ProjectEntry) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PageHeader(
-                title: "Environments",
-                subtitle: "Local environments tell Clawix how to set up worktrees for a project. ..."
-            )
-
-            HStack {
-                Text("Select a project")
-                    .font(BodyFont.system(size: 13, weight: .medium))
-                    .foregroundColor(Palette.textPrimary)
-                Spacer()
-                Button {} label: {
-                    Text("Add project")
-                        .font(BodyFont.system(size: 12, weight: .medium))
-                        .foregroundColor(Palette.textPrimary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.08))
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.bottom, 14)
-
-            VStack(spacing: 7) {
-                ForEach(projects) { project in
-                    ProjectListRow(project: project, onTap: { onSelect(project) })
-                }
-            }
-        }
-    }
-}
-
-private struct ProjectListRow: View {
-    let project: ProjectEntry
-    let onTap: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "folder")
-                .font(BodyFont.system(size: 13))
-                .foregroundColor(Palette.textSecondary)
-                .frame(width: 18)
-            Text(project.name)
-                .font(BodyFont.system(size: 13))
-                .foregroundColor(Palette.textPrimary)
-            if let tag = project.tag {
-                Text(tag)
-                    .font(BodyFont.system(size: 11.5))
-                    .foregroundColor(Color(white: 0.50))
-            }
-            Spacer()
-            Button(action: onTap) {
-                Image(systemName: "plus")
-                    .font(BodyFont.system(size: 11, weight: .semibold))
-                    .foregroundColor(Palette.textPrimary)
-                    .frame(width: 28, height: 24)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                            )
-                    )
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(white: 0.085))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                )
-        )
-    }
-}
-
-private struct EnvironmentsDetail: View {
-    let project: ProjectEntry
-    let onBack: () -> Void
-
-    @State private var name: String
-    @State private var setupTab: String = "Default"
-    @State private var setupScript: String = """
-    cd "$CLAWIX_WORKTREE_PATH"
-    pip install -r requirements.txt
-    npm install
-    ./run/setup.sh
-    """
-    @State private var cleanupTab: String = "Default"
-    @State private var cleanupScript: String = """
-    docker compose down --remove-orphans
-    rm -rf .cache/tmp
-    """
-
-    init(project: ProjectEntry, onBack: @escaping () -> Void) {
-        self.project = project
-        self.onBack = onBack
-        _name = State(initialValue: project.name)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(BodyFont.system(size: 12, weight: .semibold))
-                        .foregroundColor(Palette.textSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Color.white.opacity(0.05))
-                        )
-                }
-                .buttonStyle(.plain)
-                .hoverHint(L10n.t("Back"))
-                Text("Environments")
-                    .font(BodyFont.system(size: 22, weight: .semibold))
-                    .foregroundColor(Palette.textPrimary)
-            }
-            .padding(.bottom, 26)
-
-            Text("Local environment")
-                .font(BodyFont.system(size: 13, weight: .medium))
-                .foregroundColor(Palette.textPrimary)
-                .padding(.bottom, 14)
-
-            HStack(spacing: 12) {
-                Image(systemName: "folder")
-                    .font(BodyFont.system(size: 14))
-                    .foregroundColor(Palette.textSecondary)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(project.name)
-                        .font(BodyFont.system(size: 13))
-                        .foregroundColor(Palette.textPrimary)
-                    Text("~/Documents/\(project.name)")
-                        .font(BodyFont.system(size: 11.5, design: .monospaced))
-                        .foregroundColor(Palette.textSecondary)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(white: 0.085))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                    )
-            )
-
-            SectionLabel(title: "Name")
-            TextField("", text: $name)
-                .textFieldStyle(.plain)
-                .font(BodyFont.system(size: 13))
-                .foregroundColor(Palette.textPrimary)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 8)
-                .frame(maxWidth: 280, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.white.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                        )
-                )
-
-            ScriptBlock(
-                title: "Setup script",
-                detail: "Runs at the project root when the worktree is created",
-                tab: $setupTab,
-                script: $setupScript
-            )
-            .padding(.top, 28)
-
-            ScriptBlock(
-                title: "Cleanup script",
-                detail: "Runs at the project root before cleaning up the worktree",
-                tab: $cleanupTab,
-                script: $cleanupScript
-            )
-            .padding(.top, 28)
-
-            HStack {
-                Text("Actions")
-                    .font(BodyFont.system(size: 13, weight: .medium))
-                    .foregroundColor(Palette.textPrimary)
-                Spacer()
-                Button {} label: {
-                    Text("Add an action")
-                        .font(BodyFont.system(size: 12, weight: .medium))
-                        .foregroundColor(Palette.textPrimary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.08))
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                                )
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.top, 28)
-
-            Text("Each action can run any command and shows up in the toolbar header.")
-                .font(BodyFont.system(size: 11))
-                .foregroundColor(Palette.textSecondary)
-                .padding(.top, 4)
-                .padding(.bottom, 14)
-
-            HStack {
-                Spacer()
-                Text("Register an action that runs a command from the local toolbar.")
-                    .font(BodyFont.system(size: 12))
-                    .foregroundColor(Palette.textSecondary)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 18)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(white: 0.085))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                    )
-            )
-
-            HStack {
-                Spacer()
-                Button {} label: {
-                    Text("Save")
-                        .font(BodyFont.system(size: 12, weight: .medium))
-                        .foregroundColor(Palette.textSecondary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.06))
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.top, 18)
-        }
-    }
-}
-
-private struct ScriptBlock: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey
-    @Binding var tab: String
-    @Binding var script: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(BodyFont.system(size: 13, weight: .medium))
-                .foregroundColor(Palette.textPrimary)
-            Text(detail)
-                .font(BodyFont.system(size: 11.5))
-                .foregroundColor(Palette.textSecondary)
-                .padding(.top, 3)
-                .padding(.bottom, 12)
-
-            ScriptTabs(selected: $tab)
-                .padding(.bottom, 8)
-
-            TextEditor(text: $script)
-                .font(BodyFont.system(size: 12, design: .monospaced))
-                .scrollContentBackground(.hidden)
-                .padding(10)
-                .frame(minHeight: 130)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(white: 0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                        )
-                )
-        }
-    }
-}
-
-private struct ScriptTabs: View {
-    @Binding var selected: String
-    private let tabs = ["Default", "macOS", "Linux", "Windows"]
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(tabs, id: \.self) { tab in
-                Button {
-                    selected = tab
-                } label: {
-                    Text(tab)
-                        .font(BodyFont.system(size: 12, weight: selected == tab ? .medium : .regular))
-                        .foregroundColor(selected == tab ? Palette.textPrimary : Palette.textSecondary)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(selected == tab ? Color.white.opacity(0.10) : Color.clear)
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-            Text("Variables")
-                .font(BodyFont.system(size: 12))
-                .foregroundColor(Palette.textSecondary)
         }
     }
 }
@@ -3183,16 +2835,16 @@ private struct CommitInstructionsBlock: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(BodyFont.system(size: 13, weight: .medium))
+                        .font(BodyFont.system(size: 13, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                     Text(detail)
-                        .font(BodyFont.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                 }
                 Spacer()
                 Button {} label: {
                     Text("Save")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, wght: 600))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
@@ -3208,14 +2860,14 @@ private struct CommitInstructionsBlock: View {
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
                     Text(placeholder)
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 14)
                         .allowsHitTesting(false)
                 }
                 TextEditor(text: $text)
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .scrollContentBackground(.hidden)
                     .padding(10)
                     .frame(minHeight: 110)
@@ -3285,15 +2937,15 @@ private struct MCPListView: View {
 
             HStack {
                 Text("Servers")
-                    .font(BodyFont.system(size: 13, weight: .medium))
+                    .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button(action: onAdd) {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
-                            .font(BodyFont.system(size: 10, weight: .semibold))
+                            .font(BodyFont.system(size: 10, wght: 700))
                         Text("Add server")
-                            .font(BodyFont.system(size: 12, weight: .medium))
+                            .font(BodyFont.system(size: 12, wght: 600))
                     }
                     .foregroundColor(Palette.textPrimary)
                     .padding(.horizontal, 12)
@@ -3328,7 +2980,7 @@ private struct MCPServerRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(server.name)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Palette.textPrimary)
             Spacer()
             Button(action: onConfig) {
@@ -3375,7 +3027,7 @@ private struct MCPDetailView: View {
             HStack(spacing: 8) {
                 Button(action: onBack) {
                     Image(systemName: "chevron.left")
-                        .font(BodyFont.system(size: 12, weight: .semibold))
+                        .font(BodyFont.system(size: 12, wght: 700))
                         .foregroundColor(Palette.textSecondary)
                         .frame(width: 22, height: 22)
                         .background(
@@ -3481,7 +3133,7 @@ private struct MCPDetailView: View {
                 Spacer()
                 Button {} label: {
                     Text("Save")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                        .font(BodyFont.system(size: 12, wght: 600))
                         .foregroundColor(Palette.textSecondary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 6)
@@ -3522,7 +3174,7 @@ private struct MCPFieldLabel: View {
     init(_ text: LocalizedStringKey) { self.text = text }
     var body: some View {
         Text(text)
-            .font(BodyFont.system(size: 13, weight: .medium))
+            .font(BodyFont.system(size: 13, wght: 600))
             .foregroundColor(Palette.textPrimary)
     }
 }
@@ -3534,7 +3186,7 @@ private struct MCPInputField: View {
     var body: some View {
         TextField(placeholder, text: $text)
             .textFieldStyle(.plain)
-            .font(BodyFont.system(size: 13))
+            .font(BodyFont.system(size: 13, wght: 500))
             .foregroundColor(Palette.textPrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
@@ -3556,7 +3208,7 @@ private struct MCPTrashButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "trash")
-                .font(BodyFont.system(size: 11))
+                .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Color(white: hovered ? 0.94 : 0.55))
                 .frame(width: 30, height: 30)
                 .background(
@@ -3580,7 +3232,7 @@ private struct MCPAddRowButton: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: "plus")
-                    .font(BodyFont.system(size: 11, weight: .semibold))
+                    .font(BodyFont.system(size: 11, wght: 700))
                 Text(label)
                     .font(BodyFont.system(size: 12.5))
             }
@@ -3605,37 +3257,11 @@ private struct MCPTransportSegmented: View {
     @Binding var selection: MCPTransport
 
     var body: some View {
-        HStack(spacing: 4) {
-            chip(label: "STDIO", value: .stdio)
-            chip(label: "HTTP streaming", value: .http)
-        }
-        .padding(3)
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color.black.opacity(0.30))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                )
+        SlidingSegmented(
+            selection: $selection,
+            options: [(.stdio, "STDIO"), (.http, "HTTP streaming")],
+            height: 34,
+            fontSize: 12.5
         )
-    }
-
-    @ViewBuilder
-    private func chip(label: LocalizedStringKey, value: MCPTransport) -> some View {
-        let isOn = value == selection
-        Button {
-            selection = value
-        } label: {
-            Text(label)
-                .font(BodyFont.system(size: 12.5, weight: isOn ? .medium : .regular))
-                .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isOn ? Color.white.opacity(0.10) : Color.clear)
-                )
-        }
-        .buttonStyle(.plain)
     }
 }

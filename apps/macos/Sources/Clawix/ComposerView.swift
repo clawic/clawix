@@ -153,10 +153,10 @@ struct ComposerView: View {
                             .accessibilityHidden(true)
                     }
                     Text(appState.selectedModel)
-                        .font(BodyFont.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Color(white: 0.92))
                     Text(appState.selectedIntelligence.label)
-                        .font(BodyFont.system(size: 11.5))
+                        .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Color(white: 0.55))
                     Image(systemName: "chevron.down")
                         .font(BodyFont.system(size: 10, weight: .bold))
@@ -308,7 +308,7 @@ struct ComposerView: View {
                         Image(systemName: appState.permissionMode.iconName)
                             .font(BodyFont.system(size: 13, weight: .medium))
                         Text(appState.permissionMode.label)
-                            .font(BodyFont.system(size: 11.5))
+                            .font(BodyFont.system(size: 11.5, wght: 500))
                             .lineLimit(1)
                         Image(systemName: "chevron.down")
                             .font(BodyFont.system(size: 10, weight: .bold))
@@ -363,7 +363,7 @@ struct ComposerView: View {
                 Image(systemName: "checklist")
                     .font(BodyFont.system(size: 11, weight: .regular))
                 Text(L10n.t("Plan mode"))
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .lineLimit(1)
             }
             .fixedSize(horizontal: true, vertical: false)
@@ -464,7 +464,7 @@ struct ComposerView: View {
                 ZStack(alignment: .topLeading) {
                     if composer.text.isEmpty {
                         Text(placeholderText)
-                            .font(BodyFont.system(size: 13))
+                            .font(BodyFont.system(size: 13, wght: 500))
                             .foregroundColor(Color(white: 0.42))
                             .padding(.horizontal, 13)
                             .padding(.top, 13)
@@ -511,7 +511,7 @@ struct ComposerView: View {
                             FolderClosedIcon(size: 11)
                             Text(appState.selectedProject?.name
                                  ?? String(localized: "Work on a project", bundle: AppLocale.bundle, locale: AppLocale.current))
-                                .font(BodyFont.system(size: 11.5))
+                                .font(BodyFont.system(size: 11.5, wght: 500))
                             Image(systemName: "chevron.down")
                                 .font(BodyFont.system(size: 8, weight: .semibold))
                         }
@@ -1697,21 +1697,29 @@ extension AnyTransition {
 // MARK: - Voice recording: transcribing spinner
 
 /// Tiny indeterminate spinner that takes the mic button's slot while the
-/// recorded clip is being transcribed.
+/// recorded clip is being transcribed. Visual language matches
+/// `SidebarChatRowSpinner` (track + slow 2.4s rotation, ~0.79 arc) so
+/// every "in flight" indicator across the app reads as the same family.
 struct TranscribingSpinner: View {
     @State private var rotation: Double = 0
 
     var body: some View {
-        Circle()
-            .trim(from: 0.15, to: 0.85)
-            .stroke(Color(white: 0.78), style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
-            .frame(width: 14, height: 14)
-            .rotationEffect(.degrees(rotation))
-            .onAppear {
-                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
-                    rotation = 360
-                }
+        ZStack {
+            Circle()
+                .stroke(Color(white: 0.28),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+            Circle()
+                .trim(from: 0.0, to: 0.79)
+                .stroke(Color(white: 0.75),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+                .rotationEffect(.degrees(rotation))
+        }
+        .frame(width: 14, height: 14)
+        .onAppear {
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                rotation = 360
             }
+        }
     }
 }
 
@@ -2042,7 +2050,7 @@ private struct ComposerAttachmentChip: View {
         HStack(spacing: attachment.isImage ? 6 : 4) {
             iconView
             Text(attachment.filename)
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(white: 0.94))
                 .lineLimit(1)
                 .truncationMode(.middle)

@@ -5,6 +5,9 @@ let sidebarDefaultWidth: CGFloat = 372
 let sidebarMaxWidth: CGFloat = 558           // 372 + 50%
 let sidebarMinVisibleWidth: CGFloat = 220    // can't shrink below while open
 let sidebarCloseThreshold: CGFloat = 200     // drag-release below → snap closed
+// Settings sidebar is fixed-width and not user-resizable. ~10% narrower
+// than the chat sidebar so the categories list reads tighter.
+let settingsSidebarWidth: CGFloat = 334
 let rightSidebarDefaultWidth: CGFloat = 720
 let rightSidebarMaxWidth: CGFloat = 1080
 let rightSidebarMinVisibleWidth: CGFloat = 380
@@ -34,12 +37,21 @@ struct ContentView: View {
         min(sidebarMaxWidth, max(sidebarMinVisibleWidth, CGFloat(leftSidebarWidthRaw)))
     }
 
+    private var isSettingsRoute: Bool {
+        if case .settings = appState.currentRoute { return true }
+        return false
+    }
+
+    private var leftColumnWidth: CGFloat {
+        isSettingsRoute ? settingsSidebarWidth : leftSidebarWidth
+    }
+
     /// Largest width the right sidebar can take given the current window
     /// size, so the left sidebar and a min content column are always
     /// preserved. Falls back to the persisted minimum until the window
     /// has been measured.
     private var dynamicRightSidebarMaxWidth: CGFloat {
-        let leftWidth = appState.isLeftSidebarOpen ? leftSidebarWidth : 0
+        let leftWidth = appState.isLeftSidebarOpen ? leftColumnWidth : 0
         let raw = windowWidth - leftWidth - minContentColumnWidth
         let bounded = max(rightSidebarMinVisibleWidth, raw)
         return min(rightSidebarMaxWidth, bounded)
@@ -143,18 +155,21 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .frame(width: leftSidebarWidth)
+                    .frame(width: leftColumnWidth)
                     .overlay(alignment: .trailing) {
                         // Straddle the trailing edge: 5 pt inside the
                         // sidebar, 5 pt outside (over the content column)
                         // so hover detection is symmetric around the edge.
-                        SidebarResizeHandle(
-                            widthRaw: $leftSidebarWidthRaw,
-                            hovered: $sidebarResizeHovered
-                        )
-                        .frame(width: 10)
-                        .offset(x: 5)
-                        .zIndex(1)
+                        // Hidden in settings: that sidebar is fixed-width.
+                        if !isSettingsRoute {
+                            SidebarResizeHandle(
+                                widthRaw: $leftSidebarWidthRaw,
+                                hovered: $sidebarResizeHovered
+                            )
+                            .frame(width: 10)
+                            .offset(x: 5)
+                            .zIndex(1)
+                        }
                     }
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(1)
@@ -364,7 +379,7 @@ private struct UpdateChip: View {
     var body: some View {
         Button(action: onTap) {
             Text("Update")
-                .font(BodyFont.system(size: 12, weight: .regular))
+                .font(BodyFont.system(size: 12, wght: 500))
                 .foregroundColor(.white.opacity(hovered ? 1.0 : 0.94))
                 .padding(.horizontal, 11)
                 .padding(.vertical, 4)
@@ -481,13 +496,13 @@ private struct ContentTopChrome: View {
             )
             if let chatTitle, let _ = currentChat {
                 Text(chatTitle)
-                    .font(BodyFont.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
                     Image(systemName: "ellipsis")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(Color(white: hoverEllipsis ? 0.78 : 0.55))
                         .frame(width: 24, height: 24)
                         .background(
@@ -590,7 +605,7 @@ private struct RightSidebarTopChrome: View {
         HStack(spacing: 0) {
             Button { addMenuOpen.toggle() } label: {
                 Image(systemName: "plus")
-                    .font(BodyFont.system(size: 13, weight: .semibold))
+                    .font(BodyFont.system(size: 13, wght: 700))
                     .foregroundColor(Color(white: 0.78))
                     .frame(width: 26, height: 26)
                     .background(
@@ -672,7 +687,7 @@ private struct RightSidebarBody: View {
         ZStack {
             Color.clear
             Text("Nothing here yet")
-                .font(BodyFont.system(size: 13))
+                .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(white: 0.62))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -713,17 +728,17 @@ private struct RightSidebarAddMenu: View {
                         SearchIcon(size: 11)
                     } else {
                         Image(systemName: icon)
-                            .font(BodyFont.system(size: 11))
+                            .font(BodyFont.system(size: 11, wght: 500))
                     }
                 }
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
                 Text(title)
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 Text(shortcut)
-                    .font(BodyFont.system(size: 10))
+                    .font(BodyFont.system(size: 10, wght: 500))
                     .foregroundColor(MenuStyle.rowSubtle)
             }
             .padding(.horizontal, MenuStyle.rowHorizontalPadding)
@@ -835,12 +850,12 @@ private struct ChatActionsMenu: View {
                 }
                 .frame(width: 18, alignment: .center)
                 Text(item.title)
-                    .font(BodyFont.system(size: 13.5))
+                    .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if let shortcut = item.shortcut {
                     Text(shortcut)
-                        .font(BodyFont.system(size: 12))
+                        .font(BodyFont.system(size: 12, wght: 500))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
             }
@@ -866,6 +881,15 @@ private struct SearchPopoverOverlay: View {
     private static let popupCornerRadius: CGFloat = 26
     private static let popupStrokeColor = Color.white.opacity(0.18)
     private static let popupStrokeWidth: CGFloat = 0.9
+    /// Caps the scoped list height so a long-history project doesn't
+    /// push the popup off-screen. Mirrors the old per-project popup's
+    /// 460pt list cap so the visual footprint stays familiar.
+    private static let scopedListMaxHeight: CGFloat = 460
+
+    private var scopedProject: Project? {
+        guard let id = appState.searchScopedProjectId else { return nil }
+        return appState.projects.first(where: { $0.id == id })
+    }
 
     private var pinnedChats: [Chat] {
         appState.chats
@@ -877,6 +901,19 @@ private struct SearchPopoverOverlay: View {
         let q = appState.searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return pinnedChats }
         return pinnedChats.filter { $0.title.lowercased().contains(q) }
+    }
+
+    private func scopedChats(for project: Project) -> [Chat] {
+        appState.chats
+            .filter { $0.projectId == project.id && !$0.isArchived }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func filteredScopedChats(for project: Project) -> [Chat] {
+        let all = scopedChats(for: project)
+        let q = appState.searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return all }
+        return all.filter { $0.title.lowercased().contains(q) }
     }
 
     private func projectName(for chat: Chat) -> String? {
@@ -908,16 +945,31 @@ private struct SearchPopoverOverlay: View {
                     x: 0, y: MenuStyle.shadowOffsetY)
         )
         .background(MenuOutsideClickWatcher(isPresented: searchOpenBinding))
-        .onAppear { queryFocused = true }
+        .onAppear {
+            queryFocused = true
+            triggerScopedHistoryLoadIfNeeded()
+        }
+        .onChange(of: appState.searchScopedProjectId) { _, _ in
+            triggerScopedHistoryLoadIfNeeded()
+        }
     }
 
     private var searchField: some View {
         HStack(spacing: 10) {
             SearchIcon(size: 14)
                 .foregroundColor(Color(white: 0.55))
-            TextField("Search chats", text: $appState.searchQuery)
+            if let project = scopedProject {
+                ScopeChip(
+                    name: project.name,
+                    onRemove: { appState.searchScopedProjectId = nil }
+                )
+            }
+            TextField(scopedProject == nil
+                      ? "Search chats"
+                      : "Search in \(scopedProject!.name)",
+                      text: $appState.searchQuery)
                 .textFieldStyle(.plain)
-                .font(BodyFont.system(size: 15))
+                .font(BodyFont.system(size: 15, wght: 500))
                 .foregroundColor(Color(white: 0.94))
                 .focused($queryFocused)
             if !appState.searchQuery.isEmpty {
@@ -925,7 +977,7 @@ private struct SearchPopoverOverlay: View {
                     appState.searchQuery = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(BodyFont.system(size: 13))
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Color(white: 0.45))
                 }
                 .buttonStyle(.plain)
@@ -943,11 +995,20 @@ private struct SearchPopoverOverlay: View {
 
     @ViewBuilder
     private var content: some View {
+        if let project = scopedProject {
+            scopedContent(for: project)
+        } else {
+            unscopedContent
+        }
+    }
+
+    @ViewBuilder
+    private var unscopedContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             let pinned = filteredPinnedChats
             if !pinned.isEmpty {
                 Text("Pinned chats")
-                    .font(BodyFont.system(size: 11.5))
+                    .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(MenuStyle.headerText)
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
@@ -967,17 +1028,46 @@ private struct SearchPopoverOverlay: View {
                 .padding(.bottom, 8)
             } else if !appState.searchQuery.isEmpty {
                 Text("No matches")
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 18)
             } else {
                 Text("You do not have any pinned chats yet")
-                    .font(BodyFont.system(size: 13))
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 18)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func scopedContent(for project: Project) -> some View {
+        let chats = filteredScopedChats(for: project)
+        if chats.isEmpty {
+            Text(appState.searchQuery.isEmpty
+                 ? "No chats in this project yet"
+                 : "No matches")
+                .font(BodyFont.system(size: 13, wght: 500))
+                .foregroundColor(MenuStyle.rowSubtle)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 28)
+        } else {
+            ScrollView(showsIndicators: true) {
+                LazyVStack(spacing: 0) {
+                    ForEach(chats) { chat in
+                        SearchScopedRow(
+                            title: chat.title,
+                            createdAt: chat.createdAt,
+                            onSelect: { appState.currentRoute = .chat(chat.id) }
+                        )
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            .frame(maxHeight: Self.scopedListMaxHeight)
+            .thinScrollers()
         }
     }
 
@@ -990,6 +1080,102 @@ private struct SearchPopoverOverlay: View {
                 }
             }
         )
+    }
+
+    private func triggerScopedHistoryLoadIfNeeded() {
+        // Pull the full project history into memory the moment a scope
+        // is set, so the title filter sees every chat instead of just
+        // the 10-row sidebar slice. Detached so the popup paints with
+        // whatever's already cached and updates as rows arrive.
+        guard let project = scopedProject else { return }
+        Task.detached(priority: .userInitiated) { [project] in
+            await appState.loadAllThreadsForProject(project)
+        }
+    }
+}
+
+private struct ScopeChip: View {
+    let name: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            FolderOpenIcon(size: 11)
+                .foregroundColor(Color(white: 0.65))
+            Text(name)
+                .font(BodyFont.system(size: 12, wght: 500))
+                .foregroundColor(Color(white: 0.88))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(BodyFont.system(size: 9, weight: .semibold))
+                    .foregroundColor(Color(white: 0.62))
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.leading, 9)
+        .padding(.trailing, 5)
+        .padding(.vertical, 4)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(0.07))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+        )
+        .fixedSize()
+    }
+}
+
+private struct SearchScopedRow: View {
+    let title: String
+    let createdAt: Date
+    let onSelect: () -> Void
+
+    @State private var hovered = false
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f
+    }()
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Image(systemName: "bubble.left")
+                .font(BodyFont.system(size: 11, wght: 500))
+                .foregroundColor(MenuStyle.rowIcon)
+                .frame(width: 18, alignment: .center)
+
+            Text(title.isEmpty
+                 ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
+                 : title)
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(MenuStyle.rowText)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer(minLength: 12)
+
+            Text(Self.relativeFormatter.localizedString(for: createdAt, relativeTo: Date()))
+                .font(BodyFont.system(size: 11.5, wght: 500))
+                .foregroundColor(MenuStyle.rowSubtle)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .contentShape(Rectangle())
+        .background(
+            MenuRowHover(active: hovered)
+        )
+        .onHover { hovered = $0 }
+        .onTapGesture(perform: onSelect)
     }
 }
 
@@ -1009,7 +1195,7 @@ private struct SearchPinnedRow: View {
                 .frame(width: 18, alignment: .center)
 
             Text(title)
-                .font(BodyFont.system(size: 13.5))
+                .font(BodyFont.system(size: 13.5, wght: 500))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -1018,7 +1204,7 @@ private struct SearchPinnedRow: View {
 
             if let projectName {
                 Text(projectName)
-                    .font(BodyFont.system(size: 12))
+                    .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -1046,7 +1232,7 @@ private struct ShortcutGlyph: View {
 
     var body: some View {
         Text("⌘\(number)")
-            .font(BodyFont.system(size: 11, weight: .medium))
+            .font(BodyFont.system(size: 11, wght: 600))
             .foregroundColor(MenuStyle.rowSubtle)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
