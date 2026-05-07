@@ -625,6 +625,37 @@ final class BridgeStore {
         client?.renameChat(chatId: chatId, title: trimmed)
     }
 
+    /// Stop the in-flight turn on `chatId`. Mirrors the Mac composer's
+    /// stop button: clears `hasActiveTurn` synchronously and freezes
+    /// (or drops) the trailing assistant placeholder so the "Thinking"
+    /// shimmer disappears the instant the user taps. The bridge frame
+    /// is fire-and-forget; the daemon eventually echoes back a
+    /// `chatUpdated` carrying the same state.
+    @MainActor
+    func interruptTurn(chatId: String) {
+        if let idx = chats.firstIndex(where: { $0.id == chatId }), chats[idx].hasActiveTurn {
+            chats[idx].hasActiveTurn = false
+            chats[idx].lastTurnInterrupted = true
+        }
+        if var current = messagesByChat[chatId],
+           let lastIdx = current.indices.last,
+           current[lastIdx].role == .assistant,
+           !current[lastIdx].streamingFinished {
+            let msg = current[lastIdx]
+            let isEmpty = msg.content.isEmpty
+                && msg.reasoningText.isEmpty
+                && msg.timeline.isEmpty
+                && (msg.workSummary?.items.isEmpty ?? true)
+            if isEmpty {
+                current.remove(at: lastIdx)
+            } else {
+                current[lastIdx].streamingFinished = true
+            }
+            messagesByChat[chatId] = current
+        }
+        client?.interruptTurn(chatId: chatId)
+    }
+
     /// Mints a fresh chat id for the FAB-driven "new chat" flow. The
     /// id is queued as pending so the next `sendPrompt(chatId:text:)`
     /// emits a `newChat` frame instead, and `messagesByChat` is seeded
