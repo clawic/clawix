@@ -611,26 +611,35 @@ private struct SegmentedRow<T: Hashable>: View {
     let detail: LocalizedStringKey?
     let options: [(T, String)]
     @Binding var selection: T
+    @Namespace private var indicatorNS
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             RowLabel(title: title, detail: detail)
             Spacer(minLength: 12)
             HStack(spacing: 0) {
-                ForEach(Array(options.enumerated()), id: \.offset) { idx, opt in
+                ForEach(Array(options.enumerated()), id: \.offset) { _, opt in
                     let isOn = opt.0 == selection
                     Button {
-                        selection = opt.0
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                            selection = opt.0
+                        }
                     } label: {
                         Text(opt.1)
-                            .font(BodyFont.system(size: 12, weight: isOn ? .medium : .regular))
+                            .font(BodyFont.system(size: 12, weight: .medium))
                             .foregroundColor(isOn ? Palette.textPrimary : Palette.textSecondary)
                             .padding(.horizontal, 11)
                             .padding(.vertical, 5)
                             .background(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .fill(isOn ? Color.white.opacity(0.10) : Color.clear)
+                                ZStack {
+                                    if isOn {
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .fill(Color.white.opacity(0.10))
+                                            .matchedGeometryEffect(id: "segIndicator", in: indicatorNS)
+                                    }
+                                }
                             )
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
@@ -1255,7 +1264,7 @@ private struct CollapsibleRow: View {
                 RowLabel(title: title, detail: detail)
                 Spacer(minLength: 12)
                 Image(systemName: open ? "chevron.up" : "chevron.down")
-                    .font(BodyFont.system(size: 10, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -1280,7 +1289,7 @@ private struct DictionaryExpandableRow: View {
                              detail: "Words or phrases dictation should recognize")
                     Spacer(minLength: 12)
                     Image(systemName: open ? "chevron.up" : "chevron.down")
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
