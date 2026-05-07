@@ -25,7 +25,7 @@ struct ReasoningBlock: View {
                         .font(BodyFont.system(size: 9, weight: .semibold))
                         .foregroundColor(Color(white: 0.50))
                     Text(headerLabel)
-                        .font(BodyFont.system(size: 12.5, weight: .medium))
+                        .font(BodyFont.system(size: 12.5, wght: 600))
                         .foregroundColor(Color(white: 0.62))
                     if isStreaming {
                         ReasoningPulseDot()
@@ -37,7 +37,7 @@ struct ReasoningBlock: View {
 
             if expanded {
                 Text(text)
-                    .font(BodyFont.system(size: 12.5))
+                    .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)

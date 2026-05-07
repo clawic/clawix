@@ -31,7 +31,7 @@ struct UserAudioBubble: View {
             waveform
                 .frame(maxWidth: .infinity)
             Text(durationLabel)
-                .font(BodyFont.system(size: 11.5, weight: .medium))
+                .font(BodyFont.system(size: 11.5, wght: 600))
                 .foregroundColor(Palette.textTertiary)
                 .monospacedDigit()
         }
