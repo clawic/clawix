@@ -163,6 +163,19 @@ final class VoiceRecorder: ObservableObject {
     /// Stop recording and transcribe. Completion fires once with the
     /// recognized text (empty string if recognition failed or was denied).
     func stop(completion: @escaping (String) -> Void) {
+        stopAndCapture(keepFile: false) { transcript, _ in completion(transcript) }
+    }
+
+    /// Variant of `stop` that hands the captured audio URL back to the
+    /// caller alongside the transcript, and skips the automatic file
+    /// cleanup so the bytes stay around long enough to ship over the
+    /// bridge as an audio attachment. The caller is responsible for
+    /// deleting the file once it's done with it.
+    func stopAndKeep(completion: @escaping (String, URL?) -> Void) {
+        stopAndCapture(keepFile: true, completion: completion)
+    }
+
+    private func stopAndCapture(keepFile: Bool, completion: @escaping (String, URL?) -> Void) {
         guard state == .recording || state == .paused else { return }
         invalidateTimers()
         recorder?.stop()
@@ -178,10 +191,12 @@ final class VoiceRecorder: ObservableObject {
 
         guard let url else {
             resetAfterTranscription()
-            completion("")
+            completion("", nil)
             return
         }
-        transcribe(url: url, completion: completion)
+        transcribe(url: url, keepFile: keepFile) { transcript in
+            completion(transcript, keepFile ? url : nil)
+        }
     }
 
     /// Stop recording without transcribing. Used when the user dismisses
@@ -211,18 +226,22 @@ final class VoiceRecorder: ObservableObject {
 
     // MARK: - Transcription
 
-    private func transcribe(url: URL, completion: @escaping (String) -> Void) {
+    private func transcribe(url: URL, keepFile: Bool = false, completion: @escaping (String) -> Void) {
         // Prefer the bridge transcriber when available so the iPhone
         // gets the same Whisper output the Mac dictation flow does.
         // If the bridge isn't connected or the daemon errored, fall
-        // through to the on-device Apple Speech path.
+        // through to the on-device Apple Speech path. When `keepFile`
+        // is true we hand the URL back to the caller (sendAsAudio
+        // flow ships the bytes as an attachment) so we don't delete
+        // it here; the caller deletes once shipping is done.
         if let bridgeTranscriber {
             Task { [weak self] in
                 do {
                     let text = try await bridgeTranscriber(url, self?.bridgeLanguage)
                     await MainActor.run {
                         guard let self else { return }
-                        self.cleanup(url: url)
+                        if !keepFile { self.cleanup(url: url) }
+                        else { self.fileURL = nil }
                         self.resetAfterTranscription()
                         completion(text)
                     }
@@ -230,23 +249,26 @@ final class VoiceRecorder: ObservableObject {
                     // Soft fallback: try Apple Speech with the same
                     // file, so the user still gets a transcript when
                     // the Mac is unreachable.
-                    self?.transcribeWithSpeech(url: url, completion: completion)
+                    self?.transcribeWithSpeech(url: url, keepFile: keepFile, completion: completion)
                 }
             }
             return
         }
-        transcribeWithSpeech(url: url, completion: completion)
+        transcribeWithSpeech(url: url, keepFile: keepFile, completion: completion)
     }
 
-    private func transcribeWithSpeech(url: URL, completion: @escaping (String) -> Void) {
+    private func transcribeWithSpeech(url: URL, keepFile: Bool = false, completion: @escaping (String) -> Void) {
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
                 guard let self else { return }
+                let cleanupAfter: () -> Void = {
+                    if keepFile { self.fileURL = nil } else { self.cleanup(url: url) }
+                }
                 guard status == .authorized,
                       let recognizer = SFSpeechRecognizer(locale: self.recognitionLocale),
                       recognizer.isAvailable
                 else {
-                    self.cleanup(url: url)
+                    cleanupAfter()
                     self.resetAfterTranscription()
                     completion("")
                     return
@@ -264,12 +286,12 @@ final class VoiceRecorder: ObservableObject {
                         if let result, result.isFinal {
                             let text = result.bestTranscription.formattedString
                             self.recognitionTask = nil
-                            self.cleanup(url: url)
+                            cleanupAfter()
                             self.resetAfterTranscription()
                             completion(text)
                         } else if error != nil {
                             self.recognitionTask = nil
-                            self.cleanup(url: url)
+                            cleanupAfter()
                             self.resetAfterTranscription()
                             completion("")
                         }
