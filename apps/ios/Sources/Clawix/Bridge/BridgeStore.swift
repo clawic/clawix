@@ -91,6 +91,13 @@ final class BridgeStore {
     @ObservationIgnored
     private var pendingTranscriptions: [String: CheckedContinuation<String, Error>] = [:]
 
+    /// In-flight `requestAudio` requests keyed by `audioId`. Each
+    /// continuation resumes with the byte payload when the matching
+    /// `audioSnapshot` frame arrives. Drained on bridge tear-down so
+    /// AudioBubble's loader doesn't dangle.
+    @ObservationIgnored
+    private var pendingAudioFetches: [String: [CheckedContinuation<(data: Data, mimeType: String), Error>]] = [:]
+
     /// Drives `SnapshotCache.save` after a quiet 500ms window. Each
     /// call cancels the previous in-flight task; streaming bursts and
     /// rapid chat updates collapse into a single write. The actual
@@ -253,6 +260,57 @@ final class BridgeStore {
             cont.resume(throwing: TranscriptionBridgeError.notConnected)
         }
         pendingTranscriptions.removeAll()
+        for (_, conts) in pendingAudioFetches {
+            for cont in conts {
+                cont.resume(throwing: TranscriptionBridgeError.notConnected)
+            }
+        }
+        pendingAudioFetches.removeAll()
+    }
+
+    /// Fetch the bytes of a previously-stored voice clip. Multiple
+    /// concurrent calls for the same `audioId` coalesce onto a single
+    /// frame round trip — useful when the chat first paints and the
+    /// audio bubble lazily decides to preload before the user taps.
+    @MainActor
+    func requestAudio(audioId: String) async throws -> (data: Data, mimeType: String) {
+        guard let client else {
+            throw TranscriptionBridgeError.notConnected
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            let alreadyInFlight = pendingAudioFetches[audioId] != nil
+            pendingAudioFetches[audioId, default: []].append(continuation)
+            if !alreadyInFlight {
+                client.requestAudio(audioId: audioId)
+            }
+        }
+    }
+
+    /// Resolve all continuations waiting on `audioId` with the daemon's
+    /// reply. Called by `BridgeClient` when an `audioSnapshot` frame
+    /// lands. Errors from the daemon are surfaced as `daemonError`;
+    /// missing payload (no error, no bytes) gets a generic
+    /// `notConnected` so the bubble shows a "tap again to retry" state.
+    @MainActor
+    func applyAudioSnapshot(
+        audioId: String,
+        audioBase64: String?,
+        mimeType: String?,
+        errorMessage: String?
+    ) {
+        guard let conts = pendingAudioFetches.removeValue(forKey: audioId) else { return }
+        if let errorMessage, !errorMessage.isEmpty {
+            for c in conts { c.resume(throwing: TranscriptionBridgeError.daemonError(errorMessage)) }
+            return
+        }
+        guard let audioBase64,
+              let data = Data(base64Encoded: audioBase64),
+              let mime = mimeType
+        else {
+            for c in conts { c.resume(throwing: TranscriptionBridgeError.notConnected) }
+            return
+        }
+        for c in conts { c.resume(returning: (data, mime)) }
     }
 
     /// Kick off (or refresh) the read of a file on the Mac. Idempotent:
