@@ -68,6 +68,14 @@ mkdir -p "$(dirname "$ARCHIVE_PATH")"
 rm -rf "$ARCHIVE_PATH"
 
 echo "==> Archiving Clawix-iOS at $ARCHIVE_PATH"
+# Automatic signing (CODE_SIGN_STYLE=Automatic in xcconfig) picks the
+# correct identity per build configuration: Apple Development for Debug,
+# Apple Distribution for Release/Archive. Passing CODE_SIGN_IDENTITY as
+# an override conflicts with that and Xcode aborts. The team id is
+# enough to disambiguate which Apple ID to sign on behalf of.
+# SIGN_IDENTITY_IOS_DISTRIBUTION is read from .signing.env so the human
+# can verify the right cert is installed; xcodebuild does not need it.
+: "${SIGN_IDENTITY_IOS_DISTRIBUTION:?required from .signing.env}"
 team_setting="DEVELOPMENT_""TEAM=$DEVELOPMENT_TEAM_IOS"
 xcodebuild \
     -project Clawix.xcodeproj \
@@ -77,11 +85,11 @@ xcodebuild \
     -archivePath "$ARCHIVE_PATH" \
     "PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID_IOS" \
     "$team_setting" \
-    "CODE_SIGN_IDENTITY=$SIGN_IDENTITY_IOS_DISTRIBUTION" \
     "MARKETING_VERSION=$MARKETING_VERSION" \
     "CURRENT_PROJECT_VERSION=$BUILD_NUMBER" \
+    -allowProvisioningUpdates \
     archive \
-    | tail -40
+    | tail -60
 
 # 4) Postconditions.
 APP_IN_ARCHIVE="$ARCHIVE_PATH/Products/Applications/Clawix.app"
