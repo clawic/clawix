@@ -32,6 +32,7 @@ final class DictationCoordinator: ObservableObject {
         case none
         case composer
         case hotkey
+        case quickAsk
     }
 
     /// Internal full-resolution source enum that carries the composer's
@@ -39,11 +40,13 @@ final class DictationCoordinator: ObservableObject {
     private enum Source {
         case composer(completion: (String) -> Void)
         case hotkey
+        case quickAsk(completion: (String) -> Void)
 
         var publicSource: SessionSource {
             switch self {
             case .composer: return .composer
             case .hotkey:   return .hotkey
+            case .quickAsk: return .quickAsk
             }
         }
     }
@@ -103,15 +106,21 @@ final class DictationCoordinator: ObservableObject {
     /// overlay or kicked off a new dictation.
     private var sessionToken: Int = 0
 
-    /// `restoreClipboard`, `injectText`, `autoEnter` and `language`
-    /// settings persist in UserDefaults and are read each session, so
-    /// flipping them in Settings takes effect the next time the user
-    /// dictates. `language` is the Whisper language code (e.g. "es",
-    /// "en"); the sentinel `"auto"` means "let Whisper detect".
+    /// `restoreClipboard`, `injectText`, `autoSendKey`, `language`,
+    /// `restoreClipboardDelayMs` and `addSpaceBefore` settings persist
+    /// in UserDefaults and are read each session, so flipping them in
+    /// Settings takes effect the next time the user dictates.
+    /// `language` is the Whisper language code (e.g. "es", "en"); the
+    /// sentinel `"auto"` means "let Whisper detect".
     static let injectDefaultsKey = "dictation.injectText"
     static let restoreClipboardDefaultsKey = "dictation.restoreClipboard"
     static let autoEnterDefaultsKey = "dictation.autoEnter"
+    static let autoSendKeyDefaultsKey = "dictation.autoSendKey"
     static let languageDefaultsKey = "dictation.language"
+    static let restoreClipboardDelayMsKey = "dictation.restoreClipboardDelayMs"
+    static let addSpaceBeforeKey = "dictation.addSpaceBeforePaste"
+    static let autoFormatParagraphsKey = "dictation.autoFormatParagraphs"
+    static let prewarmOnLaunchKey = "dictation.prewarmOnLaunch"
 
     private let defaults: UserDefaults
 
@@ -131,9 +140,32 @@ final class DictationCoordinator: ObservableObject {
         if defaults.object(forKey: Self.restoreClipboardDefaultsKey) == nil {
             defaults.set(true, forKey: Self.restoreClipboardDefaultsKey)
         }
-        if defaults.object(forKey: Self.autoEnterDefaultsKey) == nil {
-            defaults.set(false, forKey: Self.autoEnterDefaultsKey)
+
+        if defaults.object(forKey: Self.autoSendKeyDefaultsKey) == nil {
+            if let legacy = defaults.object(forKey: Self.autoEnterDefaultsKey) as? Bool {
+                let migrated: DictationAutoSendKey = legacy ? .enter : .none
+                defaults.set(migrated.rawValue, forKey: Self.autoSendKeyDefaultsKey)
+            } else {
+                defaults.set(DictationAutoSendKey.none.rawValue, forKey: Self.autoSendKeyDefaultsKey)
+            }
         }
+
+        if defaults.object(forKey: Self.restoreClipboardDelayMsKey) == nil {
+            defaults.set(2000, forKey: Self.restoreClipboardDelayMsKey)
+        }
+        if defaults.object(forKey: Self.addSpaceBeforeKey) == nil {
+            defaults.set(true, forKey: Self.addSpaceBeforeKey)
+        }
+        if defaults.object(forKey: Self.autoFormatParagraphsKey) == nil {
+            defaults.set(true, forKey: Self.autoFormatParagraphsKey)
+        }
+        if defaults.object(forKey: Self.prewarmOnLaunchKey) == nil {
+            defaults.set(true, forKey: Self.prewarmOnLaunchKey)
+        }
+        _ = MediaController.shared
+        _ = PlaybackController.shared
+        _ = FillerWordsManager.shared
+        _ = PowerModeManager.shared
         capture.onLevels = { [weak self] levels in
             self?.levels = levels
         }
@@ -165,6 +197,14 @@ final class DictationCoordinator: ObservableObject {
         beginRecording(showOverlay: false)
     }
 
+    func startFromQuickAsk(language: String? = nil, completion: @escaping (String) -> Void) {
+        guard state == .idle else { return }
+        source = .quickAsk(completion: completion)
+        languageHint = language ?? resolvedLanguageHint()
+        injectOnFinish = false
+        beginRecording(showOverlay: false)
+    }
+
     /// Start a recording driven by the global hotkey. Result is pasted
     /// into the foreground app (provided Accessibility is granted)
     /// when the recording stops.
@@ -189,16 +229,86 @@ final class DictationCoordinator: ObservableObject {
         beginRecording(showOverlay: true)
     }
 
-    /// Resolve the Whisper language hint from the user's Settings.
+    /// Resolve the Whisper language hint from the user's Settings,
+    /// honouring any active Power Mode override.
     /// Returns `nil` for `"auto"` (or a missing/empty value) so
     /// `TranscriptionService.decodeOptions` skips the explicit
     /// `language` field and lets Whisper detect.
     private func resolvedLanguageHint() -> String? {
+        // Power Mode override takes precedence.
+        if let pm = PowerModeManager.shared.activeConfig,
+           let langOverride = pm.languageOverride,
+           !langOverride.isEmpty {
+            if langOverride == "auto" { return nil }
+            return langOverride
+        }
         let stored = defaults.string(forKey: Self.languageDefaultsKey) ?? "auto"
         if stored.isEmpty || stored == "auto" {
             return nil
         }
         return stored
+    }
+
+    private func resolvedAutoSendKey() -> DictationAutoSendKey {
+        if let pm = PowerModeManager.shared.activeConfig,
+           let raw = pm.autoSendKeyOverride,
+           let value = DictationAutoSendKey(rawValue: raw) {
+            return value
+        }
+        let raw = defaults.string(forKey: Self.autoSendKeyDefaultsKey) ?? DictationAutoSendKey.none.rawValue
+        return DictationAutoSendKey(rawValue: raw) ?? .none
+    }
+
+    private func resolvedActiveModel() -> DictationModel {
+        if let pm = PowerModeManager.shared.activeConfig,
+           let override = pm.transcriptionModelOverride {
+            return override
+        }
+        return modelManager.activeModel
+    }
+
+    func resolvedLanguageHintForExternalCallers() -> String? {
+        resolvedLanguageHint()
+    }
+
+    // MARK: - Prewarm
+
+    static func composeWhisperPrompt(language: String?) -> String? {
+        let vocab = VocabularyManager.shared.asPromptFragment()
+        // Power Mode override takes precedence over the per-language
+        // global prompt.
+        let stylePrompt: String?
+        if let pm = PowerModeManager.shared.activeConfig,
+           let override = pm.whisperPromptOverride,
+           !override.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            stylePrompt = override
+        } else {
+            stylePrompt = WhisperPromptStore.shared.prompt(for: language)
+        }
+        switch (vocab, stylePrompt) {
+        case (nil, nil): return nil
+        case (let v?, nil): return v
+        case (nil, let s?):
+            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        case (let v?, let s?):
+            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? v : "\(v). \(trimmed)"
+        }
+    }
+
+    func prewarmIfEnabled() {
+        guard defaults.object(forKey: Self.prewarmOnLaunchKey) as? Bool ?? true else { return }
+        let model = modelManager.activeModel
+        guard modelManager.installedModels.contains(model) else { return }
+        let samples = [Float](repeating: 0.0, count: 3200)
+        Task.detached(priority: .background) {
+            _ = try? await TranscriptionService.shared.transcribe(
+                samples: samples,
+                using: model,
+                language: nil
+            )
+        }
     }
 
     /// Hotkey "toggle" mode: tap once to start, tap again to stop.
@@ -256,26 +366,46 @@ final class DictationCoordinator: ObservableObject {
 
     /// Stop recording and run transcription. Result is delivered to
     /// the composer completion or pasted into the foreground app
-    /// depending on `source`.
+    /// depending on `source`. The samples + model + language used for
+    /// this run are captured and forwarded to
+    /// `LastTranscriptionStore` after `finish` so quick-action
+    /// AppIntents (Paste Last, Retry Last) can replay the result.
     func stop() {
         guard state == .recording else { return }
+        SoundManager.shared.playStop()
         state = .transcribing
         invalidateElapsedTimer()
         invalidateBarTimer()
         let samples = capture.stopAndCollect()
         let language = languageHint
-        let model = modelManager.activeModel
+        let model = resolvedActiveModel()
+        let prompt = Self.composeWhisperPrompt(language: language)
         let token = sessionToken
         Task { [weak self] in
             do {
                 let text = try await TranscriptionService.shared.transcribe(
                     samples: samples,
                     using: model,
+                    language: language,
+                    prompt: prompt
+                )
+                await self?.finishIfFresh(
+                    token: token,
+                    text: text,
+                    errorMessage: nil,
+                    samples: samples,
+                    model: model,
                     language: language
                 )
-                await self?.finishIfFresh(token: token, text: text, errorMessage: nil)
             } catch {
-                await self?.finishIfFresh(token: token, text: "", errorMessage: error.localizedDescription)
+                await self?.finishIfFresh(
+                    token: token,
+                    text: "",
+                    errorMessage: error.localizedDescription,
+                    samples: samples,
+                    model: model,
+                    language: language
+                )
             }
         }
     }
@@ -285,6 +415,7 @@ final class DictationCoordinator: ObservableObject {
     /// a stuck transcription (no model downloaded, daemon hung, etc.)
     /// and gets the audio engine torn down cleanly.
     func cancel() {
+        SoundManager.shared.playCancel()
         sessionToken &+= 1
         invalidateElapsedTimer()
         invalidateBarTimer()
@@ -341,6 +472,12 @@ final class DictationCoordinator: ObservableObject {
         activeSource = source.publicSource
         state = .recording
         overlayVisible = showOverlay
+        SoundManager.shared.playStart()
+        // Mute system output and pause Music/Spotify per user prefs.
+        // Both controllers are no-ops when their toggles are off, so
+        // calling them unconditionally keeps the lifecycle simple.
+        MediaController.shared.muteIfNeeded()
+        PlaybackController.shared.pauseIfNeeded()
     }
 
     private func startElapsedTimer() {
@@ -389,12 +526,31 @@ final class DictationCoordinator: ObservableObject {
     /// a transcription Task that wins the race after the user already
     /// cancelled doesn't paste an old transcript or reopen the
     /// overlay.
-    private func finishIfFresh(token: Int, text: String, errorMessage: String?) {
+    private func finishIfFresh(
+        token: Int,
+        text: String,
+        errorMessage: String?,
+        samples: [Float],
+        model: DictationModel?,
+        language: String?
+    ) {
         guard token == sessionToken else { return }
-        finish(text: text, errorMessage: errorMessage)
+        finish(
+            text: text,
+            errorMessage: errorMessage,
+            samples: samples,
+            model: model,
+            language: language
+        )
     }
 
-    private func finish(text: String, errorMessage: String?) {
+    private func finish(
+        text: String,
+        errorMessage: String?,
+        samples: [Float],
+        model: DictationModel?,
+        language: String?
+    ) {
         if let errorMessage {
             lastError = errorMessage
         } else {
@@ -402,22 +558,46 @@ final class DictationCoordinator: ObservableObject {
         }
 
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Strip filler words ("uh", "um", "este", "o sea", …) before
+        // running the user's word-replacement dictionary. Order
+        // matters: replacements may map a filler-like sound to a
+        // legitimate word, and we don't want filler removal to undo
+        // that. So filter first, then replace.
+        let deFillered = FillerWordsManager.shared.apply(to: trimmed, language: language)
+        let processed = DictationReplacementStore.shared.apply(to: deFillered)
 
-        if injectOnFinish, !trimmed.isEmpty {
+        if errorMessage == nil, !processed.isEmpty {
+            SoundManager.shared.playDone()
+            // Snapshot the result so AppIntents (Paste Last, Retry
+            // Last) can replay it without redictating.
+            LastTranscriptionStore.shared.record(
+                text: processed,
+                samples: samples,
+                model: model,
+                language: language
+            )
+        }
+
+        if injectOnFinish, !processed.isEmpty {
             let restore = defaults.bool(forKey: Self.restoreClipboardDefaultsKey)
-            let autoEnter = defaults.bool(forKey: Self.autoEnterDefaultsKey)
+            let restoreMs = defaults.object(forKey: Self.restoreClipboardDelayMsKey) as? Int ?? 2000
+            let restoreAfter = TimeInterval(max(100, min(10_000, restoreMs))) / 1000.0
+            let autoSend = resolvedAutoSendKey()
+            let addSpace = defaults.object(forKey: Self.addSpaceBeforeKey) as? Bool ?? true
             do {
                 try TextInjector.inject(
-                    text: trimmed,
+                    text: processed,
                     restorePrevious: restore,
-                    autoEnter: autoEnter
+                    autoSendKey: autoSend,
+                    restoreAfter: restoreAfter,
+                    addSpaceBefore: addSpace
                 )
             } catch {
                 lastError = error.localizedDescription
             }
         }
 
-        cleanup(deliveryText: trimmed)
+        cleanup(deliveryText: processed)
     }
 
     private func fail(with message: String) {
@@ -438,9 +618,16 @@ final class DictationCoordinator: ObservableObject {
         activeSource = .none
         overlayVisible = false
         clearEscHint()
+        // Restore system output and resume the paused media app, if
+        // either was modified at session start. The controllers are
+        // no-ops when nothing was muted/paused.
+        MediaController.shared.unmuteAfterDelay()
+        PlaybackController.shared.resumeAfterDelay()
 
         switch currentSource {
         case .composer(let completion):
+            completion(deliveryText)
+        case .quickAsk(let completion):
             completion(deliveryText)
         case .hotkey:
             break
