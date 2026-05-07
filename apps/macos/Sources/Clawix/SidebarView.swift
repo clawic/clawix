@@ -84,6 +84,10 @@ struct SidebarView: View {
     @State private var projectRenameTarget: Project?
     @State private var projectMenuOpenId: UUID?
     @State private var expandedProjects: Set<UUID> = []
+    /// Projects that the user has expanded past the default 5-chat
+    /// preview by tapping "Show more" in their accordion. Cleared on
+    /// collapse so reopening a project comes back to the trimmed view.
+    @State private var projectsShowingExtended: Set<UUID> = []
     @State private var projectsHeaderHovered: Bool = false
     @State private var newProjectMenuOpen: Bool = false
     @State private var organizeMenuOpen: Bool = false
@@ -188,9 +192,14 @@ struct SidebarView: View {
                 project: project,
                 expanded: expandedProjects.contains(project.id),
                 chats: snapshot.byProject[project.id] ?? [],
+                showingExtended: projectsShowingExtended.contains(project.id),
                 onToggle: {
                     if expandedProjects.contains(project.id) {
                         expandedProjects.remove(project.id)
+                        // Re-collapsing a project resets the extended
+                        // 10-chat slice so the next open lands back on
+                        // the 5-chat preview, per design.
+                        projectsShowingExtended.remove(project.id)
                     } else {
                         expandedProjects.insert(project.id)
                         // Fire-and-forget refresh. The accordion already
@@ -207,6 +216,16 @@ struct SidebarView: View {
                 },
                 onNewChat: {
                     appState.startNewChat(in: project)
+                },
+                onShowMore: {
+                    let pid = project.id
+                    withAnimation(.easeOut(duration: 0.22)) {
+                        _ = projectsShowingExtended.insert(pid)
+                    }
+                },
+                onViewAll: {
+                    appState.searchScopedProjectId = project.id
+                    appState.currentRoute = .search
                 },
                 menuOpen: projectMenuOpenId == project.id,
                 selectedChatId: currentChatId,
@@ -262,7 +281,7 @@ struct SidebarView: View {
                 )
                 SidebarAccordion(
                     expanded: pinnedExpanded,
-                    targetHeight: CGFloat(snapshot.pinned.count) * 32
+                    targetHeight: CGFloat(snapshot.pinned.count) * 31
                         + SidebarRowMetrics.sectionEdgePadding
                 ) {
                     PinnedReorderableList(
@@ -361,44 +380,64 @@ struct SidebarView: View {
                 if projectsExpanded {
                     let currentChatId = selectedChatId
                     let projectsList = sortedProjects(snapshot: snapshot)
-                    Group {
-                        if projectSortMode == .custom {
-                            // `ProjectReorderableList` adds drag-and-drop
-                            // gap zones between every row and persists the
-                            // resulting order via `appState.reorderProject`.
-                            // It uses a non-lazy `VStack` because measuring
-                            // row frames for the drag chip needs every row
-                            // to be in the layout tree.
-                            ProjectReorderableList(
-                                appState: appState,
-                                projects: projectsList
-                            ) { project in
-                                projectRow(
-                                    project,
-                                    snapshot: snapshot,
-                                    currentChatId: currentChatId
-                                )
-                            }
-                        } else {
-                            // `LazyVStack` instead of `VStack` so accordion
-                            // bodies for projects scrolled out of view never
-                            // instantiate. Visible projects still re-evaluate
-                            // normally; the saving is the long tail of
-                            // off-screen ones (~70-90 out of ~100 in a
-                            // typical sidebar).
-                            LazyVStack(alignment: .leading, spacing: 4) {
-                                ForEach(projectsList) { project in
+                    // Mirror the buffer pattern used by Pinned / Chats /
+                    // Archived: bake `sectionEdgePadding` into the
+                    // accordion's `targetHeight` instead of pinning a
+                    // hard `.padding(.bottom)`. `SidebarAccordion`
+                    // takes `max(target, measured)` for the frame, so a
+                    // slight measurement overshoot eats into the buffer
+                    // the same way it does in the chat sections,
+                    // landing the visible bottom gap at the same point.
+                    // A pinned bottom padding always rendered the full
+                    // 23.6pt below the last project, so Projects looked
+                    // ~5-10pt looser than Pinned/Chats when they were
+                    // open above it.
+                    let projectRowHeightEstimate: CGFloat = 28
+                    let projectsListHeightEstimate = CGFloat(projectsList.count) * projectRowHeightEstimate
+                        + CGFloat(max(projectsList.count - 1, 0)) * 4
+                    SidebarAccordion(
+                        expanded: true,
+                        targetHeight: projectsListHeightEstimate
+                            + SidebarRowMetrics.sectionEdgePadding
+                    ) {
+                        Group {
+                            if projectSortMode == .custom {
+                                // `ProjectReorderableList` adds drag-and-drop
+                                // gap zones between every row and persists the
+                                // resulting order via `appState.reorderProject`.
+                                // It uses a non-lazy `VStack` because measuring
+                                // row frames for the drag chip needs every row
+                                // to be in the layout tree.
+                                ProjectReorderableList(
+                                    appState: appState,
+                                    projects: projectsList
+                                ) { project in
                                     projectRow(
                                         project,
                                         snapshot: snapshot,
                                         currentChatId: currentChatId
                                     )
                                 }
+                            } else {
+                                // `LazyVStack` instead of `VStack` so accordion
+                                // bodies for projects scrolled out of view never
+                                // instantiate. Visible projects still re-evaluate
+                                // normally; the saving is the long tail of
+                                // off-screen ones (~70-90 out of ~100 in a
+                                // typical sidebar).
+                                LazyVStack(alignment: .leading, spacing: 4) {
+                                    ForEach(projectsList) { project in
+                                        projectRow(
+                                            project,
+                                            snapshot: snapshot,
+                                            currentChatId: currentChatId
+                                        )
+                                    }
+                                }
                             }
                         }
+                        .padding(.leading, 8)
                     }
-                    .padding(.leading, 8)
-                    .padding(.bottom, SidebarRowMetrics.sectionEdgePadding)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
@@ -515,7 +554,7 @@ struct SidebarView: View {
 
                 // Settings button at bottom (toggles account popover above it)
                 SettingsBottomButton(open: $settingsPopoverOpen)
-                    .padding(.leading, 8)
+                    .padding(.leading, 6)
                     .padding(.trailing, 22)
                     .padding(.bottom, 10)
                     .padding(.top, 6)
@@ -526,7 +565,7 @@ struct SidebarView: View {
             if settingsPopoverOpen {
                 SettingsAccountPopover(isOpen: $settingsPopoverOpen)
                     .background(MenuOutsideClickWatcher(isPresented: $settingsPopoverOpen))
-                    .padding(.leading, 8)
+                    .padding(.leading, 6)
                     .padding(.bottom, 50)
                     .transition(.softNudgeSymmetric(y: 4))
             }
@@ -928,9 +967,9 @@ private struct SettingsBottomButton: View {
             open.toggle()
         } label: {
             HStack(spacing: 11) {
-                SettingsIcon(size: 19, lineWidth: 0.7)
-                    .frame(width: 20)
-                    .foregroundColor(open ? .white : Color(white: 0.78))
+                SettingsIcon(size: 16)
+                    .frame(width: 15)
+                    .foregroundColor(open ? .white : Color(white: hovered ? 0.92 : 0.78))
                 Text("Settings")
                     .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(open ? .white : Color(white: 0.92))
@@ -976,7 +1015,7 @@ private struct SettingsAccountPopover: View {
             MenuStandardDivider()
                 .padding(.vertical, 4)
             SettingsAccountRow(title: "Settings",
-                               icon: "gearshape",
+                               icon: "clawix.settings",
                                trailing: nil) {
                 appState.currentRoute = .settings
                 isOpen = false
@@ -1044,8 +1083,7 @@ private struct SettingsLimitsHeaderRow: View {
             }
         }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: "speedometer")
-                    .font(BodyFont.system(size: 11.5))
+                UsageIcon(size: 15, lineWidth: 1.7)
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(MenuStyle.rowIcon)
                 Text("Remaining usage limits")
@@ -1193,10 +1231,16 @@ private struct SettingsAccountRow: View {
     var body: some View {
         Button(action: { action?() }) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 11.5))
-                    .frame(width: 18, alignment: .center)
-                    .foregroundColor(MenuStyle.rowIcon)
+                Group {
+                    if icon == "clawix.settings" {
+                        SettingsIcon(size: 16, lineWidth: 0.85)
+                    } else {
+                        Image(systemName: icon)
+                            .font(BodyFont.system(size: 11.5))
+                    }
+                }
+                .frame(width: 18, alignment: .center)
+                .foregroundColor(MenuStyle.rowIcon)
                 Text(title)
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
@@ -1297,7 +1341,8 @@ private struct SidebarButton: View {
 
 
     private var iconColor: Color {
-        isSelected ? .white : Color(white: 0.78)
+        if isSelected { return .white }
+        return Color(white: hovered ? 0.92 : 0.78)
     }
 
     private var labelColor: Color {
@@ -1868,7 +1913,7 @@ struct RecentChatRow: View, Equatable {
         }
         .padding(.leading, 8 + indent)
         .padding(.trailing, 3)
-        .padding(.vertical, 7)
+        .frame(height: 29)
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -2002,11 +2047,11 @@ private struct SidebarChatRowSpinner: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color(white: 0.40),
+                .stroke(Color(white: 0.28),
                         style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
             Circle()
                 .trim(from: 0.0, to: 0.79)
-                .stroke(Color(white: 0.55),
+                .stroke(Color(white: 0.75),
                         style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
                 .rotationEffect(.degrees(rotation))
         }
@@ -2024,10 +2069,19 @@ private struct SidebarChatRowSpinner: View {
 private struct ProjectAccordion: View, Equatable {
     let project: Project
     let expanded: Bool
+    /// Up to `Self.maxVisible` (10) chats indexed for this project,
+    /// already sorted desc by `createdAt`. The accordion further
+    /// trims to `defaultVisible` (5) until "Show more" is tapped.
     let chats: [Chat]
+    /// True once the user has tapped "Show more" on this project,
+    /// promoting the visible slice from 5 to up to 10. Reset by the
+    /// parent on collapse.
+    let showingExtended: Bool
     let onToggle: () -> Void
     let onMenuToggle: () -> Void
     let onNewChat: () -> Void
+    let onShowMore: () -> Void
+    let onViewAll: () -> Void
     let menuOpen: Bool
     /// Currently selected chat id, lifted out so the accordion's `Equatable`
     /// check can detect "the user navigated to / away from a chat in this
@@ -2038,6 +2092,34 @@ private struct ProjectAccordion: View, Equatable {
     /// parent side, both stable across renders.
     let chatCallbacks: (Chat) -> RecentChatRowCallbacks
 
+    /// Default number of chats shown when a project is freshly expanded.
+    /// "Show more" promotes the slice to `maxVisible`.
+    static let defaultVisible: Int = 5
+    /// Hard cap on chats rendered inside the accordion. Anything past
+    /// this is reachable through the per-project "View all" popup.
+    static let maxVisible: Int = 10
+
+    /// Visible slice of `chats` for the current `showingExtended` state.
+    private var visibleChats: ArraySlice<Chat> {
+        let cap = showingExtended ? Self.maxVisible : Self.defaultVisible
+        return chats.prefix(cap)
+    }
+
+    /// Whether tapping "Show more" would reveal additional rows in the
+    /// accordion. False once the visible slice already covers `chats`.
+    private var canShowMore: Bool {
+        !showingExtended && chats.count > Self.defaultVisible
+    }
+
+    /// Whether to surface the "View all" footer row. True once the
+    /// indexed list has saturated the per-project cap, since the
+    /// runtime may know about more conversations than the snapshot.
+    /// Conservative: with exactly 10 indexed chats and nothing else
+    /// behind them the popup just lists those 10, which is fine.
+    private var canViewAll: Bool {
+        showingExtended && chats.count >= Self.maxVisible
+    }
+
     @State private var hovered = false
     @State private var newChatHovered = false
     @State private var menuHovered = false
@@ -2046,6 +2128,7 @@ private struct ProjectAccordion: View, Equatable {
         lhs.project.id == rhs.project.id
             && lhs.project.name == rhs.project.name
             && lhs.expanded == rhs.expanded
+            && lhs.showingExtended == rhs.showingExtended
             && lhs.menuOpen == rhs.menuOpen
             && lhs.selectedChatId == rhs.selectedChatId
             && Self.chatsEqual(lhs.chats, rhs.chats)
@@ -2093,7 +2176,7 @@ private struct ProjectAccordion: View, Equatable {
                 }
                 .padding(.leading, 8)
                 .padding(.trailing, 10)
-                .padding(.vertical, 6)
+                .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.easeOut(duration: 0.28)) { onToggle() }
@@ -2139,6 +2222,7 @@ private struct ProjectAccordion: View, Equatable {
                 .sidebarHover { newChatHovered = $0 }
                 .help(L10n.t("New chat in this project"))
             }
+            .frame(height: 29)
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(hovered || menuOpen ? Color.white.opacity(0.04) : Color.clear)
@@ -2149,14 +2233,26 @@ private struct ProjectAccordion: View, Equatable {
             .animation(.easeOut(duration: 0.12), value: newChatHovered)
             .animation(.easeOut(duration: 0.12), value: menuHovered)
 
-            SmoothAccordion(
+            // `SidebarAccordion` uses the targetHeight as an open-state
+            // animation hint but takes max(target, measured) for the
+            // actual frame, so a slightly off heuristic clips a few
+            // pixels rather than the bottom row. The previous fixed
+            // `SmoothAccordion` cropped the 10th chat because the
+            // 30pt row metric undershoots the rendered height and the
+            // footer row was not in the calculation at all.
+            let visibleCount = visibleChats.count
+            let baseHeight: CGFloat = visibleCount > 0
+                ? SidebarRowMetrics.recentChats(
+                    count: visibleCount,
+                    spacing: SidebarRowMetrics.projectChatSpacing
+                )
+                : SidebarRowMetrics.projectEmptyState
+            let footerHeight: CGFloat = (canShowMore || canViewAll)
+                ? SidebarRowMetrics.projectFooterRow + SidebarRowMetrics.projectChatSpacing
+                : 0
+            SidebarAccordion(
                 expanded: expanded,
-                targetHeight: chats.isEmpty
-                    ? SidebarRowMetrics.projectEmptyState
-                    : SidebarRowMetrics.recentChats(
-                        count: chats.count,
-                        spacing: SidebarRowMetrics.projectChatSpacing
-                    )
+                targetHeight: baseHeight + footerHeight
             ) {
                 // `LazyVStack` so a project with many chats doesn't pay
                 // for instantiating off-screen rows. The accordion's
@@ -2171,7 +2267,7 @@ private struct ProjectAccordion: View, Equatable {
                             .padding(.leading, 30)
                             .padding(.vertical, 4)
                     }
-                    ForEach(chats) { chat in
+                    ForEach(Array(visibleChats)) { chat in
                         RecentChatRow(
                             chat: chat,
                             isSelected: selectedChatId == chat.id,
@@ -2184,9 +2280,53 @@ private struct ProjectAccordion: View, Equatable {
                             removal: .opacity
                         ))
                     }
+                    if canShowMore {
+                        ProjectAccordionFooterRow(
+                            label: L10n.t("Show more"),
+                            action: onShowMore
+                        )
+                        .transition(.opacity)
+                    } else if canViewAll {
+                        ProjectAccordionFooterRow(
+                            label: L10n.t("View all"),
+                            action: onViewAll
+                        )
+                        .transition(.opacity)
+                    }
                 }
             }
         }
+    }
+}
+
+/// Footer label appended to a `ProjectAccordion`'s chat list to
+/// trigger "Show more" (5 → 10) or "View all" (open the per-project
+/// popup). Reads as plain text, not a row: no hover background, no
+/// rounded "tab" look. Hover animates the text a notch toward white
+/// (still well short of the chat title's 0.94) so the user gets a
+/// subtle "this is interactive" hint without it competing with the
+/// conversation rows above. The trailing whitespace gives the next
+/// project's header a little breathing room.
+private struct ProjectAccordionFooterRow: View {
+    let label: String
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(label)
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(Color(white: hovered ? 0.78 : 0.55))
+            Spacer(minLength: 6)
+        }
+        .padding(.leading, 33)
+        .padding(.trailing, 10)
+        .padding(.top, 6)
+        .padding(.bottom, 12)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: action)
+        .sidebarHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.14), value: hovered)
     }
 }
 
@@ -2219,14 +2359,20 @@ private struct SmoothAccordion<Content: View>: View {
 /// the actual rendered values so the animation lands cleanly. Re-measure
 /// if you change row paddings or fonts.
 private enum SidebarRowMetrics {
-    /// `RecentChatRow`: vertical padding 7+7 + line-height ~16 = 30.
-    static let chatRow: CGFloat = 30
+    /// `RecentChatRow`: vertical padding 6.5+6.5 + line-height ~16 = 29.
+    /// Same height applies to `ProjectAccordion` headers so every
+    /// hoverable "tab" in the sidebar reads at one consistent size.
+    static let chatRow: CGFloat = 29
     /// VStack spacing between recent chat rows.
     static let chatSpacing: CGFloat = 2
     /// Spacing inside `ProjectAccordion`'s chat list.
     static let projectChatSpacing: CGFloat = 3
     /// "No chats" / "Loading…" placeholder row inside a project accordion.
     static let projectEmptyState: CGFloat = 24
+    /// "Show more" / "View all" footer row at the end of a project's
+    /// chat list. Same text size as a chat row plus a generous bottom
+    /// gap so it visually separates from the next project header.
+    static let projectFooterRow: CGFloat = 36
     /// Trailing buffer baked into a collapsible section's accordion
     /// `targetHeight` so the last row's pill is not clipped against the
     /// section frame and the next section header is not glued to it.
@@ -2791,12 +2937,13 @@ private struct PinnedReorderableList: View, Equatable {
     @State private var autoScroller: PinnedDragAutoScroller? = nil
 
     private let baseSpacing: CGFloat = 2
-    /// Approximate row height. RecentChatRow renders at ~32 pt with
-    /// font 13 + vertical padding 7. The gap matches it so the source's
+    /// Approximate slot size. `RecentChatRow` renders at 29 pt
+    /// (vertical padding 6.5+6.5 + line-height ~16) plus 2 pt of
+    /// baseSpacing per slot. The gap matches the slot so the source's
     /// collapse and the gap's opening cancel out and the list height
     /// stays constant during an internal drag.
-    private let gapHeight: CGFloat = 32
-    private let rowHeight: CGFloat = 32
+    private let gapHeight: CGFloat = 31
+    private let rowHeight: CGFloat = 31
     /// Delay before a deferred clear fires when the cursor exits a slot
     /// zone. Short enough that leaving the list closes the gap quickly,
     /// long enough to absorb the brief inter-row transition without a
@@ -3402,12 +3549,12 @@ final class DragChipPanel {
 
     convenience init(chat: Chat, grabAnchor: CGPoint, width: CGFloat) {
         let chip = DragChipView(chat: chat, width: width, shadowInset: Self.shadowInset)
-        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 32)
+        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 29)
     }
 
     convenience init(project: Project, grabAnchor: CGPoint, width: CGFloat) {
         let chip = ProjectDragChipView(project: project, width: width, shadowInset: Self.shadowInset)
-        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 32)
+        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 29)
     }
 
     func show() {
@@ -3481,7 +3628,7 @@ private struct DragChipView: View {
         }
         .padding(.leading, 10)
         .padding(.trailing, 9)
-        .padding(.vertical, 7)
+        .frame(height: 29)
         .background(
             ZStack {
                 VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
@@ -3520,7 +3667,7 @@ private struct ProjectDragChipView: View {
         }
         .padding(.leading, 10)
         .padding(.trailing, 10)
-        .padding(.vertical, 6)
+        .frame(height: 29)
         .background(
             ZStack {
                 VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
@@ -3581,14 +3728,14 @@ private struct ProjectReorderableList<RowContent: View>: View {
     /// branch so switching modes doesn't shift the layout.
     private let baseSpacing: CGFloat = 4
     /// Open-gap height during drag. Approximates a collapsed accordion's
-    /// header height so the source's collapse and the gap's opening
-    /// cancel out and the list height stays stable.
-    private let gapHeight: CGFloat = 32
+    /// header (29 pt) plus baseSpacing (4) so the source's collapse and
+    /// the gap's opening cancel out and the list height stays stable.
+    private let gapHeight: CGFloat = 33
     /// Threshold for splitting a row into top-half / bottom-half slot
     /// zones. Used by the row-level drop delegate to choose between
     /// "gap above this row" and "gap below this row" depending on
     /// where the cursor is vertically.
-    private let rowHeight: CGFloat = 32
+    private let rowHeight: CGFloat = 33
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
