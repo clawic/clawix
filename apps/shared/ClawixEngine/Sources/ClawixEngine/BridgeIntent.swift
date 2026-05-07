@@ -17,7 +17,7 @@ public enum BridgeIntent {
         case .listChats:
             session.send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
 
-        case .openChat(let chatIdString):
+        case .openChat(let chatIdString, let limit):
             guard let uuid = UUID(uuidString: chatIdString) else {
                 session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
                 return
@@ -27,8 +27,26 @@ public enum BridgeIntent {
             // before we hand it to the bridge subscriber. Without this
             // every `notLoaded` thread shows up empty on the iPhone.
             host?.handleHydrateHistory(chatId: uuid)
-            let messages = bus.subscribe(chatId: chatIdString)
-            session.send(BridgeFrame(.messagesSnapshot(chatId: chatIdString, messages: messages)))
+            let page = bus.subscribe(chatId: chatIdString, limit: limit)
+            // `hasMore: nil` for legacy callers (no `limit`) so iOS
+            // clients on the old code path behave identically.
+            session.send(BridgeFrame(.messagesSnapshot(
+                chatId: chatIdString,
+                messages: page.messages,
+                hasMore: limit == nil ? nil : page.hasMore
+            )))
+
+        case .loadOlderMessages(let chatIdString, let before, let limit):
+            guard UUID(uuidString: chatIdString) != nil else {
+                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+                return
+            }
+            let page = bus.page(chatId: chatIdString, before: before, limit: limit)
+            session.send(BridgeFrame(.messagesPage(
+                chatId: chatIdString,
+                messages: page.messages,
+                hasMore: page.hasMore
+            )))
 
         case .sendPrompt(let chatIdString, let text, let attachments):
             guard let uuid = UUID(uuidString: chatIdString) else {
@@ -47,6 +65,13 @@ public enum BridgeIntent {
             // trip from the client.
             _ = bus.subscribe(chatId: chatIdString)
             host?.handleNewChat(chatId: uuid, text: text, attachments: attachments)
+
+        case .interruptTurn(let chatIdString):
+            guard let uuid = UUID(uuidString: chatIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+                return
+            }
+            host?.handleInterruptTurn(chatId: uuid)
 
         case .editPrompt(let chatIdString, let messageIdString, let text):
             guard let chatUuid = UUID(uuidString: chatIdString),
@@ -68,6 +93,13 @@ public enum BridgeIntent {
         case .unpinChat(let chatIdString):
             guard let uuid = UUID(uuidString: chatIdString) else { return }
             host?.handlePinChat(chatId: uuid, pinned: false)
+
+        case .renameChat(let chatIdString, let title):
+            guard let uuid = UUID(uuidString: chatIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+                return
+            }
+            host?.handleRenameChat(chatId: uuid, title: title)
 
         case .pairingStart:
             if let payload = host?.handlePairingStart() {
@@ -101,11 +133,39 @@ public enum BridgeIntent {
                 }
             )
 
+        case .requestAudio(let audioId):
+            host?.handleRequestAudio(
+                audioId: audioId,
+                reply: { [weak session] audioBase64, mimeType, errorMessage in
+                    session?.send(BridgeFrame(.audioSnapshot(
+                        audioId: audioId,
+                        audioBase64: audioBase64,
+                        mimeType: mimeType,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+
+        case .requestGeneratedImage(let path):
+            host?.handleRequestGeneratedImage(
+                path: path,
+                reply: { [weak session] dataBase64, mimeType, errorMessage in
+                    session?.send(BridgeFrame(.generatedImageSnapshot(
+                        path: path,
+                        dataBase64: dataBase64,
+                        mimeType: mimeType,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+
         case .auth, .authOk, .authFailed, .versionMismatch,
              .chatsSnapshot, .chatUpdated, .messagesSnapshot,
+             .messagesPage,
              .messageAppended, .messageStreaming, .errorEvent,
              .pairingPayload, .projectsSnapshot, .fileSnapshot,
-             .transcriptionResult:
+             .transcriptionResult, .audioSnapshot,
+             .generatedImageSnapshot:
             // Either already handled (auth) or server-only.
             break
         }
