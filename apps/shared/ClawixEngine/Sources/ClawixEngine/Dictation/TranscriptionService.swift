@@ -79,18 +79,21 @@ public actor TranscriptionService {
         // Different (or first) model requested: drop the old one so
         // we don't keep two large CoreML graphs in memory.
         loaded = nil
+        // Resolve the on-disk folder explicitly. WhisperKitConfig with
+        // `model:` alone + `download: false` leaves `modelFolder` nil
+        // and `loadModels` then throws "Model folder is not set."
+        // Settings already downloaded the variant via
+        // `DictationModelManager`, so we point WhisperKit at the same
+        // path that scan resolves to.
+        guard let folder = DictationModelManager.installedFolder(for: model) else {
+            throw TranscriptionError.noModelAvailable
+        }
         do {
-            // `download: false` is intentional. Auto-downloading a
-            // 1.5+ GB model behind the user's back blocks the
-            // dictation overlay for a long time with no progress UI.
-            // The Settings page has an explicit "Download" button
-            // that goes through `WhisperKit.download(...)` with a
-            // proper progress bar, so by the time we get here the
-            // model should already be on disk. If it isn't, surface
-            // `noModelAvailable` so the overlay closes immediately
-            // and the caller can tell the user where to fix it.
+            // `download: false` keeps WhisperKit from auto-pulling a
+            // 1.5+ GB model behind the user's back; the Settings page
+            // owns the download UX with proper progress.
             let config = WhisperKitConfig(
-                model: model.whisperKitVariant,
+                modelFolder: folder.path,
                 verbose: false,
                 logLevel: .none,
                 prewarm: false,
@@ -101,7 +104,7 @@ public actor TranscriptionService {
             loaded = (model, kit)
             return kit
         } catch {
-            throw TranscriptionError.noModelAvailable
+            throw TranscriptionError.engineFailed(error.localizedDescription)
         }
     }
 
@@ -110,8 +113,21 @@ public actor TranscriptionService {
         // chunking is only worth turning on for >30s recordings; for
         // typical dictation bursts (<10s) the simple path is faster.
         var options = DecodingOptions()
-        if let language, !language.isEmpty, language != "auto" {
-            options.language = language
+        let normalized = language?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let normalized, !normalized.isEmpty, normalized != "auto" {
+            // Caller supplied a locale hint (iPhone passes the user's
+            // system language). Prefill the prompt with it, no need to
+            // burn a detection pass.
+            options.language = normalized
+        } else {
+            // Without a hint, Whisper's prefill defaults to English
+            // because `DecodingOptions.detectLanguage` is `false` when
+            // `usePrefillPrompt` is `true`. Flip it on so the model
+            // probes the first window for a `<|lang|>` token before
+            // decoding; this is what makes Spanish/French/etc. audio
+            // come out in their own language instead of being silently
+            // English-ified.
+            options.detectLanguage = true
         }
         options.task = .transcribe
         options.temperature = 0.0

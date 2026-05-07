@@ -9,7 +9,11 @@ public enum DictationModel: String, CaseIterable, Codable, Sendable {
     /// Distilled, multilingual, ~1.5 GB on disk. Turbo is 6-8x faster
     /// than `largeV3` on Apple Silicon while keeping enough quality
     /// for general dictation. Default for new installs.
-    case largeV3Turbo = "large-v3-turbo"
+    /// rawValue uses the underscore convention WhisperKit expects on
+    /// `argmaxinc/whisperkit-coreml` (`openai_whisper-large-v3_turbo`);
+    /// hyphenating this breaks the glob lookup and surfaces as
+    /// "No models found matching ..." in Settings.
+    case largeV3Turbo = "large-v3_turbo"
     /// Full Whisper Large V3, ~3 GB. Slower; use when transcription
     /// quality matters more than latency or storage.
     case largeV3 = "large-v3"
