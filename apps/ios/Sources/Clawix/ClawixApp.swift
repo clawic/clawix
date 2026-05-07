@@ -204,7 +204,12 @@ private struct RootView: View {
                                     // appears as a screen reset rather
                                     // than a navigation push. Any earlier
                                     // breadcrumb (e.g. project) is kept.
-                                    let newId = store.startNewChat()
+                                    // Carry over the current chat's cwd
+                                    // so the optimistic stub already
+                                    // belongs to the same folder before
+                                    // the daemon's echo lands.
+                                    let inheritedCwd = store.chat(id)?.cwd
+                                    let newId = store.startNewChat(cwd: inheritedCwd)
                                     var t = Transaction()
                                     t.disablesAnimations = true
                                     withTransaction(t) {

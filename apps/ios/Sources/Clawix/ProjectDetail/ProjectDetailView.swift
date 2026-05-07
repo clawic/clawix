@@ -24,18 +24,31 @@ struct ProjectDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var showProjectPicker = false
+    @State private var showRenameAlert = false
+    @State private var renameDraft: String = ""
 
+    // Deriving live from `store.chats` (instead of the captured
+    // `project.chats` snapshot) is what makes new chats and metadata
+    // updates land here without leaving and re-entering the folder.
+    // The captured `project` only carries the cwd identity; everything
+    // else flows from the observable store.
     private var chats: [WireChat] {
-        project.chats.sorted { lhs, rhs in
-            if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
-            let l = lhs.lastMessageAt ?? lhs.createdAt
-            let r = rhs.lastMessageAt ?? rhs.createdAt
-            return l > r
-        }
+        store.chats
+            .filter { !$0.isArchived && $0.cwd == project.cwd }
+            .sorted { lhs, rhs in
+                if lhs.isPinned != rhs.isPinned { return lhs.isPinned }
+                let l = lhs.lastMessageAt ?? lhs.createdAt
+                let r = rhs.lastMessageAt ?? rhs.createdAt
+                return l > r
+            }
     }
 
     private var allProjects: [DerivedProject] {
         DerivedProject.from(chats: store.chats.filter { !$0.isArchived })
+    }
+
+    private var displayName: String {
+        store.projectDisplayName(cwd: project.cwd, fallback: project.name)
     }
 
     var body: some View {
@@ -64,6 +77,7 @@ struct ProjectDetailView: View {
             ProjectPickerSheet(
                 projects: allProjects,
                 currentCwd: project.cwd,
+                store: store,
                 onSelect: { selected in
                     showProjectPicker = false
                     guard selected.cwd != project.cwd else { return }
@@ -77,6 +91,17 @@ struct ProjectDetailView: View {
             .presentationDragIndicator(.visible)
             .presentationBackground(Palette.surface)
             .preferredColorScheme(.dark)
+        }
+        .alert("Rename folder", isPresented: $showRenameAlert) {
+            TextField("Folder name", text: $renameDraft)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                store.renameProject(cwd: project.cwd, newName: renameDraft)
+            }
+        } message: {
+            Text("Choose a new name for this folder. The change is kept on this iPhone.")
         }
     }
 
@@ -97,14 +122,39 @@ struct ProjectDetailView: View {
             .padding(.vertical, 1)
             titlePill
             Spacer()
-            GlassIconButton(
-                systemName: "ellipsis",
-                size: 46,
-                iconSize: 20,
-                action: {}
-            )
-            .padding(.vertical, 1)
+            ellipsisButton
+                .padding(.vertical, 1)
         }
+    }
+
+    private var ellipsisButton: some View {
+        Menu {
+            Button {
+                renameDraft = displayName
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    showRenameAlert = true
+                }
+            } label: {
+                if let img = MenuIconImage.pencil {
+                    Label { Text("Edit") } icon: { Image(uiImage: img) }
+                } else {
+                    Label("Edit", systemImage: "pencil")
+                }
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.clear)
+                    .glassEffect(.regular, in: Circle())
+                Image(systemName: "ellipsis")
+                    .font(BodyFont.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Palette.textPrimary)
+            }
+            .frame(width: 46, height: 46)
+            .contentShape(Circle())
+        }
+        .menuOrder(.fixed)
+        .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
     }
 
     private func handleBack() {
@@ -120,7 +170,7 @@ struct ProjectDetailView: View {
             HStack(spacing: 8) {
                 FolderClosedIcon(size: 20, weight: 1.4)
                     .foregroundStyle(Palette.textPrimary)
-                Text(project.name)
+                Text(displayName)
                     .font(BodyFont.manrope(size: 17, wght: 500))
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
@@ -153,20 +203,14 @@ struct ProjectDetailView: View {
             .frame(maxWidth: .infinity)
             .padding(.top, 60)
         } else {
-            ForEach(Array(chats.enumerated()), id: \.element.id) { index, chat in
+            ForEach(chats) { chat in
                 Button {
                     Haptics.tap()
                     onOpen(chat.id)
                 } label: {
-                    ChatRow(chat: chat)
+                    ChatRow(chat: chat, isUnread: store.isUnread(chatId: chat.id))
                 }
                 .buttonStyle(.plain)
-                if index < chats.count - 1 {
-                    Rectangle()
-                        .fill(Palette.borderSubtle)
-                        .frame(height: 0.5)
-                        .padding(.leading, AppLayout.screenHorizontalPadding)
-                }
             }
         }
     }
@@ -182,6 +226,7 @@ struct ProjectDetailView: View {
 struct ProjectPickerSheet: View {
     let projects: [DerivedProject]
     let currentCwd: String
+    let store: BridgeStore
     let onSelect: (DerivedProject) -> Void
     let onDismiss: () -> Void
 
@@ -200,6 +245,7 @@ struct ProjectPickerSheet: View {
                     } label: {
                         ProjectPickerRow(
                             project: project,
+                            displayName: store.projectDisplayName(cwd: project.cwd, fallback: project.name),
                             isCurrent: project.cwd == currentCwd
                         )
                     }
@@ -222,13 +268,14 @@ struct ProjectPickerSheet: View {
 
     private var header: some View {
         Text("Switch project")
-            .font(AppFont.system(size: 22, weight: .bold))
+            .font(BodyFont.system(size: 22, weight: .bold))
             .foregroundStyle(Palette.textPrimary)
     }
 }
 
 private struct ProjectPickerRow: View {
     let project: DerivedProject
+    let displayName: String
     let isCurrent: Bool
 
     var body: some View {
@@ -237,7 +284,7 @@ private struct ProjectPickerRow: View {
                 .foregroundStyle(Palette.textPrimary)
                 .frame(width: 24, alignment: .center)
 
-            Text(project.name)
+            Text(displayName)
                 .font(Typography.bodyFont)
                 .tracking(-0.2)
                 .foregroundStyle(Palette.textPrimary)
