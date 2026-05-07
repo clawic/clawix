@@ -74,9 +74,12 @@ struct ClawixApp: App {
         // install or after the legacy key has been cleared.
         SidebarPrefs.migrateLegacySidebarPrefs()
         _appState = StateObject(wrappedValue: AppState())
-        // TEMP: dictation init disabled while debugging frozen-input bug.
-        // HotkeyManager.shared.register(coordinator: DictationCoordinator.shared)
-        // DictationOverlay.shared.install(coordinator: DictationCoordinator.shared)
+        // Dictation hotkey + overlay are wired from
+        // `applicationDidFinishLaunching`, NOT here. Calling
+        // `addGlobalMonitorForEvents(matching: .flagsChanged)` from
+        // App.init() before Input Monitoring is granted freezes event
+        // delivery to the app on macOS 26 (Tahoe). The bootstrap path
+        // gates the global monitor behind an explicit TCC check.
     }
 
     var body: some Scene {
@@ -226,6 +229,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // (⌃⌥⌘K) is set in `QuickAskHotkey.defaultValue`; the user
         // can change it from Settings → QuickAsk.
         QuickAskController.shared.install()
+        // Wire the dictation overlay (cheap: only creates an offscreen
+        // NSPanel that ignoresMouseEvents, no run-loop side effects)
+        // and bootstrap the dictation hotkey monitors. The hotkey
+        // bootstrap installs the local monitor unconditionally and
+        // gates the global monitor behind Input Monitoring (TCC) so a
+        // pre-grant launch doesn't freeze event delivery — the user
+        // grants from Settings → Voice to Text where the consent
+        // dialog has visible context.
+        DictationOverlay.shared.install(coordinator: DictationCoordinator.shared)
+        HotkeyManager.shared.bootstrapIfPermitted(coordinator: DictationCoordinator.shared)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
