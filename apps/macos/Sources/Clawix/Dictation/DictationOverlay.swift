@@ -16,10 +16,31 @@ import SwiftUI
 /// while the surrounding panel area stays transparent — empty SwiftUI
 /// regions don't grab clicks, so the chrome around the pill remains
 /// fully click-through to the app underneath.
+/// Where the floating dictation pill is anchored. `mini` keeps the
+/// classic bottom-centre placement that doesn't depend on hardware;
+/// `notch` docks the pill at the top of the main display, adjacent to
+/// the MacBook camera notch on machines that have one. Notch
+/// placement falls back to top-centre on hardware without a notch.
+enum DictationRecorderStyle: String, CaseIterable, Codable {
+    case mini
+    case notch
+
+    var displayName: String {
+        switch self {
+        case .mini:  return "Mini (bottom)"
+        case .notch: return "Notch (top)"
+        }
+    }
+}
+
 @MainActor
 final class DictationOverlay {
 
     static let shared = DictationOverlay()
+
+    /// Persisted in UserDefaults. Reading on every show keeps the
+    /// switch live without a relaunch.
+    static let styleKey = "dictation.recorderStyle"
 
     private var panel: NSPanel?
     private weak var coordinator: DictationCoordinator?
@@ -87,21 +108,38 @@ final class DictationOverlay {
         disarmEscRegistrar()
     }
 
-    /// Anchor the panel near the bottom-centre of the active screen's
-    /// visible area. `visibleFrame.minY` already excludes the dock when
-    /// the dock is pinned, so a 24pt padding above that keeps the pill
-    /// dock-aware on every layout.
+    /// Anchor the panel based on the user's `recorderStyle` setting.
+    /// `mini` (default) → bottom-centre of the active screen, dock
+    /// aware via `visibleFrame`. `notch` → top-centre, sitting just
+    /// below the notch / menu bar so the pill reads as an extension of
+    /// the system chrome on MacBooks.
     private func position(panel: NSPanel) {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
-        let area = screen.visibleFrame
+        let style = currentStyle()
         let width = panel.frame.width
         let height = panel.frame.height
+        let area = screen.visibleFrame
         let x = area.midX - width / 2
-        let y = area.minY + 24
+        let y: CGFloat
+        switch style {
+        case .mini:
+            y = area.minY + 24
+        case .notch:
+            // `visibleFrame.maxY` already excludes the menu bar (and
+            // the notch's vertical extent on machines that have one),
+            // so anchoring `panel.maxY` exactly at that line keeps a
+            // small breathing room from the notch chrome.
+            y = area.maxY - height - 4
+        }
         panel.setFrame(
             NSRect(x: x, y: y, width: width, height: height),
             display: true
         )
+    }
+
+    private func currentStyle() -> DictationRecorderStyle {
+        let raw = UserDefaults.standard.string(forKey: Self.styleKey) ?? DictationRecorderStyle.mini.rawValue
+        return DictationRecorderStyle(rawValue: raw) ?? .mini
     }
 
     /// Wire bare Esc system-wide for the lifetime of this session and

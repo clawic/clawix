@@ -185,7 +185,7 @@ private struct DictationMicSlot: View {
 
     var body: some View {
         MicIcon(lineWidth: 0)
-            .frame(width: 13, height: 13)
+            .frame(width: 17, height: 17)
             .foregroundStyle(.white.opacity(opacity))
             .animation(.easeInOut(duration: 0.18), value: state)
     }
@@ -356,11 +356,16 @@ private struct DictationStopButton: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                Circle()
-                    .fill(buttonFill)
-                    .frame(width: 22, height: 22)
+                if state == .recording {
+                    Circle()
+                        .fill(Color(red: 0.92, green: 0.26, blue: 0.26))
+                        .frame(width: 22, height: 22)
+                } else {
+                    Color.clear.frame(width: 22, height: 22)
+                }
                 inner
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(state == .idle)
@@ -376,33 +381,34 @@ private struct DictationStopButton: View {
                 .frame(width: 8, height: 8)
         case .transcribing:
             DictationSpinner()
-                .frame(width: 12, height: 12)
+                .frame(width: 14, height: 14)
         case .idle:
             EmptyView()
         }
     }
-
-    private var buttonFill: Color {
-        switch state {
-        case .recording:    return Color(red: 0.92, green: 0.26, blue: 0.26)
-        case .transcribing: return Color(white: 0.28)
-        case .idle:         return Color(white: 0.22)
-        }
-    }
 }
 
+/// Two-ring spinner matching `SidebarChatRowSpinner`: a static track
+/// plus a rotating arc, both stroked at 1.7pt with the same slow 2.4s
+/// rotation so transcription progress reads as quiet, not urgent.
 private struct DictationSpinner: View {
     @State private var rotation: Double = 0
 
     var body: some View {
-        Circle()
-            .trim(from: 0.1, to: 0.9)
-            .stroke(Color.white, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
-            .rotationEffect(.degrees(rotation))
-            .onAppear {
-                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
-                    rotation = 360
-                }
+        ZStack {
+            Circle()
+                .stroke(Color(white: 0.32),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+            Circle()
+                .trim(from: 0.0, to: 0.76)
+                .stroke(Color.white.opacity(0.95),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+                .rotationEffect(.degrees(rotation))
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                rotation = 360
             }
+        }
     }
 }

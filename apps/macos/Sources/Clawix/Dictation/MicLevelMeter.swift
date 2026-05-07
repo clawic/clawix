@@ -82,12 +82,12 @@ final class MicLevelMeterModel: ObservableObject {
         var rms: Float = 0
         vDSP_rmsqv(channel, 1, &rms, vDSP_Length(count))
         let dB = 20 * log10(max(rms, .leastNonzeroMagnitude))
-        // Map dBFS linearly to the visual 0…1 range. −45 dBFS is the
-        // quiet-room floor (nothing below shows up); −3 dBFS is the
-        // "all bars lit" ceiling. Linear-in-dB compresses the response
-        // around conversational levels so a normal voice already lights
-        // 2–3 of the six segments instead of just one.
-        let normalized = (Double(dB) + 45.0) / 42.0
+        // Map dBFS linearly to the visual 0…1 range. −55 dBFS is the
+        // quiet-room floor (nothing below shows up); −10 dBFS is the
+        // "all dots lit" ceiling. The conversational sweet spot lands
+        // around 0.6–0.8 so a normal speaking voice lights two of the
+        // three dots without needing to project.
+        let normalized = (Double(dB) + 55.0) / 45.0
         let clamped = CGFloat(max(0.0, min(1.0, normalized)))
         DispatchQueue.main.async { [weak self] in
             self?.ingest(clamped)
@@ -138,23 +138,23 @@ final class MicLevelMeterModel: ObservableObject {
 
 // MARK: - Inline meter
 
-/// Three-dot inline level meter that sits inside the microphone
-/// dropdown trigger, between the device name and the chevron. Just
-/// enough visual feedback to confirm the mic is picking up sound; the
-/// heavy lifting (engine lifecycle, gain) lives in
-/// `MicLevelMeterModel`.
+/// Three-bar inline level meter that sits inside the microphone
+/// dropdown trigger, between the device name and the chevron. Thin
+/// vertical capsules — just enough visual feedback to confirm the mic
+/// is picking up sound; the heavy lifting (engine lifecycle, gain)
+/// lives in `MicLevelMeterModel`.
 struct MicLevelTinyMeter: View {
     @ObservedObject var meter: MicLevelMeterModel
     let active: Bool
 
-    private let dotCount = 3
+    private let barCount = 3
 
     var body: some View {
         HStack(spacing: 3) {
-            ForEach(0..<dotCount, id: \.self) { index in
-                MicLevelTinyDot(
+            ForEach(0..<barCount, id: \.self) { index in
+                MicLevelTinyBar(
                     index: index,
-                    total: dotCount,
+                    total: barCount,
                     level: meter.level,
                     active: active
                 )
@@ -164,19 +164,23 @@ struct MicLevelTinyMeter: View {
     }
 }
 
-private struct MicLevelTinyDot: View {
+private struct MicLevelTinyBar: View {
     let index: Int
     let total: Int
     let level: CGFloat
     let active: Bool
 
     var body: some View {
-        let threshold = CGFloat(index) / CGFloat(total) + (1.0 / CGFloat(total)) * 0.35
+        // Per-bar threshold floor. The 0.20 fractional offset keeps a
+        // normal speaking voice (around 0.55–0.75 in normalised units)
+        // comfortably above the middle bar, instead of dancing on its
+        // edge.
+        let threshold = CGFloat(index) / CGFloat(total) + (1.0 / CGFloat(total)) * 0.20
         let lit = active && level >= threshold
 
-        Circle()
+        Capsule(style: .continuous)
             .fill(lit ? Color.white.opacity(0.92) : Color.white.opacity(0.22))
-            .frame(width: 3.5, height: 3.5)
+            .frame(width: 3, height: 11)
             .animation(.linear(duration: 0.05), value: lit)
     }
 }
