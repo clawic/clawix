@@ -20,6 +20,11 @@ struct ComposerView: View {
     let onSend: () -> Void
     var onMicTap: () -> Void = {}
     var onVoiceTap: () -> Void = {}
+    var onStop: () -> Void = {}
+    /// `true` while the chat has an in-flight turn. The composer hides
+    /// the mic / voice / send affordances and shows a single white
+    /// circle with a black square instead, mirroring the macOS app.
+    var hasActiveTurn: Bool = false
     var autofocusOnAppear: Bool = false
     /// `true` when the chat already has messages and the composer should
     /// shed its "first prompt" generosity (slightly tighter pill, smaller
@@ -58,18 +63,44 @@ struct ComposerView: View {
                 attachmentChips
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
-            GlassEffectContainer(spacing: 0) {
-                HStack(alignment: .bottom, spacing: compact ? 0 : 8) {
-                    if !compact {
-                        plusCircle
+            // The trailing controls (mic + white send circle) are
+            // intentionally rendered as a SIBLING of the
+            // `GlassEffectContainer`, not a child of the pill. iOS 26
+            // Liquid Glass morphs every shape inside the container
+            // when the pill grows leftward to swallow the "+", and
+            // the white circle was getting visually "absorbed" into
+            // that morph (translating left and deforming back). By
+            // overlaying it from outside the container, the glass
+            // can morph all it wants without dragging the circle
+            // along.
+            // Bottom-trailing so mic + send stay anchored to the floor
+            // of the pill as it grows multi-line. The 5.5pt bottom pad
+            // matches the (45 - 34) / 2 inset they had when centered, so
+            // a single-line pill still reads as visually equidistant.
+            ZStack(alignment: .bottomTrailing) {
+                GlassEffectContainer(spacing: 0) {
+                    HStack(alignment: .bottom, spacing: compact ? 0 : 8) {
+                        if !compact {
+                            plusCircle
+                        }
+                        mainPill
                     }
-                    mainPill
                 }
+                trailingButton
+                    .padding(.trailing, 5)
+                    .padding(.bottom, 5.5)
             }
         }
         .padding(.horizontal, 14)
         .animation(.easeOut(duration: 0.18), value: attachments)
-        .animation(.smooth(duration: 0.42), value: compact)
+        .animation(.easeOut(duration: 0.18), value: hasActiveTurn)
+        .animation(.easeOut(duration: 0.18), value: canSend)
+        // No implicit animation on `compact`: the previous `.smooth`
+        // curve interpolated both the outer HStack layout (removing
+        // `plusCircle`) and the pill's glass shape morph, which made
+        // the trailing controls visually drift left and back during
+        // the transition. Letting the layout snap keeps the white
+        // circle / mic / placeholder anchored.
         // React to both `onAppear` and `onChange`: the parent flips
         // `isFreshChat` in its own `onAppear`, which runs after the
         // child's first appearance, so this view can initially see
@@ -185,7 +216,7 @@ struct ComposerView: View {
             Image(systemName: "plus")
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Color.white)
-                .frame(width: 34, height: 37)
+                .frame(width: 45, height: 37)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -241,15 +272,34 @@ struct ComposerView: View {
     }
 
     private var mainPill: some View {
-        ZStack(alignment: .topTrailing) {
-            HStack(alignment: .bottom, spacing: 4) {
+        // Geometry choices keep the placeholder + plus icon centers
+        // anchored across the `compact` flip, so the only visible
+        // change at send-time is that the pill grows leftward to wrap
+        // the "+":
+        //   • inline plus is 45pt wide (matches the outer plusCircle).
+        //   • mainPill leading pad is 0 in compact so the inline plus
+        //     sits flush against the pill's leading curve at the same
+        //     screen X the outer plus used to occupy.
+        //   • field leading pad is 24 in compact (vs 14 non-compact)
+        //     to compensate for the geometry shift so the placeholder
+        //     text stays at the same screen X.
+        //
+        // The trailing controls are rendered OUTSIDE this view (as a
+        // sibling of the GlassEffectContainer in the parent ZStack);
+        // we just need to reserve trailing space in the field so text
+        // doesn't slide under them.
+        let trailingReserve: CGFloat = 70 /* mic + spacing + circle */
+            + 8 /* breathing room */
+            + (showExpandButton ? 28 : 0)
+
+        return ZStack(alignment: .topTrailing) {
+            HStack(alignment: .center, spacing: 0) {
                 if compact {
                     inlinePlusButton
                 }
                 field
-                    .padding(.leading, compact ? 2 : 14)
-                    .padding(.trailing, showExpandButton ? 28 : 0)
-                trailingButton
+                    .padding(.leading, compact ? 24 : 14)
+                    .padding(.trailing, trailingReserve)
             }
             if showExpandButton {
                 expandButton
@@ -259,8 +309,8 @@ struct ComposerView: View {
             }
         }
         .frame(minHeight: 37)
-        .padding(.leading, compact ? 10 : 6)
-        .padding(.trailing, 7)
+        .padding(.leading, compact ? 0 : 6)
+        .padding(.trailing, 5)
         .padding(.vertical, 4)
         .glassEffect(
             .regular.tint(Color.black.opacity(0.28)),
@@ -285,6 +335,7 @@ struct ComposerView: View {
                 .focused($focused)
                 .tint(Color.white)
                 .id(resetToken)
+                .padding(.vertical, 6)
         }
         .frame(maxWidth: .infinity, minHeight: 37, alignment: .leading)
     }
@@ -328,41 +379,75 @@ struct ComposerView: View {
         .accessibilityLabel("Expand composer")
     }
 
-    @ViewBuilder
+    /// Stable trailing layout: mic + white circle, always rendered.
+    /// Only the glyph inside the white circle morphs (arrow / waveform
+    /// / stop square) so the surrounding bubble never shifts when the
+    /// chat enters or leaves an active turn.
     private var trailingButton: some View {
-        if canSend {
-            Button(action: triggerSend) {
-                Image(systemName: "arrow.up")
-                    .font(BodyFont.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.black)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Color.white))
+        HStack(spacing: 16) {
+            Button(action: onMicTap) {
+                MicIcon(lineWidth: 6)
+                    .foregroundColor(Color(white: 0.6))
+                    .frame(width: 20, height: 20)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .transition(.scale.combined(with: .opacity))
-        } else {
-            HStack(spacing: 16) {
-                Button(action: onMicTap) {
-                    MicIcon(lineWidth: 6)
-                        .foregroundColor(Color(white: 0.6))
-                        .frame(width: 20, height: 20)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Mic")
+            .accessibilityLabel("Mic")
 
-                Button(action: onVoiceTap) {
-                    VoiceWaveformIcon()
-                        .foregroundColor(Color.black)
-                        .frame(width: 19, height: 19)
-                        .frame(width: 31.5, height: 31.5)
-                        .background(Circle().fill(Color.white))
+            Button(action: triggerPrimary) {
+                ZStack {
+                    Circle().fill(Color.white)
+                    primaryGlyph
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Voice")
+                .frame(width: 34, height: 34)
             }
-            .transition(.scale.combined(with: .opacity))
+            .buttonStyle(.plain)
+            .accessibilityLabel(primaryLabel)
         }
+    }
+
+    @ViewBuilder
+    private var primaryGlyph: some View {
+        if hasActiveTurn {
+            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                .fill(Color.black)
+                .frame(width: 12, height: 12)
+                .transition(.scale.combined(with: .opacity))
+                .id("glyph-stop")
+        } else if canSend {
+            Image(systemName: "arrow.up")
+                .font(BodyFont.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.black)
+                .transition(.scale.combined(with: .opacity))
+                .id("glyph-send")
+        } else {
+            VoiceWaveformIcon()
+                .foregroundColor(Color.black)
+                .frame(width: 19, height: 19)
+                .transition(.scale.combined(with: .opacity))
+                .id("glyph-voice")
+        }
+    }
+
+    private var primaryLabel: String {
+        if hasActiveTurn { return "Stop response" }
+        if canSend { return "Send" }
+        return "Voice"
+    }
+
+    private func triggerPrimary() {
+        if hasActiveTurn {
+            triggerStop()
+        } else if canSend {
+            triggerSend()
+        } else {
+            onVoiceTap()
+        }
+    }
+
+    private func triggerStop() {
+        Haptics.tap()
+        onStop()
     }
 
     private func triggerSend() {
