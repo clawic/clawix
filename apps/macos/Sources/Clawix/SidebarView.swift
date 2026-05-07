@@ -1,20 +1,16 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Private UTI used by project rows in the sidebar's "Custom" sort mode.
-/// Conforms to `.data` (NOT `.text`) so existing drop targets that listen
-/// for chat drags (`.text`) don't visually highlight when a project is
-/// being dragged for reordering. We declare a `conformingTo` parent
-/// explicitly so the type has a working conformance graph even when the
-/// app bundle's `Info.plist` doesn't ship a `UTExportedTypeDeclarations`
-/// entry — `UTType(importedAs:)` without conformance returns a tentative
-/// type that SwiftUI's `.onDrop(of:)` filter treats as inert.
-extension UTType {
-    static let clawixProjectId = UTType(
-        exportedAs: "com.clawix.project-id",
-        conformingTo: .data
-    )
-}
+/// Custom URL scheme used by project rows in the sidebar's "Custom" sort
+/// mode to encode the dragged project's id as `clawix-project:<UUID>`.
+/// NSURL drags conform to `public.url` (a sibling of
+/// `public.utf8-plain-text` under `public.data`), so the project reorder
+/// drag does NOT match `ChatDropTarget`'s `.onDrop(of: [.text])` and
+/// can't be misrouted into `moveChatToProject`. Going through a system
+/// UTI also sidesteps having to declare a custom UTI in `Info.plist`,
+/// which `UTType(importedAs:)` without an `Info.plist` declaration
+/// requires for SwiftUI's `.onDrop(of:)` filter to recognise it.
+private let clawixProjectURLScheme = "clawix-project"
 
 /// Top-level layout of the chat list. Either group chats under their
 /// project (with a "Chats" bucket for the projectless ones) or render a
@@ -2611,21 +2607,46 @@ private struct ChatDropTarget<Content: View>: View {
         content()
             .overlay(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Color.white.opacity(isTargeted ? 0.07 : 0))
+                    .fill(isTargeted ? Color(white: 0.30) : Color.clear)
                     .allowsHitTesting(false)
             )
             .animation(.easeOut(duration: 0.10), value: isTargeted)
-            .onDrop(of: [.text], isTargeted: $isTargeted) { providers in
-                guard let provider = providers.first else { return false }
-                _ = provider.loadObject(ofClass: NSString.self) { item, _ in
-                    guard let s = item as? String,
-                          let uuid = UUID(uuidString: s) else { return }
-                    DispatchQueue.main.async {
-                        _ = accept(uuid)
-                    }
-                }
-                return true
+            .onDrop(of: [.text], delegate: ChatDropDelegate(
+                isTargeted: $isTargeted,
+                accept: accept
+            ))
+    }
+}
+
+/// Custom delegate so we can reject project reorder drags before SwiftUI
+/// flips `isTargeted`. Project drags carry a `public.url` representation
+/// (`clawix-project://<UUID>`); `NSPasteboard` may auto-promote URLs to
+/// `public.utf8-plain-text`, so the closure-based `.onDrop(of: [.text])`
+/// would otherwise highlight project rows as if they were valid chat
+/// drop targets.
+private struct ChatDropDelegate: DropDelegate {
+    @Binding var isTargeted: Bool
+    let accept: (UUID) -> Bool
+
+    func validateDrop(info: DropInfo) -> Bool {
+        if info.hasItemsConforming(to: [.url]) { return false }
+        return info.hasItemsConforming(to: [.text])
+    }
+
+    func dropEntered(info: DropInfo) { isTargeted = true }
+    func dropExited(info: DropInfo) { isTargeted = false }
+
+    func performDrop(info: DropInfo) -> Bool {
+        isTargeted = false
+        guard let provider = info.itemProviders(for: [.text]).first else { return false }
+        _ = provider.loadObject(ofClass: NSString.self) { item, _ in
+            guard let s = item as? String,
+                  let uuid = UUID(uuidString: s) else { return }
+            DispatchQueue.main.async {
+                _ = accept(uuid)
             }
+        }
+        return true
     }
 }
 
@@ -3556,7 +3577,7 @@ private struct ProjectReorderableList<RowContent: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             gapPlaceholder(at: slot)
                 .contentShape(Rectangle())
-                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                .onDrop(of: [.url], delegate: ProjectRowDropDelegate(
                     computeSlot: { _ in slot },
                     onSet: { setTarget(slot: $0) },
                     onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
@@ -3577,15 +3598,25 @@ private struct ProjectReorderableList<RowContent: View>: View {
                 )
                 .onDrag {
                     handleDragStart(project: project)
+                    // Register `public.url` data DIRECTLY rather than
+                    // wrapping an `NSURL` instance. `NSItemProvider(object:
+                    // NSURL)` bridges through AppKit's pasteboard layer,
+                    // which auto-promotes URLs to `public.utf8-plain-text`
+                    // so other text drop targets (`ChatDropTarget`) flip
+                    // their `isTargeted` highlight when a project is being
+                    // reordered. Going through `registerDataRepresentation`
+                    // exposes ONLY `public.url`, keeping the drag invisible
+                    // to chat drop targets.
                     let provider = NSItemProvider()
+                    let urlString = "\(clawixProjectURLScheme)://\(project.id.uuidString)"
                     provider.registerDataRepresentation(
-                        forTypeIdentifier: UTType.clawixProjectId.identifier,
+                        forTypeIdentifier: UTType.url.identifier,
                         visibility: .ownProcess
                     ) { completion in
-                        let data = project.id.uuidString.data(using: .utf8)
-                        completion(data, nil)
+                        completion(urlString.data(using: .utf8), nil)
                         return nil
                     }
+                    provider.suggestedName = project.name
                     return provider
                 } preview: {
                     // 1pt transparent: macOS animates the system drag
@@ -3594,7 +3625,7 @@ private struct ProjectReorderableList<RowContent: View>: View {
                     // is our `DragChipPanel`, which closes instantly.
                     Color.clear.frame(width: 1, height: 1)
                 }
-                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                .onDrop(of: [.url], delegate: ProjectRowDropDelegate(
                     computeSlot: { y in y < rowHeight / 2 ? slot : slot + 1 },
                     onSet: { setTarget(slot: $0) },
                     onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
@@ -3608,7 +3639,7 @@ private struct ProjectReorderableList<RowContent: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             gapPlaceholder(at: slot)
                 .contentShape(Rectangle())
-                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                .onDrop(of: [.url], delegate: ProjectRowDropDelegate(
                     computeSlot: { _ in slot },
                     onSet: { setTarget(slot: $0) },
                     onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
@@ -3618,7 +3649,7 @@ private struct ProjectReorderableList<RowContent: View>: View {
             Color.clear
                 .frame(height: 14)
                 .contentShape(Rectangle())
-                .onDrop(of: [.clawixProjectId], delegate: ProjectRowDropDelegate(
+                .onDrop(of: [.url], delegate: ProjectRowDropDelegate(
                     computeSlot: { _ in slot },
                     onSet: { setTarget(slot: $0) },
                     onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
@@ -3720,7 +3751,7 @@ private struct ProjectRowDropDelegate: DropDelegate {
     let onPerform: (UUID, Int) -> Void
 
     func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.clawixProjectId])
+        info.hasItemsConforming(to: [.url])
     }
 
     func dropEntered(info: DropInfo) {
@@ -3734,15 +3765,29 @@ private struct ProjectRowDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         let slot = computeSlot(info.location.y)
-        guard let provider = info.itemProviders(for: [.clawixProjectId]).first else { return false }
-        provider.loadDataRepresentation(forTypeIdentifier: UTType.clawixProjectId.identifier) { data, _ in
+        guard let provider = info.itemProviders(for: [.url]).first else { return false }
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.url.identifier) { data, _ in
             guard let data,
                   let s = String(data: data, encoding: .utf8),
-                  let uuid = UUID(uuidString: s) else { return }
+                  let url = URL(string: s),
+                  url.scheme == clawixProjectURLScheme,
+                  let uuid = projectId(from: url) else { return }
             DispatchQueue.main.async {
                 onPerform(uuid, slot)
             }
         }
         return true
     }
+}
+
+/// `clawix-project://<UUID>` puts the UUID in the host slot. macOS
+/// canonicalises hostnames to lowercase, but `UUID(uuidString:)` is
+/// case-insensitive. Falls back to the first path component for the
+/// (rare) case where the URL parser stripped the host.
+private func projectId(from url: URL) -> UUID? {
+    if let host = url.host, let uuid = UUID(uuidString: host) {
+        return uuid
+    }
+    let trimmed = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    return UUID(uuidString: trimmed)
 }
