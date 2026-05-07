@@ -1,9 +1,17 @@
 import Foundation
 import ClawixCore
 import Observation
+import os
 #if canImport(UIKit)
 import UIKit
 #endif
+
+/// Temporary diagnostic logger for the new-chat-disappears bug. All
+/// writes go through here so a single grep on `subsystem CONTAINS
+/// "clawix.bridge.dbg"` over `xcrun simctl spawn ... log show` (sim) or
+/// `xcrun devicectl device log stream` (device) surfaces the full
+/// timeline of a repro. Remove once the regression is closed out.
+fileprivate let bridgeDbg = Logger(subsystem: "clawix.bridge.dbg", category: "store")
 
 @Observable
 final class BridgeStore {
@@ -110,6 +118,25 @@ final class BridgeStore {
     /// relaunches on this device) without lying about syncing.
     var projectLabels: [String: String] = ProjectLabelsCache.load()
 
+    /// Chat ids whose last assistant turn finished while the user was
+    /// looking somewhere else. Drives the soft-blue dot at the right
+    /// edge of the chat row (same role as the desktop's
+    /// `hasUnreadCompletion`). The wire model has no read-state, so
+    /// detection is purely client-side: we watch for the
+    /// `hasActiveTurn: true → false` transition on incoming chat
+    /// updates and add the chat id here when `openChatId` is something
+    /// else. Cleared the moment the user opens that chat. Persisted to
+    /// UserDefaults so the dot survives a relaunch.
+    var unreadChatIds: Set<String> = UnreadChatsCache.load()
+
+    /// In-memory mirror of each chat's last observed `hasActiveTurn`,
+    /// used only to detect the true→false transition that promotes a
+    /// chat into `unreadChatIds`. Not persisted: relaunch resets the
+    /// baseline so we do not retroactively decide "everything that
+    /// looks idle now must have been busy before".
+    @ObservationIgnored
+    private var previousActiveTurnByChat: [String: Bool] = [:]
+
     /// Chat ids minted locally by the FAB that haven't yet been
     /// flushed to the Mac. The first `sendPrompt` for an id in this
     /// set is upgraded to a `newChat` frame so the Mac creates the
@@ -164,6 +191,7 @@ final class BridgeStore {
     @MainActor
     func openChat(_ chatId: String) {
         openChatId = chatId
+        clearUnread(chatId: chatId)
         // Intentionally NOT seeding `messagesByChat[chatId] = []` here.
         // We use the `nil` vs `[]` distinction to mean "snapshot not
         // delivered yet" vs "snapshot arrived and the chat is genuinely
@@ -171,6 +199,48 @@ final class BridgeStore {
         // that, so a freshly-opened chat doesn't flash "No messages
         // loaded" for the few hundred ms before the bridge replies.
         client?.openChat(chatId)
+    }
+
+    /// Drop the soft-blue unread dot for `chatId`. Called when the user
+    /// opens the chat (the act of reading it) and from `applyChatUpdate`
+    /// when a chat starts a brand-new turn (the user is about to look
+    /// at it anyway, and the previous completion is no longer the most
+    /// recent thing on the row).
+    @MainActor
+    private func clearUnread(chatId: String) {
+        guard unreadChatIds.contains(chatId) else { return }
+        unreadChatIds.remove(chatId)
+        UnreadChatsCache.save(unreadChatIds)
+    }
+
+    /// True when `chatId`'s last assistant turn finished without the
+    /// user looking. Drives the soft-blue dot in `ChatRow`.
+    func isUnread(chatId: String) -> Bool {
+        unreadChatIds.contains(chatId)
+    }
+
+    /// Centralized chat-update entry point. Detects the
+    /// `hasActiveTurn: true → false` transition and surfaces the
+    /// soft-blue unread dot when the user is not currently viewing
+    /// that chat. Routed from both `applyChatsSnapshot` and the
+    /// per-chat `chatUpdated` frame.
+    @MainActor
+    private func observeActiveTurnTransition(_ updated: WireChat) {
+        let prior = previousActiveTurnByChat[updated.id]
+        if prior == true && updated.hasActiveTurn == false && openChatId != updated.id {
+            if !unreadChatIds.contains(updated.id) {
+                unreadChatIds.insert(updated.id)
+                UnreadChatsCache.save(unreadChatIds)
+            }
+        }
+        // A brand-new turn starting on a row that was carrying an old
+        // unread dot: the dot referred to the previous completion, which
+        // is no longer the freshest event on the row. Clearing here
+        // prevents the dot from outliving the moment it described.
+        if prior == false && updated.hasActiveTurn == true {
+            clearUnread(chatId: updated.id)
+        }
+        previousActiveTurnByChat[updated.id] = updated.hasActiveTurn
     }
 
     /// `true` once a `messagesSnapshot` for this chat has been
@@ -459,6 +529,74 @@ final class BridgeStore {
         pendingNewChats.insert(id)
         messagesByChat[id] = []
         return id
+    }
+
+    /// Merge a server-delivered chats list into `chats` while preserving
+    /// any locally-synthesized stub the Mac hasn't acknowledged yet. A
+    /// fresh `newChat` flow goes:
+    ///
+    ///   1. iOS calls `beginPendingTurn` and the user message lands in
+    ///      `messagesByChat[id]` with a `local-…` id.
+    ///   2. iOS dispatches `sendNewChat` to the Mac.
+    ///   3. The Mac processes it and republishes; the bus emits a
+    ///      `chatsSnapshot` containing the new chat.
+    ///
+    /// Between (2) and (3), the Mac may emit *another* snapshot for an
+    /// unrelated reason (post-auth bootstrap, `listChats` reply, a
+    /// throttled tick triggered by a peer). Replacing `chats` wholesale
+    /// at that point would drop our optimistic stub and make the chat
+    /// vanish from the list until the echo lands. The merge keeps the
+    /// stub alive: any chat we currently hold whose id isn't in
+    /// `incoming` AND whose transcript still has a `local-…` user
+    /// bubble (so we know it's mid-flight, not just stale) is appended
+    /// back. The chat list views handle final ordering.
+    @MainActor
+    func applyChatsSnapshot(_ incoming: [WireChat]) {
+        let incomingIds = Set(incoming.map(\.id))
+        let inflightCandidates = chats.filter { existing in
+            guard !incomingIds.contains(existing.id) else { return false }
+            return messagesByChat[existing.id]?
+                .contains(where: { $0.id.hasPrefix("local-") }) ?? false
+        }
+        let priorIds = Set(chats.map(\.id))
+        let droppedIds = priorIds.subtracting(incomingIds).subtracting(inflightCandidates.map(\.id))
+        bridgeDbg.notice("applyChatsSnapshot in=\(incoming.count, privacy: .public) prior=\(self.chats.count, privacy: .public) keptInflight=\(inflightCandidates.count, privacy: .public) dropped=\(droppedIds.count, privacy: .public)")
+        if !droppedIds.isEmpty {
+            for did in droppedIds.sorted().prefix(8) {
+                let msgs = messagesByChat[did]
+                let firstId = msgs?.first?.id ?? "<no msgs>"
+                bridgeDbg.notice("  drop id=\(did, privacy: .public) firstMsgId=\(firstId, privacy: .public) msgCount=\(msgs?.count ?? 0, privacy: .public)")
+            }
+        }
+        for chat in incoming {
+            observeActiveTurnTransition(chat)
+        }
+        chats = incoming + inflightCandidates
+        // Drop unread entries for chats the daemon no longer reports
+        // (deleted on the Mac). The set otherwise grows monotonically
+        // across a relaunch.
+        let known = incomingIds.union(inflightCandidates.map(\.id))
+        let stale = unreadChatIds.subtracting(known)
+        if !stale.isEmpty {
+            unreadChatIds.subtract(stale)
+            UnreadChatsCache.save(unreadChatIds)
+        }
+    }
+
+    /// Apply a single `chatUpdated` frame. Centralized so the
+    /// soft-blue unread dot logic lives in one place; `BridgeClient`
+    /// routes through this instead of writing into `chats[idx]`
+    /// directly.
+    @MainActor
+    func applyChatUpdate(_ chat: WireChat) {
+        observeActiveTurnTransition(chat)
+        if let idx = chats.firstIndex(where: { $0.id == chat.id }) {
+            chats[idx] = chat
+            bridgeDbg.notice("applyChatUpdate REPLACE id=\(chat.id, privacy: .public) hasActiveTurn=\(chat.hasActiveTurn, privacy: .public)")
+        } else {
+            chats.append(chat)
+            bridgeDbg.notice("applyChatUpdate APPEND id=\(chat.id, privacy: .public) hasActiveTurn=\(chat.hasActiveTurn, privacy: .public) totalChats=\(self.chats.count, privacy: .public)")
+        }
     }
 
     /// Send an audio blob to the Mac for transcription. Suspends until
