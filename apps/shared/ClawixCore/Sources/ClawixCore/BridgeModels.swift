@@ -239,6 +239,7 @@ public struct WireWorkItem: Codable, Equatable, Sendable {
 /// so decoders can keyed-decode without `Any`.
 public enum WireTimelineEntry: Codable, Equatable, Sendable {
     case reasoning(id: String, text: String)
+    case message(id: String, text: String)
     case tools(id: String, items: [WireWorkItem])
 
     private enum CodingKeys: String, CodingKey {
@@ -253,6 +254,9 @@ public enum WireTimelineEntry: Codable, Equatable, Sendable {
         case "reasoning":
             let text = try c.decode(String.self, forKey: .text)
             self = .reasoning(id: id, text: text)
+        case "message":
+            let text = try c.decode(String.self, forKey: .text)
+            self = .message(id: id, text: text)
         case "tools":
             let items = try c.decode([WireWorkItem].self, forKey: .items)
             self = .tools(id: id, items: items)
@@ -270,6 +274,10 @@ public enum WireTimelineEntry: Codable, Equatable, Sendable {
         switch self {
         case .reasoning(let id, let text):
             try c.encode("reasoning", forKey: .type)
+            try c.encode(id, forKey: .id)
+            try c.encode(text, forKey: .text)
+        case .message(let id, let text):
+            try c.encode("message", forKey: .type)
             try c.encode(id, forKey: .id)
             try c.encode(text, forKey: .text)
         case .tools(let id, let items):
