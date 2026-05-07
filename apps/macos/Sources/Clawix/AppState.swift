@@ -469,6 +469,45 @@ enum PermissionMode: String, CaseIterable, Identifiable {
         case .fullAccess:         return Color(red: 0.95, green: 0.50, blue: 0.20)
         }
     }
+
+    /// Maps to the Codex daemon `approval_policy` accepted by
+    /// `thread/start`. Default permissions surfaces approval requests
+    /// for actions the sandbox can't authorise on its own; the other
+    /// two never prompt.
+    var codexApprovalPolicy: String {
+        switch self {
+        case .defaultPermissions: return "on-request"
+        case .autoReview:         return "never"
+        case .fullAccess:         return "never"
+        }
+    }
+
+    /// Maps to the Codex daemon `sandbox_mode` accepted by
+    /// `thread/start`. Workspace-write keeps Codex inside the project
+    /// cwd; danger-full-access drops the sandbox entirely.
+    var codexSandbox: String {
+        switch self {
+        case .defaultPermissions: return "workspace-write"
+        case .autoReview:         return "workspace-write"
+        case .fullAccess:         return "danger-full-access"
+        }
+    }
+
+    static let userDefaultsKey = "ClawixPermissionMode"
+
+    static func loadPersisted() -> PermissionMode {
+        let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+        if let raw = defaults.string(forKey: userDefaultsKey),
+           let mode = PermissionMode(rawValue: raw) {
+            return mode
+        }
+        return .defaultPermissions
+    }
+
+    func persist() {
+        let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+        defaults.set(rawValue, forKey: PermissionMode.userDefaultsKey)
+    }
 }
 
 // MARK: - Composer attachments
@@ -567,7 +606,12 @@ final class AppState: ObservableObject {
     @Published var selectedModel: String = "5.5"
     @Published var selectedIntelligence: IntelligenceLevel = .high
     @Published var selectedSpeed: SpeedLevel = .standard
-    @Published var permissionMode: PermissionMode = .fullAccess
+    @Published var permissionMode: PermissionMode = .defaultPermissions {
+        didSet {
+            guard oldValue != permissionMode else { return }
+            permissionMode.persist()
+        }
+    }
     /// Global plan-mode toggle. When on, subsequent turns are sent with
     /// `collaborationMode = "plan"` so the agent surfaces
     /// `item/tool/requestUserInput` instead of acting directly. Toggled by
@@ -740,6 +784,7 @@ final class AppState: ObservableObject {
         // before AppState is constructed, so AppLocale.current and the
         // AppleLanguages override are already in place.
         self.preferredLanguage = AppLanguage.loadPersisted()
+        self.permissionMode = PermissionMode.loadPersisted()
 
         sampleChat = Chat(
             id: UUID(uuidString: "8B46DFE1-B932-48E6-94E7-C86E65F7F18D")!,
