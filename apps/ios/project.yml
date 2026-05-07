@@ -36,6 +36,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIBackgroundColor: LaunchBackground
         UIRequiresFullScreen: false
