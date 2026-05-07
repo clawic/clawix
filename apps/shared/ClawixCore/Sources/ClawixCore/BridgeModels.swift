@@ -96,7 +96,7 @@ public struct WireProject: Codable, Equatable, Sendable {
     }
 }
 
-public struct WireChat: Codable, Equatable, Sendable {
+public struct WireChat: Codable, Equatable, Sendable, Identifiable {
     public let id: String
     public var title: String
     public var createdAt: Date
