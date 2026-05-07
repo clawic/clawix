@@ -172,7 +172,7 @@ struct ComposerView: View {
             .anchorPreference(key: ModelButtonAnchorKey.self, value: .bounds) { $0 }
             .hoverHint(L10n.t("Change model"))
 
-            if dictation.state == .transcribing {
+            if dictation.state == .transcribing, dictation.activeSource == .composer {
                 TranscribingSpinner()
                     .frame(width: 28, height: 28)
                     .accessibilityLabel("Transcribing voice note")
@@ -228,10 +228,13 @@ struct ComposerView: View {
         HStack(spacing: 6) {
             plusButton
 
-            VoiceWaveform(levels: dictation.levels)
-                .frame(maxWidth: .infinity)
-                .frame(height: 28)
-                .padding(.horizontal, 4)
+            ComposerRecordingWaveform(
+                isActive: dictation.state == .recording,
+                levels: dictation.barLevels
+            )
+            .frame(maxWidth: .infinity)
+            .frame(height: 28)
+            .padding(.horizontal, 4)
 
             Text(dictation.formattedElapsed)
                 .font(BodyFont.system(size: 12.5, design: .monospaced))
@@ -384,9 +387,13 @@ struct ComposerView: View {
         // the "stop" and "stop + send" buttons: the buttons toggle the
         // bool, the completion reads it, and we reset it on consumption.
         sendOnStop = false
-        let language = appState.preferredLanguage.whisperLanguageCode
+        // Pass nil so the coordinator resolves the Whisper language from
+        // the user's Voice-to-Text setting (auto-detect by default), the
+        // same path the global hotkey already uses. Forcing the UI
+        // language here translated Spanish dictation to English when the
+        // app's interface was set to English.
         let pendingSend = $sendOnStop
-        dictation.startFromComposer(language: language) { text in
+        dictation.startFromComposer(language: nil) { text in
             appendTranscribedText(text)
             if pendingSend.wrappedValue,
                !composer.text.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -478,7 +485,7 @@ struct ComposerView: View {
                 }
 
                 Group {
-                    if dictation.state == .recording {
+                    if dictation.state == .recording, dictation.activeSource == .composer {
                         recordingToolbar
                     } else {
                         normalToolbar
@@ -1687,48 +1694,7 @@ extension AnyTransition {
     }
 }
 
-// MARK: - Voice recording: waveform + transcribing spinner
-
-/// Live audio waveform shown inside the composer while recording.
-/// Bars flow in from the right as new samples arrive; the empty space to
-/// the left is covered by a faint horizontal track that shrinks as the
-/// take grows, matching the look of native voice-note inputs.
-struct VoiceWaveform: View {
-    let levels: [CGFloat]
-
-    private let barWidth: CGFloat = 2
-    private let barSpacing: CGFloat = 2
-    private let trackThickness: CGFloat = 1
-    private let minBarHeight: CGFloat = 2
-
-    var body: some View {
-        GeometryReader { proxy in
-            let totalWidth = proxy.size.width
-            let height = proxy.size.height
-            let stride = barWidth + barSpacing
-            let capacity = max(0, Int((totalWidth + barSpacing) / stride))
-            let visible = Array(levels.suffix(capacity))
-
-            ZStack {
-                Capsule()
-                    .fill(Color(white: 0.32))
-                    .frame(height: trackThickness)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: height, alignment: .center)
-
-                HStack(alignment: .center, spacing: barSpacing) {
-                    ForEach(Array(visible.enumerated()), id: \.offset) { _, level in
-                        Capsule()
-                            .fill(Color(white: 0.92))
-                            .frame(width: barWidth,
-                                   height: max(minBarHeight, level * height))
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-        }
-    }
-}
+// MARK: - Voice recording: transcribing spinner
 
 /// Tiny indeterminate spinner that takes the mic button's slot while the
 /// recorded clip is being transcribed.
