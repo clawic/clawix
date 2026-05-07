@@ -42,9 +42,22 @@ public actor TranscriptionService {
 
     /// Transcribe a buffer of mono 16 kHz Float32 samples directly.
     /// Used by the macOS GUI when it captures audio in-process.
-    public func transcribe(samples: [Float], using model: DictationModel, language: String?) async throws -> String {
+    /// `prompt` is fed to Whisper as `initial_prompt` to bias the
+    /// decoder toward custom vocabulary or output formatting style.
+    /// Capped at ~244 tokens by Whisper itself; passing more is fine
+    /// (Whisper truncates) but means the tail won't influence
+    /// decoding.
+    public func transcribe(
+        samples: [Float],
+        using model: DictationModel,
+        language: String?,
+        prompt: String? = nil
+    ) async throws -> String {
         let kit = try await ensureLoaded(model: model)
-        let options = decodeOptions(language: language)
+        var options = decodeOptions(language: language, prompt: prompt)
+        if let tokens = tokenize(prompt: prompt, kit: kit) {
+            options.promptTokens = tokens
+        }
         let results = try await kit.transcribe(audioArray: samples, decodeOptions: options)
         return joinedText(results)
     }
@@ -52,9 +65,17 @@ public actor TranscriptionService {
     /// Transcribe an audio file (any format `AVAudioFile` understands).
     /// Used by the LaunchAgent daemon when the iPhone ships a
     /// compressed blob through the bridge.
-    public func transcribe(fileURL: URL, using model: DictationModel, language: String?) async throws -> String {
+    public func transcribe(
+        fileURL: URL,
+        using model: DictationModel,
+        language: String?,
+        prompt: String? = nil
+    ) async throws -> String {
         let kit = try await ensureLoaded(model: model)
-        let options = decodeOptions(language: language)
+        var options = decodeOptions(language: language, prompt: prompt)
+        if let tokens = tokenize(prompt: prompt, kit: kit) {
+            options.promptTokens = tokens
+        }
         let results = try await kit.transcribe(audioPath: fileURL.path, decodeOptions: options)
         return joinedText(results)
     }
@@ -108,7 +129,7 @@ public actor TranscriptionService {
         }
     }
 
-    private func decodeOptions(language: String?) -> DecodingOptions {
+    private func decodeOptions(language: String?, prompt: String?) -> DecodingOptions {
         // We sample at 16 kHz mono and pass full audio in one shot. VAD
         // chunking is only worth turning on for >30s recordings; for
         // typical dictation bursts (<10s) the simple path is faster.
@@ -131,10 +152,38 @@ public actor TranscriptionService {
         }
         options.task = .transcribe
         options.temperature = 0.0
+        // Custom initial prompt: combination of (a) per-language
+        // formatting hint from `WhisperPromptStore` and (b) the
+        // vocabulary boost list from `VocabularyManager`. Both are
+        // resolved by the GUI side before calling us; we just stuff
+        // the resulting string into `promptTokens` via Whisper's
+        // tokenizer-friendly path. Empty prompts are dropped to keep
+        // the default decoding behavior bit-identical.
+        if let prompt, !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            options.promptTokens = nil // Reserved for future tokenized seeding.
+        }
         return options
     }
 
     private func joinedText(_ results: [TranscriptionResult]) -> String {
         results.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Best-effort tokenization of the user-supplied prompt string.
+    /// Whisper's window is ~244 tokens; we cap at 220 to leave room
+    /// for the system's own prefix tokens and avoid accidentally
+    /// truncating the audio context. Returns nil for an empty prompt
+    /// or when the tokenizer hasn't loaded yet (first transcription
+    /// of a fresh model).
+    private func tokenize(prompt: String?, kit: WhisperKit) -> [Int]? {
+        guard let prompt else { return nil }
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard let tokenizer = kit.tokenizer else { return nil }
+        let tokens = tokenizer.encode(text: trimmed)
+        if tokens.count > 220 {
+            return Array(tokens.prefix(220))
+        }
+        return tokens
     }
 }
