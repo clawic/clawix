@@ -27,7 +27,7 @@ struct BridgedMain {
         _ = pairing.shortCode
         let publishBonjour = env["CLAWIX_BRIDGED_DISABLE_BONJOUR"] != "1"
         let box = HostBox()
-        BridgedHeartbeat.start(port: port)
+        BridgedHeartbeat.start(port: port, hostBox: box)
 
         Task { @MainActor in
             guard let binary = BackendBinary.resolve(environment: env) else {
@@ -57,6 +57,36 @@ struct BridgedMain {
 final class HostBox: @unchecked Sendable {
     var host: AnyObject?
     var server: AnyObject?
+
+    /// Read snapshot of host state, decoupled from the host's
+    /// MainActor isolation so the heartbeat timer (which runs on a
+    /// utility queue) can pull it without hopping actors. Returns
+    /// defaults when the host hasn't been wired yet.
+    struct Snapshot: Sendable {
+        let state: String
+        let chatCount: Int
+        let lastSyncAt: Date?
+        let errorMessage: String?
+    }
+
+    func snapshot() -> Snapshot {
+        guard let host = host as? DaemonEngineHost else {
+            return Snapshot(state: "booting", chatCount: 0, lastSyncAt: nil, errorMessage: nil)
+        }
+        // The heartbeat timer is `nonisolated` for performance, so we
+        // do a fast `MainActor.assumeIsolated` read. Reading a few
+        // ivars is cheap and the heartbeat fires on a low-priority
+        // queue; falling back to defaults if the assume fails keeps
+        // the writer non-blocking.
+        return MainActor.assumeIsolated {
+            Snapshot(
+                state: host.bridgeStateCurrent.wireTag,
+                chatCount: host.bridgeChatsCurrent.count,
+                lastSyncAt: host.lastChatsPublishedAt,
+                errorMessage: host.bridgeStateCurrent.errorMessage
+            )
+        }
+    }
 }
 
 /// Periodic heartbeat to a tiny JSON file under
@@ -68,43 +98,58 @@ final class HostBox: @unchecked Sendable {
 enum BridgedHeartbeat {
     private static let interval: TimeInterval = 2.0
 
-    static func start(port: UInt16) {
+    static func start(port: UInt16, hostBox: HostBox) {
         let queue = DispatchQueue(label: "com.clawix.bridge.heartbeat", qos: .utility)
         let timer = DispatchSource.makeTimerSource(queue: queue)
         timer.schedule(deadline: .now(), repeating: interval, leeway: .milliseconds(200))
         let boundAt = Self.iso8601(Date())
         let pid = Int(getpid())
         timer.setEventHandler {
-            write(pid: pid, port: port, boundAt: boundAt)
+            write(pid: pid, port: port, boundAt: boundAt, hostBox: hostBox)
         }
         timer.resume()
         // Keep a strong reference so the source is not deallocated.
         TimerBox.shared.timer = timer
     }
 
-    private static func write(pid: Int, port: UInt16, boundAt: String) {
+    private static func write(pid: Int, port: UInt16, boundAt: String, hostBox: HostBox) {
         let stateDir = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".clawix/state", isDirectory: true)
         try? FileManager.default.createDirectory(at: stateDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let target = stateDir.appendingPathComponent("bridge-status.json")
         let tmp = stateDir.appendingPathComponent("bridge-status.json.tmp")
 
-        let payload: [String: Any] = [
-            "version": "0.1.1",
-            "pid": pid,
-            "port": Int(port),
-            "boundAt": boundAt,
-            "lastHeartbeatAt": iso8601(Date()),
-            "peerCount": BridgeStats.shared.activeSessionCount,
-            "lastError": NSNull()
-        ]
-        guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys, .prettyPrinted]) else { return }
-        do {
-            try data.write(to: tmp, options: .atomic)
-            try? FileManager.default.removeItem(at: target)
-            try FileManager.default.moveItem(at: tmp, to: target)
-        } catch {
-            BridgedLog.write("heartbeat write failed: \(error)")
+        // Reading host state requires hopping to MainActor. Doing it
+        // inline from the timer's utility queue would deadlock if the
+        // main actor is busy, so we dispatch and let the next tick
+        // catch up if we miss this one.
+        DispatchQueue.main.async {
+            let snap = hostBox.snapshot()
+            var payload: [String: Any] = [
+                "version": "0.1.2",
+                "pid": pid,
+                "port": Int(port),
+                "boundAt": boundAt,
+                "lastHeartbeatAt": iso8601(Date()),
+                "peerCount": BridgeStats.shared.activeSessionCount,
+                "state": snap.state,
+                "chatCount": snap.chatCount,
+                "lastError": snap.errorMessage as Any? ?? NSNull(),
+                "lastErrorMessage": snap.errorMessage as Any? ?? NSNull()
+            ]
+            if let lastSync = snap.lastSyncAt {
+                payload["lastSyncAt"] = iso8601(lastSync)
+            } else {
+                payload["lastSyncAt"] = NSNull()
+            }
+            guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys, .prettyPrinted]) else { return }
+            do {
+                try data.write(to: tmp, options: .atomic)
+                try? FileManager.default.removeItem(at: target)
+                try FileManager.default.moveItem(at: tmp, to: target)
+            } catch {
+                BridgedLog.write("heartbeat write failed: \(error)")
+            }
         }
     }
 
@@ -183,6 +228,19 @@ final class DaemonEngineHost: EngineHost {
     private let backend: BackendClient
     private let pairing: PairingService
     private let chatsSubject = CurrentValueSubject<[BridgeChatSnapshot], Never>([])
+    private let stateSubject = CurrentValueSubject<BridgeRuntimeState, Never>(.booting)
+    /// Mirrors what the GUI's `ClawixService.refreshRateLimits` puts on
+    /// `appState.rateLimits` + `rateLimitsByLimitId` when no daemon is
+    /// involved. Seeded from `account/rateLimits/read` once at boot
+    /// and refreshed every time Codex emits `account/rateLimits/updated`.
+    /// Desktop sessions that connect mid-session pull the cached value
+    /// via `requestRateLimits`; the bus also pushes a `rateLimitsUpdated`
+    /// frame on each new payload for already-connected sessions.
+    private let rateLimitsSubject = CurrentValueSubject<WireRateLimitsPayload, Never>(.empty)
+    /// Last `lastSyncAt` we recorded, exposed to the heartbeat so the
+    /// CLI can show "synced 5s ago". Updated every time we publish a
+    /// non-empty chats list; not bumped for empty placeholders.
+    private(set) var lastChatsPublishedAt: Date?
     private var chatByThread: [String: String] = [:]
     private var threadByChat: [String: String] = [:]
     private var rolloutPathByThread: [String: String] = [:]
@@ -199,7 +257,19 @@ final class DaemonEngineHost: EngineHost {
         chatsSubject.eraseToAnyPublisher()
     }
 
+    var bridgeStateCurrent: BridgeRuntimeState { stateSubject.value }
+    var bridgeStatePublisher: AnyPublisher<BridgeRuntimeState, Never> {
+        stateSubject.eraseToAnyPublisher()
+    }
+
+    var bridgeRateLimitsCurrent: WireRateLimitsPayload { rateLimitsSubject.value }
+    var bridgeRateLimitsPublisher: AnyPublisher<WireRateLimitsPayload, Never> {
+        rateLimitsSubject.eraseToAnyPublisher()
+    }
+
     func bootstrap() async {
+        BridgedLog.write("bootstrap-start")
+        stateSubject.send(.syncing)
         do {
             try await backend.start()
             startEvents()
@@ -211,10 +281,79 @@ final class DaemonEngineHost: EngineHost {
                 )
             )
             try await backend.notify(method: "initialized", params: EmptyObject())
+            BridgedLog.write("backend-initialized")
             await reloadThreads()
+            await refreshRateLimits()
+            stateSubject.send(.ready)
         } catch {
             BridgedLog.write("bootstrap failed \(error)")
+            stateSubject.send(.error(shortReason(error)))
         }
+    }
+
+    /// One-shot pull of `account/rateLimits/read` after the backend
+    /// finishes `initialize`. The snapshot lands on `rateLimitsSubject`
+    /// so any desktop session that already sent `requestRateLimits`
+    /// gets the freshest data via the bus's emit, and any session that
+    /// connects afterwards reads the cached value synchronously.
+    /// Failures are non-fatal: we leave the subject empty so the GUI
+    /// just hides the widget instead of showing stale data.
+    private func refreshRateLimits() async {
+        do {
+            let response = try await backend.send(
+                method: "account/rateLimits/read",
+                params: EmptyObject(),
+                expecting: DaemonGetAccountRateLimitsResponse.self
+            )
+            rateLimitsSubject.send(WireRateLimitsPayload(
+                snapshot: wireSnapshot(from: response.rateLimits),
+                byLimitId: wireByLimitId(from: response.rateLimitsByLimitId)
+            ))
+            BridgedLog.write("rate-limits-read ok buckets=\(response.rateLimitsByLimitId?.count ?? 0)")
+        } catch {
+            BridgedLog.write("rate-limits-read failed \(error)")
+        }
+    }
+
+    private func wireSnapshot(from raw: DaemonRateLimitSnapshot) -> WireRateLimitSnapshot {
+        WireRateLimitSnapshot(
+            primary: raw.primary.map { WireRateLimitWindow(
+                usedPercent: $0.usedPercent,
+                resetsAt: $0.resetsAt,
+                windowDurationMins: $0.windowDurationMins
+            )},
+            secondary: raw.secondary.map { WireRateLimitWindow(
+                usedPercent: $0.usedPercent,
+                resetsAt: $0.resetsAt,
+                windowDurationMins: $0.windowDurationMins
+            )},
+            credits: raw.credits.map { WireCreditsSnapshot(
+                hasCredits: $0.hasCredits,
+                unlimited: $0.unlimited,
+                balance: $0.balance
+            )},
+            limitId: raw.limitId,
+            limitName: raw.limitName
+        )
+    }
+
+    private func wireByLimitId(from raw: [String: DaemonRateLimitSnapshot]?) -> [String: WireRateLimitSnapshot] {
+        guard let raw else { return [:] }
+        var out: [String: WireRateLimitSnapshot] = [:]
+        for (key, value) in raw {
+            out[key] = wireSnapshot(from: value)
+        }
+        return out
+    }
+
+    /// Compress an arbitrary `Error` into a short single-line string for
+    /// the `bridgeState(.error)` payload. The underlying `localizedDescription`
+    /// can be multi-line on Codex backend errors; the iPhone error card
+    /// only has room for one short sentence.
+    private func shortReason(_ error: Error) -> String {
+        let raw = "\(error)"
+        let trimmed = raw.replacingOccurrences(of: "\n", with: " ")
+        return String(trimmed.prefix(160))
     }
 
     func handleHydrateHistory(chatId: UUID) {
@@ -577,9 +716,17 @@ final class DaemonEngineHost: EngineHost {
                 expecting: ThreadListResponse.self
             )
             let snapshots = response.data.map(snapshot(from:))
+            BridgedLog.write("thread-list ok count=\(snapshots.count)")
             chatsSubject.send(snapshots)
+            lastChatsPublishedAt = Date()
         } catch {
-            BridgedLog.write("thread/list failed \(error)")
+            BridgedLog.write("thread-list failed \(error)")
+            // Surface to peers as an error state rather than silently
+            // leaving them on `syncing` forever. The bootstrap caller
+            // will move us to `.ready` only on success, so on failure
+            // the iPhone sees an actionable message instead of a
+            // perpetual spinner.
+            stateSubject.send(.error("Couldn't load chats: \(shortReason(error))"))
         }
     }
 
@@ -776,6 +923,12 @@ final class DaemonEngineHost: EngineHost {
                 $0.hasActiveTurn = false
                 $0.lastTurnInterrupted = false
             }
+        case "account/rateLimits/updated":
+            guard let payload = try? params?.decode(DaemonAccountRateLimitsUpdatedNotification.self) else { return }
+            rateLimitsSubject.send(WireRateLimitsPayload(
+                snapshot: wireSnapshot(from: payload.rateLimits),
+                byLimitId: wireByLimitId(from: payload.rateLimitsByLimitId)
+            ))
         default:
             break
         }
@@ -1101,6 +1254,45 @@ struct InitializeParams: Encodable {
 
 struct EmptyObject: Encodable {}
 struct EmptyResponse: Decodable {}
+
+// MARK: - Codex `account/rateLimits` types
+
+/// Mirrors the GUI target's `RateLimitWindow` (see
+/// `clawix/apps/macos/Sources/Clawix/AgentBackend/ClawixProtocol.swift`).
+/// Decoded straight off `account/rateLimits/read.rateLimits.primary`
+/// (and `secondary`, and the per-bucket entries inside
+/// `rateLimitsByLimitId`). New fields Codex adds (planType,
+/// rateLimitReachedType) decode-tolerantly because we only pull the
+/// keys we declare here.
+struct DaemonRateLimitWindow: Decodable {
+    let usedPercent: Int
+    let resetsAt: Int64?
+    let windowDurationMins: Int64?
+}
+
+struct DaemonCreditsSnapshot: Decodable {
+    let hasCredits: Bool
+    let unlimited: Bool
+    let balance: String?
+}
+
+struct DaemonRateLimitSnapshot: Decodable {
+    let primary: DaemonRateLimitWindow?
+    let secondary: DaemonRateLimitWindow?
+    let credits: DaemonCreditsSnapshot?
+    let limitId: String?
+    let limitName: String?
+}
+
+struct DaemonGetAccountRateLimitsResponse: Decodable {
+    let rateLimits: DaemonRateLimitSnapshot
+    let rateLimitsByLimitId: [String: DaemonRateLimitSnapshot]?
+}
+
+struct DaemonAccountRateLimitsUpdatedNotification: Decodable {
+    let rateLimits: DaemonRateLimitSnapshot
+    let rateLimitsByLimitId: [String: DaemonRateLimitSnapshot]?
+}
 
 struct ThreadStartParams: Encodable {
     let cwd: String?
