@@ -116,7 +116,7 @@ struct FileViewerPanel: View {
                 .foregroundColor(Color(white: 0.55))
                 .lineLimit(1)
                 .truncationMode(.middle)
-            LucideIcon(.chevronRight, size: 9)
+            LucideIcon(.chevronRight, size: 10)
                 .foregroundColor(Color(white: 0.35))
             Text(fileName)
                 .font(BodyFont.system(size: 12, wght: 500))
@@ -205,7 +205,7 @@ struct FileViewerPanel: View {
                             label: String,
                             action: @escaping () -> Void) -> some View {
         iconButton(hoverState: hoverState, label: label, action: action) {
-            LucideIcon.auto(systemName)
+            LucideIcon.auto(systemName, size: 11)
                 .font(BodyFont.system(size: size, weight: .regular))
         }
     }
@@ -359,7 +359,7 @@ private struct FileViewerMoreMenu: View {
             if showRichViewToggle {
                 row(id: "toggleRichView",
                     title: richViewDisabled ? "Enable rich view" : "Disable rich view") {
-                    LucideIcon.auto(richViewDisabled ? "photo" : "curlybraces", size: 12)
+                    LucideIcon.auto(richViewDisabled ? "photo" : "curlybraces", size: 13)
                         .foregroundColor(MenuStyle.rowIcon)
                 } action: {
                     onToggleRichView()

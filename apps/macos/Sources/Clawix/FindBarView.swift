@@ -97,7 +97,7 @@ struct FindBarView: View {
             Button {
                 appState.closeFindBar()
             } label: {
-                LucideIcon(.x, size: 12)
+                LucideIcon(.x, size: 13)
                     .foregroundColor(Color.white.opacity(0.6))
                     .frame(width: 18, height: 18)
                     .contentShape(Rectangle())
@@ -131,7 +131,7 @@ struct FindBarView: View {
     @ViewBuilder
     private func navButton(systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            LucideIcon.auto(systemName, size: 12)
+            LucideIcon.auto(systemName, size: 13)
                 .foregroundColor(appState.findMatches.isEmpty
                                  ? Color.white.opacity(0.25)
                                  : Color.white.opacity(0.75))

@@ -101,7 +101,7 @@ struct ChangedFileCard: View {
                 // parent pill owns both the pointer cursor and the tap.
                 .allowsHitTesting(false)
 
-            LucideIcon(.chevronDown, size: 10)
+            LucideIcon(.chevronDown, size: 11)
                 .foregroundColor(Color(white: 0.72))
                 .padding(.leading, 2)
                 .padding(.vertical, 4)

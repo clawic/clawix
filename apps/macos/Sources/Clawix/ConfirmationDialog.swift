@@ -52,7 +52,7 @@ struct ConfirmationDialog: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 12)
                 Button(action: onClose) {
-                    LucideIcon(.x, size: 12)
+                    LucideIcon(.x, size: 13)
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())

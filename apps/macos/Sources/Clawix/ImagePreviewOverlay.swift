@@ -240,7 +240,7 @@ private struct ZoomCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            LucideIcon.auto(systemName, size: 12)
+            LucideIcon.auto(systemName, size: 13)
                 .foregroundColor(Color(white: enabled ? 0.94 : 0.5))
                 .frame(width: 36, height: 36)
                 .background(
