@@ -51,7 +51,7 @@ Before publishing anything, this must pass:
 bash apps/macos/scripts/public_hygiene_check.sh
 ```
 
-It scans the entire repo (root + `apps/*/Sources` + `apps/*/scripts` + `apps/*/Resources`) for: developer-machine paths, secret-looking literals, hex digests, hard-coded codesign material, Apple Team IDs and committed `.signing.env` files. When new apps are added under `apps/`, their tree is picked up automatically because the gate iterates `apps/*/`.
+It scans the entire repo (root + `apps/*/Sources` + `apps/*/scripts` + `apps/*/Resources` + `apps/*/Helpers` + `cli/`) for: developer-machine paths, secret-looking literals, hex digests, hard-coded codesign material, Apple Team IDs and committed `.signing.env` files. When new apps are added under `apps/`, their tree is picked up automatically because the gate iterates `apps/*/`. The npm CLI under `cli/` is part of the same publish surface, so its source ships under the same blacklist.
 
 ## Commits
 
@@ -332,6 +332,61 @@ When migrating existing scroll views:
 - A SwiftUI `ScrollView { … }`: append `.thinScrollers()` outside the closure (after any `.frame`, `.background`, etc., so the installer attaches once the hosting view is mounted).
 - A nested SwiftUI `ScrollView` already inside a `ThinScrollView`: leave it alone, the outer scroller is what the user sees.
 - A surface that wants `ScrollViewReader` / programmatic scroll: stick with SwiftUI `ScrollView` + `.thinScrollers()`. Do not migrate to `ThinScrollView` just for the look — the modifier already gives you the same look without losing `ScrollViewReader`.
+
+# CLI · `cli/`
+
+Top-level npm package, name `clawix`, distributed at https://www.npmjs.com/package/clawix. Source lives in `cli/`, ships to npm with `bin/`, `lib/`, `README.md`, `LICENSE`. The package is **macOS-only** (`os: ["darwin"]`, `cpu: ["arm64", "x64"]`); the postinstall no-ops on other platforms with a helpful message.
+
+The CLI is a thin Node.js wrapper around two pre-built, pre-signed Swift binaries:
+
+- `clawix-bridged`: the same daemon `Clawix.app` ships under `Contents/Helpers/clawix-bridged`, sourced from `apps/macos/Helpers/Bridged/`. Owns the `codex app-server` subprocess and the bridge's WebSocket listener.
+- `clawix-menubar`: a tiny accessory app (NSStatusItem, no Dock, no main window) sourced from `apps/macos/Helpers/Menubar/`. Polls the daemon, exposes the pairing QR, offers "Install Clawix.app…" as a one-click install hop.
+
+`postinstall` downloads `clawix-cli-darwin-universal.tar.gz` from the GitHub release whose tag matches the npm package version, verifies SHA-256 against `cli/lib/checksums.json` (committed alongside the npm version bump), and unpacks both binaries into `~/.clawix/bin/` with `codesign --verify --strict` as the last gate. Nothing is built on the user's machine.
+
+## Commands
+
+```
+clawix up           start daemon + menu bar, print pairing QR
+clawix start        start daemon as LaunchAgent (set & forget)
+clawix stop         bootout daemon + menu bar
+clawix restart      kickstart the daemon
+clawix status       daemon state, port, peers, app presence  (--json)
+clawix pair         re-print pairing QR  (--json)
+clawix logs [-f]    tail daemon stdout/stderr
+clawix install-app  download + install /Applications/Clawix.app
+clawix uninstall    remove ~/.clawix/bin/, bootout LaunchAgents  (--purge to drop pairing too)
+```
+
+## Files the CLI manages
+
+```
+~/.clawix/bin/clawix-bridged                   universal binary, signed
+~/.clawix/bin/clawix-menubar                   universal binary, signed
+~/.clawix/bin/manifest.json                    install metadata
+~/Library/LaunchAgents/clawix.bridge.plist     daemon registration
+~/Library/LaunchAgents/clawix.menubar.plist    menu bar registration
+~/Library/Preferences/clawix.bridge.plist      pairing bearer (shared with GUI)
+/tmp/clawix-bridged.{out,err}                  daemon logs
+```
+
+## Coexistence with `Clawix.app`
+
+Both surfaces register the same LaunchAgent **label** (`clawix.bridge`) and read/write the same UserDefaults **suite** (`clawix.bridge`). The pairing bearer (`ClawixBridge.Bearer.v1`) lives in that public suite, so:
+
+- A user with only the CLI pairs an iPhone, then runs `clawix install-app`. The GUI takes over the daemon slot on next launch; the iPhone keeps working with no re-pair.
+- A user with only the GUI later runs `npm install -g clawix` (e.g. to script automation). The CLI's `daemon.start()` detects the existing label loaded from `/Applications/Clawix.app/...`, defers, and just reports status.
+- `clawix-bridged` resolution prefers `/Applications/Clawix.app/Contents/Helpers/clawix-bridged` over the npm-shipped copy whenever the GUI is installed, so both surfaces drive a single binary.
+
+There is exactly one daemon process at any time.
+
+## Hard rules for contributors and AI agents
+
+- **No private literals in `cli/`**: no Team ID, no maintainer bundle id, no codesign identity, no SKU. The hygiene gate now scans `cli/` along with `apps/*/`.
+- **No competitor brand names in `cli/`**: the CLI is positioned standalone, not as a port or clone of any existing tool. Code, comments, copy and error messages must stay neutral.
+- **No hand-rolled JS-side crypto, signing or notarization**: the binaries arrive from GitHub releases pre-signed and pre-notarized with Developer ID. The CLI verifies, never re-signs.
+- **No third-party npm dependencies in v1**: the package is intentionally zero-dep. If you need an npm dep, justify it; smaller surface = less supply-chain risk for users who run `npm install -g clawix`.
+- **No `sudo` from postinstall or the CLI**: every path it writes (`~/.clawix/bin/`, `~/Library/LaunchAgents/`, `~/Library/Caches/clawix/`) is in the user's home. `clawix install-app` copies into `/Applications` via `ditto` (which works without sudo when the user has write access; if they don't, the copy fails cleanly without a privilege escalation prompt).
 
 # iOS app · `apps/ios/`
 
