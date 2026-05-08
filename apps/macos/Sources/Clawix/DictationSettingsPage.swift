@@ -1,5 +1,6 @@
 import SwiftUI
 import ClawixEngine
+import KeyboardShortcuts
 
 /// Settings page that exposes the dictation engine: hotkey trigger
 /// and behaviour, active Whisper model, language hint, paste vs
@@ -37,8 +38,6 @@ struct DictationSettingsPage: View {
     @AppStorage(PlaybackController.enabledKey) private var pauseMediaWhileRecording = false
     @AppStorage(PlaybackController.resumeDelayKey) private var pauseResumeDelay = 0
 
-    @AppStorage(CancelHotkey.enabledKey) private var customCancelEnabled = false
-
     @AppStorage(FillerWordsManager.enabledKey) private var fillerWordsEnabled = true
 
     @AppStorage(DictationCoordinator.prewarmOnLaunchKey) private var prewarmOnLaunch = true
@@ -51,17 +50,22 @@ struct DictationSettingsPage: View {
     @StateObject private var vocabulary = VocabularyManager.shared
     @StateObject private var whisperPrompts = WhisperPromptStore.shared
     @StateObject private var powerMode = PowerModeManager.shared
+    @StateObject private var promptLibrary = PromptLibrary.shared
+    @StateObject private var transcripts = TranscriptionsRepository.shared
 
     @State private var permissions = PermissionsSnapshot()
     @State private var refreshTimer: Timer?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            DSPHeader()
+            PageHeader(
+                title: "Voice to Text",
+                subtitle: "Local on-device dictation. Press the trigger key in any app, speak, release, and the transcript is pasted at the cursor."
+            )
 
-            DSPSectionLabel(title: "Hotkey")
-            DSPCard {
-                DSPDropdownRow(
+            SectionLabel(title: "Hotkey")
+            SettingsCard {
+                DropdownRow(
                     title: "Trigger",
                     detail: "Bare modifier press starts dictation in any app",
                     options: DictationHotkeyTrigger.allCases.map { ($0, $0.displayName) },
@@ -71,8 +75,8 @@ struct DictationSettingsPage: View {
                     ),
                     minWidth: 0
                 )
-                DSPCardDivider()
-                DSPDropdownRow(
+                CardDivider()
+                DropdownRow(
                     title: "Behaviour",
                     detail: "Hold to push-to-talk, tap to toggle, or both",
                     options: [
@@ -88,8 +92,8 @@ struct DictationSettingsPage: View {
                 )
             }
 
-            DSPSectionLabel(title: "Audio Input")
-            DSPCard {
+            SectionLabel(title: "Audio Input")
+            SettingsCard {
                 MicrophoneSelectorRow(
                     micPrefs: micPrefs,
                     dictation: dictation,
@@ -97,10 +101,10 @@ struct DictationSettingsPage: View {
                 )
             }
 
-            DSPSectionLabel(title: "Model")
-            DSPCard {
+            SectionLabel(title: "Model")
+            SettingsCard {
                 ForEach(Array(DictationModel.allCases.enumerated()), id: \.offset) { idx, model in
-                    if idx > 0 { DSPCardDivider() }
+                    if idx > 0 { CardDivider() }
                     DictationModelRow(
                         model: model,
                         manager: dictation.modelManager,
@@ -109,28 +113,28 @@ struct DictationSettingsPage: View {
                 }
             }
 
-            DSPSectionLabel(title: "Output")
-            DSPCard {
-                DSPDropdownRow(
+            SectionLabel(title: "Output")
+            SettingsCard {
+                DropdownRow(
                     title: "Language",
                     detail: "Auto-detect works for most users; force a language for proper nouns",
                     options: languageOptions,
                     selection: $language
                 )
-                DSPCardDivider()
-                DSPToggleRow(
+                CardDivider()
+                ToggleRow(
                     title: "Paste into the focused app",
                     detail: "Off keeps the transcript on the clipboard only",
                     isOn: $injectText
                 )
-                DSPCardDivider()
-                DSPToggleRow(
+                CardDivider()
+                ToggleRow(
                     title: "Restore previous clipboard",
                     detail: "After pasting, put the original clipboard contents back",
                     isOn: $restoreClipboard
                 )
-                DSPCardDivider()
-                DSPDropdownRow(
+                CardDivider()
+                DropdownRow(
                     title: "Auto-send after paste",
                     detail: "Submit chat-field transcripts automatically with the right shortcut for that app",
                     options: autoSendOptions,
@@ -139,106 +143,106 @@ struct DictationSettingsPage: View {
                 )
             }
 
-            DSPSectionLabel(title: "Sound")
-            DSPCard {
-                DSPToggleRow(
+            SectionLabel(title: "Sound")
+            SettingsCard {
+                ToggleRow(
                     title: "Sound feedback",
                     detail: "Play short cues when recording starts and stops",
                     isOn: $soundFeedback
                 )
             }
 
-            DSPSectionLabel(title: "While recording")
-            DSPCard {
-                DSPToggleRow(
+            SectionLabel(title: "While recording")
+            SettingsCard {
+                ToggleRow(
                     title: "Mute system audio",
                     detail: "Silences output while you dictate so video, music or alerts don't bleed into the mic",
                     isOn: $muteAudioWhileRecording
                 )
             }
 
-            DSPSectionLabel(title: "Cleanup")
-            DSPCard {
-                DSPToggleRow(
+            SectionLabel(title: "Cleanup")
+            SettingsCard {
+                ToggleRow(
                     title: "Remove filler words",
                     detail: "Strip \"uh\", \"um\", \"este\", \"o sea\" and similar across multiple languages",
                     isOn: $fillerWordsEnabled
                 )
             }
 
-            DSPSectionLabel(title: "Dictionary")
-            DSPCard {
+            SectionLabel(title: "Dictionary")
+            SettingsCard {
                 DictionarySummaryRow(store: replacementStore)
-                DSPCardDivider()
+                CardDivider()
                 VocabularyHintsRow(vocabulary: vocabulary)
             }
 
             DSPAdvancedSection(expanded: $advancedExpanded) {
-                DSPSectionLabel(title: "Auto-send timing")
-                DSPCard {
-                    DSPDropdownRow(
+                SectionLabel(title: "Auto-send timing")
+                SettingsCard {
+                    DropdownRow(
                         title: "Restore clipboard delay",
                         detail: "Wait this long after pasting before putting the original clipboard back. Slow Electron apps need 1-2 s",
                         options: restoreDelayOptions,
                         selection: $restoreClipboardDelayMs,
                         minWidth: 130
                     )
-                    DSPCardDivider()
-                    DSPToggleRow(
+                    CardDivider()
+                    ToggleRow(
                         title: "Add space before paste",
                         detail: "If the cursor is right after a word, prepend a space so the transcript doesn't merge into it",
                         isOn: $addSpaceBefore
                     )
-                    DSPCardDivider()
-                    DSPToggleRow(
+                    CardDivider()
+                    ToggleRow(
                         title: "Format long transcripts as paragraphs",
                         detail: "Split long pauses into paragraph breaks. Activates once the streaming model lands; toggle is honored already",
                         isOn: $autoFormatParagraphs
                     )
                 }
 
-                DSPSectionLabel(title: "Sound (advanced)")
-                DSPCard {
-                    DSPToggleRow(
+                SectionLabel(title: "Sound (advanced)")
+                SettingsCard {
+                    ToggleRow(
                         title: "Play start sound",
                         detail: "Independent toggle for the start cue",
                         isOn: $playStartSound
                     )
-                    DSPCardDivider()
+                    CardDivider()
                     CustomSoundRow(
                         title: "Start sound file",
                         currentPath: $customStartURL
                     )
-                    DSPCardDivider()
-                    DSPToggleRow(
+                    CardDivider()
+                    ToggleRow(
                         title: "Play stop sound",
                         detail: "Independent toggle for the stop cue",
                         isOn: $playStopSound
                     )
-                    DSPCardDivider()
+                    CardDivider()
                     CustomSoundRow(
                         title: "Stop sound file",
                         currentPath: $customStopURL
                     )
                 }
 
-                DSPSectionLabel(title: "While recording (advanced)")
-                DSPCard {
-                    DSPDropdownRow(
+                SectionLabel(title: "While recording (advanced)")
+                SettingsCard {
+                    DropdownRow(
                         title: "Mute resume delay",
                         detail: "Seconds to wait after recording stops before unmuting the system",
                         options: secondsOptions,
                         selection: $muteResumeDelay,
                         minWidth: 130
                     )
-                    DSPCardDivider()
-                    DSPToggleRow(
+                    CardDivider()
+                    ToggleRow(
                         title: "Pause media while recording",
                         detail: "Pause Music, Spotify or Podcasts (whichever is playing) and resume only that app",
                         isOn: $pauseMediaWhileRecording
                     )
-                    DSPCardDivider()
-                    DSPDropdownRow(
+                    CardDivider()
+                    DropdownRow(
                         title: "Pause resume delay",
                         detail: "Seconds before unpausing the media app after the session ends",
                         options: secondsOptions,
@@ -247,9 +251,9 @@ struct DictationSettingsPage: View {
                     )
                 }
 
-                DSPSectionLabel(title: "Hotkey 2 (optional)")
-                DSPCard {
-                    DSPDropdownRow(
+                SectionLabel(title: "Hotkey 2 (optional)")
+                SettingsCard {
+                    DropdownRow(
                         title: "Trigger",
                         detail: "Second modifier you can use to start dictation, with its own behaviour",
                         options: DictationHotkeyTrigger.allCases.map { ($0, $0.displayName) },
@@ -259,8 +263,8 @@ struct DictationSettingsPage: View {
                         ),
                         minWidth: 0
                     )
-                    DSPCardDivider()
-                    DSPDropdownRow(
+                    CardDivider()
+                    DropdownRow(
                         title: "Behaviour",
                         detail: "Hold to push-to-talk, tap to toggle, or both",
                         options: [
@@ -276,35 +280,26 @@ struct DictationSettingsPage: View {
                     )
                 }
 
-                DSPSectionLabel(title: "Cancel shortcut")
-                DSPCard {
-                    DSPToggleRow(
-                        title: "Use a custom cancel shortcut",
-                        detail: "Override the default double-Esc with a single key combo. Default: ⌘ + .",
-                        isOn: $customCancelEnabled
-                    )
-                }
-
-                DSPSectionLabel(title: "Performance")
-                DSPCard {
-                    DSPToggleRow(
+                SectionLabel(title: "Performance")
+                SettingsCard {
+                    ToggleRow(
                         title: "Prewarm model on launch",
                         detail: "Run a silent transcription at boot so the first dictation of the session is instant. Experimental",
                         isOn: $prewarmOnLaunch
                     )
                 }
 
-                DSPSectionLabel(title: "Whisper prompt")
-                DSPCard {
+                SectionLabel(title: "Whisper prompt")
+                SettingsCard {
                     WhisperPromptEditorRow(
                         store: whisperPrompts,
                         activeLanguage: language
                     )
                 }
 
-                DSPSectionLabel(title: "Recorder style")
-                DSPCard {
-                    DSPDropdownRow(
+                SectionLabel(title: "Recorder style")
+                SettingsCard {
+                    DropdownRow(
                         title: "Pill placement",
                         detail: "Mini sits at the bottom-centre. Notch docks at the top, hugging the notch on MacBooks that have one",
                         options: DictationRecorderStyle.allCases.map { ($0.rawValue, $0.displayName) },
@@ -313,14 +308,117 @@ struct DictationSettingsPage: View {
                     )
                 }
 
-                DSPSectionLabel(title: "Power Mode")
-                DSPCard {
+                SectionLabel(title: "Power Mode")
+                SettingsCard {
                     PowerModeSummaryRow(manager: powerMode)
+                }
+
+                SectionLabel(title: "AI Enhancement")
+                SettingsCard {
+                    EnhancementSummaryRow(library: promptLibrary)
+                }
+
+                SectionLabel(title: "Transcript history")
+                SettingsCard {
+                    TranscriptHistorySummaryRow(repo: transcripts)
+                }
+
+                SectionLabel(title: "Audio input mode")
+                SettingsCard {
+                    DropdownRow(
+                        title: "Mode",
+                        detail: "System default uses macOS sound prefs. Custom keeps a single preferred mic. Prioritized walks an ordered list and falls back if the top one disconnects",
+                        options: MicrophoneInputMode.allCases.map { ($0.rawValue, $0.displayName) },
+                        selection: Binding(
+                            get: { micPrefs.mode.rawValue },
+                            set: { raw in
+                                if let mode = MicrophoneInputMode(rawValue: raw) {
+                                    micPrefs.mode = mode
+                                }
+                            }
+                        ),
+                        minWidth: 180
+                    )
+                }
+
+                SectionLabel(title: "Transcription backend")
+                SettingsCard {
+                    DropdownRow(
+                        title: "Engine",
+                        detail: "Local Whisper for highest accuracy. Apple Speech streams partials with no model download. Cloud variants need API keys (configure below)",
+                        options: DictationTranscriptionBackend.allCases.map { ($0.rawValue, $0.displayName) },
+                        selection: Binding(
+                            get: { UserDefaults.standard.string(forKey: DictationCoordinator.backendKey) ?? DictationTranscriptionBackend.whisperLocal.rawValue },
+                            set: { UserDefaults.standard.set($0, forKey: DictationCoordinator.backendKey) }
+                        ),
+                        minWidth: 220
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Live preview while recording",
+                        detail: "Show streaming partial transcripts in the floating pill. Only fires with backends that stream (Apple Speech)",
+                        isOn: Binding(
+                            get: { UserDefaults.standard.object(forKey: DictationCoordinator.livePreviewEnabledKey) as? Bool ?? true },
+                            set: { UserDefaults.standard.set($0, forKey: DictationCoordinator.livePreviewEnabledKey) }
+                        )
+                    )
+                    CardDivider()
+                    CloudBackendsRow()
+                }
+
+                SectionLabel(title: "Quality")
+                SettingsCard {
+                    ToggleRow(
+                        title: "Voice Activity Detection",
+                        detail: "Filter silences and non-speech before transcription so Whisper doesn't hallucinate over them. Local Whisper only",
+                        isOn: Binding(
+                            get: { UserDefaults.standard.bool(forKey: DictationCoordinator.vadEnabledKey) },
+                            set: { UserDefaults.standard.set($0, forKey: DictationCoordinator.vadEnabledKey) }
+                        )
+                    )
+                }
+
+                SectionLabel(title: "Voice setup")
+                SettingsCard {
+                    OnboardingTriggerRow()
+                }
+
+                SectionLabel(title: "Quick-action shortcuts")
+                SettingsCard {
+                    KeyboardShortcutsRow(
+                        title: "Toggle dictation",
+                        detail: "Start/stop dictation from any app",
+                        name: .dictationToggle
+                    )
+                    CardDivider()
+                    KeyboardShortcutsRow(
+                        title: "Cancel dictation",
+                        detail: "Abandon the in-flight session without pasting",
+                        name: .dictationCancel
+                    )
+                    CardDivider()
+                    KeyboardShortcutsRow(
+                        title: "Paste last transcription",
+                        detail: "Re-paste the most recent transcript at the cursor",
+                        name: .pasteLastTranscription
+                    )
+                    CardDivider()
+                    KeyboardShortcutsRow(
+                        title: "Retry last transcription",
+                        detail: "Re-run the previous audio with the current model",
+                        name: .retryLastTranscription
+                    )
+                    CardDivider()
+                    KeyboardShortcutsRow(
+                        title: "Toggle AI Enhancement",
+                        detail: "Flip the master toggle without opening Settings",
+                        name: .toggleEnhancement
+                    )
                 }
             }
 
-            DSPSectionLabel(title: "Permissions")
-            DSPCard {
+            SectionLabel(title: "Permissions")
+            SettingsCard {
                 PermissionRow(
                     title: "Microphone",
                     detail: "Needed to capture your voice",
@@ -333,7 +431,7 @@ struct DictationSettingsPage: View {
                     },
                     openSettings: { DictationPermissions.openMicrophoneSettings() }
                 )
-                DSPCardDivider()
+                CardDivider()
                 PermissionRow(
                     title: "Accessibility",
                     detail: "Allows Clawix to paste the transcript into the focused app",
@@ -344,7 +442,7 @@ struct DictationSettingsPage: View {
                     },
                     openSettings: { DictationPermissions.openAccessibilitySettings() }
                 )
-                DSPCardDivider()
+                CardDivider()
                 PermissionRow(
                     title: "Input Monitoring",
                     detail: "Lets the global hotkey work while another app has focus",
@@ -400,7 +498,7 @@ struct DictationSettingsPage: View {
 
     /// Restore-clipboard delay picker. Sub-second resolution at the
     /// short end matches the speed of native Cocoa text fields; the
-    /// long tail covers slow webviews like Notion or Slack.
+    /// long tail covers slow web views.
     private var restoreDelayOptions: [(Int, String)] {
         [
             (250, "250 ms"),
@@ -598,109 +696,6 @@ private struct PermissionRow: View {
 }
 
 // MARK: - Local building blocks (page-private)
-
-private struct DSPHeader: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Voice to Text")
-                .font(BodyFont.system(size: 22, weight: .semibold))
-                .foregroundColor(Palette.textPrimary)
-            Text("Local on-device dictation. Press the trigger key in any app, speak, release, and the transcript is pasted at the cursor.")
-                .font(BodyFont.system(size: 12.5, wght: 500))
-                .foregroundColor(Palette.textSecondary)
-        }
-        .padding(.bottom, 26)
-    }
-}
-
-private struct DSPSectionLabel: View {
-    let title: LocalizedStringKey
-    var body: some View {
-        Text(title)
-            .font(BodyFont.system(size: 13, wght: 600))
-            .foregroundColor(Palette.textPrimary)
-            .padding(.bottom, 14)
-            .padding(.top, 28)
-    }
-}
-
-private struct DSPCard<Content: View>: View {
-    @ViewBuilder var content: Content
-    var body: some View {
-        VStack(spacing: 0) { content }
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(white: 0.085))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                    )
-            )
-            .liftWhenSettingsDropdownOpen()
-    }
-}
-
-private struct DSPCardDivider: View {
-    var body: some View {
-        Rectangle().fill(Color.white.opacity(0.07)).frame(height: 1)
-    }
-}
-
-private struct DSPToggleRow: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(BodyFont.system(size: 12.5, wght: 500))
-                    .foregroundColor(Palette.textPrimary)
-                Text(detail)
-                    .font(BodyFont.system(size: 11, wght: 500))
-                    .foregroundColor(Palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 12)
-            PillToggle(isOn: $isOn)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-    }
-}
-
-private struct DSPDropdownRow<T: Hashable>: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey?
-    let options: [(T, String)]
-    @Binding var selection: T
-    var minWidth: CGFloat = 160
-
-    var body: some View {
-        SettingsRow {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(BodyFont.system(size: 12.5, wght: 500))
-                    .foregroundColor(Palette.textPrimary)
-                if let detail {
-                    Text(detail)
-                        .font(BodyFont.system(size: 11, wght: 500))
-                        .foregroundColor(Palette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        } trailing: {
-            SettingsDropdown(
-                options: options,
-                selection: $selection,
-                minWidth: minWidth,
-                fillsWidth: true
-            )
-        }
-        .liftWhenSettingsDropdownOpen()
-    }
-}
 
 /// Capsule-on-capsule progress bar so the inner fill keeps its rounded
 /// ends instead of inheriting the half-circle look the default
@@ -994,6 +989,7 @@ private struct DictionaryManageSheet: View {
                         }
                     }
                 }
+                .thinScrollers()
             }
 
             HStack {
@@ -1319,6 +1315,121 @@ private struct DictionaryFieldStyle: View {
     }
 }
 
+// MARK: - Cloud backends row
+
+private struct CloudBackendsRow: View {
+    @State private var sheetOpen = false
+
+    var body: some View {
+        SettingsRow {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Cloud backend keys")
+                    .font(BodyFont.system(size: 12.5))
+                    .foregroundColor(Palette.textPrimary)
+                Text(detail)
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } trailing: {
+            Button {
+                sheetOpen = true
+            } label: {
+                Text("Configure")
+                    .font(BodyFont.system(size: 12, wght: 600))
+                    .foregroundColor(Palette.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule(style: .continuous).fill(Color(white: 0.165)))
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $sheetOpen) {
+            CloudBackendsSheet(isPresented: $sheetOpen)
+        }
+    }
+
+    private var detail: LocalizedStringKey {
+        let configured = [
+            CloudTranscriptionProvider.hasKey(for: .groq),
+            CloudTranscriptionProvider.hasKey(for: .deepgram),
+            CloudTranscriptionProvider.hasKey(for: .custom)
+        ].filter { $0 }.count
+        if configured == 0 {
+            return "Add Groq / Deepgram / Custom Whisper keys to use the cloud backends."
+        }
+        return "\(configured) backend\(configured == 1 ? "" : "s") configured."
+    }
+}
+
+// MARK: - KeyboardShortcuts recorder row
+
+/// Wraps the framework's `KeyboardShortcuts.Recorder` in the page's
+/// row chrome so the picker reads the same as every other row in
+/// Settings. Recording starts on click; clearing happens via the
+/// little reset button the framework already provides inside the
+/// recorder.
+private struct KeyboardShortcutsRow: View {
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
+    let name: KeyboardShortcuts.Name
+
+    var body: some View {
+        SettingsRow {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(BodyFont.system(size: 12.5))
+                    .foregroundColor(Palette.textPrimary)
+                Text(detail)
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } trailing: {
+            KeyboardShortcuts.Recorder(for: name)
+        }
+    }
+}
+
+// MARK: - Onboarding trigger row
+
+/// One-row entry in Avanzado that launches `DictationOnboardingView`
+/// on demand. Same view that #28 will auto-present after login lands;
+/// for now users discover it from Settings.
+private struct OnboardingTriggerRow: View {
+    @State private var sheetOpen = false
+
+    var body: some View {
+        SettingsRow {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Voice setup walk-through")
+                    .font(BodyFont.system(size: 12.5))
+                    .foregroundColor(Palette.textPrimary)
+                Text("Re-run the first-time setup: permissions checklist + model download in one screen.")
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } trailing: {
+            Button {
+                DictationOnboardingTrigger.reset()
+                sheetOpen = true
+            } label: {
+                Text("Show")
+                    .font(BodyFont.system(size: 12, wght: 600))
+                    .foregroundColor(Palette.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule(style: .continuous).fill(Color(white: 0.165)))
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $sheetOpen) {
+            DictationOnboardingView(isPresented: $sheetOpen)
+        }
+    }
+}
+
 // MARK: - Avanzados disclosure
 
 /// Collapsible disclosure that hides advanced controls behind a single
@@ -1341,7 +1452,7 @@ private struct DSPAdvancedSection<Content: View>: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
-                    Text("Avanzado")
+                    Text("Advanced")
                         .font(BodyFont.system(size: 13, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                     Spacer()
@@ -1514,7 +1625,7 @@ private struct VocabularyHintsRow: View {
     private var detail: LocalizedStringKey {
         let count = vocabulary.entries.count
         if count == 0 {
-            return "Add proper nouns and jargon Whisper should bias toward (e.g. Clawix, Tailscale, OpenAI)."
+            return "Add proper nouns and jargon Whisper should bias toward."
         }
         return "\(count) terms boosted"
     }
@@ -1604,6 +1715,7 @@ private struct VocabularySheet: View {
                     }
                 }
             }
+            .thinScrollers()
 
             HStack {
                 Spacer()
