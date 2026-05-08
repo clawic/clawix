@@ -11,9 +11,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case quickAsk
     case localModels
     case mcp
-    // case git  // hidden temporarily
+    case git
     case browserUsage
     case usage
+    case secrets
 
     var id: String { rawValue }
 
@@ -27,9 +28,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .quickAsk:         return "QuickAsk"
         case .localModels:      return "Local models"
         case .mcp:              return "MCP servers"
-        // case .git:              return "Git"
+        case .git:              return "Git"
         case .browserUsage:     return "Browser usage"
         case .usage:            return "Usage"
+        case .secrets:          return "Secrets"
         }
     }
 
@@ -43,9 +45,10 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .quickAsk:         return "command"
         case .localModels:      return "cpu"
         case .mcp:              return "server.rack"
-        // case .git:              return "arrow.triangle.branch"
+        case .git:              return "arrow.triangle.branch"
         case .browserUsage:     return "cursor"
         case .usage:            return "chart.bar"
+        case .secrets:          return "lock.shield"
         }
     }
 }
@@ -54,7 +57,23 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 
 struct SettingsSidebar: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var flags: FeatureFlags
     @State private var backHovered = false
+
+    private var visibleCategories: [SettingsCategory] {
+        SettingsCategory.allCases.filter { cat in
+            switch cat {
+            case .dictation:    return flags.isVisible(.voiceToText)
+            case .quickAsk:     return flags.isVisible(.quickAsk)
+            case .secrets:      return flags.isVisible(.secrets)
+            case .mcp:          return flags.isVisible(.mcp)
+            case .localModels:  return flags.isVisible(.localModels)
+            case .browserUsage: return flags.isVisible(.browserUsage)
+            case .git:          return flags.isVisible(.git)
+            default:            return true
+            }
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,7 +91,7 @@ struct SettingsSidebar: View {
                     Spacer(minLength: 6)
                 }
                 .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .frame(height: 35)
                 .contentShape(Rectangle())
                 .background(
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -87,7 +106,7 @@ struct SettingsSidebar: View {
             .padding(.bottom, 14)
 
             VStack(spacing: 1) {
-                ForEach(SettingsCategory.allCases) { cat in
+                ForEach(visibleCategories) { cat in
                     SettingsSidebarRow(category: cat)
                 }
             }
@@ -119,7 +138,7 @@ private struct SettingsSidebarRow: View {
                 Spacer(minLength: 6)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .frame(height: 35)
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -155,9 +174,9 @@ private struct SettingsSidebarRow: View {
         case .browserUsage:
             IconImage(category.iconName, size: 20)
                 .offset(y: 2)
-        // case .git:
-        //     IconImage(category.iconName, size: 14)
-        //         .offset(y: 1)
+        case .git:
+            IconImage(category.iconName, size: 14)
+                .offset(y: 1)
         case .usage:
             UsageIcon(size: 16, lineWidth: 1.7)
         default:
@@ -170,12 +189,26 @@ private struct SettingsSidebarRow: View {
 
 struct SettingsContent: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var flags: FeatureFlags
+
+    private var resolvedCategory: SettingsCategory {
+        switch appState.settingsCategory {
+        case .dictation:    return flags.isVisible(.voiceToText)  ? .dictation    : .general
+        case .quickAsk:     return flags.isVisible(.quickAsk)     ? .quickAsk     : .general
+        case .secrets:      return flags.isVisible(.secrets)      ? .secrets      : .general
+        case .mcp:          return flags.isVisible(.mcp)          ? .mcp          : .general
+        case .localModels:  return flags.isVisible(.localModels)  ? .localModels  : .general
+        case .browserUsage: return flags.isVisible(.browserUsage) ? .browserUsage : .general
+        case .git:          return flags.isVisible(.git)          ? .git          : .general
+        default:            return appState.settingsCategory
+        }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Group {
-                    switch appState.settingsCategory {
+                    switch resolvedCategory {
                     case .general:         GeneralPage()
                     // case .appearance:      AppearancePage()
                     case .configuration:   ConfigurationPage()
@@ -183,10 +216,11 @@ struct SettingsContent: View {
                     case .dictation:       DictationSettingsPage()
                     case .quickAsk:        QuickAskSettingsPage()
                     case .localModels:     LocalModelsPage()
-                    // case .git:             GitPage()
+                    case .git:             GitPage()
                     case .browserUsage:    BrowserUsagePage()
                     case .usage:           UsagePage()
                     case .mcp:             MCPPage()
+                    case .secrets:         SecretsSettingsPage()
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -196,103 +230,12 @@ struct SettingsContent: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
         }
+        .thinScrollers()
         .background(Palette.background)
     }
 }
 
-// MARK: - Shared building blocks
-
-private struct PageHeader: View {
-    let title: LocalizedStringKey
-    var subtitle: LocalizedStringKey? = nil
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(BodyFont.system(size: 22, weight: .semibold))
-                .foregroundColor(Palette.textPrimary)
-            if let subtitle {
-                Text(subtitle)
-                    .font(BodyFont.system(size: 12.5))
-                    .foregroundColor(Palette.textSecondary)
-            }
-        }
-        .padding(.bottom, 26)
-    }
-}
-
-private struct SectionLabel: View {
-    let title: LocalizedStringKey
-    var body: some View {
-        Text(title)
-            .font(BodyFont.system(size: 13, wght: 600))
-            .foregroundColor(Palette.textPrimary)
-            .padding(.leading, 3)
-            .padding(.bottom, 14)
-            .padding(.top, 28)
-    }
-}
-
-private struct SettingsCard<Content: View>: View {
-    @ViewBuilder var content: Content
-    var body: some View {
-        VStack(spacing: 0) {
-            content
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(white: 0.085))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-                )
-        )
-        .liftWhenSettingsDropdownOpen()
-    }
-}
-
-private struct CardDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.07))
-            .frame(height: 1)
-    }
-}
-
-private struct RowLabel: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(BodyFont.system(size: 12.5))
-                .foregroundColor(Palette.textPrimary)
-            if let detail {
-                Text(detail)
-                    .font(BodyFont.system(size: 11, wght: 500))
-                    .foregroundColor(Palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-}
-
-private struct ToggleRow: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey?
-    @Binding var isOn: Bool
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            RowLabel(title: title, detail: detail)
-            Spacer(minLength: 12)
-            PillToggle(isOn: $isOn)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-    }
-}
+// MARK: - PillToggle (kept here, every other shared building block lives in SettingsKit.swift)
 
 struct PillToggle: View {
     @Binding var isOn: Bool
@@ -330,30 +273,6 @@ struct PillToggle: View {
         .accessibilityElement()
         .accessibilityAddTraits(.isButton)
         .accessibilityValue(isOn ? Text("On") : Text("Off"))
-    }
-}
-
-private struct DropdownRow<T: Hashable>: View {
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey?
-    let options: [(T, String)]
-    @Binding var selection: T
-    var iconForOption: ((T) -> AnyView?)? = nil
-    var descriptionForOption: ((T) -> String?)? = nil
-
-    var body: some View {
-        SettingsRow {
-            RowLabel(title: title, detail: detail)
-        } trailing: {
-            SettingsDropdown(
-                options: options,
-                selection: $selection,
-                iconForOption: iconForOption,
-                descriptionForOption: descriptionForOption,
-                fillsWidth: true
-            )
-        }
-        .liftWhenSettingsDropdownOpen()
     }
 }
 
@@ -694,6 +613,7 @@ private struct ActionPillRow: View {
 
 private struct GeneralPage: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var flags: FeatureFlags
     @State private var workMode: WorkMode = .daily
     @State private var permDefault: Bool = true
     @State private var permAuto: Bool = true
@@ -727,61 +647,77 @@ private struct GeneralPage: View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: "General")
 
-            Text("Work mode")
-                .font(BodyFont.system(size: 13, wght: 600))
-                .foregroundColor(Palette.textPrimary)
-            Text("Choose how much technical detail Clawix shows")
-                .font(BodyFont.system(size: 11, wght: 500))
-                .foregroundColor(Palette.textSecondary)
-                .padding(.bottom, 14)
-
-            HStack(spacing: 12) {
-                WorkModeCard(
-                    icon: "chevron.left.forwardslash.chevron.right",
-                    title: "For coding",
-                    subtitle: "More technical responses and finer control",
-                    isOn: workMode == .coding
-                ) { workMode = .coding }
-                WorkModeCard(
-                    icon: "bubble.left.and.bubble.right",
-                    title: "For daily work",
-                    subtitle: "Same power, fewer technical details...",
-                    isOn: workMode == .daily
-                ) { workMode = .daily }
-            }
-            .padding(.bottom, 4)
-
-            SectionLabel(title: "Permissions")
+            SectionLabel(title: "Feature previews")
             SettingsCard {
                 ToggleRow(
-                    title: "Default permissions",
-                    detail: "By default, Clawix can read and edit files in your workspace. It can request additional access when needed.",
-                    isOn: $permDefault
+                    title: "Beta features",
+                    detail: "Show features in active development. They generally work but may still have rough edges. Off by default.",
+                    isOn: Binding(
+                        get: { flags.beta },
+                        set: { flags.beta = $0 }
+                    )
                 )
                 CardDivider()
                 ToggleRow(
-                    title: "Automatic review",
-                    detail: "Clawix can read and edit files in your workspace. Clawix automatically reviews requests for additional access. Auto-review may make mistakes. Learn more about the elevated risks.",
-                    isOn: $permAuto
+                    title: "Experimental features",
+                    detail: "Show very early features that may not work well yet. For previewing only, not for serious use. Off by default.",
+                    isOn: Binding(
+                        get: { flags.experimental },
+                        set: { flags.experimental = $0 }
+                    )
                 )
-                CardDivider()
-                ToggleRow(
-                    title: "Full access",
-                    detail: "When Clawix runs with full access, it can edit any file on your computer and run commands over the network without your authorization. This significantly increases the risk of data loss, leaks, or unexpected behavior. Learn more about the elevated risks.",
-                    isOn: $permFull
-                )
+            }
+            .padding(.bottom, 8)
+
+            if flags.experimental {
+                Text("Work mode")
+                    .font(BodyFont.system(size: 13, wght: 600))
+                    .foregroundColor(Palette.textPrimary)
+                Text("Choose how much technical detail Clawix shows")
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                    .padding(.bottom, 14)
+
+                HStack(spacing: 12) {
+                    WorkModeCard(
+                        icon: "chevron.left.forwardslash.chevron.right",
+                        title: "For coding",
+                        subtitle: "More technical responses and finer control",
+                        isOn: workMode == .coding
+                    ) { workMode = .coding }
+                    WorkModeCard(
+                        icon: "bubble.left.and.bubble.right",
+                        title: "For daily work",
+                        subtitle: "Same power, fewer technical details...",
+                        isOn: workMode == .daily
+                    ) { workMode = .daily }
+                }
+                .padding(.bottom, 4)
+
+                SectionLabel(title: "Permissions")
+                SettingsCard {
+                    ToggleRow(
+                        title: "Default permissions",
+                        detail: "By default, Clawix can read and edit files in your workspace. It can request additional access when needed.",
+                        isOn: $permDefault
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Automatic review",
+                        detail: "Clawix can read and edit files in your workspace. Clawix automatically reviews requests for additional access. Auto-review may make mistakes. Learn more about the elevated risks.",
+                        isOn: $permAuto
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Full access",
+                        detail: "When Clawix runs with full access, it can edit any file on your computer and run commands over the network without your authorization. This significantly increases the risk of data loss, leaks, or unexpected behavior. Learn more about the elevated risks.",
+                        isOn: $permFull
+                    )
+                }
             }
 
             SectionLabel(title: "General")
             SettingsCard {
-                DropdownRow(
-                    title: "Default open destination",
-                    detail: "Where files and folders open by default",
-                    options: [("Ghostty", "Ghostty"), ("Terminal", "Terminal"), ("VS Code", "VS Code")],
-                    selection: $openTarget,
-                    iconForOption: { openTargetIcon(for: $0) }
-                )
-                CardDivider()
                 DropdownRow(
                     title: "Language",
                     detail: "App interface language",
@@ -793,12 +729,6 @@ private struct GeneralPage: View {
                 )
                 CardDivider()
                 ToggleRow(
-                    title: "Show in the menu bar",
-                    detail: "Keep Clawix in the macOS menu bar when the main window closes",
-                    isOn: $showInMenuBar
-                )
-                CardDivider()
-                ToggleRow(
                     title: "Run bridge in background",
                     detail: "Registers a LaunchAgent helper that keeps a bridge process alive even after Clawix is fully quit. Closing the window already keeps the in-process bridge alive thanks to the menu bar item; this toggle is a foundation for the upcoming \"daemon owns chat state\" mode and currently registers a stub helper that won't have your chats yet. Status: \(backgroundBridge.statusLabel)\(backgroundBridge.lastError.map { " — \($0)" } ?? "")",
                     isOn: Binding(
@@ -806,53 +736,69 @@ private struct GeneralPage: View {
                         set: { backgroundBridge.toggle($0) }
                     )
                 )
-                CardDivider()
-                ActionPillRow(
-                    title: "Popover keyboard shortcut",
-                    detail: "Set a global keyboard shortcut for the popover. Leave empty to keep it disabled.",
-                    primaryLabel: "Change",
-                    trailingDisabled: "⌥Space",
-                    onPrimary: {}
-                )
-                CardDivider()
-                ToggleRow(
-                    title: "Prevent sleep during execution",
-                    detail: "Keep the computer awake while Clawix is running a chat",
-                    isOn: $preventSleep
-                )
-                CardDivider()
-                ToggleRow(
-                    title: "Require ⌘ + Return to send long prompts",
-                    detail: "When enabled, multi-line prompts require ⌘ + Return to send.",
-                    isOn: $requireCmdEnter
-                )
-                CardDivider()
-                DropdownRow(
-                    title: "Speed",
-                    detail: "Choose how fast inference runs in chats, sub-agents and compaction. Fast uses more of the plan",
-                    options: [
-                        ("Standard", "Standard"),
-                        ("Fast", "Fast"),
-                        ("Auto", "Auto")
-                    ],
-                    selection: $speed
-                )
-                CardDivider()
-                SegmentedRow(
-                    title: "Follow-up behavior",
-                    detail: "Queue follow-up messages while Clawix runs, or steer the current run. Press ⌘Return to do the opposite for a single message.",
-                    options: [(.queue, L10n.t("Queue")), (.drive, L10n.t("Drive"))],
-                    selection: $followBehavior
-                )
-                CardDivider()
-                SegmentedRow(
-                    title: "Code review",
-                    detail: "Start /review in the current chat when possible, or open a separate review chat",
-                    options: [(.inline, L10n.t("Inline")), (.detached, L10n.t("Detached"))],
-                    selection: $codeReview
-                )
-                CardDivider()
-                ImportAgentRow()
+                if flags.experimental {
+                    CardDivider()
+                    DropdownRow(
+                        title: "Default open destination",
+                        detail: "Where files and folders open by default",
+                        options: [("Ghostty", "Ghostty"), ("Terminal", "Terminal"), ("VS Code", "VS Code")],
+                        selection: $openTarget,
+                        iconForOption: { openTargetIcon(for: $0) }
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Show in the menu bar",
+                        detail: "Keep Clawix in the macOS menu bar when the main window closes",
+                        isOn: $showInMenuBar
+                    )
+                    CardDivider()
+                    ActionPillRow(
+                        title: "Popover keyboard shortcut",
+                        detail: "Set a global keyboard shortcut for the popover. Leave empty to keep it disabled.",
+                        primaryLabel: "Change",
+                        trailingDisabled: "⌥Space",
+                        onPrimary: {}
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Prevent sleep during execution",
+                        detail: "Keep the computer awake while Clawix is running a chat",
+                        isOn: $preventSleep
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Require ⌘ + Return to send long prompts",
+                        detail: "When enabled, multi-line prompts require ⌘ + Return to send.",
+                        isOn: $requireCmdEnter
+                    )
+                    CardDivider()
+                    DropdownRow(
+                        title: "Speed",
+                        detail: "Choose how fast inference runs in chats, sub-agents and compaction. Fast uses more of the plan",
+                        options: [
+                            ("Standard", "Standard"),
+                            ("Fast", "Fast"),
+                            ("Auto", "Auto")
+                        ],
+                        selection: $speed
+                    )
+                    CardDivider()
+                    SegmentedRow(
+                        title: "Follow-up behavior",
+                        detail: "Queue follow-up messages while Clawix runs, or steer the current run. Press ⌘Return to do the opposite for a single message.",
+                        options: [(.queue, L10n.t("Queue")), (.drive, L10n.t("Drive"))],
+                        selection: $followBehavior
+                    )
+                    CardDivider()
+                    SegmentedRow(
+                        title: "Code review",
+                        detail: "Start /review in the current chat when possible, or open a separate review chat",
+                        options: [(.inline, L10n.t("Inline")), (.detached, L10n.t("Detached"))],
+                        selection: $codeReview
+                    )
+                    CardDivider()
+                    ImportAgentRow()
+                }
             }
 
             SectionLabel(title: "Sync with Codex")
@@ -897,55 +843,57 @@ private struct GeneralPage: View {
 
             HiddenCodexFoldersSection()
 
-            SectionLabel(title: "Dictado")
-            SettingsCard {
-                ActionPillRow(
-                    title: "Push-to-dictate keyboard shortcut",
-                    detail: "Hold down anywhere on the desktop to dictate where the cursor is",
-                    primaryLabel: "Establecer",
-                    trailingDisabled: "Off",
-                    onPrimary: {}
-                )
-                CardDivider()
-                ActionPillRow(
-                    title: "Toggle dictation keyboard shortcut",
-                    detail: "Press once anywhere on the desktop to dictate, press again to stop",
-                    primaryLabel: "Establecer",
-                    trailingDisabled: "Off",
-                    onPrimary: {}
-                )
-                CardDivider()
-                DictionaryExpandableRow(entries: $dictionaryEntries)
-                ForEach(Array(recentDictations.enumerated()), id: \.offset) { _, item in
+            if flags.experimental {
+                SectionLabel(title: "Dictation")
+                SettingsCard {
+                    ActionPillRow(
+                        title: "Push-to-dictate keyboard shortcut",
+                        detail: "Hold down anywhere on the desktop to dictate where the cursor is",
+                        primaryLabel: "Set",
+                        trailingDisabled: "Off",
+                        onPrimary: {}
+                    )
                     CardDivider()
-                    RecentDictationRow(stamp: item.stamp, text: item.text)
+                    ActionPillRow(
+                        title: "Toggle dictation keyboard shortcut",
+                        detail: "Press once anywhere on the desktop to dictate, press again to stop",
+                        primaryLabel: "Set",
+                        trailingDisabled: "Off",
+                        onPrimary: {}
+                    )
+                    CardDivider()
+                    DictionaryExpandableRow(entries: $dictionaryEntries)
+                    ForEach(Array(recentDictations.enumerated()), id: \.offset) { _, item in
+                        CardDivider()
+                        RecentDictationRow(stamp: item.stamp, text: item.text)
+                    }
                 }
-            }
 
-            SectionLabel(title: "Notificaciones")
-            SettingsCard {
-                DropdownRow(
-                    title: "Enable completion notifications",
-                    detail: "Set when Clawix notifies you it has finished",
-                    options: [
-                        ("Siempre", "Siempre"),
-                        ("Solo en segundo plano", "Solo en segundo plano"),
-                        ("Nunca", "Nunca")
-                    ],
-                    selection: $completionNotify
-                )
-                CardDivider()
-                ToggleRow(
-                    title: "Enable permission notifications",
-                    detail: "Show alerts when notification permissions are required",
-                    isOn: $permissionNotify
-                )
-                CardDivider()
-                ToggleRow(
-                    title: "Enable question notifications",
-                    detail: "Show alerts when your input is needed to continue",
-                    isOn: $questionNotify
-                )
+                SectionLabel(title: "Notifications")
+                SettingsCard {
+                    DropdownRow(
+                        title: "Enable completion notifications",
+                        detail: "Set when Clawix notifies you it has finished",
+                        options: [
+                            ("Siempre", "Siempre"),
+                            ("Solo en segundo plano", "Solo en segundo plano"),
+                            ("Nunca", "Nunca")
+                        ],
+                        selection: $completionNotify
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Enable permission notifications",
+                        detail: "Show alerts when notification permissions are required",
+                        isOn: $permissionNotify
+                    )
+                    CardDivider()
+                    ToggleRow(
+                        title: "Enable question notifications",
+                        detail: "Show alerts when your input is needed to continue",
+                        isOn: $questionNotify
+                    )
+                }
             }
 
             SectionLabel(title: "App behavior")
@@ -1463,9 +1411,9 @@ private struct AppearancePage: View {
                     }
                     Spacer(minLength: 12)
                     HStack(spacing: 6) {
-                        ThemeChip(icon: "sun.max", label: "Claro", isOn: theme == .light) { theme = .light }
-                        ThemeChip(icon: "moon", label: "Oscuro", isOn: theme == .dark) { theme = .dark }
-                        ThemeChip(icon: "laptopcomputer", label: "Sistema", isOn: theme == .system) { theme = .system }
+                        ThemeChip(icon: "sun.max", label: "Light", isOn: theme == .light) { theme = .light }
+                        ThemeChip(icon: "moon", label: "Dark", isOn: theme == .dark) { theme = .dark }
+                        ThemeChip(icon: "laptopcomputer", label: "System", isOn: theme == .system) { theme = .system }
                     }
                 }
                 .padding(.horizontal, 14)
@@ -1675,7 +1623,7 @@ private struct ThemeSubSection: View {
             CardDivider()
             ToggleRow(title: "Translucent sidebar", detail: nil, isOn: $translucent)
             CardDivider()
-            SliderRow(title: "Contraste", value: $contrast, range: 0...100)
+            SliderRow(title: "Contrast", value: $contrast, range: 0...100)
         }
     }
 }
@@ -1905,7 +1853,7 @@ private struct ConfigurationPage: View {
                 ActionPillRow(
                     title: "Diagnose Clawix Workspace issues",
                     detail: "Check the current bundle and save diagnostic logs",
-                    primaryLabel: "Diagnosticar",
+                    primaryLabel: "Diagnose",
                     onPrimary: {}
                 )
                 CardDivider()
@@ -2044,6 +1992,7 @@ private struct ReinstallRow: View {
 // MARK: - Personalization page
 
 private struct PersonalizationPage: View {
+    @EnvironmentObject var flags: FeatureFlags
     @State private var personality: String = "Pragmatic"
     @State private var expanded: Bool = false
     @State private var instructions: String = ""
@@ -2136,6 +2085,11 @@ private struct PersonalizationPage: View {
                 .disabled(!isDirty)
             }
             .padding(.top, 14)
+
+            if flags.isVisible(.secrets) {
+                SecretsCodexInjectionCard()
+                    .padding(.top, 28)
+            }
         }
         .onAppear { load() }
         .sheet(isPresented: $expanded) {
@@ -2317,7 +2271,7 @@ private struct UsagePage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: "Uso")
+            PageHeader(title: "Usage")
 
             if let snapshot = appState.rateLimits, snapshot.primary != nil || snapshot.secondary != nil {
                 HStack(alignment: .center) {
@@ -2574,33 +2528,33 @@ private struct BrowserUsagePage: View {
                     title: "Approval",
                     detail: "Choose whether Clawix asks for permission before opening websites",
                     options: [
-                        ("Preguntar siempre", "Preguntar siempre"),
-                        ("Permitir siempre", "Permitir siempre"),
-                        ("Bloquear siempre", "Bloquear siempre")
+                        ("Always ask", "Always ask"),
+                        ("Always allow", "Always allow"),
+                        ("Always block", "Always block")
                     ],
                     selection: $approval
                 )
                 CardDivider()
                 DropdownRow(
-                    title: "Historial",
+                    title: "History",
                     detail: "Choose whether Clawix asks for approval before accessing your history",
                     options: [
-                        ("Preguntar siempre", "Preguntar siempre"),
-                        ("Permitir siempre", "Permitir siempre"),
-                        ("Bloquear siempre", "Bloquear siempre")
+                        ("Always ask", "Always ask"),
+                        ("Always allow", "Always allow"),
+                        ("Always block", "Always block")
                     ],
                     selection: $history
                 )
             }
 
-            DomainListSection(title: "Dominios bloqueados",
+            DomainListSection(title: "Blocked domains",
                               subtitle: "Clawix will never open these sites",
-                              emptyText: "No hay dominios bloqueados")
+                              emptyText: "No blocked domains")
                 .padding(.top, 28)
 
-            DomainListSection(title: "Dominios permitidos",
+            DomainListSection(title: "Allowed domains",
                               subtitle: "Domains that open without prompting",
-                              emptyText: "No hay dominios permitidos")
+                              emptyText: "No allowed domains")
                 .padding(.top, 28)
         }
     }
@@ -2884,39 +2838,16 @@ private struct CommitInstructionsBlock: View {
     }
 }
 
-// MARK: - Servidores MCP page
-
-private struct MCPServer: Identifiable, Hashable {
-    let id = UUID()
-    var name: String
-    var isOn: Bool
-}
-
+// MARK: - MCP servers page
+//
+// Lists every `[mcp_servers.<name>]` declared in `~/.codex/config.toml`,
+// with toggles to enable/disable each entry and a sheet (popup) to
+// add or edit them. Persistence flows through `MCPServersStore`, which
+// preserves the rest of `config.toml` byte-for-byte and only rewrites
+// the MCP blocks.
 private struct MCPPage: View {
-    @State private var creating: Bool = false
-    @State private var editing: MCPServer? = nil
-    @State private var servers: [MCPServer] = []
-
-    var body: some View {
-        if creating || editing != nil {
-            MCPDetailView(onBack: {
-                creating = false
-                editing = nil
-            })
-        } else {
-            MCPListView(
-                servers: $servers,
-                onAdd: { creating = true },
-                onConfig: { server in editing = server }
-            )
-        }
-    }
-}
-
-private struct MCPListView: View {
-    @Binding var servers: [MCPServer]
-    let onAdd: () -> Void
-    let onConfig: (MCPServer) -> Void
+    @StateObject private var store: MCPServersStore = .shared
+    @State private var sheet: MCPSheetItem? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -2940,7 +2871,12 @@ private struct MCPListView: View {
                     .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
-                Button(action: onAdd) {
+                Button {
+                    sheet = .init(
+                        server: MCPServerConfig(),
+                        isExisting: false
+                    )
+                } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "plus")
                             .font(BodyFont.system(size: 10, wght: 700))
@@ -2963,27 +2899,77 @@ private struct MCPListView: View {
             }
             .padding(.bottom, 14)
 
-            VStack(spacing: 7) {
-                ForEach($servers) { $server in
-                    MCPServerRow(server: $server, onConfig: { onConfig(server) })
+            if store.servers.isEmpty {
+                MCPEmptyState(onAdd: {
+                    sheet = .init(
+                        server: MCPServerConfig(),
+                        isExisting: false
+                    )
+                })
+            } else {
+                VStack(spacing: 7) {
+                    ForEach(store.servers) { server in
+                        MCPServerRow(
+                            server: server,
+                            isOn: Binding(
+                                get: { server.enabled },
+                                set: { store.toggleEnabled(server, isOn: $0) }
+                            ),
+                            onConfigure: {
+                                sheet = .init(server: server, isExisting: true)
+                            }
+                        )
+                    }
                 }
             }
+
+            if let err = store.lastError {
+                Text(err)
+                    .font(BodyFont.system(size: 11.5, wght: 500))
+                    .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.45))
+                    .padding(.top, 12)
+            }
+        }
+        .sheet(item: $sheet) { item in
+            MCPEditorSheet(
+                store: store,
+                initial: item.server,
+                isExisting: item.isExisting,
+                onClose: { sheet = nil }
+            )
         }
     }
 }
 
+/// Identifiable wrapper so SwiftUI's `.sheet(item:)` can present the
+/// editor for either a new or an existing server.
+private struct MCPSheetItem: Identifiable {
+    let id = UUID()
+    let server: MCPServerConfig
+    let isExisting: Bool
+}
+
 private struct MCPServerRow: View {
-    @Binding var server: MCPServer
-    let onConfig: () -> Void
+    let server: MCPServerConfig
+    @Binding var isOn: Bool
+    let onConfigure: () -> Void
+
     @State private var configHovered: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(server.name)
-                .font(BodyFont.system(size: 13, wght: 500))
-                .foregroundColor(Palette.textPrimary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(server.displayName)
+                    .font(BodyFont.system(size: 13, wght: 500))
+                    .foregroundColor(Palette.textPrimary)
+                Text(transportSummary)
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
             Spacer()
-            Button(action: onConfig) {
+            Button(action: onConfigure) {
                 SettingsIcon(size: 18)
                     .foregroundColor(Color(white: configHovered ? 0.94 : 0.62))
                     .frame(width: 26, height: 26)
@@ -2992,7 +2978,7 @@ private struct MCPServerRow: View {
             .buttonStyle(.plain)
             .onHover { configHovered = $0 }
             .hoverHint(L10n.t("Configure"))
-            PillToggle(isOn: $server.isOn)
+            PillToggle(isOn: $isOn)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
@@ -3005,263 +2991,57 @@ private struct MCPServerRow: View {
                 )
         )
     }
-}
 
-// MCP detail / connect view
-
-private enum MCPTransport: Hashable { case stdio, http }
-
-private struct MCPDetailView: View {
-    let onBack: () -> Void
-
-    @State private var name: String = ""
-    @State private var transport: MCPTransport = .stdio
-    @State private var command: String = ""
-    @State private var args: [MCPField] = [.init()]
-    @State private var envVars: [MCPKeyValue] = [.init()]
-    @State private var passEnvs: [MCPField] = [.init()]
-    @State private var workDir: String = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Button(action: onBack) {
-                    Image(systemName: "chevron.left")
-                        .font(BodyFont.system(size: 12, wght: 700))
-                        .foregroundColor(Palette.textSecondary)
-                        .frame(width: 22, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Color.white.opacity(0.05))
-                        )
-                }
-                .buttonStyle(.plain)
-                .hoverHint(L10n.t("Back"))
-                Text("Connect to a custom MCP")
-                    .font(BodyFont.system(size: 22, weight: .semibold))
-                    .foregroundColor(Palette.textPrimary)
-            }
-            Button {} label: {
-                HStack(spacing: 4) {
-                    Text("Documents")
-                        .font(BodyFont.system(size: 12.5))
-                    Image(systemName: "arrow.up.right.square")
-                        .font(BodyFont.system(size: 10))
-                }
-                .foregroundColor(Palette.pastelBlue)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 6)
-            .padding(.bottom, 26)
-
-            VStack(alignment: .leading, spacing: 12) {
-                MCPFieldLabel("Name")
-                MCPInputField(placeholder: "MCP server name", text: $name)
-                MCPTransportSegmented(selection: $transport)
-            }
-            .padding(14)
-            .background(mcpCardBackground)
-
-            VStack(alignment: .leading, spacing: 12) {
-                MCPFieldLabel("Command to start")
-                MCPInputField(placeholder: "dev-mcp serve-sqlite", text: $command)
-            }
-            .padding(14)
-            .background(mcpCardBackground)
-            .padding(.top, 12)
-
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 10) {
-                    MCPFieldLabel("Arguments")
-                    ForEach($args) { $entry in
-                        HStack(spacing: 10) {
-                            MCPInputField(placeholder: "", text: $entry.value)
-                            MCPTrashButton {
-                                args.removeAll { $0.id == entry.id }
-                                if args.isEmpty { args.append(.init()) }
-                            }
-                        }
-                    }
-                    MCPAddRowButton(label: "Add argument") {
-                        args.append(.init())
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    MCPFieldLabel("Environment variables")
-                    ForEach($envVars) { $entry in
-                        HStack(spacing: 10) {
-                            MCPInputField(placeholder: "Clave", text: $entry.key)
-                            MCPInputField(placeholder: "Valor", text: $entry.value)
-                            MCPTrashButton {
-                                envVars.removeAll { $0.id == entry.id }
-                                if envVars.isEmpty { envVars.append(.init()) }
-                            }
-                        }
-                    }
-                    MCPAddRowButton(label: "Add environment variable") {
-                        envVars.append(.init())
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    MCPFieldLabel("Environment variable pass-through")
-                    ForEach($passEnvs) { $entry in
-                        HStack(spacing: 10) {
-                            MCPInputField(placeholder: "", text: $entry.value)
-                            MCPTrashButton {
-                                passEnvs.removeAll { $0.id == entry.id }
-                                if passEnvs.isEmpty { passEnvs.append(.init()) }
-                            }
-                        }
-                    }
-                    MCPAddRowButton(label: "Add variable") {
-                        passEnvs.append(.init())
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 10) {
-                    MCPFieldLabel("Working directory")
-                    MCPInputField(placeholder: "~/code", text: $workDir)
-                }
-            }
-            .padding(14)
-            .background(mcpCardBackground)
-            .padding(.top, 12)
-
-            HStack {
-                Spacer()
-                Button {} label: {
-                    Text("Save")
-                        .font(BodyFont.system(size: 12, wght: 600))
-                        .foregroundColor(Palette.textSecondary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.06))
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.top, 14)
+    private var transportSummary: String {
+        switch server.transport {
+        case .http:
+            let u = server.url
+            return u.isEmpty ? "Streamable HTTP" : "HTTP · \(u)"
+        case .stdio:
+            let c = server.command
+            return c.isEmpty ? "STDIO" : "STDIO · \(c)"
         }
     }
-
-    private var mcpCardBackground: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color(white: 0.085))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
-            )
-    }
 }
 
-private struct MCPField: Identifiable, Hashable {
-    let id = UUID()
-    var value: String = ""
-}
-
-private struct MCPKeyValue: Identifiable, Hashable {
-    let id = UUID()
-    var key: String = ""
-    var value: String = ""
-}
-
-private struct MCPFieldLabel: View {
-    let text: LocalizedStringKey
-    init(_ text: LocalizedStringKey) { self.text = text }
-    var body: some View {
-        Text(text)
-            .font(BodyFont.system(size: 13, wght: 600))
-            .foregroundColor(Palette.textPrimary)
-    }
-}
-
-private struct MCPInputField: View {
-    let placeholder: String
-    @Binding var text: String
+private struct MCPEmptyState: View {
+    let onAdd: () -> Void
 
     var body: some View {
-        TextField(placeholder, text: $text)
-            .textFieldStyle(.plain)
-            .font(BodyFont.system(size: 13, wght: 500))
-            .foregroundColor(Palette.textPrimary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.black.opacity(0.30))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                    )
-            )
-    }
-}
-
-private struct MCPTrashButton: View {
-    let action: () -> Void
-    @State private var hovered: Bool = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "trash")
-                .font(BodyFont.system(size: 11, wght: 500))
-                .foregroundColor(Color(white: hovered ? 0.94 : 0.55))
-                .frame(width: 30, height: 30)
+        VStack(spacing: 10) {
+            Text("No MCP servers connected yet.")
+                .font(BodyFont.system(size: 12.5, wght: 500))
+                .foregroundColor(Palette.textSecondary)
+            Button(action: onAdd) {
+                HStack(spacing: 5) {
+                    Image(systemName: "plus")
+                        .font(BodyFont.system(size: 10, wght: 700))
+                    Text("Add server")
+                        .font(BodyFont.system(size: 12, wght: 600))
+                }
+                .foregroundColor(Palette.textPrimary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(Color.white.opacity(hovered ? 0.06 : 0.0))
+                        .fill(Color.white.opacity(0.08))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                        )
                 )
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .hoverHint(L10n.t("Delete"))
-    }
-}
-
-private struct MCPAddRowButton: View {
-    let label: LocalizedStringKey
-    let action: () -> Void
-    @State private var hovered: Bool = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: "plus")
-                    .font(BodyFont.system(size: 11, wght: 700))
-                Text(label)
-                    .font(BodyFont.system(size: 12.5))
             }
-            .foregroundColor(Color(white: hovered ? 0.94 : 0.65))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.black.opacity(hovered ? 0.36 : 0.30))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                    )
-            )
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-    }
-}
-
-private struct MCPTransportSegmented: View {
-    @Binding var selection: MCPTransport
-
-    var body: some View {
-        SlidingSegmented(
-            selection: $selection,
-            options: [(.stdio, "STDIO"), (.http, "HTTP streaming")],
-            height: 34,
-            fontSize: 12.5
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(white: 0.085))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                )
         )
     }
 }
