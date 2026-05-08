@@ -533,6 +533,43 @@ public final class SecretsStore {
         return toPurge.count
     }
 
+    // MARK: Fixture seeding (DEV ONLY)
+    //
+    // The methods below let dummy-mode fixtures backdate timestamps and
+    // counters that the regular API derives from `Clock.now()`. They are
+    // gated by the `CLAWIX_FIXTURE_SEEDING=1` environment variable, set
+    // exclusively by `dummy.sh` when seeding from `CLAWIX_SECRETS_FIXTURE`.
+    // In production builds (where the env var is never set) every call
+    // is a no-op, so the production write path is unchanged.
+
+    public func _fixtureTouch(
+        secretId: EntityID,
+        createdAt: Timestamp? = nil,
+        updatedAt: Timestamp? = nil,
+        lastUsedAt: Timestamp? = nil,
+        lastRotatedAt: Timestamp? = nil,
+        useCount: Int? = nil,
+        trashedAt: Timestamp? = nil,
+        readOnly: Bool? = nil,
+        isLocked: Bool? = nil
+    ) throws {
+        guard ProcessInfo.processInfo.environment["CLAWIX_FIXTURE_SEEDING"] == "1" else { return }
+        try database.write { db in
+            guard var secret = try SecretRecord.fetchOne(db, key: secretId.uuidString.uppercased()) else {
+                throw SecretsStoreError.secretNotFound
+            }
+            if let createdAt { secret.createdAt = createdAt }
+            if let updatedAt { secret.updatedAt = updatedAt }
+            if let lastUsedAt { secret.lastUsedAt = lastUsedAt }
+            if let lastRotatedAt { secret.lastRotatedAt = lastRotatedAt }
+            if let useCount { secret.useCount = useCount }
+            if let trashedAt { secret.trashedAt = trashedAt }
+            if let readOnly { secret.readOnly = readOnly }
+            if let isLocked { secret.isLocked = isLocked }
+            try secret.update(db)
+        }
+    }
+
     // MARK: Helpers
 
     private func buildFieldRecord(

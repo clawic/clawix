@@ -230,4 +230,50 @@ public final class AgentGrantStore {
         guard let json, let data = json.data(using: .utf8) else { return [:] }
         return (try? JSONDecoder().decode([String: String].self, from: data)) ?? [:]
     }
+
+    // MARK: Fixture seeding (DEV ONLY)
+    //
+    // Creates a grant record with explicit timestamps so dummy-mode
+    // fixtures can paint the Grants tab with a mix of ACTIVE / EXPIRED /
+    // REVOKED entries spread over time. Gated by `CLAWIX_FIXTURE_SEEDING=1`;
+    // no-op in production. The synthesized `tokenHash` is random (the seed
+    // never needs to resolve a real token), and the duration precondition
+    // of `issue()` is intentionally bypassed because seeded grants model
+    // historical grants whose original duration is irrelevant.
+    @discardableResult
+    public func _fixtureSeedGrant(
+        accountId: Int64 = 0,
+        agent: String,
+        secretId: EntityID,
+        capability: AgentCapability,
+        reason: String,
+        scope: [String: String],
+        createdAt: Timestamp,
+        expiresAt: Timestamp,
+        revokedAt: Timestamp? = nil,
+        usedCount: Int = 0,
+        lastUsedAt: Timestamp? = nil
+    ) throws -> AgentGrantRecord? {
+        guard ProcessInfo.processInfo.environment["CLAWIX_FIXTURE_SEEDING"] == "1" else { return nil }
+        let scopeData = try? JSONEncoder().encode(scope)
+        let scopeJson = scopeData.flatMap { String(data: $0, encoding: .utf8) }
+        let tokenHash = AgentTokenIssuer.hash(AgentTokenIssuer.generateToken())
+        var grant = AgentGrantRecord(
+            id: EntityID.newID(),
+            accountId: accountId,
+            agent: agent,
+            secretId: secretId,
+            capability: capability,
+            scopeJson: scopeJson,
+            reason: reason,
+            tokenHash: tokenHash,
+            createdAt: createdAt,
+            expiresAt: expiresAt,
+            revokedAt: revokedAt,
+            usedCount: usedCount,
+            lastUsedAt: lastUsedAt
+        )
+        try database.write { db in try grant.insert(db) }
+        return grant
+    }
 }

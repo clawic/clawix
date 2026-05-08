@@ -60,6 +60,32 @@ public struct DecryptedAuditEvent: Sendable, Hashable {
     public let deviceId: String?
     public let sessionId: String?
     public let payload: AuditEventPayload
+
+    public init(
+        id: EntityID,
+        secretId: EntityID? = nil,
+        vaultId: EntityID? = nil,
+        versionId: EntityID? = nil,
+        kind: AuditEventKind,
+        timestamp: Timestamp,
+        source: AuditEventSource,
+        success: Bool? = nil,
+        deviceId: String? = nil,
+        sessionId: String? = nil,
+        payload: AuditEventPayload
+    ) {
+        self.id = id
+        self.secretId = secretId
+        self.vaultId = vaultId
+        self.versionId = versionId
+        self.kind = kind
+        self.timestamp = timestamp
+        self.source = source
+        self.success = success
+        self.deviceId = deviceId
+        self.sessionId = sessionId
+        self.payload = payload
+    }
 }
 
 public struct AuditIntegrityReport: Sendable, Hashable {
@@ -67,6 +93,11 @@ public struct AuditIntegrityReport: Sendable, Hashable {
     public let firstBrokenAt: EntityID?
 
     public var isIntact: Bool { firstBrokenAt == nil }
+
+    public init(totalEvents: Int, firstBrokenAt: EntityID? = nil) {
+        self.totalEvents = totalEvents
+        self.firstBrokenAt = firstBrokenAt
+    }
 }
 
 public struct AuditEventFilter: Sendable, Hashable {
@@ -143,6 +174,81 @@ public final class AuditStore {
                 timestamp = max(now, prev.timestamp + 1)
             } else {
                 timestamp = now
+            }
+            let canonical = Self.canonicalClear(
+                id: id, accountId: accountId,
+                secretId: new.secretId, vaultId: new.vaultId, versionId: new.versionId,
+                kind: new.kind, timestamp: timestamp, source: new.source,
+                success: new.success, deviceId: deviceId, sessionId: new.sessionId,
+                prevHash: prevHash
+            )
+            let selfHash = computeSelfHash(canonical: canonical, ciphertext: payloadCiphertext)
+            let record = AuditEventRecord(
+                id: id,
+                accountId: accountId,
+                secretId: new.secretId,
+                vaultId: new.vaultId,
+                versionId: new.versionId,
+                kind: new.kind,
+                timestamp: timestamp,
+                source: new.source,
+                success: new.success,
+                deviceId: deviceId,
+                sessionId: new.sessionId,
+                wrappedEventKey: wrappedEventKey,
+                payloadCiphertext: payloadCiphertext,
+                prevHash: prevHash,
+                selfHash: selfHash
+            )
+            try record.insert(db)
+            return record
+        }
+    }
+
+    // MARK: Fixture seeding (DEV ONLY)
+    //
+    // Inserts an event using an explicit timestamp instead of Clock.now()
+    // so dummy-mode fixtures can paint a realistic activity timeline.
+    // Gated by `CLAWIX_FIXTURE_SEEDING=1` (set by `dummy.sh`); a no-op in
+    // production. Seed events MUST be appended in ascending timestamp
+    // order before any real (non-seed) events run, so the cryptographic
+    // chain stays valid: each call uses the latest existing event's
+    // selfHash as prevHash, exactly like `append`. If `timestamp` is not
+    // strictly greater than the latest existing event, it gets bumped to
+    // `prev.timestamp + 1` to preserve the monotonic invariant.
+    @discardableResult
+    public func _fixtureAppendBackdated(
+        _ new: NewAuditEvent,
+        timestamp explicitTimestamp: Timestamp,
+        accountId: Int64 = 0
+    ) throws -> AuditEventRecord? {
+        guard ProcessInfo.processInfo.environment["CLAWIX_FIXTURE_SEEDING"] == "1" else { return nil }
+        let id = EntityID.newID()
+        let eventKeyBytes = SecureRandom.bytes(32)
+        let eventKey = LockableSecret(bytes: eventKeyBytes)
+        let wrappedEventKey = try AEAD.seal(
+            plaintext: eventKeyBytes,
+            key: auditMacKey,
+            aad: Self.aadForKeyWrap(eventId: id)
+        )
+        let payloadJSON = try JSONEncoder().encode(new.payload)
+        let payloadCiphertext = try AEAD.seal(
+            plaintext: payloadJSON,
+            key: eventKey,
+            aad: Self.aadForPayload(eventId: id)
+        )
+
+        return try database.write { [self] db -> AuditEventRecord in
+            let prevRow = try AuditEventRecord
+                .order(Column("timestamp").desc)
+                .limit(1)
+                .fetchOne(db)
+            let prevHash = prevRow?.selfHash ?? chainGenesis
+            let timestamp: Timestamp
+            if let prev = prevRow {
+                timestamp = max(explicitTimestamp, prev.timestamp + 1)
+            } else {
+                timestamp = explicitTimestamp
             }
             let canonical = Self.canonicalClear(
                 id: id, accountId: accountId,

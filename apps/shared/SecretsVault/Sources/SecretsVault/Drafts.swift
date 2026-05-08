@@ -77,4 +77,22 @@ public struct RevealedField: Equatable, Hashable, Sendable {
     public let otpPeriod: Int?
     public let otpDigits: Int?
     public let otpAlgorithm: OtpAlgorithm?
+
+    public init(
+        name: String,
+        fieldKind: FieldKind,
+        placement: FieldPlacement,
+        value: String?,
+        otpPeriod: Int? = nil,
+        otpDigits: Int? = nil,
+        otpAlgorithm: OtpAlgorithm? = nil
+    ) {
+        self.name = name
+        self.fieldKind = fieldKind
+        self.placement = placement
+        self.value = value
+        self.otpPeriod = otpPeriod
+        self.otpDigits = otpDigits
+        self.otpAlgorithm = otpAlgorithm
+    }
 }
