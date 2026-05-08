@@ -5,9 +5,9 @@ let sidebarDefaultWidth: CGFloat = 372
 let sidebarMaxWidth: CGFloat = 558           // 372 + 50%
 let sidebarMinVisibleWidth: CGFloat = 220    // can't shrink below while open
 let sidebarCloseThreshold: CGFloat = 200     // drag-release below → snap closed
-// Settings sidebar is fixed-width and not user-resizable. ~10% narrower
+// Settings sidebar is fixed-width and not user-resizable. ~20% narrower
 // than the chat sidebar so the categories list reads tighter.
-let settingsSidebarWidth: CGFloat = 334
+let settingsSidebarWidth: CGFloat = 298
 let rightSidebarDefaultWidth: CGFloat = 720
 let rightSidebarMaxWidth: CGFloat = 1080
 let rightSidebarMinVisibleWidth: CGFloat = 380
