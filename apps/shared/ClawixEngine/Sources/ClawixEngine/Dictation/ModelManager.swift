@@ -15,6 +15,14 @@ public final class DictationModelManager: ObservableObject {
     /// GUI and the LaunchAgent daemon agree on which variant to load.
     public static let activeModelDefaultsKey = "dictation.activeModel"
 
+    /// Posted by `TranscriptionService` (or anything else that wipes a
+    /// broken install) so every `DictationModelManager` instance —
+    /// there's typically one in the GUI and one in the daemon — drops
+    /// the broken model from `installedModels`. The notification's
+    /// object is the `DictationModel.rawValue` string so observers can
+    /// surface a targeted "re-download needed" error in Settings.
+    public static let modelInvalidatedNotification = Notification.Name("DictationModelInvalidated")
+
     @Published public private(set) var activeModel: DictationModel
     @Published public private(set) var downloadProgress: [DictationModel: Double] = [:]
     @Published public private(set) var installedModels: Set<DictationModel> = []
@@ -32,6 +40,7 @@ public final class DictationModelManager: ObservableObject {
     /// from the Settings row; `nil` means no download is running for
     /// that model.
     private var inFlight: [DictationModel: Task<Void, Never>] = [:]
+    private var invalidationObserver: NSObjectProtocol?
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -42,6 +51,27 @@ public final class DictationModelManager: ObservableObject {
             self.activeModel = .default
         }
         refreshInstalled()
+        invalidationObserver = NotificationCenter.default.addObserver(
+            forName: Self.modelInvalidatedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            Task { @MainActor in
+                guard let self else { return }
+                self.refreshInstalled()
+                if let raw = note.object as? String,
+                   let model = DictationModel(rawValue: raw) {
+                    self.downloadProgress[model] = nil
+                    self.downloadErrors[model] = "Previous \(model.displayName) download was incomplete. Tap Download to retry."
+                }
+            }
+        }
+    }
+
+    deinit {
+        if let invalidationObserver {
+            NotificationCenter.default.removeObserver(invalidationObserver)
+        }
     }
 
     // MARK: - Active model
@@ -66,6 +96,18 @@ public final class DictationModelManager: ObservableObject {
             downloadErrors[model] = nil
             return
         }
+
+        // Any previous attempt that landed an incomplete tree (e.g.
+        // the user quit mid-download, the network dropped, or the
+        // process crashed during snapshot) leaves a partial folder
+        // under `argmaxinc/whisperkit-coreml/openai_whisper-…/` that
+        // is NOT a valid install. Hub.snapshot doesn't always cleanly
+        // overwrite, and the tail of those broken `.mlmodelc` dirs
+        // would silently survive a "successful" re-download and break
+        // CoreML at load time. Wipe (silently — the user just asked
+        // to download, no need to flag a "previous download was
+        // incomplete" banner) before retrying.
+        Self.wipeFolders(for: model)
 
         downloadProgress[model] = 0
         downloadErrors[model] = nil
@@ -113,10 +155,9 @@ public final class DictationModelManager: ObservableObject {
                         // half-written tree (a single completed
                         // .mlmodelc inside the variant folder is enough
                         // to fool the recursive probe and would leave
-                        // the row stuck on Use/Delete).
-                        for url in Self.candidatePaths(for: model) {
-                            try? FileManager.default.removeItem(at: url)
-                        }
+                        // the row stuck on Use/Delete). Silent wipe —
+                        // cancellation is intentional, no banner.
+                        Self.wipeFolders(for: model)
                         self.refreshInstalled()
                         self.downloadProgress[model] = nil
                         self.downloadErrors[model] = nil
@@ -129,8 +170,20 @@ public final class DictationModelManager: ObservableObject {
                         if self.installedModels.contains(model) {
                             self.downloadProgress[model] = 1.0
                         } else {
+                            // Partial state left over: every previous
+                            // run treated this as "still installed" if
+                            // ANY .mlmodelc dir was on disk, which is
+                            // exactly how the user got into the
+                            // "Unable to load model … coremldata.bin
+                            // is not valid" trap. Silent wipe so the
+                            // next download is clean; we set our own
+                            // contextual error message right after, so
+                            // we don't want the notification observer
+                            // overwriting it with the generic
+                            // "previous download was incomplete" copy.
+                            Self.wipeFolders(for: model)
                             self.downloadProgress[model] = nil
-                            self.downloadErrors[model] = message
+                            self.downloadErrors[model] = "Download failed: \(message). Tap Download to retry."
                         }
                     }
                 }
@@ -224,25 +277,82 @@ public final class DictationModelManager: ObservableObject {
         ]
     }
 
-    /// Return the first candidate that holds at least one `.mlmodelc`,
-    /// or nil if none do. Shared by `refreshInstalled` (which only
-    /// needs presence) and `TranscriptionService` (which needs the
-    /// actual path to feed `WhisperKitConfig.modelFolder`).
+    /// Return the first candidate that holds a complete WhisperKit
+    /// variant install, or nil if none do. WhisperKit reads the
+    /// tokenizer separately from the `openai/whisper-<variant>` cache
+    /// (different repo) so we don't require a `tokenizer.json` next to
+    /// the weights — the argmaxinc folder typically doesn't carry one.
     public nonisolated static func installedFolder(for model: DictationModel) -> URL? {
         for url in candidatePaths(for: model) {
-            if hasMLModelC(at: url) { return url }
+            if isCompleteVariantFolder(at: url) { return url }
         }
         return nil
     }
 
-    private nonisolated static func hasMLModelC(at url: URL) -> Bool {
-        guard let entries = try? FileManager.default.contentsOfDirectory(
-            at: url,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else { return false }
-        return entries.contains { $0.pathExtension == "mlmodelc" }
-            || entries.contains { hasMLModelC(at: $0) }
+    /// CoreML refuses to load any `.mlmodelc` that doesn't carry a
+    /// `coremldata.bin`, and an interrupted Hub.snapshot frequently
+    /// leaves the dir present but without that file (or with it
+    /// truncated to zero bytes). Treat both as "not installed" so the
+    /// Settings row falls back to "Download" instead of pretending the
+    /// model is ready. The previous `hasMLModelC` check only required
+    /// the directory to exist, which is what shipped the user the
+    /// "Unable to load model: file:///…/MelSpectrogram.mlmodelc"
+    /// CoreML error after a partially-downloaded large-v3.
+    private nonisolated static func mlmodelcIsValid(at url: URL) -> Bool {
+        let bin = url.appendingPathComponent("coremldata.bin")
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: bin.path) else {
+            return false
+        }
+        if (attrs[.type] as? FileAttributeType) != .typeRegular { return false }
+        if (attrs[.size] as? NSNumber)?.intValue ?? 0 <= 0 { return false }
+        return true
+    }
+
+    /// Components every Whisper variant on `argmaxinc/whisperkit-coreml`
+    /// ships and that WhisperKit's `loadModels` looks up by name. Some
+    /// distilled variants additionally ship `TextDecoderContextPrefill`
+    /// — that one is optional and absent from base Large V3, so we
+    /// don't gate on it.
+    private nonisolated static var requiredMLModelCNames: [String] {
+        ["MelSpectrogram", "AudioEncoder", "TextDecoder"]
+    }
+
+    /// True iff `url` looks like a complete WhisperKit variant folder:
+    /// the three required `.mlmodelc` directories are present and each
+    /// of them carries a non-empty `coremldata.bin`. We don't validate
+    /// the inner `weights/weight.bin` because some small components
+    /// inline their tensors into `model.mil`; CoreML's load step is
+    /// the canonical authority and `coremldata.bin` is its gating file.
+    public nonisolated static func isCompleteVariantFolder(at url: URL) -> Bool {
+        for name in requiredMLModelCNames {
+            let mlc = url.appendingPathComponent("\(name).mlmodelc", isDirectory: true)
+            if !mlmodelcIsValid(at: mlc) { return false }
+        }
+        return true
+    }
+
+    /// Synchronously remove every candidate path for `model`. Used by
+    /// `cancel`, `delete`, and the pre-download wipe — none of which
+    /// should surface a "previous download was incomplete" banner to
+    /// the user, since those are intentional or routine.
+    private nonisolated static func wipeFolders(for model: DictationModel) {
+        for url in candidatePaths(for: model) {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
+    /// Wipe the on-disk tree AND post `modelInvalidatedNotification`,
+    /// so every live `DictationModelManager` instance (GUI + daemon)
+    /// drops the model from `installedModels` and shows a re-download
+    /// prompt. Reserved for genuine corruption signals — e.g. when
+    /// `TranscriptionService` finds the folder passes our static
+    /// validation but WhisperKit still refuses to load what's there.
+    public nonisolated static func wipeBrokenInstall(for model: DictationModel) {
+        wipeFolders(for: model)
+        NotificationCenter.default.post(
+            name: modelInvalidatedNotification,
+            object: model.rawValue
+        )
     }
 
     /// Root directory under which WhisperKit caches downloaded models.
