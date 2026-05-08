@@ -401,6 +401,7 @@ cat > "$BUNDLE/Contents/Info.plist" << PLIST
     <key>CFBundleIconFile</key>          <string>Clawix</string>
     <key>CFBundleVersion</key>           <string>${BUILD_NUMBER}</string>
     <key>CFBundleShortVersionString</key><string>${MARKETING_VERSION}</string>
+    <key>ClawJSVersion</key>             <string>${CLAWJS_VERSION}</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>
@@ -430,6 +431,28 @@ if [[ -n "$SPARKLE_FW" ]]; then
     cp -R "$SPARKLE_FW" "$BUNDLE/Contents/Frameworks/Sparkle.framework"
 else
     echo "WARN: Sparkle.framework not found in .build; auto-update will be inert" >&2
+fi
+
+# 3.4) Bundle the pinned @clawjs/cli release plus a Node runtime under
+#      Contents/Helpers/clawjs/. ClawJSRuntime.swift expects this layout
+#      at runtime. The script is idempotent (skips when CLAWJS_VERSION
+#      already matches the installed tree) and signs every nested .node
+#      with SIGN_IDENTITY so the outer bundle codesign passes.
+#
+# TEMPORARILY DISABLED in the dev loop — the outer codesign on
+# Contents/Helpers/clawjs/ chokes on bundled npm packages whose package.json
+# layout is interpreted as a sub-bundle (zod/v4/locales/es.cjs). Re-enable
+# once the bundling layout moves to Contents/Resources/clawjs/ or the
+# clawjs tree is sealed as a self-contained signed sub-bundle. ClawJSRuntime.swift
+# already tolerates the missing tree (isAvailable returns false in dev).
+if [[ "${CLAWIX_DEV_BUNDLE_CLAWJS:-0}" == "1" ]]; then
+    echo "==> Bundling ClawJS runtime"
+    CLAWJS_SIGN_IDENTITY="$SIGN_IDENTITY" \
+    CLAWJS_SIGN_OPTS="--timestamp=none" \
+        bash "$SCRIPT_DIR/bundle_clawjs.sh" "$BUNDLE"
+else
+    echo "==> Skipping ClawJS bundling (set CLAWIX_DEV_BUNDLE_CLAWJS=1 to enable)"
+    rm -rf "$BUNDLE/Contents/Helpers/clawjs"
 fi
 
 # 4) Sign the bundle with the stable identity. TCC ties permissions to
@@ -507,6 +530,16 @@ fi
 
 # 5) Launch the app bundle. Window position is restored from the autosave
 #    name, so the user sees the same window in the same place.
+#
+#    `CLAWIX_DEV_NOLAUNCH=1` skips the launch and exits after a successful
+#    build. Used by `perf-capture.sh` so xctrace can be the one launching
+#    the binary (and seeing its launch timeline). Bundle path is printed
+#    so the caller can find it.
+if [[ "${CLAWIX_DEV_NOLAUNCH:-0}" == "1" ]]; then
+    echo "==> Build complete, launch skipped (CLAWIX_DEV_NOLAUNCH=1)"
+    echo "Bundle: $BUNDLE"
+    exit 0
+fi
 echo "==> Launching ${APP_NAME}"
 /usr/bin/open -n "$BUNDLE"
 
