@@ -119,7 +119,7 @@ struct ContentView: View {
         switch appState.currentRoute {
         case .home, .search, .plugins, .project, .chat:
             return true
-        case .automations, .settings:
+        case .automations, .settings, .secretsHome:
             return false
         }
     }
@@ -198,6 +198,7 @@ struct ContentView: View {
                         case .project:       MainContentView()
                         case .chat(let id):  ChatView(chatId: id)
                         case .settings:      SettingsContent()
+                        case .secretsHome:   SecretsScreen()
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

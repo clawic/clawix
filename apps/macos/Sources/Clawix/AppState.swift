@@ -16,6 +16,7 @@ enum SidebarRoute: Equatable {
     case project
     case chat(UUID)
     case settings
+    case secretsHome
 }
 
 // MARK: - Models

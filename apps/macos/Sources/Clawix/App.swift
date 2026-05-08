@@ -58,6 +58,8 @@ struct ClawixApp: App {
     @StateObject private var updater = UpdaterController()
     @StateObject private var windowState = WindowState()
     @StateObject private var dictation = DictationCoordinator.shared
+    @StateObject private var vaultManager = VaultManager()
+    @StateObject private var featureFlags = FeatureFlags.shared
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -97,6 +99,8 @@ struct ClawixApp: App {
                 .environmentObject(updater)
                 .environmentObject(windowState)
                 .environmentObject(dictation)
+                .environmentObject(vaultManager)
+                .environmentObject(featureFlags)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until
@@ -153,6 +157,8 @@ struct ClawixApp: App {
         MenuBarExtra {
             MenuBarContent()
                 .environmentObject(appState)
+                .environmentObject(vaultManager)
+                .environmentObject(featureFlags)
         } label: {
             Image(nsImage: ClawixLogoTemplateImage.make(size: 18))
         }
@@ -161,6 +167,8 @@ struct ClawixApp: App {
 
 private struct MenuBarContent: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var flags: FeatureFlags
     @ObservedObject private var micPrefs = MicrophonePreferences.shared
     @Environment(\.openWindow) private var openWindow
 
@@ -169,6 +177,44 @@ private struct MenuBarContent: View {
             openMainWindow()
         }
         .keyboardShortcut("o")
+
+        Divider()
+
+        if flags.isVisible(.secrets) {
+            Menu(secretsMenuTitle) {
+                Button("Show vault") {
+                    appState.currentRoute = .secretsHome
+                    openMainWindow()
+                }
+                switch vault.state {
+                case .unlocked:
+                    Button("Lock now") { vault.lock() }
+                        .keyboardShortcut("l", modifiers: [.command, .shift])
+                    Divider()
+                    if !vault.openAnomalies.isEmpty {
+                        Text("\(vault.openAnomalies.count) open anomal\(vault.openAnomalies.count == 1 ? "y" : "ies")")
+                            .foregroundColor(.orange)
+                    }
+                    if !vault.activeGrants.isEmpty {
+                        Text("\(vault.activeGrants.count) active grant\(vault.activeGrants.count == 1 ? "" : "s")")
+                    }
+                    Text("\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s")")
+                        .foregroundColor(.secondary)
+                case .locked:
+                    Button("Unlock…") {
+                        appState.currentRoute = .secretsHome
+                        openMainWindow()
+                    }
+                case .uninitialized:
+                    Button("Set up vault…") {
+                        appState.currentRoute = .secretsHome
+                        openMainWindow()
+                    }
+                default:
+                    EmptyView()
+                }
+            }
+        }
 
         Divider()
 
@@ -201,6 +247,16 @@ private struct MenuBarContent: View {
             NSApp.terminate(nil)
         }
         .keyboardShortcut("q")
+    }
+
+    private var secretsMenuTitle: String {
+        switch vault.state {
+        case .unlocked: return "Secrets · unlocked"
+        case .locked, .unlocking: return "Secrets · locked"
+        case .uninitialized: return "Secrets · not set up"
+        case .loading: return "Secrets · loading"
+        case .openFailed: return "Secrets · error"
+        }
     }
 
     /// Reuse the existing main-window NSWindow if SwiftUI is still
