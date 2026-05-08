@@ -22,6 +22,7 @@ struct ComposerView: View {
     @State private var projectEditorContext: ProjectEditorContext?
     @State private var slashHighlightID: String? = nil
     @State private var composerContentHeight: CGFloat = 52
+    @State private var planSuggestionDismissed = false
 
     private let cornerRadius: CGFloat = 22
     private let projectOverlap: CGFloat = 32
@@ -56,6 +57,31 @@ struct ComposerView: View {
     }
 
     private var slashOpen: Bool { slashQuery != nil }
+
+    /// True when the draft contains the standalone word "plan"
+    /// (case-insensitive, separated by word boundaries) so we can offer
+    /// the plan-mode shortcut. We deliberately keep this English-only
+    /// per spec: "plan" is the same word in EN/ES and the suggestion
+    /// is intentionally a literal trigger, not localised.
+    private var draftMentionsPlan: Bool {
+        let text = composer.text
+        guard !text.isEmpty else { return false }
+        return text.range(of: #"(?i)\bplan\b"#, options: .regularExpression) != nil
+    }
+
+    private var showsPlanSuggestion: Bool {
+        draftMentionsPlan
+            && !appState.planMode
+            && !planSuggestionDismissed
+    }
+
+    private func activatePlanModeFromSuggestion() {
+        guard !appState.planMode else { return }
+        withAnimation(.easeOut(duration: 0.18)) {
+            appState.togglePlanMode()
+            planSuggestionDismissed = false
+        }
+    }
 
     var body: some View {
         RenderProbe.tick("ComposerView")
@@ -445,6 +471,46 @@ struct ComposerView: View {
     }
 
     private var composerStack: some View {
+        VStack(spacing: 8) {
+            if showsPlanSuggestion {
+                PlanSuggestionBar(
+                    onUsePlanMode: { activatePlanModeFromSuggestion() },
+                    onDismiss: {
+                        withAnimation(.easeOut(duration: 0.18)) {
+                            planSuggestionDismissed = true
+                        }
+                    }
+                )
+                .padding(.horizontal, 4)
+                .transition(.asymmetric(
+                    insertion: AnyTransition.opacity
+                        .combined(with: AnyTransition.offset(y: 6)),
+                    removal: AnyTransition.opacity
+                        .combined(with: AnyTransition.offset(y: 4))
+                ))
+            }
+
+            mainComposerStack
+        }
+        .animation(.easeOut(duration: 0.20), value: showsPlanSuggestion)
+        .onChange(of: composer.text) {
+            // Reset the user's "X" once the trigger word leaves the
+            // draft, so the next time they re-type "plan" the hint
+            // surfaces again.
+            if !draftMentionsPlan, planSuggestionDismissed {
+                planSuggestionDismissed = false
+            }
+        }
+        .onChange(of: appState.planMode) {
+            // Plan mode just turned on (via shortcut, pill, slash menu,
+            // or this suggestion), so the hint has done its job.
+            if appState.planMode, planSuggestionDismissed {
+                planSuggestionDismissed = false
+            }
+        }
+    }
+
+    private var mainComposerStack: some View {
         VStack(spacing: -projectOverlap) {
             VStack(spacing: 0) {
                 if !composer.attachments.isEmpty {
@@ -476,7 +542,12 @@ struct ComposerView: View {
                         contentHeight: $composerContentHeight,
                         autofocus: true,
                         focusToken: composer.focusToken,
-                        onSubmit: { appState.sendMessage() }
+                        onSubmit: { appState.sendMessage() },
+                        onShiftTab: {
+                            withAnimation(.easeOut(duration: 0.18)) {
+                                appState.togglePlanMode()
+                            }
+                        }
                     )
                     .padding(.horizontal, 9)
                     .padding(.vertical, composerVerticalPadding)
@@ -1803,6 +1874,9 @@ struct ComposerTextEditor: NSViewRepresentable {
     /// the same editor instance stays mounted.
     var focusToken: Int = 0
     var onSubmit: () -> Void
+    /// Fires when the user presses ⇧⇥ inside the editor. The composer
+    /// uses this to toggle plan mode without leaving the keyboard.
+    var onShiftTab: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -1939,6 +2013,12 @@ struct ComposerTextEditor: NSViewRepresentable {
                 }
                 parent.onSubmit()
                 return true
+            }
+            if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+                if let onShiftTab = parent.onShiftTab {
+                    onShiftTab()
+                    return true
+                }
             }
             return false
         }
