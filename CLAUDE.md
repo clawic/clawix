@@ -125,6 +125,20 @@ Required invariants:
 - Daemon-first expansion. If a new bridge feature needs to work on iOS, add daemon support and E2E coverage for that frame before wiring UI clients to it.
 - No real-cost validation by default. E2E tests should use isolated fake backends unless the user explicitly approves a real prompt. Real host validation may authenticate and list chats, but must not send real prompts without confirmation.
 
+## Feature flags: experimental hidden in release builds
+
+Two opt-in tiers gate in-development surfaces: **Beta** and **Experimental**. The toggles live in Settings → General. Both default to OFF. The toggles, the underlying persistence and the user-visible card are **dev-only** — release builds (`swift build -c release`, i.e. anything `dev.sh` did not produce) ship without them.
+
+Hard rules:
+
+- The "Feature previews" card in Settings → General is wrapped in `#if DEBUG`. In a notarized binary the card does not render and the toggles are not user-controllable.
+- `FeatureFlags.beta` and `FeatureFlags.experimental` are `@Published var` only inside `#if DEBUG`. Under `#else`, they are `let beta = false` / `let experimental = false` with no UserDefaults backing. A stale value persisted by an earlier dev build cannot leak into a release build because the persistence code does not exist there.
+- `isVisible(_:)` keeps the same signature in both configurations. Call sites (`SidebarView`, `App`, `QuickAskController`, `AppState`, etc.) need no `#if DEBUG` of their own — in release the function returns `false` for any beta or experimental tier.
+- This must stay **compile-time** enforced, not runtime config. Do not introduce a `UserDefaults` override, an Info.plist key, an environment variable or a launch argument that re-enables either flag in a release build. The contract is: notarized = stable surface only, no escape hatch.
+- When promoting a feature out of beta/experimental, change its `tier` in `AppFeature.tier` to `.stable`. Do not "ship it via the experimental toggle" by flipping a default — the toggle is gone in release.
+
+Auto-enforced via the `#if DEBUG` guards in `FeatureFlags.swift` and `SettingsView.swift`. If a contributor introduces a new toggle that should also be dev-only, follow the same pattern (compile-time guard around both the storage and the UI).
+
 ## Corner radius: always squircle (`.continuous`)
 
 App-wide standard. Every corner radius is rendered with `style: .continuous` (Apple's superellipse). Never `.circular`, never the default style. The difference vs. `.circular` is subtle but cumulative: a `.continuous` app feels "pro", a `.circular` one feels amateur.
@@ -233,9 +247,22 @@ Hard rules:
 
 - **One file per icon, named after it.** New icons go in their own `XxxIcon.swift` file. Do not paste a Canvas / Path icon body into a feature view file. Existing icons that live in feature files (the "legacy spot" rows above) are pending extraction; treat them as an exception, not a precedent.
 - **Never duplicate a custom icon's body across files.** If you need the same glyph in a new place, import the existing struct. If two places need slightly different sizes / colors, parametrize the existing struct with `var size: CGFloat`, `var color: Color`, etc., do NOT copy/paste.
-- **Before reaching for `Image(systemName: "…")`, check the table above and grep the project for `<concept>Icon`.** Only fall back to SF Symbols when the glyph genuinely has no identity (caret chevrons, generic placeholders, OS-level concepts like `arrow.up.right.square`). When you do use SF Symbols, keep them tonally aligned with the surrounding custom icons (`Color(white: 0.55)`-`0.86`, hairline weights).
-- **The model behind this rule**: a custom icon is the project's design DNA. If you swap one for an SF Symbol the screen feels "off" even if you can't pinpoint why. The user notices.
+- **Before reaching for any system icon, check the table above and grep the project for `<concept>Icon`.** When the glyph genuinely has no project-custom equivalent, the canonical fallback is a **Lucide-sourced icon** (see "Lucide-sourced icons" below), NOT an SF Symbol.
+- **The model behind this rule**: a custom icon is the project's design DNA. If you swap one for a generic icon the screen feels "off" even if you can't pinpoint why. The user notices.
 - When in doubt about whether a glyph deserves a custom icon, **ask before drawing**. Hand-drawing an icon that already has a system equivalent and lives nowhere else in the app is wasted work.
+
+## Lucide-sourced icons (project canon, fallback for non-custom glyphs)
+
+When a glyph has no project-custom icon (the table above), the fallback is **Lucide** (https://lucide.dev), not SF Symbols. Lucide has a clean, restrained outline language that sits next to the custom Path-based icons without breaking visual consistency; SF Symbols feel generic next to the rest of the chrome.
+
+Hard rules:
+
+- **Use the SPM-managed Lucide package, never hand-port the SVG paths.** A previous attempt to hand-port silhouettes into SwiftUI `Path` shapes was a visual fracaso (chevrons came out fine, complex glyphs like trash, paperclip, link, drama looked broken). The canonical install is `lcandy2/LucideIcon` from `https://github.com/lcandy2/LucideIcon.git`, declared in `apps/macos/Package.swift` and in `apps/ios/project.yml` (`packages.LucideIcon`). The package converts every Lucide SVG into a custom SF Symbol via `swiftdraw` and ships them as an asset catalog, so existing SwiftUI Image modifiers (`.font(.system(size:))`, `.foregroundStyle`, `.symbolRenderingMode`, `.imageScale`) all continue to work like a normal `Image(systemName:)`.
+- **Call sites use `Image(lucide: .name)`.** Hyphens become underscores: `chevron-down` → `.chevron_down`, `trash-2` → `.trash_2`, `arrow-up-right` → `.arrow_up_right`. The list of available cases lives in the package's `LucideIcon+All.swift`. Files that use Lucide need `import LucideIcon` at the top, alongside `import SwiftUI`.
+- **Bridge for legacy SF Symbol strings.** A small `LucideBridge.swift` lives at `apps/macos/Sources/Clawix/LucideBridge.swift` (and mirrored at `apps/ios/Sources/Clawix/Theme/LucideBridge.swift`). It exposes `LucideIcon.sfMapped(_: String) -> LucideIcon?` and `Image(lucideOrSystem: String)`. Use the latter at sites where the icon name is a runtime String coming from data tables (settings categories, plugin metadata, permission-mode `iconName` properties, etc.). The bridge's mapping table is the single place where a new SF-Symbol-string-to-Lucide entry is added.
+- **SF Symbols stay forbidden** as a generic fallback. The only legitimate `Image(systemName:)` left in the codebase is for genuinely OS-level chrome where the platform glyph is the right answer (e.g. `command` for the Cmd modifier in keyboard shortcut hints, `return` for the Return key, system menu/menubar conventions where AppKit owns the rendering). Anything that depicts a domain concept (folder, document, trash, search, chevron, plus, x, arrow, etc.) goes through Lucide.
+
+The brand mark is still `ClawixLogoIcon` / `ClawixLogoTemplateImage`. Lucide is for everything that is a domain glyph without project identity.
 
 ## Dropdowns / popups / context menus (project canon)
 
@@ -392,3 +419,17 @@ Hard rules:
 Canonical helpers live in `Theme/GlassPill.swift` (`glassCapsule()`, `glassCircle()`, `glassRounded(radius:)`, `GlassIconButton`). Reuse them; do not re-derive the modifier chain by hand. Color and size tokens live in `Theme/DesignTokens.swift` (`Palette`, `AppLayout`, `Typography`); add to those files instead of inlining magic numbers.
 
 Reference for layout, hierarchy and motion: ChatGPT iOS. The chat detail surface (light bubble for user messages, bare text for assistant, floating glass composer, two glass clusters in the top bar) is the visual baseline; copy paddings, radii and weights from there before inventing.
+
+## Icons (iOS)
+
+Same hierarchy as macOS:
+
+1. **Project-custom icons first.** Glyphs that have identity in the product (the brand mark, the mic, the wrench, the family of folder/file/branch icons, etc.) are hand-drawn SwiftUI `Path`/`Shape` views. The macOS app already ships the canonical set (`ClawixLogoIcon`, `MicIcon`, `WrenchIcon`, `FileChipIcon`, `FolderOpenIcon`, ...). Where iOS needs the same concept, port the existing Mac struct into `apps/ios/Sources/Clawix/Theme/` (or move it to `apps/shared/` if it stabilises) rather than redrawing.
+2. **Lucide-sourced icons as fallback.** Same rules as the macOS section "Lucide-sourced icons":
+   - The SPM dep is `lcandy2/LucideIcon`, declared in `apps/ios/project.yml` under `packages` and added to the `Clawix` target's `dependencies`. Re-run `xcodegen generate` after editing `project.yml`.
+   - Call sites use `Image(lucide: .name)` (kebab-to-underscore naming: `chevron-down` → `.chevron_down`).
+   - The bridge is `apps/ios/Sources/Clawix/Theme/LucideBridge.swift`, mirroring the macOS file. Dynamic name strings flow through `Image(lucideOrSystem: name)`.
+   - Files that use Lucide need `import LucideIcon` next to `import SwiftUI`.
+3. **SF Symbols stay forbidden** as a generic fallback. The only legitimate `Image(systemName:)` left is for genuinely OS-level chrome (keyboard shortcut indicators, Liquid Glass system buttons that ship a fixed SF Symbol per Apple's HIG). Anything depicting a domain concept goes through Lucide.
+
+This applies on top of the Liquid Glass design language: a `Image(lucide: .name)` placed inside a `glassCircle()` or `glassCapsule()` button is the canonical iOS chrome icon button, not `Image(systemName:)`.
