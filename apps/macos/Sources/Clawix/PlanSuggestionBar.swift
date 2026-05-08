@@ -13,8 +13,7 @@ struct PlanSuggestionBar: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "checklist")
-                .font(BodyFont.system(size: 13, weight: .medium))
+            LucideIcon(.listChecks, size: 13)
                 .foregroundColor(Color(white: 0.88))
 
             Text(L10n.t("Create a plan"))
@@ -80,8 +79,7 @@ struct PlanSuggestionBar: View {
 
     private var dismissButton: some View {
         Button(action: onDismiss) {
-            Image(systemName: "xmark")
-                .font(BodyFont.system(size: 11, weight: .medium))
+            LucideIcon(.x, size: 11)
                 .foregroundColor(Color.white.opacity(hoverDismiss ? 0.9 : 0.55))
                 .frame(width: 26, height: 26)
                 .contentShape(Rectangle())

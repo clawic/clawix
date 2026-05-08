@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import ClawixCore
 import ClawixEngine
+import LucideIcon
 
 /// Pill-shaped player rendered above a user message that originated as
 /// a voice clip. Mirrors the WhatsApp idiom: round play/pause bubble
@@ -54,7 +55,7 @@ struct UserAudioBubble: View {
             ZStack {
                 Circle()
                     .fill(Color.white.opacity(0.14))
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                Image(lucideOrSystem: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(Palette.textPrimary)
                     .offset(x: isPlaying ? 0 : 1)

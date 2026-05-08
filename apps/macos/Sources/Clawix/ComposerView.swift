@@ -173,8 +173,7 @@ struct ComposerView: View {
             } label: {
                 HStack(spacing: 4) {
                     if appState.selectedSpeed == .fast {
-                        Image(systemName: "bolt.fill")
-                            .font(BodyFont.system(size: 12, weight: .bold))
+                        LucideIcon(.zap, size: 12)
                             .foregroundColor(Color(white: 0.92))
                             .accessibilityHidden(true)
                     }
@@ -184,8 +183,7 @@ struct ComposerView: View {
                     Text(appState.selectedIntelligence.label)
                         .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Color(white: 0.55))
-                    Image(systemName: "chevron.down")
-                        .font(BodyFont.system(size: 10, weight: .bold))
+                    LucideIcon(.chevronDown, size: 10)
                         .foregroundColor(Color(white: 0.55))
                 }
                 .padding(.horizontal, 6)
@@ -222,8 +220,7 @@ struct ComposerView: View {
 
             if activeTurnInChat {
                 Button { appState.interruptActiveTurn() } label: {
-                    Image(systemName: "stop.fill")
-                        .font(BodyFont.system(size: 14, weight: .bold))
+                    LucideIcon(.square, size: 14)
                         .foregroundColor(Color(white: 0.06))
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(Color.white))
@@ -233,8 +230,7 @@ struct ComposerView: View {
                 .hoverHint(L10n.t("Stop response"))
             } else {
                 Button { appState.sendMessage() } label: {
-                    Image(systemName: "arrow.up")
-                        .font(BodyFont.system(size: 15, weight: .bold))
+                    LucideIcon(.arrowUp, size: 15)
                         .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(canSend ? Color.white : Color.white.opacity(0.14)))
@@ -271,8 +267,7 @@ struct ComposerView: View {
             Button {
                 stopAndAppendTranscription()
             } label: {
-                Image(systemName: "stop.fill")
-                    .font(BodyFont.system(size: 13, weight: .bold))
+                LucideIcon(.square, size: 13)
                     .foregroundColor(Color(white: 0.92))
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color(white: 0.22)))
@@ -284,8 +279,7 @@ struct ComposerView: View {
             Button {
                 stopAndSend()
             } label: {
-                Image(systemName: "arrow.up")
-                    .font(BodyFont.system(size: 15, weight: .bold))
+                LucideIcon(.arrowUp, size: 15)
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(Color.white))
@@ -301,8 +295,7 @@ struct ComposerView: View {
         return Button {
             addMenuOpen.toggle()
         } label: {
-            Image(systemName: "plus")
-                .font(BodyFont.system(size: 16, weight: .medium))
+            LucideIcon(.plus, size: 16)
                 .foregroundColor(.white)
                 .opacity(active ? 0.96 : 0.62)
                 .frame(width: 28, height: 28)
@@ -331,13 +324,11 @@ struct ComposerView: View {
             Group {
                 if expanded {
                     HStack(spacing: 5) {
-                        Image(systemName: appState.permissionMode.iconName)
-                            .font(BodyFont.system(size: 13, weight: .medium))
+                        LucideIcon.auto(appState.permissionMode.iconName, size: 13)
                         Text(appState.permissionMode.label)
                             .font(BodyFont.system(size: 11.5, wght: 500))
                             .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                            .font(BodyFont.system(size: 10, weight: .bold))
+                        LucideIcon(.chevronDown, size: 10)
                     }
                     .foregroundColor(appState.permissionMode.accent)
                     .fixedSize(horizontal: true, vertical: false)
@@ -347,8 +338,7 @@ struct ComposerView: View {
                         removal: AnyTransition.opacity
                     ))
                 } else {
-                    Image(systemName: appState.permissionMode.iconName)
-                        .font(BodyFont.system(size: 13, weight: .medium))
+                    LucideIcon.auto(appState.permissionMode.iconName, size: 13)
                         .foregroundColor(Color.white.opacity(0.5))
                         .transition(.opacity)
                 }
@@ -386,8 +376,7 @@ struct ComposerView: View {
             }
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: "checklist")
-                    .font(BodyFont.system(size: 11, weight: .regular))
+                LucideIcon(.listChecks, size: 11)
                 Text(L10n.t("Plan mode"))
                     .font(BodyFont.system(size: 11.5, wght: 500))
                     .lineLimit(1)
@@ -583,8 +572,7 @@ struct ComposerView: View {
                             Text(appState.selectedProject?.name
                                  ?? String(localized: "Work on a project", bundle: AppLocale.bundle, locale: AppLocale.current))
                                 .font(BodyFont.system(size: 11.5, wght: 500))
-                            Image(systemName: "chevron.down")
-                                .font(BodyFont.system(size: 8, weight: .semibold))
+                            LucideIcon(.chevronDown, size: 8)
                         }
                         .foregroundColor(Color(white: 0.55))
                     }
@@ -899,8 +887,7 @@ private struct ProjectPickerRow: View {
                     .truncationMode(.tail)
                 Spacer(minLength: 8)
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 9, weight: .semibold))
+                    LucideIcon(.check, size: 9)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -959,8 +946,7 @@ private struct PermissionsMenuRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: mode.iconName)
-                    .font(BodyFont.system(size: 11))
+                LucideIcon.auto(mode.iconName, size: 11)
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(mode.label)
@@ -970,8 +956,7 @@ private struct PermissionsMenuRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 9, weight: .semibold))
+                    LucideIcon(.check, size: 9)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1357,8 +1342,7 @@ private struct ModelMenuCheckRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 9, weight: .semibold))
+                    LucideIcon(.check, size: 9)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1388,7 +1372,7 @@ private struct ModelMenuChevronRow: View {
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
+                LucideIcon(.chevronRight)
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
             }
@@ -1429,8 +1413,7 @@ private struct ModelMenuDescriptionRow: View {
                 }
                 Spacer(minLength: 8)
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 9, weight: .semibold))
+                    LucideIcon(.check, size: 9)
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 2)
                 }
@@ -1543,8 +1526,7 @@ private struct AddMenuRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 11))
+                LucideIcon.auto(icon, size: 11)
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(label)
@@ -1554,7 +1536,7 @@ private struct AddMenuRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if let trailing {
-                    Image(systemName: trailing)
+                    LucideIcon.auto(trailing)
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1583,8 +1565,7 @@ private struct AddMenuToggleRow: View {
 
     var body: some View {
         HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-            Image(systemName: icon)
-                .font(BodyFont.system(size: 11))
+            LucideIcon.auto(icon, size: 11)
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
             Text(label)
@@ -1613,8 +1594,7 @@ private struct PluginRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
-                Image(systemName: plugin.iconName)
-                    .font(BodyFont.system(size: 11))
+                LucideIcon.auto(plugin.iconName, size: 11)
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(plugin.name)
@@ -2074,8 +2054,7 @@ private struct ComposerAttachmentChip: View {
                 .layoutPriority(0)
             if hovered {
                 Button(action: onRemove) {
-                    Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                    LucideIcon(.x, size: 10)
                         .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
                         .frame(width: 14, height: 14)
                         .contentShape(Rectangle())

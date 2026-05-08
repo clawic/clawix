@@ -86,8 +86,8 @@ struct PlanQuestionCard: View {
 
     private var arrowsHint: some View {
         HStack(spacing: 6) {
-            Image(systemName: "arrow.up")
-            Image(systemName: "arrow.down")
+            LucideIcon(.arrowUp)
+            LucideIcon(.arrowDown)
         }
         .font(BodyFont.system(size: 11, weight: .regular))
         .foregroundColor(Palette.textSecondary)
@@ -268,8 +268,7 @@ private struct PlanOptionRow: View {
                 .truncationMode(.tail)
 
             if description != nil {
-                Image(systemName: "info.circle")
-                    .font(BodyFont.system(size: 11, weight: .regular))
+                LucideIcon(.info, size: 11)
                     .foregroundColor(Color(white: 0.45))
                     .help(description ?? "")
                     .onHover { infoHovered = $0 }

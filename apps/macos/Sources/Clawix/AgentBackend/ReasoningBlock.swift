@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 // Collapsible "Razonando…" block that shows the assistant's reasoning
 // stream (item/reasoning/textDelta) above the visible answer.
@@ -21,7 +22,7 @@ struct ReasoningBlock: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                    Image(lucideOrSystem: expanded ? "chevron.down" : "chevron.right")
                         .font(BodyFont.system(size: 9, weight: .semibold))
                         .foregroundColor(Color(white: 0.50))
                     Text(headerLabel)
