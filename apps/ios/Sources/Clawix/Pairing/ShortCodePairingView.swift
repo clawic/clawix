@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 /// Sheet shown when the user taps "Type a code instead" on the
 /// pairing screen. Browses for `_clawix-bridge._tcp` Macs on the
@@ -75,7 +76,7 @@ struct ShortCodePairingView: View {
                 Haptics.tap()
                 onCancel()
             }) {
-                Image(systemName: "xmark")
+                Image(lucide: .x)
                     .font(BodyFont.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
@@ -99,13 +100,13 @@ struct ShortCodePairingView: View {
             .glassRounded(radius: AppLayout.cardCornerRadius)
         } else if flow.discovered.count == 1, let mac = flow.discovered.first {
             HStack {
-                Image(systemName: "laptopcomputer")
+                Image(lucide: .laptop)
                     .foregroundStyle(Palette.textSecondary)
                 Text(mac.name)
                     .font(Typography.bodyEmphasized)
                     .foregroundStyle(Palette.textPrimary)
                 Spacer()
-                Image(systemName: "checkmark.circle.fill")
+                Image(lucide: .circle_check)
                     .foregroundStyle(Color.green.opacity(0.85))
             }
             .padding(.horizontal, 16)
@@ -122,14 +123,14 @@ struct ShortCodePairingView: View {
                         pickedMacId = mac.id
                     }) {
                         HStack {
-                            Image(systemName: "laptopcomputer")
+                            Image(lucide: .laptop)
                                 .foregroundStyle(Palette.textSecondary)
                             Text(mac.name)
                                 .font(Typography.bodyEmphasized)
                                 .foregroundStyle(Palette.textPrimary)
                             Spacer()
                             if (pickedMacId ?? flow.discovered.first?.id) == mac.id {
-                                Image(systemName: "checkmark.circle.fill")
+                                Image(lucide: .circle_check)
                                     .foregroundStyle(Color.green.opacity(0.85))
                             }
                         }
