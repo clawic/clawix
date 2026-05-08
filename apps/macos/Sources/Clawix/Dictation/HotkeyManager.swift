@@ -385,28 +385,31 @@ final class HotkeyManager {
     }
 
     private func keyUp(coordinator: DictationCoordinator, binding: Binding) {
-        guard binding.isPressed else { return }
+        guard binding.isPressed else {
+            Self.debug("keyUp ignored: !isPressed slot=\(binding.slot)")
+            return
+        }
         binding.isPressed = false
         let mode = mode(forSlot: binding.slot)
         switch mode {
         case .pushToTalk:
+            Self.debug("keyUp pushToTalk → stop slot=\(binding.slot) coordState=\(coordinator.state)")
             coordinator.stop()
         case .hybrid:
             let elapsed: TimeInterval = binding.pressedAt.map { Date().timeIntervalSince($0) } ?? 0
             binding.pressedAt = nil
             let wasIdle = binding.wasIdleAtKeyDown
             binding.wasIdleAtKeyDown = false
+            Self.debug("keyUp hybrid slot=\(binding.slot) elapsed=\(String(format: "%.3f", elapsed)) wasIdle=\(wasIdle) coordState=\(coordinator.state)")
             if elapsed >= holdThreshold {
-                // Held: push-to-talk style.
+                Self.debug("→ branch=held → stop()")
                 coordinator.stop()
             } else if !wasIdle, coordinator.state == .recording {
-                // Tap on a running session: toggle off. The state guard
-                // prevents a second tap during the .transcribing phase
-                // from cancelling a result the user already committed.
+                Self.debug("→ branch=tap-on-running → stop()")
                 coordinator.stop()
+            } else {
+                Self.debug("→ branch=tap-on-idle → leave running")
             }
-            // Else: tap on idle → keyDown started a fresh session;
-            // leave it running so the user can tap again to stop.
         case .toggle:
             break
         }

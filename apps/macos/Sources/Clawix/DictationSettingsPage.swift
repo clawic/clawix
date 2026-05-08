@@ -571,7 +571,7 @@ private struct DictationModelRow: View {
             }
 
             if let error = manager.downloadErrors[model] {
-                Text("Download failed: \(error)")
+                Text(error)
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Color(red: 0.94, green: 0.45, blue: 0.45))
                     .fixedSize(horizontal: false, vertical: true)
@@ -1046,7 +1046,7 @@ private struct DictionaryAddRow: View {
                     onSubmit: submit
                 )
                 Button(action: submit) {
-                    LucideIcon(.plus, size: 12)
+                    LucideIcon(.plus, size: 13)
                         .foregroundColor(canSubmit ? Palette.textPrimary : Palette.textSecondary)
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(addButtonFill))
@@ -1133,7 +1133,7 @@ private struct DictionaryRow: View {
                     .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 6) {
-                    LucideIcon(.arrowRight, size: 10)
+                    LucideIcon(.arrowRight, size: 11)
                         .foregroundColor(Palette.textSecondary)
                     Text(entry.replacement)
                         .font(BodyFont.system(size: 12, wght: 500))
@@ -1444,7 +1444,7 @@ private struct DSPAdvancedSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: toggle) {
                 HStack(spacing: 8) {
-                    LucideIcon(.chevronRight, size: 10)
+                    LucideIcon(.chevronRight, size: 11)
                         .foregroundColor(Palette.textSecondary)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                     Text("Advanced")
@@ -1665,7 +1665,7 @@ private struct VocabularySheet: View {
                     )
                     .onSubmit(submit)
                 Button(action: submit) {
-                    LucideIcon(.plus, size: 12)
+                    LucideIcon(.plus, size: 13)
                         .foregroundColor(canSubmit ? Palette.textPrimary : Palette.textSecondary)
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(Color(white: 0.18)))
@@ -1695,7 +1695,7 @@ private struct VocabularySheet: View {
                             Button {
                                 vocabulary.remove(at: idx)
                             } label: {
-                                LucideIcon(.trash2, size: 11)
+                                LucideIcon(.trash, size: 11)
                                     .foregroundColor(Palette.textPrimary)
                                     .frame(width: 24, height: 24)
                                     .background(Circle().fill(Color(white: 0.14)))
