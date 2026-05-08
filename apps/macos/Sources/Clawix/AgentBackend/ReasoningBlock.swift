@@ -21,8 +21,7 @@ struct ReasoningBlock: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(BodyFont.system(size: 9, weight: .semibold))
+                    LucideIcon.auto(expanded ? "chevron.down" : "chevron.right", size: 9)
                         .foregroundColor(Color(white: 0.50))
                     Text(headerLabel)
                         .font(BodyFont.system(size: 12.5, wght: 600))

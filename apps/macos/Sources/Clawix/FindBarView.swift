@@ -97,8 +97,7 @@ struct FindBarView: View {
             Button {
                 appState.closeFindBar()
             } label: {
-                Image(systemName: "xmark")
-                    .font(BodyFont.system(size: 12, wght: 600))
+                LucideIcon(.x, size: 12)
                     .foregroundColor(Color.white.opacity(0.6))
                     .frame(width: 18, height: 18)
                     .contentShape(Rectangle())
@@ -132,8 +131,7 @@ struct FindBarView: View {
     @ViewBuilder
     private func navButton(systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(BodyFont.system(size: 12, wght: 500))
+            LucideIcon.auto(systemName, size: 12)
                 .foregroundColor(appState.findMatches.isEmpty
                                  ? Color.white.opacity(0.25)
                                  : Color.white.opacity(0.75))

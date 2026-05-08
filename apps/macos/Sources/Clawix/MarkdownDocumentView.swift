@@ -310,8 +310,7 @@ private struct CodeBlockView: View {
                 Button(action: copyCode) {
                     Group {
                         if copied {
-                            Image(systemName: "checkmark")
-                                .font(BodyFont.system(size: 11, weight: .semibold))
+                            LucideIcon(.check, size: 11)
                                 .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
                         } else {
                             CopyIconViewSquircle(

@@ -285,8 +285,7 @@ struct ToolGroupView: View {
                     Image(systemName: "command")
                         .font(.system(size: 13, weight: .medium))
                 default:
-                    Image(systemName: row.icon)
-                        .font(BodyFont.system(size: 11.5))
+                    LucideIcon.auto(row.icon, size: 11.5)
                 }
             }
             .foregroundColor(Color(white: 0.45))

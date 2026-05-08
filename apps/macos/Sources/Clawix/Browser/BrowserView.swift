@@ -77,8 +77,7 @@ struct BrowserView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "globe")
-                .font(BodyFont.system(size: 28, weight: .light))
+            LucideIcon(.globe, size: 28)
                 .foregroundColor(Color(white: 0.40))
             Text("No tabs open")
                 .font(BodyFont.system(size: 13, wght: 500))
