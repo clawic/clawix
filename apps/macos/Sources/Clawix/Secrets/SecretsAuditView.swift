@@ -1,7 +1,6 @@
 import SwiftUI
 import SecretsModels
 import SecretsVault
-import LucideIcon
 
 struct SecretsAuditView: View {
     @EnvironmentObject private var vault: VaultManager
@@ -133,8 +132,7 @@ struct SecretsAuditView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.04))
                     .frame(width: 64, height: 64)
-                Image(lucide: .clock)
-                    .font(.system(size: 26, weight: .regular))
+                LucideIcon(.clock, size: 18)
                     .foregroundColor(Palette.textSecondary)
             }
             VStack(spacing: 4) {
@@ -246,8 +244,7 @@ struct EventRow: View {
             case .system: return "gear"
             }
         }()
-        Image(lucideOrSystem: symbol)
-            .font(.system(size: 11.5))
+        LucideIcon.auto(symbol, size: 12)
             .foregroundColor(eventColor)
             .padding(5)
             .background(Circle().fill(Color.white.opacity(0.07)))

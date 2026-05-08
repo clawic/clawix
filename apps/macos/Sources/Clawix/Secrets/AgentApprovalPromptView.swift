@@ -2,7 +2,6 @@ import SwiftUI
 import SecretsModels
 import SecretsProxyCore
 import SecretsVault
-import LucideIcon
 
 /// Floating sheet shown over `SecretsScreen` when the proxy bridge has
 /// queued an activation request from an agent. Presents the agent name,
@@ -102,8 +101,7 @@ struct AgentApprovalPromptView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(lucide: .key)
-                .font(.system(size: 18, weight: .semibold))
+            LucideIcon(.key, size: 12.5)
                 .foregroundColor(Color.orange.opacity(0.85))
             VStack(alignment: .leading, spacing: 1) {
                 Text("Agent activation requested")

@@ -1,8 +1,6 @@
 import SwiftUI
 import SecretsModels
 import SecretsVault
-import LucideIcon
-
 struct SecretsHomeView: View {
     @EnvironmentObject private var vault: VaultManager
     @State private var selectedSecretId: EntityID?
@@ -12,6 +10,8 @@ struct SecretsHomeView: View {
     var onOpenTrash: () -> Void = {}
 
     enum ListFilter: Hashable { case all, stale }
+
+    private var staleCount: Int { vault.staleSecrets(olderThanDays: 90).count }
 
     private var visibleSecrets: [SecretRecord] {
         switch listFilter {
@@ -50,9 +50,14 @@ struct SecretsHomeView: View {
                 Text("Secrets")
                     .font(BodyFont.system(size: 16, wght: 600))
                     .foregroundColor(Palette.textPrimary)
-                Text(verbatim: "\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s") · vault unlocked")
-                    .font(BodyFont.system(size: 11, wght: 500))
-                    .foregroundColor(Color.green.opacity(0.65))
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color(red: 0.34, green: 0.78, blue: 0.55))
+                        .frame(width: 6, height: 6)
+                    Text(verbatim: "\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s") · vault unlocked")
+                        .font(BodyFont.system(size: 11, wght: 500))
+                        .foregroundColor(Palette.textSecondary)
+                }
             }
             Spacer()
             IconChipButton(symbol: "list.bullet.rectangle", label: "Activity", action: onOpenAudit)
@@ -98,17 +103,37 @@ struct SecretsHomeView: View {
 
     private var filterStrip: some View {
         let options: [(ListFilter, String)] = [
-            (.all,   "All \(vault.secrets.count)"),
-            (.stale, "Stale 90d \(vault.staleSecrets(olderThanDays: 90).count)")
+            (.all,   "All"),
+            (.stale, "Stale 90d")
         ]
-        return SlidingSegmented(
-            selection: $listFilter,
-            options: options,
-            height: 28,
-            fontSize: 11.5
-        )
+        let visibleCount = visibleSecrets.count
+        let totalCount = vault.secrets.count
+        let stale = staleCount
+        let caption: String = {
+            switch listFilter {
+            case .all:   return "\(visibleCount) of \(totalCount)"
+            case .stale: return "\(stale) of \(totalCount) · idle > 90d"
+            }
+        }()
+        return VStack(spacing: 6) {
+            SlidingSegmented(
+                selection: $listFilter,
+                options: options,
+                height: 28,
+                fontSize: 11.5
+            )
+            HStack(spacing: 0) {
+                Text(verbatim: caption)
+                    .font(BodyFont.system(size: 10.5, wght: 500))
+                    .foregroundColor(Palette.textSecondary.opacity(0.75))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 4)
+        }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
     }
 
     private var emptyState: some View {
@@ -188,12 +213,11 @@ private struct SecretListRow: View {
                             .foregroundColor(Palette.textPrimary)
                             .lineLimit(1)
                         if secret.isCompromised {
-                            Image(lucide: .shield_alert)
-                                .font(.system(size: 9))
+                            LucideIcon(.shieldAlert, size: 10)
                                 .foregroundColor(Color.red.opacity(0.85))
                         }
                     }
-                    Text(verbatim: "\(secret.kind.rawValue.replacingOccurrences(of: "_", with: " ")) · \(secret.internalName)")
+                    Text(verbatim: secret.kind.friendlyLabel)
                         .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                         .lineLimit(1)

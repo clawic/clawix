@@ -1,7 +1,6 @@
 import SwiftUI
 import SecretsModels
 import SecretsVault
-import LucideIcon
 
 struct SecretsTrashView: View {
     @EnvironmentObject private var vault: VaultManager
@@ -72,8 +71,7 @@ struct SecretsTrashView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.04))
                     .frame(width: 64, height: 64)
-                Image(lucide: .trash_2)
-                    .font(.system(size: 26, weight: .regular))
+                LucideIcon(.trash, size: 18)
                     .foregroundColor(Palette.textSecondary)
             }
             VStack(spacing: 4) {

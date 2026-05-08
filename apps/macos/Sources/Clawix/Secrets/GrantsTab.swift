@@ -97,10 +97,9 @@ struct GrantsTab: View {
     }
 
     private func revoke(_ grant: AgentGrantRecord) {
-        guard let store = vault.store, let audit = vault.audit, let grants = vault.grants else { return }
+        guard let grants = vault.grants else { return }
         do {
-            let resolver = ProxyResolver(store: store, audit: audit, grants: grants)
-            _ = try resolver.revokeGrant(id: grant.id)
+            _ = try grants.revoke(grantId: grant.id)
             vault.reloadGrants()
             reload()
             onChanged()
