@@ -168,6 +168,24 @@ if [[ -f "$BRIDGED_PKG/Package.swift" ]]; then
     fi
 fi
 
+# 1.6) Build the secrets-vault proxy helper (clawix-secrets-proxy). Lives
+#      under Helpers/SecretsProxy/, shares SecretsProxyCore with the GUI,
+#      and is what Codex / Claude Code / scripts call to use vault
+#      secrets without ever seeing the literal value. The helper connects
+#      to the running app over a unix-domain socket inside
+#      ~/Library/Application Support/Clawix/secrets/proxy.sock.
+SECRETS_PROXY_PKG="$PROJECT_DIR/Helpers/SecretsProxy"
+SECRETS_PROXY_BIN_BUILT=""
+if [[ -f "$SECRETS_PROXY_PKG/Package.swift" ]]; then
+    echo "==> Building clawix-secrets-proxy helper…"
+    (cd "$SECRETS_PROXY_PKG" && swift build 2>&1)
+    SECRETS_PROXY_BIN_BUILT="$SECRETS_PROXY_PKG/.build/debug/clawix-secrets-proxy"
+    if [[ ! -f "$SECRETS_PROXY_BIN_BUILT" ]]; then
+        echo "WARN: clawix-secrets-proxy binary not produced; bundle will ship without it" >&2
+        SECRETS_PROXY_BIN_BUILT=""
+    fi
+fi
+
 # 2) Kill any previous instance, however launched.
 #    The frame is persisted on every move/resize, so killing is safe.
 PIDS=$({
@@ -213,17 +231,24 @@ cp "$ICON_FILE" "$BUNDLE/Contents/Resources/Clawix.icns"
 #      bundle layout is the production layout so future passes only
 #      add the wiring, not move the binary.
 #
-# 3.2) Generate Contents/Library/LaunchAgents/<bundle>.bridge.plist
-#      from a template here. The bundle id of the agent is
-#      "${BUNDLE_ID}.bridge" so it stays grouped with the GUI under
-#      the same reverse-DNS prefix without leaking the maintainer's
-#      real id into the public repo.
+# 3.2) Generate Contents/Library/LaunchAgents/clawix.bridge.plist
+#      from a template here. The Label is the literal `clawix.bridge`,
+#      public and shared with the standalone npm CLI so both surfaces
+#      register the same agent slot. The defaults suite is also the
+#      literal `clawix.bridge` so the pairing bearer is shared between
+#      the GUI's PairingService and the daemon.
+if [[ -n "$SECRETS_PROXY_BIN_BUILT" ]]; then
+    mkdir -p "$BUNDLE/Contents/Helpers"
+    cp "$SECRETS_PROXY_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-secrets-proxy"
+    chmod +x "$BUNDLE/Contents/Helpers/clawix-secrets-proxy"
+fi
+
 if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
     mkdir -p "$BUNDLE/Contents/Helpers" "$BUNDLE/Contents/Library/LaunchAgents"
     cp "$BRIDGED_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-bridged"
     chmod +x "$BUNDLE/Contents/Helpers/clawix-bridged"
 
-    AGENT_LABEL="${BUNDLE_ID}.bridge"
+    AGENT_LABEL="clawix.bridge"
     AGENT_PLIST="$BUNDLE/Contents/Library/LaunchAgents/${AGENT_LABEL}.plist"
     cat > "$AGENT_PLIST" << AGENTPLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -238,7 +263,7 @@ if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
     <key>EnvironmentVariables</key>
     <dict>
         <key>CLAWIX_BRIDGED_PORT</key>     <string>7778</string>
-        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>${BUNDLE_ID}</string>
+        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>clawix.bridge</string>
     </dict>
     <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
     <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
@@ -246,6 +271,40 @@ if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
 </plist>
 AGENTPLIST
 fi
+
+# 3.3) Generate the LaunchAgent plist for the local LLM runtime. Unlike
+#      the bridge daemon, this binary does NOT ship inside the bundle —
+#      it's downloaded lazily into Application Support. So we cannot use
+#      `BundleProgram` with a relative path; instead a /bin/sh -c
+#      wrapper resolves $HOME at launch time. The wrapper exits 0 if the
+#      binary isn't present (so KeepAlive doesn't infinite-loop on a
+#      runtime that hasn't been installed yet).
+mkdir -p "$BUNDLE/Contents/Library/LaunchAgents"
+LM_AGENT_LABEL="${BUNDLE_ID}.local-models"
+LM_AGENT_PLIST="$BUNDLE/Contents/Library/LaunchAgents/${LM_AGENT_LABEL}.plist"
+cat > "$LM_AGENT_PLIST" << LMAGENTPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>                       <string>${LM_AGENT_LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>RUNTIME="\$HOME/Library/Application Support/Clawix/local-models/runtime"; [ -x "\$RUNTIME/ollama" ] || exit 0; mkdir -p "\$HOME/Library/Logs/Clawix" "\$HOME/Library/Application Support/Clawix/local-models/models" "\$HOME/Library/Application Support/Clawix/local-models/home"; exec env DYLD_LIBRARY_PATH="\$RUNTIME" OLLAMA_HOST=127.0.0.1:11435 OLLAMA_MODELS="\$HOME/Library/Application Support/Clawix/local-models/models" OLLAMA_KEEP_ALIVE=5m HOME="\$HOME/Library/Application Support/Clawix/local-models/home" "\$RUNTIME/ollama" serve</string>
+    </array>
+    <key>RunAtLoad</key>                   <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>          <false/>
+    </dict>
+    <key>StandardOutPath</key>             <string>/tmp/clawix-local-models.out</string>
+    <key>StandardErrorPath</key>           <string>/tmp/clawix-local-models.err</string>
+</dict>
+</plist>
+LMAGENTPLIST
 
 #      Exclude `.build/index-build/...` — that tree is produced by
 #      SourceKit's background indexer and lags behind real builds, so
@@ -294,6 +353,8 @@ cat > "$BUNDLE/Contents/Info.plist" << PLIST
     <string>Clawix uses the microphone to record voice notes that are transcribed into the composer.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Clawix transcribes recorded voice notes to insert them as text in the composer.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Clawix uses the camera so you can attach a photo straight from the QuickAsk panel.</string>
     <key>SUFeedURL</key>                 <string>${SU_FEED_URL}</string>${SU_ED_KEY_BLOCK}
     <key>SUEnableAutomaticChecks</key>   <true/>
     <key>SUScheduledCheckInterval</key>  <integer>86400</integer>
@@ -339,17 +400,30 @@ sign_one() {
 # Sign the bridge daemon helper. SMAppService refuses to register a
 # LaunchAgent helper whose codesign team id doesn't match the
 # enclosing .app, so we sign with the same identity used for the GUI.
-# The helper carries its own bundle id (`${BUNDLE_ID}.bridge`) so
-# launchd / SMAppService can address it independently.
+# The helper carries the public identifier `clawix.bridge` (matching
+# the LaunchAgent Label) so launchd / SMAppService can address it
+# independently of the GUI's bundle id.
 HELPER_BIN="$BUNDLE/Contents/Helpers/clawix-bridged"
 if [[ -f "$HELPER_BIN" ]]; then
     if ! codesign --force --sign "$SIGN_IDENTITY" \
-                  --identifier "${BUNDLE_ID}.bridge" \
+                  --identifier "clawix.bridge" \
                   --timestamp=none \
                   "$HELPER_BIN" 2>/tmp/clawix-bridged-sign.err; then
         echo "WARN: codesign for clawix-bridged with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
         cat /tmp/clawix-bridged-sign.err >&2
-        codesign --force --sign - --identifier "${BUNDLE_ID}.bridge" "$HELPER_BIN"
+        codesign --force --sign - --identifier "clawix.bridge" "$HELPER_BIN"
+    fi
+fi
+
+SECRETS_PROXY_HELPER_BIN="$BUNDLE/Contents/Helpers/clawix-secrets-proxy"
+if [[ -f "$SECRETS_PROXY_HELPER_BIN" ]]; then
+    if ! codesign --force --sign "$SIGN_IDENTITY" \
+                  --identifier "clawix.secrets-proxy" \
+                  --timestamp=none \
+                  "$SECRETS_PROXY_HELPER_BIN" 2>/tmp/clawix-secrets-proxy-sign.err; then
+        echo "WARN: codesign for clawix-secrets-proxy with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
+        cat /tmp/clawix-secrets-proxy-sign.err >&2
+        codesign --force --sign - --identifier "clawix.secrets-proxy" "$SECRETS_PROXY_HELPER_BIN"
     fi
 fi
 

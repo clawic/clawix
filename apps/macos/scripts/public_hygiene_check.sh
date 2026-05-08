@@ -23,6 +23,8 @@ COMMON_GLOBS=(
   --glob '!**/.build/**'
   --glob '!**/build/**'
   --glob '!**/artifacts/**'
+  --glob '!**/node_modules/**'
+  --glob '!**/Package.resolved'
   --glob '!**/*.icns'
   --glob '!**/scripts/public_hygiene_check.sh'
 )
@@ -55,11 +57,18 @@ done
 if [[ -d "$APPS_DIR" ]]; then
   for app in "$APPS_DIR"/*/ ; do
     [[ -d "$app" ]] || continue
-    for sub in Package.swift Sources Resources scripts ; do
+    for sub in Package.swift Sources Resources scripts Helpers ; do
       candidate="${app%/}/$sub"
       [[ -e "$candidate" ]] && TARGETS+=("$candidate")
     done
   done
+fi
+
+# Top-level npm CLI package: ships to npmjs.com under the public name
+# `clawix`, so its source tree is part of the public publish surface
+# and must pass the same blacklist scan as the native code.
+if [[ -d "$ROOT_DIR/cli" ]]; then
+  TARGETS+=("$ROOT_DIR/cli")
 fi
 
 # Developer-machine absolute paths almost always come from a personal

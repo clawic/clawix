@@ -9,8 +9,16 @@
         the binary is signed with `--options runtime`. Without this
         entitlement the audio tap on the input node returns silence even
         if the user granted Microphone access in System Settings.
+
+        camera: same story for AVCaptureDevice video input. Granting
+        Camera permission in System Settings is necessary but not
+        sufficient under hardened runtime; the binary also needs this
+        entitlement or the capture session reports `setupResult ==
+        configurationFailed` silently.
     -->
     <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.camera</key>
     <true/>
 </dict>
 </plist>

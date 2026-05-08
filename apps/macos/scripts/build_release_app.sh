@@ -135,6 +135,8 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <string>Clawix uses the microphone to record voice notes that are transcribed into the composer.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Clawix transcribes recorded voice notes to insert them as text in the composer.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Clawix uses the camera so you can attach a photo straight from the QuickAsk panel.</string>
     <key>SUFeedURL</key>                 <string>${SU_FEED_URL}</string>${SU_ED_KEY_BLOCK}
     <key>SUEnableAutomaticChecks</key>   <true/>
     <key>SUScheduledCheckInterval</key>  <integer>86400</integer>
@@ -154,15 +156,18 @@ cp -R "$SPARKLE_FW" "$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
 
 # Embed the bridge daemon under Contents/Helpers/clawix-bridged plus
 # its LaunchAgent plist under Contents/Library/LaunchAgents/. The
-# plist label / filename uses "${BUNDLE_ID}.bridge" so the LaunchAgent
-# stays grouped with the GUI under the same reverse-DNS prefix without
-# leaking the maintainer's bundle id.
+# plist label is the literal `clawix.bridge`, public and shared with
+# the standalone npm CLI so both surfaces register the same agent slot
+# and a machine that swaps CLI for GUI (or vice versa) hands ownership
+# over without two daemons fighting for the loopback port. The same
+# rationale picks `clawix.bridge` as the UserDefaults suite so the
+# pairing bearer survives the swap.
 if [[ -n "$BRIDGED_BINARY" ]]; then
     mkdir -p "$BUNDLE_DIR/Contents/Helpers" "$BUNDLE_DIR/Contents/Library/LaunchAgents"
     cp "$BRIDGED_BINARY" "$BUNDLE_DIR/Contents/Helpers/clawix-bridged"
     chmod +x "$BUNDLE_DIR/Contents/Helpers/clawix-bridged"
 
-    AGENT_LABEL="${BUNDLE_ID}.bridge"
+    AGENT_LABEL="clawix.bridge"
     AGENT_PLIST="$BUNDLE_DIR/Contents/Library/LaunchAgents/${AGENT_LABEL}.plist"
     cat > "$AGENT_PLIST" << AGENTPLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -177,7 +182,7 @@ if [[ -n "$BRIDGED_BINARY" ]]; then
     <key>EnvironmentVariables</key>
     <dict>
         <key>CLAWIX_BRIDGED_PORT</key>     <string>7778</string>
-        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>${BUNDLE_ID}</string>
+        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>clawix.bridge</string>
     </dict>
     <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
     <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
@@ -242,7 +247,7 @@ if [[ -f "$HELPER_BIN" ]]; then
     echo "==> Signing clawix-bridged helper"
     codesign --force --options runtime --timestamp \
              --sign "$DEVELOPER_ID_IDENTITY" \
-             --identifier "${BUNDLE_ID}.bridge" \
+             --identifier "clawix.bridge" \
              "$HELPER_BIN"
 fi
 
