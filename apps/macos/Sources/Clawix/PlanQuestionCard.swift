@@ -86,8 +86,8 @@ struct PlanQuestionCard: View {
 
     private var arrowsHint: some View {
         HStack(spacing: 6) {
-            LucideIcon(.arrowUp)
-            LucideIcon(.arrowDown)
+            LucideIcon(.arrowUp, size: 11)
+            LucideIcon(.arrowDown, size: 11)
         }
         .font(BodyFont.system(size: 11, weight: .regular))
         .foregroundColor(Palette.textSecondary)

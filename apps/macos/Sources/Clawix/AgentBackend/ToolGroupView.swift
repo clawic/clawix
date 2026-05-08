@@ -1,5 +1,4 @@
 import SwiftUI
-import LucideIcon
 
 // Inline tool-group row that appears between reasoning chunks in an
 // assistant message timeline. While a command is in flight it shows
@@ -286,8 +285,7 @@ struct ToolGroupView: View {
                     Image(systemName: "command")
                         .font(.system(size: 13, weight: .medium))
                 default:
-                    Image(lucideOrSystem: row.icon)
-                        .font(BodyFont.system(size: 11.5))
+                    LucideIcon.auto(row.icon, size: 12)
                 }
             }
             .foregroundColor(Color(white: 0.45))
