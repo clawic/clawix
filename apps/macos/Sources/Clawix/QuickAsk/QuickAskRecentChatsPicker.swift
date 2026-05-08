@@ -100,7 +100,7 @@ private struct QuickAskRecentChatRow: View {
         Button(action: onSelect) {
             HStack(spacing: 8) {
                 if isActive {
-                    LucideIcon(.check, size: 10)
+                    LucideIcon(.check, size: 11)
                         .foregroundColor(.white.opacity(0.9))
                         .frame(width: 14)
                 } else {

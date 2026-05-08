@@ -46,7 +46,7 @@ private struct QuickAskChip: View {
                 .layoutPriority(0)
             if hovered {
                 Button(action: onRemove) {
-                    LucideIcon(.x, size: 10)
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
                         .frame(width: 14, height: 14)
                         .contentShape(Rectangle())

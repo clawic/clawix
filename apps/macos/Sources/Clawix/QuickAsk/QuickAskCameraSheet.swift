@@ -23,7 +23,7 @@ struct QuickAskCameraSheet: View {
                 Color.black
                 if let error = errorMessage {
                     VStack(spacing: 6) {
-                        LucideIcon(.triangleAlert, size: 22)
+                        LucideIcon(.triangleAlert, size: 15.5)
                             .foregroundColor(.yellow)
                         Text(error)
                             .font(BodyFont.system(size: 12, wght: 500))
