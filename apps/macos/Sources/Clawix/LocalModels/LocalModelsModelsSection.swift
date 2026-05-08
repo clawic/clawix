@@ -4,20 +4,19 @@ extension LocalModelsPage {
     var modelsSection: some View {
         SectionCard(title: "Models") {
             VStack(alignment: .leading, spacing: 14) {
-                if service.installedModels.isEmpty {
-                    Text("No models yet. Pull one below.")
+                if service.installedModels.isEmpty && service.downloads.isEmpty {
+                    Text("No models yet. Browse the catalog or pull one by name.")
                         .font(BodyFont.system(size: 12))
                         .foregroundColor(Palette.textSecondary)
-                } else {
+                }
+
+                if !service.installedModels.isEmpty {
                     VStack(spacing: 10) {
                         ForEach(service.installedModels) { model in
                             modelRow(model)
                         }
                     }
                 }
-
-                Divider().background(Color.white.opacity(0.07))
-                pullRow
 
                 if !service.downloads.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -26,7 +25,40 @@ extension LocalModelsPage {
                         }
                     }
                 }
+
+                Divider().background(Color.white.opacity(0.07))
+                browseAndPullRow
             }
+        }
+    }
+
+    /// Catalog browser CTA + free-form `model:tag` pull on the same row,
+    /// so the user doesn't have to scroll to find the alternative path.
+    var browseAndPullRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                showCatalog = true
+            } label: {
+                Text("Browse catalog")
+                    .font(BodyFont.system(size: 11.5, wght: 600))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color(white: 0.15)))
+                    .foregroundColor(Palette.textPrimary)
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            TextField("Pull by name (e.g. llama3.2:1b)", text: $pullField)
+                .textFieldStyle(.roundedBorder)
+                .font(BodyFont.system(size: 12))
+                .frame(width: 240)
+            Button("Download") {
+                let n = pullField.trimmingCharacters(in: .whitespaces)
+                guard !n.isEmpty else { return }
+                pullField = ""
+                Task { await service.pull(model: n) }
+            }
+            .disabled(pullField.trimmingCharacters(in: .whitespaces).isEmpty)
         }
     }
 

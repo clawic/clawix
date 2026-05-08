@@ -1,11 +1,23 @@
 import SwiftUI
 
+/// Settings page for the local LLM runtime. Single sidebar entry, with
+/// the visible flow on top (install → daemon toggle → models) and a
+/// collapsed `Advanced` disclosure at the bottom.
+///
+/// View extensions split across files:
+/// - `LocalModelsModelsSection.swift` owns the Models card.
+/// - `LocalModelsDiagnosticsSection.swift` owns shared row helpers and `SectionCard`.
+/// - `LocalModelsAdvancedSection.swift` owns the collapsed Advanced bloc.
+/// State and the published-binding wiring live here.
 struct LocalModelsPage: View {
 
     @StateObject var service = LocalModelsService.shared
+    @StateObject var launchAgent = LocalModelsLaunchAgent.shared
 
     @State var pullField: String = ""
-    @State private var showUninstallConfirm = false
+    @State var showCatalog = false
+    @State var showUninstallConfirm = false
+    @State var advancedExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -16,18 +28,32 @@ struct LocalModelsPage: View {
 
             if case .running = service.daemonState {
                 modelsSection
-                    .padding(.top, 28)
+                    .padding(.top, 22)
             }
 
-            diagnosticsSection
-                .padding(.top, 28)
+            advancedSection
+                .padding(.top, 22)
+                .padding(.bottom, 8)
         }
-        .onAppear { service.cancelInstall() /* clear stale state */ }
+        .sheet(isPresented: $showCatalog) {
+            LocalModelsCatalogSheet(
+                installedModelNames: Set(service.installedModels.map { $0.name }),
+                onPick: { name in
+                    showCatalog = false
+                    Task { await service.pull(model: name) }
+                },
+                onClose: { showCatalog = false }
+            )
+        }
+        .onAppear {
+            launchAgent.refresh()
+            LocalModelsRuntimeInstaller.shared.refresh()
+        }
     }
 
     // MARK: - Header
 
-    private var header: some View {
+    var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Local models")
                 .font(BodyFont.system(size: 22, weight: .semibold))
@@ -38,21 +64,23 @@ struct LocalModelsPage: View {
         }
     }
 
-    // MARK: - Runtime section
+    // MARK: - Runtime card
 
-    private var runtimeSection: some View {
+    var runtimeSection: some View {
         SectionCard(title: "Runtime") {
             VStack(alignment: .leading, spacing: 12) {
                 runtimeStateRow
 
-                if shouldShowDaemonToggle {
+                if shouldShowDaemonControls {
                     Divider().background(Color.white.opacity(0.07))
                     daemonToggleRow
+                    Divider().background(Color.white.opacity(0.07))
+                    startAtLoginRow
                 }
 
-                if case .installed = service.runtimeState, !service.daemonState.isStarting {
+                if case .installed = service.runtimeState {
                     Divider().background(Color.white.opacity(0.07))
-                    HStack(spacing: 10) {
+                    HStack {
                         Spacer()
                         Button("Uninstall runtime") {
                             showUninstallConfirm = true
@@ -68,6 +96,7 @@ struct LocalModelsPage: View {
             Button("Cancel", role: .cancel) {}
             Button("Remove", role: .destructive) {
                 service.disable()
+                launchAgent.disable()
                 try? LocalModelsRuntimeInstaller.shared.uninstall()
             }
         } message: {
@@ -76,7 +105,7 @@ struct LocalModelsPage: View {
     }
 
     @ViewBuilder
-    private var runtimeStateRow: some View {
+    var runtimeStateRow: some View {
         switch service.runtimeState {
         case .notInstalled:
             actionRow(
@@ -93,9 +122,12 @@ struct LocalModelsPage: View {
                 ProgressView(value: progress)
                     .progressViewStyle(.linear)
                 HStack {
-                    Text(progressLabel(downloaded: downloaded, total: LocalModelsRuntimeInstaller.pinnedSizeBytes))
-                        .font(BodyFont.system(size: 11))
-                        .foregroundColor(Palette.textSecondary)
+                    Text(progressLabel(
+                        downloaded: downloaded,
+                        total: LocalModelsRuntimeInstaller.pinnedSizeBytes
+                    ))
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(Palette.textSecondary)
                     Spacer()
                     Button("Cancel") { service.cancelInstall() }
                         .buttonStyle(.borderless)
@@ -138,12 +170,12 @@ struct LocalModelsPage: View {
         }
     }
 
-    private var shouldShowDaemonToggle: Bool {
+    private var shouldShowDaemonControls: Bool {
         if case .installed = service.runtimeState { return true }
         return false
     }
 
-    private var daemonToggleRow: some View {
+    var daemonToggleRow: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Run local runtime")
@@ -167,13 +199,41 @@ struct LocalModelsPage: View {
         }
     }
 
-    private var daemonStatusLabel: String {
+    var startAtLoginRow: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Start at login")
+                    .font(BodyFont.system(size: 12.5, wght: 500))
+                    .foregroundColor(Palette.textPrimary)
+                Text(launchAgent.statusLabel)
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(Palette.textSecondary)
+            }
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { launchAgent.isEnabled },
+                set: { launchAgent.toggle($0) }
+            ))
+            .toggleStyle(.switch)
+            .labelsHidden()
+        }
+    }
+
+    var daemonStatusLabel: String {
         switch service.daemonState {
-        case .stopped:        return "Stopped"
-        case .starting:       return "Starting…"
-        case .running:        return "Running on 127.0.0.1:\(LocalModelsDaemon.port) · \(service.loadedModels.count) loaded"
-        case .missingRuntime: return "Runtime binary missing"
-        case .crashed(let m): return m
+        case .stopped:
+            return "Stopped"
+        case .starting:
+            return "Starting…"
+        case .running:
+            let loaded = service.loadedModels.count
+            return loaded == 0
+                ? "Running on 127.0.0.1:\(LocalModelsDaemon.port) · idle"
+                : "Running on 127.0.0.1:\(LocalModelsDaemon.port) · \(loaded) loaded"
+        case .missingRuntime:
+            return "Runtime binary missing"
+        case .crashed(let m):
+            return m
         }
     }
 }
