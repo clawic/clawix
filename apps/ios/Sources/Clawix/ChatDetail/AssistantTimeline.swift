@@ -123,7 +123,8 @@ private struct WorkSummaryHeaderView: View {
                     Text(headerText(now: Date()))
                         .font(BodyFont.system(size: 13, weight: .regular))
                         .foregroundStyle(Palette.textSecondary)
-                    LucideIcon(.chevronRight, size: 10)
+                    Image(systemName: "chevron.right")
+                        .font(BodyFont.system(size: 10, weight: .semibold))
                         .foregroundStyle(Palette.textTertiary)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                         .animation(.easeOut(duration: 0.16), value: expanded)
@@ -235,7 +236,8 @@ private struct ToolRowIcon: View {
             PencilIconView(color: Palette.textTertiary, lineWidth: 1.0)
                 .frame(width: 14, height: 14)
         default:
-            LucideIcon.auto(systemImage, size: 12)
+            Image(systemName: systemImage)
+                .font(BodyFont.system(size: 12, weight: .regular))
         }
     }
 }

@@ -76,7 +76,8 @@ private struct BodyDropTarget: ViewModifier {
                 .clipShape(panelShape)
 
             HStack(spacing: 9) {
-                LucideIcon(.paperclip, size: 13)
+                Image(systemName: "paperclip")
+                    .font(BodyFont.system(size: 13, weight: .medium))
                     .foregroundColor(Color(white: 0.94))
                 Text(L10n.t("Drop to attach"))
                     .font(BodyFont.system(size: 13.5, weight: .medium))

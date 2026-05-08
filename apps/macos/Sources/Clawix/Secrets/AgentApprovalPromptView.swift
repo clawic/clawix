@@ -101,7 +101,8 @@ struct AgentApprovalPromptView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 10) {
-            LucideIcon(.key, size: 18)
+            Image(systemName: "key.viewfinder")
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(Color.orange.opacity(0.85))
             VStack(alignment: .leading, spacing: 1) {
                 Text("Agent activation requested")

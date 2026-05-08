@@ -83,7 +83,8 @@ private struct SidebarItemPill: View {
             .overlay(alignment: .trailing) {
                 if isHovered {
                     Button(action: onClose) {
-                        LucideIcon(.x, size: 9)
+                        Image(systemName: "xmark")
+                            .font(BodyFont.system(size: 9, weight: .bold))
                             .foregroundColor(Color(white: 0.95))
                             .frame(width: 14, height: 14)
                             .background(
@@ -136,7 +137,8 @@ private struct NewTabButton: View {
 
     var body: some View {
         Button(action: action) {
-            LucideIcon(.plus, size: 12)
+            Image(systemName: "plus")
+                .font(BodyFont.system(size: 12, weight: .semibold))
                 .foregroundColor(Color(white: 0.78))
                 .frame(width: 26, height: 26)
                 .background(
@@ -226,7 +228,8 @@ private struct ChromeIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            LucideIcon.auto(systemName, size: 12)
+            Image(systemName: systemName)
+                .font(BodyFont.system(size: 12, weight: .medium))
                 .foregroundColor(foreground)
                 .frame(width: 26, height: 26)
                 .background(
@@ -350,7 +353,8 @@ struct BrowserMoreOptionsMenu: View {
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if trailingCheck {
-                    LucideIcon(.check, size: 11)
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -417,7 +421,8 @@ private struct ZoomRow: View {
             )
 
             Button(action: onReset) {
-                LucideIcon(.rotateCcw, size: 11)
+                Image(systemName: "arrow.counterclockwise")
+                    .font(BodyFont.system(size: 11, weight: .medium))
                     .foregroundColor(hoverReset ? MenuStyle.rowText : MenuStyle.rowSubtle)
                     .frame(width: 22, height: 22)
                     .contentShape(Rectangle())
@@ -431,7 +436,8 @@ private struct ZoomRow: View {
 
     private func stepperButton(symbol: String, hovered: Binding<Bool>, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            LucideIcon.auto(symbol, size: 11)
+            Image(systemName: symbol)
+                .font(BodyFont.system(size: 11, weight: .semibold))
                 .foregroundColor(hovered.wrappedValue ? MenuStyle.rowText : MenuStyle.rowIcon)
                 .frame(width: 28, height: 24)
                 .contentShape(Rectangle())

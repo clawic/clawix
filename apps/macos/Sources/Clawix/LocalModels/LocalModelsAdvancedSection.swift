@@ -15,7 +15,8 @@ extension LocalModelsPage {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    LucideIcon.auto(advancedExpanded ? "chevron.down" : "chevron.right", size: 9)
+                    Image(systemName: advancedExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                     Text("Advanced")
                         .font(BodyFont.system(size: 13, wght: 600))

@@ -97,7 +97,8 @@ struct SecretDetailPane: View {
                 Text("Move to trash")
             }
         } label: {
-            LucideIcon(.ellipsis, size: 12)
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: 28, height: 28)
                 .background(
@@ -190,7 +191,8 @@ struct SecretDetailPane: View {
 
     private func fieldEmptyState(symbol: String, text: String) -> some View {
         VStack(spacing: 10) {
-            LucideIcon.auto(symbol, size: 22)
+            Image(systemName: symbol)
+                .font(.system(size: 22, weight: .regular))
                 .foregroundColor(Palette.textSecondary)
             Text(verbatim: text)
                 .font(BodyFont.system(size: 11.5, wght: 500))

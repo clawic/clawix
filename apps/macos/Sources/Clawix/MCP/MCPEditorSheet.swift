@@ -112,7 +112,8 @@ struct MCPEditorSheet: View {
                     HStack(spacing: 4) {
                         Text("Docs")
                             .font(BodyFont.system(size: 12, wght: 500))
-                        LucideIcon(.squareArrowOutUpRight, size: 10)
+                        Image(systemName: "arrow.up.right.square")
+                            .font(BodyFont.system(size: 10))
                     }
                     .foregroundColor(Palette.pastelBlue)
                 }
@@ -124,7 +125,8 @@ struct MCPEditorSheet: View {
                     confirmingUninstall = true
                 } label: {
                     HStack(spacing: 5) {
-                        LucideIcon(.trash2, size: 11)
+                        Image(systemName: "trash")
+                            .font(BodyFont.system(size: 11, wght: 600))
                         Text("Uninstall")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -144,7 +146,8 @@ struct MCPEditorSheet: View {
                 .buttonStyle(.plain)
             }
             Button(action: onClose) {
-                LucideIcon(.x, size: 12)
+                Image(systemName: "xmark")
+                    .font(BodyFont.system(size: 12, weight: .medium))
                     .foregroundColor(Color(white: 0.65))
                     .frame(width: 24, height: 24)
                     .contentShape(Rectangle())
@@ -387,7 +390,8 @@ private struct MCPSheetAddRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                LucideIcon(.plus, size: 11)
+                Image(systemName: "plus")
+                    .font(BodyFont.system(size: 11, wght: 700))
                 Text(label)
                     .font(BodyFont.system(size: 12.5))
             }
@@ -414,7 +418,8 @@ private struct MCPSheetTrashButton: View {
 
     var body: some View {
         Button(action: action) {
-            LucideIcon(.trash2, size: 11)
+            Image(systemName: "trash")
+                .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Color(white: hovered ? 0.94 : 0.55))
                 .frame(width: 30, height: 30)
                 .background(

@@ -59,7 +59,8 @@ struct EditorTagList: View {
                     .background(editorFieldBackground(radius: 6))
                     .onSubmit(submit)
                 Button(action: submit) {
-                    LucideIcon(.plus, size: 12)
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(canSubmit ? Palette.textPrimary : Palette.textSecondary)
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(Color(white: 0.18)))
@@ -112,7 +113,8 @@ struct FlowingChips: View {
                         Button {
                             onDelete(idx)
                         } label: {
-                            LucideIcon(.x, size: 9)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 9, weight: .semibold))
                                 .foregroundColor(Palette.textSecondary)
                         }
                         .buttonStyle(.plain)

@@ -121,7 +121,8 @@ private struct DictationEscToast: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            LucideIcon(.info, size: 14)
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(accent)
                 .frame(width: 18, height: 18)
 
@@ -134,7 +135,8 @@ private struct DictationEscToast: View {
             Spacer(minLength: 6)
 
             Button(action: onClose) {
-                LucideIcon(.x, size: 10)
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.white.opacity(0.6))
                     .frame(width: 16, height: 16)
                     .contentShape(Rectangle())

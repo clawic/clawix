@@ -66,7 +66,8 @@ struct AutomationsView: View {
 
             Button {} label: {
                 HStack(spacing: 4) {
-                    LucideIcon(.plus, size: 10)
+                    Image(systemName: "plus")
+                        .font(BodyFont.system(size: 10, weight: .bold))
                     Text("New automation")
                         .font(BodyFont.system(size: 11, wght: 600))
                 }
@@ -128,7 +129,8 @@ private struct AutomationCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            LucideIcon.auto(card.icon, size: 14)
+            Image(systemName: card.icon)
+                .font(BodyFont.system(size: 14, weight: .semibold))
                 .foregroundColor(card.color)
                 .frame(width: 18, height: 18, alignment: .leading)
 

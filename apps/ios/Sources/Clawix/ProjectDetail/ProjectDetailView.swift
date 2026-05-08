@@ -146,7 +146,8 @@ struct ProjectDetailView: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                LucideIcon(.ellipsis, size: 20)
+                Image(systemName: "ellipsis")
+                    .font(BodyFont.system(size: 20, weight: .semibold))
                     .foregroundStyle(Palette.textPrimary)
             }
             .frame(width: 46, height: 46)
@@ -174,7 +175,8 @@ struct ProjectDetailView: View {
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                LucideIcon(.chevronDown, size: 10)
+                Image(systemName: "chevron.down")
+                    .font(BodyFont.system(size: 10, weight: .semibold))
                     .foregroundStyle(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -191,7 +193,8 @@ struct ProjectDetailView: View {
     private var chatRows: some View {
         if chats.isEmpty {
             VStack(spacing: 10) {
-                LucideIcon(.messageCircle, size: 28)
+                Image(systemName: "bubble.left")
+                    .font(BodyFont.system(size: 28))
                     .foregroundStyle(Palette.textTertiary)
                 Text("No chats yet")
                     .font(Typography.bodyEmphasized)
@@ -290,7 +293,8 @@ private struct ProjectPickerRow: View {
             Spacer(minLength: 8)
 
             if isCurrent {
-                LucideIcon(.check, size: 13)
+                Image(systemName: "checkmark")
+                    .font(BodyFont.system(size: 13, weight: .bold))
                     .foregroundStyle(Palette.textPrimary)
             } else if project.hasActiveTurn {
                 Circle()

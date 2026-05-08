@@ -161,7 +161,8 @@ private struct PrimaryLoginButton: View {
                         .tint(.black)
                     Text("Waiting for confirmation…")
                 } else {
-                    LucideIcon(.arrowRightToLine, size: 13)
+                    Image(systemName: "arrow.right.to.line")
+                        .font(BodyFont.system(size: 13, weight: .semibold))
                     Text("Sign in")
                 }
             }

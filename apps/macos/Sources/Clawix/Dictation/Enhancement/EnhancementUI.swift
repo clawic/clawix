@@ -151,7 +151,8 @@ struct EnhancementSettingsSheet: View {
                     Button {
                         apiKeyVisible.toggle()
                     } label: {
-                        LucideIcon.auto(apiKeyVisible ? "eye.slash" : "eye", size: 11)
+                        Image(systemName: apiKeyVisible ? "eye.slash" : "eye")
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 26, height: 26)
                             .background(Circle().fill(Color(white: 0.14)))
@@ -213,7 +214,8 @@ struct EnhancementSettingsSheet: View {
                         Button(m) { modelDraft = m }
                     }
                 } label: {
-                    LucideIcon(.list, size: 11)
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(Color(white: 0.14)))
@@ -364,7 +366,8 @@ private struct PromptListRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 10) {
-                LucideIcon.auto(active ? "checkmark.circle.fill" : "circle", size: 13)
+                Image(systemName: active ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(active
                         ? Color(red: 0.27, green: 0.74, blue: 0.42)
                         : Palette.textSecondary)
@@ -396,7 +399,8 @@ private struct PromptListRow: View {
                     Button {
                         onDelete()
                     } label: {
-                        LucideIcon(.trash2, size: 11)
+                        Image(systemName: "trash")
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 22, height: 22)
                             .background(Circle().fill(Color(white: 0.14)))

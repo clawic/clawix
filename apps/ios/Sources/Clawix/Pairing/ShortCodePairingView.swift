@@ -75,7 +75,8 @@ struct ShortCodePairingView: View {
                 Haptics.tap()
                 onCancel()
             }) {
-                LucideIcon(.x, size: 14)
+                Image(systemName: "xmark")
+                    .font(BodyFont.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
                     .glassCircle()
@@ -98,13 +99,13 @@ struct ShortCodePairingView: View {
             .glassRounded(radius: AppLayout.cardCornerRadius)
         } else if flow.discovered.count == 1, let mac = flow.discovered.first {
             HStack {
-                LucideIcon(.laptop)
+                Image(systemName: "laptopcomputer")
                     .foregroundStyle(Palette.textSecondary)
                 Text(mac.name)
                     .font(Typography.bodyEmphasized)
                     .foregroundStyle(Palette.textPrimary)
                 Spacer()
-                LucideIcon(.circleCheck)
+                Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.green.opacity(0.85))
             }
             .padding(.horizontal, 16)
@@ -121,14 +122,14 @@ struct ShortCodePairingView: View {
                         pickedMacId = mac.id
                     }) {
                         HStack {
-                            LucideIcon(.laptop)
+                            Image(systemName: "laptopcomputer")
                                 .foregroundStyle(Palette.textSecondary)
                             Text(mac.name)
                                 .font(Typography.bodyEmphasized)
                                 .foregroundStyle(Palette.textPrimary)
                             Spacer()
                             if (pickedMacId ?? flow.discovered.first?.id) == mac.id {
-                                LucideIcon(.circleCheck)
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(Color.green.opacity(0.85))
                             }
                         }

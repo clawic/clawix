@@ -96,7 +96,8 @@ struct FileViewerView: View {
 
         case .failed(let reason):
             VStack(spacing: 10) {
-                LucideIcon(.fileQuestion, size: 32)
+                Image(systemName: "doc.questionmark")
+                    .font(BodyFont.system(size: 32, weight: .light))
                     .foregroundStyle(Palette.textTertiary)
                 Text(reason)
                     .font(Typography.secondaryFont)

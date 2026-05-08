@@ -357,7 +357,8 @@ private struct UserImageThumbnail: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 Color.white.opacity(0.05)
-                LucideIcon(.image, size: 18)
+                Image(systemName: "photo")
+                    .font(BodyFont.system(size: 18, weight: .regular))
                     .foregroundColor(Color(white: 0.45))
             }
         }
@@ -876,7 +877,8 @@ private struct MessageActionIcon: View {
         switch kind {
         case .copy(let showCheck):
             if showCheck {
-                LucideIcon(.check, size: 12)
+                Image(systemName: "checkmark")
+                    .font(BodyFont.system(size: 12, wght: 700))
                     .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
@@ -976,7 +978,8 @@ private struct ChatFooterPill: View {
                 Text(label)
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .lineLimit(1)
-                LucideIcon(.chevronDown, size: 9)
+                Image(systemName: "chevron.down")
+                    .font(BodyFont.system(size: 9, wght: 700))
             }
             .foregroundColor(Color(white: (hovered || isOpen) ? 0.82 : 0.55))
             .padding(.horizontal, 4)
@@ -1037,7 +1040,8 @@ private struct WorkLocallyRow: View {
                     if icon == "chart.bar" || icon == "gauge.with.dots.needle.33percent" {
                         UsageIcon(size: 14)
                     } else {
-                        LucideIcon.auto(icon, size: 13)
+                        Image(systemName: icon)
+                            .font(BodyFont.system(size: 13, wght: 500))
                     }
                 }
                     .foregroundColor(MenuStyle.rowIcon)
@@ -1051,10 +1055,11 @@ private struct WorkLocallyRow: View {
                 case .none:
                     EmptyView()
                 case .check:
-                    LucideIcon(.check, size: 11)
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(MenuStyle.rowText)
                 case .chevron:
-                    LucideIcon(.chevronRight)
+                    Image(systemName: "chevron.right")
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1167,7 +1172,8 @@ private struct BranchRow: View {
                 }
                 Spacer(minLength: 8)
                 if isCurrent {
-                    LucideIcon(.check, size: 11)
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 1)
                 }
@@ -1196,7 +1202,8 @@ private struct BranchCreateRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                LucideIcon(.plus, size: 13)
+                Image(systemName: "plus")
+                    .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
                 Text(String(localized: "Create and switch to a new branch...", bundle: AppLocale.bundle, locale: AppLocale.current))
@@ -1246,7 +1253,8 @@ private struct BranchCreateSheet: View {
                     .foregroundColor(Color(white: 0.97))
                 Spacer(minLength: 12)
                 Button(action: onCancel) {
-                    LucideIcon(.x, size: 11)
+                    Image(systemName: "xmark")
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(Color(white: 0.70))
                         .frame(width: 22, height: 22)
                         .contentShape(Rectangle())
@@ -1621,7 +1629,8 @@ private struct LinkPreviewCard: View {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(Color(red: 0.20, green: 0.45, blue: 0.92))
                     .frame(width: 38, height: 38)
-                LucideIcon(.globe, size: 17)
+                Image(systemName: "globe")
+                    .font(BodyFont.system(size: 17, weight: .regular))
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 2) {

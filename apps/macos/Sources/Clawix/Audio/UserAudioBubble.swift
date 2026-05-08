@@ -54,7 +54,8 @@ struct UserAudioBubble: View {
             ZStack {
                 Circle()
                     .fill(Color.white.opacity(0.14))
-                LucideIcon.auto(isPlaying ? "pause.fill" : "play.fill", size: 12)
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundColor(Palette.textPrimary)
                     .offset(x: isPlaying ? 0 : 1)
             }

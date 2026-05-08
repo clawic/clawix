@@ -358,7 +358,8 @@ struct SidebarView: View {
                         "Chats",
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
-                            LucideIcon(.messageCircle, size: 11.5)
+                            Image(systemName: "bubble.left")
+                                .font(BodyFont.system(size: 11.5, wght: 550))
                         )
                     )
                     SidebarAccordion(
@@ -773,7 +774,8 @@ struct SidebarView: View {
                       showAddProject: false,
                       showNewChat: false,
                       leadingIcon: AnyView(
-                          LucideIcon(.messageCircle, size: 11.5)
+                          Image(systemName: "bubble.left")
+                              .font(BodyFont.system(size: 11.5, wght: 550))
                       ),
                       expanded: $chronoExpanded)
     }
@@ -1155,7 +1157,7 @@ private struct SettingsLimitsHeaderRow: View {
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
-                LucideIcon(.chevronDown)
+                Image(systemName: "chevron.down")
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .rotationEffect(.degrees(expanded ? 180 : 0))
@@ -1304,7 +1306,8 @@ private struct SettingsAccountRow: View {
                         SignOutIcon(size: 16)
                             .offset(x: 1)
                     } else {
-                        LucideIcon.auto(icon, size: 11.5)
+                        Image(systemName: icon)
+                            .font(BodyFont.system(size: 11.5))
                     }
                 }
                 .frame(width: 18, alignment: .center)
@@ -1314,7 +1317,7 @@ private struct SettingsAccountRow: View {
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 if let trailingIcon = trailing {
-                    LucideIcon.auto(trailingIcon, size: 16)
+                    Image(systemName: trailingIcon)
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1369,7 +1372,8 @@ private struct SidebarButton: View {
                             .frame(width: customShapeSize, height: customShapeSize)
                             .frame(width: 15, height: 15)
                     } else {
-                        LucideIcon.auto(icon, size: 13.5)
+                        Image(systemName: icon)
+                            .font(BodyFont.system(size: 13.5, wght: 500))
                             .frame(width: 15)
                             .foregroundColor(iconColor)
                     }
@@ -1552,7 +1556,8 @@ private struct SectionDisclosureChevron: View {
     var hovered: Bool = false
 
     var body: some View {
-        LucideIcon(.chevronRight, size: 9.5)
+        Image(systemName: "chevron.right")
+            .font(BodyFont.system(size: 9.5, wght: 700))
             .foregroundColor(Color(white: 0.78))
             .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -2037,7 +2042,8 @@ struct RecentChatRow: View, Equatable {
                 help: L10n.t("Pin")
             )
         case .bubble:
-            LucideIcon(.messageCircle, size: 10.5)
+            Image(systemName: "bubble.left")
+                .font(BodyFont.system(size: 10.5, wght: 500))
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
         case .unarchive:
@@ -2255,7 +2261,8 @@ private struct ProjectAccordion: View, Equatable {
                 // into the icon makes the parent lose hover and the icon
                 // disappears.
                 Button(action: onMenuToggle) {
-                    LucideIcon(.ellipsis, size: 12.5)
+                    Image(systemName: "ellipsis")
+                        .font(BodyFont.system(size: 12.5, wght: 600))
                         .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
@@ -2594,7 +2601,8 @@ private struct PinnedRow: View {
                 Button {
                     // archivar chat
                 } label: {
-                    LucideIcon(.archive, size: 12.5)
+                    Image(systemName: "archivebox")
+                        .font(BodyFont.system(size: 12.5, wght: 500))
                         .foregroundColor(Color(white: 0.72))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
@@ -2823,7 +2831,8 @@ private struct OrganizeMenuRow: View {
                         FolderOpenIcon(size: 11.5)
                             .foregroundColor(MenuStyle.rowIcon)
                     case .system(let name):
-                        LucideIcon.auto(name, size: 11.5)
+                        Image(systemName: name)
+                            .font(BodyFont.system(size: 11.5))
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
@@ -2834,7 +2843,8 @@ private struct OrganizeMenuRow: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 9.5)
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 9.5, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
             }

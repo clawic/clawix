@@ -503,7 +503,8 @@ private struct ContentTopChrome: View {
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
-                    LucideIcon(.ellipsis, size: 11)
+                    Image(systemName: "ellipsis")
+                        .font(BodyFont.system(size: 11, wght: 700))
                         .foregroundColor(Color(white: hoverEllipsis ? 0.78 : 0.55))
                         .frame(width: 24, height: 24)
                         .background(
@@ -605,7 +606,8 @@ private struct RightSidebarTopChrome: View {
     var body: some View {
         HStack(spacing: 0) {
             Button { addMenuOpen.toggle() } label: {
-                LucideIcon(.plus, size: 13)
+                Image(systemName: "plus")
+                    .font(BodyFont.system(size: 13, wght: 700))
                     .foregroundColor(Color(white: 0.78))
                     .frame(width: 26, height: 26)
                     .background(
@@ -727,7 +729,8 @@ private struct RightSidebarAddMenu: View {
                     if icon == "magnifyingglass" {
                         SearchIcon(size: 11)
                     } else {
-                        LucideIcon.auto(icon, size: 11)
+                        Image(systemName: icon)
+                            .font(BodyFont.system(size: 11, wght: 500))
                     }
                 }
                 .foregroundColor(MenuStyle.rowIcon)
@@ -1017,7 +1020,8 @@ private struct SearchPopoverOverlay: View {
                 Button {
                     appState.searchQuery = ""
                 } label: {
-                    LucideIcon(.circleX, size: 13)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(BodyFont.system(size: 13, wght: 500))
                         .foregroundColor(Color(white: 0.45))
                 }
                 .buttonStyle(.plain)
@@ -1233,7 +1237,8 @@ private struct ScopeChip: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Button(action: onRemove) {
-                LucideIcon(.x, size: 9)
+                Image(systemName: "xmark")
+                    .font(BodyFont.system(size: 9, weight: .semibold))
                     .foregroundColor(Color(white: 0.62))
                     .padding(.horizontal, 3)
                     .padding(.vertical, 2)
@@ -1271,7 +1276,8 @@ private struct SearchScopedRow: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            LucideIcon(.messageCircle, size: 11)
+            Image(systemName: "bubble.left")
+                .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
 

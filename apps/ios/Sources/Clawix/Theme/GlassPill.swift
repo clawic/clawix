@@ -104,7 +104,7 @@ struct GlassIconButton: View {
     private var glyphView: some View {
         switch glyph {
         case .system(let name, let iconSize, let weight):
-            LucideIcon.auto(name, size: 16)
+            Image(systemName: name)
                 .font(BodyFont.system(size: iconSize, weight: weight))
                 .foregroundStyle(Palette.textPrimary)
         case .custom(let view):

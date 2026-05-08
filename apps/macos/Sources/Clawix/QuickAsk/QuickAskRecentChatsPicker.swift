@@ -29,7 +29,8 @@ struct QuickAskRecentChatsPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                LucideIcon(.search, size: 11)
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white.opacity(0.55))
                 TextField(
                     "",
@@ -100,7 +101,8 @@ private struct QuickAskRecentChatRow: View {
         Button(action: onSelect) {
             HStack(spacing: 8) {
                 if isActive {
-                    LucideIcon(.check, size: 10)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.white.opacity(0.9))
                         .frame(width: 14)
                 } else {

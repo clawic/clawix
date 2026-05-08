@@ -141,7 +141,8 @@ struct QuickAskView: View {
             )
             .overlay(
                 VStack(spacing: 6) {
-                    LucideIcon(.inbox, size: 24)
+                    Image(systemName: "tray.and.arrow.down")
+                        .font(.system(size: 24, weight: .regular))
                         .foregroundColor(.white.opacity(0.92))
                     Text("Drop to attach")
                         .font(BodyFont.system(size: 13, wght: 600))
@@ -366,7 +367,8 @@ struct QuickAskView: View {
                     action: { controller.hide() },
                     tooltip: "Close (⎋)"
                 ) {
-                    LucideIcon(.circleX, size: 15)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.white.opacity(0.50))
                 }
                 if let chat = currentChat {
@@ -377,7 +379,8 @@ struct QuickAskView: View {
                                 .foregroundColor(.white.opacity(0.70))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
-                            LucideIcon(.chevronDown, size: 9)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(.white.opacity(0.50))
                         }
                         .padding(.horizontal, 6)
@@ -406,9 +409,10 @@ struct QuickAskView: View {
                         ? "Temporary chat — won't be saved"
                         : "Switch to Temporary chat (⌘⇧N)"
                 ) {
-                    LucideIcon.auto(controller.isTemporary
+                    Image(systemName: controller.isTemporary
                           ? "eyeglasses.slash"
-                          : "eyeglasses", size: 14)
+                          : "eyeglasses")
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(
                             controller.isTemporary
                                 ? .white.opacity(0.95)
@@ -647,7 +651,8 @@ struct QuickAskView: View {
             Button {
                 stopAndAppendTranscription()
             } label: {
-                LucideIcon(.square, size: 12, filled: true)
+                Image(systemName: "stop.fill")
+                    .font(BodyFont.system(size: 12, weight: .bold))
                     .foregroundColor(Color(white: 0.92))
                     .frame(width: 26, height: 26)
                     .background(Circle().fill(Color(white: 0.22)))
@@ -659,7 +664,8 @@ struct QuickAskView: View {
             Button {
                 stopAndSend()
             } label: {
-                LucideIcon(.arrowUp, size: 15)
+                Image(systemName: "arrow.up")
+                    .font(BodyFont.system(size: 15, weight: .bold))
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color.white))
@@ -693,7 +699,8 @@ struct QuickAskView: View {
         Button {
             controller.webSearchEnabled.toggle()
         } label: {
-            LucideIcon.auto(controller.webSearchEnabled ? "globe.americas.fill" : "globe", size: 14)
+            Image(systemName: controller.webSearchEnabled ? "globe.americas.fill" : "globe")
+                .font(.system(size: 14, weight: .regular))
                 .foregroundColor(
                     controller.webSearchEnabled
                         ? .white.opacity(0.95)
@@ -715,7 +722,8 @@ struct QuickAskView: View {
             workWithAppsPickerPresented.toggle()
         } label: {
             HStack(spacing: 4) {
-                LucideIcon(.squareDashed, size: 14)
+                Image(systemName: "app.dashed")
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundColor(
                         controller.workWithBundleId != nil
                             ? .white.opacity(0.95)
@@ -776,7 +784,8 @@ struct QuickAskView: View {
     // down toward the bottom edge.
     private func sendButton(extraBottomPadding: CGFloat) -> some View {
         Button(action: submitIfReady) {
-            LucideIcon(.arrowUp, size: 17)
+            Image(systemName: "arrow.up")
+                .font(BodyFont.system(size: 17, weight: .heavy))
                 .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                 .frame(width: 33, height: 33)
                 .background(
@@ -806,7 +815,8 @@ struct QuickAskView: View {
     private var selectionSuggestion: some View {
         if let snap = controller.pendingSelection {
             HStack(spacing: 6) {
-                LucideIcon(.alignLeft, size: 11)
+                Image(systemName: "text.alignleft")
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white.opacity(0.85))
                 Text(snap.appName.map { "Use selection from \($0)" } ?? "Use selection")
                     .font(BodyFont.system(size: 11, wght: 600))
@@ -838,7 +848,8 @@ struct QuickAskView: View {
                 Button {
                     controller.pendingSelection = nil
                 } label: {
-                    LucideIcon(.x, size: 9)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white.opacity(0.6))
                         .frame(width: 16, height: 16)
                         .background(Circle().fill(Color.white.opacity(0.10)))
@@ -1068,7 +1079,8 @@ private struct QuickAskPlusMenu: View {
                 Label("Take a photo", systemImage: "camera")
             }
         } label: {
-            LucideIcon(.plus, size: 18)
+            Image(systemName: "plus")
+                .font(BodyFont.system(size: 18, weight: .bold))
                 .foregroundColor(.white)
                 .opacity(0.78)
                 .frame(width: 28, height: 28)

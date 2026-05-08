@@ -116,7 +116,8 @@ struct FileViewerPanel: View {
                 .foregroundColor(Color(white: 0.55))
                 .lineLimit(1)
                 .truncationMode(.middle)
-            LucideIcon(.chevronRight, size: 9)
+            Image(systemName: "chevron.right")
+                .font(BodyFont.system(size: 9, weight: .semibold))
                 .foregroundColor(Color(white: 0.35))
             Text(fileName)
                 .font(BodyFont.system(size: 12, wght: 500))
@@ -145,7 +146,8 @@ struct FileViewerPanel: View {
                 copyContents()
             } icon: {
                 if copied {
-                    LucideIcon(.check, size: 11)
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 11, weight: .regular))
                 } else {
                     FolderStackIcon(size: 16)
                 }
@@ -205,7 +207,7 @@ struct FileViewerPanel: View {
                             label: String,
                             action: @escaping () -> Void) -> some View {
         iconButton(hoverState: hoverState, label: label, action: action) {
-            LucideIcon.auto(systemName, size: 16)
+            Image(systemName: systemName)
                 .font(BodyFont.system(size: size, weight: .regular))
         }
     }
@@ -359,7 +361,8 @@ private struct FileViewerMoreMenu: View {
             if showRichViewToggle {
                 row(id: "toggleRichView",
                     title: richViewDisabled ? "Enable rich view" : "Disable rich view") {
-                    LucideIcon.auto(richViewDisabled ? "photo" : "curlybraces", size: 12)
+                    Image(systemName: richViewDisabled ? "photo" : "curlybraces")
+                        .font(BodyFont.system(size: 12, weight: .regular))
                         .foregroundColor(MenuStyle.rowIcon)
                 } action: {
                     onToggleRichView()

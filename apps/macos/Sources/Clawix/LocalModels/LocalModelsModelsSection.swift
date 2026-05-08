@@ -92,7 +92,7 @@ extension LocalModelsPage {
             Button {
                 Task { await service.delete(model: model.name) }
             } label: {
-                LucideIcon(.trash2)
+                Image(systemName: "trash")
                     .foregroundColor(Color(red: 0.94, green: 0.45, blue: 0.45))
             }
             .buttonStyle(.borderless)

@@ -57,7 +57,8 @@ struct RecordingOverlay: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
-                LucideIcon(.x, size: 15)
+                Image(systemName: "xmark")
+                    .font(BodyFont.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.white)
             }
             .frame(width: 44, height: 44)
@@ -106,7 +107,8 @@ struct RecordingOverlay: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
-                LucideIcon(.play, size: 15, filled: true)
+                Image(systemName: "play.fill")
+                    .font(BodyFont.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.white)
                     .offset(x: 1)
             }
@@ -179,7 +181,8 @@ struct RecordingOverlay: View {
 
     private func sendCircle(enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            LucideIcon(.arrowUp, size: 15)
+            Image(systemName: "arrow.up")
+                .font(BodyFont.system(size: 15, weight: .bold))
                 .foregroundStyle(enabled ? Color.black : Color(white: 0.35))
                 .frame(width: 38, height: 38)
                 .background(Circle().fill(enabled ? Color.white : Color(white: 0.55)))

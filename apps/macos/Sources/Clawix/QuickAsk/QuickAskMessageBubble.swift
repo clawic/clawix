@@ -123,7 +123,8 @@ private struct QuickAskCopyAction: View {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color.white.opacity(hovered ? 0.07 : 0))
                 if showCheck {
-                    LucideIcon(.check, size: 12)
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 12, wght: 700))
                         .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                         .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 } else {

@@ -174,7 +174,8 @@ struct RecoveryPhraseSheet: View {
         Button {
             isPresented = false
         } label: {
-            LucideIcon(.x, size: 11)
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Palette.textSecondary)
                 .padding(6)
                 .background(Circle().fill(Color.white.opacity(0.06)))

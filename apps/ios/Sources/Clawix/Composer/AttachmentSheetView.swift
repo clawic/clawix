@@ -99,7 +99,8 @@ struct AttachmentSheetView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(white: 0.16))
-                LucideIcon(.camera, size: 28)
+                Image(systemName: "camera.fill")
+                    .font(BodyFont.system(size: 28, weight: .regular))
                     .foregroundStyle(Color.white.opacity(0.9))
             }
             .frame(width: 132, height: 160)
@@ -144,7 +145,8 @@ struct AttachmentSheetView: View {
                 .stroke(Color.white, lineWidth: 1.5)
                 .frame(width: 26, height: 26)
             if isSelected {
-                LucideIcon(.check, size: 12)
+                Image(systemName: "checkmark")
+                    .font(BodyFont.system(size: 12, weight: .bold))
                     .foregroundStyle(Color.white)
             }
         }
@@ -177,7 +179,8 @@ struct AttachmentSheetView: View {
 
     private var deniedState: some View {
         VStack(spacing: 10) {
-            LucideIcon(.images, size: 32)
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(BodyFont.system(size: 32, weight: .regular))
                 .foregroundStyle(Palette.textSecondary)
             Text("Photo access disabled")
                 .font(Typography.bodyEmphasized)

@@ -55,7 +55,8 @@ struct LocalModelsCatalogSheet: View {
             Button {
                 onClose()
             } label: {
-                LucideIcon(.x, size: 11)
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Palette.textSecondary)
                     .padding(8)
                     .background(

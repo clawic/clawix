@@ -32,6 +32,8 @@ struct PairWindowView: View {
                 .frame(maxWidth: 320)
 
             qrImage
+                .interpolation(.none)
+                .resizable()
                 .frame(width: 240, height: 240)
                 .padding(20)
                 .background(
@@ -114,16 +116,11 @@ struct PairWindowView: View {
         pb.setString(payload, forType: .string)
     }
 
-    @ViewBuilder
-    private var qrImage: some View {
+    private var qrImage: Image {
         if let nsImage = Self.makeQR(from: payload) {
-            Image(nsImage: nsImage)
-                .interpolation(.none)
-                .resizable()
-        } else {
-            LucideIcon(.squareDashed, size: 240)
-                .foregroundStyle(Color.black.opacity(0.4))
+            return Image(nsImage: nsImage)
         }
+        return Image(systemName: "questionmark.square.dashed")
     }
 
     static func makeQR(from string: String) -> NSImage? {

@@ -187,7 +187,8 @@ private struct SecretListRow: View {
                             .foregroundColor(Palette.textPrimary)
                             .lineLimit(1)
                         if secret.isCompromised {
-                            LucideIcon(.shieldAlert, size: 9)
+                            Image(systemName: "exclamationmark.shield.fill")
+                                .font(.system(size: 9))
                                 .foregroundColor(Color.red.opacity(0.85))
                         }
                     }

@@ -54,7 +54,8 @@ struct UserAudioBubble: View {
                         .controlSize(.mini)
                         .tint(Palette.textPrimary)
                 } else {
-                    LucideIcon.auto(isPlaying ? "pause.fill" : "play.fill", size: 12)
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Palette.textPrimary)
                         .offset(x: isPlaying ? 0 : 1)
                 }

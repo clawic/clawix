@@ -71,7 +71,8 @@ struct SecretsTrashView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.white.opacity(0.04))
                     .frame(width: 64, height: 64)
-                LucideIcon(.trash2, size: 26)
+                Image(systemName: "trash")
+                    .font(.system(size: 26, weight: .regular))
                     .foregroundColor(Palette.textSecondary)
             }
             VStack(spacing: 4) {

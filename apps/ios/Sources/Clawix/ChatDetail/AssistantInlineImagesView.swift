@@ -306,7 +306,8 @@ struct AssistantInlineImagesView: View {
 
     private func failurePill(reason: String, path: String) -> some View {
         HStack(spacing: 8) {
-            LucideIcon(.imageOff, size: 14)
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(.white.opacity(0.55))
             Text(reason)
                 .font(BodyFont.system(size: 13, weight: .regular))

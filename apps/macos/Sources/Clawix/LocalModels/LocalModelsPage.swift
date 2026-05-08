@@ -142,7 +142,7 @@ struct LocalModelsPage: View {
             }
         case .installed(let v):
             HStack {
-                LucideIcon(.circleCheck)
+                Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(Color(red: 0.40, green: 0.78, blue: 0.55))
                 Text("Runtime ready · \(v)")
                     .font(BodyFont.system(size: 12.5, wght: 500))

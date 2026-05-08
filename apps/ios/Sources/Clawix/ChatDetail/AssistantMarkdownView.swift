@@ -360,7 +360,8 @@ private struct AssistantCodeBlockView: View {
                 Button(action: copy) {
                     ZStack {
                         if copied {
-                            LucideIcon(.check, size: 12)
+                            Image(systemName: "checkmark")
+                                .font(BodyFont.system(size: 12, weight: .semibold))
                                 .foregroundStyle(Color(white: 0.78))
                                 .transition(.opacity)
                         } else {
