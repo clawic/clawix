@@ -35,7 +35,16 @@ import Foundation
 /// inline (turn 2: model wrote `![](/Users/.../*.png)` after the
 /// user complained the image hadn't shown up). All additions are
 /// optional so v3 peers keep parsing.
-public let bridgeSchemaVersion: Int = 4
+///
+/// v5 (2026-05): Rate limits. Three new desktop-only frames so the
+/// macOS GUI can keep its "Remaining usage limits" widget alive when
+/// the LaunchAgent daemon owns the Codex backend. `requestRateLimits`
+/// (desktop -> daemon) asks for the current snapshot, `rateLimitsSnapshot`
+/// is the reply, and `rateLimitsUpdated` is a daemon push fired whenever
+/// Codex emits `account/rateLimits/updated`. iPhone clients ignore the
+/// new types. All additions are additive frames; v4 peers decode v5
+/// frames as `unknownType` and fall through to their default branch.
+public let bridgeSchemaVersion: Int = 5
 
 /// Default count of trailing messages the server returns on
 /// `openChat(limit:)` when the client opts into pagination. 60 covers
@@ -251,6 +260,41 @@ public enum BridgeBody: Equatable, Sendable {
     /// `errorMessage` is a short reason for display.
     case generatedImageSnapshot(path: String, dataBase64: String?, mimeType: String?, errorMessage: String?)
 
+    /// Host-side bootstrap state. `state` is one of `booting`,
+    /// `syncing`, `ready`, `error`. `chatCount` is the size of the
+    /// chats list as the host currently knows it (useful while in
+    /// `ready` to confirm the snapshot is non-empty by design, not by
+    /// race). `message` carries a short reason when state is `error`,
+    /// or a hint for `syncing` (e.g. "loading rollouts"); nil otherwise.
+    /// Sent immediately after `authOk` and again whenever the host
+    /// transitions, so a peer that connected during boot sees the
+    /// `syncing → ready` flip without polling.
+    case bridgeState(state: String, chatCount: Int, message: String?)
+
+    // MARK: - v5 outbound (desktop client -> daemon)
+    /// Ask the daemon for the current rate-limits snapshot. Reply is
+    /// `rateLimitsSnapshot`. The macOS GUI sends this once after
+    /// `authOk` so the "Remaining usage limits" widget hydrates as
+    /// soon as the desktop client connects to the daemon. iPhone
+    /// clients never emit it.
+    case requestRateLimits
+
+    // MARK: - v5 inbound (daemon -> desktop client)
+    /// Reply to `requestRateLimits` and also the shape of the push
+    /// the daemon sends when Codex emits `account/rateLimits/updated`.
+    /// `snapshot` is the general-account view (the same field Codex
+    /// returns at `rateLimits` top level); `byLimitId` is the
+    /// per-bucket map keyed by metered `limit_id` (e.g. `"codex"`,
+    /// `"codex_<model>"`). Both are optional: `snapshot` is nil while
+    /// the daemon is still booting and hasn't pulled the first read,
+    /// `byLimitId` is empty when the backend doesn't surface
+    /// per-bucket data.
+    case rateLimitsSnapshot(snapshot: WireRateLimitSnapshot?, byLimitId: [String: WireRateLimitSnapshot])
+    /// Push from the daemon every time Codex notifies a fresh
+    /// `account/rateLimits/updated`. Same shape as `rateLimitsSnapshot`
+    /// so clients can apply both through the same code path.
+    case rateLimitsUpdated(snapshot: WireRateLimitSnapshot?, byLimitId: [String: WireRateLimitSnapshot])
+
     fileprivate var typeTag: String {
         switch self {
         case .auth:               return "auth"
@@ -288,6 +332,10 @@ public enum BridgeBody: Equatable, Sendable {
         case .audioSnapshot:      return "audioSnapshot"
         case .requestGeneratedImage: return "requestGeneratedImage"
         case .generatedImageSnapshot: return "generatedImageSnapshot"
+        case .bridgeState:        return "bridgeState"
+        case .requestRateLimits:  return "requestRateLimits"
+        case .rateLimitsSnapshot: return "rateLimitsSnapshot"
+        case .rateLimitsUpdated:  return "rateLimitsUpdated"
         }
     }
 
@@ -306,6 +354,8 @@ public enum BridgeBody: Equatable, Sendable {
         case audioId
         case dataBase64
         case limit, beforeMessageId, hasMore
+        case state, chatCount
+        case rateLimits, rateLimitsByLimitId
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
@@ -415,6 +465,18 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encodeIfPresent(dataBase64, forKey: .dataBase64)
             try c.encodeIfPresent(mimeType, forKey: .mimeType)
             try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .bridgeState(let state, let chatCount, let message):
+            try c.encode(state, forKey: .state)
+            try c.encode(chatCount, forKey: .chatCount)
+            try c.encodeIfPresent(message, forKey: .message)
+        case .requestRateLimits:
+            break
+        case .rateLimitsSnapshot(let snapshot, let byLimitId):
+            try c.encodeIfPresent(snapshot, forKey: .rateLimits)
+            try c.encode(byLimitId, forKey: .rateLimitsByLimitId)
+        case .rateLimitsUpdated(let snapshot, let byLimitId):
+            try c.encodeIfPresent(snapshot, forKey: .rateLimits)
+            try c.encode(byLimitId, forKey: .rateLimitsByLimitId)
         }
     }
 
@@ -564,6 +626,24 @@ public enum BridgeBody: Equatable, Sendable {
                 mimeType: try c.decodeIfPresent(String.self, forKey: .mimeType),
                 errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
             )
+        case "bridgeState":
+            return .bridgeState(
+                state: try c.decode(String.self, forKey: .state),
+                chatCount: try c.decode(Int.self, forKey: .chatCount),
+                message: try c.decodeIfPresent(String.self, forKey: .message)
+            )
+        case "requestRateLimits":
+            return .requestRateLimits
+        case "rateLimitsSnapshot":
+            return .rateLimitsSnapshot(
+                snapshot: try c.decodeIfPresent(WireRateLimitSnapshot.self, forKey: .rateLimits),
+                byLimitId: try c.decodeIfPresent([String: WireRateLimitSnapshot].self, forKey: .rateLimitsByLimitId) ?? [:]
+            )
+        case "rateLimitsUpdated":
+            return .rateLimitsUpdated(
+                snapshot: try c.decodeIfPresent(WireRateLimitSnapshot.self, forKey: .rateLimits),
+                byLimitId: try c.decodeIfPresent([String: WireRateLimitSnapshot].self, forKey: .rateLimitsByLimitId) ?? [:]
+            )
         default:
             throw BridgeDecodingError.unknownType(type)
         }
@@ -572,6 +652,100 @@ public enum BridgeBody: Equatable, Sendable {
 
 public enum BridgeDecodingError: Error, Equatable {
     case unknownType(String)
+}
+
+/// Bootstrap state of the host that drives a `BridgeServer`. The
+/// daemon flips through `booting → syncing → ready` while it spawns
+/// the Codex backend, runs `initialize`, and pulls the first
+/// `thread/list`. The in-process GUI server sits permanently at
+/// `.ready` because it shares process state with the chat owner.
+public enum BridgeRuntimeState: Equatable, Sendable {
+    /// Daemon process started, host wired up, but the Codex backend
+    /// subprocess hasn't been launched yet.
+    case booting
+    /// Codex backend running and `initialize` succeeded; we're now
+    /// pulling the chat list / hydrating any cached state.
+    case syncing
+    /// First chat snapshot has been published to the bus. Subsequent
+    /// snapshots flow through the throttled chat publisher; clients
+    /// are expected to render the chats list now.
+    case ready
+    /// Bootstrap failed. The string is short and user-facing
+    /// (surfaced as the "fail" line in `clawix up` and as an error
+    /// banner on iOS). Hosts may transition back to `.syncing` after
+    /// a retry.
+    case error(String)
+
+    public var wireTag: String {
+        switch self {
+        case .booting: return "booting"
+        case .syncing: return "syncing"
+        case .ready:   return "ready"
+        case .error:   return "error"
+        }
+    }
+
+    public var errorMessage: String? {
+        if case .error(let message) = self { return message }
+        return nil
+    }
+}
+
+// MARK: - Rate limits wire types
+
+/// Single rate-limit window (primary or secondary). Mirrors the shape
+/// Codex returns under `account/rateLimits/read.rateLimits.primary`.
+/// `windowDurationMins` and `resetsAt` are optional because older
+/// daemons / future buckets may omit them.
+public struct WireRateLimitWindow: Codable, Equatable, Sendable {
+    public let usedPercent: Int
+    public let resetsAt: Int64?
+    public let windowDurationMins: Int64?
+
+    public init(usedPercent: Int, resetsAt: Int64?, windowDurationMins: Int64?) {
+        self.usedPercent = usedPercent
+        self.resetsAt = resetsAt
+        self.windowDurationMins = windowDurationMins
+    }
+}
+
+/// Credits balance for the account (overage / pay-per-use). The GUI's
+/// Settings → Usage page renders a row when this is non-nil.
+public struct WireCreditsSnapshot: Codable, Equatable, Sendable {
+    public let hasCredits: Bool
+    public let unlimited: Bool
+    public let balance: String?
+
+    public init(hasCredits: Bool, unlimited: Bool, balance: String?) {
+        self.hasCredits = hasCredits
+        self.unlimited = unlimited
+        self.balance = balance
+    }
+}
+
+/// One bucket of rate-limit state. The general account view ships with
+/// `limitId == "codex"` (or nil); per-model buckets carry their own id
+/// (e.g. `"codex_<spark>"`) and a human label in `limitName`.
+public struct WireRateLimitSnapshot: Codable, Equatable, Sendable {
+    public let primary: WireRateLimitWindow?
+    public let secondary: WireRateLimitWindow?
+    public let credits: WireCreditsSnapshot?
+    public let limitId: String?
+    public let limitName: String?
+
+    public init(
+        primary: WireRateLimitWindow?,
+        secondary: WireRateLimitWindow?,
+        credits: WireCreditsSnapshot?,
+        limitId: String?,
+        limitName: String?
+    ) {
+        self.primary = primary
+        self.secondary = secondary
+        self.credits = credits
+        self.limitId = limitId
+        self.limitName = limitName
+    }
 }
 
 public enum BridgeCoder {
