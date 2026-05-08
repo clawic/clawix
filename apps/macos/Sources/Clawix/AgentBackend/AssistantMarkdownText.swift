@@ -174,6 +174,13 @@ struct AssistantMarkdownText: View {
     let color: Color
     var checkpoints: [StreamCheckpoint] = []
     var streamingFinished: Bool = true
+    /// Substring to highlight (case-insensitive). Empty disables the
+    /// AttributedString path so steady-state rendering pays nothing.
+    /// Wired from `AppState.findQuery` while the in-page find bar is
+    /// open and stays empty otherwise; `Equatable` on `ParagraphFlow` /
+    /// `AtomView` includes it so toggling the bar invalidates the
+    /// cached views.
+    var findQuery: String = ""
     @EnvironmentObject var appState: AppState
     @StateObject private var parseCache = MarkdownParseCache()
     /// Bumped when the trailing fade window closes, so the body
@@ -247,7 +254,7 @@ struct AssistantMarkdownText: View {
     private func blockView(_ block: AnnotatedBlock, now: Date) -> some View {
         switch block {
         case .paragraph(let p):
-            ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
+            ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now, findQuery: findQuery) { url in
                 appState.openLinkInBrowser(url)
             }
             .equatable()
@@ -260,7 +267,8 @@ struct AssistantMarkdownText: View {
                 color: color,
                 fontSize: headingFontSize(level),
                 checkpoints: checkpoints,
-                now: now
+                now: now,
+                findQuery: findQuery
             ) { url in
                 appState.openLinkInBrowser(url)
             }
@@ -276,7 +284,7 @@ struct AssistantMarkdownText: View {
                             .frame(width: 5, height: 5)
                             .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + 4 }
                             .frame(width: 10, alignment: .leading)
-                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
+                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now, findQuery: findQuery) { url in
                             appState.openLinkInBrowser(url)
                         }
                         .equatable()
@@ -294,7 +302,7 @@ struct AssistantMarkdownText: View {
                             .font(BodyFont.system(size: 13.5, wght: assistantWght(for: weight)))
                             .foregroundColor(color)
                             .fixedSize()
-                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now) { url in
+                        ParagraphFlow(paragraph: item, weight: weight, color: color, checkpoints: checkpoints, now: now, findQuery: findQuery) { url in
                             appState.openLinkInBrowser(url)
                         }
                         .equatable()
@@ -504,6 +512,7 @@ struct AssistantCodeBlockView: View {
                     .padding(.bottom, 12)
                     .textSelection(.enabled)
             }
+            .thinScrollers()
         }
     }
 
@@ -535,6 +544,7 @@ struct ParagraphFlow: View, Equatable {
     var fontSize: CGFloat = 13.5
     var checkpoints: [StreamCheckpoint] = []
     var now: Date = .distantPast
+    var findQuery: String = ""
     let onLinkTap: (URL) -> Void
 
     /// Skip body re-evaluation when the rendered output cannot have
@@ -549,6 +559,7 @@ struct ParagraphFlow: View, Equatable {
               lhs.weight == rhs.weight,
               lhs.color == rhs.color,
               lhs.fontSize == rhs.fontSize,
+              lhs.findQuery == rhs.findQuery,
               lhs.checkpoints == rhs.checkpoints else { return false }
         guard let last = lhs.checkpoints.last else { return true }
         let settledBy = last.addedAt.addingTimeInterval(StreamingFade.duration)
@@ -567,6 +578,7 @@ struct ParagraphFlow: View, Equatable {
                             weight: weight,
                             color: color,
                             fontSize: fontSize,
+                            findQuery: findQuery,
                             onLinkTap: onLinkTap
                         )
                         .equatable()
@@ -618,6 +630,7 @@ struct AtomView: View, Equatable {
     let weight: Font.Weight
     let color: Color
     var fontSize: CGFloat = 13.5
+    var findQuery: String = ""
     let onLinkTap: (URL) -> Void
 
     static func == (lhs: AtomView, rhs: AtomView) -> Bool {
@@ -626,27 +639,40 @@ struct AtomView: View, Equatable {
             && lhs.weight == rhs.weight
             && lhs.color == rhs.color
             && lhs.fontSize == rhs.fontSize
+            && lhs.findQuery == rhs.findQuery
+    }
+
+    /// Returns `Text(s)` when no find is active or this atom doesn't
+    /// match; otherwise returns `Text(AttributedString)` with a yellow
+    /// background painted over each match. Hot path stays free of
+    /// AttributedString construction so steady-state rendering keeps
+    /// the existing budget.
+    private func styledText(_ s: String) -> Text {
+        if substringMatches(s, query: findQuery) {
+            return Text(highlightedAttributed(s, query: findQuery))
+        }
+        return Text(s)
     }
 
     var body: some View {
         switch atom {
         case .word(let s):
-            Text(s)
+            styledText(s)
                 .font(BodyFont.system(size: fontSize, wght: assistantWght(for: weight)))
                 .foregroundColor(color)
                 .opacity(opacity)
         case .bold(let s):
-            Text(s)
+            styledText(s)
                 .font(BodyFont.system(size: fontSize, wght: assistantWght(for: .semibold)))
                 .foregroundColor(color)
                 .opacity(opacity)
         case .italic(let s):
-            Text(s)
+            styledText(s)
                 .font(BodyFont.system(size: fontSize, wght: assistantWght(for: weight)).italic())
                 .foregroundColor(color)
                 .opacity(opacity)
         case .code(let s):
-            Text(s)
+            styledText(s)
                 .font(BodyFont.system(size: fontSize - 1.5, weight: .regular, design: .monospaced))
                 .foregroundColor(Color(white: 0.94))
                 .padding(.horizontal, 7)

@@ -66,7 +66,7 @@ struct ChatView: View {
                             .padding(.horizontal, 24)
                             .padding(.top, 24)
                             .padding(.bottom, 12)
-                            .background(ThinScrollerInstaller().allowsHitTesting(false))
+                            .background(ThinScrollerInstaller(style: .legacy).allowsHitTesting(false))
                         }
                         .onChange(of: chat.messages.count) { _, _ in
                             if let last = chat.messages.last {
@@ -77,6 +77,12 @@ struct ChatView: View {
                         .onChange(of: chatId) { _, _ in
                             appState.ensureSelectedChat()
                             appState.requestComposerFocus()
+                        }
+                        .onChange(of: appState.currentFindIndex) { _, _ in
+                            scrollToCurrentFindMatch(proxy: proxy)
+                        }
+                        .onChange(of: appState.findMatches.count) { _, _ in
+                            scrollToCurrentFindMatch(proxy: proxy)
                         }
                     }
 
@@ -118,6 +124,16 @@ struct ChatView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.background)
+                .overlay(alignment: .topTrailing) {
+                    if appState.isFindBarOpen, appState.findChatId == chatId {
+                        FindBarView()
+                            .padding(.top, 14)
+                            .padding(.trailing, 18)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .zIndex(10)
+                    }
+                }
+                .animation(.easeOut(duration: 0.18), value: appState.isFindBarOpen)
                 .overlayPreferenceValue(WorkPillAnchorKey.self) { anchor in
                     GeometryReader { proxy in
                         if workMenuOpen, let anchor {
@@ -182,6 +198,15 @@ struct ChatView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Palette.background)
             }
+        }
+    }
+
+    private func scrollToCurrentFindMatch(proxy: ScrollViewProxy) {
+        guard appState.isFindBarOpen,
+              appState.findChatId == chatId,
+              let match = appState.currentFindMatch else { return }
+        withAnimation(.easeOut(duration: 0.20)) {
+            proxy.scrollTo(match.messageId, anchor: .center)
         }
     }
 
@@ -459,12 +484,19 @@ private struct MessageRow: View {
                             .components(separatedBy: "\n\n")
                             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
+                        let findQuery = appState.isFindBarOpen ? appState.findQuery : ""
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
-                                Text(p)
-                                    .font(BodyFont.system(size: 13.5, wght: 500))
-                                    .foregroundColor(Palette.textPrimary)
-                                    .lineSpacing(5)
+                                Group {
+                                    if substringMatches(p, query: findQuery) {
+                                        Text(highlightedAttributed(p, query: findQuery))
+                                    } else {
+                                        Text(p)
+                                    }
+                                }
+                                .font(BodyFont.system(size: 13.5, wght: 500))
+                                .foregroundColor(Palette.textPrimary)
+                                .lineSpacing(5)
                             }
                         }
                         .padding(.horizontal, 16)
@@ -549,7 +581,8 @@ private struct MessageRow: View {
                                     ? Color(red: 0.95, green: 0.45, blue: 0.45)
                                     : Palette.textPrimary,
                                 checkpoints: onlyTextSegment ? message.streamCheckpoints : [],
-                                streamingFinished: message.streamingFinished
+                                streamingFinished: message.streamingFinished,
+                                findQuery: appState.isFindBarOpen ? appState.findQuery : ""
                             )
                             .frame(maxWidth: .infinity, alignment: .leading)
                         case .plan(let body, let completed):
@@ -650,7 +683,8 @@ private struct MessageRow: View {
                 weight: .light,
                 color: Palette.textPrimary,
                 checkpoints: message.reasoningCheckpoints[entryId] ?? [],
-                streamingFinished: message.streamingFinished
+                streamingFinished: message.streamingFinished,
+                findQuery: appState.isFindBarOpen ? appState.findQuery : ""
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         case .message(let entryId, let text):
@@ -697,7 +731,8 @@ private struct MessageRow: View {
                             ? Color(red: 0.95, green: 0.45, blue: 0.45)
                             : Palette.textPrimary,
                         checkpoints: useCheckpoints ? message.streamCheckpoints : [],
-                        streamingFinished: message.streamingFinished
+                        streamingFinished: message.streamingFinished,
+                        findQuery: appState.isFindBarOpen ? appState.findQuery : ""
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                 case .plan(let body, let completed):
@@ -763,7 +798,7 @@ private struct MessageRow: View {
     private var formattedTimestamp: String {
         let cal = Calendar.current
         let timeFmt = DateFormatter()
-        timeFmt.locale = Locale.current
+        timeFmt.locale = AppLocale.current
         timeFmt.dateStyle = .none
         timeFmt.timeStyle = .short
         if cal.isDateInToday(message.timestamp) {
@@ -774,12 +809,12 @@ private struct MessageRow: View {
         let dayDiff = cal.dateComponents([.day], from: startOfMsg, to: startOfToday).day ?? 0
         if dayDiff >= 1 && dayDiff <= 6 {
             let weekdayFmt = DateFormatter()
-            weekdayFmt.locale = Locale.current
+            weekdayFmt.locale = AppLocale.current
             weekdayFmt.dateFormat = "EEEE"
             return "\(weekdayFmt.string(from: message.timestamp)), \(timeFmt.string(from: message.timestamp))"
         }
         let dateFmt = DateFormatter()
-        dateFmt.locale = Locale.current
+        dateFmt.locale = AppLocale.current
         dateFmt.dateStyle = .short
         dateFmt.timeStyle = .none
         return dateFmt.string(from: message.timestamp)
@@ -1093,6 +1128,7 @@ private struct BranchPickerPopup: View {
                     }
                 }
             }
+            .thinScrollers()
             .frame(maxHeight: 256)
 
             MenuStandardDivider()

@@ -18,8 +18,15 @@ struct ViewMenuCommands: View {
             .keyboardShortcut("r", modifiers: .command)
         Button("Toggle Diff Panel") {}
             .keyboardShortcut("b", modifiers: [.option, .command])
-        Button("Find") {}
-            .keyboardShortcut("f", modifiers: .command)
+        Button("Find in Chat") {
+            appState.openFindBar()
+        }
+        .keyboardShortcut("f", modifiers: .command)
+        .disabled(!appState.canOpenFindBar)
+        Button("Search Chats") {
+            appState.currentRoute = .search
+        }
+        .keyboardShortcut("g", modifiers: .command)
 
         Divider()
 
