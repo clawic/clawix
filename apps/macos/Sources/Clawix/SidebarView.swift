@@ -98,6 +98,18 @@ struct SidebarView: View {
     @AppStorage("ProjectSortMode", store: SidebarPrefs.store)
     private var projectSortModeRaw: String = ProjectSortMode.recent.rawValue
     @State private var pinnedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarPinnedExpanded", default: true)
+    @State private var pinnedFilterMenuOpen: Bool = false
+    /// Comma-separated list of disabled pinned-filter tokens. UUIDs identify
+    /// projects; the literal `__none__` represents the implicit "no project"
+    /// bucket. Persisted as a single string so the existing `SidebarPrefs`
+    /// `UserDefaults` suite can hold it without a custom codec.
+    @AppStorage("SidebarPinnedFilterDisabled", store: SidebarPrefs.store)
+    private var pinnedFilterDisabledRaw: String = ""
+    /// Mirror of `pinnedFilterDisabledRaw` for the chronological "All chats"
+    /// list. Same comma-separated UUID + `__none__` sentinel format. Edited
+    /// from inside the Organize popup's "Filter > By project" submenu.
+    @AppStorage("SidebarChronoFilterDisabled", store: SidebarPrefs.store)
+    private var chronoFilterDisabledRaw: String = ""
     @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarChronoExpanded", default: true)
     @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
     @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
@@ -281,31 +293,48 @@ struct SidebarView: View {
             }
 
             if !snapshot.pinned.isEmpty {
-                sectionHeader(
-                    "Pinned",
+                let pinnedSources = pinnedFilterSources(from: snapshot.pinned)
+                let visiblePinned = applyPinnedFilter(to: snapshot.pinned)
+                let canFilterPinned = pinnedSources.count >= 2
+                BasicSectionHeader(
+                    title: "Pinned",
                     expanded: $pinnedExpanded,
-                    leadingIcon: AnyView(PinIcon(size: 15.0, lineWidth: 1.5))
+                    leadingIcon: AnyView(PinIcon(size: 15.0, lineWidth: 1.5)),
+                    trailingIcon: canFilterPinned ? AnyView(pinnedFilterButton) : nil,
+                    trailingForceVisible: pinnedFilterMenuOpen
                 )
                 SidebarAccordion(
                     expanded: pinnedExpanded,
-                    targetHeight: CGFloat(snapshot.pinned.count) * 35
-                        + SidebarRowMetrics.sectionEdgePadding
+                    targetHeight: visiblePinned.isEmpty
+                        ? 26 + SidebarRowMetrics.sectionEdgePadding
+                        : CGFloat(visiblePinned.count) * 35
+                            + SidebarRowMetrics.sectionEdgePadding
                 ) {
-                    // No trailing `Color.clear` spacer here:
-                    // `PinnedReorderableList.trailingSlotZone` already
-                    // ends with a `sectionEdgePadding`-tall strip that
-                    // provides both the bottom gap and the drop-at-end
-                    // target. Adding a parent spacer would stack on top
-                    // of that strip and make Pinned visibly taller than
-                    // every other section.
-                    PinnedReorderableList(
-                        appState: appState,
-                        pinned: snapshot.pinned,
-                        selectedChatId: selectedChatId
-                    )
-                    .equatable()
-                    .padding(.leading, 8)
-                    .padding(.trailing, 0)
+                    // Populated case: `PinnedReorderableList.trailingSlotZone`
+                    // already ends with a `sectionEdgePadding`-tall strip that
+                    // provides the bottom gap and the drop-at-end target, so
+                    // we don't add a parent spacer there. The empty case has
+                    // no list, so we add the spacer manually to match the
+                    // bottom gap every other closable section shows.
+                    if visiblePinned.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("No pinned chats match the filter")
+                                .font(BodyFont.system(size: 13.5, wght: 500))
+                                .foregroundColor(Color(white: 0.40))
+                                .padding(.leading, 34)
+                                .padding(.vertical, 4)
+                            Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
+                        }
+                    } else {
+                        PinnedReorderableList(
+                            appState: appState,
+                            pinned: visiblePinned,
+                            selectedChatId: selectedChatId
+                        )
+                        .equatable()
+                        .padding(.leading, 8)
+                        .padding(.trailing, 0)
+                    }
                 }
             }
 
@@ -316,25 +345,30 @@ struct SidebarView: View {
                     .padding(.top, 6)
                     .padding(.bottom, 4)
                     .sidebarHover { projectsHeaderHovered = $0 }
-                let chronoCount = min(snapshot.chrono.count, chronoLimit)
+                let visibleChrono = applyChronoFilter(to: snapshot.chrono)
+                let chronoCount = min(visibleChrono.count, chronoLimit)
+                let chronoFilterActive = !chronoFilterDisabled.isEmpty
+                let showEmptyState = visibleChrono.isEmpty
                 SidebarAccordion(
                     expanded: chronoExpanded,
-                    targetHeight: snapshot.chrono.isEmpty
-                        ? 26
+                    targetHeight: showEmptyState
+                        ? 26 + SidebarRowMetrics.sectionEdgePadding
                         : SidebarRowMetrics.recentChats(count: chronoCount)
                             + SidebarRowMetrics.sectionEdgePadding
                 ) {
                     VStack(alignment: .leading, spacing: 0) {
                         VStack(alignment: .leading, spacing: 0) {
-                            if snapshot.chrono.isEmpty {
-                                Text("No chats")
+                            if showEmptyState {
+                                Text(chronoFilterActive && !snapshot.chrono.isEmpty
+                                     ? "No chats match the filter"
+                                     : "No chats")
                                     .font(BodyFont.system(size: 13.5, wght: 500))
                                     .foregroundColor(Color(white: 0.40))
                                     .padding(.leading, 34)
                                     .padding(.vertical, 4)
                             } else {
                                 let currentChatId = selectedChatId
-                                ForEach(snapshot.chrono.prefix(chronoLimit), id: \.id) { chat in
+                                ForEach(visibleChrono.prefix(chronoLimit), id: \.id) { chat in
                                     RecentChatRow(
                                         chat: chat,
                                         isSelected: currentChatId == chat.id,
@@ -346,7 +380,7 @@ struct SidebarView: View {
                             }
                         }
                         .padding(.leading, 8)
-                        if !snapshot.chrono.isEmpty {
+                        if !showEmptyState {
                             Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
                         }
                     }
@@ -358,8 +392,7 @@ struct SidebarView: View {
                         "Chats",
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
-                            Image(systemName: "bubble.left")
-                                .font(BodyFont.system(size: 11.5, wght: 550))
+                            LucideIcon(.messageCircle, size: 18.5)
                         )
                     )
                     SidebarAccordion(
@@ -490,6 +523,138 @@ struct SidebarView: View {
         .onChange(of: toolsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarToolsExpanded") }
         .task {
             if archivedExpanded { await appState.loadArchivedChats() }
+        }
+    }
+
+    /// Sentinel token used inside `pinnedFilterDisabledRaw` to represent
+    /// pinned chats with no associated project. Distinct from any UUID
+    /// string so it can coexist with project ids in the same set.
+    private static let pinnedFilterNoProjectToken = "__none__"
+
+    private var pinnedFilterDisabled: Set<String> {
+        let parts = pinnedFilterDisabledRaw.split(separator: ",").map(String.init)
+        return Set(parts.filter { !$0.isEmpty })
+    }
+
+    private func setPinnedFilterDisabled(_ next: Set<String>) {
+        pinnedFilterDisabledRaw = next.sorted().joined(separator: ",")
+    }
+
+    /// Distinct buckets present across the loaded pinned chats: each
+    /// project that has at least one pinned chat, plus a synthetic
+    /// "no project" entry when any chat has `projectId == nil`. Sorted
+    /// alphabetically so the popup is stable across renders.
+    private func pinnedFilterSources(from pinned: [Chat]) -> [PinnedFilterSource] {
+        var hasNoProject = false
+        var projectIds: Set<UUID> = []
+        for chat in pinned {
+            if let pid = chat.projectId {
+                projectIds.insert(pid)
+            } else {
+                hasNoProject = true
+            }
+        }
+        let projectsById = Dictionary(uniqueKeysWithValues: appState.projects.map { ($0.id, $0) })
+        var sources: [PinnedFilterSource] = projectIds.compactMap { id in
+            guard let p = projectsById[id] else { return nil }
+            return PinnedFilterSource(
+                token: id.uuidString,
+                label: p.name,
+                isNoProject: false
+            )
+        }
+        sources.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+        if hasNoProject {
+            sources.append(PinnedFilterSource(
+                token: Self.pinnedFilterNoProjectToken,
+                label: String(localized: "Without project", bundle: AppLocale.packageBundle),
+                isNoProject: true
+            ))
+        }
+        return sources
+    }
+
+    /// Drops chats whose source bucket is in the disabled set. Empty set
+    /// short-circuits to the original list so the renderer's hot path
+    /// stays cheap when no filter is active.
+    private func applyPinnedFilter(to pinned: [Chat]) -> [Chat] {
+        let disabled = pinnedFilterDisabled
+        guard !disabled.isEmpty else { return pinned }
+        return pinned.filter { chat in
+            if let pid = chat.projectId {
+                return !disabled.contains(pid.uuidString)
+            }
+            return !disabled.contains(Self.pinnedFilterNoProjectToken)
+        }
+    }
+
+    /// Funnel button anchoring `PinnedFilterPopup`. Same icon shape as
+    /// the `Organize` button on Projects/All chats so the two filter
+    /// affordances share the same visual language across the sidebar.
+    private var pinnedFilterButton: some View {
+        HeaderHoverIcon(tooltip: "Filter pinned by project") {
+            pinnedFilterMenuOpen.toggle()
+        } label: { color in
+            OrganizeFunnelIcon()
+                .foregroundColor(color)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .anchorPreference(key: PinnedFilterAnchorKey.self, value: .bounds) { anchor in
+            pinnedFilterMenuOpen ? anchor : nil
+        }
+    }
+
+    private var chronoFilterDisabled: Set<String> {
+        let parts = chronoFilterDisabledRaw.split(separator: ",").map(String.init)
+        return Set(parts.filter { !$0.isEmpty })
+    }
+
+    private func setChronoFilterDisabled(_ next: Set<String>) {
+        chronoFilterDisabledRaw = next.sorted().joined(separator: ",")
+    }
+
+    /// Mirrors `pinnedFilterSources(from:)` for the chronological list:
+    /// distinct project buckets present plus an optional "no project"
+    /// entry, sorted alphabetically.
+    private func chronoFilterSources(from chrono: [Chat]) -> [PinnedFilterSource] {
+        var hasNoProject = false
+        var projectIds: Set<UUID> = []
+        for chat in chrono {
+            if let pid = chat.projectId {
+                projectIds.insert(pid)
+            } else {
+                hasNoProject = true
+            }
+        }
+        let projectsById = Dictionary(uniqueKeysWithValues: appState.projects.map { ($0.id, $0) })
+        var sources: [PinnedFilterSource] = projectIds.compactMap { id in
+            guard let p = projectsById[id] else { return nil }
+            return PinnedFilterSource(
+                token: id.uuidString,
+                label: p.name,
+                isNoProject: false
+            )
+        }
+        sources.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+        if hasNoProject {
+            sources.append(PinnedFilterSource(
+                token: Self.pinnedFilterNoProjectToken,
+                label: String(localized: "Without project", bundle: AppLocale.packageBundle),
+                isNoProject: true
+            ))
+        }
+        return sources
+    }
+
+    private func applyChronoFilter(to chrono: [Chat]) -> [Chat] {
+        let disabled = chronoFilterDisabled
+        guard !disabled.isEmpty else { return chrono }
+        return chrono.filter { chat in
+            if let pid = chat.projectId {
+                return !disabled.contains(pid.uuidString)
+            }
+            return !disabled.contains(Self.pinnedFilterNoProjectToken)
         }
     }
 
@@ -653,11 +818,28 @@ struct SidebarView: View {
             GeometryReader { proxy in
                 if organizeMenuOpen, let anchor {
                     let buttonFrame = proxy[anchor]
-                    let popupWidth: CGFloat = 232
+                    let popupWidth: CGFloat = OrganizeMenuPopup.mainColumnWidth
+                    let chronoSnapshotForFilter = makeSnapshot()
+                    let chronoSources = chronoFilterSources(from: chronoSnapshotForFilter.chrono)
                     OrganizeMenuPopup(
                         isPresented: $organizeMenuOpen,
                         viewModeRaw: $viewModeRaw,
-                        projectSortModeRaw: $projectSortModeRaw
+                        projectSortModeRaw: $projectSortModeRaw,
+                        chronoFilterSources: chronoSources,
+                        chronoFilterDisabled: chronoFilterDisabled,
+                        toggleChronoFilter: { token in
+                            var next = chronoFilterDisabled
+                            if next.contains(token) {
+                                next.remove(token)
+                            } else {
+                                next.insert(token)
+                            }
+                            setChronoFilterDisabled(next)
+                        },
+                        showAllChronoFilter: { setChronoFilterDisabled([]) },
+                        hideAllChronoFilter: {
+                            setChronoFilterDisabled(Set(chronoSources.map { $0.token }))
+                        }
                     )
                     .frame(width: popupWidth)
                     .anchoredPopupPlacement(
@@ -750,6 +932,41 @@ struct SidebarView: View {
             .allowsHitTesting(projectMenuOpenId != nil)
             .animation(MenuStyle.openAnimation, value: projectMenuOpenId)
         }
+        .overlayPreferenceValue(PinnedFilterAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if pinnedFilterMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    let popupWidth: CGFloat = 244
+                    let snapshot = makeSnapshot()
+                    let sources = pinnedFilterSources(from: snapshot.pinned)
+                    PinnedFilterPopup(
+                        isPresented: $pinnedFilterMenuOpen,
+                        sources: sources,
+                        disabled: pinnedFilterDisabled,
+                        toggle: { token in
+                            var next = pinnedFilterDisabled
+                            if next.contains(token) {
+                                next.remove(token)
+                            } else {
+                                next.insert(token)
+                            }
+                            setPinnedFilterDisabled(next)
+                        },
+                        showAll: { setPinnedFilterDisabled([]) },
+                        hideAll: { setPinnedFilterDisabled(Set(sources.map { $0.token })) }
+                    )
+                    .frame(width: popupWidth)
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .trailing()
+                    )
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(pinnedFilterMenuOpen)
+            .animation(MenuStyle.openAnimation, value: pinnedFilterMenuOpen)
+        }
     }
 
     private func sectionHeader(
@@ -774,8 +991,7 @@ struct SidebarView: View {
                       showAddProject: false,
                       showNewChat: false,
                       leadingIcon: AnyView(
-                          Image(systemName: "bubble.left")
-                              .font(BodyFont.system(size: 11.5, wght: 550))
+                          LucideIcon(.messageCircle, size: 18.5)
                       ),
                       expanded: $chronoExpanded)
     }
@@ -1157,7 +1373,7 @@ private struct SettingsLimitsHeaderRow: View {
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.down")
+                LucideIcon(.chevronDown)
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .rotationEffect(.degrees(expanded ? 180 : 0))
@@ -1306,8 +1522,7 @@ private struct SettingsAccountRow: View {
                         SignOutIcon(size: 16)
                             .offset(x: 1)
                     } else {
-                        Image(systemName: icon)
-                            .font(BodyFont.system(size: 11.5))
+                        LucideIcon.auto(icon, size: 11.5)
                     }
                 }
                 .frame(width: 18, alignment: .center)
@@ -1317,7 +1532,7 @@ private struct SettingsAccountRow: View {
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 if let trailingIcon = trailing {
-                    Image(systemName: trailingIcon)
+                    LucideIcon.auto(trailingIcon)
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1372,8 +1587,7 @@ private struct SidebarButton: View {
                             .frame(width: customShapeSize, height: customShapeSize)
                             .frame(width: 15, height: 15)
                     } else {
-                        Image(systemName: icon)
-                            .font(BodyFont.system(size: 13.5, wght: 500))
+                        LucideIcon.auto(icon, size: 13.5)
                             .frame(width: 15)
                             .foregroundColor(iconColor)
                     }
@@ -1556,8 +1770,7 @@ private struct SectionDisclosureChevron: View {
     var hovered: Bool = false
 
     var body: some View {
-        Image(systemName: "chevron.right")
-            .font(BodyFont.system(size: 9.5, wght: 700))
+        LucideIcon(.chevronRight, size: 9.5)
             .foregroundColor(Color(white: 0.78))
             .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -1669,40 +1882,73 @@ private struct CollapsibleSectionLabel: View {
     }
 }
 
-/// Collapsible section header without a trailing icon group (Pinned,
-/// Chats with no project, Archived). Owns its own row-wide hover so the
-/// label, chevron and hairlines all light up together when the cursor
-/// enters anywhere inside the row, including the hairline tails — not
-/// just the inner text+chevron region.
+/// Collapsible section header used for Pinned, "Chats with no project",
+/// Archived, and Tools. Owns its own row-wide hover so the label, chevron
+/// and hairlines all light up together when the cursor enters anywhere
+/// inside the row, including the hairline tails — not just the inner
+/// text+chevron region.
+///
+/// Optionally renders a single trailing hover icon (used by Pinned for
+/// the per-project filter funnel). The icon shares the staggered fade
+/// timing of the project header's icon group so the two filter
+/// affordances feel like the same control across the sidebar.
 private struct BasicSectionHeader: View {
     let title: LocalizedStringKey
     @Binding var expanded: Bool
     let leadingIcon: AnyView?
+    /// Optional view rendered in a 22pt slot at the trailing edge. Fades
+    /// in on hover or when `trailingForceVisible` is true. The view is
+    /// responsible for its own click handler.
+    var trailingIcon: AnyView? = nil
+    /// Keep the trailing icon visible regardless of hover (e.g. while
+    /// the icon's popup menu is open) so it doesn't blink out when the
+    /// cursor enters the dropdown.
+    var trailingForceVisible: Bool = false
 
     @State private var hovered = false
 
+    private var iconsVisible: Bool { hovered || trailingForceVisible }
+
     var body: some View {
         let leadingPadding: CGFloat = leadingIcon != nil ? 16 : 20
-        Button(action: {
-            withAnimation(SidebarSection.toggleAnimation) { expanded.toggle() }
-        }) {
-            HStack(spacing: 0) {
-                CollapsibleSectionLabel(
-                    title: title,
-                    expanded: expanded,
-                    hovered: hovered,
-                    leadingIcon: leadingIcon
-                )
-                Spacer()
-            }
-            .frame(height: 24)
-            .padding(.leading, leadingPadding)
-            .padding(.trailing, 11)
-            .padding(.top, 6)
-            .padding(.bottom, 4)
-            .contentShape(Rectangle())
+        let hasTrailing = trailingIcon != nil
+        let trailingClearance: CGFloat = hasTrailing ? 28 : 0
+        HStack(spacing: 0) {
+            CollapsibleSectionLabel(
+                title: title,
+                expanded: expanded,
+                hovered: hovered,
+                trailingIconsActive: hasTrailing ? iconsVisible : nil,
+                leadingIcon: leadingIcon,
+                trailingIconsClearance: trailingClearance
+            )
+            Spacer()
         }
-        .buttonStyle(.plain)
+        .frame(height: 24)
+        .padding(.leading, leadingPadding)
+        .padding(.trailing, 11)
+        .padding(.top, 6)
+        .padding(.bottom, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(SidebarSection.toggleAnimation) { expanded.toggle() }
+        }
+        .overlay(alignment: .trailing) {
+            if let trailingIcon {
+                trailingIcon
+                    .frame(width: 22, height: 22)
+                    .padding(.trailing, 11)
+                    .opacity(iconsVisible ? 1 : 0)
+                    .animation(
+                        iconsVisible
+                            ? SidebarSection.trailingIconsFadeIn
+                                .delay(SidebarSection.trailingIconsFirstDelay)
+                            : SidebarSection.trailingIconsFadeOut,
+                        value: iconsVisible
+                    )
+                    .disabled(!iconsVisible)
+            }
+        }
         .sidebarHover { hovered = $0 }
         .animation(.easeOut(duration: 0.12), value: hovered)
     }
@@ -2042,8 +2288,7 @@ struct RecentChatRow: View, Equatable {
                 help: L10n.t("Pin")
             )
         case .bubble:
-            Image(systemName: "bubble.left")
-                .font(BodyFont.system(size: 10.5, wght: 500))
+            LucideIcon(.messageCircle, size: 10.5)
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
         case .unarchive:
@@ -2261,8 +2506,7 @@ private struct ProjectAccordion: View, Equatable {
                 // into the icon makes the parent lose hover and the icon
                 // disappears.
                 Button(action: onMenuToggle) {
-                    Image(systemName: "ellipsis")
-                        .font(BodyFont.system(size: 12.5, wght: 600))
+                    LucideIcon(.ellipsis, size: 12.5)
                         .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
@@ -2601,8 +2845,7 @@ private struct PinnedRow: View {
                 Button {
                     // archivar chat
                 } label: {
-                    Image(systemName: "archivebox")
-                        .font(BodyFont.system(size: 12.5, wght: 500))
+                    LucideIcon(.archive, size: 12.5)
                         .foregroundColor(Color(white: 0.72))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
@@ -2729,21 +2972,93 @@ private struct OrganizeMenuAnchorKey: PreferenceKey {
     }
 }
 
-/// Two-section dropdown: top-level view mode (Grouped vs Chronological)
-/// and project sort field. The "Sort projects by" section is hidden when
-/// the user is in chronological mode (no projects to sort). Selections
-/// persist via the caller's `@AppStorage`-backed bindings, so the popup
-/// itself is stateless.
+private enum OrganizeSubmenu { case none, byProject }
+
+private enum OrganizeChevronRow: Hashable { case byProject }
+
+private struct OrganizeChevronAnchorsKey: PreferenceKey {
+    static var defaultValue: [OrganizeChevronRow: Anchor<CGRect>] = [:]
+    static func reduce(value: inout [OrganizeChevronRow: Anchor<CGRect>],
+                       nextValue: () -> [OrganizeChevronRow: Anchor<CGRect>]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+/// Three-section dropdown: top-level view mode (Grouped vs Chronological),
+/// project sort field (only when grouped), and a `Filter > By project`
+/// submenu (only when chronological). The filter row mirrors the
+/// hover-reveals-side-panel pattern used in the composer's model picker
+/// (`ModelMenuPopup`): hovering the chevron spawns a column to the right
+/// with the project filter list, so this popup remains the single entry
+/// point for organizing the chat list. Selections persist via the
+/// caller's `@AppStorage`-backed bindings; the side panel's per-project
+/// toggles flow through the `chronoFilter*` callbacks.
 private struct OrganizeMenuPopup: View {
     @Binding var isPresented: Bool
     @Binding var viewModeRaw: String
     @Binding var projectSortModeRaw: String
 
+    /// Distinct project buckets across the chronological list. Empty if
+    /// the chrono list contains zero chats. Provided by the caller so the
+    /// popup stays stateless.
+    let chronoFilterSources: [PinnedFilterSource]
+    let chronoFilterDisabled: Set<String>
+    let toggleChronoFilter: (String) -> Void
+    let showAllChronoFilter: () -> Void
+    let hideAllChronoFilter: () -> Void
+
+    static let mainColumnWidth: CGFloat = 232
+    private static let byProjectColumnWidth: CGFloat = 244
+    private static let columnGap: CGFloat = 6
+    private static let byProjectMaxListHeight: CGFloat = 260
+
+    @State private var openSubmenu: OrganizeSubmenu = .none
+
     private var isGrouped: Bool {
         viewModeRaw == SidebarViewMode.grouped.rawValue
     }
 
+    private var canFilterByProject: Bool {
+        !isGrouped && !chronoFilterSources.isEmpty
+    }
+
+    private var allChronoHidden: Bool {
+        !chronoFilterSources.isEmpty
+            && chronoFilterDisabled.count >= chronoFilterSources.count
+    }
+
     var body: some View {
+        ZStack(alignment: .topLeading) {
+            mainColumn
+        }
+        .overlayPreferenceValue(OrganizeChevronAnchorsKey.self) { anchors in
+            GeometryReader { proxy in
+                let parentGlobalMinX = proxy.frame(in: .global).minX
+                if openSubmenu == .byProject,
+                   canFilterByProject,
+                   let anchor = anchors[.byProject] {
+                    let row = proxy[anchor]
+                    let placement = submenuLeadingPlacement(
+                        parentGlobalMinX: parentGlobalMinX,
+                        row: row,
+                        submenuWidth: Self.byProjectColumnWidth,
+                        gap: Self.columnGap
+                    )
+                    byProjectColumn
+                        .alignmentGuide(.leading) { _ in placement.offset }
+                        .alignmentGuide(.top) { _ in -row.minY }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .transition(.softNudge(x: placement.placedRight ? -4 : 4))
+                }
+            }
+            .animation(.easeOut(duration: 0.18), value: openSubmenu)
+        }
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+        .animation(.easeOut(duration: 0.18), value: isGrouped)
+        .animation(.easeOut(duration: 0.18), value: canFilterByProject)
+    }
+
+    private var mainColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader("Organize")
             OrganizeMenuRow(
@@ -2754,6 +3069,9 @@ private struct OrganizeMenuPopup: View {
                 viewModeRaw = SidebarViewMode.grouped.rawValue
                 isPresented = false
             }
+            .onHover { hovering in
+                if hovering { openSubmenu = .none }
+            }
             OrganizeMenuRow(
                 icon: .system("clock"),
                 label: "Chronological list",
@@ -2761,6 +3079,9 @@ private struct OrganizeMenuPopup: View {
             ) {
                 viewModeRaw = SidebarViewMode.chronological.rawValue
                 isPresented = false
+            }
+            .onHover { hovering in
+                if hovering { openSubmenu = .none }
             }
 
             if isGrouped {
@@ -2801,11 +3122,72 @@ private struct OrganizeMenuPopup: View {
                     isPresented = false
                 }
             }
+
+            if canFilterByProject {
+                MenuStandardDivider()
+                    .padding(.vertical, 5)
+
+                ModelMenuHeader("Filter")
+                OrganizeMenuChevronRow(
+                    icon: .system("folder"),
+                    label: "By project",
+                    badge: chronoFilterDisabled.isEmpty ? nil : "\(chronoFilterDisabled.count)",
+                    highlighted: openSubmenu == .byProject
+                ) {
+                    openSubmenu = (openSubmenu == .byProject) ? .none : .byProject
+                }
+                .onHover { hovering in
+                    if hovering { openSubmenu = .byProject }
+                }
+                .anchorPreference(key: OrganizeChevronAnchorsKey.self, value: .bounds) {
+                    [.byProject: $0]
+                }
+            }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.mainColumnWidth, alignment: .leading)
         .menuStandardBackground()
-        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
-        .animation(.easeOut(duration: 0.18), value: isGrouped)
+    }
+
+    private var byProjectColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader("Filter by project")
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(chronoFilterSources) { source in
+                        PinnedFilterRow(
+                            label: source.label,
+                            isNoProject: source.isNoProject,
+                            isActive: !chronoFilterDisabled.contains(source.token),
+                            action: { toggleChronoFilter(source.token) }
+                        )
+                    }
+                }
+            }
+            .frame(maxHeight: Self.byProjectMaxListHeight)
+
+            let hasFooter = !chronoFilterDisabled.isEmpty || !allChronoHidden
+            if hasFooter {
+                MenuStandardDivider()
+                    .padding(.vertical, 5)
+                if !chronoFilterDisabled.isEmpty {
+                    PinnedFilterBulkRow(icon: "eye", label: "Show all") {
+                        showAllChronoFilter()
+                        isPresented = false
+                    }
+                }
+                if !allChronoHidden {
+                    PinnedFilterBulkRow(icon: "eye.slash", label: "Hide all") {
+                        hideAllChronoFilter()
+                        isPresented = false
+                    }
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .frame(width: Self.byProjectColumnWidth, alignment: .leading)
+        .menuStandardBackground()
+        .animation(.easeOut(duration: 0.18), value: chronoFilterDisabled)
     }
 }
 
@@ -2831,8 +3213,7 @@ private struct OrganizeMenuRow: View {
                         FolderOpenIcon(size: 11.5)
                             .foregroundColor(MenuStyle.rowIcon)
                     case .system(let name):
-                        Image(systemName: name)
-                            .font(BodyFont.system(size: 11.5))
+                        LucideIcon.auto(name, size: 11.5)
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
@@ -2843,10 +3224,229 @@ private struct OrganizeMenuRow: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if isSelected {
+                    LucideIcon(.check, size: 9.5)
+                        .foregroundColor(MenuStyle.rowText)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+    }
+}
+
+/// Row variant of `OrganizeMenuRow` that ends in a chevron and stays
+/// highlighted while its companion side panel is open. Mirrors the
+/// chevron row styling used by `ModelMenuChevronRow` in the composer's
+/// model picker so the two cascading menus read as the same family.
+private struct OrganizeMenuChevronRow: View {
+    let icon: OrganizeMenuIcon
+    let label: String
+    let badge: String?
+    let highlighted: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Group {
+                    switch icon {
+                    case .folderOpen:
+                        FolderOpenIcon(size: 11.5)
+                            .foregroundColor(MenuStyle.rowIcon)
+                    case .system(let name):
+                        LucideIcon.auto(name, size: 11.5)
+                            .foregroundColor(MenuStyle.rowIcon)
+                    }
+                }
+                .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(BodyFont.system(size: 12))
+                    .foregroundColor(MenuStyle.rowText)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if let badge {
+                    Text(badge)
+                        .font(BodyFont.system(size: 10.5, wght: 600))
+                        .foregroundColor(MenuStyle.rowSubtle)
+                }
+                LucideIcon(.chevronRight)
+                    .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
+                    .foregroundColor(MenuStyle.rowSubtle)
+            }
+            .padding(.leading, MenuStyle.rowHorizontalPadding)
+            .padding(.trailing, MenuStyle.rowHorizontalPadding + MenuStyle.rowTrailingIconExtra)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(
+                active: highlighted || hovered,
+                intensity: highlighted ? MenuStyle.rowHoverIntensityStrong : MenuStyle.rowHoverIntensity
+            ))
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+    }
+}
+
+// MARK: - Pinned filter
+
+/// Distinct buckets present across the loaded pinned chats: each project
+/// that has at least one pinned chat, plus a synthetic "no project"
+/// entry when any chat has `projectId == nil`. Lives at file scope so
+/// the popup type below can name it as a concrete parameter.
+fileprivate struct PinnedFilterSource: Identifiable, Equatable {
+    let token: String
+    let label: String
+    let isNoProject: Bool
+    var id: String { token }
+}
+
+private struct PinnedFilterAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+/// Per-project visibility filter for the Pinned section. Each row maps
+/// to one bucket present across the user's pinned chats (a project, or
+/// the synthetic "no project" entry). Toggling a row flips its inclusion
+/// in the visible list. The popup also exposes a "Show all" shortcut at
+/// the bottom that wipes the entire disabled set in one click — the
+/// recovery path when the user filtered down to "nothing visible" and
+/// can no longer find the chats they pinned earlier.
+private struct PinnedFilterPopup: View {
+    @Binding var isPresented: Bool
+    let sources: [PinnedFilterSource]
+    let disabled: Set<String>
+    let toggle: (String) -> Void
+    let showAll: () -> Void
+    let hideAll: () -> Void
+
+    /// Cap so the popup never occupies the entire window when the user
+    /// has dozens of projects with pinned chats; rows beyond the cap
+    /// scroll inside.
+    private static let maxListHeight: CGFloat = 260
+
+    private var allHidden: Bool {
+        !sources.isEmpty && disabled.count >= sources.count
+    }
+
+    private var hasFooter: Bool { !disabled.isEmpty || !allHidden }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader("Filter by project")
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(sources) { source in
+                        PinnedFilterRow(
+                            label: source.label,
+                            isNoProject: source.isNoProject,
+                            isActive: !disabled.contains(source.token),
+                            action: { toggle(source.token) }
+                        )
+                    }
+                }
+            }
+            .frame(maxHeight: Self.maxListHeight)
+            if hasFooter {
+                MenuStandardDivider()
+                    .padding(.vertical, 5)
+                if !disabled.isEmpty {
+                    PinnedFilterBulkRow(icon: "eye", label: "Show all") {
+                        showAll()
+                        isPresented = false
+                    }
+                }
+                if !allHidden {
+                    PinnedFilterBulkRow(icon: "eye.slash", label: "Hide all") {
+                        hideAll()
+                        isPresented = false
+                    }
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .menuStandardBackground()
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+        .animation(.easeOut(duration: 0.18), value: disabled)
+    }
+}
+
+/// Toggleable row inside `PinnedFilterPopup`. Active state is shown with
+/// a check on the trailing edge and the icon + label rendered at full
+/// brightness; inactive rows fade their label and icon so the disabled
+/// state reads at a glance even without hovering.
+private struct PinnedFilterRow: View {
+    let label: String
+    let isNoProject: Bool
+    let isActive: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Group {
+                    if isNoProject {
+                        Image(systemName: "tray")
+                            .font(BodyFont.system(size: 10.5))
+                            .foregroundColor(isActive ? MenuStyle.rowIcon : MenuStyle.rowSubtle)
+                    } else {
+                        FolderOpenIcon(size: 11.5)
+                            .foregroundColor(isActive ? MenuStyle.rowIcon : MenuStyle.rowSubtle)
+                    }
+                }
+                .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(BodyFont.system(size: 12))
+                    .foregroundColor(isActive ? MenuStyle.rowText : MenuStyle.rowSubtle)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 8)
+                if isActive {
                     Image(systemName: "checkmark")
                         .font(BodyFont.system(size: 9.5, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+    }
+}
+
+/// Footer row inside `PinnedFilterPopup` for "Show all" / "Hide all"
+/// shortcuts. Same hover styling as the toggleable project rows so the
+/// footer reads as part of the same list, just with a divider above it.
+private struct PinnedFilterBulkRow: View {
+    let icon: String
+    let label: LocalizedStringKey
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Image(systemName: icon)
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(MenuStyle.rowIcon)
+                    .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(BodyFont.system(size: 12))
+                    .foregroundColor(MenuStyle.rowText)
+                Spacer(minLength: 8)
             }
             .padding(.horizontal, MenuStyle.rowHorizontalPadding)
             .padding(.vertical, MenuStyle.rowVerticalPadding)
