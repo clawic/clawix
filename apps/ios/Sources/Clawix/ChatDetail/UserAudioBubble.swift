@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import ClawixCore
+import LucideIcon
 
 /// Audio player rendered inline with a user voice-note message. Mirrors
 /// the WhatsApp idiom: round play/pause bubble, static waveform glyph,
@@ -54,7 +55,7 @@ struct UserAudioBubble: View {
                         .controlSize(.mini)
                         .tint(Palette.textPrimary)
                 } else {
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    Image(lucideOrSystem: isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(Palette.textPrimary)
                         .offset(x: isPlaying ? 0 : 1)

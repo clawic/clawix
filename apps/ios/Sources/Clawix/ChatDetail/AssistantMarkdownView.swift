@@ -1,6 +1,7 @@
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
+import LucideIcon
 #endif
 
 // Block-level markdown renderer used by the assistant message body in
@@ -360,7 +361,7 @@ private struct AssistantCodeBlockView: View {
                 Button(action: copy) {
                     ZStack {
                         if copied {
-                            Image(systemName: "checkmark")
+                            Image(lucide: .check)
                                 .font(BodyFont.system(size: 12, weight: .semibold))
                                 .foregroundStyle(Color(white: 0.78))
                                 .transition(.opacity)
