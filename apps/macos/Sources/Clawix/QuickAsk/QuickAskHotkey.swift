@@ -15,13 +15,12 @@ struct QuickAskHotkey: Codable, Equatable {
     /// Carbon modifier mask (e.g. `cmdKey | optionKey | controlKey`).
     var modifiers: UInt32
 
-    /// Default shortcut shipped on first launch: ⌃⌥⌘K.
-    /// Three modifiers + a letter key — unusual enough to avoid
-    /// colliding with Spotlight, Raycast, Alfred, the emoji popover,
-    /// IME switchers, or any first-party macOS combo.
+    /// Default shortcut shipped on first launch: ⌃Space.
+    /// Easy to reach with one hand, and configurable in Settings if
+    /// the user has another global hotkey on this combo.
     static let defaultValue = QuickAskHotkey(
-        keyCode: UInt32(kVK_ANSI_K),
-        modifiers: UInt32(controlKey | optionKey | cmdKey)
+        keyCode: UInt32(kVK_Space),
+        modifiers: UInt32(controlKey)
     )
 
     /// Human-readable label like "⌃⌥⌘K". Used in Settings rows.
@@ -148,6 +147,7 @@ final class QuickAskHotkeyManager: ObservableObject {
     /// Install the Carbon event handler and register the current
     /// shortcut. Idempotent: subsequent calls are no-ops.
     func install() {
+        QuickAskDiag.log("hotkey install() current=\(current.displayString) keyCode=\(current.keyCode) modifiers=0x\(String(current.modifiers, radix: 16))")
         installEventHandler()
         registerCurrent()
     }
@@ -173,7 +173,10 @@ final class QuickAskHotkeyManager: ObservableObject {
     private let hotkeyID: UInt32 = 1
 
     private func installEventHandler() {
-        guard eventHandler == nil else { return }
+        guard eventHandler == nil else {
+            QuickAskDiag.log("installEventHandler skipped (already installed)")
+            return
+        }
 
         var spec = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
@@ -201,8 +204,15 @@ final class QuickAskHotkeyManager: ObservableObject {
                 nil,
                 &hkID
             )
-            guard status == noErr else { return status }
+            guard status == noErr else {
+                QuickAskDiag.log("Carbon callback: GetEventParameter failed status=\(status)")
+                return status
+            }
+            QuickAskDiag.log("Carbon callback fired hkID.id=\(hkID.id) hkID.signature=0x\(String(hkID.signature, radix: 16))")
             DispatchQueue.main.async {
+                if manager.onTrigger == nil {
+                    QuickAskDiag.log("Carbon callback: onTrigger is nil, no-op")
+                }
                 manager.onTrigger?()
             }
             return noErr
@@ -219,6 +229,9 @@ final class QuickAskHotkeyManager: ObservableObject {
         )
         if status == noErr {
             eventHandler = handlerRef
+            QuickAskDiag.log("InstallEventHandler ok handlerRef=\(handlerRef != nil)")
+        } else {
+            QuickAskDiag.log("InstallEventHandler FAILED status=\(status)")
         }
     }
 
@@ -242,6 +255,9 @@ final class QuickAskHotkeyManager: ObservableObject {
         )
         if status == noErr {
             hotkeyRef = ref
+            QuickAskDiag.log("RegisterEventHotKey ok combo=\(current.displayString) ref=\(ref != nil)")
+        } else {
+            QuickAskDiag.log("RegisterEventHotKey FAILED status=\(status) combo=\(current.displayString) keyCode=\(current.keyCode) modifiers=0x\(String(current.modifiers, radix: 16))")
         }
     }
 
