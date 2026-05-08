@@ -1,6 +1,7 @@
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
+import LucideIcon
 #endif
 
 // Floating Liquid Glass composer. Lives over the transcript: the
@@ -196,7 +197,7 @@ struct ComposerView: View {
             Haptics.tap()
             showAttachmentSheet = true
         }) {
-            Image(systemName: "plus")
+            Image(lucide: .plus)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Color.white)
                 .frame(width: 45, height: 45)
@@ -213,7 +214,7 @@ struct ComposerView: View {
             Haptics.tap()
             showAttachmentSheet = true
         }) {
-            Image(systemName: "plus")
+            Image(lucide: .plus)
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Color.white)
                 .frame(width: 45, height: 37)
@@ -247,7 +248,7 @@ struct ComposerView: View {
                         .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
                 )
             Button(action: { remove(attachment) }) {
-                Image(systemName: "xmark")
+                Image(lucide: .x)
                     .font(BodyFont.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.black)
                     .frame(width: 18, height: 18)
@@ -369,7 +370,7 @@ struct ComposerView: View {
             focused = false
             isExpanded = true
         } label: {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
+            Image(lucide: .maximize_2)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.7))
                 .frame(width: 30, height: 30)
@@ -415,7 +416,7 @@ struct ComposerView: View {
                 .transition(.scale.combined(with: .opacity))
                 .id("glyph-stop")
         } else if canSend {
-            Image(systemName: "arrow.up")
+            Image(lucide: .arrow_up)
                 .font(BodyFont.system(size: 15, weight: .bold))
                 .foregroundStyle(Color.black)
                 .transition(.scale.combined(with: .opacity))
@@ -511,7 +512,7 @@ private struct ExpandedComposerSheet: View {
             .overlay(alignment: .bottomTrailing) {
                 if canSend {
                     Button(action: onSend) {
-                        Image(systemName: "arrow.up")
+                        Image(lucide: .arrow_up)
                             .font(BodyFont.system(size: 15, weight: .bold))
                             .foregroundStyle(Color.black)
                             .frame(width: 34, height: 34)
@@ -524,7 +525,7 @@ private struct ExpandedComposerSheet: View {
 
             // Collapse icon
             Button(action: onCollapse) {
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
+                Image(lucide: .minimize_2)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.85))
                     .frame(width: 36, height: 36)

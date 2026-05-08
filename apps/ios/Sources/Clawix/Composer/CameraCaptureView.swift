@@ -2,6 +2,7 @@ import SwiftUI
 #if canImport(UIKit)
 import UIKit
 import AVFoundation
+import LucideIcon
 
 // Full-screen camera with the three bottom controls from the brief:
 //   - photo library shortcut on the left
@@ -47,7 +48,7 @@ struct CameraCaptureView: View {
                 Haptics.tap()
                 onCancel()
             }) {
-                Image(systemName: "xmark")
+                Image(lucide: .x)
                     .font(BodyFont.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.white)
                     .frame(width: 36, height: 36)
@@ -56,7 +57,7 @@ struct CameraCaptureView: View {
             .buttonStyle(.plain)
             Spacer()
             Button(action: toggleTorch) {
-                Image(systemName: torchOn ? "bolt.fill" : "bolt.slash.fill")
+                Image(lucideOrSystem: torchOn ? "bolt.fill" : "bolt.slash.fill")
                     .font(BodyFont.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.white)
                     .frame(width: 36, height: 36)
@@ -74,7 +75,7 @@ struct CameraCaptureView: View {
                 Haptics.tap()
                 onOpenLibrary()
             }) {
-                Image(systemName: "photo.on.rectangle.angled")
+                Image(lucide: .images)
                     .font(BodyFont.system(size: 22, weight: .regular))
                     .foregroundStyle(Color.white)
                     .frame(width: 56, height: 56)
@@ -104,7 +105,7 @@ struct CameraCaptureView: View {
                 Haptics.selection()
                 coordinator.flip()
             }) {
-                Image(systemName: "arrow.triangle.2.circlepath")
+                Image(lucide: .refresh_cw)
                     .font(BodyFont.system(size: 22, weight: .regular))
                     .foregroundStyle(Color.white)
                     .frame(width: 56, height: 56)

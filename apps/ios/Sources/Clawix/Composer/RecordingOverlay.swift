@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 // Recording UI shown over the bottom of the chat while the user is
 // dictating a prompt or capturing an audio message. Two purposes:
@@ -57,7 +58,7 @@ struct RecordingOverlay: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
-                Image(systemName: "xmark")
+                Image(lucide: .x)
                     .font(BodyFont.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.white)
             }
@@ -107,7 +108,7 @@ struct RecordingOverlay: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
-                Image(systemName: "play.fill")
+                Image(lucide: .play)
                     .font(BodyFont.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.white)
                     .offset(x: 1)
@@ -181,7 +182,7 @@ struct RecordingOverlay: View {
 
     private func sendCircle(enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: "arrow.up")
+            Image(lucide: .arrow_up)
                 .font(BodyFont.system(size: 15, weight: .bold))
                 .foregroundStyle(enabled ? Color.black : Color(white: 0.35))
                 .frame(width: 38, height: 38)
