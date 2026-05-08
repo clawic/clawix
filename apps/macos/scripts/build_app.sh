@@ -106,6 +106,7 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <key>CFBundleIconFile</key>          <string>Clawix</string>
     <key>CFBundleVersion</key>           <string>${BUILD_NUMBER}</string>
     <key>CFBundleShortVersionString</key><string>${MARKETING_VERSION}</string>
+    <key>ClawJSVersion</key>             <string>${CLAWJS_VERSION}</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>

@@ -9,11 +9,14 @@
 # Exposes:
 #   MARKETING_VERSION  → CFBundleShortVersionString (e.g. "0.1.0")
 #   BUILD_NUMBER       → CFBundleVersion (e.g. "47")
+#   CLAWJS_VERSION     → ClawJSVersion (the @clawjs/cli release this Clawix
+#                        build is pinned to, read from apps/macos/CLAWJS_VERSION).
 set -euo pipefail
 
 EMIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EMIT_PROJECT_DIR="$(dirname "$EMIT_DIR")"
 EMIT_VERSION_FILE="$EMIT_PROJECT_DIR/VERSION"
+EMIT_CLAWJS_VERSION_FILE="$EMIT_PROJECT_DIR/CLAWJS_VERSION"
 
 if [[ ! -f "$EMIT_VERSION_FILE" ]]; then
     echo "ERROR: $EMIT_VERSION_FILE missing" >&2
@@ -35,4 +38,21 @@ else
     BUILD_NUMBER="0"
 fi
 
-export MARKETING_VERSION BUILD_NUMBER
+# ClawJS pinning. Each Clawix build declares the exact @clawjs/cli release
+# it was integrated against. The value is interpolated into Info.plist as
+# `ClawJSVersion` and read at runtime by ClawJSRuntime.expectedVersion.
+# Phase 1 of the integration uses this same value to install the bundled
+# tree under Contents/Helpers/clawjs/ and refuses to ship a release whose
+# bundled package.json version doesn't match.
+if [[ ! -f "$EMIT_CLAWJS_VERSION_FILE" ]]; then
+    echo "ERROR: $EMIT_CLAWJS_VERSION_FILE missing" >&2
+    return 1 2>/dev/null || exit 1
+fi
+
+CLAWJS_VERSION="$(tr -d '[:space:]' < "$EMIT_CLAWJS_VERSION_FILE")"
+if [[ -z "$CLAWJS_VERSION" ]]; then
+    echo "ERROR: $EMIT_CLAWJS_VERSION_FILE is empty" >&2
+    return 1 2>/dev/null || exit 1
+fi
+
+export MARKETING_VERSION BUILD_NUMBER CLAWJS_VERSION
