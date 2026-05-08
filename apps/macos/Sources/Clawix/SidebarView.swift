@@ -79,6 +79,8 @@ enum SidebarPrefs {
 
 struct SidebarView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var vault: VaultManager
+    @EnvironmentObject var flags: FeatureFlags
     @State private var settingsPopoverOpen: Bool = false
     @State private var projectEditor: ProjectEditorContext?
     @State private var projectRenameTarget: Project?
@@ -100,6 +102,7 @@ struct SidebarView: View {
     @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
     @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
     @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarArchivedExpanded", default: false)
+    @State private var toolsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarToolsExpanded", default: true)
     @State private var chronoLimit: Int = 100
 
     private var viewMode: SidebarViewMode {
@@ -273,6 +276,10 @@ struct SidebarView: View {
     @ViewBuilder
     private func sidebarScrollContent(snapshot: SidebarSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            if flags.isVisible(.secrets) {
+                toolsSection
+            }
+
             if !snapshot.pinned.isEmpty {
                 sectionHeader(
                     "Pinned",
@@ -281,9 +288,16 @@ struct SidebarView: View {
                 )
                 SidebarAccordion(
                     expanded: pinnedExpanded,
-                    targetHeight: CGFloat(snapshot.pinned.count) * 31
+                    targetHeight: CGFloat(snapshot.pinned.count) * 35
                         + SidebarRowMetrics.sectionEdgePadding
                 ) {
+                    // No trailing `Color.clear` spacer here:
+                    // `PinnedReorderableList.trailingSlotZone` already
+                    // ends with a `sectionEdgePadding`-tall strip that
+                    // provides both the bottom gap and the drop-at-end
+                    // target. Adding a parent spacer would stack on top
+                    // of that strip and make Pinned visibly taller than
+                    // every other section.
                     PinnedReorderableList(
                         appState: appState,
                         pinned: snapshot.pinned,
@@ -310,27 +324,32 @@ struct SidebarView: View {
                         : SidebarRowMetrics.recentChats(count: chronoCount)
                             + SidebarRowMetrics.sectionEdgePadding
                 ) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        if snapshot.chrono.isEmpty {
-                            Text("No chats")
-                                .font(BodyFont.system(size: 13.5, wght: 500))
-                                .foregroundColor(Color(white: 0.40))
-                                .padding(.leading, 34)
-                                .padding(.vertical, 4)
-                        } else {
-                            let currentChatId = selectedChatId
-                            ForEach(snapshot.chrono.prefix(chronoLimit), id: \.id) { chat in
-                                RecentChatRow(
-                                    chat: chat,
-                                    isSelected: currentChatId == chat.id,
-                                    leadingIcon: .pinOnHover,
-                                    callbacks: recentChatCallbacks(for: chat, archived: false)
-                                )
-                                .equatable()
+                    VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            if snapshot.chrono.isEmpty {
+                                Text("No chats")
+                                    .font(BodyFont.system(size: 13.5, wght: 500))
+                                    .foregroundColor(Color(white: 0.40))
+                                    .padding(.leading, 34)
+                                    .padding(.vertical, 4)
+                            } else {
+                                let currentChatId = selectedChatId
+                                ForEach(snapshot.chrono.prefix(chronoLimit), id: \.id) { chat in
+                                    RecentChatRow(
+                                        chat: chat,
+                                        isSelected: currentChatId == chat.id,
+                                        leadingIcon: .pinOnHover,
+                                        callbacks: recentChatCallbacks(for: chat, archived: false)
+                                    )
+                                    .equatable()
+                                }
                             }
                         }
+                        .padding(.leading, 8)
+                        if !snapshot.chrono.isEmpty {
+                            Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
+                        }
                     }
-                    .padding(.leading, 8)
                 }
             } else {
                 let projectlessChats = snapshot.chrono.filter { $0.projectId == nil }
@@ -340,7 +359,7 @@ struct SidebarView: View {
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
                             Image(systemName: "bubble.left")
-                                .font(BodyFont.system(size: 11.5, wght: 500))
+                                .font(BodyFont.system(size: 11.5, wght: 550))
                         )
                     )
                     SidebarAccordion(
@@ -349,18 +368,21 @@ struct SidebarView: View {
                             + SidebarRowMetrics.sectionEdgePadding
                     ) {
                         let currentChatId = selectedChatId
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(projectlessChats) { chat in
-                                RecentChatRow(
-                                    chat: chat,
-                                    isSelected: currentChatId == chat.id,
-                                    leadingIcon: .pinOnHover,
-                                    callbacks: recentChatCallbacks(for: chat, archived: false)
-                                )
-                                .equatable()
+                        VStack(alignment: .leading, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                ForEach(projectlessChats) { chat in
+                                    RecentChatRow(
+                                        chat: chat,
+                                        isSelected: currentChatId == chat.id,
+                                        leadingIcon: .pinOnHover,
+                                        callbacks: recentChatCallbacks(for: chat, archived: false)
+                                    )
+                                    .equatable()
+                                }
                             }
+                            .padding(.leading, 8)
+                            Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
                         }
-                        .padding(.leading, 8)
                     }
                 }
 
@@ -380,18 +402,18 @@ struct SidebarView: View {
                 if projectsExpanded {
                     let currentChatId = selectedChatId
                     let projectsList = sortedProjects(snapshot: snapshot)
-                    // Mirror the buffer pattern used by Pinned / Chats /
-                    // Archived: bake `sectionEdgePadding` into the
-                    // accordion's `targetHeight` instead of pinning a
-                    // hard `.padding(.bottom)`. `SidebarAccordion`
-                    // takes `max(target, measured)` for the frame, so a
-                    // slight measurement overshoot eats into the buffer
-                    // the same way it does in the chat sections,
-                    // landing the visible bottom gap at the same point.
-                    // A pinned bottom padding always rendered the full
-                    // 23.6pt below the last project, so Projects looked
-                    // ~5-10pt looser than Pinned/Chats when they were
-                    // open above it.
+                    // Same pattern as every other collapsible section: render
+                    // `sectionEdgePadding` as a real `Color.clear` spacer at
+                    // the end of the accordion's content. `SidebarAccordion`
+                    // takes `max(target, measured)` for the frame, so the
+                    // visible bottom gap is governed by the content's
+                    // intrinsic size — which always includes the spacer —
+                    // rather than by `targetHeight` overshoot. Earlier this
+                    // section relied on overshoot to "produce" the buffer
+                    // and the row-height estimate (28pt) was too low vs the
+                    // actual ~35pt rows; `measured > target` ate the buffer
+                    // entirely, so Projects appeared glued to Archived
+                    // while Pinned/Chats had a generous gap.
                     let projectRowHeightEstimate: CGFloat = 28
                     let projectsListHeightEstimate = CGFloat(projectsList.count) * projectRowHeightEstimate
                         + CGFloat(max(projectsList.count - 1, 0)) * 4
@@ -400,43 +422,55 @@ struct SidebarView: View {
                         targetHeight: projectsListHeightEstimate
                             + SidebarRowMetrics.sectionEdgePadding
                     ) {
-                        Group {
-                            if projectSortMode == .custom {
-                                // `ProjectReorderableList` adds drag-and-drop
-                                // gap zones between every row and persists the
-                                // resulting order via `appState.reorderProject`.
-                                // It uses a non-lazy `VStack` because measuring
-                                // row frames for the drag chip needs every row
-                                // to be in the layout tree.
-                                ProjectReorderableList(
-                                    appState: appState,
-                                    projects: projectsList
-                                ) { project in
-                                    projectRow(
-                                        project,
-                                        snapshot: snapshot,
-                                        currentChatId: currentChatId
-                                    )
-                                }
-                            } else {
-                                // `LazyVStack` instead of `VStack` so accordion
-                                // bodies for projects scrolled out of view never
-                                // instantiate. Visible projects still re-evaluate
-                                // normally; the saving is the long tail of
-                                // off-screen ones (~70-90 out of ~100 in a
-                                // typical sidebar).
-                                LazyVStack(alignment: .leading, spacing: 4) {
-                                    ForEach(projectsList) { project in
+                        VStack(alignment: .leading, spacing: 0) {
+                            Group {
+                                if projectSortMode == .custom {
+                                    // `ProjectReorderableList` adds drag-and-drop
+                                    // gap zones between every row and persists the
+                                    // resulting order via `appState.reorderProject`.
+                                    // It uses a non-lazy `VStack` because measuring
+                                    // row frames for the drag chip needs every row
+                                    // to be in the layout tree.
+                                    ProjectReorderableList(
+                                        appState: appState,
+                                        projects: projectsList
+                                    ) { project in
                                         projectRow(
                                             project,
                                             snapshot: snapshot,
                                             currentChatId: currentChatId
                                         )
                                     }
+                                } else {
+                                    // `LazyVStack` instead of `VStack` so accordion
+                                    // bodies for projects scrolled out of view never
+                                    // instantiate. Visible projects still re-evaluate
+                                    // normally; the saving is the long tail of
+                                    // off-screen ones (~70-90 out of ~100 in a
+                                    // typical sidebar).
+                                    LazyVStack(alignment: .leading, spacing: 0) {
+                                        ForEach(projectsList) { project in
+                                            projectRow(
+                                                project,
+                                                snapshot: snapshot,
+                                                currentChatId: currentChatId
+                                            )
+                                        }
+                                    }
                                 }
                             }
+                            .padding(.leading, 8)
+                            // Only the alphabetical (LazyVStack) path needs an
+                            // explicit trailing spacer; in `.custom` mode
+                            // `ProjectReorderableList.trailingSlotZone` already
+                            // ends with a `sectionEdgePadding` strip that
+                            // doubles as the section gap. Adding a parent
+                            // spacer in custom mode would stack on top of that
+                            // strip and bloat the gap.
+                            if projectSortMode != .custom {
+                                Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
+                            }
                         }
-                        .padding(.leading, 8)
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
@@ -453,6 +487,7 @@ struct SidebarView: View {
             SidebarPrefs.store.set(v, forKey: "SidebarArchivedExpanded")
             if v { Task { await appState.loadArchivedChats() } }
         }
+        .onChange(of: toolsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarToolsExpanded") }
         .task {
             if archivedExpanded { await appState.loadArchivedChats() }
         }
@@ -476,34 +511,66 @@ struct SidebarView: View {
                 : SidebarRowMetrics.recentChats(count: appState.archivedChats.count)
                     + SidebarRowMetrics.sectionEdgePadding
         ) {
-            VStack(alignment: .leading, spacing: 2) {
-                if appState.archivedChats.isEmpty {
-                    HStack(spacing: 6) {
-                        if appState.archivedLoading {
-                            SidebarChatRowSpinner()
-                                .frame(width: 9, height: 9)
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if appState.archivedChats.isEmpty {
+                        HStack(spacing: 6) {
+                            if appState.archivedLoading {
+                                SidebarChatRowSpinner()
+                                    .frame(width: 9, height: 9)
+                            }
+                            Text(appState.archivedLoading ? "Loading…" : "No archived chats")
+                                .font(BodyFont.system(size: 13.5, wght: 500))
+                                .foregroundColor(Color(white: 0.40))
                         }
-                        Text(appState.archivedLoading ? "Loading…" : "No archived chats")
-                            .font(BodyFont.system(size: 13.5, wght: 500))
-                            .foregroundColor(Color(white: 0.40))
-                    }
-                    .padding(.leading, 34)
-                    .padding(.vertical, 4)
-                } else {
-                    let currentChatId = selectedChatId
-                    ForEach(appState.archivedChats) { chat in
-                        RecentChatRow(
-                            chat: chat,
-                            isSelected: currentChatId == chat.id,
-                            leadingIcon: .unarchive,
-                            archivedRow: true,
-                            callbacks: recentChatCallbacks(for: chat, archived: true)
-                        )
-                        .equatable()
+                        .padding(.leading, 34)
+                        .padding(.vertical, 4)
+                    } else {
+                        let currentChatId = selectedChatId
+                        ForEach(appState.archivedChats) { chat in
+                            RecentChatRow(
+                                chat: chat,
+                                isSelected: currentChatId == chat.id,
+                                leadingIcon: .unarchive,
+                                archivedRow: true,
+                                callbacks: recentChatCallbacks(for: chat, archived: true)
+                            )
+                            .equatable()
+                        }
                     }
                 }
+                .padding(.leading, 8)
+                if !appState.archivedChats.isEmpty {
+                    Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
+                }
             }
-            .padding(.leading, 8)
+        }
+    }
+
+    /// Tools section: top-level entries to feature areas other than chat
+    /// (currently only the secrets vault). The header is collapsible like
+    /// the rest of the sidebar; the entry inside routes to `.secretsHome`
+    /// and shows a status dot reflecting the vault lock state.
+    @ViewBuilder
+    private var toolsSection: some View {
+        sectionHeader(
+            "Tools",
+            expanded: $toolsExpanded,
+            leadingIcon: AnyView(WrenchIcon(size: 16.5, lineWidth: 1.28))
+        )
+        SidebarAccordion(
+            expanded: toolsExpanded,
+            targetHeight: 36 + SidebarRowMetrics.sectionEdgePadding
+        ) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    SecretsToolRow(isSelected: appState.currentRoute == .secretsHome) {
+                        appState.currentRoute = .secretsHome
+                    }
+                }
+                .padding(.leading, 8)
+                Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
+            }
         }
     }
 
@@ -528,7 +595,7 @@ struct SidebarView: View {
                                   customShapeSize: 13.8,
                                   customShapeStroke: 1.65,
                                   route: .search,
-                                  shortcut: "⌘F")
+                                  shortcut: "⌘G")
                     /*
                     SidebarButton(title: "Plugins",
                                   icon: "circle.grid.2x2",
@@ -708,7 +775,7 @@ struct SidebarView: View {
                       showNewChat: false,
                       leadingIcon: AnyView(
                           Image(systemName: "bubble.left")
-                              .font(BodyFont.system(size: 11, wght: 500))
+                              .font(BodyFont.system(size: 11.5, wght: 550))
                       ),
                       expanded: $chronoExpanded)
     }
@@ -1009,20 +1076,20 @@ private struct SettingsAccountPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SettingsAccountRow(title: appState.auth.info?.email ?? "Connected account",
+            SettingsAccountRow(title: appState.auth.info?.email ?? L10n.t("Connected account"),
                                icon: "person.circle",
                                trailing: nil)
             MenuStandardDivider()
                 .padding(.vertical, 4)
-            SettingsAccountRow(title: "Settings",
+            SettingsAccountRow(title: L10n.t("Settings"),
                                icon: "clawix.settings",
                                trailing: nil) {
                 appState.currentRoute = .settings
                 isOpen = false
             }
             SettingsLimitsSection(expanded: $limitsExpanded)
-            SettingsAccountRow(title: "Sign out",
-                               icon: "rectangle.portrait.and.arrow.right",
+            SettingsAccountRow(title: L10n.t("Sign out"),
+                               icon: "clawix.signout",
                                trailing: nil) {
                 isOpen = false
                 appState.performBackendLogout()
@@ -1158,7 +1225,7 @@ enum SettingsLimitsFormatter {
         return String(format: template, locale: AppLocale.current, Int(mins))
     }
 
-    /// Long-form reset label, e.g. "Resets at 18:39" / "Resets on 5 may".
+    /// Long-form reset label, e.g. "Resets at 18:39" / "Resets on 5 mayo".
     static func detailedResetLabel(for window: RateLimitWindow) -> String {
         guard let resetsAt = window.resetsAt else { return "" }
         let date = Date(timeIntervalSince1970: TimeInterval(resetsAt))
@@ -1170,7 +1237,8 @@ enum SettingsLimitsFormatter {
             let template = String(localized: "Resets at %@", bundle: AppLocale.bundle, locale: AppLocale.current)
             return String(format: template, formatter.string(from: date))
         }
-        formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        // Full month name (MMMM) so Spanish reads "5 mayo" instead of "5 may.".
+        formatter.setLocalizedDateFormatFromTemplate("dMMMM")
         let template = String(localized: "Resets on %@", bundle: AppLocale.bundle, locale: AppLocale.current)
         return String(format: template, formatter.string(from: date))
     }
@@ -1233,7 +1301,10 @@ private struct SettingsAccountRow: View {
             HStack(spacing: MenuStyle.rowIconLabelSpacing) {
                 Group {
                     if icon == "clawix.settings" {
-                        SettingsIcon(size: 16, lineWidth: 0.85)
+                        SettingsIcon(size: 16)
+                    } else if icon == "clawix.signout" {
+                        SignOutIcon(size: 16)
+                            .offset(x: 1)
                     } else {
                         Image(systemName: icon)
                             .font(BodyFont.system(size: 11.5))
@@ -1913,7 +1984,7 @@ struct RecentChatRow: View, Equatable {
         }
         .padding(.leading, 8 + indent)
         .padding(.trailing, 3)
-        .frame(height: 29)
+        .frame(height: 35)
         .contentShape(Rectangle())
         .background(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -2157,7 +2228,7 @@ private struct ProjectAccordion: View, Equatable {
 
     var body: some View {
         RenderProbe.tick("ProjectAccordion")
-        return VStack(alignment: .leading, spacing: 1) {
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 0) {
                 // Tap-gesture instead of `Button`. A `Button` would consume
                 // mouseDown and starve the parent's `.onDrag` (custom sort
@@ -2222,7 +2293,7 @@ private struct ProjectAccordion: View, Equatable {
                 .sidebarHover { newChatHovered = $0 }
                 .help(L10n.t("New chat in this project"))
             }
-            .frame(height: 29)
+            .frame(height: 35)
             .background(
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(hovered || menuOpen ? Color.white.opacity(0.04) : Color.clear)
@@ -2259,7 +2330,7 @@ private struct ProjectAccordion: View, Equatable {
                 // `targetHeight` provides the bounded frame, and the
                 // surrounding `ThinScrollView` is the scroll context that
                 // actually drives lazy materialisation.
-                LazyVStack(alignment: .leading, spacing: 3) {
+                LazyVStack(alignment: .leading, spacing: 0) {
                     if chats.isEmpty {
                         Text("No chats")
                             .font(BodyFont.system(size: 11, wght: 500))
@@ -2359,29 +2430,36 @@ private struct SmoothAccordion<Content: View>: View {
 /// the actual rendered values so the animation lands cleanly. Re-measure
 /// if you change row paddings or fonts.
 private enum SidebarRowMetrics {
-    /// `RecentChatRow`: vertical padding 6.5+6.5 + line-height ~16 = 29.
-    /// Same height applies to `ProjectAccordion` headers so every
-    /// hoverable "tab" in the sidebar reads at one consistent size.
-    static let chatRow: CGFloat = 29
+    /// `RecentChatRow` and `ProjectAccordion` headers are both pinned
+    /// to `frame(height: 35)` so every hoverable "tab" in the sidebar
+    /// reads at one consistent size, regardless of internal content
+    /// (e.g. the chat row's 22pt archive button vs the project header's
+    /// 16pt text line).
+    static let chatRow: CGFloat = 35
     /// VStack spacing between recent chat rows.
-    static let chatSpacing: CGFloat = 2
+    static let chatSpacing: CGFloat = 0
     /// Spacing inside `ProjectAccordion`'s chat list.
-    static let projectChatSpacing: CGFloat = 3
+    static let projectChatSpacing: CGFloat = 0
     /// "No chats" / "Loading…" placeholder row inside a project accordion.
     static let projectEmptyState: CGFloat = 24
     /// "Show more" / "View all" footer row at the end of a project's
     /// chat list. Same text size as a chat row plus a generous bottom
     /// gap so it visually separates from the next project header.
     static let projectFooterRow: CGFloat = 36
-    /// Trailing buffer baked into a collapsible section's accordion
-    /// `targetHeight` so the last row's pill is not clipped against the
-    /// section frame and the next section header is not glued to it.
-    /// Lives inside the accordion (not as a standalone spacer) so it
-    /// rides the height transition without an extra animated element.
-    /// Same value applied to every top-level collapsible section
-    /// (Pinned, Chats, All chats, Projects, Archived) so the gap below
-    /// each open section reads identically.
-    static let sectionEdgePadding: CGFloat = 23.6
+    /// Trailing buffer rendered as a `Color.clear` spacer at the end of
+    /// every collapsible section's content (Pinned, Chats, All chats,
+    /// Projects, Archived). Inside the accordion (not standalone) so it
+    /// rides the height transition. Driving the gap from a real spacer
+    /// inside `content()` instead of from `targetHeight` overshoot is
+    /// what guarantees the gap reads identically across sections: when
+    /// a section's row-height estimate is too low (Projects: 28pt
+    /// estimate vs ~35pt actual rows), `measuredHeight` overshoots
+    /// `targetHeight` and the accordion frame uses `measuredHeight`,
+    /// which used to consume the buffer entirely (Projects looked glued
+    /// to Archived while Pinned/Chats had a generous gap). With the
+    /// spacer baked into measured content, the visible gap = this
+    /// constant regardless of estimate accuracy.
+    static let sectionEdgePadding: CGFloat = 9.75
 
     static func recentChats(count: Int, spacing: CGFloat = chatSpacing) -> CGFloat {
         guard count > 0 else { return 0 }
@@ -2401,12 +2479,18 @@ private enum SidebarRowMetrics {
 ///
 /// `targetHeight` is a heuristic (row count × estimated row height +
 /// section padding) that lands the open-state geometry on the same
-/// transaction as the header. A hidden measurement twin runs in
-/// parallel and reports the actual intrinsic content height; we take
-/// `max(targetHeight, measuredHeight)` so the floor is always the real
-/// content size. Without this, line-height drift between the heuristic
-/// and the rendered text (Archived at 15+ rows) clipped the last row
-/// because `.clipped()` honours `targetHeight`, not intrinsic height.
+/// transaction as the header. A `GeometryReader` measures the actual
+/// intrinsic content height and we take `max(targetHeight, measuredHeight)`
+/// so the floor is always the real content size. Without this, line-height
+/// drift between the heuristic and the rendered text (Archived at 15+ rows)
+/// clipped the last row because `.clipped()` honours `targetHeight`, not
+/// intrinsic height.
+///
+/// `measuredHeight` follows the content size in both directions. An earlier
+/// version only ratcheted up (`if newH > measuredHeight`), which left a
+/// stale tall frame after rows were removed (unpinning, moving a chat into
+/// a folder) — the section "remembered" its old maximum height and the
+/// gap stayed open until something forced a re-measurement.
 private struct SidebarAccordion<Content: View>: View {
     let expanded: Bool
     let targetHeight: CGFloat
@@ -2421,16 +2505,10 @@ private struct SidebarAccordion<Content: View>: View {
                     GeometryReader { proxy in
                         Color.clear
                             .onAppear {
-                                NSLog("[SidebarAccordion] onAppear measured=\(proxy.size.height) target=\(targetHeight)")
-                                if proxy.size.height > measuredHeight {
-                                    measuredHeight = proxy.size.height
-                                }
+                                measuredHeight = proxy.size.height
                             }
                             .onChange(of: proxy.size.height) { _, newH in
-                                NSLog("[SidebarAccordion] onChange measured=\(newH) target=\(targetHeight)")
-                                if newH > measuredHeight {
-                                    measuredHeight = newH
-                                }
+                                measuredHeight = newH
                             }
                     }
                 )
@@ -2936,14 +3014,14 @@ private struct PinnedReorderableList: View, Equatable {
     @StateObject private var scrollBox = EnclosingScrollViewBox()
     @State private var autoScroller: PinnedDragAutoScroller? = nil
 
-    private let baseSpacing: CGFloat = 2
-    /// Approximate slot size. `RecentChatRow` renders at 29 pt
-    /// (vertical padding 6.5+6.5 + line-height ~16) plus 2 pt of
-    /// baseSpacing per slot. The gap matches the slot so the source's
-    /// collapse and the gap's opening cancel out and the list height
-    /// stays constant during an internal drag.
-    private let gapHeight: CGFloat = 31
-    private let rowHeight: CGFloat = 31
+    private let baseSpacing: CGFloat = 0
+    /// Approximate slot size. `RecentChatRow` renders at 35 pt
+    /// (`frame(height: 35)`) with 0 pt of baseSpacing so adjacent rows
+    /// share an edge. The gap matches the row so the source's collapse
+    /// and the gap's opening cancel out and the list height stays
+    /// constant during an internal drag.
+    private let gapHeight: CGFloat = 35
+    private let rowHeight: CGFloat = 35
     /// Delay before a deferred clear fires when the cursor exits a slot
     /// zone. Short enough that leaving the list closes the gap quickly,
     /// long enough to absorb the brief inter-row transition without a
@@ -3065,8 +3143,17 @@ private struct PinnedReorderableList: View, Equatable {
                     onExit: { scheduleExitClear() },
                     onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
                 ))
+            // Trailing strip doubles as: (a) a drop target so dropping
+            // "at the end" doesn't require landing on the last row's
+            // bottom-half pixel-perfectly, and (b) the visible bottom
+            // gap of the Pinned section. Sized to `sectionEdgePadding`
+            // so Pinned's bottom gap matches every other collapsible
+            // section. Earlier this was a hardcoded 14pt strip stacked
+            // above the parent's `sectionEdgePadding` spacer, leaving
+            // Pinned with ~14pt extra below the last row vs Chats /
+            // Projects / Archived.
             Color.clear
-                .frame(height: 14)
+                .frame(height: SidebarRowMetrics.sectionEdgePadding)
                 .contentShape(Rectangle())
                 .onDrop(of: [.text], delegate: PinnedRowDropDelegate(
                     computeSlot: { _ in slot },
@@ -3549,12 +3636,12 @@ final class DragChipPanel {
 
     convenience init(chat: Chat, grabAnchor: CGPoint, width: CGFloat) {
         let chip = DragChipView(chat: chat, width: width, shadowInset: Self.shadowInset)
-        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 29)
+        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 35)
     }
 
     convenience init(project: Project, grabAnchor: CGPoint, width: CGFloat) {
         let chip = ProjectDragChipView(project: project, width: width, shadowInset: Self.shadowInset)
-        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 29)
+        self.init(content: AnyView(chip), grabAnchor: grabAnchor, width: width, fallbackHeight: 35)
     }
 
     func show() {
@@ -3628,7 +3715,7 @@ private struct DragChipView: View {
         }
         .padding(.leading, 10)
         .padding(.trailing, 9)
-        .frame(height: 29)
+        .frame(height: 35)
         .background(
             ZStack {
                 VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
@@ -3667,7 +3754,7 @@ private struct ProjectDragChipView: View {
         }
         .padding(.leading, 10)
         .padding(.trailing, 10)
-        .frame(height: 29)
+        .frame(height: 35)
         .background(
             ZStack {
                 VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
@@ -3726,16 +3813,17 @@ private struct ProjectReorderableList<RowContent: View>: View {
     /// Vertical breathing room between projects when no drag is active.
     /// Matches the `LazyVStack` spacing in the parent's non-custom
     /// branch so switching modes doesn't shift the layout.
-    private let baseSpacing: CGFloat = 4
-    /// Open-gap height during drag. Approximates a collapsed accordion's
-    /// header (29 pt) plus baseSpacing (4) so the source's collapse and
-    /// the gap's opening cancel out and the list height stays stable.
-    private let gapHeight: CGFloat = 33
+    private let baseSpacing: CGFloat = 0
+    /// Open-gap height during drag. Matches the project header (35 pt)
+    /// with 0 pt baseSpacing so adjacent rows share an edge and the
+    /// source's collapse plus the gap's opening cancel out, keeping the
+    /// list height stable.
+    private let gapHeight: CGFloat = 35
     /// Threshold for splitting a row into top-half / bottom-half slot
     /// zones. Used by the row-level drop delegate to choose between
     /// "gap above this row" and "gap below this row" depending on
     /// where the cursor is vertically.
-    private let rowHeight: CGFloat = 33
+    private let rowHeight: CGFloat = 35
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -3838,10 +3926,13 @@ private struct ProjectReorderableList<RowContent: View>: View {
                     onSet: { setTarget(slot: $0) },
                     onPerform: { uuid, chosen in performReorder(uuid: uuid, beforeIndex: chosen) }
                 ))
-            // Extra strip so dropping "at the end" doesn't require
-            // landing on the last row's bottom-half pixel-perfectly.
+            // Trailing strip doubles as drop target for "at the end"
+            // and as the section's visible bottom gap. Sized to
+            // `sectionEdgePadding` for parity with every other
+            // collapsible section; see the matching strip in
+            // `PinnedReorderableList.trailingSlotZone` for the rationale.
             Color.clear
-                .frame(height: 14)
+                .frame(height: SidebarRowMetrics.sectionEdgePadding)
                 .contentShape(Rectangle())
                 .onDrop(of: [.url], delegate: ProjectRowDropDelegate(
                     computeSlot: { _ in slot },
