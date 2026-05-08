@@ -82,50 +82,45 @@ enum QuickAskActions {
     // MARK: - File / photo / app pickers
 
     static func loadFile() {
-        QuickAskController.shared.hide()
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        present(panel) { _ in }
+        present(panel) { urls in
+            for url in urls {
+                QuickAskController.shared.addAttachment(
+                    QuickAskAttachment(url: url, kind: .file)
+                )
+            }
+        }
     }
 
     static func loadPhoto() {
-        QuickAskController.shared.hide()
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowedContentTypes = [.image]
-        present(panel) { _ in }
-    }
-
-    static func openApplication() {
-        QuickAskController.shared.hide()
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.allowedContentTypes = [.application]
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
         present(panel) { urls in
-            guard let url = urls.first else { return }
-            let cfg = NSWorkspace.OpenConfiguration()
-            NSWorkspace.shared.openApplication(at: url, configuration: cfg, completionHandler: nil)
+            for url in urls {
+                QuickAskController.shared.addAttachment(
+                    QuickAskAttachment(url: url, kind: .file)
+                )
+            }
         }
     }
 
     // MARK: - Captures
 
-    /// `screencapture -D <displayID> -t png /tmp/quickask-screen-…png`.
-    /// Hides the QuickAsk panel before invoking so the panel doesn't
-    /// end up in its own screenshot, and reveals the resulting file
-    /// in Finder so the user knows where it landed.
+    /// `screencapture -D <displayID> -t png …`. Hides the QuickAsk
+    /// panel briefly so it doesn't end up in its own screenshot, then
+    /// re-shows it and stages the PNG as a `screenshot` attachment chip
+    /// so the next prompt can refer to the captured image.
     static func captureScreen(_ screen: QuickAskCaptureSource.Screen) {
         QuickAskController.shared.hide()
         let url = captureFileURL(prefix: "screen")
         runScreencapture(args: ["-D", String(screen.id), "-t", "png", url.path]) {
-            NSWorkspace.shared.activateFileViewerSelecting([url])
+            attachScreenshotAndReshow(url: url)
         }
     }
 
@@ -135,7 +130,7 @@ enum QuickAskActions {
         QuickAskController.shared.hide()
         let url = captureFileURL(prefix: "window")
         runScreencapture(args: ["-l", String(window.id), "-o", "-t", "png", url.path]) {
-            NSWorkspace.shared.activateFileViewerSelecting([url])
+            attachScreenshotAndReshow(url: url)
         }
     }
 
@@ -147,21 +142,31 @@ enum QuickAskActions {
         let url = captureFileURL(prefix: "selection")
         runScreencapture(args: ["-i", "-t", "png", url.path]) {
             // `-i` writes nothing if the user cancels with Esc; in
-            // that case we don't reveal an empty file.
+            // that case we just re-show the panel with no chip.
             if FileManager.default.fileExists(atPath: url.path) {
-                NSWorkspace.shared.activateFileViewerSelecting([url])
+                attachScreenshotAndReshow(url: url)
+            } else {
+                QuickAskController.shared.show()
             }
         }
     }
 
-    /// Camera-photo capture isn't wired through AVFoundation yet;
-    /// for now we open Photo Booth as the simplest "take a photo"
-    /// surface so the menu item isn't a dead end.
+    /// Reveal the AVFoundation camera sheet on top of the QuickAsk
+    /// panel. The sheet captures a still frame and stages it as a
+    /// `camera` attachment chip; cancellation just dismisses the sheet
+    /// with no attachment added.
     static func takePhoto() {
-        QuickAskController.shared.hide()
-        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.PhotoBooth") {
-            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
-        }
+        QuickAskController.shared.requestCameraSheet()
+    }
+
+    /// Re-shows the QuickAsk panel and adds the captured PNG as a
+    /// chip. Centralised so all three capture variants share the same
+    /// post-capture flow without three duplicated bodies.
+    private static func attachScreenshotAndReshow(url: URL) {
+        QuickAskController.shared.show()
+        QuickAskController.shared.addAttachment(
+            QuickAskAttachment(url: url, kind: .screenshot)
+        )
     }
 
     // MARK: - Helpers

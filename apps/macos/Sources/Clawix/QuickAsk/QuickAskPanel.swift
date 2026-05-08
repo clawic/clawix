@@ -6,9 +6,8 @@ import AppKit
 ///     receive keystrokes. A non-activating panel that can't become key
 ///     would render but never accept text input.
 ///   • `isMovableByWindowBackground = true` lets the user grab the
-///     panel anywhere outside the text field and drag it to any spot
-///     across any space, mirroring the "Spotlight that I drag where I
-///     want" feel the user described.
+    ///     panel anywhere outside the text field and drag it to any spot
+    ///     across any space, matching a lightweight movable HUD.
 final class QuickAskPanel: NSPanel {
 
     init(contentRect: NSRect) {
@@ -50,7 +49,7 @@ final class QuickAskPanel: NSPanel {
     // Esc dismisses, even when the text field is first responder.
     // SwiftUI's `.onSubmit` doesn't fire on Esc, and forwarding to
     // `cancelOperation(_:)` here keeps the behaviour consistent with
-    // how Spotlight-style HUDs behave on macOS.
+    // lightweight HUDs on macOS.
     override func cancelOperation(_ sender: Any?) {
         QuickAskController.shared.hide()
     }

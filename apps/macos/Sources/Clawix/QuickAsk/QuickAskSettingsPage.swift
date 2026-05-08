@@ -9,7 +9,12 @@ import Carbon.HIToolbox
 struct QuickAskSettingsPage: View {
 
     @ObservedObject private var hotkeyManager = QuickAskHotkeyManager.shared
+    @ObservedObject private var slashStore = QuickAskSlashCommandsStore.shared
+    @ObservedObject private var mentionsStore = QuickAskMentionsStore.shared
+    @EnvironmentObject private var appState: AppState
     @State private var recording = false
+    @State private var advancedExpanded = false
+    @State private var defaultModelSelection: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -44,13 +49,47 @@ struct QuickAskSettingsPage: View {
                         Text("Reset to default")
                             .font(BodyFont.system(size: 12.5, wght: 500))
                             .foregroundColor(Palette.textPrimary)
-                        Text("Restores ⌃⌥⌘K, the shipped default.")
+                        Text("Restores ⌃Space, the shipped default.")
                             .font(BodyFont.system(size: 11, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                     }
                     Spacer(minLength: 12)
                     QASSecondaryButton(label: "Reset") {
                         hotkeyManager.update(.defaultValue)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+
+            QASSectionLabel(title: "Default model")
+            QASCard {
+                HStack(alignment: .center, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Model")
+                            .font(BodyFont.system(size: 12.5, wght: 500))
+                            .foregroundColor(Palette.textPrimary)
+                        Text("Applied every time the QuickAsk panel opens. Picker inside the HUD overrides it for the current session.")
+                            .font(BodyFont.system(size: 11, wght: 500))
+                            .foregroundColor(Palette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 12)
+                    Picker("", selection: $defaultModelSelection) {
+                        Text("Follow main composer").tag("")
+                        ForEach(appState.availableModels + appState.otherModels, id: \.self) { m in
+                            Text("GPT-\(m)").tag(m)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 220)
+                    .onChange(of: defaultModelSelection) { newValue in
+                        QuickAskController.shared.quickAskDefaultModel =
+                            newValue.isEmpty ? nil : newValue
+                    }
+                    .onAppear {
+                        defaultModelSelection =
+                            QuickAskController.shared.quickAskDefaultModel ?? ""
                     }
                 }
                 .padding(.horizontal, 14)
@@ -77,7 +116,116 @@ struct QuickAskSettingsPage: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             }
+
+            DisclosureGroup(isExpanded: $advancedExpanded) {
+                advancedContent
+                    .padding(.top, 12)
+            } label: {
+                Text("Advanced")
+                    .font(BodyFont.system(size: 13, wght: 600))
+                    .foregroundColor(Palette.textPrimary)
+            }
+            .padding(.top, 28)
             .padding(.bottom, 16)
+        }
+    }
+
+    @ViewBuilder
+    private var advancedContent: some View {
+        QASSectionLabel(title: "Slash commands")
+        QASCard {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Built-in: /search, /research, /imagine, /think")
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                if slashStore.customCommands.isEmpty {
+                    Text("No custom commands yet. Add one and use it from QuickAsk by typing /<trigger>.")
+                        .font(BodyFont.system(size: 11, wght: 500))
+                        .foregroundColor(Palette.textSecondary)
+                } else {
+                    ForEach(slashStore.customCommands) { cmd in
+                        HStack(spacing: 8) {
+                            Text(cmd.trigger)
+                                .font(BodyFont.system(size: 12, wght: 700))
+                                .foregroundColor(Palette.textPrimary)
+                            Text(cmd.description)
+                                .font(BodyFont.system(size: 11, wght: 500))
+                                .foregroundColor(Palette.textSecondary)
+                                .lineLimit(1)
+                            Spacer()
+                            QASSecondaryButton(label: "Remove") {
+                                slashStore.remove(cmd.id)
+                            }
+                        }
+                    }
+                }
+                QASSecondaryButton(label: "Add custom command") {
+                    let suffix = slashStore.customCommands.count + 1
+                    slashStore.upsert(QuickAskSlashCommand(
+                        trigger: "/custom\(suffix)",
+                        description: "Custom command",
+                        expansion: nil
+                    ))
+                }
+            }
+            .padding(14)
+        }
+
+        QASSectionLabel(title: "Mention prompts")
+        QASCard {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Quick-recall prompt templates. Type @<name> in QuickAsk to expand them.")
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                if mentionsStore.customPrompts.isEmpty {
+                    Text("No custom prompts yet.")
+                        .font(BodyFont.system(size: 11, wght: 500))
+                        .foregroundColor(Palette.textSecondary)
+                } else {
+                    ForEach(mentionsStore.customPrompts) { p in
+                        HStack(spacing: 8) {
+                            Text("@\(p.name)")
+                                .font(BodyFont.system(size: 12, wght: 700))
+                                .foregroundColor(Palette.textPrimary)
+                            Text(p.description)
+                                .font(BodyFont.system(size: 11, wght: 500))
+                                .foregroundColor(Palette.textSecondary)
+                                .lineLimit(1)
+                            Spacer()
+                            QASSecondaryButton(label: "Remove") {
+                                mentionsStore.remove(p.id)
+                            }
+                        }
+                    }
+                }
+                QASSecondaryButton(label: "Add prompt") {
+                    let suffix = mentionsStore.customPrompts.count + 1
+                    mentionsStore.upsert(QuickAskMentionPrompt(
+                        name: "prompt\(suffix)",
+                        description: "Custom prompt",
+                        body: "Edit this prompt body."
+                    ))
+                }
+            }
+            .padding(14)
+        }
+
+        QASSectionLabel(title: "Work with Apps")
+        QASCard {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Pick the app QuickAsk should treat as your focal context. The picker lives in the toolbar inside the panel.")
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                Text("Reading app contents (selection, file paths) requires Accessibility permission.")
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                QASSecondaryButton(label: "Open Accessibility settings") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+            .padding(14)
         }
     }
 }

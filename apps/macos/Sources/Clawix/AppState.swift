@@ -320,6 +320,11 @@ struct Chat: Identifiable {
     /// "Interrupted, retry?" pill. Cleared when the user fires a new
     /// prompt or the engine produces a fresh turn.
     var lastTurnInterrupted: Bool = false
+    /// Conversation lives only inside a QuickAsk session; sidebar
+    /// filters these out and `QuickAskController.hide()` deletes them
+    /// from `appState.chats` once the panel closes. Lets the user run
+    /// throwaway prompts ("incognito") without polluting their history.
+    var isQuickAskTemporary: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -342,7 +347,8 @@ struct Chat: Identifiable {
         forkedFromChatId: UUID? = nil,
         forkedFromTitle: String? = nil,
         forkBannerAfterMessageId: UUID? = nil,
-        lastTurnInterrupted: Bool = false
+        lastTurnInterrupted: Bool = false,
+        isQuickAskTemporary: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -365,6 +371,7 @@ struct Chat: Identifiable {
         self.forkedFromTitle = forkedFromTitle
         self.forkBannerAfterMessageId = forkBannerAfterMessageId
         self.lastTurnInterrupted = lastTurnInterrupted
+        self.isQuickAskTemporary = isQuickAskTemporary
     }
 }
 
@@ -560,6 +567,26 @@ struct ComposerAttachment: Identifiable, Equatable {
     }
 }
 
+// MARK: - Find (in-page)
+
+/// Single occurrence of `findQuery` inside one of the current chat's
+/// messages. `range` is on `message.content` (NSString-byte range so it
+/// survives the Cocoa string conversions the renderers go through) and
+/// `kind` lets the highlighter know whether the match is on the user
+/// bubble or the assistant body, so the renderer can pick the right path
+/// without touching messages it doesn't own.
+struct FindMatch: Equatable, Identifiable {
+    let id = UUID()
+    let messageId: UUID
+    let range: NSRange
+
+    static func == (lhs: FindMatch, rhs: FindMatch) -> Bool {
+        lhs.messageId == rhs.messageId
+            && lhs.range.location == rhs.range.location
+            && lhs.range.length == rhs.range.length
+    }
+}
+
 // MARK: - ComposerState
 //
 // Lives separately from AppState so that typing into the composer only
@@ -597,10 +624,28 @@ final class AppState: ObservableObject {
             if currentRoute != .search, searchScopedProjectId != nil {
                 searchScopedProjectId = nil
             }
+            // ⌘F binds to the chat that owned it; navigating away closes
+            // the bar so the highlights don't bleed into the next view.
+            if isFindBarOpen {
+                if case .chat(let id) = currentRoute, id == findChatId {
+                    // Same chat, keep the bar.
+                } else {
+                    closeFindBar()
+                }
+            }
         }
     }
     @Published var searchQuery: String = ""
     @Published var searchResults: [String] = []
+    /// In-page Find (⌘F) state. Operates on the chat that owns the
+    /// current view; closes when the user navigates anywhere else.
+    @Published var isFindBarOpen: Bool = false
+    @Published var findQuery: String = ""
+    @Published var isFinding: Bool = false
+    @Published private(set) var findMatches: [FindMatch] = []
+    @Published var currentFindIndex: Int = 0
+    @Published private(set) var findChatId: UUID? = nil
+    private var findDebounce: DispatchWorkItem?
     @Published var chats: [Chat] = []
     /// Manual ordering for pinned chats. Persisted via metadata as the
     /// order of `pinnedThreadIds`. The sidebar sorts pinned rows by the
@@ -980,7 +1025,11 @@ final class AppState: ObservableObject {
             server.start()
             self.bridgeServer = server
         } else if daemonBridgeEnabled {
-            let pairing = PairingService(defaults: UserDefaults(suiteName: appPrefsSuite) ?? .standard,
+            // Bridge state (bearer token, paired peers) lives in the
+            // public `clawix.bridge` suite so the daemon (started with
+            // CLAWIX_BRIDGED_DEFAULTS_SUITE=clawix.bridge) and a future
+            // standalone CLI surface share the same bearer.
+            let pairing = PairingService(defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
                                          port: daemonBridgePort)
             let client = DaemonBridgeClient(appState: self, pairing: pairing)
             daemonBridgeClient = client
@@ -996,6 +1045,43 @@ final class AppState: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in self?.handleAppDidBecomeActive() }
+        }
+        // AppIntents → AppState bridge (#13). Shortcuts.app posts
+        // these notifications when the user invokes NewChat or
+        // SendPrompt; we react by routing to home (so the composer
+        // is in scope) and, for SendPrompt, prefilling the composer
+        // and submitting.
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("clawix.intent.newChat"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.handleNewChatIntent() }
+        }
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("clawix.intent.sendPrompt"),
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let prompt = note.userInfo?["prompt"] as? String ?? ""
+            Task { @MainActor in self?.handleSendPromptIntent(prompt) }
+        }
+    }
+
+    private func handleNewChatIntent() {
+        currentRoute = .home
+        composer.text = ""
+    }
+
+    private func handleSendPromptIntent(_ prompt: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        currentRoute = .home
+        composer.text = trimmed
+        // Defer the actual submit so SwiftUI has settled the route
+        // change before sendMessage() reads it.
+        DispatchQueue.main.async { [weak self] in
+            self?.sendMessage()
         }
     }
 
@@ -1932,6 +2018,9 @@ final class AppState: ObservableObject {
         default:
             currentRoute = .home
         }
+        if currentRoute == .secretsHome, !FeatureFlags.shared.isVisible(.secrets) {
+            currentRoute = .home
+        }
     }
 
     func performSearch(_ query: String) {
@@ -1942,6 +2031,105 @@ final class AppState: ObservableObject {
             "ContentView.swift — match for \"\(query)\" on line 34",
             "AppState.swift — match for \"\(query)\" on line 78"
         ]
+    }
+
+    // MARK: - Find (in-page)
+
+    /// True when ⌘F has somewhere meaningful to land. Only a chat view
+    /// can hold a find bar today; routes like `.home`, `.search`, or
+    /// `.settings` do not have searchable transcripts so the menu item
+    /// disables there.
+    var canOpenFindBar: Bool {
+        if case .chat = currentRoute { return true }
+        return false
+    }
+
+    func openFindBar() {
+        guard case .chat(let id) = currentRoute else { return }
+        findChatId = id
+        isFindBarOpen = true
+    }
+
+    func closeFindBar() {
+        isFindBarOpen = false
+        findQuery = ""
+        findMatches = []
+        currentFindIndex = 0
+        findChatId = nil
+        isFinding = false
+        findDebounce?.cancel()
+        findDebounce = nil
+    }
+
+    /// Updates `findQuery` and recomputes matches over the active chat
+    /// transcript with a short debounce so each keystroke doesn't burn a
+    /// full pass over the message list. The spinner stays on while the
+    /// debounce is pending so the bar shows visible feedback even on
+    /// instant searches.
+    func updateFindQuery(_ q: String) {
+        findQuery = q
+        findDebounce?.cancel()
+        guard !q.isEmpty else {
+            findMatches = []
+            currentFindIndex = 0
+            isFinding = false
+            return
+        }
+        isFinding = true
+        let work = DispatchWorkItem { [weak self] in
+            self?.runFindNow()
+        }
+        findDebounce = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(260), execute: work)
+    }
+
+    private func runFindNow() {
+        guard let chatId = findChatId, let chat = chat(byId: chatId) else {
+            findMatches = []
+            currentFindIndex = 0
+            isFinding = false
+            return
+        }
+        let q = findQuery
+        guard !q.isEmpty else {
+            findMatches = []
+            currentFindIndex = 0
+            isFinding = false
+            return
+        }
+        var out: [FindMatch] = []
+        for msg in chat.messages {
+            let haystack = msg.content as NSString
+            var searchRange = NSRange(location: 0, length: haystack.length)
+            while searchRange.location < haystack.length {
+                let r = haystack.range(of: q, options: [.caseInsensitive], range: searchRange)
+                if r.location == NSNotFound { break }
+                out.append(FindMatch(messageId: msg.id, range: r))
+                let next = r.location + max(r.length, 1)
+                if next >= haystack.length { break }
+                searchRange = NSRange(location: next, length: haystack.length - next)
+            }
+        }
+        findMatches = out
+        currentFindIndex = out.isEmpty ? 0 : 0
+        isFinding = false
+    }
+
+    func nextFindMatch() {
+        guard !findMatches.isEmpty else { return }
+        currentFindIndex = (currentFindIndex + 1) % findMatches.count
+    }
+
+    func prevFindMatch() {
+        guard !findMatches.isEmpty else { return }
+        currentFindIndex = (currentFindIndex - 1 + findMatches.count) % findMatches.count
+    }
+
+    var currentFindMatch: FindMatch? {
+        guard !findMatches.isEmpty,
+              currentFindIndex >= 0,
+              currentFindIndex < findMatches.count else { return nil }
+        return findMatches[currentFindIndex]
     }
 
     func sendMessage() {
@@ -2015,23 +2203,77 @@ final class AppState: ObservableObject {
     ///   - BridgeProtocol.swift comment on `.newChat` ("auto-subscribes")
     ///   - sister bubble: `QuickAskMessageBubble` in QuickAskView.swift
     @discardableResult
-    func submitQuickAsk(chatId: UUID?, text: String) -> UUID {
+    func submitQuickAsk(
+        chatId: UUID?,
+        text: String,
+        attachments: [QuickAskAttachment] = [],
+        temporary: Bool = false
+    ) -> UUID {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        precondition(!trimmed.isEmpty, "submitQuickAsk requires non-empty text")
+        precondition(!trimmed.isEmpty || !attachments.isEmpty,
+                     "submitQuickAsk requires non-empty text or at least one attachment")
 
-        let userMsg = ChatMessage(role: .user, content: trimmed, timestamp: Date())
+        // Same convention as `sendMessage()` for the main composer:
+        // attachments enter the prompt as `@<absolute-path>` mentions
+        // so the daemon can resolve them server-side (image attachments
+        // become `localImage` items, file paths get read into context).
+        // Selection / clipboard chips that carry their own preview text
+        // ride as a leading "Selected text:" / "Clipboard:" block
+        // because the source isn't a file the agent can re-read.
+        let mentions = attachments.compactMap { att -> String? in
+            switch att.kind {
+            case .file, .drop, .paste, .screenshot, .camera:
+                return "@\(att.url.path)"
+            case .clipboard:
+                // Clipboard chips fall into two shapes: file URLs
+                // (mention path) and inline text (skip; surfaced as
+                // a "Clipboard:" prelude below).
+                return att.previewText == nil ? "@\(att.url.path)" : nil
+            case .selection:
+                // Selection chips carry the verbatim text the user
+                // wanted included; surface it as a quoted block
+                // before the prompt rather than a path mention.
+                return nil
+            }
+        }
+        let preludes = attachments.compactMap { att -> String? in
+            switch att.kind {
+            case .selection:
+                guard let text = att.previewText else { return nil }
+                return "Selected text:\n\(text)"
+            case .clipboard:
+                guard let text = att.previewText else { return nil }
+                return "Clipboard:\n\(text)"
+            default:
+                return nil
+            }
+        }
+
+        let combined: String = {
+            var parts: [String] = []
+            if !preludes.isEmpty { parts.append(preludes.joined(separator: "\n\n")) }
+            if !mentions.isEmpty { parts.append(mentions.joined(separator: " ")) }
+            if !trimmed.isEmpty { parts.append(trimmed) }
+            return parts.joined(separator: "\n\n")
+        }()
+
+        let userMsg = ChatMessage(role: .user, content: combined, timestamp: Date())
         let resolvedId: UUID
         if let id = chatId, let idx = chats.firstIndex(where: { $0.id == id }) {
             chats[idx].messages.append(userMsg)
             chats[idx].lastTurnInterrupted = false
             resolvedId = id
         } else {
+            let titleSeed = trimmed.isEmpty
+                ? (attachments.first?.filename ?? "Attachments")
+                : trimmed
             let newChat = Chat(
                 id: UUID(),
-                title: String(trimmed.prefix(40)),
+                title: String(titleSeed.prefix(40)),
                 messages: [userMsg],
                 createdAt: Date(),
-                projectId: selectedProject?.id
+                projectId: selectedProject?.id,
+                isQuickAskTemporary: temporary
             )
             chats.insert(newChat, at: 0)
             resolvedId = newChat.id
@@ -2046,10 +2288,10 @@ final class AppState: ObservableObject {
             // calling it on every submit is safe and also covers the
             // re-subscribe-after-reconnect case.
             daemonBridgeClient.openChat(resolvedId)
-            daemonBridgeClient.sendPrompt(chatId: resolvedId, text: trimmed)
+            daemonBridgeClient.sendPrompt(chatId: resolvedId, text: combined)
         } else if let clawix {
             Task { @MainActor in
-                await clawix.sendUserMessage(chatId: resolvedId, text: trimmed)
+                await clawix.sendUserMessage(chatId: resolvedId, text: combined)
                 self.clawixBackendStatus = clawix.status
             }
         }
