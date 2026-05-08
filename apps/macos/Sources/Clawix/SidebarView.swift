@@ -143,6 +143,7 @@ struct SidebarView: View {
     }
 
     private func makeSnapshot() -> SidebarSnapshot {
+        PerfSignpost.uiSidebar.interval("snapshot") {
         RenderProbe.time("makeSnapshot") {
             let order = appState.pinnedOrder
             let pinIndex = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($1, $0) })
@@ -181,6 +182,7 @@ struct SidebarView: View {
                 recentDateByProject: recentDateByProject,
                 chrono: chronoRaw
             )
+        }
         }
     }
 
@@ -392,7 +394,7 @@ struct SidebarView: View {
                         "Chats",
                         expanded: $noProjectExpanded,
                         leadingIcon: AnyView(
-                            LucideIcon(.messageCircle, size: 18.5)
+                            LucideIcon(.messageCircle, size: 13)
                         )
                     )
                     SidebarAccordion(
@@ -725,13 +727,44 @@ struct SidebarView: View {
         )
         SidebarAccordion(
             expanded: toolsExpanded,
-            targetHeight: 36 + SidebarRowMetrics.sectionEdgePadding
+            // 5 productivity rows + secrets + database admin = 7 rows of 28pt
+            targetHeight: 7 * 28 + SidebarRowMetrics.sectionEdgePadding
         ) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 2) {
+                    DatabaseToolRow(
+                        title: "Tasks",
+                        systemIcon: "checkmark.circle",
+                        route: .databaseCollection("tasks"),
+                        isSelected: appState.currentRoute == .databaseCollection("tasks")
+                    ) { appState.currentRoute = .databaseCollection("tasks") }
+                    DatabaseToolRow(
+                        title: "Goals",
+                        systemIcon: "flag",
+                        route: .databaseCollection("goals"),
+                        isSelected: appState.currentRoute == .databaseCollection("goals")
+                    ) { appState.currentRoute = .databaseCollection("goals") }
+                    DatabaseToolRow(
+                        title: "Notes",
+                        systemIcon: "note.text",
+                        route: .databaseCollection("notes"),
+                        isSelected: appState.currentRoute == .databaseCollection("notes")
+                    ) { appState.currentRoute = .databaseCollection("notes") }
+                    DatabaseToolRow(
+                        title: "Projects",
+                        systemIcon: "square.stack.3d.up",
+                        route: .databaseCollection("projects"),
+                        isSelected: appState.currentRoute == .databaseCollection("projects")
+                    ) { appState.currentRoute = .databaseCollection("projects") }
                     SecretsToolRow(isSelected: appState.currentRoute == .secretsHome) {
                         appState.currentRoute = .secretsHome
                     }
+                    DatabaseToolRow(
+                        title: "Database",
+                        systemIcon: "cylinder.split.1x2",
+                        route: .databaseHome,
+                        isSelected: appState.currentRoute == .databaseHome
+                    ) { appState.currentRoute = .databaseHome }
                 }
                 .padding(.leading, 8)
                 Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
@@ -991,7 +1024,7 @@ struct SidebarView: View {
                       showAddProject: false,
                       showNewChat: false,
                       leadingIcon: AnyView(
-                          LucideIcon(.messageCircle, size: 18.5)
+                          LucideIcon(.messageCircle, size: 13)
                       ),
                       expanded: $chronoExpanded)
     }
@@ -1373,7 +1406,7 @@ private struct SettingsLimitsHeaderRow: View {
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
-                LucideIcon(.chevronDown)
+                LucideIcon(.chevronDown, size: 11)
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
                     .rotationEffect(.degrees(expanded ? 180 : 0))
@@ -1522,7 +1555,7 @@ private struct SettingsAccountRow: View {
                         SignOutIcon(size: 16)
                             .offset(x: 1)
                     } else {
-                        LucideIcon.auto(icon, size: 11.5)
+                        LucideIcon.auto(icon, size: 14)
                     }
                 }
                 .frame(width: 18, alignment: .center)
@@ -1532,7 +1565,7 @@ private struct SettingsAccountRow: View {
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 8)
                 if let trailingIcon = trailing {
-                    LucideIcon.auto(trailingIcon)
+                    LucideIcon.auto(trailingIcon, size: 11)
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1587,7 +1620,7 @@ private struct SidebarButton: View {
                             .frame(width: customShapeSize, height: customShapeSize)
                             .frame(width: 15, height: 15)
                     } else {
-                        LucideIcon.auto(icon, size: 13.5)
+                        LucideIcon.auto(icon, size: 9.5)
                             .frame(width: 15)
                             .foregroundColor(iconColor)
                     }
@@ -1770,7 +1803,7 @@ private struct SectionDisclosureChevron: View {
     var hovered: Bool = false
 
     var body: some View {
-        LucideIcon(.chevronRight, size: 9.5)
+        LucideIcon(.chevronRight, size: 10)
             .foregroundColor(Color(white: 0.78))
             .frame(width: 14, height: 14, alignment: .center)
             .rotationEffect(.degrees(expanded ? 90 : 0))
@@ -2288,7 +2321,7 @@ struct RecentChatRow: View, Equatable {
                 help: L10n.t("Pin")
             )
         case .bubble:
-            LucideIcon(.messageCircle, size: 10.5)
+            LucideIcon(.messageCircle, size: 11)
                 .foregroundColor(Color(white: 0.58))
                 .frame(width: 14, height: 14)
         case .unarchive:
@@ -2506,7 +2539,7 @@ private struct ProjectAccordion: View, Equatable {
                 // into the icon makes the parent lose hover and the icon
                 // disappears.
                 Button(action: onMenuToggle) {
-                    LucideIcon(.ellipsis, size: 12.5)
+                    LucideIcon(.ellipsis, size: 13)
                         .foregroundColor(menuHovered || menuOpen ? Color(white: 0.94) : Color(white: 0.55))
                         .frame(width: 26, height: 24)
                         .contentShape(Rectangle())
@@ -2845,7 +2878,7 @@ private struct PinnedRow: View {
                 Button {
                     // archivar chat
                 } label: {
-                    LucideIcon(.archive, size: 12.5)
+                    LucideIcon(.archive, size: 13)
                         .foregroundColor(Color(white: 0.72))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
@@ -3011,6 +3044,10 @@ private struct OrganizeMenuPopup: View {
     private static let byProjectColumnWidth: CGFloat = 244
     private static let columnGap: CGFloat = 6
     private static let byProjectMaxListHeight: CGFloat = 260
+    /// Below this row count we render the project list inline so the
+    /// popup hugs the rows; above it we wrap in a capped ScrollView so
+    /// the popup doesn't dominate the window.
+    private static let byProjectInlineThreshold = 8
 
     @State private var openSubmenu: OrganizeSubmenu = .none
 
@@ -3018,8 +3055,12 @@ private struct OrganizeMenuPopup: View {
         viewModeRaw == SidebarViewMode.grouped.rawValue
     }
 
+    /// Hide the filter affordance when there's nothing meaningful to
+    /// filter by: zero buckets, or a single bucket (typically just the
+    /// implicit "Without project" entry when the user hasn't created any
+    /// projects yet). Mirrors the `>= 2` rule the Pinned section uses.
     private var canFilterByProject: Bool {
-        !isGrouped && !chronoFilterSources.isEmpty
+        !isGrouped && chronoFilterSources.count >= 2
     }
 
     private var allChronoHidden: Bool {
@@ -3152,19 +3193,7 @@ private struct OrganizeMenuPopup: View {
     private var byProjectColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader("Filter by project")
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(chronoFilterSources) { source in
-                        PinnedFilterRow(
-                            label: source.label,
-                            isNoProject: source.isNoProject,
-                            isActive: !chronoFilterDisabled.contains(source.token),
-                            action: { toggleChronoFilter(source.token) }
-                        )
-                    }
-                }
-            }
-            .frame(maxHeight: Self.byProjectMaxListHeight)
+            byProjectList
 
             let hasFooter = !chronoFilterDisabled.isEmpty || !allChronoHidden
             if hasFooter {
@@ -3188,6 +3217,36 @@ private struct OrganizeMenuPopup: View {
         .frame(width: Self.byProjectColumnWidth, alignment: .leading)
         .menuStandardBackground()
         .animation(.easeOut(duration: 0.18), value: chronoFilterDisabled)
+    }
+
+    @ViewBuilder
+    private var byProjectList: some View {
+        if chronoFilterSources.count > Self.byProjectInlineThreshold {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(chronoFilterSources) { source in
+                        PinnedFilterRow(
+                            label: source.label,
+                            isNoProject: source.isNoProject,
+                            isActive: !chronoFilterDisabled.contains(source.token),
+                            action: { toggleChronoFilter(source.token) }
+                        )
+                    }
+                }
+            }
+            .frame(maxHeight: Self.byProjectMaxListHeight)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(chronoFilterSources) { source in
+                    PinnedFilterRow(
+                        label: source.label,
+                        isNoProject: source.isNoProject,
+                        isActive: !chronoFilterDisabled.contains(source.token),
+                        action: { toggleChronoFilter(source.token) }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -3213,7 +3272,7 @@ private struct OrganizeMenuRow: View {
                         FolderOpenIcon(size: 11.5)
                             .foregroundColor(MenuStyle.rowIcon)
                     case .system(let name):
-                        LucideIcon.auto(name, size: 11.5)
+                        LucideIcon.auto(name, size: 12)
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
@@ -3224,7 +3283,7 @@ private struct OrganizeMenuRow: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 9.5)
+                    LucideIcon(.check, size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -3260,7 +3319,7 @@ private struct OrganizeMenuChevronRow: View {
                         FolderOpenIcon(size: 11.5)
                             .foregroundColor(MenuStyle.rowIcon)
                     case .system(let name):
-                        LucideIcon.auto(name, size: 11.5)
+                        LucideIcon.auto(name, size: 12)
                             .foregroundColor(MenuStyle.rowIcon)
                     }
                 }
@@ -3275,7 +3334,7 @@ private struct OrganizeMenuChevronRow: View {
                         .font(BodyFont.system(size: 10.5, wght: 600))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
-                LucideIcon(.chevronRight)
+                LucideIcon(.chevronRight, size: 11)
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
             }
@@ -3332,6 +3391,10 @@ private struct PinnedFilterPopup: View {
     /// has dozens of projects with pinned chats; rows beyond the cap
     /// scroll inside.
     private static let maxListHeight: CGFloat = 260
+    /// Below this row count we render the project list inline so the
+    /// popup hugs the rows; above it we wrap in a capped ScrollView so
+    /// the popup doesn't dominate the window.
+    private static let inlineThreshold = 8
 
     private var allHidden: Bool {
         !sources.isEmpty && disabled.count >= sources.count
@@ -3342,19 +3405,7 @@ private struct PinnedFilterPopup: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader("Filter by project")
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(sources) { source in
-                        PinnedFilterRow(
-                            label: source.label,
-                            isNoProject: source.isNoProject,
-                            isActive: !disabled.contains(source.token),
-                            action: { toggle(source.token) }
-                        )
-                    }
-                }
-            }
-            .frame(maxHeight: Self.maxListHeight)
+            list
             if hasFooter {
                 MenuStandardDivider()
                     .padding(.vertical, 5)
@@ -3376,6 +3427,36 @@ private struct PinnedFilterPopup: View {
         .menuStandardBackground()
         .background(MenuOutsideClickWatcher(isPresented: $isPresented))
         .animation(.easeOut(duration: 0.18), value: disabled)
+    }
+
+    @ViewBuilder
+    private var list: some View {
+        if sources.count > Self.inlineThreshold {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(sources) { source in
+                        PinnedFilterRow(
+                            label: source.label,
+                            isNoProject: source.isNoProject,
+                            isActive: !disabled.contains(source.token),
+                            action: { toggle(source.token) }
+                        )
+                    }
+                }
+            }
+            .frame(maxHeight: Self.maxListHeight)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(sources) { source in
+                    PinnedFilterRow(
+                        label: source.label,
+                        isNoProject: source.isNoProject,
+                        isActive: !disabled.contains(source.token),
+                        action: { toggle(source.token) }
+                    )
+                }
+            }
+        }
     }
 }
 

@@ -35,6 +35,8 @@ struct SplashView: View {
 /// one `ContentView` paints, so the swap leaves no visible seam.
 struct AppRootView: View {
     @State private var splashShown = true
+    @State private var quickAddVisible = false
+    @State private var dbSearchVisible = false
 
     var body: some View {
         ZStack {
@@ -49,6 +51,63 @@ struct AppRootView: View {
             } else {
                 ContentView()
             }
+
+            // App-wide toast bus. Mounted at the root so any feature
+            // (browser screenshot, secrets, downloads, …) can call
+            // ToastCenter.shared.show(...) and the pill floats over
+            // every other surface.
+            ToastHost()
+                .allowsHitTesting(true)
+
+            // Database global overlays: ⌘⇧N quick-add and ⌘⇧F search.
+            // Both rendered as transparent passthrough until invoked.
+            if quickAddVisible {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .onTapGesture { quickAddVisible = false }
+                DatabaseQuickAddOverlay(isPresented: $quickAddVisible)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.black.opacity(0.92))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.45), radius: 28, y: 12)
+            }
+            if dbSearchVisible {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                    .onTapGesture { dbSearchVisible = false }
+                DatabaseSearchOverlay(isPresented: $dbSearchVisible)
+            }
         }
+        .background(
+            DatabaseHotkeyBridge(
+                quickAddVisible: $quickAddVisible,
+                dbSearchVisible: $dbSearchVisible
+            )
+        )
+    }
+}
+
+/// Hidden Button-bag whose only purpose is to register the global
+/// keyboardShortcuts that toggle the database quick-add and search
+/// overlays. Lives behind the visual root via `.background`.
+private struct DatabaseHotkeyBridge: View {
+    @Binding var quickAddVisible: Bool
+    @Binding var dbSearchVisible: Bool
+
+    var body: some View {
+        ZStack {
+            Button("DBQuickAdd") { quickAddVisible.toggle() }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            Button("DBSearch") { dbSearchVisible.toggle() }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
     }
 }

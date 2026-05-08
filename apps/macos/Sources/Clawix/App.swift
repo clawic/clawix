@@ -60,6 +60,7 @@ struct ClawixApp: App {
     @StateObject private var windowState = WindowState()
     @StateObject private var dictation = DictationCoordinator.shared
     @StateObject private var vaultManager = VaultManager()
+    @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
     @Environment(\.openWindow) private var openWindow
 
@@ -84,6 +85,7 @@ struct ClawixApp: App {
         // hits the global hotkey, even before any window appears.
         QuickAskController.shared.attach(appState: state)
         _appState = StateObject(wrappedValue: state)
+        DictationE2ERunner.runIfRequested()
         // Dictation hotkey + overlay are wired from
         // `applicationDidFinishLaunching`, NOT here. Calling
         // `addGlobalMonitorForEvents(matching: .flagsChanged)` from
@@ -101,6 +103,7 @@ struct ClawixApp: App {
                 .environmentObject(windowState)
                 .environmentObject(dictation)
                 .environmentObject(vaultManager)
+                .environmentObject(databaseManager)
                 .environmentObject(featureFlags)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
@@ -159,6 +162,7 @@ struct ClawixApp: App {
             MenuBarContent()
                 .environmentObject(appState)
                 .environmentObject(vaultManager)
+                .environmentObject(databaseManager)
                 .environmentObject(featureFlags)
         } label: {
             Image(nsImage: ClawixLogoTemplateImage.make(size: 18))
@@ -174,6 +178,23 @@ private struct MenuBarContent: View {
     @ObservedObject private var bridge = BackgroundBridgeService.shared
     @Environment(\.openWindow) private var openWindow
 
+    // Status bar dropdown is organized into 4 thematic sections, in fixed order:
+    //
+    //   1. CONNECT       pairing actions to link Clawix with other devices
+    //                    (Pair iPhone…, future: Pair Watch, Re-pair, Unlink…).
+    //   2. BRIDGE        runtime status and controls of the background bridge
+    //                    daemon (port, LAN/Tailscale IPs, Open Logs, Restart).
+    //   3. VOICE TO TEXT audio capture sources and dictation settings
+    //                    (Audio Input device picker, future: dictation toggles).
+    //   4. SECRETS       vault state and access (Show vault, Lock now, Unlock…).
+    //
+    // Open Clawix sits above the sections; Quit Clawix sits below. They are
+    // app-level meta-actions and stay outside any Section.
+    //
+    // When adding a new menu item, decide which of the 4 sections it belongs
+    // to and place it inside that Section. Never add a top-level entry between
+    // Open and Quit. If it doesn't fit any section, raise it before introducing
+    // a 5th.
     var body: some View {
         Button {
             openMainWindow()
@@ -184,110 +205,122 @@ private struct MenuBarContent: View {
 
         Divider()
 
-        if flags.isVisible(.secrets) {
-            Menu {
-                Button {
-                    appState.currentRoute = .secretsHome
-                    openMainWindow()
-                } label: {
-                    Label("Show vault", systemImage: "tray.full")
-                }
-                switch vault.state {
-                case .unlocked:
-                    Button {
-                        vault.lock()
-                    } label: {
-                        Label("Lock now", systemImage: "lock.fill")
-                    }
-                    .keyboardShortcut("l", modifiers: [.command, .shift])
-                    Divider()
-                    if !vault.openAnomalies.isEmpty {
-                        Text("\(vault.openAnomalies.count) open anomal\(vault.openAnomalies.count == 1 ? "y" : "ies")")
-                            .foregroundColor(.orange)
-                    }
-                    if !vault.activeGrants.isEmpty {
-                        Text("\(vault.activeGrants.count) active grant\(vault.activeGrants.count == 1 ? "" : "s")")
-                    }
-                    Text("\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s")")
-                        .foregroundColor(.secondary)
-                case .locked:
-                    Button {
-                        appState.currentRoute = .secretsHome
-                        openMainWindow()
-                    } label: {
-                        Label("Unlock…", systemImage: "lock.open.fill")
-                    }
-                case .uninitialized:
-                    Button {
-                        appState.currentRoute = .secretsHome
-                        openMainWindow()
-                    } label: {
-                        Label("Set up vault…", systemImage: "key.fill")
-                    }
-                default:
-                    EmptyView()
-                }
+        Section {
+            Button {
+                openWindow(id: "clawix-pair")
+                NSApp.activate(ignoringOtherApps: true)
             } label: {
-                Label(secretsMenuTitle, systemImage: "lock.shield")
+                Label(L10n.t("Pair iPhone…"), systemImage: "iphone")
             }
-        }
-
-        Divider()
-
-        Menu {
-            if micPrefs.devices.isEmpty {
-                Text(L10n.t("No input devices"))
-            } else {
-                ForEach(micPrefs.devices) { device in
-                    Button {
-                        micPrefs.selectPreferred(uid: device.uid)
-                    } label: {
-                        if device.uid == micPrefs.activeUID {
-                            Label(device.name, systemImage: "checkmark")
-                        } else {
-                            Text(device.name)
-                        }
-                    }
-                }
-            }
-        } label: {
-            Label(L10n.t("Audio Input"), systemImage: "mic")
-        }
-
-        Button {
-            openWindow(id: "clawix-pair")
-            NSApp.activate(ignoringOtherApps: true)
-        } label: {
-            Label(L10n.t("Pair iPhone…"), systemImage: "iphone")
+        } header: {
+            Text(L10n.t("Connect"))
         }
 
         if bridge.isEnabled {
-            Divider()
+            Section {
+                Menu {
+                    Text("Running on port \(String(BridgeAgentControl.bridgePort))")
+                        .foregroundColor(.secondary)
+                    if let lan = PairingService.currentLANIPv4() {
+                        Text("LAN: \(lan)")
+                            .foregroundColor(.secondary)
+                    }
+                    if let ts = PairingService.currentTailscaleIPv4() {
+                        Text("Tailscale: \(ts)")
+                            .foregroundColor(.secondary)
+                    }
+                    Divider()
+                    Button {
+                        BridgeAgentControl.openLogs()
+                    } label: {
+                        Label(L10n.t("Open Bridge Logs"), systemImage: "doc.text")
+                    }
+                    Button {
+                        BridgeAgentControl.restart()
+                    } label: {
+                        Label(L10n.t("Restart Bridge"), systemImage: "arrow.clockwise")
+                    }
+                } label: {
+                    Label(L10n.t("Bridge"), systemImage: "antenna.radiowaves.left.and.right")
+                }
+            } header: {
+                Text(L10n.t("Bridge"))
+            }
+        }
 
+        Section {
             Menu {
-                Text("Running on port \(String(BridgeAgentControl.bridgePort))")
-                    .foregroundColor(.secondary)
-                if let lan = PairingService.currentLANIPv4() {
-                    Text("LAN: \(lan)")
-                        .foregroundColor(.secondary)
-                }
-                if let ts = PairingService.currentTailscaleIPv4() {
-                    Text("Tailscale: \(ts)")
-                        .foregroundColor(.secondary)
-                }
-                Divider()
-                Button {
-                    BridgeAgentControl.openLogs()
-                } label: {
-                    Label(L10n.t("Open Bridge Logs"), systemImage: "doc.text")
-                }
-                Button {
-                    BridgeAgentControl.restart()
-                } label: {
-                    Label(L10n.t("Restart Bridge"), systemImage: "arrow.clockwise")
+                if micPrefs.devices.isEmpty {
+                    Text(L10n.t("No input devices"))
+                } else {
+                    ForEach(micPrefs.devices) { device in
+                        Button {
+                            micPrefs.selectPreferred(uid: device.uid)
+                        } label: {
+                            if device.uid == micPrefs.activeUID {
+                                Label(device.name, systemImage: "checkmark")
+                            } else {
+                                Text(device.name)
+                            }
+                        }
+                    }
                 }
             } label: {
-                Label(L10n.t("Bridge"), systemImage: "antenna.radiowaves.left.and.right")
+                Label(L10n.t("Audio Input"), systemImage: "mic")
+            }
+        } header: {
+            Text(L10n.t("Voice to text"))
+        }
+
+        if flags.isVisible(.secrets) {
+            Section {
+                Menu {
+                    Button {
+                        appState.currentRoute = .secretsHome
+                        openMainWindow()
+                    } label: {
+                        Label("Show vault", systemImage: "tray.full")
+                    }
+                    switch vault.state {
+                    case .unlocked:
+                        Button {
+                            vault.lock()
+                        } label: {
+                            Label("Lock now", systemImage: "lock.fill")
+                        }
+                        .keyboardShortcut("l", modifiers: [.command, .shift])
+                        Divider()
+                        if !vault.openAnomalies.isEmpty {
+                            Text("\(vault.openAnomalies.count) open anomal\(vault.openAnomalies.count == 1 ? "y" : "ies")")
+                                .foregroundColor(.orange)
+                        }
+                        if !vault.activeGrants.isEmpty {
+                            Text("\(vault.activeGrants.count) active grant\(vault.activeGrants.count == 1 ? "" : "s")")
+                        }
+                        Text("\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s")")
+                            .foregroundColor(.secondary)
+                    case .locked:
+                        Button {
+                            appState.currentRoute = .secretsHome
+                            openMainWindow()
+                        } label: {
+                            Label("Unlock…", systemImage: "lock.open.fill")
+                        }
+                    case .uninitialized:
+                        Button {
+                            appState.currentRoute = .secretsHome
+                            openMainWindow()
+                        } label: {
+                            Label("Set up vault…", systemImage: "key.fill")
+                        }
+                    default:
+                        EmptyView()
+                    }
+                } label: {
+                    Label(secretsMenuTitle, systemImage: "lock.shield")
+                }
+            } header: {
+                Text(L10n.t("Secrets"))
             }
         }
 
@@ -335,11 +368,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             NSApp.windows.forEach(self.configure)
         }
+        // Diagnostics bootstrap. ResourceSampler and MetricKitObserver
+        // are always-on (negligible runtime cost). HangDetector is
+        // gated to DEBUG by default; CLAWIX_FORCE_HANG_DETECTOR=1
+        // opts a release build in. Order is independent — see
+        // apps/macos/PERF.md for the playbook.
+        ResourceSampler.start()
+        MetricKitObserver.shared.install()
+        HangDetector.start()
         // If the previous launch was interrupted by a Sparkle update
         // mid-install, the LaunchAgent was unregistered to release
         // file handles. Restore it now so the user does not have to
         // re-enable "Run bridge in background" after every update.
         BackgroundBridgeService.shared.restoreAfterUpdateIfNeeded()
+        // Boot the ClawJS sidecar supervisor (Phase 2). Today every
+        // service publishes `.blocked` because @clawjs/cli does not
+        // expose a service launcher yet; the supervisor is in place so
+        // the moment ClawJS publishes the surface only one method
+        // (`commandLine(for:)`) needs to change.
+        Task { @MainActor in
+            await ClawJSServiceManager.shared.start()
+        }
         // Suppress the standalone `clawix-menubar` icon while the GUI
         // owns its own MenuBarExtra: two near-identical icons next to
         // each other confuse users. The CLI agent is restored on
@@ -361,6 +410,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         NSApp.windows.forEach(saveFrame)
+        // SIGTERM every ClawJS sidecar service before the run loop
+        // unwinds. macOS reaps stragglers via SIGKILL once the parent
+        // process exits, so this synchronous fan-out is enough.
+        ClawJSServiceManager.shared.terminateAllSynchronously()
+        // Persist the most recent resource sample so a post-mortem
+        // read of "what did the process look like before it shut down"
+        // is one `cat` away on the diagnostics directory.
+        ResourceSampler.persistLastSample()
         // Hand the menu bar back to the standalone CLI icon if the
         // user installed it AND the daemon is still going to outlive
         // the GUI (the LaunchAgent kept it up across Cmd+Q). If the
