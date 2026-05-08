@@ -256,37 +256,49 @@ struct ContentView: View {
                 } // end !isRightSidebarMaximized content column
 
                 if appState.isRightSidebarOpen {
-                    Group {
-                        if appState.isRightSidebarMaximized {
-                            RightSidebarColumn()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else {
-                            RightSidebarColumn()
-                                .frame(width: rightSidebarColumnWidth, alignment: .leading)
-                                .overlay(alignment: .leading) {
-                                    Rectangle()
-                                        .fill(Color.white.opacity(0.10))
-                                        .frame(width: 0.7)
-                                        .allowsHitTesting(false)
-                                }
-                                .overlay(alignment: .leading) {
-                                    // Mirror of the left handle: straddle
-                                    // the leading edge (5 pt outside / 5 pt
-                                    // inside) for symmetric hover.
-                                    SidebarResizeHandle(
-                                        widthRaw: $rightSidebarWidthRaw,
-                                        hovered: $rightSidebarResizeHovered,
-                                        side: .right,
-                                        maxWidthOverride: dynamicRightSidebarMaxWidth
-                                    )
-                                    .frame(width: 10)
-                                    .offset(x: -5)
-                                    .zIndex(1)
-                                }
-                                .zIndex(1)
+                    // Single instance with a stable modifier chain: only
+                    // the .frame values flip on maximize. This preserves
+                    // SwiftUI view identity for BrowserView/WKWebView so
+                    // toggling expand resizes the column smoothly (just
+                    // like dragging the resize handle) instead of tearing
+                    // down and recreating the WebView tree.
+                    RightSidebarColumn()
+                        .frame(
+                            maxWidth: appState.isRightSidebarMaximized ? .infinity : nil,
+                            maxHeight: .infinity,
+                            alignment: .leading
+                        )
+                        .frame(
+                            width: appState.isRightSidebarMaximized ? nil : rightSidebarColumnWidth,
+                            alignment: .leading
+                        )
+                        .overlay(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.10))
+                                .frame(width: 0.7)
+                                .opacity(appState.isRightSidebarMaximized ? 0 : 1)
+                                .allowsHitTesting(false)
                         }
-                    }
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                        .overlay(alignment: .leading) {
+                            // Mirror of the left handle: straddle the
+                            // leading edge (5 pt outside / 5 pt inside)
+                            // for symmetric hover. Disabled while
+                            // maximized so it can't be dragged from the
+                            // window's leading edge.
+                            SidebarResizeHandle(
+                                widthRaw: $rightSidebarWidthRaw,
+                                hovered: $rightSidebarResizeHovered,
+                                side: .right,
+                                maxWidthOverride: dynamicRightSidebarMaxWidth
+                            )
+                            .frame(width: 10)
+                            .offset(x: -5)
+                            .opacity(appState.isRightSidebarMaximized ? 0 : 1)
+                            .allowsHitTesting(!appState.isRightSidebarMaximized)
+                            .zIndex(1)
+                        }
+                        .zIndex(1)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .animation(.easeInOut(duration: 0.18), value: appState.isLeftSidebarOpen)
