@@ -307,8 +307,7 @@ struct ChatListView: View {
                         showAllProjects = true
                     } label: {
                         HStack(spacing: 12) {
-                            Image(systemName: "ellipsis")
-                                .font(BodyFont.system(size: 18, weight: .regular))
+                            LucideIcon(.ellipsis, size: 18)
                                 .foregroundStyle(Palette.textPrimary)
                                 .frame(width: 24, alignment: .center)
                             Text("See more")
@@ -943,8 +942,7 @@ private struct SettingsSheet: View {
             action()
         }) {
             HStack(spacing: 14) {
-                Image(systemName: iconName)
-                    .font(BodyFont.system(size: 16, weight: .regular))
+                LucideIcon.auto(iconName, size: 16)
                     .foregroundStyle(destructive ? Color(red: 0.95, green: 0.40, blue: 0.40) : Palette.textPrimary)
                     .frame(width: 24, alignment: .center)
                 Text(title)
@@ -952,8 +950,7 @@ private struct SettingsSheet: View {
                     .foregroundStyle(destructive ? Color(red: 0.95, green: 0.40, blue: 0.40) : Palette.textPrimary)
                 Spacer(minLength: 8)
                 if showsChevron {
-                    Image(systemName: "chevron.right")
-                        .font(BodyFont.system(size: 12, weight: .semibold))
+                    LucideIcon(.chevronRight, size: 12)
                         .foregroundStyle(Palette.textTertiary)
                 }
             }
@@ -998,8 +995,7 @@ private struct SettingsScannerSheet: View {
                         Haptics.tap()
                         onCancel()
                     }) {
-                        Image(systemName: "xmark")
-                            .font(BodyFont.system(size: 16, weight: .semibold))
+                        LucideIcon(.x, size: 16)
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .glassCircle()

@@ -469,8 +469,7 @@ struct ChatDetailView: View {
                     }
                 }
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(BodyFont.system(size: 20, weight: .semibold))
+                LucideIcon(.ellipsis, size: 20)
                     .foregroundStyle(Palette.textPrimary)
                     .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
@@ -525,8 +524,7 @@ struct ChatDetailView: View {
                         .foregroundStyle(Palette.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Image(systemName: "chevron.down")
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                    LucideIcon(.chevronDown, size: 10)
                         .foregroundStyle(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -618,8 +616,7 @@ struct ChatDetailView: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                Image(systemName: "arrow.down")
-                    .font(BodyFont.system(size: 15, weight: .semibold))
+                LucideIcon(.arrowDown, size: 15)
                     .foregroundStyle(Palette.textPrimary)
                 if unreadCount > 0 {
                     Text("\(unreadCount)")
@@ -1167,8 +1164,7 @@ private struct MessageActions: View {
         Button(action: copy) {
             ZStack {
                 if copied {
-                    Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 12, weight: .semibold))
+                    LucideIcon(.check, size: 12)
                         .foregroundStyle(Palette.textTertiary)
                         .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 } else {
@@ -1203,8 +1199,7 @@ private struct ReasoningDisclosure: View {
         VStack(alignment: .leading, spacing: 10) {
             Button(action: toggle) {
                 HStack(spacing: 6) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                    LucideIcon.auto(isExpanded ? "chevron.down" : "chevron.right", size: 11)
                         .foregroundStyle(Palette.textTertiary)
                     Text("Reasoning")
                         .font(Typography.captionFont)
