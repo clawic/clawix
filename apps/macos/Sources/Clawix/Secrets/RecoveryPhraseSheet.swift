@@ -1,5 +1,6 @@
 import SwiftUI
 import SecretsCrypto
+import LucideIcon
 
 struct RecoveryPhraseSheet: View {
     @EnvironmentObject private var vault: VaultManager
@@ -174,7 +175,7 @@ struct RecoveryPhraseSheet: View {
         Button {
             isPresented = false
         } label: {
-            Image(systemName: "xmark")
+            Image(lucide: .x)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Palette.textSecondary)
                 .padding(6)

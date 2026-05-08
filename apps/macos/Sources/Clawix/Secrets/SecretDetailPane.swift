@@ -1,6 +1,7 @@
 import SwiftUI
 import SecretsModels
 import SecretsVault
+import LucideIcon
 
 struct SecretDetailPane: View {
     @EnvironmentObject private var vault: VaultManager
@@ -97,7 +98,7 @@ struct SecretDetailPane: View {
                 Text("Move to trash")
             }
         } label: {
-            Image(systemName: "ellipsis")
+            Image(lucide: .ellipsis)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: 28, height: 28)
@@ -191,7 +192,7 @@ struct SecretDetailPane: View {
 
     private func fieldEmptyState(symbol: String, text: String) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: symbol)
+            Image(lucideOrSystem: symbol)
                 .font(.system(size: 22, weight: .regular))
                 .foregroundColor(Palette.textSecondary)
             Text(verbatim: text)

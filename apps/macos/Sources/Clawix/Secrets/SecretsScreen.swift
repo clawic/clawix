@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 enum SecretsScreenMode: Equatable {
     case home
@@ -88,7 +89,7 @@ private struct SecretsOpenFailedView: View {
 private struct IntegrityFailedBanner: View {
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.shield.fill")
+            Image(lucide: .shield_alert)
                 .font(.system(size: 12))
                 .foregroundColor(.white)
             Text("Audit chain broken")

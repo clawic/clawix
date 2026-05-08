@@ -1,6 +1,7 @@
 import SwiftUI
 import SecretsModels
 import SecretsVault
+import LucideIcon
 
 struct SecretsHomeView: View {
     @EnvironmentObject private var vault: VaultManager
@@ -187,7 +188,7 @@ private struct SecretListRow: View {
                             .foregroundColor(Palette.textPrimary)
                             .lineLimit(1)
                         if secret.isCompromised {
-                            Image(systemName: "exclamationmark.shield.fill")
+                            Image(lucide: .shield_alert)
                                 .font(.system(size: 9))
                                 .foregroundColor(Color.red.opacity(0.85))
                         }

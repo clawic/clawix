@@ -3,6 +3,7 @@ import AppKit
 import UniformTypeIdentifiers
 import SecretsModels
 import SecretsVault
+import LucideIcon
 
 /// Settings page that aggregates all the power-user surfaces of the secrets
 /// vault: CLI install, import / export, audit jump, integrity check,
@@ -315,7 +316,7 @@ private struct BackupExportSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(systemName: "xmark")
+                    Image(lucide: .x)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                         .padding(6)
@@ -391,7 +392,7 @@ private struct BackupImportSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(systemName: "xmark")
+                    Image(lucide: .x)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                         .padding(6)
