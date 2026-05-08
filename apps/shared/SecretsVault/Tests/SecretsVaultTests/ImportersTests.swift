@@ -18,13 +18,13 @@ final class ImportersTests: XCTestCase {
         """
         let preview = try OnePasswordCSVImporter.parse(csv)
         XCTAssertEqual(preview.drafts.count, 2)
-        let openai = preview.drafts[0]
-        XCTAssertEqual(openai.internalName, "openai")
-        XCTAssertEqual(openai.title, "Service")
-        XCTAssertEqual(openai.kind, .passwordLogin)
-        XCTAssertEqual(openai.fields.count, 3)
-        XCTAssertEqual(openai.fields.first { $0.name == "password" }?.secretValue, "sk-deadbeef")
-        XCTAssertEqual(openai.notes, "api key for tests")
+        let service = preview.drafts[0]
+        XCTAssertEqual(service.internalName, "service")
+        XCTAssertEqual(service.title, "Service")
+        XCTAssertEqual(service.kind, .passwordLogin)
+        XCTAssertEqual(service.fields.count, 3)
+        XCTAssertEqual(service.fields.first { $0.name == "password" }?.secretValue, "sk-deadbeef")
+        XCTAssertEqual(service.notes, "api key for tests")
     }
 
     func testOnePasswordCSVRecognizesOTPColumn() throws {
@@ -62,7 +62,7 @@ final class ImportersTests: XCTestCase {
     func testEnvImporterTriagesByName() throws {
         let env = """
         # production
-        export OPENAI_API_KEY="sk-deadbeef"
+        export SERVICE_API_KEY="sk-deadbeef"
         DB_PASSWORD='hunter2'
         APP_NAME=Clawix
         EMPTY_LINE_BELOW=
@@ -70,10 +70,10 @@ final class ImportersTests: XCTestCase {
         """
         let preview = try EnvFileImporter.parse(env)
         XCTAssertEqual(preview.drafts.count, 4)
-        let openai = try XCTUnwrap(preview.drafts.first { $0.internalName == "openai_api_key" })
-        XCTAssertEqual(openai.kind, .apiKey)
-        XCTAssertEqual(openai.fields.first?.secretValue, "sk-deadbeef")
-        XCTAssertEqual(openai.fields.first?.placement, .env)
+        let service = try XCTUnwrap(preview.drafts.first { $0.internalName == "service_api_key" })
+        XCTAssertEqual(service.kind, .apiKey)
+        XCTAssertEqual(service.fields.first?.secretValue, "sk-deadbeef")
+        XCTAssertEqual(service.fields.first?.placement, .env)
         let appName = try XCTUnwrap(preview.drafts.first { $0.internalName == "app_name" })
         XCTAssertEqual(appName.kind, .secureNote)
     }
