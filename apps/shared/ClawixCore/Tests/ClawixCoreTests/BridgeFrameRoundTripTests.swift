@@ -335,4 +335,44 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             XCTAssertEqual(t, "madeUp")
         }
     }
+
+    // MARK: - Rate limits (v5)
+
+    func testRequestRateLimitsRoundTrip() throws {
+        try roundTrip(.requestRateLimits)
+    }
+
+    func testRateLimitsSnapshotRoundTrip() throws {
+        let primary = WireRateLimitWindow(usedPercent: 14, resetsAt: 1_778_222_391, windowDurationMins: 300)
+        let secondary = WireRateLimitWindow(usedPercent: 14, resetsAt: 1_778_539_180, windowDurationMins: 10_080)
+        let credits = WireCreditsSnapshot(hasCredits: false, unlimited: false, balance: "0")
+        let general = WireRateLimitSnapshot(
+            primary: primary,
+            secondary: secondary,
+            credits: credits,
+            limitId: "codex",
+            limitName: nil
+        )
+        let model = WireRateLimitSnapshot(
+            primary: WireRateLimitWindow(usedPercent: 0, resetsAt: 1_778_227_957, windowDurationMins: 300),
+            secondary: WireRateLimitWindow(usedPercent: 0, resetsAt: 1_778_814_757, windowDurationMins: 10_080),
+            credits: nil,
+            limitId: "codex_bengalfox",
+            limitName: "GPT-5.3-Codex-Spark"
+        )
+        try roundTrip(.rateLimitsSnapshot(snapshot: general, byLimitId: ["codex": general, "codex_bengalfox": model]))
+        // Empty / not-yet-fetched payload also survives the round trip.
+        try roundTrip(.rateLimitsSnapshot(snapshot: nil, byLimitId: [:]))
+    }
+
+    func testRateLimitsUpdatedRoundTrip() throws {
+        let snap = WireRateLimitSnapshot(
+            primary: WireRateLimitWindow(usedPercent: 67, resetsAt: 1_780_000_000, windowDurationMins: 300),
+            secondary: nil,
+            credits: WireCreditsSnapshot(hasCredits: true, unlimited: false, balance: "12.34"),
+            limitId: "codex",
+            limitName: nil
+        )
+        try roundTrip(.rateLimitsUpdated(snapshot: snap, byLimitId: [:]))
+    }
 }
