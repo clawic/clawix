@@ -9,11 +9,6 @@ final class MetaRepository {
         self.db = db
     }
 
-    var hasLocalPins: Bool {
-        get { boolValue(forKey: "has_local_pins") }
-        set { setBool(newValue, forKey: "has_local_pins") }
-    }
-
     func string(forKey key: String) -> String? {
         try? db.read { try MetaRow.fetchOne($0, key: key)?.value }
     }

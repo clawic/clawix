@@ -45,6 +45,34 @@ final class PinsRepository {
         try? db.write { _ = try PinnedThreadRow.deleteOne($0, key: threadId) }
     }
 
+    /// Append every id in `threadIds` that is not already pinned, in the
+    /// order received, after the current last pinned row. Used to mirror
+    /// Codex's `pinned-thread-ids` into the local store on each read of
+    /// `~/.codex/.codex-global-state.json`. One-way sync: pins removed
+    /// in Codex stay locally pinned (the Mac app never writes back, and
+    /// removing on import would punish a user who explicitly pinned
+    /// here for an old chat). Returns the count of newly inserted rows.
+    @discardableResult
+    func addIfMissing(_ threadIds: [String]) -> Int {
+        guard !threadIds.isEmpty else { return 0 }
+        return (try? db.write { db in
+            let existing = Set(try PinnedThreadRow.fetchAll(db).map(\.threadId))
+            let toAdd = threadIds.filter { !existing.contains($0) }
+            guard !toAdd.isEmpty else { return 0 }
+            var lastOrder = try Int64.fetchOne(db,
+                sql: "SELECT MAX(sort_order) FROM pinned_threads") ?? 0
+            let now = Int64(Date().timeIntervalSince1970)
+            for id in toAdd {
+                lastOrder += Self.orderGap
+                let row = PinnedThreadRow(threadId: id,
+                                          sortOrder: lastOrder,
+                                          pinnedAt: now)
+                try row.insert(db)
+            }
+            return toAdd.count
+        }) ?? 0
+    }
+
     /// Replace the full pinned order with the given list, preserving
     /// pinned_at timestamps when possible. Used after drag-reorder.
     func setOrder(_ threadIds: [String]) {
