@@ -93,12 +93,16 @@ final class LocalModelsDaemon: ObservableObject {
             let process = try spawn(numCtx: numCtx, keepAlive: keepAlive)
             self.process = process
 
-            if await waitUntilAlive(deadlineSeconds: 10) {
+            // GPU discovery on the first cold start can take 8-10 s
+            // before the HTTP listener begins serving requests. 30 s
+            // gives plenty of headroom on slow machines without making
+            // the failure path feel hung.
+            if await waitUntilAlive(deadlineSeconds: 30) {
                 state = .running
             } else {
                 process.terminate()
                 state = .crashed(message:
-                    "Runtime did not respond on \(Self.host):\(Self.port) within 10 seconds. " +
+                    "Runtime did not respond on \(Self.host):\(Self.port) within 30 seconds. " +
                     "See ~/Library/Logs/Clawix/local-models.log for details.")
             }
         } catch {
@@ -137,6 +141,10 @@ final class LocalModelsDaemon: ObservableObject {
         process.executableURL = LocalModelsRuntimeInstaller.binaryURL
         process.arguments = ["serve"]
         process.environment = Self.environment(numCtx: numCtx, keepAlive: keepAlive)
+        // Run from the runtime root so dylibs sibling to the binary
+        // resolve via @loader_path; DYLD_LIBRARY_PATH is the belt to
+        // that suspenders.
+        process.currentDirectoryURL = LocalModelsRuntimeInstaller.runtimeRoot
 
         // Append-mode write handle so we don't truncate previous runs'
         // logs when Clawix restarts.
@@ -177,6 +185,9 @@ final class LocalModelsDaemon: ObservableObject {
         env["OLLAMA_KEEP_ALIVE"] = keepAlive
         env["OLLAMA_CONTEXT_LENGTH"] = String(numCtx)
         env["HOME"] = fakeHomeDirectory.path
+        // The tarball lays its dylibs flat next to the binary. Ensure
+        // dyld searches that directory whatever the rpath situation is.
+        env["DYLD_LIBRARY_PATH"] = LocalModelsRuntimeInstaller.libraryPath.path
         return env
     }
 

@@ -112,9 +112,16 @@ final class LocalModelsRuntimeInstaller: NSObject, ObservableObject {
         runtimeRoot.appendingPathComponent("version", isDirectory: false)
     }
 
+    /// The upstream tarball ships the binary at the tarball root (next
+    /// to its `.dylib`s, `.so`s and `mlx_metal_v*/` directories), not
+    /// under `bin/`. Confirmed against v0.23.1 by extracting locally.
     nonisolated static var binaryURL: URL {
-        runtimeRoot.appendingPathComponent("bin/ollama", isDirectory: false)
+        runtimeRoot.appendingPathComponent("ollama", isDirectory: false)
     }
+
+    /// Directory dyld must search at runtime to load the libs that ship
+    /// alongside the binary. Set via `DYLD_LIBRARY_PATH` when spawning.
+    nonisolated static var libraryPath: URL { runtimeRoot }
 
     nonisolated static var applicationSupportRoot: URL {
         let base = FileManager.default.urls(
