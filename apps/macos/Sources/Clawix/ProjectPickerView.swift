@@ -21,8 +21,7 @@ struct ProjectPickerView: View {
                     Button {
                     } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "plus")
-                                .font(BodyFont.system(size: 13))
+                            LucideIcon(.plus, size: 13)
                                 .foregroundColor(Palette.textSecondary)
                                 .frame(width: 36, height: 36)
                                 .background(
@@ -62,8 +61,7 @@ private struct ProjectRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: "folder.fill")
-                    .font(BodyFont.system(size: 16))
+                LucideIcon(.folder, size: 16)
                     .foregroundColor(isSelected ? Color.accentColor : Palette.textSecondary)
                     .frame(width: 36, height: 36)
                     .background(
@@ -83,8 +81,7 @@ private struct ProjectRow: View {
                 Spacer()
 
                 if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                    LucideIcon(.check, size: 11)
                         .foregroundColor(Color.accentColor)
                 }
             }

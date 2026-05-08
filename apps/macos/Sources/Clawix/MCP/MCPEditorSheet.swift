@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 /// Modal popup used to add or edit a single `[mcp_servers.<name>]`
 /// entry. Visually aligned with `ChatRenameSheet` (same chrome, same
@@ -112,7 +113,7 @@ struct MCPEditorSheet: View {
                     HStack(spacing: 4) {
                         Text("Docs")
                             .font(BodyFont.system(size: 12, wght: 500))
-                        Image(systemName: "arrow.up.right.square")
+                        Image(lucide: .square_arrow_out_up_right)
                             .font(BodyFont.system(size: 10))
                     }
                     .foregroundColor(Palette.pastelBlue)
@@ -125,7 +126,7 @@ struct MCPEditorSheet: View {
                     confirmingUninstall = true
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "trash")
+                        Image(lucide: .trash_2)
                             .font(BodyFont.system(size: 11, wght: 600))
                         Text("Uninstall")
                             .font(BodyFont.system(size: 12, wght: 600))
@@ -146,7 +147,7 @@ struct MCPEditorSheet: View {
                 .buttonStyle(.plain)
             }
             Button(action: onClose) {
-                Image(systemName: "xmark")
+                Image(lucide: .x)
                     .font(BodyFont.system(size: 12, weight: .medium))
                     .foregroundColor(Color(white: 0.65))
                     .frame(width: 24, height: 24)
@@ -390,7 +391,7 @@ private struct MCPSheetAddRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: "plus")
+                Image(lucide: .plus)
                     .font(BodyFont.system(size: 11, wght: 700))
                 Text(label)
                     .font(BodyFont.system(size: 12.5))
@@ -418,7 +419,7 @@ private struct MCPSheetTrashButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "trash")
+            Image(lucide: .trash_2)
                 .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Color(white: hovered ? 0.94 : 0.55))
                 .frame(width: 30, height: 30)

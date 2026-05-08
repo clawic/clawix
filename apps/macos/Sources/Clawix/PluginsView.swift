@@ -27,8 +27,7 @@ private struct PluginRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: plugin.iconName)
-                .font(BodyFont.system(size: 16))
+            LucideIcon.auto(plugin.iconName, size: 16)
                 .foregroundColor(Palette.textSecondary)
                 .frame(width: 36, height: 36)
                 .background(

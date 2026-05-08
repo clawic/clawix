@@ -31,8 +31,7 @@ struct ProjectEditorSheet: View {
                     .foregroundColor(Color(white: 0.97))
                 Spacer()
                 Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                    LucideIcon(.x, size: 12)
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
@@ -75,8 +74,7 @@ struct ProjectEditorSheet: View {
 
                 if !path.isEmpty && !FileManager.default.fileExists(atPath: expandedPath) {
                     HStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(BodyFont.system(size: 11))
+                        LucideIcon(.triangleAlert, size: 11)
                         Text("This folder doesn’t exist on disk")
                             .font(BodyFont.system(size: 11.5, wght: 500))
                     }
@@ -93,8 +91,7 @@ struct ProjectEditorSheet: View {
                     }.count
                     if pathMatchCount > 0 {
                         HStack(spacing: 6) {
-                            Image(systemName: "point.3.connected.trianglepath.dotted")
-                                .font(BodyFont.system(size: 11))
+                            LucideIcon(.workflow, size: 11)
                             Text(L10n.chatsAutoGroupedByPath(pathMatchCount))
                                 .font(BodyFont.system(size: 11.5, wght: 500))
                         }
