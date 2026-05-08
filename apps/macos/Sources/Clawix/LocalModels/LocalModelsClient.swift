@@ -56,6 +56,24 @@ struct LocalModelsClient {
         let license: String?
     }
 
+    struct ChatMessage: Encodable {
+        let role: String
+        let content: String
+    }
+
+    /// One streamed chunk from `/api/chat`. The daemon emits one JSON
+    /// object per line with the assistant's incremental token in
+    /// `message.content` until `done == true`.
+    struct ChatStreamEvent: Decodable {
+        struct InnerMessage: Decodable {
+            let role: String?
+            let content: String?
+        }
+        let message: InnerMessage?
+        let done: Bool?
+        let error: String?
+    }
+
     /// One streamed chunk from `/api/pull`. Status is the human-readable
     /// stage ("pulling manifest", "downloading sha256:…", "success");
     /// when downloading a layer, `total` and `completed` track bytes for
@@ -113,6 +131,56 @@ struct LocalModelsClient {
         )
         let (_, response) = try await URLSession.shared.data(for: req)
         try Self.assertOK(response, path: "/api/generate")
+    }
+
+    /// Streaming chat. Yields the assistant's text content as it
+    /// arrives from `/api/chat`. Cancellation aborts the underlying
+    /// URLSession task.
+    func chat(
+        model: String,
+        messages: [ChatMessage]
+    ) -> AsyncThrowingStream<String, Error> {
+        struct Body: Encodable {
+            let model: String
+            let messages: [ChatMessage]
+            let stream: Bool
+        }
+
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    var req = makeRequest(path: "/api/chat", method: "POST")
+                    req.httpBody = try JSONEncoder().encode(
+                        Body(model: model, messages: messages, stream: true)
+                    )
+                    let (bytes, response) = try await URLSession.shared.bytes(for: req)
+                    try Self.assertOK(response, path: "/api/chat")
+
+                    let decoder = JSONDecoder()
+                    for try await line in bytes.lines {
+                        guard !line.isEmpty,
+                              let data = line.data(using: .utf8),
+                              let event = try? decoder.decode(ChatStreamEvent.self, from: data)
+                        else { continue }
+                        if let error = event.error, !error.isEmpty {
+                            continuation.finish(throwing: ClientError.daemonError(error))
+                            return
+                        }
+                        if let content = event.message?.content, !content.isEmpty {
+                            continuation.yield(content)
+                        }
+                        if event.done == true {
+                            continuation.finish()
+                            return
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 
     /// Streaming pull. Yields one `PullEvent` per JSON line on the wire

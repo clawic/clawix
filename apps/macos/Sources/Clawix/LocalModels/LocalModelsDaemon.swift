@@ -37,7 +37,20 @@ final class LocalModelsDaemon: ObservableObject {
     private var process: Process?
     private var logHandle: FileHandle?
 
-    private init() {}
+    /// `true` when an external owner (LaunchAgent, manual `ollama serve`)
+    /// is already listening on `port`. We attach as a client and never
+    /// terminate that process from `stop()`.
+    private var attachedExternally: Bool = false
+
+    private init() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if await self.ping() {
+                self.attachedExternally = true
+                self.state = .running
+            }
+        }
+    }
 
     // MARK: - Paths
 
@@ -79,6 +92,17 @@ final class LocalModelsDaemon: ObservableObject {
         default: break
         }
 
+        // Someone (LaunchAgent, a manual `ollama serve`, a leftover
+        // process from a previous Clawix run) is already serving on the
+        // loopback port. Attach as a client instead of fighting for the
+        // port; spawning would fail with "address already in use" and
+        // flip the toggle back to off.
+        if await ping() {
+            attachedExternally = true
+            state = .running
+            return
+        }
+
         guard FileManager.default.isExecutableFile(
             atPath: LocalModelsRuntimeInstaller.binaryURL.path
         ) else {
@@ -92,6 +116,7 @@ final class LocalModelsDaemon: ObservableObject {
             try Self.prepareDirectories()
             let process = try spawn(numCtx: numCtx, keepAlive: keepAlive)
             self.process = process
+            self.attachedExternally = false
 
             // GPU discovery on the first cold start can take 8-10 s
             // before the HTTP listener begins serving requests. 30 s
@@ -112,8 +137,16 @@ final class LocalModelsDaemon: ObservableObject {
 
     /// Stops the daemon by sending SIGTERM. The termination handler
     /// settled in `spawn(...)` flips state once the process is gone.
+    /// If the daemon is owned by something else (LaunchAgent), we leave
+    /// it running and just detach: killing a launchd-supervised process
+    /// gets it instantly relaunched and confuses the UI.
     func stop() {
-        process?.terminate()
+        if let process {
+            process.terminate()
+        } else if attachedExternally {
+            attachedExternally = false
+            state = .stopped
+        }
     }
 
     func toggle(_ on: Bool) async {
