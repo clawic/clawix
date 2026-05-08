@@ -15,7 +15,8 @@ extension Chat {
             lastMessagePreview: last.flatMap { String($0.content.prefix(140)) },
             branch: branch,
             cwd: cwd,
-            lastTurnInterrupted: lastTurnInterrupted
+            lastTurnInterrupted: lastTurnInterrupted,
+            threadId: clawixThreadId
         )
     }
 }

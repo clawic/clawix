@@ -2,10 +2,47 @@ import Foundation
 import Combine
 import ClawixCore
 import ClawixEngine
+import WhisperKit
 
 @main
 struct BridgedMain {
     static func main() {
+        // Maintenance flag: `clawix-bridged --download-model <variant>`
+        // pulls a WhisperKit model under `~/Documents/huggingface/models/...`
+        // and exits. Used by `dev.sh` to recover a corrupted/incomplete
+        // cache without forcing the user through the GUI Settings flow.
+        // Variant matches `DictationModel.rawValue` (`large-v3`,
+        // `large-v3_turbo`).
+        let argv = CommandLine.arguments
+        if argv.count >= 3, argv[1] == "--download-model" {
+            let variant = argv[2]
+            let semaphore = DispatchSemaphore(value: 0)
+            Task {
+                do {
+                    let url = try await WhisperKit.download(
+                        variant: variant,
+                        progressCallback: { progress in
+                            let pct = Int(progress.fractionCompleted * 100)
+                            FileHandle.standardError.write(
+                                Data("download \(variant): \(pct)%\n".utf8)
+                            )
+                        }
+                    )
+                    FileHandle.standardError.write(
+                        Data("download \(variant) ok at \(url.path)\n".utf8)
+                    )
+                } catch {
+                    FileHandle.standardError.write(
+                        Data("download \(variant) failed: \(error)\n".utf8)
+                    )
+                    exit(1)
+                }
+                semaphore.signal()
+            }
+            semaphore.wait()
+            exit(0)
+        }
+
         BridgedLog.write("starting schemaVersion=\(bridgeSchemaVersion)")
         let env = ProcessInfo.processInfo.environment
         if let bearer = env["CLAWIX_BRIDGED_BEARER"], !bearer.isEmpty {
@@ -246,10 +283,121 @@ final class DaemonEngineHost: EngineHost {
     private var rolloutPathByThread: [String: String] = [:]
     private var activeAssistantIdByThread: [String: String] = [:]
     private var activeTurnByThread: [String: String] = [:]
+    /// Set of Codex thread ids the user has pinned, sourced from
+    /// `~/.codex/.codex-global-state.json` (`pinned-thread-ids`).
+    /// Refreshed on bootstrap and again at the top of every
+    /// `reloadThreads`. Without this the daemon would emit every chat
+    /// with `isPinned = false`, the GUI's Pinned section would stay
+    /// empty even when Codex's global state has pins, and the iPhone
+    /// would lose the affordance entirely. Mirror of what
+    /// `BackendStateReader` does in the GUI process.
+    private var pinnedThreadIds: Set<String> = []
+    /// File watcher on `~/.codex/.codex-global-state.json`. When the
+    /// user pins / unpins a chat from another Codex surface (CLI, the
+    /// Electron app, etc.) the file gets rewritten; the watcher fires
+    /// `reloadThreads` so the iPhone and any desktop client see the
+    /// new pin set without having to relaunch the daemon. Held as a
+    /// strong reference so the source isn't deallocated while we want
+    /// it watching. nil until the file exists for the first time.
+    private var pinnedStateWatcher: DispatchSourceFileSystemObject?
+    private var pinnedStateFD: Int32 = -1
 
     init(binary: BackendBinary, pairing: PairingService) {
         self.backend = BackendClient(binary: binary)
         self.pairing = pairing
+    }
+
+    /// Codex's global state file. Same path the GUI's
+    /// `BackendStateReader` opens; the file is owned by Codex itself
+    /// (the in-process backend writes it on every pin / unpin), so
+    /// both processes always agree on the canonical pin set.
+    private static var globalStateURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex/.codex-global-state.json")
+    }
+
+    /// Read `pinned-thread-ids` from Codex's global state file. Silent
+    /// on every failure path (file missing, malformed JSON, schema
+    /// surprise): the daemon keeps whatever pin set it had so a
+    /// transient read failure does not blank the Pinned section on
+    /// every connected client.
+    private func refreshPinnedThreadIds() {
+        let url = Self.globalStateURL
+        guard
+            let data = try? Data(contentsOf: url),
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let raw = json["pinned-thread-ids"] as? [String]
+        else { return }
+        pinnedThreadIds = Set(raw.filter { !$0.isEmpty })
+    }
+
+    /// Set up a one-time DispatchSource watcher on the global state
+    /// file so external pin / unpin actions (Codex CLI, Electron app)
+    /// trigger a republish without waiting for the next reload tick.
+    /// No-op when the file does not exist yet (Codex creates it on
+    /// first launch); we'll re-attempt the next bootstrap. Idempotent.
+    private func installPinnedStateWatcher() {
+        guard pinnedStateWatcher == nil else { return }
+        let path = Self.globalStateURL.path
+        guard FileManager.default.fileExists(atPath: path) else { return }
+        let fd = open(path, O_EVTONLY)
+        guard fd >= 0 else { return }
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: [.write, .extend, .rename, .delete],
+            queue: DispatchQueue.main
+        )
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            // `rename` / `delete` mean the file was atomically
+            // replaced (the typical write pattern). Rebuild the
+            // watcher against the new inode and re-read in one shot.
+            let mask = source.data
+            if mask.contains(.rename) || mask.contains(.delete) {
+                self.tearDownPinnedStateWatcher()
+                self.refreshPinnedThreadIds()
+                self.installPinnedStateWatcher()
+            } else {
+                self.refreshPinnedThreadIds()
+            }
+            // Republish the current chat snapshots with refreshed
+            // `isPinned` values so connected clients see the pin
+            // change without waiting for the next reloadThreads().
+            self.republishChatsWithCurrentPins()
+        }
+        source.setCancelHandler {
+            close(fd)
+        }
+        pinnedStateFD = fd
+        pinnedStateWatcher = source
+        source.resume()
+    }
+
+    private func tearDownPinnedStateWatcher() {
+        pinnedStateWatcher?.cancel()
+        pinnedStateWatcher = nil
+        pinnedStateFD = -1
+    }
+
+    /// Recompute `isPinned` for every chat snapshot in memory using the
+    /// current `pinnedThreadIds` set and republish. Called from the
+    /// state-file watcher when pins change without a thread-list refresh.
+    private func republishChatsWithCurrentPins() {
+        var snapshots = bridgeChatsCurrent
+        var changed = false
+        for index in snapshots.indices {
+            let threadId = threadByChat[snapshots[index].id]
+            let nextPinned = threadId.map { pinnedThreadIds.contains($0) } ?? false
+            if snapshots[index].chat.isPinned != nextPinned {
+                var mutable = MutableSnapshot(snapshots[index])
+                mutable.chat.isPinned = nextPinned
+                snapshots[index] = mutable.snapshot
+                changed = true
+            }
+        }
+        if changed {
+            chatsSubject.send(snapshots)
+        }
     }
 
     var bridgeChatsCurrent: [BridgeChatSnapshot] { chatsSubject.value }
@@ -282,6 +430,12 @@ final class DaemonEngineHost: EngineHost {
             )
             try await backend.notify(method: "initialized", params: EmptyObject())
             BridgedLog.write("backend-initialized")
+            // Read the canonical pin set BEFORE the first thread-list
+            // publish so the very first `chatsSnapshot` carries the
+            // correct `isPinned` flags (the GUI's first paint and the
+            // iPhone's onboard arrival both consume that snapshot).
+            refreshPinnedThreadIds()
+            installPinnedStateWatcher()
             await reloadThreads()
             await refreshRateLimits()
             stateSubject.send(.ready)
@@ -698,6 +852,14 @@ final class DaemonEngineHost: EngineHost {
     }
 
     private func reloadThreads() async {
+        // Re-read pins right before the publish: even with the
+        // file-watcher in place, this catches the case where the
+        // watcher hasn't been installed yet (state file didn't exist
+        // at boot but does now) and also pays a cheap one-shot cost
+        // to keep the pin set fresh on every reload triggered from
+        // user interaction.
+        refreshPinnedThreadIds()
+        installPinnedStateWatcher()
         do {
             let response = try await backend.send(
                 method: "thread/list",
@@ -716,7 +878,7 @@ final class DaemonEngineHost: EngineHost {
                 expecting: ThreadListResponse.self
             )
             let snapshots = response.data.map(snapshot(from:))
-            BridgedLog.write("thread-list ok count=\(snapshots.count)")
+            BridgedLog.write("thread-list ok count=\(snapshots.count) pinned=\(pinnedThreadIds.count)")
             chatsSubject.send(snapshots)
             lastChatsPublishedAt = Date()
         } catch {
@@ -735,16 +897,24 @@ final class DaemonEngineHost: EngineHost {
         chatByThread[thread.id] = chatId
         threadByChat[chatId] = thread.id
         if let path = thread.path { rolloutPathByThread[thread.id] = path }
+        let archived = thread.archived ?? false
+        // Pinned chats stay pinned while archived in Codex's data
+        // model, but the GUI hides the pin badge for archived rows
+        // (mirroring `chatFromThread` in `AppState.swift`). Clamp
+        // here so connected clients don't have to repeat that rule.
+        let isPinned = !archived && pinnedThreadIds.contains(thread.id)
         return BridgeChatSnapshot(
             chat: WireChat(
                 id: chatId,
                 title: title(for: thread),
                 createdAt: thread.updatedDate,
-                isArchived: thread.archived ?? false,
+                isPinned: isPinned,
+                isArchived: archived,
                 hasActiveTurn: activeTurnByThread[thread.id] != nil,
                 lastMessageAt: thread.updatedDate,
                 lastMessagePreview: thread.preview,
-                cwd: thread.cwd
+                cwd: thread.cwd,
+                threadId: thread.id
             ),
             messages: existingMessages(chatId: chatId)
         )
@@ -783,6 +953,10 @@ final class DaemonEngineHost: EngineHost {
             let trimmed = firstPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
             snap.chat.title = trimmed.isEmpty ? "Conversation" : String(trimmed.prefix(60))
             snap.chat.cwd = result.thread.cwd
+            // Stamp the freshly minted Codex thread id onto the wire
+            // chat so desktop clients can reconcile pin / project
+            // metadata against `BackendStateReader` going forward.
+            snap.chat.threadId = threadId
         }
         return threadId
     }
@@ -816,6 +990,22 @@ final class DaemonEngineHost: EngineHost {
         else { return }
         let result = RolloutHistory.read(path: URL(fileURLWithPath: path))
         guard !result.messages.isEmpty || result.lastTurnInterrupted else { return }
+        // Apply the canonical messages synchronously before returning so
+        // the imminent `bus.subscribe(chatId)` call in
+        // `BridgeIntent.dispatch` reads the full transcript out of
+        // `bridgeChatsCurrent` and the first frame the client gets is a
+        // populated `messagesSnapshot`. Wrapping the apply in a Task (as
+        // before) made the snapshot ship empty and the publisher tick
+        // that landed after the Task ran emitted N `messageAppended`
+        // frames in a row, which the client paints one row per render.
+        updateSnapshot(chatId: chatId) { snap in
+            snap.messages = result.messages
+            snap.chat.lastTurnInterrupted = result.lastTurnInterrupted
+            if let last = result.messages.last {
+                snap.chat.lastMessageAt = last.timestamp
+                snap.chat.lastMessagePreview = String(last.content.prefix(140))
+            }
+        }
         // Audio refs from previous sessions live in the AudioMessageStore.
         // Rollout rebuild mints fresh message ids so we can't key by id;
         // instead we walk audio entries (chronological) and pair them up
@@ -824,13 +1014,21 @@ final class DaemonEngineHost: EngineHost {
         // the user message just shows without a bubble, the bytes are
         // still on disk and `requestAudio` still works if a client knows
         // the audioId from another route.
+        //
+        // Done after the message apply because `AudioMessageStore.entries`
+        // is actor-isolated (async). Patching `audioRef` doesn't change
+        // `messageCount` nor the last message's content/reasoning, so the
+        // follow-up publisher tick doesn't trigger any spurious
+        // `messageAppended` / `messageStreaming` frame from `BridgeBus`.
         Task { @MainActor in
             let audioEntries = await AudioMessageStore.shared.entries(forThread: threadId)
-            var decorated = result.messages
-            if !audioEntries.isEmpty {
+            guard !audioEntries.isEmpty else { return }
+            self.updateSnapshot(chatId: chatId) { snap in
                 var unmatched = audioEntries
-                for idx in decorated.indices where decorated[idx].role == .user {
-                    let content = decorated[idx].content
+                for idx in snap.messages.indices
+                    where snap.messages[idx].role == .user
+                       && snap.messages[idx].audioRef == nil {
+                    let content = snap.messages[idx].content
                     let pickIdx: Int? = {
                         if let exact = unmatched.firstIndex(where: { $0.transcript == content }) {
                             return exact
@@ -838,17 +1036,9 @@ final class DaemonEngineHost: EngineHost {
                         return unmatched.indices.first
                     }()
                     if let pickIdx {
-                        decorated[idx].audioRef = unmatched[pickIdx].wireRef
+                        snap.messages[idx].audioRef = unmatched[pickIdx].wireRef
                         unmatched.remove(at: pickIdx)
                     }
-                }
-            }
-            self.updateSnapshot(chatId: chatId) { snap in
-                snap.messages = decorated
-                snap.chat.lastTurnInterrupted = result.lastTurnInterrupted
-                if let last = decorated.last {
-                    snap.chat.lastMessageAt = last.timestamp
-                    snap.chat.lastMessagePreview = String(last.content.prefix(140))
                 }
             }
         }
@@ -881,7 +1071,20 @@ final class DaemonEngineHost: EngineHost {
                   let chatId = chatByThread[payload.threadId]
             else { return }
             activeTurnByThread[payload.threadId] = payload.turn.id
-            ensureAssistant(chatId: chatId, threadId: payload.threadId)
+            let assistantId = ensureAssistant(chatId: chatId, threadId: payload.threadId)
+            // Stamp the live "Worked for Xs" counter on the placeholder so
+            // the chat row's header ticks live while the model is working.
+            // `endedAt` stays nil; `turn/completed` freezes it.
+            let started = Date()
+            updateMessage(chatId: chatId, messageId: assistantId) { msg in
+                if msg.workSummary == nil {
+                    msg.workSummary = WireWorkSummary(
+                        startedAt: started,
+                        endedAt: nil,
+                        items: []
+                    )
+                }
+            }
             updateChat(chatId: chatId) { $0.hasActiveTurn = true }
         case "item/agentMessage/delta":
             guard let payload = try? params?.decode(AgentMessageDelta.self),
@@ -917,6 +1120,17 @@ final class DaemonEngineHost: EngineHost {
             guard let payload = try? params?.decode(TurnEnvelope.self),
                   let chatId = chatByThread[payload.threadId]
             else { return }
+            // Freeze the work-summary counter at turn close so the live
+            // ticker stops; without this the chat row keeps incrementing
+            // even though the agent is done.
+            if let assistantId = activeAssistantIdByThread[payload.threadId] {
+                let ended = Date()
+                updateMessage(chatId: chatId, messageId: assistantId) { msg in
+                    if msg.workSummary != nil, msg.workSummary?.endedAt == nil {
+                        msg.workSummary?.endedAt = ended
+                    }
+                }
+            }
             activeTurnByThread[payload.threadId] = nil
             activeAssistantIdByThread[payload.threadId] = nil
             updateChat(chatId: chatId) {
@@ -1520,55 +1734,147 @@ indirect enum JSONValue: Codable, Equatable {
 }
 
 enum RolloutHistory {
+
+    /// Mutable accumulator for one assistant turn. Mirrors the Mac
+    /// `RolloutReader.PendingAssistant` pattern: every `agent_message`
+    /// becomes a `.message` timeline entry on the same WireMessage so
+    /// the chat row groups the whole turn under a single "Worked for
+    /// Xs" disclosure instead of rendering each commentary paragraph
+    /// as its own bubble.
+    private struct PendingAssistant {
+        let startedAt: Date
+        var endedAt: Date
+        var timeline: [WireTimelineEntry] = []
+        var finalText: String = ""
+
+        init(startedAt: Date) {
+            self.startedAt = startedAt
+            self.endedAt = startedAt
+        }
+
+        mutating func appendMessage(text: String, isFinal: Bool) {
+            if case .message(let lastId, let existing) = timeline.last {
+                timeline[timeline.count - 1] = .message(
+                    id: lastId,
+                    text: existing + "\n\n" + text
+                )
+            } else {
+                timeline.append(.message(id: UUID().uuidString, text: text))
+            }
+            if isFinal {
+                finalText = text
+            }
+        }
+
+        func finalize() -> WireMessage {
+            // The collapsed chat row reads `content` once the disclosure
+            // is closed; pick the canonical body the same way the Mac's
+            // RolloutReader does: phase=="final_answer" wins, otherwise
+            // fall back to the last `.message` entry so commentary-only
+            // turns still have a visible body when collapsed.
+            let body: String
+            if !finalText.isEmpty {
+                body = finalText
+            } else {
+                var fallback = ""
+                for entry in timeline.reversed() {
+                    if case .message(_, let text) = entry {
+                        fallback = text
+                        break
+                    }
+                }
+                body = fallback
+            }
+            return WireMessage(
+                id: UUID().uuidString,
+                role: .assistant,
+                content: body,
+                streamingFinished: true,
+                timestamp: startedAt,
+                timeline: timeline,
+                workSummary: WireWorkSummary(
+                    startedAt: startedAt,
+                    endedAt: endedAt,
+                    items: []
+                )
+            )
+        }
+    }
+
     static func read(path: URL, now: Date = Date()) -> (messages: [WireMessage], lastTurnInterrupted: Bool) {
         guard let text = try? String(contentsOf: path, encoding: .utf8) else {
             return ([], false)
         }
         var messages: [WireMessage] = []
+        var pending: PendingAssistant? = nil
         var lastEventAt: Date?
         var sawAgentWork = false
         var sawClose = true
         let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let isoFallback = ISO8601DateFormatter()
+        isoFallback.formatOptions = [.withInternetDateTime]
+
+        func flushPending() {
+            if let p = pending {
+                messages.append(p.finalize())
+                pending = nil
+            }
+        }
+
         for line in text.split(separator: "\n") {
             guard let data = line.data(using: .utf8),
                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             else { continue }
-            if let ts = obj["timestamp"] as? String {
-                lastEventAt = iso.date(from: ts)
+            let parsedTimestamp: Date? = (obj["timestamp"] as? String).flatMap {
+                iso.date(from: $0) ?? isoFallback.date(from: $0)
+            }
+            if let parsedTimestamp {
+                lastEventAt = parsedTimestamp
+                pending?.endedAt = parsedTimestamp
             }
             guard obj["type"] as? String == "event_msg",
                   let payload = obj["payload"] as? [String: Any],
                   let type = payload["type"] as? String
             else { continue }
+            let timestamp = parsedTimestamp ?? lastEventAt ?? now
             switch type {
             case "user_message":
+                flushPending()
                 if let message = payload["message"] as? String {
                     messages.append(WireMessage(
                         id: UUID().uuidString,
                         role: .user,
                         content: message,
                         streamingFinished: true,
-                        timestamp: lastEventAt ?? now
+                        timestamp: timestamp
                     ))
                     sawClose = true
+                    sawAgentWork = false
                 }
             case "agent_message":
+                // Skip Codex's interim-summary chunks: they're scratch
+                // intermediates the renderer never wants to surface as
+                // user-visible paragraphs.
+                let phase = payload["phase"] as? String
+                if phase == "interim_summary" { continue }
                 let message = (payload["message"] as? String) ?? (payload["text"] as? String) ?? ""
-                messages.append(WireMessage(
-                    id: UUID().uuidString,
-                    role: .assistant,
-                    content: message,
-                    streamingFinished: true,
-                    timestamp: lastEventAt ?? now
-                ))
+                let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty { continue }
+                if pending == nil {
+                    pending = PendingAssistant(startedAt: timestamp)
+                }
+                pending?.appendMessage(text: trimmed, isFinal: phase == "final_answer")
                 sawAgentWork = true
-                sawClose = false
-            case "final_answer", "turn_completed":
+                sawClose = (phase == "final_answer")
+            case "turn_completed":
+                flushPending()
                 sawClose = true
             default:
                 break
             }
         }
+        flushPending()
         let interrupted = sawAgentWork
             && !sawClose
             && lastEventAt.map { now.timeIntervalSince($0) > 30 } == true
