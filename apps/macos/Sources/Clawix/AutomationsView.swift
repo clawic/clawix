@@ -62,6 +62,7 @@ struct AutomationsView: View {
                 .frame(maxWidth: .infinity)
                 .offset(x: 8)
             }
+            .thinScrollers()
 
             Button {} label: {
                 HStack(spacing: 4) {

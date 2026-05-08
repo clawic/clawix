@@ -242,6 +242,7 @@ struct CommandPaletteView: View {
                 .padding(.top, 6)
                 .padding(.bottom, 10)
             }
+            .thinScrollers()
             .frame(maxHeight: 460)
             .onChange(of: selectedID) { id in
                 guard let id else { return }

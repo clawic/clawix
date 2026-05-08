@@ -363,6 +363,7 @@ private struct CodeBlockView: View {
                     .padding(.bottom, 12)
                     .textSelection(.enabled)
             }
+            .thinScrollers()
         }
     }
 

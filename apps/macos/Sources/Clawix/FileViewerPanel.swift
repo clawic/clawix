@@ -178,6 +178,7 @@ struct FileViewerPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
                 }
+                .thinScrollers()
             }
 
         case .plain(let raw):
@@ -465,6 +466,7 @@ private struct RawTextView: View {
                             alignment: .topLeading
                         )
                 }
+                .thinScrollers()
             } else {
                 ScrollView([.vertical, .horizontal]) {
                     content
@@ -474,6 +476,7 @@ private struct RawTextView: View {
                             alignment: .topLeading
                         )
                 }
+                .thinScrollers()
             }
         }
     }

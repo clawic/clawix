@@ -208,6 +208,7 @@ struct PlanCardView: View {
                     .padding(.bottom, collapsed ? 80 : 22)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .thinScrollers()
             .scrollDisabled(!collapsed)
             .frame(maxHeight: maxHeight)
 

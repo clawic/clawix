@@ -1924,7 +1924,7 @@ struct ComposerTextEditor: NSViewRepresentable {
         textView.wantsInitialFocus = autofocus
         context.coordinator.lastFocusToken = focusToken
 
-        let scroller = ComposerScroller()
+        let scroller = ThinScroller()
         scroller.scrollerStyle = .overlay
         scrollView.verticalScroller = scroller
 
@@ -2022,69 +2022,6 @@ struct ComposerTextEditor: NSViewRepresentable {
             }
             return false
         }
-    }
-}
-
-final class ComposerScroller: NSScroller {
-    override class var isCompatibleWithOverlayScrollers: Bool { true }
-
-    override class func scrollerWidth(for controlSize: NSControl.ControlSize,
-                                      scrollerStyle: NSScroller.Style) -> CGFloat {
-        return 14
-    }
-
-    private static let verticalPad: CGFloat = 8
-    private static let thumbWidth: CGFloat = 7
-    private static let thumbInsetFromRight: CGFloat = 4
-
-    private func trackRect() -> NSRect {
-        let bounds = self.bounds
-        let pad = ComposerScroller.verticalPad
-        let width = ComposerScroller.thumbWidth
-        let inset = ComposerScroller.thumbInsetFromRight
-        return NSRect(
-            x: bounds.maxX - width - inset,
-            y: bounds.minY + pad,
-            width: width,
-            height: max(0, bounds.height - pad * 2)
-        )
-    }
-
-    override func drawKnobSlot(in slotRect: NSRect, highlight: Bool) {
-        // Overlay scrollers don't reliably invoke this; drawing lives in draw(_:).
-    }
-
-    override func rect(for part: NSScroller.Part) -> NSRect {
-        guard part == .knob else { return super.rect(for: part) }
-        let track = trackRect()
-        let knobProp = max(0.05, min(1.0, CGFloat(self.knobProportion)))
-        let thumbHeight = max(36, track.height * knobProp)
-        let maxThumbY = max(0, track.height - thumbHeight)
-        let progress = CGFloat(self.doubleValue)
-        let thumbY = track.minY + maxThumbY * progress
-        return NSRect(x: track.minX, y: thumbY, width: track.width, height: thumbHeight)
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        let track = trackRect()
-        if track.width > 0, track.height > 0 {
-            // Pill shape: radius == width/2, so NSBezierPath circular == .continuous visually.
-            let radius = track.width / 2
-            let trackPath = NSBezierPath(roundedRect: track, xRadius: radius, yRadius: radius)
-            NSColor(white: 1.0, alpha: 0.06).setFill()
-            trackPath.fill()
-        }
-        drawKnob()
-    }
-
-    override func drawKnob() {
-        let thumb = self.rect(for: .knob)
-        guard thumb.width > 0, thumb.height > 0 else { return }
-        // Pill shape (full radius): NSBezierPath circular matches .continuous visually.
-        let radius = min(thumb.width, thumb.height) / 2
-        let path = NSBezierPath(roundedRect: thumb, xRadius: radius, yRadius: radius)
-        NSColor(white: 1.0, alpha: 0.32).setFill()
-        path.fill()
     }
 }
 

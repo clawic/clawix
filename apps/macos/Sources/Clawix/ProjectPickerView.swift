@@ -46,6 +46,7 @@ struct ProjectPickerView: View {
                 }
                 .padding(.horizontal, 24)
             }
+            .thinScrollers()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.background)

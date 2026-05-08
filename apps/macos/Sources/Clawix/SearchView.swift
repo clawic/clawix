@@ -57,6 +57,7 @@ struct SearchView: View {
                     }
                     .padding(.horizontal, 24)
                 }
+                .thinScrollers()
             } else if appState.searchQuery.isEmpty {
                 emptyState(String(localized: "Type to search your conversations", bundle: AppLocale.bundle, locale: AppLocale.current),
                            icon: "magnifyingglass")
