@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 /// Settings sheet that exposes API keys + base URLs for the cloud
 /// transcription backends (#22 cloud variants). Reachable from
@@ -161,7 +162,7 @@ struct CloudBackendsSheet: View {
             Button {
                 hidden.wrappedValue.toggle()
             } label: {
-                Image(systemName: hidden.wrappedValue ? "eye.slash" : "eye")
+                Image(lucideOrSystem: hidden.wrappedValue ? "eye.slash" : "eye")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(Palette.textPrimary)
                     .frame(width: 26, height: 26)

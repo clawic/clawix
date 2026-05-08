@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import LucideIcon
 
 /// Settings entry: a single row that surfaces the master toggle and a
 /// Manage button which opens the full provider + prompt + skip-short
@@ -151,7 +152,7 @@ struct EnhancementSettingsSheet: View {
                     Button {
                         apiKeyVisible.toggle()
                     } label: {
-                        Image(systemName: apiKeyVisible ? "eye.slash" : "eye")
+                        Image(lucideOrSystem: apiKeyVisible ? "eye.slash" : "eye")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 26, height: 26)
@@ -214,7 +215,7 @@ struct EnhancementSettingsSheet: View {
                         Button(m) { modelDraft = m }
                     }
                 } label: {
-                    Image(systemName: "list.bullet")
+                    Image(lucide: .list)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .frame(width: 26, height: 26)
@@ -366,7 +367,7 @@ private struct PromptListRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 10) {
-                Image(systemName: active ? "checkmark.circle.fill" : "circle")
+                Image(lucideOrSystem: active ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(active
                         ? Color(red: 0.27, green: 0.74, blue: 0.42)
@@ -399,7 +400,7 @@ private struct PromptListRow: View {
                     Button {
                         onDelete()
                     } label: {
-                        Image(systemName: "trash")
+                        Image(lucide: .trash_2)
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(Palette.textPrimary)
                             .frame(width: 22, height: 22)

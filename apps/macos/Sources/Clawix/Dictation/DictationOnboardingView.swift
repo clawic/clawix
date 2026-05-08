@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ClawixEngine
+import LucideIcon
 
 /// First-run voice setup. Lightweight sheet that batches the three
 /// TCC permissions plus the first-model download, so a brand-new
@@ -238,7 +239,7 @@ private struct OnboardingModelGrid: View {
                                 .foregroundColor(Palette.textPrimary)
                             if manager.activeModel == model {
                                 Spacer()
-                                Image(systemName: "checkmark.circle.fill")
+                                Image(lucide: .circle_check)
                                     .foregroundColor(Color(red: 0.16, green: 0.46, blue: 0.98))
                             }
                         }

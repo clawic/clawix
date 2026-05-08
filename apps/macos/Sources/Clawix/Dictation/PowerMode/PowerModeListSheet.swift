@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 struct PowerModeListSheet: View {
     @ObservedObject var manager: PowerModeManager
@@ -33,7 +34,7 @@ struct PowerModeListSheet: View {
                 selection = id
             } label: {
                 HStack(spacing: 4) {
-                    Image(systemName: "plus")
+                    Image(lucide: .plus)
                         .font(.system(size: 11, weight: .semibold))
                     Text("New")
                         .font(BodyFont.system(size: 12, wght: 600))
@@ -138,7 +139,7 @@ private struct PowerModeListRow: View {
                 }
                 Spacer()
                 if !config.enabled {
-                    Image(systemName: "moon.zzz")
+                    Image(lucide: .moon)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(Palette.textSecondary)
                 }

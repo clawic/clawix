@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 struct EditorSection<Content: View>: View {
     let title: LocalizedStringKey
@@ -59,7 +60,7 @@ struct EditorTagList: View {
                     .background(editorFieldBackground(radius: 6))
                     .onSubmit(submit)
                 Button(action: submit) {
-                    Image(systemName: "plus")
+                    Image(lucide: .plus)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(canSubmit ? Palette.textPrimary : Palette.textSecondary)
                         .frame(width: 26, height: 26)
@@ -113,7 +114,7 @@ struct FlowingChips: View {
                         Button {
                             onDelete(idx)
                         } label: {
-                            Image(systemName: "xmark")
+                            Image(lucide: .x)
                                 .font(.system(size: 9, weight: .semibold))
                                 .foregroundColor(Palette.textSecondary)
                         }

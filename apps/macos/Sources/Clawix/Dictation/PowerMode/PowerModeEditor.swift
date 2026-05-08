@@ -1,5 +1,6 @@
 import SwiftUI
 import ClawixEngine
+import LucideIcon
 
 struct PowerModeEditor: View {
     @Binding var config: PowerModeConfig
@@ -41,7 +42,7 @@ struct PowerModeEditor: View {
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Image(systemName: "trash")
+                Image(lucide: .trash_2)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(Color(red: 0.94, green: 0.45, blue: 0.45))
                     .frame(width: 32, height: 32)
