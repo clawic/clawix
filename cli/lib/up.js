@@ -74,6 +74,7 @@ async function run({ noWatch = false } = {}) {
     process.stdout.write('\n' + ui.dim('watching… press Ctrl+C to stop watching (the bridge keeps running).') + '\n\n');
 
     let tipShown = false;
+    let syncTipShown = false;
     const startedAt = Date.now();
     const interval = setInterval(() => {
         const status = readStatus();
@@ -85,19 +86,37 @@ async function run({ noWatch = false } = {}) {
         const age = Number.isFinite(last) ? Date.now() - last : null;
         const stale = age !== null && age > 10_000;
         const peers = status.peerCount || 0;
+        // `state` and `chatCount` are only emitted by daemons >= 0.1.2;
+        // older heartbeats omit them and we treat that as "ready/unknown"
+        // so the new line still degrades cleanly.
+        const state = typeof status.state === 'string' ? status.state : 'ready';
+        const chatCount = Number.isFinite(status.chatCount) ? status.chatCount : null;
+        const lastErr = status.lastErrorMessage || null;
 
         let line;
         if (stale) {
             line = '  ' + ui.bullet('fail') + '  '
                 + ui.red(`daemon stale: last heartbeat ${age !== null ? fmtAge(age) : 'unknown'}`);
+        } else if (state === 'error') {
+            line = '  ' + ui.bullet('fail') + '  '
+                + ui.red(`bridge error: ${lastErr || 'unknown'}`);
+        } else if (state === 'booting') {
+            line = '  ' + ui.bullet('warn') + '  ' + ui.yellow('bridge starting…');
+        } else if (state === 'syncing') {
+            const tail = peers > 0
+                ? ui.dim(`  ·  ${peers} device${peers === 1 ? '' : 's'} esperando datos`)
+                : '';
+            line = '  ' + ui.bullet('warn') + '  ' + ui.yellow('bridge syncing chats…') + tail;
         } else if (peers > 0) {
+            const chats = chatCount !== null ? `${chatCount} chat${chatCount === 1 ? '' : 's'} synced` : 'bridge healthy';
             line = '  ' + ui.bullet('ok') + '  '
                 + ui.green(`${peers} device${peers === 1 ? '' : 's'} paired`)
-                + ui.dim(`  ·  bridge healthy${age !== null ? ' (heartbeat ' + fmtAge(age) + ')' : ''}`);
+                + ui.dim(`  ·  ${chats}${age !== null ? ' (heartbeat ' + fmtAge(age) + ')' : ''}`);
         } else {
+            const chats = chatCount !== null ? `${chatCount} chat${chatCount === 1 ? '' : 's'} synced` : 'bridge healthy';
             line = '  ' + ui.bullet('ok') + '  '
                 + 'no devices paired yet'
-                + ui.dim(`  ·  bridge healthy${age !== null ? ' (heartbeat ' + fmtAge(age) + ')' : ''}`);
+                + ui.dim(`  ·  ${chats}${age !== null ? ' (heartbeat ' + fmtAge(age) + ')' : ''}`);
         }
         ui.statusLine(line);
 
@@ -109,6 +128,19 @@ async function run({ noWatch = false } = {}) {
             process.stdout.write('    ' + ui.dim('→') + ' is your iPhone on the same Wi-Fi as this Mac?\n');
             process.stdout.write('    ' + ui.dim('→') + ' is the Clawix iOS app open and on the pairing screen?\n');
             process.stdout.write('    ' + ui.dim('→') + ' is the macOS firewall allowing incoming connections? `clawix doctor`\n');
+            process.stdout.write('\n');
+        }
+
+        // If the daemon stays in `syncing` past 10s, hint that it's
+        // probably loading rollouts and that this is normal the first
+        // time the daemon comes up after a reinstall. Shown once.
+        if (!syncTipShown && state === 'syncing' && Date.now() - startedAt >= 10_000) {
+            syncTipShown = true;
+            ui.statusLineEnd();
+            process.stdout.write('\n');
+            process.stdout.write('  ' + ui.bullet('hint') + ' bridge has been syncing for >10s.\n');
+            process.stdout.write('    ' + ui.dim('→') + ' first launch after a reinstall takes a moment to load rollouts.\n');
+            process.stdout.write('    ' + ui.dim('→') + ' if it stays here >60s, run `clawix doctor` and `clawix logs`.\n');
             process.stdout.write('\n');
         }
     }, 1000);
