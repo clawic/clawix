@@ -1,5 +1,4 @@
 import SwiftUI
-import LucideIcon
 
 /// Modal popup used to add or edit a single `[mcp_servers.<name>]`
 /// entry. Visually aligned with `ChatRenameSheet` (same chrome, same
@@ -113,8 +112,7 @@ struct MCPEditorSheet: View {
                     HStack(spacing: 4) {
                         Text("Docs")
                             .font(BodyFont.system(size: 12, wght: 500))
-                        Image(lucide: .square_arrow_out_up_right)
-                            .font(BodyFont.system(size: 10))
+                        LucideIcon(.squareArrowOutUpRight, size: 11)
                     }
                     .foregroundColor(Palette.pastelBlue)
                 }
@@ -126,8 +124,7 @@ struct MCPEditorSheet: View {
                     confirmingUninstall = true
                 } label: {
                     HStack(spacing: 5) {
-                        Image(lucide: .trash_2)
-                            .font(BodyFont.system(size: 11, wght: 600))
+                        LucideIcon(.trash, size: 11)
                         Text("Uninstall")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -147,8 +144,7 @@ struct MCPEditorSheet: View {
                 .buttonStyle(.plain)
             }
             Button(action: onClose) {
-                Image(lucide: .x)
-                    .font(BodyFont.system(size: 12, weight: .medium))
+                LucideIcon(.x, size: 13)
                     .foregroundColor(Color(white: 0.65))
                     .frame(width: 24, height: 24)
                     .contentShape(Rectangle())
@@ -391,8 +387,7 @@ private struct MCPSheetAddRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(lucide: .plus)
-                    .font(BodyFont.system(size: 11, wght: 700))
+                LucideIcon(.plus, size: 11)
                 Text(label)
                     .font(BodyFont.system(size: 12.5))
             }
@@ -419,8 +414,7 @@ private struct MCPSheetTrashButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(lucide: .trash_2)
-                .font(BodyFont.system(size: 11, wght: 500))
+            LucideIcon(.trash, size: 11)
                 .foregroundColor(Color(white: hovered ? 0.94 : 0.55))
                 .frame(width: 30, height: 30)
                 .background(

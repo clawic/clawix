@@ -66,7 +66,7 @@ struct AutomationsView: View {
 
             Button {} label: {
                 HStack(spacing: 4) {
-                    LucideIcon(.plus, size: 10)
+                    LucideIcon(.plus, size: 11)
                     Text("New automation")
                         .font(BodyFont.system(size: 11, wght: 600))
                 }

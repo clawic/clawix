@@ -61,7 +61,7 @@ private struct ProjectRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                LucideIcon(.folder, size: 16)
+                LucideIcon(.folder, size: 11)
                     .foregroundColor(isSelected ? Color.accentColor : Palette.textSecondary)
                     .frame(width: 36, height: 36)
                     .background(

@@ -31,7 +31,7 @@ struct ProjectEditorSheet: View {
                     .foregroundColor(Color(white: 0.97))
                 Spacer()
                 Button(action: onClose) {
-                    LucideIcon(.x, size: 12)
+                    LucideIcon(.x, size: 13)
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
