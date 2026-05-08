@@ -515,8 +515,7 @@ private struct ContentTopChrome: View {
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
-                    Image(systemName: "ellipsis")
-                        .font(BodyFont.system(size: 11, wght: 700))
+                    LucideIcon(.ellipsis, size: 11)
                         .foregroundColor(Color(white: hoverEllipsis ? 0.78 : 0.55))
                         .frame(width: 24, height: 24)
                         .background(
@@ -618,8 +617,7 @@ private struct RightSidebarTopChrome: View {
     var body: some View {
         HStack(spacing: 0) {
             Button { addMenuOpen.toggle() } label: {
-                Image(systemName: "plus")
-                    .font(BodyFont.system(size: 13, wght: 700))
+                LucideIcon(.plus, size: 13)
                     .foregroundColor(Color(white: 0.78))
                     .frame(width: 26, height: 26)
                     .background(
@@ -741,8 +739,7 @@ private struct RightSidebarAddMenu: View {
                     if icon == "magnifyingglass" {
                         SearchIcon(size: 11)
                     } else {
-                        Image(systemName: icon)
-                            .font(BodyFont.system(size: 11, wght: 500))
+                        LucideIcon.auto(icon, size: 11)
                     }
                 }
                 .foregroundColor(MenuStyle.rowIcon)
@@ -1032,8 +1029,7 @@ private struct SearchPopoverOverlay: View {
                 Button {
                     appState.searchQuery = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(BodyFont.system(size: 13, wght: 500))
+                    LucideIcon(.circleX, size: 13)
                         .foregroundColor(Color(white: 0.45))
                 }
                 .buttonStyle(.plain)
@@ -1249,8 +1245,7 @@ private struct ScopeChip: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Button(action: onRemove) {
-                Image(systemName: "xmark")
-                    .font(BodyFont.system(size: 9, weight: .semibold))
+                LucideIcon(.x, size: 9)
                     .foregroundColor(Color(white: 0.62))
                     .padding(.horizontal, 3)
                     .padding(.vertical, 2)
@@ -1288,8 +1283,7 @@ private struct SearchScopedRow: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            Image(systemName: "bubble.left")
-                .font(BodyFont.system(size: 11, wght: 500))
+            LucideIcon(.messageCircle, size: 11)
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
 
@@ -1770,7 +1764,21 @@ private final class SidebarResizeNSView: NSView {
         guard let window, event.window === window else { return }
         let mouseLocal = convert(event.locationInWindow, from: nil)
         guard bounds.contains(mouseLocal) else { return }
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let window = self.window else { return }
+            // Re-check bounds at dispatch time using the CURRENT mouse
+            // position, not the event's. Between the synchronous check
+            // above and this dispatch the cursor may have left our strip
+            // (the user moves fast into the sidebar). Setting the resize
+            // cursor here would then strand it: the cursor is already
+            // outside our `addCursorRect`, so the system won't see a
+            // boundary crossing to reset it back to arrow until the user
+            // re-enters and exits again. Result: the resize cursor
+            // sticks while the user is navigating the sidebar.
+            let screenPoint = NSEvent.mouseLocation
+            let windowPoint = window.convertPoint(fromScreen: screenPoint)
+            let local = self.convert(windowPoint, from: nil)
+            guard self.bounds.contains(local) else { return }
             NSCursor.resizeLeftRight.set()
         }
     }

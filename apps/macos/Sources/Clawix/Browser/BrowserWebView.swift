@@ -15,6 +15,15 @@ final class BrowserTabController: NSObject, ObservableObject {
     @Published var faviconURL: URL?
     @Published var pageZoom: Double = 1.0
     @Published var mobileMode: Bool = false
+    /// Last error surfaced by `WKNavigationDelegate`. Cleared the moment a
+    /// new navigation starts. Drives the "Cannot connect to host" overlay
+    /// in BrowserView.
+    @Published var lastNavigationError: NavigationError?
+
+    struct NavigationError: Equatable {
+        let message: String
+        let failedURL: URL?
+    }
 
     private static let mobileUserAgent =
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) " +
@@ -32,12 +41,16 @@ final class BrowserTabController: NSObject, ObservableObject {
         initialURL: URL,
         appState: AppState,
         initialTitle: String,
-        initialFaviconURL: URL?
+        initialFaviconURL: URL?,
+        initialPageZoom: Double = 1.0,
+        initialMobileMode: Bool = false
     ) {
         self.id = id
         self.currentURL = initialURL
         self.title = initialTitle
         self.faviconURL = initialFaviconURL
+        self.pageZoom = initialPageZoom
+        self.mobileMode = initialMobileMode
         self.appState = appState
 
         let config = WKWebViewConfiguration()
@@ -47,6 +60,10 @@ final class BrowserTabController: NSObject, ObservableObject {
         wv.allowsBackForwardNavigationGestures = true
         wv.allowsLinkPreview = true
         wv.setValue(false, forKey: "drawsBackground")
+        wv.pageZoom = CGFloat(initialPageZoom)
+        if initialMobileMode {
+            wv.customUserAgent = Self.mobileUserAgent
+        }
         self.webView = wv
 
         super.init()
@@ -87,11 +104,13 @@ final class BrowserTabController: NSObject, ObservableObject {
         let rounded = (value * 100).rounded() / 100
         pageZoom = rounded
         webView.pageZoom = CGFloat(rounded)
+        appState?.updateBrowserTab(id, pageZoom: rounded)
     }
 
     func toggleMobileMode() {
         mobileMode.toggle()
         webView.customUserAgent = mobileMode ? Self.mobileUserAgent : nil
+        appState?.updateBrowserTab(id, mobileMode: mobileMode)
         webView.reload()
     }
 
@@ -198,7 +217,15 @@ final class BrowserTabController: NSObject, ObservableObject {
         })
         observers.append(webView.observe(\.isLoading, options: [.initial, .new]) { [weak self] wv, _ in
             let value = wv.isLoading
-            Task { @MainActor in self?.isLoading = value }
+            Task { @MainActor in
+                guard let self else { return }
+                self.isLoading = value
+                if value {
+                    self.appState?.browserTabsLoading.insert(self.id)
+                } else {
+                    self.appState?.browserTabsLoading.remove(self.id)
+                }
+            }
         })
         observers.append(webView.observe(\.url, options: [.new]) { [weak self] wv, _ in
             guard let url = wv.url else { return }
@@ -455,6 +482,7 @@ extension BrowserTabController: WKNavigationDelegate {
             // is still loading. fetchFavicon() upgrades to the page-declared
             // icon once navigation finishes.
             self.setHostFallbackFavicon()
+            self.lastNavigationError = nil
         }
     }
 
@@ -462,6 +490,47 @@ extension BrowserTabController: WKNavigationDelegate {
         Task { @MainActor in
             self.fetchFavicon()
             self.sampleBottomLeftBackground()
+            self.lastNavigationError = nil
+        }
+    }
+
+    nonisolated func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        let nsError = error as NSError
+        let failingURL = nsError.userInfo[NSURLErrorFailingURLErrorKey] as? URL
+        let message = nsError.localizedDescription
+        Task { @MainActor in
+            // -999 ("cancelled") fires when the user types a new URL while a
+            // previous load is still resolving. Don't show an error overlay
+            // for that, the new navigation has already taken over.
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                return
+            }
+            self.lastNavigationError = NavigationError(
+                message: message,
+                failedURL: failingURL
+            )
+        }
+    }
+
+    nonisolated func webView(
+        _ webView: WKWebView,
+        didFail navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        let nsError = error as NSError
+        let message = nsError.localizedDescription
+        Task { @MainActor in
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                return
+            }
+            self.lastNavigationError = NavigationError(
+                message: message,
+                failedURL: webView.url
+            )
         }
     }
 }
@@ -478,6 +547,31 @@ struct BrowserWebView: NSViewRepresentable {
     func updateNSView(_ nsView: WKWebView, context: Context) {}
 }
 
+/// One-shot request emitted by the menu / keyboard shortcut layer, consumed
+/// by `BrowserView` and forwarded to the active tab's controller. The
+/// `sequence` number makes consecutive identical requests (e.g. Cmd+R twice)
+/// distinct from Combine's perspective so `.onChange` fires for both.
+struct BrowserCommandRequest: Equatable {
+    enum Action: Equatable {
+        case newTab
+        case reload
+        case focusURLBar
+        case closeActiveTab
+        case zoomIn
+        case zoomOut
+        case zoomReset
+    }
+    let action: Action
+    let sequence: UInt64
+}
+
+/// Tagged focus-the-URL-bar signal. Carries the tab id the request was
+/// originally aimed at so a late-arriving handler on another tab ignores it.
+struct BrowserFocusURLBarRequest: Equatable {
+    let tabId: UUID
+    let sequence: UInt64
+}
+
 /// Reference-typed cache so SwiftUI can keep one controller alive per tab id
 /// without Swift complaining about mutating @State from inside the body.
 @MainActor
@@ -491,7 +585,9 @@ final class BrowserControllerStore {
             initialURL: tab.url,
             appState: appState,
             initialTitle: tab.title,
-            initialFaviconURL: tab.faviconURL
+            initialFaviconURL: tab.faviconURL,
+            initialPageZoom: tab.pageZoom,
+            initialMobileMode: tab.mobileMode
         )
         controllers[tab.id] = new
         return new

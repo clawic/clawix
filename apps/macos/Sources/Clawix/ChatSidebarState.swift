@@ -12,6 +12,37 @@ enum SidebarItem: Identifiable, Equatable, Codable {
         var url: URL
         var title: String
         var faviconURL: URL?
+        var pageZoom: Double = 1.0
+        var mobileMode: Bool = false
+
+        init(
+            id: UUID,
+            url: URL,
+            title: String,
+            faviconURL: URL? = nil,
+            pageZoom: Double = 1.0,
+            mobileMode: Bool = false
+        ) {
+            self.id = id
+            self.url = url
+            self.title = title
+            self.faviconURL = faviconURL
+            self.pageZoom = pageZoom
+            self.mobileMode = mobileMode
+        }
+
+        // Custom decoder so existing on-disk payloads (no zoom/mobile fields)
+        // don't fail to load. Newly added fields default to their identity
+        // values, matching the in-memory init defaults.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try c.decode(UUID.self, forKey: .id)
+            self.url = try c.decode(URL.self, forKey: .url)
+            self.title = try c.decode(String.self, forKey: .title)
+            self.faviconURL = try c.decodeIfPresent(URL.self, forKey: .faviconURL)
+            self.pageZoom = try c.decodeIfPresent(Double.self, forKey: .pageZoom) ?? 1.0
+            self.mobileMode = try c.decodeIfPresent(Bool.self, forKey: .mobileMode) ?? false
+        }
     }
 
     struct FilePayload: Equatable, Codable {

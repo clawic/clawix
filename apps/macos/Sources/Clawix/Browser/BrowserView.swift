@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 struct BrowserView: View {
     @EnvironmentObject var appState: AppState
@@ -24,10 +25,18 @@ struct BrowserView: View {
                 if let payload = activeWeb {
                     let controller = store.controller(for: payload, appState: appState)
                     BrowserNavigationBar(controller: controller, moreMenuOpen: $moreMenuOpen)
-                    Divider().background(Color.white.opacity(0.06))
-                    BrowserWebView(controller: controller)
                         .id(payload.id)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Divider().background(Color.white.opacity(0.06))
+                    ZStack {
+                        BrowserWebView(controller: controller)
+                            .id(payload.id)
+                        if let error = controller.lastNavigationError {
+                            BrowserErrorOverlay(error: error) {
+                                controller.reload()
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let payload = activeFile {
                     FileViewerPanel(path: payload.path)
                         .id(payload.id)
@@ -73,11 +82,49 @@ struct BrowserView: View {
             controller.reload()
             appState.pendingReloadTabId = nil
         }
+        .onChange(of: appState.pendingBrowserCommand) { _, newValue in
+            guard let request = newValue else { return }
+            handleBrowserCommand(request.action)
+            appState.pendingBrowserCommand = nil
+        }
     }
+
+    private func handleBrowserCommand(_ action: BrowserCommandRequest.Action) {
+        // newTab is the only action that doesn't require an active tab; the
+        // others fall through silently when the panel is empty.
+        if action == .newTab {
+            appState.newBrowserTab()
+            return
+        }
+        guard let payload = activeWeb else { return }
+        let controller = store.controller(for: payload, appState: appState)
+        switch action {
+        case .newTab:
+            return  // already handled above
+        case .reload:
+            controller.reload()
+        case .focusURLBar:
+            BrowserView.focusSequence &+= 1
+            appState.pendingFocusURLBar = BrowserFocusURLBarRequest(
+                tabId: payload.id,
+                sequence: BrowserView.focusSequence
+            )
+        case .closeActiveTab:
+            appState.closeSidebarItem(payload.id)
+        case .zoomIn:
+            controller.zoomIn()
+        case .zoomOut:
+            controller.zoomOut()
+        case .zoomReset:
+            controller.resetZoom()
+        }
+    }
+
+    private static var focusSequence: UInt64 = 0
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "globe")
+            Image(lucide: .globe)
                 .font(BodyFont.system(size: 28, weight: .light))
                 .foregroundColor(Color(white: 0.40))
             Text("No tabs open")
@@ -97,6 +144,50 @@ struct BrowserView: View {
                     )
             }
             .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.background)
+    }
+}
+
+private struct BrowserErrorOverlay: View {
+    let error: BrowserTabController.NavigationError
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(lucide: .circle_alert)
+                .font(BodyFont.system(size: 32, weight: .light))
+                .foregroundColor(Color(white: 0.55))
+            Text("Cannot load page")
+                .font(BodyFont.system(size: 14, wght: 600))
+                .foregroundColor(Color(white: 0.85))
+            Text(error.message)
+                .font(BodyFont.system(size: 12, wght: 400))
+                .foregroundColor(Color(white: 0.60))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 360)
+            if let url = error.failedURL {
+                Text(url.absoluteString)
+                    .font(BodyFont.system(size: 11, wght: 400))
+                    .foregroundColor(Color(white: 0.45))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 360)
+            }
+            Button(action: onRetry) {
+                Text("Try again")
+                    .font(BodyFont.system(size: 12, wght: 600))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color(white: 0.20))
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.background)

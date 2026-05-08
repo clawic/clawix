@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 // MARK: - Tab strip
 
@@ -7,12 +8,13 @@ struct BrowserTabStrip: View {
     @State private var hoveredItemId: UUID?
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             ForEach(appState.sidebarItems) { item in
                 SidebarItemPill(
                     item: item,
                     isActive: appState.activeSidebarItemId == item.id,
                     isHovered: hoveredItemId == item.id,
+                    isLoading: appState.browserTabsLoading.contains(item.id),
                     onSelect: { appState.activeSidebarItemId = item.id },
                     onClose:  { appState.closeSidebarItem(item.id) }
                 )
@@ -25,18 +27,21 @@ struct BrowserTabStrip: View {
             NewTabButton {
                 appState.newBrowserTab()
             }
+            .padding(.top, 2)
 
             Spacer(minLength: 0)
 
             ChromeMaximizeButton()
+                .padding(.top, 2)
                 .accessibilityLabel(appState.isRightSidebarMaximized ? "Restore panel size" : "Maximize panel")
 
             // The window chrome owns the right toggle; reserve its
             // footprint so the maximize button doesn't slide under it.
             Color.clear.frame(width: 30, height: 1)
         }
-        .padding(.leading, 10)
-        .frame(height: 36)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .frame(height: 40)
         .background(Color.black)
     }
 }
@@ -45,6 +50,7 @@ private struct SidebarItemPill: View {
     let item: SidebarItem
     let isActive: Bool
     let isHovered: Bool
+    let isLoading: Bool
     let onSelect: () -> Void
     let onClose: () -> Void
 
@@ -58,11 +64,10 @@ private struct SidebarItemPill: View {
                     .foregroundColor(isActive ? .white : Color(white: 0.78))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 7)
-            .frame(maxWidth: 132)
+            .frame(maxWidth: 132, alignment: .leading)
             .clipped()
             .mask(
                 LinearGradient(
@@ -83,7 +88,7 @@ private struct SidebarItemPill: View {
             .overlay(alignment: .trailing) {
                 if isHovered {
                     Button(action: onClose) {
-                        Image(systemName: "xmark")
+                        Image(lucide: .x)
                             .font(BodyFont.system(size: 9, weight: .bold))
                             .foregroundColor(Color(white: 0.95))
                             .frame(width: 14, height: 14)
@@ -105,7 +110,15 @@ private struct SidebarItemPill: View {
     private var leadingIcon: some View {
         switch item {
         case .web(let p):
-            FaviconView(url: p.faviconURL, size: 14)
+            ZStack {
+                FaviconView(url: p.faviconURL, size: 14)
+                    .opacity(isLoading ? 0 : 1)
+                if isLoading {
+                    BrowserTabSpinner()
+                }
+            }
+            .frame(width: 14, height: 14)
+            .animation(.easeOut(duration: 0.12), value: isLoading)
         case .file:
             FileChipIcon(size: 13)
                 .foregroundColor(Color(white: 0.78))
@@ -131,13 +144,41 @@ private struct SidebarItemPill: View {
     }
 }
 
+/// Thin rotating ring used in tab pills while a page is loading. Mirrors
+/// the sidebar's `SidebarChatRowSpinner` (Sources/Clawix/SidebarView.swift)
+/// and the find bar's `FindBarSpinner` so the three loading idioms read
+/// as one family. Uses white-on-dark tones because the tab strip sits on
+/// a black background.
+private struct BrowserTabSpinner: View {
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.18),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+            Circle()
+                .trim(from: 0.0, to: 0.79)
+                .stroke(Color.white.opacity(0.75),
+                        style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+                .rotationEffect(.degrees(rotation))
+        }
+        .frame(width: 11, height: 11)
+        .onAppear {
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
+        }
+    }
+}
+
 private struct NewTabButton: View {
     let action: () -> Void
     @State private var hovered = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "plus")
+            Image(lucide: .plus)
                 .font(BodyFont.system(size: 12, weight: .semibold))
                 .foregroundColor(Color(white: 0.78))
                 .frame(width: 26, height: 26)
@@ -228,7 +269,7 @@ private struct ChromeIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
+            Image(lucideOrSystem: systemName)
                 .font(BodyFont.system(size: 12, weight: .medium))
                 .foregroundColor(foreground)
                 .frame(width: 26, height: 26)
@@ -353,7 +394,7 @@ struct BrowserMoreOptionsMenu: View {
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if trailingCheck {
-                    Image(systemName: "checkmark")
+                    Image(lucide: .check)
                         .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundColor(MenuStyle.rowText)
                 }
@@ -421,7 +462,7 @@ private struct ZoomRow: View {
             )
 
             Button(action: onReset) {
-                Image(systemName: "arrow.counterclockwise")
+                Image(lucide: .rotate_ccw)
                     .font(BodyFont.system(size: 11, weight: .medium))
                     .foregroundColor(hoverReset ? MenuStyle.rowText : MenuStyle.rowSubtle)
                     .frame(width: 22, height: 22)
@@ -436,7 +477,7 @@ private struct ZoomRow: View {
 
     private func stepperButton(symbol: String, hovered: Binding<Bool>, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol)
+            Image(lucideOrSystem: symbol)
                 .font(BodyFont.system(size: 11, weight: .semibold))
                 .foregroundColor(hovered.wrappedValue ? MenuStyle.rowText : MenuStyle.rowIcon)
                 .frame(width: 28, height: 24)
@@ -450,6 +491,7 @@ private struct ZoomRow: View {
 // MARK: - URL field
 
 struct BrowserURLField: View {
+    @EnvironmentObject var appState: AppState
     @ObservedObject var controller: BrowserTabController
     @State private var draft: String = ""
     @State private var editing: Bool = false
@@ -486,8 +528,36 @@ struct BrowserURLField: View {
                 .stroke(Color.white.opacity(editing ? 0.18 : 0.08), lineWidth: 0.7)
         )
         .onAppear { syncFromController() }
+        .onChange(of: controller.id) { _, _ in
+            // Switching to a different tab. Drop any in-flight edit state so
+            // the field can't commit the previous tab's draft against the new
+            // controller. The .id(payload.id) on BrowserNavigationBar already
+            // recreates this view; this guard covers the case where SwiftUI
+            // chooses to keep structural identity.
+            editing = false
+            isFocused = false
+            syncFromController()
+        }
         .onChange(of: controller.currentURL) { _, _ in
             if !editing { syncFromController() }
+        }
+        .onChange(of: appState.pendingFocusURLBar) { _, newValue in
+            guard let request = newValue, request.tabId == controller.id else { return }
+            draft = controller.currentURL.absoluteString
+            editing = true
+            isFocused = true
+            // The TextField's underlying NSTextField becomes first responder
+            // on the next runloop tick. Sending selectAll then highlights the
+            // full URL so the user can replace it with a single keystroke,
+            // matching Safari's Cmd+L behaviour.
+            DispatchQueue.main.async {
+                NSApp.sendAction(
+                    #selector(NSText.selectAll(_:)),
+                    to: nil,
+                    from: nil
+                )
+            }
+            appState.pendingFocusURLBar = nil
         }
     }
 

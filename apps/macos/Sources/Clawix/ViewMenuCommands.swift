@@ -12,10 +12,25 @@ struct ViewMenuCommands: View {
             .keyboardShortcut("j", modifiers: .command)
         Button("Toggle File Tree") {}
             .keyboardShortcut("e", modifiers: [.shift, .command])
-        Button("Open Browser Tab") {}
-            .keyboardShortcut("t", modifiers: .command)
-        Button("Reload Browser Page") {}
-            .keyboardShortcut("r", modifiers: .command)
+        Button("New Browser Tab") {
+            appState.requestBrowserCommand(.newTab)
+        }
+        .keyboardShortcut("t", modifiers: .command)
+        Button("Reload Browser Page") {
+            appState.requestBrowserCommand(.reload)
+        }
+        .keyboardShortcut("r", modifiers: .command)
+        .disabled(!appState.hasActiveWebTab)
+        Button("Open Location") {
+            appState.requestBrowserCommand(.focusURLBar)
+        }
+        .keyboardShortcut("l", modifiers: .command)
+        .disabled(!appState.hasActiveWebTab)
+        Button("Close Browser Tab") {
+            appState.requestBrowserCommand(.closeActiveTab)
+        }
+        .keyboardShortcut("w", modifiers: .command)
+        .disabled(!appState.hasActiveWebTab)
         Button("Toggle Diff Panel") {}
             .keyboardShortcut("b", modifiers: [.option, .command])
         Button("Find in Chat") {
@@ -41,11 +56,20 @@ struct ViewMenuCommands: View {
 
         Divider()
 
-        Button("Zoom In") {}
-            .keyboardShortcut("+", modifiers: .command)
-        Button("Zoom Out") {}
-            .keyboardShortcut("-", modifiers: .command)
-        Button("Actual Size") {}
-            .keyboardShortcut("0", modifiers: .command)
+        Button("Zoom In") {
+            appState.requestBrowserCommand(.zoomIn)
+        }
+        .keyboardShortcut("+", modifiers: .command)
+        .disabled(!appState.hasActiveWebTab)
+        Button("Zoom Out") {
+            appState.requestBrowserCommand(.zoomOut)
+        }
+        .keyboardShortcut("-", modifiers: .command)
+        .disabled(!appState.hasActiveWebTab)
+        Button("Actual Size") {
+            appState.requestBrowserCommand(.zoomReset)
+        }
+        .keyboardShortcut("0", modifiers: .command)
+        .disabled(!appState.hasActiveWebTab)
     }
 }

@@ -748,6 +748,23 @@ final class AppState: ObservableObject {
     /// instead of a duplicate opening. The view resets it back to nil after
     /// firing the reload.
     @Published var pendingReloadTabId: UUID?
+    /// One-shot command the menu / keyboard shortcuts dispatch toward the
+    /// active browser tab. `BrowserView` consumes this via `.onChange`,
+    /// translates it to a controller method, and resets it to nil. We use a
+    /// counter-tagged value so two consecutive same-action presses (e.g.
+    /// Cmd+R twice) still fire as distinct events even if the enum case
+    /// matches.
+    @Published var pendingBrowserCommand: BrowserCommandRequest?
+    /// Tagged signal for the URL field to grab focus and pre-fill with the
+    /// full URL. Carries the active tab's id at dispatch time so a stale
+    /// view in another tab doesn't hijack the focus.
+    @Published var pendingFocusURLBar: BrowserFocusURLBarRequest?
+    /// Per-tab "is the WKWebView currently navigating" mirror. The
+    /// `BrowserTabController` keeps the source-of-truth as `@Published
+    /// isLoading`, but the tab-strip pills live outside that observation
+    /// chain, so we forward the bit here so each pill can show a spinner
+    /// without needing a reference to the live controller.
+    @Published var browserTabsLoading: Set<UUID> = []
     /// Per-web-tab live page background colour sampled from the bottom-left
     /// pixel of each browser webview. Keyed by the web item's id so the
     /// bottom-trailing rounded-corner cutout blends with whatever the
@@ -990,7 +1007,12 @@ final class AppState: ObservableObject {
             $searchResults.dropFirst().sink { _ in RenderProbe.tick("AppState.searchResults") },
         ]
 
-        let daemonBridgeEnabled = BackgroundBridgeService.shared.isEnabled
+        // `isActive`, not `isEnabled`: SMAppService.status is bundle-
+        // relative, so a daemon registered by the npm CLI doesn't show
+        // up as enabled for the GUI's own SMAppService.agent. Treat any
+        // reachable daemon on loopback as authoritative — otherwise the
+        // GUI would race the CLI-installed daemon for Codex ownership.
+        let daemonBridgeEnabled = BackgroundBridgeService.shared.isActive
         clawix?.appState = self
         if let clawix,
            ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] != "1",
@@ -2839,6 +2861,45 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Daemon-bridge mode counterpart of `ClawixService.refreshRateLimits`:
+    /// the GUI's own backend never bootstraps when the LaunchAgent owns
+    /// Codex, so the daemon ships its `account/rateLimits/read` view
+    /// over the bridge and we land it on the same `@Published` fields
+    /// the sidebar / Settings → Usage page already render off.
+    func applyDaemonRateLimits(
+        snapshot: WireRateLimitSnapshot?,
+        byLimitId: [String: WireRateLimitSnapshot]
+    ) {
+        rateLimits = snapshot.map(rateLimitSnapshot(from:))
+        var mapped: [String: RateLimitSnapshot] = [:]
+        for (key, value) in byLimitId {
+            mapped[key] = rateLimitSnapshot(from: value)
+        }
+        rateLimitsByLimitId = mapped
+    }
+
+    private func rateLimitSnapshot(from wire: WireRateLimitSnapshot) -> RateLimitSnapshot {
+        RateLimitSnapshot(
+            primary: wire.primary.map { RateLimitWindow(
+                usedPercent: $0.usedPercent,
+                resetsAt: $0.resetsAt,
+                windowDurationMins: $0.windowDurationMins
+            )},
+            secondary: wire.secondary.map { RateLimitWindow(
+                usedPercent: $0.usedPercent,
+                resetsAt: $0.resetsAt,
+                windowDurationMins: $0.windowDurationMins
+            )},
+            credits: wire.credits.map { CreditsSnapshot(
+                hasCredits: $0.hasCredits,
+                unlimited: $0.unlimited,
+                balance: $0.balance
+            )},
+            limitId: wire.limitId,
+            limitName: wire.limitName
+        )
+    }
+
     func applyDaemonStreaming(
         chatId: String,
         messageId: String,
@@ -4081,6 +4142,30 @@ final class AppState: ObservableObject {
 
     var activeSidebarItem: SidebarItem? { currentSidebar.activeItem }
 
+    /// Whether the browser panel is showing a web tab right now. Drives the
+    /// enabled state of browser-scoped menu commands (Cmd+R, Cmd+L, Cmd+W,
+    /// Cmd+/-/0) so they fall through to the system when there's nothing
+    /// for them to act on.
+    var hasActiveWebTab: Bool {
+        if case .web = currentSidebar.activeItem { return true }
+        return false
+    }
+
+    /// Dispatch a browser command toward the active web tab. The view layer
+    /// reads `pendingBrowserCommand` and forwards to the right controller.
+    /// We bump a sequence so two presses of the same command produce two
+    /// distinct values (otherwise Combine wouldn't fire `onChange` for
+    /// identical enums).
+    func requestBrowserCommand(_ command: BrowserCommandRequest.Action) {
+        Self.browserCommandSequence &+= 1
+        pendingBrowserCommand = BrowserCommandRequest(
+            action: command,
+            sequence: Self.browserCommandSequence
+        )
+    }
+
+    private static var browserCommandSequence: UInt64 = 0
+
     /// Convenience for the corner-cutout colour sampling: returns the id
     /// of the active item only when it's a web tab (file previews don't
     /// sample a page colour).
@@ -4089,9 +4174,23 @@ final class AppState: ObservableObject {
         return nil
     }
 
+    /// Entry point for "open the browser" actions (toolbar `+ → Browser`,
+    /// Cmd+T, deep links). When the panel is already open with web tabs we
+    /// always create a fresh tab so the user gets the new-tab behaviour they
+    /// expect from any browser. Only the cold case (panel closed, or first
+    /// time on this chat) reuses the first existing web tab so reopening the
+    /// panel doesn't spawn an extra google.com every time.
     func openBrowser(initialURL: URL = URL(string: "https://www.google.com")!) {
         guard currentChatId != nil else { return }
         var s = currentSidebar
+        let hasWebTab = s.items.contains(where: {
+            if case .web = $0 { return true } else { return false }
+        })
+        if s.isOpen && hasWebTab {
+            currentSidebar = s
+            newBrowserTab(url: initialURL)
+            return
+        }
         if let firstWeb = s.items.first(where: { if case .web = $0 { return true } else { return false } }) {
             s.activeItemId = firstWeb.id
         } else {
@@ -4219,6 +4318,7 @@ final class AppState: ObservableObject {
         let wasActive = s.activeItemId == id
         s.items.remove(at: idx)
         browserPageBackgroundColors.removeValue(forKey: id)
+        browserTabsLoading.remove(id)
         if wasActive && !s.items.isEmpty {
             let next = min(idx, s.items.count - 1)
             s.activeItemId = s.items[next].id
@@ -4238,7 +4338,9 @@ final class AppState: ObservableObject {
         _ id: UUID,
         url: URL? = nil,
         title: String? = nil,
-        faviconURL: URL? = nil
+        faviconURL: URL? = nil,
+        pageZoom: Double? = nil,
+        mobileMode: Bool? = nil
     ) {
         for chatId in chatSidebars.keys {
             guard var s = chatSidebars[chatId],
@@ -4251,6 +4353,8 @@ final class AppState: ObservableObject {
                 payload.faviconURL = faviconURL
                 recordHostFavicon(faviconURL, for: payload.url)
             }
+            if let pageZoom { payload.pageZoom = pageZoom }
+            if let mobileMode { payload.mobileMode = mobileMode }
             s.items[idx] = .web(payload)
             chatSidebars[chatId] = s
             persistChatSidebars()
