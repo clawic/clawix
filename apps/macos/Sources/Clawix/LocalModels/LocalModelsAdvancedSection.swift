@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import LucideIcon
 
 /// Collapsed "Advanced" disclosure for the Local models page. Holds the
 /// tuning knobs that most users never touch: context window, keep-alive,
@@ -15,7 +16,7 @@ extension LocalModelsPage {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: advancedExpanded ? "chevron.down" : "chevron.right")
+                    Image(lucideOrSystem: advancedExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundColor(Palette.textSecondary)
                     Text("Advanced")

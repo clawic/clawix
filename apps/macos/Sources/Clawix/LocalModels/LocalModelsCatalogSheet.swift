@@ -1,4 +1,5 @@
 import SwiftUI
+import LucideIcon
 
 /// Modal browser over the curated catalog. The user picks a model and a
 /// variant (size); we hand the choice back via the closure and the
@@ -55,7 +56,7 @@ struct LocalModelsCatalogSheet: View {
             Button {
                 onClose()
             } label: {
-                Image(systemName: "xmark")
+                Image(lucide: .x)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Palette.textSecondary)
                     .padding(8)
