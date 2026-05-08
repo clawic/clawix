@@ -520,7 +520,7 @@ struct DictationSettingsPage: View {
         // .notDetermined/.denied to .granted), re-arm the hotkey so
         // the global monitor comes online without a relaunch.
         if previousInputMon != .granted, permissions.inputMonitoring == .granted {
-            HotkeyManager.shared.bootstrapIfPermitted(
+            HotkeyManager.shared.bootstrap(
                 coordinator: DictationCoordinator.shared
             )
         }
