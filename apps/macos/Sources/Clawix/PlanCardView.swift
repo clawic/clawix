@@ -178,8 +178,7 @@ struct PlanCardView: View {
                     CopyIconViewSquircle(color: tint, lineWidth: 1.0)
                         .frame(width: 13, height: 13)
                 } else {
-                    Image(systemName: systemName)
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                    LucideIcon.auto(systemName, size: 12)
                         .foregroundColor(tint)
                 }
             }

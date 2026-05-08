@@ -26,7 +26,7 @@ struct SearchView: View {
                         appState.searchQuery = ""
                         appState.searchResults = []
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
+                        LucideIcon(.circleX)
                             .foregroundColor(Palette.textTertiary)
                     }
                     .buttonStyle(.plain)
@@ -125,8 +125,7 @@ func emptyState(_ message: String, icon: String) -> some View {
             if icon == "magnifyingglass" {
                 SearchIcon(size: 28)
             } else {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 28))
+                LucideIcon.auto(icon, size: 28)
             }
         }
         .foregroundColor(Palette.textTertiary)

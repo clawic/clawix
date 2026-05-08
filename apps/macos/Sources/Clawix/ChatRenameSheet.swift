@@ -25,8 +25,7 @@ struct ChatRenameSheet: View {
                 }
                 Spacer()
                 Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 12, weight: .medium))
+                    LucideIcon(.x, size: 12)
                         .foregroundColor(Color(white: 0.65))
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
