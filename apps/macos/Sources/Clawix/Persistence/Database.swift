@@ -225,6 +225,36 @@ final class Database {
             """)
         }
 
+        // Dictation transcript history (#24). One row per transcript;
+        // the `audio_file_path` column is nullable so audio-only
+        // cleanup (#25) can drop the WAV without losing the row.
+        // FTS happens client-side on `original_text` because GRDB's
+        // FTS module isn't enabled in this build.
+        migrator.registerMigration("v7_dictation_transcripts") { db in
+            try db.execute(sql: """
+                CREATE TABLE dictation_transcript (
+                    id                 TEXT PRIMARY KEY NOT NULL,
+                    timestamp          INTEGER NOT NULL,
+                    original_text      TEXT NOT NULL,
+                    enhanced_text      TEXT,
+                    model_used         TEXT,
+                    language           TEXT,
+                    duration_seconds   REAL NOT NULL,
+                    audio_file_path    TEXT,
+                    power_mode_id      TEXT,
+                    word_count         INTEGER NOT NULL DEFAULT 0,
+                    transcription_ms   INTEGER NOT NULL DEFAULT 0,
+                    enhancement_ms     INTEGER NOT NULL DEFAULT 0,
+                    enhancement_provider TEXT,
+                    cost_usd           REAL NOT NULL DEFAULT 0
+                )
+            """)
+            try db.execute(sql: """
+                CREATE INDEX dictation_transcript_timestamp_idx
+                    ON dictation_transcript(timestamp DESC)
+            """)
+        }
+
         return migrator
     }
 }
