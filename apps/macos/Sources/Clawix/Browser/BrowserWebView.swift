@@ -96,6 +96,37 @@ final class BrowserTabController: NSObject, ObservableObject {
     func reload()    { webView.reload() }
     func hardReload() { webView.reloadFromOrigin() }
 
+    /// Capture the current visible region of the web view as a PNG and
+    /// copy it to the system pasteboard. Surfaces a toast on success or
+    /// failure so the user gets immediate feedback even though the
+    /// pasteboard write is silent.
+    func captureToClipboard() {
+        let config = WKSnapshotConfiguration()
+        config.afterScreenUpdates = true
+        webView.takeSnapshot(with: config) { image, error in
+            Task { @MainActor in
+                guard let image, error == nil else {
+                    ToastCenter.shared.show(
+                        "Couldn't take screenshot",
+                        icon: .error
+                    )
+                    return
+                }
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                let ok = pb.writeObjects([image])
+                if ok {
+                    ToastCenter.shared.show("Screenshot saved to clipboard")
+                } else {
+                    ToastCenter.shared.show(
+                        "Couldn't copy screenshot",
+                        icon: .error
+                    )
+                }
+            }
+        }
+    }
+
     func zoomIn()    { setZoom(min(pageZoom + 0.1, 5.0)) }
     func zoomOut()   { setZoom(max(pageZoom - 0.1, 0.25)) }
     func resetZoom() { setZoom(1.0) }

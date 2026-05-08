@@ -119,7 +119,7 @@ struct ContentView: View {
         switch appState.currentRoute {
         case .home, .search, .plugins, .project, .chat:
             return true
-        case .automations, .settings, .secretsHome:
+        case .automations, .settings, .secretsHome, .databaseHome, .databaseCollection:
             return false
         }
     }
@@ -200,6 +200,9 @@ struct ContentView: View {
                         case .chat(let id):  ChatView(chatId: id)
                         case .settings:      SettingsContent()
                         case .secretsHome:   SecretsScreen()
+                        case .databaseHome:  DatabaseScreen(mode: .admin)
+                        case .databaseCollection(let name):
+                            DatabaseScreen(mode: .curated(collectionName: name))
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1245,7 +1248,7 @@ private struct ScopeChip: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Button(action: onRemove) {
-                LucideIcon(.x, size: 9)
+                LucideIcon(.x, size: 10)
                     .foregroundColor(Color(white: 0.62))
                     .padding(.horizontal, 3)
                     .padding(.vertical, 2)
