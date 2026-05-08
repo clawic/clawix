@@ -43,7 +43,14 @@ let package = Package(
         // quick-action bindings; supports any key + modifier combo
         // via Carbon EventHotKey so the bindings fire regardless of
         // foreground app.
-        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.0")
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.0"),
+        // Lucide icons as SF Symbol-style assets. Imported as
+        // `Image(lucide: .someName)` from SwiftUI views that prefer
+        // the Lucide visual over Apple's SF Symbols. Already vendored
+        // into `.build/checkouts` by an earlier resolution; this
+        // declaration restores it as an explicit dependency so the
+        // linker actually pulls in the static lib's symbols.
+        .package(url: "https://github.com/lcandy2/LucideIcon.git", branch: "main")
     ],
     targets: [
         .executableTarget(
@@ -59,7 +66,8 @@ let package = Package(
                 .product(name: "SecretsPersistence", package: "SecretsPersistence"),
                 .product(name: "SecretsVault", package: "SecretsVault"),
                 .product(name: "SecretsProxyCore", package: "SecretsProxyCore"),
-                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts")
+                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
+                .product(name: "LucideIcon", package: "LucideIcon")
             ],
             path: "Sources/Clawix",
             resources: [

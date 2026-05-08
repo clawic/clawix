@@ -19,6 +19,15 @@
       }
     },
     {
+      "identity" : "lucideicon",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/lcandy2/LucideIcon.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "26b1b010abf37c98e88df634e21740d96c45d29a"
+      }
+    },
+    {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
