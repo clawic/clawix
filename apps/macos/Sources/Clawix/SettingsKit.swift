@@ -156,7 +156,7 @@ struct InfoBanner: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            LucideIcon.auto(iconName, size: 12)
+            LucideIcon.auto(iconName, size: 13)
                 .foregroundColor(.white)
             Text(text)
                 .font(BodyFont.system(size: 12, wght: 600))
@@ -208,8 +208,14 @@ struct IconChipButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                LucideIcon.auto(symbol, size: 11)
-                    .foregroundColor(Palette.textPrimary)
+                if let isLocked = Self.lockSymbolState(symbol) {
+                    SecretsIcon(size: 13, lineWidth: 1.15,
+                                color: Palette.textPrimary,
+                                isLocked: isLocked)
+                } else {
+                    LucideIcon.auto(symbol, size: 11)
+                        .foregroundColor(Palette.textPrimary)
+                }
                 if let label {
                     Text(label)
                         .font(BodyFont.system(size: 12, wght: 500))
@@ -238,6 +244,17 @@ struct IconChipButton: View {
         let value = base + (hovered ? 0.03 : 0)
         return Color(white: value)
     }
+
+    /// Routes lock-shaped SF Symbol names to the project's custom
+    /// `SecretsIcon`, so any chip that asks for a padlock renders the
+    /// same glyph used elsewhere in the Secrets feature.
+    private static func lockSymbolState(_ symbol: String) -> Bool? {
+        switch symbol {
+        case "lock", "lock.fill", "lock.shield": return true
+        case "lock.open", "lock.open.fill":      return false
+        default:                                 return nil
+        }
+    }
 }
 
 // MARK: - IconCircleButton
@@ -255,7 +272,7 @@ struct IconCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            LucideIcon.auto(symbol)
+            LucideIcon.auto(symbol, size: 11)
                 .font(.system(size: symbolSize, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: size, height: size)

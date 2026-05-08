@@ -15,6 +15,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case browserUsage
     case usage
     case secrets
+    case clawjs
 
     var id: String { rawValue }
 
@@ -32,6 +33,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .browserUsage:     return "Browser usage"
         case .usage:            return "Usage"
         case .secrets:          return "Secrets"
+        case .clawjs:           return "ClawJS"
         }
     }
 
@@ -49,6 +51,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .browserUsage:     return "cursor"
         case .usage:            return "chart.bar"
         case .secrets:          return "lock.shield"
+        case .clawjs:           return "shippingbox"
         }
     }
 }
@@ -81,7 +84,7 @@ struct SettingsSidebar: View {
                 appState.currentRoute = .home
             } label: {
                 HStack(spacing: 11) {
-                    LucideIcon(.arrowLeft, size: 12)
+                    LucideIcon(.arrowLeft, size: 13)
                         .frame(width: 15, alignment: .center)
                         .foregroundColor(Color(white: backHovered ? 0.92 : 0.78))
                     Text("Back to app")
@@ -170,6 +173,8 @@ private struct SettingsSidebarRow: View {
         switch category {
         case .configuration:
             SettingsIcon(size: 19, lineWidth: 0.9)
+        case .personalization:
+            BotIcon(size: 16, lineWidth: 1.4)
         case .browserUsage:
             IconImage(category.iconName, size: 20)
                 .offset(y: 2)
@@ -178,8 +183,18 @@ private struct SettingsSidebarRow: View {
                 .offset(y: 1)
         case .usage:
             UsageIcon(size: 16, lineWidth: 1.7)
+        case .localModels:
+            LocalModelsIcon(size: 16, lineWidth: 1.4)
+        case .secrets:
+            // Match the padlock used in the main sidebar's SecretsToolRow so
+            // both navs share the same glyph. `isLocked` is true here because
+            // this row is nav chrome — the actual vault state is reflected on
+            // the Secrets page itself.
+            SecretsIcon(size: 15, lineWidth: 1.28, isLocked: true)
+        case .mcp:
+            McpIcon(size: 16, lineWidth: 1.28)
         default:
-            IconImage(category.iconName, size: 13)
+            IconImage(category.iconName, size: 14)
         }
     }
 }
@@ -220,6 +235,7 @@ struct SettingsContent: View {
                     case .usage:           UsagePage()
                     case .mcp:             MCPPage()
                     case .secrets:         SecretsSettingsPage()
+                    case .clawjs:          ClawJSSettingsPage()
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -497,7 +513,7 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                         }
                         Spacer(minLength: 8)
                         if opt.0 == selection {
-                            LucideIcon(.check, size: 10)
+                            LucideIcon(.check, size: 11)
                                 .foregroundColor(MenuStyle.rowText)
                                 .padding(.top, hasAnyDescription ? 3 : 0)
                         }
@@ -843,7 +859,7 @@ private struct GeneralPage: View {
                     )
                 )
                 CardDivider()
-                PinsSourceInfoRow(isLocal: appState.pinsAreLocal)
+                PinsSourceInfoRow()
             }
 
             HiddenCodexFoldersSection()
@@ -947,28 +963,13 @@ private struct GeneralPage: View {
 }
 
 private struct PinsSourceInfoRow: View {
-    let isLocal: Bool
-
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("Pins source")
-                        .font(BodyFont.system(size: 13, wght: 500))
-                        .foregroundColor(Color(white: 0.94))
-                    Text(isLocal ? "Local" : "Codex")
-                        .font(BodyFont.system(size: 11, wght: 600))
-                        .foregroundColor(isLocal ? Color(white: 0.94) : Color(white: 0.55))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Color.white.opacity(isLocal ? 0.10 : 0.04))
-                        )
-                }
-                Text(isLocal
-                     ? "Pins are managed locally. Use Reset local overrides below to switch back to Codex's pins."
-                     : "Pins are read from Codex on each launch. Pin or unpin from this app to take local control.")
+                Text("Pins")
+                    .font(BodyFont.system(size: 13, wght: 500))
+                    .foregroundColor(Color(white: 0.94))
+                Text("Pins are mirrored from Codex on each launch. Pinning or unpinning from this app applies locally and never writes back to Codex.")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }
@@ -1208,7 +1209,7 @@ private struct CollapsibleRow: View {
             HStack(alignment: .center, spacing: 14) {
                 RowLabel(title: title, detail: detail)
                 Spacer(minLength: 12)
-                LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 10)
+                LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 11)
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -1232,7 +1233,7 @@ private struct DictionaryExpandableRow: View {
                     RowLabel(title: "Dictation dictionary",
                              detail: "Words or phrases dictation should recognize")
                     Spacer(minLength: 12)
-                    LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 10)
+                    LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 11)
                         .foregroundColor(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -1298,7 +1299,7 @@ private struct DictionaryEntryField: View {
                 .padding(.vertical, 9)
             Spacer(minLength: 8)
             Button(action: onDelete) {
-                LucideIcon(.trash2, size: 12)
+                LucideIcon(.trash, size: 13)
                     .foregroundColor(Color(white: trashHovered ? 0.94 : 0.55))
                     .frame(width: 30, height: 30)
                     .contentShape(Rectangle())
@@ -1351,7 +1352,7 @@ private struct RecentDictationRow: View {
             } label: {
                 Group {
                     if copied {
-                        LucideIcon(.check, size: 12)
+                        LucideIcon(.check, size: 13)
                     } else {
                         CopyIconViewSquircle(
                             color: Color(white: copyHovered ? 0.94 : 0.60),
@@ -1797,7 +1798,7 @@ private struct ConfigurationPage: View {
                         Text("Open config.toml")
                             .font(BodyFont.system(size: 12, wght: 500))
                             .foregroundColor(Palette.textSecondary)
-                        LucideIcon(.arrowUpRight, size: 9)
+                        LucideIcon(.arrowUpRight, size: 10)
                             .foregroundColor(Palette.textSecondary)
                     }
                 }
@@ -1905,7 +1906,7 @@ private struct DeprecationBanner: View {
                 }
                 .font(BodyFont.system(size: 11.5, wght: 500))
                 HStack(spacing: 4) {
-                    LucideIcon(.globe, size: 10)
+                    LucideIcon(.globe, size: 11)
                         .foregroundColor(Palette.pastelBlue)
                     Text("Toggle experimental features by editing the configuration file.")
                         .font(BodyFont.system(size: 11.5, wght: 500))
@@ -2137,7 +2138,7 @@ private struct InstructionsTextEditor: NSViewRepresentable {
         textContainer.lineFragmentPadding = 4
         layoutManager.addTextContainer(textContainer)
 
-        let textView = NSTextView(frame: .zero, textContainer: textContainer)
+        let textView = InstructionsNSTextView(frame: .zero, textContainer: textContainer)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = .width
@@ -2210,99 +2211,45 @@ private struct ExpandIconButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .background(PointingHandCursor())
         .onHover { hovered = $0 }
         .hoverHint(L10n.t("Edit in large view"))
     }
 }
 
-private struct PointingHandCursor: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { CursorRectView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+/// NSTextView subclass that yields its I-beam cursor in the top-right
+/// corner so the SwiftUI overlay button (`ExpandIconButton`) can show
+/// `.pointingHand` reliably. Overriding the cursor inside the textview
+/// itself avoids racing with NSTextView's own cursor management on every
+/// `mouseMoved` (the previous monitor-based attempt flickered for that
+/// reason).
+private final class InstructionsNSTextView: NSTextView {
+    /// Square corner reserved for the overlay button, in screen-stable
+    /// (visibleRect) coordinates. Matches `ExpandIconButton.padding(8)`
+    /// plus its content size with a couple of pixels of slack.
+    private let pointerCornerSize: CGFloat = 40
 
-    private final class CursorRectView: NSView {
-        private var trackingArea: NSTrackingArea?
-        private var moveMonitor: Any?
+    private var pointerCornerRect: NSRect {
+        let visible = visibleRect
+        let s = pointerCornerSize
+        return NSRect(x: visible.maxX - s, y: visible.minY, width: s, height: s)
+    }
 
-        override func resetCursorRects() {
-            super.resetCursorRects()
-            addCursorRect(bounds, cursor: .pointingHand)
-        }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            window?.invalidateCursorRects(for: self)
-            if window != nil {
-                installMoveMonitor()
-            } else {
-                removeMoveMonitor()
-            }
-        }
-
-        override func setFrameSize(_ newSize: NSSize) {
-            super.setFrameSize(newSize)
-            window?.invalidateCursorRects(for: self)
-        }
-
-        override func updateTrackingAreas() {
-            super.updateTrackingAreas()
-            if let trackingArea {
-                removeTrackingArea(trackingArea)
-            }
-            let area = NSTrackingArea(
-                rect: bounds,
-                options: [.mouseEnteredAndExited, .mouseMoved, .cursorUpdate, .activeAlways, .inVisibleRect],
-                owner: self,
-                userInfo: nil
-            )
-            addTrackingArea(area)
-            trackingArea = area
-        }
-
-        override func cursorUpdate(with event: NSEvent) {
+    override func cursorUpdate(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        if pointerCornerRect.contains(p) {
             NSCursor.pointingHand.set()
+        } else {
+            super.cursorUpdate(with: event)
         }
+    }
 
-        override func mouseEntered(with event: NSEvent) {
+    override func mouseMoved(with event: NSEvent) {
+        let p = convert(event.locationInWindow, from: nil)
+        if pointerCornerRect.contains(p) {
             NSCursor.pointingHand.set()
+            return
         }
-
-        override func mouseMoved(with event: NSEvent) {
-            NSCursor.pointingHand.set()
-        }
-
-        private func installMoveMonitor() {
-            guard moveMonitor == nil else { return }
-            moveMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
-                self?.applyCursorIfInside(event: event)
-                return event
-            }
-        }
-
-        private func removeMoveMonitor() {
-            if let m = moveMonitor {
-                NSEvent.removeMonitor(m)
-                moveMonitor = nil
-            }
-        }
-
-        private func applyCursorIfInside(event: NSEvent) {
-            guard let window, event.window === window else { return }
-            let mouseLocal = convert(event.locationInWindow, from: nil)
-            guard bounds.contains(mouseLocal) else { return }
-            DispatchQueue.main.async { [weak self] in
-                guard let self, let window = self.window else { return }
-                let screenPoint = NSEvent.mouseLocation
-                let windowPoint = window.convertPoint(fromScreen: screenPoint)
-                let local = self.convert(windowPoint, from: nil)
-                guard self.bounds.contains(local) else { return }
-                NSCursor.pointingHand.set()
-            }
-        }
-
-        deinit { removeMoveMonitor() }
-
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        super.mouseMoved(with: event)
     }
 }
 
@@ -2384,7 +2331,7 @@ private struct PlaceholderPage: View {
 
             SettingsCard {
                 HStack(spacing: 12) {
-                    LucideIcon.auto(category.iconName, size: 16)
+                    LucideIcon.auto(category.iconName, size: 11)
                         .foregroundColor(Palette.textSecondary)
                     Text("Coming soon")
                         .font(BodyFont.system(size: 13, wght: 500))
@@ -2735,7 +2682,7 @@ private struct BrowserPluginRow: View {
                         )
                     )
                     .frame(width: 36, height: 36)
-                LucideIcon(.send, size: 15)
+                LucideIcon(.send, size: 14)
                     .foregroundColor(.white)
                     .rotationEffect(.degrees(-12))
             }
@@ -2748,7 +2695,7 @@ private struct BrowserPluginRow: View {
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
-            LucideIcon(.check, size: 12)
+            LucideIcon(.check, size: 13)
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.horizontal, 14)
@@ -2770,7 +2717,7 @@ private struct DomainListSection: View {
                 Spacer()
                 Button {} label: {
                     HStack(spacing: 5) {
-                        LucideIcon(.plus, size: 10)
+                        LucideIcon(.plus, size: 11)
                         Text("Add")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -3034,7 +2981,7 @@ private struct MCPPage: View {
                     )
                 } label: {
                     HStack(spacing: 5) {
-                        LucideIcon(.plus, size: 10)
+                        LucideIcon(.plus, size: 11)
                         Text("Add server")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -3169,7 +3116,7 @@ private struct MCPEmptyState: View {
                 .foregroundColor(Palette.textSecondary)
             Button(action: onAdd) {
                 HStack(spacing: 5) {
-                    LucideIcon(.plus, size: 10)
+                    LucideIcon(.plus, size: 11)
                     Text("Add server")
                         .font(BodyFont.system(size: 12, wght: 600))
                 }
