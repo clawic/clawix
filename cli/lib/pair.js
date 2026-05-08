@@ -99,11 +99,10 @@ function show({ json = false } = {}) {
     }
 
     ui.section('scan with the Clawix iOS app');
-    // Note: shortCode is intentionally omitted from the QR. iOS ignores
-    // it on the scan path (the long bearer is what authenticates), and
-    // dropping it knocks ~26 bytes off the payload, which lets the QR
-    // fit in a smaller version (v8 instead of v10) and therefore in
-    // narrower terminal windows.
+    // shortCode is intentionally omitted from the QR. iOS ignores it on
+    // the scan path (the long bearer is what authenticates), and
+    // dropping it knocks ~26 bytes off the payload, so the QR fits in a
+    // smaller version and therefore in narrower terminal windows.
     const qrJson = JSON.stringify({
         v: payload.v,
         host: payload.host,
@@ -112,17 +111,21 @@ function show({ json = false } = {}) {
         macName: payload.macName,
         tailscaleHost: payload.tailscaleHost || undefined
     });
-    const matrix = qr.encode(qrJson);
-    process.stdout.write(ui.indent(qr.toAnsi(matrix, { utf8: ui.isUtf8, color: ui.isColor, quietZone: 2 })) + '\n');
+    qr.generate(qrJson, { small: true });
 
-    // Always write a PNG copy too. Some terminals (font, line-height,
-    // tmux) render the in-terminal QR with seams that confuse the iOS
-    // camera. Preview opening the PNG is the bulletproof path.
+    // Always write a PNG copy and auto-open it on macOS. Terminal QRs
+    // depend on font and theme (they render inverted on light themes,
+    // for example) and the PNG side-steps both. Opening it in Preview
+    // is the bulletproof scan path.
     try {
         fs.mkdirSync(path.dirname(QR_PNG_PATH), { recursive: true });
-        fs.writeFileSync(QR_PNG_PATH, qr.toPng(matrix));
-        process.stdout.write('\n  ' + ui.dim('png  ') + ' ' + QR_PNG_PATH + '\n');
-        process.stdout.write('  ' + ui.dim('     ') + ' ' + ui.dim('open it for a guaranteed scan: ') + 'open ' + QR_PNG_PATH + '\n');
+        fs.writeFileSync(QR_PNG_PATH, qr.toPng(qrJson));
+        if (process.platform === 'darwin' && process.stdout.isTTY) {
+            spawn('open', [QR_PNG_PATH], { detached: true, stdio: 'ignore' }).unref();
+            process.stdout.write('\n  ' + ui.dim('png  ') + ' opened in Preview · ' + QR_PNG_PATH + '\n');
+        } else {
+            process.stdout.write('\n  ' + ui.dim('png  ') + ' ' + QR_PNG_PATH + '\n');
+        }
     } catch (e) {
         // Non-fatal; the in-terminal QR is still there.
     }
