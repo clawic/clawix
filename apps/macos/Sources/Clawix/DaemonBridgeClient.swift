@@ -22,11 +22,15 @@ final class DaemonBridgeClient {
         let ws = NWProtocolWebSocket.Options()
         ws.autoReplyPing = true
         parameters.defaultProtocolStack.applicationProtocols.insert(ws, at: 0)
-        let connection = NWConnection(
-            host: "127.0.0.1",
-            port: NWEndpoint.Port(rawValue: pairing.port) ?? .any,
-            using: parameters
-        )
+        // NWProtocolWebSocket needs a URL endpoint, not bare hostPort.
+        // With a hostPort endpoint the upgrade aborts on macOS/iOS 26
+        // with ECONNABORTED right after the TCP handshake even against
+        // a server the iOS app's NWBrowser candidates reach fine. The
+        // iOS bridge client (BridgeClient.makeEndpoint) hit the same
+        // wall and switched to NWEndpoint.url(URL("ws://host:port/"));
+        // do the same here so the macOS desktop client doesn't break.
+        let url = URL(string: "ws://127.0.0.1:\(pairing.port)/")!
+        let connection = NWConnection(to: .url(url), using: parameters)
         self.connection = connection
         connection.stateUpdateHandler = { [weak self] state in
             Task { @MainActor in
@@ -112,6 +116,11 @@ final class DaemonBridgeClient {
         case .authOk:
             isAuthenticated = true
             send(.listChats)
+            // The daemon owns the Codex backend in this mode, so the GUI
+            // can no longer pull rate limits via its own ClawixService.
+            // Ask the daemon for the current snapshot; subsequent
+            // changes flow back as `rateLimitsUpdated` pushes.
+            send(.requestRateLimits)
         case .chatsSnapshot(let chats):
             appState?.applyDaemonChats(chats)
         case .chatUpdated(let chat):
@@ -129,6 +138,9 @@ final class DaemonBridgeClient {
                                            content: content,
                                            reasoningText: reasoningText,
                                            finished: finished)
+        case .rateLimitsSnapshot(let snapshot, let byLimitId),
+             .rateLimitsUpdated(let snapshot, let byLimitId):
+            appState?.applyDaemonRateLimits(snapshot: snapshot, byLimitId: byLimitId)
         case .authFailed, .versionMismatch:
             connection?.cancel()
         default:

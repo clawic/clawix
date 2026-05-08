@@ -518,6 +518,9 @@ final class ClawixService: ObservableObject {
         case ClawixMethod.nAccountRateLimitsUpdated:
             if let payload = try? params?.decode(AccountRateLimitsUpdatedNotification.self) {
                 appState?.rateLimits = payload.rateLimits
+                if let buckets = payload.rateLimitsByLimitId {
+                    appState?.rateLimitsByLimitId = buckets
+                }
             }
 
         case ClawixMethod.nThreadArchived:

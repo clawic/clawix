@@ -35,6 +35,61 @@ final class BackgroundBridgeService: ObservableObject {
         status == .enabled
     }
 
+    /// True when *any* `clawix-bridged` daemon is reachable on this Mac,
+    /// regardless of who registered it. Reads
+    /// `~/.clawix/state/bridge-status.json` (the daemon's heartbeat file)
+    /// and confirms the recorded PID is still alive.
+    ///
+    /// Why this exists: SMAppService.status is bundle-relative. A
+    /// LaunchAgent registered by the npm CLI (its plist sitting in
+    /// `~/Library/LaunchAgents/clawix.bridge.plist` and pointing at
+    /// `~/.clawix/bin/clawix-bridged`) does NOT show up as `.enabled`
+    /// for the GUI app's SMAppService.agent — that API only sees agents
+    /// the calling .app itself registered through `register()`. So a
+    /// dev build launched via dev.sh sees `isEnabled = false` even
+    /// though a daemon is alive on loopback owning Codex.
+    /// `isActive` (below) combines both signals so the GUI routes
+    /// through the daemon either way.
+    var isDaemonReachable: Bool {
+        let url = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".clawix/state/bridge-status.json")
+        guard let data = try? Data(contentsOf: url),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pid = obj["pid"] as? Int,
+              let state = obj["state"] as? String,
+              state == "ready" || state == "syncing"
+        else { return false }
+        // Heartbeat freshness: the daemon writes every 2s but the
+        // write happens on a utility queue and the file's mtime can
+        // lag by a few seconds during GUI startup contention. 60s is
+        // generous enough to survive that race while still catching
+        // a daemon that has actually wedged or been kill -9'd. Real
+        // liveness is the PID check below; freshness is just a cheap
+        // sanity gate against a leftover heartbeat from a long-dead
+        // run whose PID happens to be reused.
+        if let lastHeartbeatAt = obj["lastHeartbeatAt"] as? String,
+           let date = Self.isoParser.date(from: lastHeartbeatAt) {
+            if Date().timeIntervalSince(date) > 60 { return false }
+        }
+        // PID liveness: signal 0 returns 0 if the process exists and
+        // we have permission to signal it; ESRCH means it's gone.
+        return kill(pid_t(pid), 0) == 0
+    }
+
+    /// True when the GUI should treat the daemon as the canonical
+    /// owner of Codex. Either we registered a LaunchAgent through
+    /// SMAppService ourselves, or there's already a daemon alive on
+    /// loopback (e.g. the CLI installed it). Used by `AppState` to
+    /// decide whether to spawn its own in-process backend or connect
+    /// over the bridge instead.
+    var isActive: Bool { isEnabled || isDaemonReachable }
+
+    private static let isoParser: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
     /// Re-read status from launchd. Useful after `register`/`unregister`
     /// to surface the new state without polling.
     func refresh() {
