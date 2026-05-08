@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Persistence: a single JSON-encoded `[String]` in UserDefaults.
 /// Keeping vocabulary global (not per-language) is intentional — most
-/// proper nouns ("Clawix", "Tailscale", "OpenAI") are language-agnostic.
+/// proper nouns and product-specific terms are language-agnostic.
 @MainActor
 final class VocabularyManager: ObservableObject {
 

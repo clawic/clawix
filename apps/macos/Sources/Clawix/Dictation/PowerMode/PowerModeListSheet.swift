@@ -69,6 +69,7 @@ struct PowerModeListSheet: View {
                     }
                 }
             }
+            .thinScrollers()
             .frame(width: 220)
 
             Rectangle().fill(Color.white.opacity(0.06)).frame(width: 0.5)

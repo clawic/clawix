@@ -5,8 +5,8 @@ import Carbon.HIToolbox
 /// Key combo posted automatically after the dictation transcript has
 /// been pasted. Lets the user "dictate then send" in chat-style apps
 /// without reaching for the keyboard, with the right combo for the
-/// destination: plain Return for Slack/WhatsApp web, Shift+Return for
-/// some forms, Cmd+Return for Linear/ChatGPT/GitHub PR comments.
+/// destination: plain Return for chat fields, Shift+Return for
+/// multiline fields, Cmd+Return for command-submit fields.
 ///
 /// Persisted via UserDefaults under `dictation.autoSendKey`. The
 /// previous bool key (`dictation.autoEnter`) is migrated on app boot in

@@ -29,10 +29,30 @@ struct MicrophoneDevice: Identifiable, Hashable {
 /// `activeDeviceID()` at the start of every recording, so a newly
 /// reconnected preferred mic takes effect on the next session without
 /// the user touching anything.
+/// Three-mode selection picker. `systemDefault` ignores the preferred
+/// list entirely and binds to whatever macOS Sound preferences pick;
+/// `custom` keeps a single preferred mic; `prioritized` walks an
+/// ordered list and falls back if the top one disconnects.
+enum MicrophoneInputMode: String, CaseIterable {
+    case systemDefault
+    case custom
+    case prioritized
+
+    var displayName: String {
+        switch self {
+        case .systemDefault: return "System default"
+        case .custom:        return "Custom"
+        case .prioritized:   return "Prioritized list"
+        }
+    }
+}
+
 @MainActor
 final class MicrophonePreferences: ObservableObject {
 
     static let shared = MicrophonePreferences()
+
+    static let modeKey = "dictation.microphone.mode"
 
     /// Input devices currently visible to Core Audio, ordered with
     /// preferred entries (most-recent first) and the rest below in
@@ -83,10 +103,29 @@ final class MicrophonePreferences: ObservableObject {
     /// devices at all (the engine then falls back to whatever input
     /// AVAudioEngine picks up by default).
     func activeDeviceID() -> AudioDeviceID? {
+        // Mode `.systemDefault` short-circuits the preferred-list
+        // walk and binds to whatever macOS picked in Sound prefs.
+        if currentMode() == .systemDefault {
+            return Self.systemDefaultInputDeviceID()
+        }
         if let uid = activeUID, let dev = devices.first(where: { $0.uid == uid }) {
             return dev.deviceID
         }
         return Self.systemDefaultInputDeviceID()
+    }
+
+    var mode: MicrophoneInputMode {
+        get { currentMode() }
+        set {
+            defaults.set(newValue.rawValue, forKey: Self.modeKey)
+            objectWillChange.send()
+            recomputeActive()
+        }
+    }
+
+    private func currentMode() -> MicrophoneInputMode {
+        let raw = defaults.string(forKey: Self.modeKey) ?? MicrophoneInputMode.custom.rawValue
+        return MicrophoneInputMode(rawValue: raw) ?? .custom
     }
 
     /// Re-enumerate input devices and re-resolve the active selection.

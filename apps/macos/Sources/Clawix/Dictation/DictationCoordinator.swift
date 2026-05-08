@@ -75,6 +75,13 @@ final class DictationCoordinator: ObservableObject {
     /// `state`.
     @Published private(set) var overlayVisible: Bool = false
 
+    /// Streaming partial transcript (#19). Apple Speech publishes a
+    /// best-guess refinement every ~150 ms during recording; Whisper
+    /// local doesn't and leaves this empty. Overlay observes and
+    /// renders below the waveform when non-empty + the live preview
+    /// toggle is on.
+    @Published private(set) var partialTranscript: String = ""
+
     /// Drives the "Press ESC again to cancel recording" toast that
     /// appears above the pill on the first Esc press. Replicates the
     /// reference UI's double-tap-to-cancel pattern: a single Esc
@@ -91,6 +98,10 @@ final class DictationCoordinator: ObservableObject {
     let modelManager: DictationModelManager
 
     private let capture = AudioCapture()
+    /// Allocated lazily the first time the user picks the Apple
+    /// Speech backend so the system framework isn't loaded for users
+    /// who stay on Whisper local.
+    private lazy var appleSpeech = AppleSpeechRecorder()
     private var source: Source = .hotkey
     private var startedAt: Date?
     private var elapsedTimer: Timer?
@@ -105,6 +116,11 @@ final class DictationCoordinator: ObservableObject {
     /// can't surface a stale result after the user has dismissed the
     /// overlay or kicked off a new dictation.
     private var sessionToken: Int = 0
+
+    /// Which engine actually drove the current session. Captured at
+    /// startCapture so cancel/stop paths know whether to tear down
+    /// AUHAL or the Apple Speech recognizer.
+    private var activeBackend: DictationTranscriptionBackend = .whisperLocal
 
     /// `restoreClipboard`, `injectText`, `autoSendKey`, `language`,
     /// `restoreClipboardDelayMs` and `addSpaceBefore` settings persist
@@ -121,6 +137,20 @@ final class DictationCoordinator: ObservableObject {
     static let addSpaceBeforeKey = "dictation.addSpaceBeforePaste"
     static let autoFormatParagraphsKey = "dictation.autoFormatParagraphs"
     static let prewarmOnLaunchKey = "dictation.prewarmOnLaunch"
+    /// Voice Activity Detection on the local Whisper path. WhisperKit
+    /// implements this via `chunkingStrategy = .vad`. Default ON.
+    static let vadEnabledKey = "dictation.vadEnabled"
+    /// Which transcription backend the coordinator routes to. Values
+    /// are `DictationTranscriptionBackend.rawValue`. Default
+    /// `whisperLocal` (the existing AUHAL → WhisperKit path); when
+    /// set to `appleSpeech`, audio capture is handled inside
+    /// `AppleSpeechRecorder` (its own AVAudioEngine) and partials
+    /// stream into `partialTranscript` for the live preview.
+    static let backendKey = "dictation.transcriptionBackend"
+    /// Live preview toggle (#19). On: render Whisper / Apple Speech
+    /// partials in the floating overlay so the user sees the words
+    /// as they speak. Off: only the waveform shows.
+    static let livePreviewEnabledKey = "dictation.livePreviewEnabled"
 
     private let defaults: UserDefaults
 
@@ -162,10 +192,23 @@ final class DictationCoordinator: ObservableObject {
         if defaults.object(forKey: Self.prewarmOnLaunchKey) == nil {
             defaults.set(true, forKey: Self.prewarmOnLaunchKey)
         }
+        if defaults.object(forKey: Self.vadEnabledKey) == nil {
+            defaults.set(true, forKey: Self.vadEnabledKey)
+        }
+        if defaults.object(forKey: Self.backendKey) == nil {
+            defaults.set(DictationTranscriptionBackend.whisperLocal.rawValue, forKey: Self.backendKey)
+        }
+        if defaults.object(forKey: Self.livePreviewEnabledKey) == nil {
+            defaults.set(true, forKey: Self.livePreviewEnabledKey)
+        }
         _ = MediaController.shared
         _ = PlaybackController.shared
         _ = FillerWordsManager.shared
         _ = PowerModeManager.shared
+        // Start the privacy cleanup scheduler so users with the
+        // toggle on don't accumulate stale rows / audio across
+        // sessions. Idempotent; safe to call once per launch.
+        CleanupScheduler.shared.start()
         capture.onLevels = { [weak self] levels in
             self?.levels = levels
         }
@@ -376,22 +419,105 @@ final class DictationCoordinator: ObservableObject {
         state = .transcribing
         invalidateElapsedTimer()
         invalidateBarTimer()
+        // Apple Speech delivers its final transcript via the recognizer
+        // callback wired in startCapture. We just signal end-of-audio
+        // and let `onFinal` drive the same `finish` path the Whisper
+        // branch ends in.
+        if activeBackend == .appleSpeech {
+            appleSpeech.stop()
+            return
+        }
         let samples = capture.stopAndCollect()
         let language = languageHint
         let model = resolvedActiveModel()
         let prompt = Self.composeWhisperPrompt(language: language)
         let token = sessionToken
+
+        // Cloud Whisper backends (Groq / Deepgram / Custom) take the
+        // captured PCM and upload as WAV. Same async + enhancement
+        // path as the local Whisper branch — the only difference is
+        // the transcription source.
+        if let cloud = activeBackend.cloudProvider {
+            Task { [weak self] in
+                do {
+                    let cloudRaw = try await cloud.transcribe(
+                        samples: samples,
+                        language: language,
+                        prompt: prompt
+                    )
+                    // Cloud Whisper providers don't return per-segment
+                    // timestamps in their JSON shapes, so fall back to
+                    // the heuristic sentence-boundary auto-format
+                    // (mid-sentence safe).
+                    let autoFormat = self?.defaults.object(forKey: Self.autoFormatParagraphsKey) as? Bool ?? true
+                    let raw = autoFormat
+                        ? TranscriptFormatter.format(cloudRaw)
+                        : cloudRaw
+                    let pmActive = await PowerModeManager.shared.activeConfig
+                    let enhanced = await EnhancementService.shared.enhance(
+                        raw: raw,
+                        powerMode: pmActive
+                    )
+                    await self?.finishIfFresh(
+                        token: token,
+                        text: enhanced,
+                        errorMessage: nil,
+                        samples: samples,
+                        model: model,
+                        language: language
+                    )
+                } catch {
+                    await self?.finishIfFresh(
+                        token: token,
+                        text: "",
+                        errorMessage: error.localizedDescription,
+                        samples: samples,
+                        model: model,
+                        language: language
+                    )
+                }
+            }
+            return
+        }
         Task { [weak self] in
             do {
-                let text = try await TranscriptionService.shared.transcribe(
-                    samples: samples,
-                    using: model,
-                    language: language,
-                    prompt: prompt
+                let useVAD = self?.defaults.object(forKey: Self.vadEnabledKey) as? Bool ?? true
+                let autoFormat = self?.defaults.object(forKey: Self.autoFormatParagraphsKey) as? Bool ?? true
+                // Use the segmented variant when auto-format is on so
+                // we have silence timestamps to break paragraphs at.
+                // When off, take the cheaper joined-text path.
+                let raw: String
+                if autoFormat {
+                    let segmented = try await TranscriptionService.shared.transcribeWithSegments(
+                        samples: samples,
+                        using: model,
+                        language: language,
+                        prompt: prompt,
+                        useVAD: useVAD
+                    )
+                    raw = TranscriptFormatter.format(segmented)
+                } else {
+                    raw = try await TranscriptionService.shared.transcribe(
+                        samples: samples,
+                        using: model,
+                        language: language,
+                        prompt: prompt,
+                        useVAD: useVAD
+                    )
+                }
+                // AI Enhancement (#21). Returns the input unchanged
+                // when the master toggle is off, so this is a no-op
+                // for users who haven't opted in. Runs here in the
+                // same async path as transcription so we never block
+                // the main actor.
+                let pmActive = await PowerModeManager.shared.activeConfig
+                let enhanced = await EnhancementService.shared.enhance(
+                    raw: raw,
+                    powerMode: pmActive
                 )
                 await self?.finishIfFresh(
                     token: token,
-                    text: text,
+                    text: enhanced,
                     errorMessage: nil,
                     samples: samples,
                     model: model,
@@ -420,6 +546,7 @@ final class DictationCoordinator: ObservableObject {
         invalidateElapsedTimer()
         invalidateBarTimer()
         capture.cancel()
+        appleSpeech.cancel()
         cleanup(deliveryText: "")
     }
 
@@ -454,12 +581,94 @@ final class DictationCoordinator: ObservableObject {
         levels = []
         barLevels = []
         elapsed = 0
+        partialTranscript = ""
         lastError = nil
-        do {
-            try capture.start(deviceID: MicrophonePreferences.shared.activeDeviceID())
-        } catch {
-            fail(with: "Couldn't start audio engine: \(error.localizedDescription)")
-            return
+
+        // Resolve the backend. Power Mode override is intentionally
+        // not applied here — backend choice is global, not per-app.
+        let backendRaw = defaults.string(forKey: Self.backendKey) ?? DictationTranscriptionBackend.whisperLocal.rawValue
+        let backend = DictationTranscriptionBackend(rawValue: backendRaw) ?? .whisperLocal
+        activeBackend = backend
+
+        switch backend {
+        case .whisperLocal, .groqCloud, .deepgramCloud, .customCloud:
+            // Local Whisper and the cloud Whisper backends share the
+            // capture path: AUHAL records 16 kHz mono PCM into the
+            // same buffer; `stop()` then either runs WhisperKit
+            // locally or uploads the WAV to the cloud provider.
+            do {
+                try capture.start(deviceID: MicrophonePreferences.shared.activeDeviceID())
+            } catch {
+                fail(with: "Couldn't start audio engine: \(error.localizedDescription)")
+                return
+            }
+        case .appleSpeech:
+            // Apple Speech runs its own AVAudioEngine. First, make
+            // sure speech-recognition TCC is granted; the prompt is
+            // only shown on the very first request, every subsequent
+            // call returns the cached status synchronously.
+            let auth = AppleSpeechRecorder.authorizationStatus()
+            if auth == .notDetermined {
+                Task { @MainActor [weak self] in
+                    let granted = await AppleSpeechRecorder.requestPermission()
+                    if granted {
+                        self?.startCapture(showOverlay: showOverlay)
+                    } else {
+                        self?.fail(with: "Apple Speech recognition permission denied")
+                    }
+                }
+                return
+            }
+            if auth != .authorized {
+                fail(with: "Apple Speech recognition permission denied. Open System Settings → Privacy → Speech Recognition.")
+                return
+            }
+            // Wire the callbacks before start() so the very first
+            // partial doesn't get dropped.
+            let token = sessionToken
+            appleSpeech.onPartial = { [weak self] partial in
+                Task { @MainActor in
+                    guard let self else { return }
+                    guard self.sessionToken == token else { return }
+                    self.partialTranscript = partial
+                }
+            }
+            appleSpeech.onFinal = { [weak self] final in
+                Task { @MainActor in
+                    guard let self else { return }
+                    guard self.sessionToken == token else { return }
+                    // Run AI Enhancement (#21) before finish, mirroring
+                    // the Whisper branch. Returns input unchanged when
+                    // the master toggle is off.
+                    let pmActive = PowerModeManager.shared.activeConfig
+                    let enhanced = await EnhancementService.shared.enhance(
+                        raw: final,
+                        powerMode: pmActive
+                    )
+                    // Apple Speech doesn't have raw PCM samples to
+                    // hand back — we feed an empty array so the
+                    // history record skips audio storage. Live preview
+                    // already showed the user the text.
+                    self.finish(
+                        text: enhanced,
+                        errorMessage: nil,
+                        samples: [],
+                        model: nil,
+                        language: self.languageHint
+                    )
+                }
+            }
+            appleSpeech.onError = { [weak self] message in
+                Task { @MainActor in
+                    self?.lastError = message
+                }
+            }
+            do {
+                try appleSpeech.start(language: languageHint)
+            } catch {
+                fail(with: "Apple Speech failed to start: \(error.localizedDescription)")
+                return
+            }
         }
         startedAt = Date()
         startElapsedTimer()
@@ -565,6 +774,16 @@ final class DictationCoordinator: ObservableObject {
         // that. So filter first, then replace.
         let deFillered = FillerWordsManager.shared.apply(to: trimmed, language: language)
         let processed = DictationReplacementStore.shared.apply(to: deFillered)
+        // Auto-format paragraphs (#7) already happened upstream in
+        // the Task that owned transcription (Whisper local uses
+        // segment timestamps; cloud Whisper falls back to the
+        // sentence-boundary heuristic). Apple Speech is a single
+        // best-of utterance and doesn't need paragraph splitting.
+        // Note: AI Enhancement (#21) runs in the async Task that
+        // owns transcription (see `stop()`), BEFORE finish() is
+        // called. By the time we land here `text` is already the
+        // enhanced version when the master toggle is on, so we
+        // don't re-enter the LLM here.
 
         if errorMessage == nil, !processed.isEmpty {
             SoundManager.shared.playDone()
@@ -576,6 +795,38 @@ final class DictationCoordinator: ObservableObject {
                 model: model,
                 language: language
             )
+            // Persist a transcript row + companion WAV so the
+            // history view (#24), cleanup (#25), export (#26), and
+            // metrics (#27) all have something to chew on. The audio
+            // dump runs synchronously here because it's just a
+            // local file write; the DB insert hops a Task.
+            let id = UUID().uuidString
+            let audioURL = DictationAudioStorage.writeWAV(samples: samples, id: id)
+            let words = processed.split(whereSeparator: { $0.isWhitespace }).count
+            let duration = TimeInterval(samples.count) / 16_000.0
+            let pmId = PowerModeManager.shared.activeConfig?.id.uuidString
+            let enhancementProvider: String? = EnhancementService.shared.isEnabled
+                ? UserDefaults.standard.string(forKey: EnhancementSettings.providerKey)
+                : nil
+            let record = TranscriptionRecord(
+                id: id,
+                timestamp: Date(),
+                originalText: text,
+                enhancedText: text == processed ? nil : processed,
+                modelUsed: model?.rawValue,
+                language: language,
+                durationSeconds: duration,
+                audioFilePath: audioURL?.path,
+                powerModeId: pmId,
+                wordCount: words,
+                transcriptionMs: 0,
+                enhancementMs: 0,
+                enhancementProvider: enhancementProvider,
+                costUSD: 0
+            )
+            Task { @MainActor in
+                await TranscriptionsRepository.shared.record(record)
+            }
         }
 
         if injectOnFinish, !processed.isEmpty {
@@ -614,6 +865,7 @@ final class DictationCoordinator: ObservableObject {
         levels = []
         barLevels = []
         elapsed = 0
+        partialTranscript = ""
         state = .idle
         activeSource = .none
         overlayVisible = false

@@ -26,6 +26,13 @@ struct DictationOverlayView: View {
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            // Live preview (#19) — only meaningful when the active
+            // backend streams partials (Apple Speech). Whisper local
+            // leaves `partialTranscript` empty so this never shows.
+            if shouldShowLivePreview {
+                DictationLivePreview(text: coordinator.partialTranscript)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
             if coordinator.state != .idle {
                 pill
                     .transition(.opacity.combined(with: .scale(scale: 0.94)))
@@ -35,6 +42,15 @@ struct DictationOverlayView: View {
         .padding(.bottom, 6)
         .animation(.easeInOut(duration: 0.22), value: coordinator.state)
         .animation(.easeInOut(duration: 0.22), value: coordinator.escHintVisible)
+        .animation(.easeInOut(duration: 0.18), value: coordinator.partialTranscript)
+    }
+
+    private var shouldShowLivePreview: Bool {
+        guard coordinator.state == .recording else { return false }
+        guard !coordinator.partialTranscript.isEmpty else { return false }
+        return UserDefaults.standard.object(
+            forKey: DictationCoordinator.livePreviewEnabledKey
+        ) as? Bool ?? true
     }
 
     private var pill: some View {
@@ -410,5 +426,36 @@ private struct DictationSpinner: View {
                 rotation = 360
             }
         }
+    }
+}
+
+// MARK: - Live preview pill
+
+/// Glass pill that floats above the recording capsule and renders the
+/// streaming partial transcript while the user is still speaking
+/// (#19). Apple Speech publishes refinements every ~150 ms; the
+/// `.animation(value:)` on the parent VStack interpolates the text
+/// fade so successive partials don't flash.
+private struct DictationLivePreview: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(BodyFont.system(size: 12, wght: 600))
+            .foregroundColor(Color.white.opacity(0.92))
+            .lineLimit(2)
+            .truncationMode(.head)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .frame(maxWidth: 340)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.black.opacity(0.55))
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                }
+            )
     }
 }

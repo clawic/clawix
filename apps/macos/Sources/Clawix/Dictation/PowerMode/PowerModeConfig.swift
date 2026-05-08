@@ -3,8 +3,8 @@ import ClawixEngine
 
 /// Single power-mode profile. A "power mode" is a context-aware
 /// override layer that auto-activates when the user is in a specific
-/// app (or on a specific website) — Slack vs Cursor vs Mail each get
-/// their own dictation behaviour without manual switching.
+/// app (or on a specific website), so different contexts can get their
+/// own dictation behaviour without manual switching.
 ///
 /// Many fields are overrides: when nil/empty, dictation falls back to
 /// the global defaults; when set, they win. The fields that depend on
@@ -21,8 +21,7 @@ struct PowerModeConfig: Identifiable, Codable, Equatable {
 
     // MARK: Triggers
 
-    /// Bundle identifiers that activate this profile (e.g.
-    /// `com.tinyspeck.slackmacgap` for Slack).
+    /// Bundle identifiers that activate this profile.
     var triggerBundleIds: [String]
     /// URL host substrings that activate this profile when the
     /// foreground app is a supported browser (Safari, Chrome, Arc,
@@ -121,9 +120,9 @@ enum PowerModePresets {
         ),
         PowerModeConfig(
             id: UUID(),
-            name: "Slack",
+            name: "Chat",
             emoji: "💬",
-            triggerBundleIds: ["com.tinyspeck.slackmacgap"],
+            triggerBundleIds: [],
             triggerURLHosts: [],
             transcriptionModelOverride: nil,
             languageOverride: nil,
@@ -139,12 +138,9 @@ enum PowerModePresets {
         ),
         PowerModeConfig(
             id: UUID(),
-            name: "Cursor",
+            name: "Code editor",
             emoji: "📝",
-            triggerBundleIds: [
-                "com.todesktop.230313mzl4w4u92x",
-                "com.cursor.cursor"
-            ],
+            triggerBundleIds: [],
             triggerURLHosts: [],
             transcriptionModelOverride: nil,
             languageOverride: nil,

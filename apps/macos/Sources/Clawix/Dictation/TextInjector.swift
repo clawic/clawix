@@ -110,10 +110,9 @@ enum TextInjector {
     }
 
     /// Post a Return key, optionally with modifier flags. With no
-    /// flags, regular Enter (chat fields like Slack/WhatsApp web). With
-    /// shift, the same key but flagged as Shift+Return (Linear/Things).
-    /// With command, Cmd+Return (Linear, ChatGPT desktop, GitHub PR
-    /// comments). Some chat fields submit only when the keystroke is
+    /// flags, regular Enter for chat fields. With shift, the same key
+    /// but flagged as Shift+Return for multiline fields. With command,
+    /// Cmd+Return for command-submit fields. Some chat fields submit only when the keystroke is
     /// delivered separately from the paste, so this is called from a
     /// delayed dispatch after `postCommandV`.
     private static func postReturn(flags: CGEventFlags) {

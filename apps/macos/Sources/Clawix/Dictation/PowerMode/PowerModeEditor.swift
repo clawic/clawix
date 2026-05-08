@@ -20,6 +20,7 @@ struct PowerModeEditor: View {
             }
             .padding(20)
         }
+        .thinScrollers()
     }
 
     private var header: some View {
