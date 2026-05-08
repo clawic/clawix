@@ -364,6 +364,10 @@ final class DictationCoordinator: ObservableObject {
         }
     }
 
+    static func trace(_ message: String) {
+        TranscriptionService.trace("coordinator: \(message)")
+    }
+
     /// Hotkey "toggle" mode: tap once to start, tap again to stop.
     func toggleFromHotkey(language: String? = nil) {
         switch state {
@@ -459,6 +463,7 @@ final class DictationCoordinator: ObservableObject {
     /// AppIntents (Paste Last, Retry Last) can replay the result.
     func stop() {
         guard state == .recording else { return }
+        Self.trace("stop: backend=\(activeBackend.rawValue)")
         // Unmute synchronously before the cue: AVAudioPlayer routes
         // through the system mixer, so the stop sound would be silent
         // otherwise. Mic capture is finished by this point, so there's
@@ -489,23 +494,20 @@ final class DictationCoordinator: ObservableObject {
         if let cloud = activeBackend.cloudProvider {
             Task { [weak self] in
                 do {
-                    let cloudRaw = try await cloud.transcribe(
-                        samples: samples,
-                        language: language,
-                        prompt: prompt
-                    )
-                    // Cloud Whisper providers don't return per-segment
-                    // timestamps in their JSON shapes, so fall back to
-                    // the heuristic sentence-boundary auto-format
-                    // (mid-sentence safe).
                     let autoFormat = self?.defaults.object(forKey: Self.autoFormatParagraphsKey) as? Bool ?? true
-                    let raw = autoFormat
-                        ? TranscriptFormatter.format(cloudRaw)
-                        : cloudRaw
-                    let pmActive = await PowerModeManager.shared.activeConfig
-                    let enhanced = await EnhancementService.shared.enhance(
+                    let useVAD = self?.defaults.object(forKey: Self.vadEnabledKey) as? Bool ?? true
+                    let raw = try await self?.transcribeCloudOrFallback(
+                        cloud: cloud,
+                        samples: samples,
+                        model: model,
+                        language: language,
+                        prompt: prompt,
+                        useVAD: useVAD,
+                        autoFormat: autoFormat
+                    ) ?? ""
+                    let enhanced = await Self.enhanceFailOpen(
                         raw: raw,
-                        powerMode: pmActive
+                        powerMode: PowerModeManager.shared.activeConfig
                     )
                     await self?.finishIfFresh(
                         token: token,
@@ -532,37 +534,22 @@ final class DictationCoordinator: ObservableObject {
             do {
                 let useVAD = self?.defaults.object(forKey: Self.vadEnabledKey) as? Bool ?? true
                 let autoFormat = self?.defaults.object(forKey: Self.autoFormatParagraphsKey) as? Bool ?? true
-                // Use the segmented variant when auto-format is on so
-                // we have silence timestamps to break paragraphs at.
-                // When off, take the cheaper joined-text path.
-                let raw: String
-                if autoFormat {
-                    let segmented = try await TranscriptionService.shared.transcribeWithSegments(
-                        samples: samples,
-                        using: model,
-                        language: language,
-                        prompt: prompt,
-                        useVAD: useVAD
-                    )
-                    raw = TranscriptFormatter.format(segmented)
-                } else {
-                    raw = try await TranscriptionService.shared.transcribe(
-                        samples: samples,
-                        using: model,
-                        language: language,
-                        prompt: prompt,
-                        useVAD: useVAD
-                    )
-                }
+                let raw = try await Self.transcribeLocalWithFallback(
+                    samples: samples,
+                    model: model,
+                    language: language,
+                    prompt: prompt,
+                    useVAD: useVAD,
+                    autoFormat: autoFormat
+                )
                 // AI Enhancement (#21). Returns the input unchanged
                 // when the master toggle is off, so this is a no-op
                 // for users who haven't opted in. Runs here in the
                 // same async path as transcription so we never block
                 // the main actor.
-                let pmActive = await PowerModeManager.shared.activeConfig
-                let enhanced = await EnhancementService.shared.enhance(
+                let enhanced = await Self.enhanceFailOpen(
                     raw: raw,
-                    powerMode: pmActive
+                    powerMode: PowerModeManager.shared.activeConfig
                 )
                 await self?.finishIfFresh(
                     token: token,
@@ -583,6 +570,223 @@ final class DictationCoordinator: ObservableObject {
                 )
             }
         }
+    }
+
+    private func transcribeCloudOrFallback(
+        cloud: CloudTranscriptionProvider,
+        samples: [Float],
+        model: DictationModel,
+        language: String?,
+        prompt: String?,
+        useVAD: Bool,
+        autoFormat: Bool
+    ) async throws -> String {
+        do {
+            Self.trace("transcribe: cloud start provider=\(cloud.rawValue)")
+            let cloudRaw = try await cloud.transcribe(
+                samples: samples,
+                language: language,
+                prompt: prompt
+            )
+            Self.trace("transcribe: cloud ok provider=\(cloud.rawValue) chars=\(cloudRaw.count)")
+            return autoFormat ? TranscriptFormatter.format(cloudRaw) : cloudRaw
+        } catch {
+            Self.trace("transcribe: cloud failed provider=\(cloud.rawValue) error=\(error.localizedDescription)")
+            guard Self.canRunLocalFallback(model: model) else {
+                throw error
+            }
+            Self.trace("transcribe: falling back to local model=\(model.rawValue)")
+            return try await Self.transcribeLocalWithFallback(
+                samples: samples,
+                model: model,
+                language: language,
+                prompt: prompt,
+                useVAD: useVAD,
+                autoFormat: autoFormat
+            )
+        }
+    }
+
+    static func transcribeLocalWithFallback(
+        samples: [Float],
+        model: DictationModel,
+        language: String?,
+        prompt: String?,
+        useVAD: Bool,
+        autoFormat: Bool
+    ) async throws -> String {
+        do {
+            trace("transcribe: local start model=\(model.rawValue) vad=\(useVAD) autoFormat=\(autoFormat)")
+            let raw = try await transcribeLocal(
+                samples: samples,
+                model: model,
+                language: language,
+                prompt: prompt,
+                useVAD: useVAD,
+                autoFormat: autoFormat
+            )
+            if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if useVAD {
+                    trace("transcribe: local vad returned empty, retrying without vad")
+                    let noVAD = try await transcribeLocal(
+                        samples: samples,
+                        model: model,
+                        language: language,
+                        prompt: prompt,
+                        useVAD: false,
+                        autoFormat: autoFormat
+                    )
+                    if !noVAD.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        return noVAD
+                    }
+                }
+                return try await transcribeLocalEmptyFallback(
+                    samples: samples,
+                    model: model,
+                    language: language,
+                    prompt: prompt,
+                    autoFormat: autoFormat
+                )
+            }
+            trace("transcribe: local ok chars=\(raw.count)")
+            return raw
+        } catch {
+            guard useVAD else { throw error }
+            trace("transcribe: local vad failed, retrying without vad error=\(error.localizedDescription)")
+            let raw = try await transcribeLocal(
+                samples: samples,
+                model: model,
+                language: language,
+                prompt: prompt,
+                useVAD: false,
+                autoFormat: autoFormat
+            )
+            if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return try await transcribeLocalEmptyFallback(
+                    samples: samples,
+                    model: model,
+                    language: language,
+                    prompt: prompt,
+                    autoFormat: autoFormat
+                )
+            }
+            return raw
+        }
+    }
+
+    private static func transcribeLocalEmptyFallback(
+        samples: [Float],
+        model: DictationModel,
+        language: String?,
+        prompt: String?,
+        autoFormat: Bool
+    ) async throws -> String {
+        if autoFormat {
+            trace("transcribe: empty after segment path, retrying plain decode")
+            let plain = try await transcribeLocal(
+                samples: samples,
+                model: model,
+                language: language,
+                prompt: prompt,
+                useVAD: false,
+                autoFormat: false
+            )
+            if !plain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return plain
+            }
+        }
+
+        let languageHints = fallbackLanguageHints(preferred: language)
+        for fallbackLanguage in languageHints {
+            trace("transcribe: empty in auto language, retrying language=\(fallbackLanguage)")
+            let forced = try await transcribeLocal(
+                samples: samples,
+                model: model,
+                language: fallbackLanguage,
+                prompt: prompt,
+                useVAD: false,
+                autoFormat: false
+            )
+            if !forced.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return forced
+            }
+        }
+        for fallbackLanguage in languageHints {
+            trace("transcribe: empty after guarded decode, retrying permissive language=\(fallbackLanguage)")
+            let permissive = try await TranscriptionService.shared.transcribePermissive(
+                samples: samples,
+                using: model,
+                language: fallbackLanguage,
+                prompt: prompt
+            )
+            if !permissive.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return permissive
+            }
+        }
+        return ""
+    }
+
+    private static func fallbackLanguageHints(preferred: String? = nil) -> [String] {
+        var hints: [String] = []
+        if let preferred = preferred?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+           !preferred.isEmpty,
+           preferred != "auto" {
+            hints.append(preferred)
+        }
+        if let code = Locale.current.language.languageCode?.identifier.lowercased(),
+           !code.isEmpty,
+           !hints.contains(code) {
+            hints.append(code)
+        }
+        for code in ["es", "en"] where !hints.contains(code) {
+            hints.append(code)
+        }
+        return hints
+    }
+
+    private static func transcribeLocal(
+        samples: [Float],
+        model: DictationModel,
+        language: String?,
+        prompt: String?,
+        useVAD: Bool,
+        autoFormat: Bool
+    ) async throws -> String {
+        if autoFormat {
+            let segmented = try await TranscriptionService.shared.transcribeWithSegments(
+                samples: samples,
+                using: model,
+                language: language,
+                prompt: prompt,
+                useVAD: useVAD
+            )
+            return TranscriptFormatter.format(segmented)
+        }
+        return try await TranscriptionService.shared.transcribe(
+            samples: samples,
+            using: model,
+            language: language,
+            prompt: prompt,
+            useVAD: useVAD
+        )
+    }
+
+    static func enhanceFailOpen(raw: String, powerMode: PowerModeConfig?) async -> String {
+        if ProcessInfo.processInfo.environment["CLAWIX_E2E_ENHANCEMENT_FAIL"] == "1" {
+            trace("enhancement: e2e forced failure, using raw")
+            return raw
+        }
+        trace("enhancement: start")
+        let enhanced = await EnhancementService.shared.enhance(raw: raw, powerMode: powerMode)
+        trace("enhancement: done changed=\(enhanced != raw)")
+        return enhanced
+    }
+
+    private static func canRunLocalFallback(model: DictationModel) -> Bool {
+        if ProcessInfo.processInfo.environment["CLAWIX_E2E_TRANSCRIPTION_TEXT"] != nil {
+            return true
+        }
+        return DictationModelManager.installedFolder(for: model) != nil
     }
 
     /// Abandon the current session immediately, regardless of state.
@@ -644,12 +848,26 @@ final class DictationCoordinator: ObservableObject {
         activeBackend = backend
 
         switch backend {
-        case .whisperLocal, .groqCloud, .deepgramCloud, .customCloud:
+        case .whisperLocal:
+            let model = resolvedActiveModel()
+            guard Self.canRunLocalFallback(model: model) else {
+                fail(with: "\(model.displayName) is not downloaded. Open Settings → Voice to Text and download a model first.")
+                return
+            }
+            do {
+                Self.trace("capture: start local model=\(model.rawValue)")
+                try capture.start(deviceID: MicrophonePreferences.shared.activeDeviceID())
+            } catch {
+                fail(with: "Couldn't start audio engine: \(error.localizedDescription)")
+                return
+            }
+        case .groqCloud, .deepgramCloud, .customCloud:
             // Local Whisper and the cloud Whisper backends share the
             // capture path: AUHAL records 16 kHz mono PCM into the
             // same buffer; `stop()` then either runs WhisperKit
             // locally or uploads the WAV to the cloud provider.
             do {
+                Self.trace("capture: start cloud backend=\(backend.rawValue)")
                 try capture.start(deviceID: MicrophonePreferences.shared.activeDeviceID())
             } catch {
                 fail(with: "Couldn't start audio engine: \(error.localizedDescription)")
@@ -822,14 +1040,7 @@ final class DictationCoordinator: ObservableObject {
             lastError = nil
         }
 
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Strip filler words ("uh", "um", "este", "o sea", …) before
-        // running the user's word-replacement dictionary. Order
-        // matters: replacements may map a filler-like sound to a
-        // legitimate word, and we don't want filler removal to undo
-        // that. So filter first, then replace.
-        let deFillered = FillerWordsManager.shared.apply(to: trimmed, language: language)
-        let processed = DictationReplacementStore.shared.apply(to: deFillered)
+        let processed = Self.processForDelivery(text, language: language)
         // Auto-format paragraphs (#7) already happened upstream in
         // the Task that owned transcription (Whisper local uses
         // segment timestamps; cloud Whisper falls back to the
@@ -904,25 +1115,111 @@ final class DictationCoordinator: ObservableObject {
                     addSpaceBefore: addSpace
                 )
             } catch {
-                lastError = error.localizedDescription
+                let message = error.localizedDescription
+                lastError = message
+                // Inject failures (Accessibility denied, no focused
+                // field) leave the transcript on the clipboard but no
+                // visible signal to the user that the press "worked".
+                // Surface so they know to grant AX or re-focus.
+                showErrorToast(message)
             }
         }
 
-        // Surface failures over the floating panel so the user sees
-        // *why* a press produced nothing. Without this, an empty
-        // result + non-nil error makes the overlay disappear silently
-        // (e.g. when the active Whisper model is missing on disk).
-        if let errorMessage, processed.isEmpty {
-            showErrorToast(errorMessage)
+        // Surface transcription failures on the panel so the user
+        // knows *why* the press produced nothing. Three cases reach
+        // here with `processed.isEmpty`:
+        //  1. Hard error (model missing, AUHAL failure) → `errorMessage`
+        //     is set; show it directly.
+        //  2. Soft empty (Whisper succeeded but returned no tokens):
+        //     dominated by short / silent / sub-threshold audio, not
+        //     model corruption. The previous fallback ("re-download
+        //     the model") was misleading — once `ensureLoaded` and the
+        //     strict installer accept the folder, the model itself is
+        //     fine, so we should never blame it from here.
+        //     We bucket on the captured audio:
+        //     a) < ~1.0s captured (user tapped quickly, no time to
+        //        say anything) → suppress the toast entirely; a
+        //        guidance toast for an accidental tap is more annoying
+        //        than helpful.
+        //     b) low RMS (audio came through but at silence level) →
+        //        "Couldn't hear you" toast pointing at mic / volume.
+        //     c) audible audio, no transcript → generic "didn't
+        //        catch any speech" toast; this is rare and usually
+        //        VAD trimming non-speech (cough, click, hum).
+        //  3. User legitimately said nothing → same as (2a) — silent.
+        if processed.isEmpty {
+            if let errorMessage {
+                showErrorToast(errorMessage)
+            } else if !samples.isEmpty {
+                let durationSeconds = Double(samples.count) / 16_000.0
+                let rms = Self.rms(of: samples)
+                let peak = Self.peak(of: samples)
+                let isVeryShort = durationSeconds < 1.0
+                let isLowEnergy = rms < 0.01
+                // Diagnostic dump: a copy of the exact buffer that was
+                // handed to Whisper, so when the user reports "the
+                // waves looked right but it returned nothing" we can
+                // open the WAV and verify whether capture or decode is
+                // at fault. Lives in
+                // ~/Library/Application Support/Clawix/dictation-audio-debug/
+                // and is never auto-cleaned; the user can wipe it.
+                let debugURL = DictationAudioStorage.writeEmptyTranscriptDebugWAV(samples: samples)
+                fputs(
+                    "[Clawix.dictation] empty transcript: dur=\(String(format: "%.2f", durationSeconds))s samples=\(samples.count) rms=\(String(format: "%.4f", rms)) peak=\(String(format: "%.4f", peak)) lang=\(language ?? "auto") debugWAV=\(debugURL?.path ?? "nil")\n",
+                    stderr
+                )
+                if isVeryShort {
+                    // Silent — accidental tap, don't bother the user.
+                } else if isLowEnergy {
+                    showErrorToast("Couldn't hear you. Speak louder or check your microphone in System Settings → Privacy & Security → Microphone.")
+                } else {
+                    showErrorToast("Whisper returned no text for audible audio. A copy of what was captured is in ~/Library/Application Support/Clawix/dictation-audio-debug/ — open it to confirm the recording.")
+                }
+            }
         }
 
         cleanup(deliveryText: processed)
+    }
+
+    static func processForDelivery(_ text: String, language: String?) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        trace("process: start chars=\(trimmed.count)")
+        let deFillered = FillerWordsManager.shared.apply(to: trimmed, language: language)
+        let processed = DictationReplacementStore.shared.apply(to: deFillered)
+        trace("process: done chars=\(processed.count)")
+        return processed
     }
 
     private func fail(with message: String) {
         lastError = message
         showErrorToast(message)
         cleanup(deliveryText: "")
+    }
+
+    /// Root-mean-square amplitude of a 16 kHz mono Float32 buffer.
+    /// Used by the empty-transcript classifier to distinguish "user
+    /// tapped silently" (~0) from "audible audio that Whisper still
+    /// produced no tokens for" (>0.01-ish for normal speech). Cheap
+    /// O(n) walk; the buffers we land here are at most ~30 s of
+    /// dictation (480k samples), so even a no-SIMD loop is sub-ms.
+    private static func rms(of samples: [Float]) -> Float {
+        guard !samples.isEmpty else { return 0 }
+        var acc: Float = 0
+        for s in samples { acc += s * s }
+        return (acc / Float(samples.count)).squareRoot()
+    }
+
+    /// Absolute peak amplitude. Used together with RMS in the empty
+    /// transcript diagnostic so we can tell "audio is full-scale but
+    /// Whisper still returned nothing" (a Whisper / VAD issue) apart
+    /// from "audio is genuinely too quiet" (mic / gain issue).
+    private static func peak(of samples: [Float]) -> Float {
+        var m: Float = 0
+        for s in samples {
+            let a = abs(s)
+            if a > m { m = a }
+        }
+        return m
     }
 
     private func cleanup(deliveryText: String) {

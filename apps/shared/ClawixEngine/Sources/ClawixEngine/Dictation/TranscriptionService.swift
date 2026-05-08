@@ -20,6 +20,10 @@ public enum TranscriptionError: Error, LocalizedError, Sendable {
     case noModelAvailable
     case audioDecodeFailed
     case engineFailed(String)
+    /// On-disk WhisperKit folder is present but partial / corrupt.
+    /// We've already wiped it so the next press re-downloads cleanly;
+    /// the message points the user at Settings to start that fetch.
+    case modelIncomplete(DictationModel)
 
     public var errorDescription: String? {
         switch self {
@@ -29,6 +33,8 @@ public enum TranscriptionError: Error, LocalizedError, Sendable {
             return "Couldn't read the recorded audio"
         case .engineFailed(let detail):
             return detail
+        case .modelIncomplete(let model):
+            return "\(model.displayName) didn't finish downloading. Open Settings → Voice to Text and tap Download to retry."
         }
     }
 }
@@ -66,6 +72,9 @@ public actor TranscriptionService {
         prompt: String? = nil,
         useVAD: Bool = false
     ) async throws -> String {
+        if let fixture = try Self.e2eFixtureText(useVAD: useVAD, permissive: false) {
+            return fixture
+        }
         let kit = try await ensureLoaded(model: model)
         var options = decodeOptions(language: language, prompt: prompt)
         if useVAD {
@@ -74,7 +83,14 @@ public actor TranscriptionService {
         if let tokens = tokenize(prompt: prompt, kit: kit) {
             options.promptTokens = tokens
         }
+        Self.trace("transcribe: samples=\(samples.count) language=\(options.language ?? "auto") detect=\(options.detectLanguage) vad=\(useVAD)")
         let results = try await kit.transcribe(audioArray: samples, decodeOptions: options)
+        Self.trace("transcribe: results.count=\(results.count) firstText=\"\(results.first?.text.prefix(80) ?? "")\" segments=\(results.first?.segments.count ?? -1) detectedLang=\(results.first?.language ?? "?")")
+        if let first = results.first {
+            for (idx, seg) in first.segments.prefix(3).enumerated() {
+                Self.trace("  seg[\(idx)] text=\"\(seg.text)\" start=\(seg.start) end=\(seg.end) tokens=\(seg.tokens.prefix(20))")
+            }
+        }
         return joinedText(results)
     }
 
@@ -88,6 +104,9 @@ public actor TranscriptionService {
         prompt: String? = nil,
         useVAD: Bool = false
     ) async throws -> String {
+        if let fixture = try Self.e2eFixtureText(useVAD: useVAD, permissive: false) {
+            return fixture
+        }
         let kit = try await ensureLoaded(model: model)
         var options = decodeOptions(language: language, prompt: prompt)
         if useVAD {
@@ -124,6 +143,14 @@ public actor TranscriptionService {
         prompt: String? = nil,
         useVAD: Bool = false
     ) async throws -> SegmentedTranscript {
+        if let fixture = try Self.e2eFixtureText(useVAD: useVAD, permissive: false) {
+            return SegmentedTranscript(
+                text: fixture,
+                segments: [
+                    SegmentedTranscript.Segment(text: fixture, start: 0, end: 1)
+                ]
+            )
+        }
         let kit = try await ensureLoaded(model: model)
         var options = decodeOptions(language: language, prompt: prompt)
         if useVAD {
@@ -132,7 +159,14 @@ public actor TranscriptionService {
         if let tokens = tokenize(prompt: prompt, kit: kit) {
             options.promptTokens = tokens
         }
+        Self.trace("transcribeWithSegments: samples=\(samples.count) language=\(options.language ?? "auto") detect=\(options.detectLanguage) vad=\(useVAD)")
         let results = try await kit.transcribe(audioArray: samples, decodeOptions: options)
+        Self.trace("transcribeWithSegments: results.count=\(results.count) firstText=\"\(results.first?.text.prefix(80) ?? "")\" segments=\(results.first?.segments.count ?? -1) detectedLang=\(results.first?.language ?? "?")")
+        if let first = results.first {
+            for (idx, seg) in first.segments.prefix(3).enumerated() {
+                Self.trace("  seg[\(idx)] text=\"\(seg.text)\" start=\(seg.start) end=\(seg.end) tokens=\(seg.tokens.prefix(20))")
+            }
+        }
         let text = joinedText(results)
         // Each `TranscriptionResult` window restarts its `start` at
         // 0 within its own coordinate space, so when we flatten we
@@ -160,41 +194,107 @@ public actor TranscriptionService {
         return SegmentedTranscript(text: text, segments: flattened)
     }
 
+    /// Last local fallback for audible buffers where WhisperKit returns
+    /// only control tokens (`<|startoftranscript|> ... <|endoftext|>`).
+    /// The normal decoder keeps no-speech / low-logprob guards enabled;
+    /// this path disables those guards so real speech is not discarded
+    /// before it reaches the coordinator.
+    public func transcribePermissive(
+        samples: [Float],
+        using model: DictationModel,
+        language: String? = nil,
+        prompt: String? = nil
+    ) async throws -> String {
+        if let fixture = try Self.e2eFixtureText(useVAD: false, permissive: true) {
+            return fixture
+        }
+        let kit = try await ensureLoaded(model: model)
+        var options = decodeOptions(language: language, prompt: prompt)
+        options.detectLanguage = language == nil || language == "auto"
+        options.skipSpecialTokens = true
+        options.noSpeechThreshold = nil
+        options.logProbThreshold = nil
+        options.firstTokenLogProbThreshold = nil
+        options.temperatureFallbackCount = 0
+        if let tokens = tokenize(prompt: prompt, kit: kit) {
+            options.promptTokens = tokens
+        }
+        Self.trace("transcribePermissive: samples=\(samples.count) language=\(options.language ?? "auto") detect=\(options.detectLanguage)")
+        let results = try await kit.transcribe(audioArray: samples, decodeOptions: options)
+        Self.trace("transcribePermissive: results.count=\(results.count) firstText=\"\(results.first?.text.prefix(80) ?? "")\" segments=\(results.first?.segments.count ?? -1) detectedLang=\(results.first?.language ?? "?")")
+        return joinedText(results)
+    }
+
     // MARK: - Internal
 
     private func ensureLoaded(model: DictationModel) async throws -> WhisperKit {
         if let loaded, loaded.model == model {
             return loaded.kit
         }
-        // Different (or first) model requested: drop the old one so
-        // we don't keep two large CoreML graphs in memory.
         loaded = nil
-        // Resolve the on-disk folder explicitly. WhisperKitConfig with
-        // `model:` alone + `download: false` leaves `modelFolder` nil
-        // and `loadModels` then throws "Model folder is not set."
-        // Settings already downloaded the variant via
-        // `DictationModelManager`, so we point WhisperKit at the same
-        // path that scan resolves to.
         guard let folder = DictationModelManager.installedFolder(for: model) else {
+            Self.trace("ensureLoaded: noModelAvailable variant=\(model.whisperKitVariant)")
             throw TranscriptionError.noModelAvailable
         }
+        Self.trace("ensureLoaded: loading variant=\(model.whisperKitVariant) folder=\(folder.path)")
         do {
             // `download: false` keeps WhisperKit from auto-pulling a
             // 1.5+ GB model behind the user's back; the Settings page
-            // owns the download UX with proper progress.
+            // owns the download UX with proper progress. `verbose: true`
+            // and `logLevel: .debug` route WhisperKit's internal stage
+            // messages (model load, audio chunks, decode passes) through
+            // its `Logging` system so we can read them in the host app's
+            // stderr / Console; cheap and load-bearing for diagnosing
+            // empty-transcript cases where the audio is captured fine
+            // but the decoder produces no tokens.
             let config = WhisperKitConfig(
                 modelFolder: folder.path,
-                verbose: false,
-                logLevel: .none,
+                verbose: true,
+                logLevel: .debug,
                 prewarm: false,
                 load: true,
                 download: false
             )
             let kit = try await WhisperKit(config)
+            Self.trace("ensureLoaded: loaded ok variant=\(model.whisperKitVariant) tokenizerLoaded=\(kit.tokenizer != nil)")
             loaded = (model, kit)
             return kit
         } catch {
-            throw TranscriptionError.engineFailed(error.localizedDescription)
+            Self.trace("ensureLoaded: WhisperKit init threw: \(error)")
+            // The strict `installedFolder` check should already keep
+            // partial trees out of here, but a corrupted-yet-non-empty
+            // file (e.g. a `coremldata.bin` truncated by a power
+            // failure) can still slip through. Re-validate, and if
+            // the folder fails the check now, treat it as a broken
+            // install: wipe and surface the actionable
+            // `modelIncomplete` error so the user gets a clean retry
+            // path from Settings instead of a leaky CoreML message
+            // pointing at `file:///Users/.../coremldata.bin`.
+            if !DictationModelManager.isCompleteVariantFolder(at: folder) {
+                DictationModelManager.wipeBrokenInstall(for: model)
+                throw TranscriptionError.modelIncomplete(model)
+            }
+            throw TranscriptionError.engineFailed(
+                "Couldn't load \(model.displayName). Try restarting the app, or re-download the model from Settings → Voice to Text."
+            )
+        }
+    }
+
+    /// File-backed tracer so transcription stage transitions land in a
+    /// known location regardless of how the host app is launched.
+    /// Mirrors the format used by `HotkeyManager` / `DictationCoordinator`
+    /// (same `/tmp/clawix-hotkey.log`) so we can diff one continuous
+    /// timeline when reproducing dictation bugs.
+    public nonisolated static func trace(_ message: String) {
+        let line = "\(Date()) ts: \(message)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        let url = URL(fileURLWithPath: "/tmp/clawix-hotkey.log")
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(data)
+            try? handle.close()
+        } else {
+            try? data.write(to: url)
         }
     }
 
@@ -254,5 +354,20 @@ public actor TranscriptionService {
             return Array(tokens.prefix(220))
         }
         return tokens
+    }
+
+    private nonisolated static func e2eFixtureText(useVAD: Bool, permissive: Bool) throws -> String? {
+        let env = ProcessInfo.processInfo.environment
+        guard let text = env["CLAWIX_E2E_TRANSCRIPTION_TEXT"] else { return nil }
+        if !permissive, env["CLAWIX_E2E_TRANSCRIPTION_EMPTY_UNTIL_PERMISSIVE"] == "1" {
+            trace("e2e: forced empty standard transcription")
+            return ""
+        }
+        if useVAD, env["CLAWIX_E2E_TRANSCRIPTION_VAD_FAIL"] == "1" {
+            trace("e2e: forced vad failure")
+            throw TranscriptionError.engineFailed("E2E forced VAD failure")
+        }
+        trace("e2e: fixture transcription vad=\(useVAD) permissive=\(permissive)")
+        return text
     }
 }
