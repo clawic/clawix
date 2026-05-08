@@ -24,7 +24,26 @@ let package = Package(
         // GUI is closed. Currently a thin layer that will absorb more
         // of `AppState`'s engine-side responsibilities as the daemon
         // refactor progresses.
-        .package(path: "../shared/ClawixEngine")
+        .package(path: "../shared/ClawixEngine"),
+        // Secrets vault data model (Codable records; pure Foundation).
+        .package(path: "../shared/SecretsModels"),
+        // Secrets vault crypto primitives (Argon2id KDF + ChaCha20-Poly1305
+        // AEAD + verifier + LockableSecret + calibration).
+        .package(path: "../shared/SecretsCrypto"),
+        // Argon2id reference implementation, vendored.
+        .package(path: "../shared/ClawixArgon2"),
+        // Secrets vault persistence (GRDB schema, migrator, record conformances).
+        .package(path: "../shared/SecretsPersistence"),
+        // High-level secrets vault store (CRUD + per-item key wrapping).
+        .package(path: "../shared/SecretsVault"),
+        // Wire types + placeholder resolver + redactor shared with the helper.
+        .package(path: "../shared/SecretsProxyCore"),
+        // Global keyboard-shortcut binding library. Powers the
+        // user-customizable cancel shortcut and the Last/Retry
+        // quick-action bindings; supports any key + modifier combo
+        // via Carbon EventHotKey so the bindings fire regardless of
+        // foreground app.
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.0")
     ],
     targets: [
         .executableTarget(
@@ -33,7 +52,14 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "ClawixCore", package: "ClawixCore"),
-                .product(name: "ClawixEngine", package: "ClawixEngine")
+                .product(name: "ClawixEngine", package: "ClawixEngine"),
+                .product(name: "SecretsModels", package: "SecretsModels"),
+                .product(name: "SecretsCrypto", package: "SecretsCrypto"),
+                .product(name: "ClawixArgon2", package: "ClawixArgon2"),
+                .product(name: "SecretsPersistence", package: "SecretsPersistence"),
+                .product(name: "SecretsVault", package: "SecretsVault"),
+                .product(name: "SecretsProxyCore", package: "SecretsProxyCore"),
+                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts")
             ],
             path: "Sources/Clawix",
             resources: [
