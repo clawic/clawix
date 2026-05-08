@@ -1,5 +1,4 @@
 import SwiftUI
-import LucideIcon
 
 /// Settings page for the local LLM runtime. Single sidebar entry, with
 /// the visible flow on top (install → daemon toggle → models) and a
@@ -143,7 +142,7 @@ struct LocalModelsPage: View {
             }
         case .installed(let v):
             HStack {
-                Image(lucide: .circle_check)
+                LucideIcon(.circleCheck, size: 11)
                     .foregroundColor(Color(red: 0.40, green: 0.78, blue: 0.55))
                 Text("Runtime ready · \(v)")
                     .font(BodyFont.system(size: 12.5, wght: 500))
