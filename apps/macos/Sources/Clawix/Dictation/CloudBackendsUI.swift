@@ -161,8 +161,7 @@ struct CloudBackendsSheet: View {
             Button {
                 hidden.wrappedValue.toggle()
             } label: {
-                Image(systemName: hidden.wrappedValue ? "eye.slash" : "eye")
-                    .font(.system(size: 11, weight: .medium))
+                LucideIcon.auto(hidden.wrappedValue ? "eye.slash" : "eye", size: 11)
                     .foregroundColor(Palette.textPrimary)
                     .frame(width: 26, height: 26)
                     .background(Circle().fill(Color(white: 0.14)))

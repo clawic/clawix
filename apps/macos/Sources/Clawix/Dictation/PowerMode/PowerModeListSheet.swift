@@ -33,8 +33,7 @@ struct PowerModeListSheet: View {
                 selection = id
             } label: {
                 HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .semibold))
+                    LucideIcon(.plus, size: 11)
                     Text("New")
                         .font(BodyFont.system(size: 12, wght: 600))
                 }
@@ -138,8 +137,7 @@ private struct PowerModeListRow: View {
                 }
                 Spacer()
                 if !config.enabled {
-                    Image(systemName: "moon.zzz")
-                        .font(.system(size: 11, weight: .medium))
+                    LucideIcon(.moon, size: 11)
                         .foregroundColor(Palette.textSecondary)
                 }
             }

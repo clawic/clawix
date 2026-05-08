@@ -238,7 +238,7 @@ private struct OnboardingModelGrid: View {
                                 .foregroundColor(Palette.textPrimary)
                             if manager.activeModel == model {
                                 Spacer()
-                                Image(systemName: "checkmark.circle.fill")
+                                LucideIcon(.circleCheck)
                                     .foregroundColor(Color(red: 0.16, green: 0.46, blue: 0.98))
                             }
                         }

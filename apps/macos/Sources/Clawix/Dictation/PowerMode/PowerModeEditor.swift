@@ -41,8 +41,7 @@ struct PowerModeEditor: View {
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Image(systemName: "trash")
-                    .font(.system(size: 12, weight: .medium))
+                LucideIcon(.trash2, size: 12)
                     .foregroundColor(Color(red: 0.94, green: 0.45, blue: 0.45))
                     .frame(width: 32, height: 32)
                     .background(Circle().fill(Color(white: 0.14)))

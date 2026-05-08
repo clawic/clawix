@@ -1038,8 +1038,7 @@ private struct DictionaryAddRow: View {
                     text: $original,
                     onSubmit: submit
                 )
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .medium))
+                LucideIcon(.arrowRight, size: 11)
                     .foregroundColor(Palette.textSecondary)
                 DictionaryFieldStyle(
                     placeholder: "Replacement",
@@ -1047,8 +1046,7 @@ private struct DictionaryAddRow: View {
                     onSubmit: submit
                 )
                 Button(action: submit) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
+                    LucideIcon(.plus, size: 12)
                         .foregroundColor(canSubmit ? Palette.textPrimary : Palette.textSecondary)
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(addButtonFill))
@@ -1135,8 +1133,7 @@ private struct DictionaryRow: View {
                     .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 6) {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 10, weight: .medium))
+                    LucideIcon(.arrowRight, size: 10)
                         .foregroundColor(Palette.textSecondary)
                     Text(entry.replacement)
                         .font(BodyFont.system(size: 12, wght: 500))
@@ -1167,8 +1164,7 @@ private struct DictionaryIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 11, weight: .medium))
+            LucideIcon.auto(systemName, size: 11)
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: 24, height: 24)
                 .background(
@@ -1448,8 +1444,7 @@ private struct DSPAdvancedSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: toggle) {
                 HStack(spacing: 8) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
+                    LucideIcon(.chevronRight, size: 10)
                         .foregroundColor(Palette.textSecondary)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                     Text("Advanced")
@@ -1580,8 +1575,7 @@ private struct CustomSoundIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 11, weight: .medium))
+            LucideIcon.auto(systemName, size: 11)
                 .foregroundColor(isEnabled ? Palette.textPrimary : Palette.textSecondary)
                 .frame(width: 24, height: 24)
                 .background(
@@ -1671,8 +1665,7 @@ private struct VocabularySheet: View {
                     )
                     .onSubmit(submit)
                 Button(action: submit) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
+                    LucideIcon(.plus, size: 12)
                         .foregroundColor(canSubmit ? Palette.textPrimary : Palette.textSecondary)
                         .frame(width: 26, height: 26)
                         .background(Circle().fill(Color(white: 0.18)))
@@ -1702,8 +1695,7 @@ private struct VocabularySheet: View {
                             Button {
                                 vocabulary.remove(at: idx)
                             } label: {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 11, weight: .medium))
+                                LucideIcon(.trash2, size: 11)
                                     .foregroundColor(Palette.textPrimary)
                                     .frame(width: 24, height: 24)
                                     .background(Circle().fill(Color(white: 0.14)))

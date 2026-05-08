@@ -315,8 +315,7 @@ private struct BackupExportSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Palette.textSecondary)
                         .padding(6)
                         .background(Circle().fill(Color.white.opacity(0.06)))
@@ -391,8 +390,7 @@ private struct BackupImportSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Palette.textSecondary)
                         .padding(6)
                         .background(Circle().fill(Color.white.opacity(0.06)))

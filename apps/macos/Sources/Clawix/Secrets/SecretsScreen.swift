@@ -88,8 +88,7 @@ private struct SecretsOpenFailedView: View {
 private struct IntegrityFailedBanner: View {
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.shield.fill")
-                .font(.system(size: 12))
+            LucideIcon(.shieldAlert, size: 12)
                 .foregroundColor(.white)
             Text("Audit chain broken")
                 .font(BodyFont.system(size: 12, wght: 700))
