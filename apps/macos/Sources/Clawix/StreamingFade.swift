@@ -98,6 +98,7 @@ enum StreamingFade {
         flush: Bool = false,
         now: Date = Date()
     ) -> ScheduleResult {
+        PerfSignpost.renderStreaming.event("ingest", delta.count)
         let combined = pendingTail + delta
         var checkpoints: [StreamCheckpoint] = []
         var i = combined.startIndex
