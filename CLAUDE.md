@@ -297,6 +297,42 @@ Constants and helpers already available (in `ContentView.swift`):
 
 Before adding a new dropdown, look at `ModelMenuPopup` and replicate its structure. If the behavior differs (side submenu, sectioned with header, divider), copy the building blocks `ModelMenuHeader`, `ModelMenuDivider`, `ModelMenuCheckRow`, `ModelMenuChevronRow`, `ModelMenuDescriptionRow` or build a new one with the same paddings and `MenuRowHover`.
 
+## Scrollbars: always `ThinScroller` (project canon)
+
+App-wide standard for any scroll surface. The sidebar's scrollbar is the **visual reference**: a thin, low-opacity capsule that paints over the content, never the system's default fat gray bar with a track background. Anything new and anything retroactive must match it.
+
+The canonical implementation lives in `apps/macos/Sources/Clawix/ThinScrollbar.swift` and exposes two entry points; pick the one that matches the underlying scroll container, never roll a new scroller class.
+
+Spec (numbers come from `ThinScroller`; do not invent values when reusing the look elsewhere):
+
+- Scroller column width: `14 pt`.
+- Thumb (knob): `9 pt` wide, inset `3 pt` from the scroller's right edge, with `8 pt` of vertical padding at top and bottom of the track. Minimum thumb height `40 pt`.
+- Color: pure white (`NSColor(white: 1.0, alpha: …)`).
+- Alpha: `0.10` idle, `0.18` while the cursor is over the scroller. No other states.
+- Shape: capsule (`xRadius = yRadius = min(thumb.width, thumb.height) / 2`), rendered with `NSBezierPath(roundedRect:xRadius:yRadius:)`. The corner-radius lint exempts this site explicitly because at this radius the capsule is visually identical to a squircle (see the AppKit edge case noted under "Corner radius").
+- Track background: none. `drawKnobSlot` is overridden to a no-op.
+- Auto-hide on overflow: when content fits the viewport (`knobProportion >= 0.999`) `drawKnob` short-circuits, so an unscrollable list shows nothing. As soon as content overflows, the thumb is visible.
+- No system fade-out: `alphaValue` is pinned to `1.0` while there's something to scroll. The thumb does not fade away after a few seconds of idle, the way the macOS overlay scroller does. The user always sees their position.
+
+Two APIs, pick the right one:
+
+- **`ThinScrollView { … }`** — full `NSViewRepresentable` wrapping a real `NSScrollView` with a `ThinScroller`. Used by surfaces that need a real AppKit scroll view (sidebar, slash-command menu, composer file viewer): the legacy scroller style + `autohidesScrollers = false` + a small `trailingGutter` keep the knob from being clipped by the SwiftUI hosting layer. Reach for this when (a) you already need the AppKit scroll view for other reasons (`EnclosingScrollViewLocator`, edge auto-scroll, manual contentInsets), or (b) the scroll surface is a popover/menu where the system overlay would behave wrong.
+- **`.thinScrollers()`** — view modifier that walks up to the SwiftUI `ScrollView`'s underlying `NSScrollView` and swaps in a `ThinScroller` (overlay style, `autohidesScrollers = true`). Use this for any plain SwiftUI `ScrollView { … }`. It's the default for everything new.
+
+Hard rules:
+
+- **Every scroll surface uses `ThinScroller`.** A bare SwiftUI `ScrollView { … }` without `.thinScrollers()` is a bug. A bare `NSScrollView` without a `ThinScroller` as its `verticalScroller` is a bug. The only exceptions are `NSTextView` / scrolling text containers where AppKit owns the scroller for IME / cursor reasons; route those through `ThinScrollerInstaller` if practical.
+- **Do not reintroduce the system scroller** (`scrollView.verticalScroller = NSScroller()`, `Picker` with default chrome, `List` defaults). The system overlay scroller fades out, has a visible track on hover, and uses platform-default sizes that don't match this app.
+- **Do not change the alpha or thickness numbers per surface.** If a particular view feels too dim or too thin, fix it at the source in `ThinScroller` (and audit every screen) rather than forking the values for one place.
+- **Do not show a SwiftUI scrollbar via `showsIndicators: true` and call it a day.** That ships the system scroller. Use `.thinScrollers()` regardless of the `showsIndicators` argument; the modifier replaces whatever scroller the SwiftUI ScrollView produced.
+- **Horizontal scrollers** follow the same rule when present, but in practice most horizontal scroll surfaces in the app run with `showsIndicators: false` and rely on overflow gradients / chevrons. If a horizontal scroller ever needs a visible bar, extend `ThinScroller` rather than introducing a parallel custom class.
+
+When migrating existing scroll views:
+
+- A SwiftUI `ScrollView { … }`: append `.thinScrollers()` outside the closure (after any `.frame`, `.background`, etc., so the installer attaches once the hosting view is mounted).
+- A nested SwiftUI `ScrollView` already inside a `ThinScrollView`: leave it alone, the outer scroller is what the user sees.
+- A surface that wants `ScrollViewReader` / programmatic scroll: stick with SwiftUI `ScrollView` + `.thinScrollers()`. Do not migrate to `ThinScrollView` just for the look — the modifier already gives you the same look without losing `ScrollViewReader`.
+
 # iOS app · `apps/ios/`
 
 ## Design language: iOS 26 Liquid Glass
