@@ -49,7 +49,7 @@ struct LucideIcon: View {
         case refreshCw
         case maximize2
         case minimize2
-        case trash2
+        case trash
         case search
         case folder
         case archive
@@ -97,6 +97,14 @@ struct LucideIcon: View {
         case eye
         case eyeOff
         case glasses
+        case lock
+        case terminal
+        case database
+        case braces
+        case idCard
+        case badgeCheck
+        case webhook
+        case fileText
 
         var codepoint: String {
             switch self {
@@ -123,7 +131,7 @@ struct LucideIcon: View {
             case .refreshCw: return "\u{e145}"
             case .maximize2: return "\u{e113}"
             case .minimize2: return "\u{e11b}"
-            case .trash2: return "\u{e18e}"
+            case .trash: return "\u{e18d}"
             case .search: return "\u{e151}"
             case .folder: return "\u{e0d7}"
             case .archive: return "\u{e041}"
@@ -171,6 +179,14 @@ struct LucideIcon: View {
             case .eye: return "\u{e0ba}"
             case .eyeOff: return "\u{e0bb}"
             case .glasses: return "\u{e20d}"
+            case .lock: return "\u{e10b}"
+            case .terminal: return "\u{e181}"
+            case .database: return "\u{e0ad}"
+            case .braces: return "\u{e36a}"
+            case .idCard: return "\u{e617}"
+            case .badgeCheck: return "\u{e241}"
+            case .webhook: return "\u{e374}"
+            case .fileText: return "\u{e0cc}"
             }
         }
     }
@@ -179,7 +195,6 @@ struct LucideIcon: View {
     var size: CGFloat
 
     init(_ kind: Kind, size: CGFloat = 16) {
-        Self.registerOnce
         self.kind = kind
         self.size = size
     }
@@ -193,18 +208,10 @@ struct LucideIcon: View {
             .frame(width: size, height: size)
     }
 
-    /// One-shot CTFontManager registration. macOS bundles `lucide.ttf`
-    /// next to Manrope under `Resources/Fonts/`; iOS lists it in
-    /// `UIAppFonts` so the system loads it before the first view
-    /// resolves. We register from code as a safety net so non-bundle
-    /// hosts (Xcode previews, command-line previews) also see the font.
-    static let registerOnce: Void = {
-        guard let url = Bundle.module.url(forResource: "lucide", withExtension: "ttf") else {
-            return
-        }
-        var error: Unmanaged<CFError>?
-        CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
-    }()
+    // Font registration: iOS loads `lucide.ttf` at process start via
+    // `UIAppFonts` in Info.plist; macOS loads it via `BodyFont.register()`
+    // which iterates every `.ttf` in `Bundle.module` (including
+    // `Resources/Fonts/lucide.ttf`). No per-view registration needed.
 
     /// Maps a legacy SF Symbol name to a Lucide kind. Used by the
     /// `auto(_:)` helper at sites where the icon name is computed at
@@ -237,7 +244,7 @@ struct LucideIcon: View {
         case "arrow.up.left.and.arrow.down.right": return .maximize2
         case "arrow.down.right.and.arrow.up.left": return .minimize2
 
-        case "trash":            return .trash2
+        case "trash":            return .trash
         case "magnifyingglass":  return .search
         case "folder", "folder.fill": return .folder
         case "archivebox":       return .archive

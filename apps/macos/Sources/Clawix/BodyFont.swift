@@ -62,7 +62,7 @@ enum BodyFont {
     // returns `alreadyRegistered` on subsequent calls and we ignore it.
     private static let registerOnce: Void = {
         let urls = Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
-        for url in urls where url.lastPathComponent.lowercased().hasPrefix("manrope") {
+        for url in urls {
             var error: Unmanaged<CFError>?
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
         }

@@ -1,16 +1,24 @@
 import SwiftUI
 
-/// Custom MCP icon: four corner rings linked by a single diagonal from
-/// the top-right ring to the bottom-left ring. Drawn with `Path` in a
-/// 28-point grid so it tints with `.foregroundColor` and stays balanced
-/// against the other custom glyphs in the work summary (terminal, globe).
+/// Custom MCP icon: three interlocking hooks rendered with squircle
+/// curves on a 24-pt grid, after the official Model Context Protocol
+/// chain-link logo (https://commons.wikimedia.org/wiki/File:Model_Context_Protocol_logo.svg).
+/// Each hook is drawn as two parallel diagonal stems joined by a single
+/// cubic-bezier 180° loop. The S-chain of paths 1+2 share an inner
+/// anchor (path 1 end ≈ path 2 start) so their three free ends fall on
+/// the NW-SE diagonal; path 3 weaves through both loops with its own
+/// apex flipped down-left. Tints with `.foregroundColor` and stays
+/// crisp at 11–16 pt point sizes.
 struct McpIcon: View {
     var size: CGFloat = 14
+    var lineWidth: CGFloat? = nil
 
     var body: some View {
+        let s = size / 24
+        let lw = lineWidth ?? 1.4 * s
         McpIconShape()
             .stroke(style: StrokeStyle(
-                lineWidth: 2.0 * (size / 28),
+                lineWidth: lw,
                 lineCap: .round,
                 lineJoin: .round
             ))
@@ -21,30 +29,43 @@ struct McpIcon: View {
 
 private struct McpIconShape: Shape {
     func path(in rect: CGRect) -> Path {
-        let s = min(rect.width, rect.height) / 28
-        let dx = (rect.width  - 28 * s) / 2
-        let dy = (rect.height - 28 * s) / 2
-        let cx = dx + 14 * s
-        let cy = dy + 14 * s
-
-        // Geometry locked to the most-compact variant agreed with the
-        // user (round 6 attempt 5): rings tightly packed with a hairline
-        // gap, single diagonal connecting the top-right and bottom-left
-        // rings via their inner-tangent point.
-        let d: CGFloat = 7.5 * s
-        let r: CGFloat = 4.5 * s
-        let off: CGFloat = r * 0.7071067811865476
+        let s = min(rect.width, rect.height) / 24
+        let dx = (rect.width - 24 * s) / 2
+        let dy = (rect.height - 24 * s) / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: dx + x * s, y: dy + y * s)
+        }
 
         var path = Path()
 
-        let centers: [(CGFloat, CGFloat)] = [(-d, -d), (d, -d), (-d, d), (d, d)]
-        for (cdx, cdy) in centers {
-            let rx = cx + cdx, ry = cy + cdy
-            path.addEllipse(in: CGRect(x: rx - r, y: ry - r, width: 2 * r, height: 2 * r))
-        }
+        // Hook 1 (upper, apex up-right). Translated NE from the symmetric
+        // baseline so the S-chain with hook 2 stays balanced.
+        path.move(to: p(3.09, 7.29))
+        path.addLine(to: p(5.92, 4.46))
+        path.addCurve(to: p(12.70, 11.24),
+                      control1: p(9.31, 1.07),
+                      control2: p(16.09, 7.85))
+        path.addLine(to: p(9.87, 14.07))
 
-        path.move(to: CGPoint(x: cx + d - off, y: cy - d + off))
-        path.addLine(to: CGPoint(x: cx - d + off, y: cy + d - off))
+        // Hook 2 (lower-right, apex up-right). Translated NE the same
+        // amount as hook 1 so its start meets hook 1 end at the chain
+        // anchor (~9.92, 14.03) along the NW-SE diagonal.
+        path.move(to: p(9.98, 13.99))
+        path.addLine(to: p(12.81, 11.16))
+        path.addCurve(to: p(19.59, 17.94),
+                      control1: p(16.20, 7.77),
+                      control2: p(22.98, 14.55))
+        path.addLine(to: p(16.76, 20.77))
+
+        // Hook 3 (lower-left, apex down-left). Translated SW so it
+        // visually weaves through the loops of hooks 1 and 2 with a
+        // chain gap of ~3 units in either chain anchor.
+        path.move(to: p(7.25, 9.92))
+        path.addLine(to: p(4.42, 12.75))
+        path.addCurve(to: p(11.20, 19.53),
+                      control1: p(1.03, 16.14),
+                      control2: p(7.81, 22.92))
+        path.addLine(to: p(14.03, 16.70))
 
         return path
     }
