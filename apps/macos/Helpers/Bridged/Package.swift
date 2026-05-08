@@ -22,14 +22,21 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../../shared/ClawixCore"),
-        .package(path: "../../../shared/ClawixEngine")
+        .package(path: "../../../shared/ClawixEngine"),
+        // Re-pinned here even though `ClawixEngine` already pulls it in
+        // transitively: `import WhisperKit` from the executable's own
+        // sources requires the symbol in the package graph at this
+        // level so SwiftPM exposes the public products. Used by the
+        // `--download-model <variant>` maintenance flag.
+        .package(url: "https://github.com/argmaxinc/WhisperKit", from: "0.9.0")
     ],
     targets: [
         .executableTarget(
             name: "clawix-bridged",
             dependencies: [
                 .product(name: "ClawixCore", package: "ClawixCore"),
-                .product(name: "ClawixEngine", package: "ClawixEngine")
+                .product(name: "ClawixEngine", package: "ClawixEngine"),
+                .product(name: "WhisperKit", package: "WhisperKit")
             ],
             path: "Sources/clawix-bridged"
         )
