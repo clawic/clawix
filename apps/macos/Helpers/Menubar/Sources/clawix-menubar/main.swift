@@ -220,10 +220,15 @@ final class MenubarApp: NSObject, NSApplicationDelegate {
 
     @objc private func openLogs() {
         let url = URL(fileURLWithPath: "/tmp/clawix-bridged.err")
-        if FileManager.default.fileExists(atPath: url.path) {
-            NSWorkspace.shared.open(url)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: "/tmp")])
+            return
+        }
+        if let consoleURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Console") {
+            let config = NSWorkspace.OpenConfiguration()
+            NSWorkspace.shared.open([url], withApplicationAt: consoleURL, configuration: config)
         } else {
-            NSWorkspace.shared.open(URL(fileURLWithPath: "/tmp"))
+            NSWorkspace.shared.activateFileViewerSelecting([url])
         }
     }
 
