@@ -191,6 +191,19 @@ public final class DictationModelManager: ObservableObject {
             found.insert(model)
         }
         installedModels = found
+        // If the persisted active model isn't on disk but another one
+        // is, adopt that one. Without this fallback the user gets a
+        // silent "No transcription model is downloaded yet" error
+        // every time they trigger dictation: e.g. when a previous
+        // build saved a different default, when the chosen variant
+        // was deleted out from under us, or when defaults got reset.
+        // Picking deterministically keeps two simultaneous instances
+        // (GUI + daemon) on the same model.
+        if !found.isEmpty, !found.contains(activeModel),
+           let fallback = found.sorted(by: { $0.rawValue < $1.rawValue }).first {
+            activeModel = fallback
+            defaults.set(fallback.rawValue, forKey: Self.activeModelDefaultsKey)
+        }
     }
 
     // MARK: - Helpers
