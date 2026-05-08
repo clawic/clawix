@@ -1,6 +1,6 @@
 import SwiftUI
 import AppKit
-import LucideIcon
+import ClawixCore
 
 // [QUICKASK<->CHAT PARITY]
 //
@@ -109,25 +109,26 @@ func annotate(_ line: AssistantMarkdown.Line, with resolver: inout AtomOffsetRes
 
 // MARK: - Parse cache
 
-/// Per-message identity cache for `parseBlocks` + `annotateBlocks`.
-/// Every delta to ANY message publishes `AppState.chats`, which
-/// invalidates every `AssistantMarkdownText` body in the chat. Without
-/// this cache, every old message in the transcript would re-parse its
-/// markdown on every token arrival; with the cache the body short-
-/// circuits when `text` is byte-equal to the last parsed value.
+/// Process-wide cache for `parseBlocks` + `annotateBlocks`. Lives as a
+/// `static let` over the shared `MarkdownBlockCache` so closing and
+/// reopening a chat keeps the parses warm — a per-instance / per-view
+/// cache used to die on unmount and force a full reparse of every
+/// message on the next chat open. Every delta to ANY message still
+/// publishes `AppState.chats`, which invalidates every
+/// `AssistantMarkdownText` body in the chat; the byte-equal source key
+/// means the body short-circuits when `text` is identical to a recent
+/// parse, including across mount/unmount cycles.
 ///
-/// For the message that's currently streaming the cache also caches the
-/// full-text branch: an upstream `objectWillChange` (e.g. an unrelated
-/// `@Published` setter) can invalidate body without `text` actually
-/// growing, and we want those re-runs to skip the parse too. When `text`
-/// truly grew between calls we fall through to a full reparse, small
-/// (a typical assistant turn is a few KB), but the dominant cost in the
-/// streaming pipeline is downstream rendering, not this parse.
-final class MarkdownParseCache: ObservableObject {
-    private var cachedText: String?
-    private var cachedBlocks: [AnnotatedBlock] = []
-    private var cachedParseMs: Double = 0
-    private var cachedAnnotateMs: Double = 0
+/// For the message that's currently streaming the cache also covers
+/// the full-text branch: an upstream `objectWillChange` (e.g. an
+/// unrelated `@Published` setter) can invalidate body without `text`
+/// actually growing, and we want those re-runs to skip the parse too.
+/// When `text` truly grew between calls we fall through to a full
+/// reparse, small (a typical assistant turn is a few KB), but the
+/// dominant cost in the streaming pipeline is downstream rendering,
+/// not this parse.
+enum MarkdownParseCache {
+    fileprivate static let cache = MarkdownBlockCache<[AnnotatedBlock]>(countLimit: 128)
 
     struct Result {
         let blocks: [AnnotatedBlock]
@@ -136,22 +137,30 @@ final class MarkdownParseCache: ObservableObject {
         let annotateMs: Double
     }
 
-    func parse(_ text: String) -> Result {
-        if let last = cachedText, last == text {
-            return Result(blocks: cachedBlocks, cacheHit: true,
-                          parseMs: cachedParseMs, annotateMs: cachedAnnotateMs)
+    /// Pre-warm hook for callers that want to pay the parse cost off
+    /// the main thread (e.g. when hydrating a chat from the on-disk
+    /// snapshot before its `ChatView` mounts). Safe to call from any
+    /// thread; the underlying NSCache is thread-safe.
+    static func prewarm(_ text: String) {
+        _ = parse(text)
+    }
+
+    static func parse(_ text: String) -> Result {
+        if let cached = cache.get(for: text) {
+            return Result(blocks: cached, cacheHit: true,
+                          parseMs: 0, annotateMs: 0)
         }
-        let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let parsed = AssistantMarkdown.parseBlocks(text)
-        let parseT1 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        let annotated = annotateBlocks(parsed, source: text)
-        let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
-        cachedText = text
-        cachedBlocks = annotated
-        cachedParseMs = (parseT1 - parseT0) * 1000
-        cachedAnnotateMs = (parseT2 - parseT1) * 1000
-        return Result(blocks: annotated, cacheHit: false,
-                      parseMs: cachedParseMs, annotateMs: cachedAnnotateMs)
+        return PerfSignpost.renderMarkdown.interval("parse") {
+            let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+            let parsed = AssistantMarkdown.parseBlocks(text)
+            let parseT1 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+            let annotated = annotateBlocks(parsed, source: text)
+            let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
+            cache.set(annotated, for: text)
+            return Result(blocks: annotated, cacheHit: false,
+                          parseMs: (parseT1 - parseT0) * 1000,
+                          annotateMs: (parseT2 - parseT1) * 1000)
+        }
     }
 }
 
@@ -183,14 +192,13 @@ struct AssistantMarkdownText: View {
     /// cached views.
     var findQuery: String = ""
     @EnvironmentObject var appState: AppState
-    @StateObject private var parseCache = MarkdownParseCache()
     /// Bumped when the trailing fade window closes, so the body
     /// re-evaluates and tears down the `TimelineView` once nothing is
     /// animating any more.
     @State private var animationTick: Int = 0
 
     var body: some View {
-        let parsed = parseCache.parse(text)
+        let parsed = MarkdownParseCache.parse(text)
         let blocks = parsed.blocks
         let _ = streamingPerfLogEnabled && !parsed.cacheHit
             && (!checkpoints.isEmpty || !streamingFinished)
@@ -460,8 +468,7 @@ struct AssistantCodeBlockView: View {
                 Button(action: copyCode) {
                     Group {
                         if copied {
-                            Image(lucide: .check)
-                                .font(BodyFont.system(size: 11, wght: 700))
+                            LucideIcon(.check, size: 11)
                                 .foregroundColor(Color(white: hoverCopy ? 0.94 : 0.78))
                         } else {
                             CopyIconViewSquircle(

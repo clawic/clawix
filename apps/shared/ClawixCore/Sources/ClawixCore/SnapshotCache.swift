@@ -1,25 +1,32 @@
 import Foundation
-import ClawixCore
 
-/// On-disk cache of the last `BridgeStore` snapshot the app saw,
-/// living in `Application Support/clawix/snapshot.json`. The point is
-/// cold-start "feel": when the app launches we can populate the chat
-/// list and the most-recent transcripts before the WebSocket race
-/// even completes. The bridge always wins eventually (its snapshot
-/// frames replace the cache in memory), but the user no longer stares
-/// at an empty screen for the seconds it takes to reach the Mac over
-/// Tailscale or to wake it from sleep.
+/// On-disk cache of the last `BridgeStore` / `AppState` snapshot the app
+/// saw, living in `Application Support/clawix/snapshot.json`. The point
+/// is cold-start "feel": when the app launches we can populate the chat
+/// list and the most-recent transcripts before the WebSocket race even
+/// completes. The bridge always wins eventually (its snapshot frames
+/// replace the cache in memory), but the user no longer stares at an
+/// empty screen for the seconds it takes to reach the Mac over Tailscale
+/// or to wake it from sleep.
 ///
-/// The cache is intentionally small (last 30 chats, last 80 messages
-/// each). Users with thousands of chats/messages still get an instant
-/// home; rarely-touched chats fall back to the live snapshot path.
-enum SnapshotCache {
+/// Lives in `ClawixCore` so iOS and the macOS desktop client share the
+/// same on-disk format; both targets read the same `WireChat` /
+/// `WireMessage` shapes via `BridgeCoder`. The cache is intentionally
+/// small (last 30 chats, last 80 messages each). Users with thousands
+/// of chats/messages still get an instant home; rarely-touched chats
+/// fall back to the live snapshot path.
+public enum SnapshotCache {
     /// `Codable` envelope for the persisted state. Lives in this file
-    /// instead of leaking into `BridgeStore` because nothing outside
-    /// of this cache should be reading from / writing to it.
-    struct Payload: Codable {
-        let chats: [WireChat]
-        let messagesByChat: [String: [WireMessage]]
+    /// instead of leaking into the consumers because nothing outside of
+    /// this cache should be reading from / writing to it.
+    public struct Payload: Codable {
+        public let chats: [WireChat]
+        public let messagesByChat: [String: [WireMessage]]
+
+        public init(chats: [WireChat], messagesByChat: [String: [WireMessage]]) {
+            self.chats = chats
+            self.messagesByChat = messagesByChat
+        }
     }
 
     /// Cap defensive: keep the last `maxChats` chats by recency, and
@@ -54,7 +61,7 @@ enum SnapshotCache {
     /// Load the persisted snapshot if any. Silent on every failure path
     /// (corrupt JSON, missing file, schema mismatch): the bridge will
     /// re-deliver the truth shortly anyway.
-    static func load() -> Payload? {
+    public static func load() -> Payload? {
         guard let url = fileURL,
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
@@ -66,7 +73,7 @@ enum SnapshotCache {
     /// Persist a clipped snapshot. Safe to call from a background
     /// queue; writes through a temp file so a mid-write process kill
     /// does not leave a partial JSON in place.
-    static func save(chats: [WireChat], messages: [String: [WireMessage]]) {
+    public static func save(chats: [WireChat], messages: [String: [WireMessage]]) {
         guard let url = fileURL else { return }
         let topChats = chats
             .filter { !$0.isArchived }
@@ -96,7 +103,7 @@ enum SnapshotCache {
     /// Wipe the cache. Called on unpair so a future user of the same
     /// device does not see the previous user's chats during the
     /// pairing → connect window.
-    static func clear() {
+    public static func clear() {
         guard let url = fileURL else { return }
         try? FileManager.default.removeItem(at: url)
     }
