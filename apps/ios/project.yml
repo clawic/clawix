@@ -61,6 +61,7 @@ targets:
           - PlusJakartaSans-SemiBold.ttf
           - PlusJakartaSans-Bold.ttf
           - Manrope.ttf
+          - lucide.ttf
     settings:
       base:
         ENABLE_PREVIEWS: YES
