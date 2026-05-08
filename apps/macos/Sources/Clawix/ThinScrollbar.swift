@@ -55,7 +55,9 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
         // brings the scroller into the layer tree so the explicit z
         // order (scroller above clip view) is honoured.
         scroller.wantsLayer = true
-        scrollView.verticalScroller = scroller
+        if axes.contains(.vertical) {
+            scrollView.verticalScroller = scroller
+        }
 
         let hosting = NSHostingView(rootView: content)
         hosting.translatesAutoresizingMaskIntoConstraints = false
@@ -70,7 +72,18 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
         // zPosition above the clip view guarantees the knob always
         // paints on top, regardless of how AppKit orders the children.
         scroller.layer?.zPosition = 1
-        scrollView.addSubview(scroller, positioned: .above, relativeTo: clipView)
+        if axes.contains(.vertical) {
+            scrollView.addSubview(scroller, positioned: .above, relativeTo: clipView)
+        }
+        if axes.contains(.horizontal) {
+            let horizontal = ThinScroller()
+            horizontal.scrollerStyle = .legacy
+            horizontal.controlSize = .regular
+            horizontal.wantsLayer = true
+            scrollView.horizontalScroller = horizontal
+            horizontal.layer?.zPosition = 1
+            scrollView.addSubview(horizontal, positioned: .above, relativeTo: clipView)
+        }
         NSLayoutConstraint.activate([
             hosting.leadingAnchor.constraint(equalTo: clipView.leadingAnchor),
             hosting.trailingAnchor.constraint(equalTo: clipView.trailingAnchor,
@@ -109,6 +122,14 @@ final class ThinScroller: NSScroller {
     private var mouseInside: Bool = false
     private var trackingArea: NSTrackingArea?
 
+    private var isHorizontal: Bool {
+        // The scroller's bounds are laid out by NSScrollView along its
+        // dominant axis, so a wider-than-tall frame implies a horizontal
+        // scroller (bottom edge of the scroll view). Vertical scrollers
+        // sit on the right edge with bounds taller than wide.
+        return bounds.width > bounds.height
+    }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         installLayer()
@@ -135,12 +156,22 @@ final class ThinScroller: NSScroller {
     private func trackRect() -> NSRect {
         let b = self.bounds
         let pad = ThinScroller.verticalPad
-        let w = ThinScroller.thumbWidth
+        let thickness = ThinScroller.thumbWidth
         let inset = ThinScroller.thumbInsetFromRight
+        if isHorizontal {
+            // Bottom-anchored thin capsule, mirrors the right-anchored
+            // vertical layout: same numbers swapped along axes.
+            return NSRect(
+                x: b.minX + pad,
+                y: b.maxY - thickness - inset,
+                width: max(0, b.width - pad * 2),
+                height: thickness
+            )
+        }
         return NSRect(
-            x: b.maxX - w - inset,
+            x: b.maxX - thickness - inset,
             y: b.minY + pad,
-            width: w,
+            width: thickness,
             height: max(0, b.height - pad * 2)
         )
     }
@@ -153,9 +184,15 @@ final class ThinScroller: NSScroller {
         guard part == .knob else { return super.rect(for: part) }
         let track = trackRect()
         let knobProp = max(0.05, min(1.0, CGFloat(self.knobProportion)))
+        let progress = CGFloat(self.doubleValue)
+        if isHorizontal {
+            let thumbWidth = max(40, track.width * knobProp)
+            let maxThumbX = max(0, track.width - thumbWidth)
+            let thumbX = track.minX + maxThumbX * progress
+            return NSRect(x: thumbX, y: track.minY, width: thumbWidth, height: track.height)
+        }
         let thumbHeight = max(40, track.height * knobProp)
         let maxThumbY = max(0, track.height - thumbHeight)
-        let progress = CGFloat(self.doubleValue)
         let thumbY = track.minY + maxThumbY * progress
         return NSRect(x: track.minX, y: thumbY, width: track.width, height: thumbHeight)
     }
@@ -249,8 +286,14 @@ final class ThinScroller: NSScroller {
 // verticalScroller. We re-apply on every `viewDidMoveToWindow` and on
 // the next runloop after layout in case AppKit re-tiles.
 struct ThinScrollerInstaller: NSViewRepresentable {
+    private let style: NSScroller.Style
+
+    init(style: NSScroller.Style = .overlay) {
+        self.style = style
+    }
+
     func makeNSView(context: Context) -> ThinScrollerInstallerView {
-        ThinScrollerInstallerView()
+        ThinScrollerInstallerView(style: style)
     }
 
     func updateNSView(_ nsView: ThinScrollerInstallerView, context: Context) {
@@ -260,6 +303,16 @@ struct ThinScrollerInstaller: NSViewRepresentable {
 
 final class ThinScrollerInstallerView: NSView {
     private weak var installedScrollView: NSScrollView?
+    private let style: NSScroller.Style
+
+    init(style: NSScroller.Style) {
+        self.style = style
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -269,7 +322,14 @@ final class ThinScrollerInstallerView: NSView {
     }
 
     func installIfNeeded() {
-        guard installedScrollView == nil || installedScrollView?.verticalScroller is ThinScroller == false else {
+        // Re-install when either the vertical or the horizontal scroller
+        // is still the system one. AppKit can re-tile a scroll view (e.g.
+        // when its axis flips after a `showsIndicators` update or when a
+        // SwiftUI parent rebuilds the host view) and replace our scroller
+        // with a fresh `NSScroller`; the second condition catches that.
+        if let already = installedScrollView,
+           already.verticalScroller is ThinScroller,
+           (!already.hasHorizontalScroller || already.horizontalScroller is ThinScroller) {
             return
         }
         var current: NSView? = self.superview
@@ -284,20 +344,48 @@ final class ThinScrollerInstallerView: NSView {
     }
 
     private func attachThinScroller(to scrollView: NSScrollView) {
-        let scroller = ThinScroller()
-        scroller.scrollerStyle = .overlay
-        scroller.controlSize = .regular
-        scroller.wantsLayer = true
+        scrollView.scrollerStyle = style
+        // `.overlay` autohides while idle; `.legacy` keeps the scroller
+        // permanently visible (its 14pt column lives outside the clipView,
+        // so the knob can't get clipped by the SwiftUI hosting layer or
+        // by the private collapse animation).
+        scrollView.autohidesScrollers = (style == .overlay)
 
-        scrollView.scrollerStyle = .overlay
-        scrollView.autohidesScrollers = true
+        let clipView = scrollView.contentView
+        clipView.wantsLayer = true
+
+        // Vertical scroller is installed unconditionally: a SwiftUI
+        // `ScrollView` with a vertical or default axis maps to an
+        // NSScrollView that needs the vertical scroller swap. For
+        // horizontal-only scroll views the overlay autohides the unused
+        // vertical scroller, so this is a no-op visually.
+        let vertical = ThinScroller()
+        vertical.scrollerStyle = style
+        vertical.controlSize = .regular
+        vertical.wantsLayer = true
         scrollView.hasVerticalScroller = true
-        scrollView.verticalScroller = scroller
+        scrollView.verticalScroller = vertical
+        vertical.layer?.zPosition = 1
+        if style == .overlay {
+            scrollView.addSubview(vertical, positioned: .above, relativeTo: clipView)
+        }
 
-        scroller.layer?.zPosition = 1
-        if let clipView = scrollView.contentView as NSClipView? {
-            clipView.wantsLayer = true
-            scrollView.addSubview(scroller, positioned: .above, relativeTo: clipView)
+        // If the scroll view already exposes a horizontal scroller (axis
+        // includes `.horizontal`), swap it for the same thin capsule
+        // anchored at the bottom edge. We do not force-enable the
+        // horizontal scroller for vertical-only scroll views: that would
+        // either reserve a phantom strip or paint a bar where the user
+        // didn't ask for one.
+        if scrollView.hasHorizontalScroller {
+            let horizontal = ThinScroller()
+            horizontal.scrollerStyle = style
+            horizontal.controlSize = .regular
+            horizontal.wantsLayer = true
+            scrollView.horizontalScroller = horizontal
+            horizontal.layer?.zPosition = 1
+            if style == .overlay {
+                scrollView.addSubview(horizontal, positioned: .above, relativeTo: clipView)
+            }
         }
     }
 }
@@ -305,7 +393,7 @@ final class ThinScrollerInstallerView: NSView {
 extension View {
     /// Replace the underlying SwiftUI `ScrollView`'s vertical scroller
     /// with the same thin, low-opacity capsule used by the sidebar.
-    func thinScrollers() -> some View {
-        background(ThinScrollerInstaller().allowsHitTesting(false))
+    func thinScrollers(style: NSScroller.Style = .overlay) -> some View {
+        background(ThinScrollerInstaller(style: style).allowsHitTesting(false))
     }
 }
