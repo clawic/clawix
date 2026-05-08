@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import LucideIcon
 
 /// Floating composer rendered inside `QuickAskPanel`. Visual language
 /// mirrors the macOS composer (`ComposerView`): same `MicIcon`, same
@@ -141,7 +142,7 @@ struct QuickAskView: View {
             )
             .overlay(
                 VStack(spacing: 6) {
-                    Image(systemName: "tray.and.arrow.down")
+                    Image(lucide: .inbox)
                         .font(.system(size: 24, weight: .regular))
                         .foregroundColor(.white.opacity(0.92))
                     Text("Drop to attach")
@@ -367,7 +368,7 @@ struct QuickAskView: View {
                     action: { controller.hide() },
                     tooltip: "Close (⎋)"
                 ) {
-                    Image(systemName: "xmark.circle.fill")
+                    Image(lucide: .circle_x)
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.white.opacity(0.50))
                 }
@@ -379,7 +380,7 @@ struct QuickAskView: View {
                                 .foregroundColor(.white.opacity(0.70))
                                 .lineLimit(1)
                                 .truncationMode(.tail)
-                            Image(systemName: "chevron.down")
+                            Image(lucide: .chevron_down)
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(.white.opacity(0.50))
                         }
@@ -409,7 +410,7 @@ struct QuickAskView: View {
                         ? "Temporary chat — won't be saved"
                         : "Switch to Temporary chat (⌘⇧N)"
                 ) {
-                    Image(systemName: controller.isTemporary
+                    Image(lucideOrSystem: controller.isTemporary
                           ? "eyeglasses.slash"
                           : "eyeglasses")
                         .font(.system(size: 14, weight: .regular))
@@ -651,7 +652,7 @@ struct QuickAskView: View {
             Button {
                 stopAndAppendTranscription()
             } label: {
-                Image(systemName: "stop.fill")
+                Image(lucide: .square)
                     .font(BodyFont.system(size: 12, weight: .bold))
                     .foregroundColor(Color(white: 0.92))
                     .frame(width: 26, height: 26)
@@ -664,7 +665,7 @@ struct QuickAskView: View {
             Button {
                 stopAndSend()
             } label: {
-                Image(systemName: "arrow.up")
+                Image(lucide: .arrow_up)
                     .font(BodyFont.system(size: 15, weight: .bold))
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 28, height: 28)
@@ -699,7 +700,7 @@ struct QuickAskView: View {
         Button {
             controller.webSearchEnabled.toggle()
         } label: {
-            Image(systemName: controller.webSearchEnabled ? "globe.americas.fill" : "globe")
+            Image(lucideOrSystem: controller.webSearchEnabled ? "globe.americas.fill" : "globe")
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(
                     controller.webSearchEnabled
@@ -722,7 +723,7 @@ struct QuickAskView: View {
             workWithAppsPickerPresented.toggle()
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: "app.dashed")
+                Image(lucide: .square_dashed)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(
                         controller.workWithBundleId != nil
@@ -784,7 +785,7 @@ struct QuickAskView: View {
     // down toward the bottom edge.
     private func sendButton(extraBottomPadding: CGFloat) -> some View {
         Button(action: submitIfReady) {
-            Image(systemName: "arrow.up")
+            Image(lucide: .arrow_up)
                 .font(BodyFont.system(size: 17, weight: .heavy))
                 .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                 .frame(width: 33, height: 33)
@@ -815,7 +816,7 @@ struct QuickAskView: View {
     private var selectionSuggestion: some View {
         if let snap = controller.pendingSelection {
             HStack(spacing: 6) {
-                Image(systemName: "text.alignleft")
+                Image(lucide: .text_align_start)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white.opacity(0.85))
                 Text(snap.appName.map { "Use selection from \($0)" } ?? "Use selection")
@@ -848,7 +849,7 @@ struct QuickAskView: View {
                 Button {
                     controller.pendingSelection = nil
                 } label: {
-                    Image(systemName: "xmark")
+                    Image(lucide: .x)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white.opacity(0.6))
                         .frame(width: 16, height: 16)
@@ -1079,7 +1080,7 @@ private struct QuickAskPlusMenu: View {
                 Label("Take a photo", systemImage: "camera")
             }
         } label: {
-            Image(systemName: "plus")
+            Image(lucide: .plus)
                 .font(BodyFont.system(size: 18, weight: .bold))
                 .foregroundColor(.white)
                 .opacity(0.78)

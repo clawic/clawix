@@ -20,8 +20,7 @@ struct QuickAskWorkWithAppsPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .semibold))
+                LucideIcon(.search, size: 11)
                     .foregroundColor(.white.opacity(0.55))
                 TextField(
                     "",
@@ -53,8 +52,7 @@ struct QuickAskWorkWithAppsPicker: View {
                             isPresented = false
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: "xmark.circle")
-                                    .font(.system(size: 14, weight: .regular))
+                                LucideIcon(.circleX, size: 14)
                                     .foregroundColor(.white.opacity(0.85))
                                     .frame(width: 18, height: 18)
                                 Text("Stop working with app")
@@ -120,8 +118,7 @@ private struct QuickAskWorkRow: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 22, height: 22)
                 } else {
-                    Image(systemName: "app")
-                        .font(.system(size: 14))
+                    LucideIcon(.appWindow, size: 14)
                         .foregroundColor(.white.opacity(0.65))
                         .frame(width: 22, height: 22)
                 }
@@ -136,8 +133,7 @@ private struct QuickAskWorkRow: View {
                 }
                 Spacer(minLength: 0)
                 if isActive {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
+                    LucideIcon(.check, size: 11)
                         .foregroundColor(.white.opacity(0.9))
                 }
             }

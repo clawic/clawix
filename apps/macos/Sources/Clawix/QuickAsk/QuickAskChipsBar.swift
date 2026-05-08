@@ -46,8 +46,7 @@ private struct QuickAskChip: View {
                 .layoutPriority(0)
             if hovered {
                 Button(action: onRemove) {
-                    Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                    LucideIcon(.x, size: 10)
                         .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
                         .frame(width: 14, height: 14)
                         .contentShape(Rectangle())
@@ -87,8 +86,7 @@ private struct QuickAskChip: View {
                 .frame(width: 18, height: 18)
                 .clipShape(Circle())
         } else {
-            Image(systemName: iconName)
-                .font(.system(size: 11, weight: .semibold))
+            LucideIcon.auto(iconName, size: 11)
                 .foregroundColor(Color(white: 0.60))
                 .frame(width: 18, height: 18)
         }
