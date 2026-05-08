@@ -196,8 +196,7 @@ struct ComposerView: View {
             Haptics.tap()
             showAttachmentSheet = true
         }) {
-            Image(systemName: "plus")
-                .font(.system(size: 17, weight: .medium))
+            LucideIcon(.plus, size: 17)
                 .foregroundStyle(Color.white)
                 .frame(width: 45, height: 45)
                 .glassEffect(.regular.tint(Color.black.opacity(0.28)), in: Circle())
@@ -213,8 +212,7 @@ struct ComposerView: View {
             Haptics.tap()
             showAttachmentSheet = true
         }) {
-            Image(systemName: "plus")
-                .font(.system(size: 17, weight: .medium))
+            LucideIcon(.plus, size: 17)
                 .foregroundStyle(Color.white)
                 .frame(width: 45, height: 37)
                 .contentShape(Circle())
@@ -247,8 +245,7 @@ struct ComposerView: View {
                         .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
                 )
             Button(action: { remove(attachment) }) {
-                Image(systemName: "xmark")
-                    .font(BodyFont.system(size: 9, weight: .bold))
+                LucideIcon(.x, size: 9)
                     .foregroundStyle(Color.black)
                     .frame(width: 18, height: 18)
                     .background(Circle().fill(Color.white))
@@ -369,8 +366,7 @@ struct ComposerView: View {
             focused = false
             isExpanded = true
         } label: {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 12, weight: .semibold))
+            LucideIcon(.maximize2, size: 12)
                 .foregroundStyle(Color.white.opacity(0.7))
                 .frame(width: 30, height: 30)
                 .contentShape(Rectangle())
@@ -415,8 +411,7 @@ struct ComposerView: View {
                 .transition(.scale.combined(with: .opacity))
                 .id("glyph-stop")
         } else if canSend {
-            Image(systemName: "arrow.up")
-                .font(BodyFont.system(size: 15, weight: .bold))
+            LucideIcon(.arrowUp, size: 15)
                 .foregroundStyle(Color.black)
                 .transition(.scale.combined(with: .opacity))
                 .id("glyph-send")
@@ -511,8 +506,7 @@ private struct ExpandedComposerSheet: View {
             .overlay(alignment: .bottomTrailing) {
                 if canSend {
                     Button(action: onSend) {
-                        Image(systemName: "arrow.up")
-                            .font(BodyFont.system(size: 15, weight: .bold))
+                        LucideIcon(.arrowUp, size: 15)
                             .foregroundStyle(Color.black)
                             .frame(width: 34, height: 34)
                             .background(Circle().fill(Color.white))
@@ -524,8 +518,7 @@ private struct ExpandedComposerSheet: View {
 
             // Collapse icon
             Button(action: onCollapse) {
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 12, weight: .semibold))
+                LucideIcon(.minimize2, size: 12)
                     .foregroundStyle(Color.white.opacity(0.85))
                     .frame(width: 36, height: 36)
                     .contentShape(Rectangle())

@@ -47,8 +47,7 @@ struct CameraCaptureView: View {
                 Haptics.tap()
                 onCancel()
             }) {
-                Image(systemName: "xmark")
-                    .font(BodyFont.system(size: 16, weight: .semibold))
+                LucideIcon(.x, size: 16)
                     .foregroundStyle(Color.white)
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(Color.black.opacity(0.45)))
@@ -56,8 +55,7 @@ struct CameraCaptureView: View {
             .buttonStyle(.plain)
             Spacer()
             Button(action: toggleTorch) {
-                Image(systemName: torchOn ? "bolt.fill" : "bolt.slash.fill")
-                    .font(BodyFont.system(size: 16, weight: .semibold))
+                LucideIcon.auto(torchOn ? "bolt.fill" : "bolt.slash.fill", size: 16)
                     .foregroundStyle(Color.white)
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(Color.black.opacity(0.45)))
@@ -74,8 +72,7 @@ struct CameraCaptureView: View {
                 Haptics.tap()
                 onOpenLibrary()
             }) {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(BodyFont.system(size: 22, weight: .regular))
+                LucideIcon(.images, size: 22)
                     .foregroundStyle(Color.white)
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(Color.white.opacity(0.18)))
@@ -104,8 +101,7 @@ struct CameraCaptureView: View {
                 Haptics.selection()
                 coordinator.flip()
             }) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(BodyFont.system(size: 22, weight: .regular))
+                LucideIcon(.refreshCw, size: 22)
                     .foregroundStyle(Color.white)
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(Color.white.opacity(0.18)))
