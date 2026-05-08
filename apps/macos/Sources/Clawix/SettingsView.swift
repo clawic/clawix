@@ -81,8 +81,7 @@ struct SettingsSidebar: View {
                 appState.currentRoute = .home
             } label: {
                 HStack(spacing: 11) {
-                    Image(systemName: "arrow.left")
-                        .font(BodyFont.system(size: 12, wght: 600))
+                    LucideIcon(.arrowLeft, size: 12)
                         .frame(width: 15, alignment: .center)
                         .foregroundColor(Color(white: backHovered ? 0.92 : 0.78))
                     Text("Back to app")
@@ -332,8 +331,7 @@ struct SettingsDropdown<T: Hashable>: View {
                 if let accessory = trailingAccessory?() {
                     accessory
                 }
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                LucideIcon(.chevronDown, size: 11)
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -499,8 +497,7 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                         }
                         Spacer(minLength: 8)
                         if opt.0 == selection {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .semibold))
+                            LucideIcon(.check, size: 10)
                                 .foregroundColor(MenuStyle.rowText)
                                 .padding(.top, hasAnyDescription ? 3 : 0)
                         }
@@ -1098,8 +1095,7 @@ private struct WorkModeCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 14))
+                LucideIcon.auto(icon, size: 14)
                     .foregroundColor(Color(white: 0.86))
                     .frame(width: 28, height: 28)
                     .background(
@@ -1204,8 +1200,7 @@ private struct CollapsibleRow: View {
             HStack(alignment: .center, spacing: 14) {
                 RowLabel(title: title, detail: detail)
                 Spacer(minLength: 12)
-                Image(systemName: open ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 10)
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -1229,8 +1224,7 @@ private struct DictionaryExpandableRow: View {
                     RowLabel(title: "Dictation dictionary",
                              detail: "Words or phrases dictation should recognize")
                     Spacer(minLength: 12)
-                    Image(systemName: open ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
+                    LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 10)
                         .foregroundColor(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -1254,8 +1248,7 @@ private struct DictionaryExpandableRow: View {
                         entries.append("")
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "plus")
-                                .font(BodyFont.system(size: 11, wght: 700))
+                            LucideIcon(.plus, size: 11)
                             Text("Add entry")
                                 .font(BodyFont.system(size: 12.5))
                         }
@@ -1297,8 +1290,7 @@ private struct DictionaryEntryField: View {
                 .padding(.vertical, 9)
             Spacer(minLength: 8)
             Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(BodyFont.system(size: 12, wght: 500))
+                LucideIcon(.trash2, size: 12)
                     .foregroundColor(Color(white: trashHovered ? 0.94 : 0.55))
                     .frame(width: 30, height: 30)
                     .contentShape(Rectangle())
@@ -1351,8 +1343,7 @@ private struct RecentDictationRow: View {
             } label: {
                 Group {
                     if copied {
-                        Image(systemName: "checkmark")
-                            .font(BodyFont.system(size: 12, wght: 500))
+                        LucideIcon(.check, size: 12)
                     } else {
                         CopyIconViewSquircle(
                             color: Color(white: copyHovered ? 0.94 : 0.60),
@@ -1481,8 +1472,7 @@ private struct ThemeChip: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 11, wght: 500))
+                LucideIcon.auto(icon, size: 11)
                 Text(label)
                     .font(BodyFont.system(size: 12, wght: 500))
             }
@@ -1799,8 +1789,7 @@ private struct ConfigurationPage: View {
                         Text("Open config.toml")
                             .font(BodyFont.system(size: 12, wght: 500))
                             .foregroundColor(Palette.textSecondary)
-                        Image(systemName: "arrow.up.right")
-                            .font(BodyFont.system(size: 9, weight: .semibold))
+                        LucideIcon(.arrowUpRight, size: 9)
                             .foregroundColor(Palette.textSecondary)
                     }
                 }
@@ -1887,8 +1876,7 @@ private struct PermissionToggleRow: View {
 private struct DeprecationBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.circle")
-                .font(BodyFont.system(size: 13, wght: 500))
+            LucideIcon(.circleAlert, size: 13)
                 .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.30))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
@@ -1909,8 +1897,7 @@ private struct DeprecationBanner: View {
                 }
                 .font(BodyFont.system(size: 11.5, wght: 500))
                 HStack(spacing: 4) {
-                    Image(systemName: "globe")
-                        .font(BodyFont.system(size: 10))
+                    LucideIcon(.globe, size: 10)
                         .foregroundColor(Palette.pastelBlue)
                     Text("Toggle experimental features by editing the configuration file.")
                         .font(BodyFont.system(size: 11.5, wght: 500))
@@ -1965,8 +1952,7 @@ private struct ReinstallRow: View {
             Spacer(minLength: 12)
             Button {} label: {
                 HStack(spacing: 5) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(BodyFont.system(size: 11, wght: 500))
+                    LucideIcon(.circleAlert, size: 11)
                     Text("Reinstall")
                         .font(BodyFont.system(size: 12, wght: 600))
                 }
@@ -2157,8 +2143,7 @@ private struct InstructionsExpandedSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 11, wght: 700))
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Color(white: 0.78))
                         .frame(width: 22, height: 22)
                         .background(
@@ -2224,8 +2209,7 @@ private struct PlaceholderPage: View {
 
             SettingsCard {
                 HStack(spacing: 12) {
-                    Image(systemName: category.iconName)
-                        .font(BodyFont.system(size: 16))
+                    LucideIcon.auto(category.iconName, size: 16)
                         .foregroundColor(Palette.textSecondary)
                     Text("Coming soon")
                         .font(BodyFont.system(size: 13, wght: 500))
@@ -2576,8 +2560,7 @@ private struct BrowserPluginRow: View {
                         )
                     )
                     .frame(width: 36, height: 36)
-                Image(systemName: "paperplane.fill")
-                    .font(BodyFont.system(size: 15, wght: 600))
+                LucideIcon(.send, size: 15)
                     .foregroundColor(.white)
                     .rotationEffect(.degrees(-12))
             }
@@ -2590,8 +2573,7 @@ private struct BrowserPluginRow: View {
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
-            Image(systemName: "checkmark")
-                .font(BodyFont.system(size: 12, wght: 700))
+            LucideIcon(.check, size: 12)
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.horizontal, 14)
@@ -2613,8 +2595,7 @@ private struct DomainListSection: View {
                 Spacer()
                 Button {} label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(BodyFont.system(size: 10, wght: 700))
+                        LucideIcon(.plus, size: 10)
                         Text("Add")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -2878,8 +2859,7 @@ private struct MCPPage: View {
                     )
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(BodyFont.system(size: 10, wght: 700))
+                        LucideIcon(.plus, size: 10)
                         Text("Add server")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -3014,8 +2994,7 @@ private struct MCPEmptyState: View {
                 .foregroundColor(Palette.textSecondary)
             Button(action: onAdd) {
                 HStack(spacing: 5) {
-                    Image(systemName: "plus")
-                        .font(BodyFont.system(size: 10, wght: 700))
+                    LucideIcon(.plus, size: 10)
                     Text("Add server")
                         .font(BodyFont.system(size: 12, wght: 600))
                 }
