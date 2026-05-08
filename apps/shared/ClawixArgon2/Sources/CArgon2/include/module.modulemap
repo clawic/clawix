@@ -1,0 +1,4 @@
+module CArgon2 {
+    umbrella header "argon2.h"
+    export *
+}
