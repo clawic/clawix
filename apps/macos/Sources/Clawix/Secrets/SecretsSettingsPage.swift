@@ -3,7 +3,6 @@ import AppKit
 import UniformTypeIdentifiers
 import SecretsModels
 import SecretsVault
-import LucideIcon
 
 /// Settings page that aggregates all the power-user surfaces of the secrets
 /// vault: CLI install, import / export, audit jump, integrity check,
@@ -23,13 +22,14 @@ struct SecretsSettingsPage: View {
     @State private var showBackupSheet = false
     @State private var showRestoreSheet = false
     @State private var pendingBackupData: Data?
+    @AppStorage("secrets.advancedExpanded") private var advancedExpanded = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 PageHeader(
                     title: "Secrets vault",
-                    subtitle: "Manage how Codex and the helper CLI access your vault, import from existing managers, and export encrypted backups."
+                    subtitle: "Store API keys and passwords for Codex. Import what you have, keep it backed up, keep it private."
                 )
 
                 if let banner = importBanner {
@@ -41,10 +41,22 @@ struct SecretsSettingsPage: View {
                         .padding(.bottom, 4)
                 }
 
+                setupBanner
+
                 cliSection
-                auditSection
                 importsSection
                 backupSection
+
+                DisclosureGroup(isExpanded: $advancedExpanded) {
+                    auditSection
+                        .padding(.top, 12)
+                } label: {
+                    Text("Advanced")
+                        .font(BodyFont.system(size: 13, wght: 600))
+                        .foregroundColor(Palette.textPrimary)
+                }
+                .padding(.top, 28)
+                .padding(.bottom, 8)
 
                 Color.clear.frame(height: 24)
             }
@@ -66,12 +78,14 @@ struct SecretsSettingsPage: View {
 
     @ViewBuilder
     private var cliSection: some View {
-        SectionLabel(title: "CLI proxy")
+        SectionLabel(title: "Codex CLI helper")
         SettingsCard {
             SettingsRow {
-                RowLabel(
-                    title: "Helper symlink",
-                    detail: "Install at ~/bin/clawix-secrets-proxy so Codex can call it directly from the shell."
+                statusLabel(
+                    title: "Codex shell access",
+                    detail: symlinkInstalled
+                        ? "Installed at ~/bin/clawix-secrets-proxy."
+                        : "Not installed. Codex can’t read your vault from the shell yet."
                 )
             } trailing: {
                 IconChipButton(
@@ -80,17 +94,6 @@ struct SecretsSettingsPage: View {
                     isPrimary: !symlinkInstalled,
                     action: installSymlink
                 )
-            }
-            CardDivider()
-            SettingsRow {
-                statusLabel(
-                    title: "Status",
-                    detail: symlinkInstalled
-                        ? "Installed at ~/bin/clawix-secrets-proxy."
-                        : "Symlink not installed yet. Codex will not find the helper unless you install it or use the absolute bundle path."
-                )
-            } trailing: {
-                EmptyView()
             }
             if let symlinkResult {
                 Text(symlinkResult)
@@ -108,8 +111,8 @@ struct SecretsSettingsPage: View {
         SettingsCard {
             SettingsRow {
                 RowLabel(
-                    title: "Open activity log",
-                    detail: "Browse every event written by the proxy, the UI, and admin actions."
+                    title: "Open the activity log",
+                    detail: "Browse every event the vault has logged."
                 )
             } trailing: {
                 IconChipButton(
@@ -121,8 +124,8 @@ struct SecretsSettingsPage: View {
             CardDivider()
             SettingsRow {
                 RowLabel(
-                    title: "Verify chain integrity",
-                    detail: "Walk the hash chain to confirm no events were tampered with or deleted from the database file."
+                    title: "Check audit log integrity",
+                    detail: "Confirm no events were tampered with or deleted."
                 )
             } trailing: {
                 IconChipButton(
@@ -147,41 +150,11 @@ struct SecretsSettingsPage: View {
         SettingsCard {
             SettingsRow {
                 RowLabel(
-                    title: "1Password CSV",
-                    detail: "Drop in a CSV exported from 1Password (Title, URL, Username, Password, Notes columns)."
+                    title: "Bring secrets from another manager",
+                    detail: "1Password, Bitwarden, or a .env file."
                 )
             } trailing: {
-                IconChipButton(
-                    symbol: "doc",
-                    label: "Choose file…",
-                    action: { pickAndImport(format: .onePassword, allowed: [.commaSeparatedText, .plainText]) }
-                )
-            }
-            CardDivider()
-            SettingsRow {
-                RowLabel(
-                    title: "Bitwarden CSV",
-                    detail: "Use the standard Bitwarden export format (folder, type, name, login_username, login_password, …)."
-                )
-            } trailing: {
-                IconChipButton(
-                    symbol: "doc",
-                    label: "Choose file…",
-                    action: { pickAndImport(format: .bitwarden, allowed: [.commaSeparatedText, .plainText]) }
-                )
-            }
-            CardDivider()
-            SettingsRow {
-                RowLabel(
-                    title: ".env file",
-                    detail: "KEY=value lines become individual secrets. Names containing KEY/TOKEN/SECRET/PASS get the api_key kind, the rest are stored as secure notes."
-                )
-            } trailing: {
-                IconChipButton(
-                    symbol: "doc",
-                    label: "Choose file…",
-                    action: { pickAndImport(format: .env, allowed: [.plainText, .data]) }
-                )
+                importMenu(label: "Import…")
             }
         }
     }
@@ -192,8 +165,8 @@ struct SecretsSettingsPage: View {
         SettingsCard {
             SettingsRow {
                 RowLabel(
-                    title: "Export .clawixvault",
-                    detail: "Pack the entire vault into a single passphrase-protected file. The passphrase is independent of the master password; Argon2id + ChaCha20-Poly1305."
+                    title: "Export vault to file",
+                    detail: "Pack everything into one encrypted file you can keep on a USB drive or another Mac."
                 )
             } trailing: {
                 IconChipButton(
@@ -206,8 +179,8 @@ struct SecretsSettingsPage: View {
             CardDivider()
             SettingsRow {
                 RowLabel(
-                    title: "Restore from .clawixvault",
-                    detail: "Pick a backup file. Existing secrets with the same internal name are skipped to avoid overwriting newer entries."
+                    title: "Restore from a backup file",
+                    detail: "Pick a .clawixvault. Existing secrets keep their newest version."
                 )
             } trailing: {
                 IconChipButton(
@@ -217,6 +190,105 @@ struct SecretsSettingsPage: View {
                 )
             }
         }
+    }
+
+    @ViewBuilder
+    private var setupBanner: some View {
+        if !symlinkInstalled {
+            setupBannerCard(
+                icon: "exclamationmark.shield.fill",
+                tint: Color.orange,
+                title: "Codex can’t read your vault yet",
+                detail: "Install the helper so the Codex shell command can use the secrets you store here."
+            ) {
+                IconChipButton(
+                    symbol: "link",
+                    label: "Install",
+                    isPrimary: true,
+                    action: installSymlink
+                )
+            }
+        } else if vault.secrets.isEmpty {
+            setupBannerCard(
+                icon: "info.circle.fill",
+                tint: Color.blue.opacity(0.85),
+                title: "Your vault is empty",
+                detail: "Bring your existing passwords from 1Password, Bitwarden, or a .env file."
+            ) {
+                importMenu(label: "Import…")
+            }
+        }
+    }
+
+    private func setupBannerCard<CTA: View>(
+        icon: String,
+        tint: Color,
+        title: LocalizedStringKey,
+        detail: LocalizedStringKey,
+        @ViewBuilder cta: () -> CTA
+    ) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            LucideIcon.auto(icon, size: 16)
+                .foregroundColor(tint)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(BodyFont.system(size: 12.5, wght: 600))
+                    .foregroundColor(Palette.textPrimary)
+                Text(detail)
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 12)
+            cta()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(white: 0.085))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(tint.opacity(0.40), lineWidth: 0.7)
+                )
+        )
+        .padding(.bottom, 6)
+    }
+
+    private func importMenu(label: LocalizedStringKey) -> some View {
+        Menu {
+            Button("1Password CSV") {
+                pickAndImport(format: .onePassword, allowed: [.commaSeparatedText, .plainText])
+            }
+            Button("Bitwarden CSV") {
+                pickAndImport(format: .bitwarden, allowed: [.commaSeparatedText, .plainText])
+            }
+            Button(".env file") {
+                pickAndImport(format: .env, allowed: [.plainText, .data])
+            }
+        } label: {
+            HStack(spacing: 6) {
+                LucideIcon.auto("doc", size: 11)
+                    .foregroundColor(Palette.textPrimary)
+                Text(label)
+                    .font(BodyFont.system(size: 12, wght: 500))
+                    .foregroundColor(Palette.textPrimary)
+            }
+            .padding(.horizontal, 11)
+            .frame(height: 28)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color(white: 0.135))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
+                    )
+            )
+            .contentShape(Capsule(style: .continuous))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
     }
 
     // The Status row shows a runtime-derived detail string (the
@@ -244,7 +316,10 @@ struct SecretsSettingsPage: View {
 
     // MARK: - Helpers
 
-    private var symlinkInstalled: Bool { ProxyBridgeServer.cliSymlinkInstalled() }
+    // The legacy UDS proxy + CLI symlink are gone: the bundled `claw`
+    // CLI lives inside the .app at Contents/Helpers/clawjs and is
+    // invoked directly by the app and by scripts-dev wrappers.
+    private var symlinkInstalled: Bool { false }
 
     private func installSymlink() {
         if let url = vault.installCliSymlink() {
@@ -316,8 +391,7 @@ private struct BackupExportSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(lucide: .x)
-                        .font(.system(size: 11, weight: .semibold))
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Palette.textSecondary)
                         .padding(6)
                         .background(Circle().fill(Color.white.opacity(0.06)))
@@ -392,8 +466,7 @@ private struct BackupImportSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(lucide: .x)
-                        .font(.system(size: 11, weight: .semibold))
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Palette.textSecondary)
                         .padding(6)
                         .background(Circle().fill(Color.white.opacity(0.06)))
