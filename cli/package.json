@@ -1,0 +1,34 @@
+{
+  "name": "clawix",
+  "version": "0.1.1",
+  "description": "Use Codex remotely from your phone via your Mac. Standalone CLI surface, no GUI required.",
+  "license": "MIT",
+  "homepage": "https://github.com/clawic/clawix#readme",
+  "bugs": {
+    "url": "https://github.com/clawic/clawix/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clawic/clawix.git",
+    "directory": "cli"
+  },
+  "keywords": ["codex", "cli", "bridge", "iphone", "remote"],
+  "bin": {
+    "clawix": "bin/clawix.js"
+  },
+  "scripts": {
+    "postinstall": "node lib/postinstall.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": ["darwin"],
+  "cpu": ["arm64", "x64"],
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ]
+}
