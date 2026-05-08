@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ClawixEngine
 
 let appDisplayName: String = {
     let info = Bundle.main.infoDictionary
@@ -170,26 +171,35 @@ private struct MenuBarContent: View {
     @EnvironmentObject private var vault: VaultManager
     @EnvironmentObject private var flags: FeatureFlags
     @ObservedObject private var micPrefs = MicrophonePreferences.shared
+    @ObservedObject private var bridge = BackgroundBridgeService.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Button("Open \(appDisplayName)") {
+        Button {
             openMainWindow()
+        } label: {
+            Label("Open \(appDisplayName)", systemImage: "macwindow")
         }
         .keyboardShortcut("o")
 
         Divider()
 
         if flags.isVisible(.secrets) {
-            Menu(secretsMenuTitle) {
-                Button("Show vault") {
+            Menu {
+                Button {
                     appState.currentRoute = .secretsHome
                     openMainWindow()
+                } label: {
+                    Label("Show vault", systemImage: "tray.full")
                 }
                 switch vault.state {
                 case .unlocked:
-                    Button("Lock now") { vault.lock() }
-                        .keyboardShortcut("l", modifiers: [.command, .shift])
+                    Button {
+                        vault.lock()
+                    } label: {
+                        Label("Lock now", systemImage: "lock.fill")
+                    }
+                    .keyboardShortcut("l", modifiers: [.command, .shift])
                     Divider()
                     if !vault.openAnomalies.isEmpty {
                         Text("\(vault.openAnomalies.count) open anomal\(vault.openAnomalies.count == 1 ? "y" : "ies")")
@@ -201,24 +211,30 @@ private struct MenuBarContent: View {
                     Text("\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s")")
                         .foregroundColor(.secondary)
                 case .locked:
-                    Button("Unlock…") {
+                    Button {
                         appState.currentRoute = .secretsHome
                         openMainWindow()
+                    } label: {
+                        Label("Unlock…", systemImage: "lock.open.fill")
                     }
                 case .uninitialized:
-                    Button("Set up vault…") {
+                    Button {
                         appState.currentRoute = .secretsHome
                         openMainWindow()
+                    } label: {
+                        Label("Set up vault…", systemImage: "key.fill")
                     }
                 default:
                     EmptyView()
                 }
+            } label: {
+                Label(secretsMenuTitle, systemImage: "lock.shield")
             }
         }
 
         Divider()
 
-        Menu(L10n.t("Audio Input")) {
+        Menu {
             if micPrefs.devices.isEmpty {
                 Text(L10n.t("No input devices"))
             } else {
@@ -234,17 +250,53 @@ private struct MenuBarContent: View {
                     }
                 }
             }
+        } label: {
+            Label(L10n.t("Audio Input"), systemImage: "mic")
         }
 
-        Button(L10n.t("Pair iPhone…")) {
+        Button {
             openWindow(id: "clawix-pair")
             NSApp.activate(ignoringOtherApps: true)
+        } label: {
+            Label(L10n.t("Pair iPhone…"), systemImage: "iphone")
+        }
+
+        if bridge.isEnabled {
+            Divider()
+
+            Menu {
+                Text("Running on port \(String(BridgeAgentControl.bridgePort))")
+                    .foregroundColor(.secondary)
+                if let lan = PairingService.currentLANIPv4() {
+                    Text("LAN: \(lan)")
+                        .foregroundColor(.secondary)
+                }
+                if let ts = PairingService.currentTailscaleIPv4() {
+                    Text("Tailscale: \(ts)")
+                        .foregroundColor(.secondary)
+                }
+                Divider()
+                Button {
+                    BridgeAgentControl.openLogs()
+                } label: {
+                    Label(L10n.t("Open Bridge Logs"), systemImage: "doc.text")
+                }
+                Button {
+                    BridgeAgentControl.restart()
+                } label: {
+                    Label(L10n.t("Restart Bridge"), systemImage: "arrow.clockwise")
+                }
+            } label: {
+                Label(L10n.t("Bridge"), systemImage: "antenna.radiowaves.left.and.right")
+            }
         }
 
         Divider()
 
-        Button(L10n.t("Quit \(appDisplayName)")) {
+        Button {
             NSApp.terminate(nil)
+        } label: {
+            Label(L10n.t("Quit \(appDisplayName)"), systemImage: "power")
         }
         .keyboardShortcut("q")
     }
@@ -288,6 +340,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // file handles. Restore it now so the user does not have to
         // re-enable "Run bridge in background" after every update.
         BackgroundBridgeService.shared.restoreAfterUpdateIfNeeded()
+        // Suppress the standalone `clawix-menubar` icon while the GUI
+        // owns its own MenuBarExtra: two near-identical icons next to
+        // each other confuse users. The CLI agent is restored on
+        // applicationWillTerminate if the bridge daemon is still alive.
+        BridgeAgentControl.bootoutMenubarAgent()
         // Register the system-wide QuickAsk hotkey. The default combo
         // (⌃⌥⌘K) is set in `QuickAskHotkey.defaultValue`; the user
         // can change it from Settings → QuickAsk.
@@ -304,6 +361,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         NSApp.windows.forEach(saveFrame)
+        // Hand the menu bar back to the standalone CLI icon if the
+        // user installed it AND the daemon is still going to outlive
+        // the GUI (the LaunchAgent kept it up across Cmd+Q). If the
+        // daemon is also gone, an empty CLI menubar saying "Bridge:
+        // not running" would just be noise, so we leave it alone.
+        if BridgeAgentControl.isMenubarAgentInstalled(),
+           BridgeAgentControl.isBridgeAgentLoaded() {
+            BridgeAgentControl.bootstrapMenubarAgent()
+        }
     }
 
     /// Closing the main window does NOT quit the app. The bridge that
