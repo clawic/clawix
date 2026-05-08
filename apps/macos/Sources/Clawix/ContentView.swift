@@ -190,8 +190,9 @@ struct ContentView: View {
                         case .home:          MainContentView()
                         case .search:
                             MainContentView()
-                                .overlay(alignment: .center) {
+                                .overlay(alignment: .top) {
                                     SearchPopoverOverlay()
+                                        .padding(.top, 120)
                                 }
                         case .plugins:       MainContentView()
                         case .automations:   AutomationsView()
@@ -875,17 +876,32 @@ private struct ChatActionsMenu: View {
 
 // MARK: - Search popover overlay
 
+/// Bubbles the inner search-content's natural height (rows or empty
+/// message) up to `SearchPopoverOverlay`, which uses it to size the
+/// content slot. `max` so duplicate emissions converge on the tallest
+/// reading.
+private struct SearchContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 private struct SearchPopoverOverlay: View {
     @EnvironmentObject var appState: AppState
     @FocusState private var queryFocused: Bool
+    /// Natural height of the inner content (rows or empty message),
+    /// measured via `SearchContentHeightKey`. The popup's content slot
+    /// renders at this height, capped at `contentAreaMaxHeight`. Anchored
+    /// to the popup's top so the search icon never moves; only the
+    /// bottom edge tracks the result count.
+    @State private var contentNaturalHeight: CGFloat = 220
 
     private static let popupCornerRadius: CGFloat = 26
     private static let popupStrokeColor = Color.white.opacity(0.18)
     private static let popupStrokeWidth: CGFloat = 0.9
-    /// Caps the scoped list height so a long-history project doesn't
-    /// push the popup off-screen. Mirrors the old per-project popup's
-    /// 460pt list cap so the visual footprint stays familiar.
-    private static let scopedListMaxHeight: CGFloat = 460
+    /// Cap on the result list. Past this, the inner content scrolls.
+    private static let contentAreaMaxHeight: CGFloat = 350
 
     private var scopedProject: Project? {
         guard let id = appState.searchScopedProjectId else { return nil }
@@ -894,7 +910,7 @@ private struct SearchPopoverOverlay: View {
 
     private var pinnedChats: [Chat] {
         appState.chats
-            .filter { $0.isPinned && !$0.isArchived }
+            .filter { $0.isPinned && !$0.isArchived && !$0.isQuickAskTemporary }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -906,7 +922,7 @@ private struct SearchPopoverOverlay: View {
 
     private func scopedChats(for project: Project) -> [Chat] {
         appState.chats
-            .filter { $0.projectId == project.id && !$0.isArchived }
+            .filter { $0.projectId == project.id && !$0.isArchived && !$0.isQuickAskTemporary }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -922,11 +938,23 @@ private struct SearchPopoverOverlay: View {
         return appState.projects.first(where: { $0.id == pid })?.name
     }
 
+    private var sortedProjects: [Project] {
+        appState.projects.sorted {
+            $0.name.lowercased() < $1.name.lowercased()
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             searchField
             divider
             content
+                .frame(height: min(max(contentNaturalHeight, 1),
+                                   Self.contentAreaMaxHeight),
+                       alignment: .top)
+                .onPreferenceChange(SearchContentHeightKey.self) { newValue in
+                    contentNaturalHeight = newValue
+                }
         }
         .frame(width: 560, alignment: .leading)
         .background(
@@ -946,12 +974,24 @@ private struct SearchPopoverOverlay: View {
                     x: 0, y: MenuStyle.shadowOffsetY)
         )
         .background(MenuOutsideClickWatcher(isPresented: searchOpenBinding))
-        .onAppear {
+        .background(SearchEscapeMonitor(onEscape: { closePopover() }))
+        .task {
+            // Re-arming the focus in a Task keeps the textfield reliably
+            // first responder even when the popup is reopened from the
+            // same route, where onAppear sometimes fires before the
+            // field is in the responder chain.
             queryFocused = true
             triggerScopedHistoryLoadIfNeeded()
         }
         .onChange(of: appState.searchScopedProjectId) { _, _ in
+            queryFocused = true
             triggerScopedHistoryLoadIfNeeded()
+        }
+    }
+
+    private func closePopover() {
+        if appState.currentRoute == .search {
+            appState.currentRoute = .home
         }
     }
 
@@ -973,6 +1013,9 @@ private struct SearchPopoverOverlay: View {
                 .font(BodyFont.system(size: 15, wght: 500))
                 .foregroundColor(Color(white: 0.94))
                 .focused($queryFocused)
+            if scopedProject == nil, !sortedProjects.isEmpty {
+                projectFilterMenu
+            }
             if !appState.searchQuery.isEmpty {
                 Button {
                     appState.searchQuery = ""
@@ -986,6 +1029,25 @@ private struct SearchPopoverOverlay: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
+    }
+
+    private var projectFilterMenu: some View {
+        Menu {
+            ForEach(sortedProjects) { project in
+                Button(project.name) {
+                    appState.searchScopedProjectId = project.id
+                }
+            }
+        } label: {
+            FolderOpenIcon(size: 14)
+                .foregroundColor(Color(white: 0.55))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Filter by project")
     }
 
     private var divider: some View {
@@ -1005,41 +1067,39 @@ private struct SearchPopoverOverlay: View {
 
     @ViewBuilder
     private var unscopedContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            let pinned = filteredPinnedChats
-            if !pinned.isEmpty {
-                Text("Pinned chats")
-                    .font(BodyFont.system(size: 11.5, wght: 500))
-                    .foregroundColor(MenuStyle.headerText)
-                    .padding(.horizontal, 18)
-                    .padding(.top, 12)
-                    .padding(.bottom, 4)
+        let pinned = filteredPinnedChats
+        if !pinned.isEmpty {
+            ScrollView(showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Pinned chats")
+                        .font(BodyFont.system(size: 11.5, wght: 500))
+                        .foregroundColor(MenuStyle.headerText)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
 
-                VStack(spacing: 0) {
-                    ForEach(Array(pinned.prefix(9).enumerated()), id: \.element.id) { index, chat in
-                        SearchPinnedRow(
-                            title: chat.title,
-                            projectName: projectName(for: chat),
-                            shortcutNumber: index + 1,
-                            isFirst: index == 0 && appState.searchQuery.isEmpty,
-                            onSelect: { appState.currentRoute = .chat(chat.id) }
-                        )
+                    VStack(spacing: 0) {
+                        ForEach(Array(pinned.prefix(9).enumerated()), id: \.element.id) { index, chat in
+                            SearchPinnedRow(
+                                title: chat.title,
+                                projectName: projectName(for: chat),
+                                shortcutNumber: index + 1,
+                                isFirst: index == 0 && appState.searchQuery.isEmpty,
+                                onSelect: { appState.currentRoute = .chat(chat.id) }
+                            )
+                        }
                     }
+                    .padding(.bottom, 8)
                 }
-                .padding(.bottom, 8)
-            } else if !appState.searchQuery.isEmpty {
-                Text("No matches")
-                    .font(BodyFont.system(size: 13, wght: 500))
-                    .foregroundColor(MenuStyle.rowSubtle)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 18)
-            } else {
-                Text("You do not have any pinned chats yet")
-                    .font(BodyFont.system(size: 13, wght: 500))
-                    .foregroundColor(MenuStyle.rowSubtle)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 18)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(naturalHeightProbe)
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .thinScrollers()
+        } else {
+            emptyContent(message: appState.searchQuery.isEmpty
+                         ? "You do not have any pinned chats yet"
+                         : "No matches")
         }
     }
 
@@ -1047,13 +1107,9 @@ private struct SearchPopoverOverlay: View {
     private func scopedContent(for project: Project) -> some View {
         let chats = filteredScopedChats(for: project)
         if chats.isEmpty {
-            Text(appState.searchQuery.isEmpty
-                 ? "No chats in this project yet"
-                 : "No matches")
-                .font(BodyFont.system(size: 13, wght: 500))
-                .foregroundColor(MenuStyle.rowSubtle)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, 28)
+            emptyContent(message: appState.searchQuery.isEmpty
+                         ? "No chats in this project yet"
+                         : "No matches")
         } else {
             ScrollView(showsIndicators: true) {
                 LazyVStack(spacing: 0) {
@@ -1066,9 +1122,32 @@ private struct SearchPopoverOverlay: View {
                     }
                 }
                 .padding(.vertical, 8)
+                .background(naturalHeightProbe)
             }
-            .frame(maxHeight: Self.scopedListMaxHeight)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .thinScrollers()
+        }
+    }
+
+    private func emptyContent(message: LocalizedStringKey) -> some View {
+        Text(message)
+            .font(BodyFont.system(size: 13, wght: 500))
+            .foregroundColor(MenuStyle.rowSubtle)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity)
+            .background(naturalHeightProbe)
+    }
+
+    /// Transparent overlay used by the content branches to publish their
+    /// unconstrained natural height to the popup so the outer frame can
+    /// shrink to fit short lists and clip+scroll long ones.
+    private var naturalHeightProbe: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .preference(key: SearchContentHeightKey.self,
+                            value: proxy.size.height)
         }
     }
 
@@ -1092,6 +1171,55 @@ private struct SearchPopoverOverlay: View {
         Task.detached(priority: .userInitiated) { [project] in
             await appState.loadAllThreadsForProject(project)
         }
+    }
+}
+
+private struct SearchEscapeMonitor: NSViewRepresentable {
+    var onEscape: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = MonitorView()
+        view.onEscape = onEscape
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? MonitorView)?.onEscape = onEscape
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: ()) {
+        (nsView as? MonitorView)?.detach()
+    }
+
+    final class MonitorView: NSView {
+        var onEscape: (() -> Void)?
+        private var monitor: Any?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window != nil { attach() } else { detach() }
+        }
+
+        private func attach() {
+            guard monitor == nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self, let win = self.window, event.window == win else { return event }
+                if event.keyCode == 53 {
+                    self.onEscape?()
+                    return nil
+                }
+                return event
+            }
+        }
+
+        func detach() {
+            if let m = monitor {
+                NSEvent.removeMonitor(m)
+                monitor = nil
+            }
+        }
+
+        deinit { detach() }
     }
 }
 
