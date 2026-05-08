@@ -26,6 +26,31 @@ struct RolloutHistoryEntry {
     /// can ship the bytes inline on the wire. Empty for typed messages
     /// and for assistant entries.
     let attachments: [WireAttachment]
+    /// Synthesized work summary for assistant entries. `startedAt` is
+    /// the first timestamp seen for the turn and `endedAt` is the last
+    /// timestamp seen, so the chat row's "Worked for Xs" header reads
+    /// correctly on a hydrated rollout (the live pipeline populates
+    /// this via `beginWorkSummary` / `completeWorkSummary`; without an
+    /// equivalent here, the header would never render after a chat
+    /// reload). `items` stays empty because the chronological tool
+    /// rows already live in `timeline.tools`. Nil for user entries.
+    let workSummary: WorkSummary?
+
+    init(
+        role: Role,
+        text: String,
+        timestamp: Date,
+        timeline: [AssistantTimelineEntry],
+        attachments: [WireAttachment],
+        workSummary: WorkSummary? = nil
+    ) {
+        self.role = role
+        self.text = text
+        self.timestamp = timestamp
+        self.timeline = timeline
+        self.attachments = attachments
+        self.workSummary = workSummary
+    }
 }
 
 enum RolloutReader {
@@ -47,9 +72,22 @@ enum RolloutReader {
     /// after a daemon respawn.
     static let interruptedThreshold: TimeInterval = 30
 
+    /// Default tail-read window for `readTailWithStatus`. 4 MB covers
+    /// dozens to hundreds of typical assistant turns (more than any
+    /// viewport ever shows on first paint), while keeping the parse
+    /// cost bounded regardless of how big the rollout has grown — real
+    /// sessions in `~/.codex/sessions/` reach 100+ MB. Read the head
+    /// (`tailHeadProbeBytes`) separately to recover `session_meta`.
+    static let defaultTailBytes: Int = 4 * 1024 * 1024
+
+    /// Bytes scanned at the start of the file to recover the
+    /// `session_meta` line when doing a tail read. Codex writes it as
+    /// the very first record, so a small probe is enough.
+    static let tailHeadProbeBytes: Int = 64 * 1024
+
     static func read(path: URL) -> [RolloutHistoryEntry] {
         guard let data = try? Data(contentsOf: path) else { return [] }
-        return parse(data: data)
+        return parse(data: data, now: Date()).entries
     }
 
     /// Like `read(path:)` but also reports whether the last turn was
@@ -59,72 +97,97 @@ enum RolloutReader {
         guard let data = try? Data(contentsOf: path) else {
             return ReadResult(entries: [], lastTurnInterrupted: false)
         }
-        let entries = parse(data: data)
-        let interrupted = detectInterrupted(in: data, now: now)
-        return ReadResult(entries: entries, lastTurnInterrupted: interrupted)
+        return parse(data: data, now: now)
     }
 
-    /// Walks the JSONL backwards looking for the last semantic close
-    /// (`event_msg.phase == "final_answer"` or `event_msg.event ==
-    /// "turn_completed"`). If the trailing record is older than the
-    /// threshold and we never saw a close, the turn was interrupted.
-    private static func detectInterrupted(in data: Data, now: Date) -> Bool {
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let isoFallback = ISO8601DateFormatter()
-        isoFallback.formatOptions = [.withInternetDateTime]
+    /// Tail-only variant of `readWithStatus`. Reads the trailing
+    /// `maxBytes` of the rollout instead of the whole file, aligns to
+    /// the first newline so we never start mid-line, and prepends the
+    /// head `session_meta` line so the parser can still resolve cwd /
+    /// session id (used to materialise `apply_patch` paths and
+    /// `imagegen` output dirs). For files smaller than `maxBytes`
+    /// falls back to a full read so short rollouts are not truncated.
+    ///
+    /// Used by the Mac UI hydration path: the chat opens at the
+    /// latest turn, the user almost never scrolls hundreds of turns
+    /// up immediately, and capping the parse to a fixed window keeps
+    /// "click chat → first paint" sub-second even on multi-hundred-MB
+    /// rollouts. Older history can be loaded on demand by callers
+    /// that want it via `readWithStatus`.
+    static func readTailWithStatus(
+        path: URL,
+        maxBytes: Int = defaultTailBytes,
+        now: Date = Date()
+    ) -> ReadResult {
+        guard let handle = try? FileHandle(forReadingFrom: path) else {
+            return ReadResult(entries: [], lastTurnInterrupted: false)
+        }
+        defer { try? handle.close() }
 
-        var lastTimestamp: Date? = nil
-        var sawClose = false
-        var sawAnyAssistantWork = false
+        let totalSize: UInt64 = (try? handle.seekToEnd()) ?? 0
+        if totalSize == 0 {
+            return ReadResult(entries: [], lastTurnInterrupted: false)
+        }
+        if totalSize <= UInt64(maxBytes) {
+            try? handle.seek(toOffset: 0)
+            let data = (try? handle.readToEnd()) ?? Data()
+            return parse(data: data, now: now)
+        }
 
+        // Step 1: head probe to recover session_meta.
+        try? handle.seek(toOffset: 0)
+        let probeSize = min(UInt64(tailHeadProbeBytes), totalSize)
+        let headData = (try? handle.read(upToCount: Int(probeSize))) ?? Data()
+        let sessionMetaLine = extractSessionMetaLine(headData)
+
+        // Step 2: tail bytes from the file.
+        let tailOffset = totalSize - UInt64(maxBytes)
+        try? handle.seek(toOffset: tailOffset)
+        var tailData = (try? handle.readToEnd()) ?? Data()
+
+        // Step 3: drop the leading partial line so parse never sees
+        // a half-record. tailOffset > 0 here by construction (we
+        // returned early when totalSize <= maxBytes), so there's
+        // always at least one full line ahead of the first newline.
+        if let firstNL = tailData.firstIndex(of: 0x0a) {
+            let alignStart = tailData.index(after: firstNL)
+            tailData = alignStart < tailData.endIndex
+                ? tailData.subdata(in: alignStart..<tailData.endIndex)
+                : Data()
+        }
+
+        var combined = Data(capacity: tailData.count + 4096)
+        if let sessionMetaLine {
+            combined.append(sessionMetaLine)
+            combined.append(0x0a)
+        }
+        combined.append(tailData)
+        return parse(data: combined, now: now)
+    }
+
+    /// Walk the head probe for the first `session_meta` JSONL line.
+    /// Returns the line bytes (without trailing newline) so callers
+    /// can splice it into a tail read. nil when the probe doesn't
+    /// contain one; callers degrade gracefully (relative paths emitted
+    /// by `apply_patch` won't resolve to absolute, but the chat still
+    /// renders).
+    private static func extractSessionMetaLine(_ data: Data) -> Data? {
         var start = data.startIndex
         while start < data.endIndex {
             let nl = data[start...].firstIndex(of: 0x0a) ?? data.endIndex
             let line = data[start..<nl]
             start = nl < data.endIndex ? data.index(after: nl) : data.endIndex
-            guard !line.isEmpty,
-                  let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else {
+            if line.isEmpty { continue }
+            guard let obj = (try? JSONSerialization.jsonObject(with: line, options: [])) as? [String: Any],
+                  (obj["type"] as? String) == "session_meta" else {
                 continue
             }
-            if let ts = obj["timestamp"] as? String {
-                lastTimestamp = isoFormatter.date(from: ts) ?? isoFallback.date(from: ts) ?? lastTimestamp
-            }
-            let type = obj["type"] as? String
-            let event = (obj["payload"] as? [String: Any])?["type"] as? String
-                     ?? obj["event"] as? String
-            let phase = (obj["payload"] as? [String: Any])?["phase"] as? String
-                     ?? obj["phase"] as? String
-
-            if type == "event_msg" {
-                switch event {
-                case "agent_message", "agent_reasoning",
-                     "exec_command_begin", "exec_command_output_delta",
-                     "exec_command_end", "tool_call":
-                    sawAnyAssistantWork = true
-                case "turn_completed":
-                    sawClose = true
-                case "user_message":
-                    // New user turn: previous assistant work is no
-                    // longer "the last turn" we care about.
-                    sawClose = true
-                    sawAnyAssistantWork = false
-                default:
-                    break
-                }
-                if phase == "final_answer" {
-                    sawClose = true
-                }
-            }
+            return Data(line)
         }
-
-        guard sawAnyAssistantWork, !sawClose, let last = lastTimestamp else {
-            return false
-        }
-        return now.timeIntervalSince(last) > interruptedThreshold
+        return nil
     }
 
-    private static func parse(data: Data) -> [RolloutHistoryEntry] {
+    private static func parse(data: Data, now: Date) -> ReadResult {
         var out: [RolloutHistoryEntry] = []
 
         // Builder for the assistant turn currently being assembled. nil
@@ -160,6 +223,14 @@ enum RolloutReader {
         let isoFallback = ISO8601DateFormatter()
         isoFallback.formatOptions = [.withInternetDateTime]
 
+        // Interrupted-detection state. We used to do a second full pass
+        // over `data` to compute these; folding them into the main loop
+        // avoids re-walking + re-decoding tens of thousands of JSONL
+        // lines on a multi-MB rollout.
+        var lastParsedTimestamp: Date? = nil
+        var sawClose = false
+        var sawAnyAssistantWork = false
+
         var start = data.startIndex
         while start < data.endIndex {
             let nl = data[start...].firstIndex(of: 0x0a) ?? data.endIndex
@@ -170,15 +241,52 @@ enum RolloutReader {
                 continue
             }
 
-            let timestamp: Date = {
-                if let s = obj["timestamp"] as? String {
-                    return isoFormatter.date(from: s) ?? isoFallback.date(from: s) ?? Date()
-                }
-                return Date()
-            }()
+            // `parsedTimestamp` is the strictly-from-JSON value; only
+            // those advance `lastParsedTimestamp` so a synthetic
+            // `Date()` fallback (line had no `timestamp` field) does
+            // not falsely re-anchor the interrupted-turn check.
+            let parsedTimestamp: Date? = (obj["timestamp"] as? String).flatMap {
+                isoFormatter.date(from: $0) ?? isoFallback.date(from: $0)
+            }
+            let timestamp: Date = parsedTimestamp ?? Date()
+            if let parsedTimestamp {
+                lastParsedTimestamp = parsedTimestamp
+                // Stamp the in-progress turn's `endedAt` so the synthesized
+                // `WorkSummary` ends on the last activity timestamp instead
+                // of leaving the chat row's "Worked for Xs" header ticking
+                // forever (`isActive` is gated on `endedAt == nil`).
+                pending?.endedAt = parsedTimestamp
+            }
             let kind = obj["type"] as? String
             guard let payload = obj["payload"] as? [String: Any] else { continue }
             let inner = payload["type"] as? String
+
+            // Track interrupted-turn signal. Mirrors the heuristic the
+            // dedicated `detectInterrupted` pass used to compute: any
+            // assistant-side activity sets `sawAnyAssistantWork`; an
+            // explicit close (`turn_completed`, `final_answer`) or a
+            // new `user_message` resets it.
+            if kind == "event_msg" {
+                let event = inner ?? (obj["event"] as? String)
+                let phase = (payload["phase"] as? String)
+                    ?? (obj["phase"] as? String)
+                switch event {
+                case "agent_message", "agent_reasoning",
+                     "exec_command_begin", "exec_command_output_delta",
+                     "exec_command_end", "tool_call":
+                    sawAnyAssistantWork = true
+                case "turn_completed":
+                    sawClose = true
+                case "user_message":
+                    sawClose = true
+                    sawAnyAssistantWork = false
+                default:
+                    break
+                }
+                if phase == "final_answer" {
+                    sawClose = true
+                }
+            }
 
             if kind == "session_meta" {
                 if sessionCwd == nil,
@@ -438,7 +546,13 @@ enum RolloutReader {
         if let p = pending {
             out.append(p.finalize())
         }
-        return out
+
+        let interrupted: Bool = {
+            guard sawAnyAssistantWork, !sawClose,
+                  let last = lastParsedTimestamp else { return false }
+            return now.timeIntervalSince(last) > interruptedThreshold
+        }()
+        return ReadResult(entries: out, lastTurnInterrupted: interrupted)
     }
 
     /// Clawix parses each shell command into one or more semantic actions
@@ -716,8 +830,18 @@ enum RolloutReader {
 /// pipeline produces.
 private struct PendingAssistant {
     let timestamp: Date
+    /// Last parsed timestamp seen while this turn was being assembled.
+    /// Bumped from the parser loop on every line that belongs to the
+    /// turn so `finalize()` can stamp `WorkSummary.endedAt` with the
+    /// actual close time instead of leaving the live counter ticking.
+    var endedAt: Date
     var timeline: [AssistantTimelineEntry] = []
     var finalText: String = ""
+
+    init(timestamp: Date) {
+        self.timestamp = timestamp
+        self.endedAt = timestamp
+    }
 
     mutating func appendText(_ text: String, isFinal: Bool) {
         // Each agent_message lands as a `.message` entry in the
@@ -822,7 +946,12 @@ private struct PendingAssistant {
             text: body,
             timestamp: timestamp,
             timeline: timeline,
-            attachments: []
+            attachments: [],
+            workSummary: WorkSummary(
+                startedAt: timestamp,
+                endedAt: endedAt,
+                items: []
+            )
         )
     }
 }

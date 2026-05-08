@@ -49,10 +49,26 @@ final class DaemonBridgeClient {
     }
 
     func openChat(_ chatId: UUID) {
-        // Desktop client wants the whole transcript: it's the
-        // co-located GUI talking to its own daemon, no point
-        // paginating loopback-local data.
-        send(.openChat(chatId: chatId.uuidString, limit: nil))
+        // Always opt into pagination, same as the iPhone client. The
+        // initial paint only needs the trailing window
+        // (`bridgeInitialPageLimit`); older history streams in via
+        // `loadOlderMessages` if the user scrolls up. Pulling the full
+        // transcript on every chat tap was the dominant cost behind
+        // the "transcript reanchors visibly while building from the
+        // top" symptom on Mac, even over loopback.
+        send(.openChat(chatId: chatId.uuidString, limit: bridgeInitialPageLimit))
+    }
+
+    /// Fetch the next page of older messages for `chatId`. The cursor
+    /// is the id of the oldest message the desktop currently has; the
+    /// daemon replies with `messagesPage` carrying the slice prior to
+    /// it (oldest first). No-op when not yet authenticated.
+    func loadOlderMessages(chatId: UUID, beforeMessageId: String) {
+        send(.loadOlderMessages(
+            chatId: chatId.uuidString,
+            beforeMessageId: beforeMessageId,
+            limit: bridgeOlderPageLimit
+        ))
     }
 
     func sendPrompt(chatId: UUID, text: String, attachments: [WireAttachment] = []) {
@@ -123,15 +139,19 @@ final class DaemonBridgeClient {
             send(.requestRateLimits)
         case .chatsSnapshot(let chats):
             appState?.applyDaemonChats(chats)
+            appState?.persistSnapshotDebounced()
         case .chatUpdated(let chat):
             appState?.applyDaemonChat(chat)
-        case .messagesSnapshot(let chatId, let messages, _):
-            appState?.applyDaemonMessages(chatId: chatId, messages: messages)
-        case .messagesPage:
-            // Desktop client never requests paginated history.
-            break
+            appState?.persistSnapshotDebounced()
+        case .messagesSnapshot(let chatId, let messages, let hasMore):
+            appState?.applyDaemonMessages(chatId: chatId, messages: messages, hasMore: hasMore)
+            appState?.persistSnapshotDebounced()
+        case .messagesPage(let chatId, let messages, let hasMore):
+            appState?.applyDaemonMessagesPage(chatId: chatId, messages: messages, hasMore: hasMore)
+            appState?.persistSnapshotDebounced()
         case .messageAppended(let chatId, let message):
             appState?.appendDaemonMessage(chatId: chatId, message: message)
+            appState?.persistSnapshotDebounced()
         case .messageStreaming(let chatId, let messageId, let content, let reasoningText, let finished):
             appState?.applyDaemonStreaming(chatId: chatId,
                                            messageId: messageId,

@@ -113,6 +113,15 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
     /// Surfaced so the iPhone (or any client) can render an
     /// "Interrupted, retry?" affordance on the chat row.
     public var lastTurnInterrupted: Bool
+    /// Codex thread id (the stable id Codex emits in rollouts and in
+    /// `~/.codex/.codex-global-state.json`). Distinct from `id`,
+    /// which is the wire chat UUID minted by whichever process built
+    /// this snapshot. The desktop GUI uses this to reconcile pin
+    /// order and project membership from `BackendStateReader` when
+    /// the daemon owns Codex (otherwise that metadata would be lost
+    /// on the way across the bridge — see `applyDaemonChats`).
+    /// Optional + decodeIfPresent so older clients keep parsing.
+    public var threadId: String?
 
     public init(
         id: String,
@@ -125,7 +134,8 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         lastMessagePreview: String? = nil,
         branch: String? = nil,
         cwd: String? = nil,
-        lastTurnInterrupted: Bool = false
+        lastTurnInterrupted: Bool = false,
+        threadId: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -138,6 +148,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         self.branch = branch
         self.cwd = cwd
         self.lastTurnInterrupted = lastTurnInterrupted
+        self.threadId = threadId
     }
 
     /// Decode tolerant of legacy payloads (without `lastTurnInterrupted`).
@@ -146,6 +157,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case id, title, createdAt, isPinned, isArchived, hasActiveTurn
         case lastMessageAt, lastMessagePreview, branch, cwd, lastTurnInterrupted
+        case threadId
     }
 
     public init(from decoder: Decoder) throws {
@@ -161,6 +173,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         self.branch = try c.decodeIfPresent(String.self, forKey: .branch)
         self.cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
         self.lastTurnInterrupted = try c.decodeIfPresent(Bool.self, forKey: .lastTurnInterrupted) ?? false
+        self.threadId = try c.decodeIfPresent(String.self, forKey: .threadId)
     }
 }
 

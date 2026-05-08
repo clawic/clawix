@@ -10,10 +10,28 @@ struct ChatView: View {
     @State private var branchMenuOpen = false
     @State private var branchCreateOpen = false
     @State private var branchSearch = ""
+    /// Drives `scrollPosition`. `chatTailId` is the canonical "you are
+    /// at the tail" marker; an `id`'d clear rectangle at the end of
+    /// the LazyVStack carries the same id so SwiftUI knows where the
+    /// bottom is. Stays `nil` whenever the user scrolls up so we
+    /// don't fight their position.
+    @State private var bottomId: String?
 
     private var chat: Chat? {
         appState.chat(byId: chatId)
     }
+
+    /// Stable id for the trailing sentinel inside the chat's LazyVStack.
+    /// Per-chat so switching chats reanchors at the new tail instead of
+    /// keeping the old chat's sentinel reference and animating between
+    /// them.
+    private var chatTailId: String { "chat-tail-\(chatId.uuidString)" }
+
+    /// Scroll-up sentinel threshold and spinner height tuned to match
+    /// the iPhone client (`ChatDetailView.loadOlderThreshold`). Firing
+    /// at 80pt from the top gives the daemon a chance to deliver the
+    /// next page before the user sees the gap.
+    private static let loadOlderThreshold: CGFloat = 80
 
     var body: some View {
         RenderProbe.tick("ChatView")
@@ -23,6 +41,24 @@ struct ChatView: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 44) {
+                                // Spinner that surfaces while a
+                                // `loadOlderMessages` round trip is in
+                                // flight. Sits above the messages so
+                                // the user gets feedback the moment
+                                // the scroll-up sentinel fires;
+                                // collapses to zero height when idle
+                                // so the layout doesn't reserve dead
+                                // space.
+                                if appState.messagesPaginationByChat[chatId]?.loadingOlder == true {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView()
+                                            .controlSize(.small)
+                                        Spacer()
+                                    }
+                                    .frame(height: 28)
+                                    .transition(.opacity)
+                                }
                                 let lastUserMessageId = chat.messages.last(where: { $0.role == .user })?.id
                                 let lastAssistantMessageId = chat.messages.last(where: {
                                     $0.role == .assistant && $0.streamingFinished && !$0.isError
@@ -33,6 +69,7 @@ struct ChatView: View {
                                     }
                                     return chat.hasActiveTurn
                                 }()
+                                let activeFindQuery = appState.isFindBarOpen ? appState.findQuery : ""
                                 ForEach(chat.messages) { msg in
                                     MessageRow(
                                         chatId: chat.id,
@@ -40,6 +77,7 @@ struct ChatView: View {
                                         isLastUserMessage: msg.id == lastUserMessageId,
                                         isLastAssistantMessage: msg.id == lastAssistantMessageId,
                                         responseStreaming: responseStreaming,
+                                        findQuery: activeFindQuery,
                                         onTimelineExpanded: { expandedId in
                                             // Pin the bottom of the expanded
                                             // bubble so the inserted prelude
@@ -49,8 +87,25 @@ struct ChatView: View {
                                             DispatchQueue.main.async {
                                                 proxy.scrollTo(expandedId, anchor: .bottom)
                                             }
+                                        },
+                                        onEditUserMessage: { newContent in
+                                            appState.editUserMessage(
+                                                chatId: chat.id,
+                                                messageId: msg.id,
+                                                newContent: newContent
+                                            )
+                                        },
+                                        onForkConversation: {
+                                            appState.forkConversation(
+                                                chatId: chat.id,
+                                                atMessageId: msg.id
+                                            )
+                                        },
+                                        onOpenImage: { url in
+                                            appState.imagePreviewURL = url
                                         }
                                     )
+                                    .equatable()
                                     .id(msg.id)
 
                                     if msg.id == chat.forkBannerAfterMessageId,
@@ -59,6 +114,16 @@ struct ChatView: View {
                                             .padding(.top, -20)
                                     }
                                 }
+                                // Trailing sentinel for `scrollPosition`.
+                                // Pairing this with `defaultScrollAnchor
+                                // (.bottom, for: .initialOffset)` is what
+                                // makes the chat appear with the latest
+                                // message visible from the very first
+                                // frame, no animated scroll-to-bottom on
+                                // mount.
+                                Color.clear
+                                    .frame(height: 1)
+                                    .id(chatTailId)
                             }
                             .textSelection(.enabled)
                             .frame(maxWidth: chatRailMaxWidth)
@@ -68,15 +133,57 @@ struct ChatView: View {
                             .padding(.bottom, 12)
                             .background(ThinScrollerInstaller(style: .legacy).allowsHitTesting(false))
                         }
-                        .onChange(of: chat.messages.count) { _, _ in
-                            if let last = chat.messages.last {
-                                withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                            }
+                        // Declarative scroll positioning. The
+                        // `scrollPosition(id:anchor:)` binding tells
+                        // SwiftUI which row should sit at the bottom
+                        // edge: when `bottomId` equals `chatTailId`
+                        // the viewport pins to the trailing sentinel,
+                        // and SwiftUI keeps it glued there while the
+                        // content size changes (streaming, prepended
+                        // pages). When the user scrolls up the
+                        // binding flips to whichever id sits at the
+                        // bottom of the viewport, so we don't fight
+                        // their position.
+                        //
+                        // On macOS 15 we layer the
+                        // `defaultScrollAnchor(_:for:)` triplet that
+                        // matches the iPhone (`.top` for alignment,
+                        // `.bottom` for initial offset and size
+                        // changes) so the very first frame already
+                        // lands at the tail without an animated
+                        // scroll the user can see. On macOS 14 the
+                        // `scrollPosition` binding alone, paired with
+                        // the snapshot cache prepopulating the chat
+                        // and the bridge's `bridgeInitialPageLimit`
+                        // payload, gets us 90% of the same feel.
+                        .scrollPosition(id: $bottomId, anchor: .bottom)
+                        .modifier(ChatScrollDeclarativeAnchors())
+                        // Scroll-up sentinel for `loadOlderMessages`.
+                        // Fires whenever `offsetY` crosses the
+                        // threshold AND the content actually overflows
+                        // the viewport. The store dedupes via
+                        // `loadingOlderByChat`, so the callback is
+                        // safe to fire on every geometry update.
+                        // macOS 15+ only; macOS 14 keeps the initial
+                        // page (`bridgeInitialPageLimit` messages)
+                        // and falls back gracefully when the user
+                        // scrolls past it.
+                        .modifier(ChatScrollUpSentinel(
+                            threshold: Self.loadOlderThreshold,
+                            onTrigger: { appState.requestOlderIfNeeded(chatId: chatId) }
+                        ))
+                        .onAppear {
+                            appState.ensureSelectedChat()
+                            // Re-arm `bottomId` so a switch back into
+                            // a chat the user previously scrolled up
+                            // in still pins to the latest message on
+                            // reentry.
+                            bottomId = chatTailId
                         }
-                        .onAppear { appState.ensureSelectedChat() }
                         .onChange(of: chatId) { _, _ in
                             appState.ensureSelectedChat()
                             appState.requestComposerFocus()
+                            bottomId = chatTailId
                         }
                         .onChange(of: appState.currentFindIndex) { _, _ in
                             scrollToCurrentFindMatch(proxy: proxy)
@@ -231,6 +338,64 @@ struct ChatView: View {
     }
 }
 
+/// Equatable bundle of the scroll-geometry numbers we care about.
+/// Mirrors `ChatDetailView.ScrollMetrics` on iOS so SwiftUI's diff
+/// filters out the sub-pixel updates that fire while the composer is
+/// animating its height; the action callback only re-runs when one of
+/// these four members actually changes.
+private struct ChatScrollMetrics: Equatable {
+    let content: CGFloat
+    let container: CGFloat
+    let insets: CGFloat
+    let offsetY: CGFloat
+}
+
+/// macOS 15+ layered anchors. macOS 14 falls back to the
+/// `scrollPosition` binding alone (already applied at the call site).
+private struct ChatScrollDeclarativeAnchors: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content
+                .defaultScrollAnchor(.top, for: .alignment)
+                .defaultScrollAnchor(.bottom, for: .initialOffset)
+                .defaultScrollAnchor(.bottom, for: .sizeChanges)
+        } else {
+            content
+        }
+    }
+}
+
+/// Scroll-up sentinel that fires `onTrigger` once the user is near
+/// the top of the transcript and there is real overflow. macOS 15+
+/// only because `onScrollGeometryChange` is a 15.0 API; macOS 14 ships
+/// without scroll-up pagination, which is acceptable degradation —
+/// the initial `bridgeInitialPageLimit` messages still load eagerly.
+private struct ChatScrollUpSentinel: ViewModifier {
+    let threshold: CGFloat
+    let onTrigger: () -> Void
+
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content.onScrollGeometryChange(for: ChatScrollMetrics.self) { geom in
+                ChatScrollMetrics(
+                    content: geom.contentSize.height,
+                    container: geom.containerSize.height,
+                    insets: geom.contentInsets.top + geom.contentInsets.bottom,
+                    offsetY: geom.contentOffset.y
+                )
+            } action: { _, m in
+                let nearTop = m.offsetY < threshold
+                let realOverflow = m.content > m.container - m.insets + 1
+                if nearTop, realOverflow {
+                    onTrigger()
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
 // MARK: - Anchor keys for footer pills
 
 private struct WorkPillAnchorKey: PreferenceKey {
@@ -268,6 +433,14 @@ private enum UserBubbleContent {
         "png", "jpg", "jpeg", "gif", "heic", "heif", "tiff", "tif", "bmp", "webp"
     ]
 
+    /// `NSRegularExpression` is moderately expensive to compile and the
+    /// pattern never changes — compile once for the lifetime of the
+    /// process so every visible user bubble doesn't re-pay that cost on
+    /// each render.
+    private static let mentionRegex: NSRegularExpression? = try? NSRegularExpression(
+        pattern: #"@(/.+?)(?=\s+@/|\n|$)"#
+    )
+
     static func parse(_ raw: String) -> Parsed {
         // Mentions in user messages come from `AppState.sendMessage`, which
         // builds them as `@<absolute-path>` joined by single spaces and
@@ -275,8 +448,7 @@ private enum UserBubbleContent {
         // (e.g. "My Project Folder"), so we can't stop at the first
         // whitespace. Stop on either ` @/` (next mention), `\n`, or end of
         // string. Lazy `.+?` ensures we don't swallow the body.
-        let pattern = #"@(/.+?)(?=\s+@/|\n|$)"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+        guard let regex = mentionRegex else {
             return Parsed(
                 images: [], files: [],
                 text: raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -314,7 +486,12 @@ private enum UserBubbleContent {
 
 private struct UserMentionPreviews: View {
     let parsed: UserBubbleContent.Parsed
-    @EnvironmentObject private var appState: AppState
+    /// Tap on a mentioned image opens the lightbox. Routed through a
+    /// closure (instead of reading `AppState` directly) so this view —
+    /// and its `MessageRow` parent — can stay independent of
+    /// `AppState`'s @Published storm during streaming, which would
+    /// otherwise invalidate every visible bubble on every delta.
+    let onOpenImage: (URL) -> Void
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
@@ -324,7 +501,7 @@ private struct UserMentionPreviews: View {
                         UserImageThumbnail(url: url)
                             .onTapGesture {
                                 withAnimation(.easeOut(duration: 0.18)) {
-                                    appState.imagePreviewURL = url
+                                    onOpenImage(url)
                                 }
                             }
                     }
@@ -357,7 +534,7 @@ private struct UserImageThumbnail: View {
                     .aspectRatio(contentMode: .fill)
             } else {
                 Color.white.opacity(0.05)
-                LucideIcon(.image, size: 18)
+                LucideIcon(.image, size: 12.5)
                     .foregroundColor(Color(white: 0.45))
             }
         }
@@ -405,6 +582,42 @@ private struct UserFileMentionChip: View {
     }
 }
 
+/// Per-process cache for the three `DateFormatter`s `MessageRow` uses to
+/// render its timestamp. Allocating + configuring a `DateFormatter` is
+/// surprisingly expensive (it lazily walks `cf-locale`/ICU on first use)
+/// and `formattedTimestamp` is called inside `actionBar`, which is
+/// re-evaluated whenever the row's `body` runs. Caching the three
+/// formatters and only re-configuring when the locale identifier
+/// changes turns three allocations per render into a dictionary lookup.
+private enum TimestampFormatters {
+    private static let lock = NSLock()
+    private static var lastLocaleId: String = ""
+    private static let time = DateFormatter()
+    private static let weekday = DateFormatter()
+    private static let date = DateFormatter()
+
+    static func resolved() -> (time: DateFormatter, weekday: DateFormatter, date: DateFormatter) {
+        lock.lock(); defer { lock.unlock() }
+        let locale = AppLocale.current
+        let id = locale.identifier
+        if id != lastLocaleId {
+            time.locale = locale
+            time.dateStyle = .none
+            time.timeStyle = .short
+
+            weekday.locale = locale
+            weekday.dateFormat = "EEEE"
+
+            date.locale = locale
+            date.dateStyle = .short
+            date.timeStyle = .none
+
+            lastLocaleId = id
+        }
+        return (time, weekday, date)
+    }
+}
+
 // MARK: - Message row
 
 // [QUICKASK<->CHAT PARITY]
@@ -429,14 +642,27 @@ private struct UserFileMentionChip: View {
 // dispatch counterpart of `sendMessage()` is `submitQuickAsk(...)`
 // in `AppState.swift`; see its doc for why QuickAsk must call
 // `openChat` explicitly.
-private struct MessageRow: View {
+private struct MessageRow: View, Equatable {
     let chatId: UUID
     let message: ChatMessage
     var isLastUserMessage: Bool = false
     var isLastAssistantMessage: Bool = false
     var responseStreaming: Bool = false
+    /// Empty unless the in-page find bar is open. Threaded down from
+    /// `ChatView` instead of read off `AppState` here so an unrelated
+    /// `@Published` change on `AppState` (any streaming delta, hover
+    /// state on the sidebar, etc.) does not invalidate every visible
+    /// row's body. Combined with `.equatable()` on the row's call site,
+    /// a delta on a single message only re-renders that one row.
+    var findQuery: String = ""
     var onTimelineExpanded: ((UUID) -> Void)? = nil
-    @EnvironmentObject var appState: AppState
+    /// Closures bridge back to the `AppState` mutation surface from the
+    /// row's parent (`ChatView`). They are intentionally NOT compared by
+    /// `Equatable` so swapping them across rebuilds doesn't force a
+    /// re-render of the bubble.
+    var onEditUserMessage: (String) -> Void = { _ in }
+    var onForkConversation: () -> Void = {}
+    var onOpenImage: (URL) -> Void = { _ in }
     @State private var rowHovered = false
     @State private var justCopied = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -450,7 +676,17 @@ private struct MessageRow: View {
 
     private var isUser: Bool { message.role == .user }
 
+    static func == (lhs: MessageRow, rhs: MessageRow) -> Bool {
+        lhs.chatId == rhs.chatId
+            && lhs.message == rhs.message
+            && lhs.isLastUserMessage == rhs.isLastUserMessage
+            && lhs.isLastAssistantMessage == rhs.isLastAssistantMessage
+            && lhs.responseStreaming == rhs.responseStreaming
+            && lhs.findQuery == rhs.findQuery
+    }
+
     var body: some View {
+        let _ = PerfSignpost.uiChat.event("row.body")
         VStack(alignment: isUser ? .trailing : .leading, spacing: 24) {
             if isUser {
                 if isEditing {
@@ -460,11 +696,7 @@ private struct MessageRow: View {
                         onSubmit: {
                             let trimmed = editDraft.trimmingCharacters(in: .whitespacesAndNewlines)
                             guard !trimmed.isEmpty else { return }
-                            appState.editUserMessage(
-                                chatId: chatId,
-                                messageId: message.id,
-                                newContent: trimmed
-                            )
+                            onEditUserMessage(trimmed)
                             isEditing = false
                         }
                     )
@@ -472,7 +704,7 @@ private struct MessageRow: View {
                 } else {
                     let parsed = UserBubbleContent.parse(message.content)
                     if !parsed.images.isEmpty || !parsed.files.isEmpty {
-                        UserMentionPreviews(parsed: parsed)
+                        UserMentionPreviews(parsed: parsed, onOpenImage: onOpenImage)
                     }
                     if let audioRef = message.audioRef {
                         UserAudioBubble(audioRef: audioRef)
@@ -483,7 +715,6 @@ private struct MessageRow: View {
                             .components(separatedBy: "\n\n")
                             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
-                        let findQuery = appState.isFindBarOpen ? appState.findQuery : ""
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
                                 Group {
@@ -581,7 +812,7 @@ private struct MessageRow: View {
                                     : Palette.textPrimary,
                                 checkpoints: onlyTextSegment ? message.streamCheckpoints : [],
                                 streamingFinished: message.streamingFinished,
-                                findQuery: appState.isFindBarOpen ? appState.findQuery : ""
+                                findQuery: findQuery
                             )
                             .frame(maxWidth: .infinity, alignment: .leading)
                         case .plan(let body, let completed):
@@ -683,7 +914,7 @@ private struct MessageRow: View {
                 color: Palette.textPrimary,
                 checkpoints: message.reasoningCheckpoints[entryId] ?? [],
                 streamingFinished: message.streamingFinished,
-                findQuery: appState.isFindBarOpen ? appState.findQuery : ""
+                findQuery: findQuery
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         case .message(let entryId, let text):
@@ -731,7 +962,7 @@ private struct MessageRow: View {
                             : Palette.textPrimary,
                         checkpoints: useCheckpoints ? message.streamCheckpoints : [],
                         streamingFinished: message.streamingFinished,
-                        findQuery: appState.isFindBarOpen ? appState.findQuery : ""
+                        findQuery: findQuery
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                 case .plan(let body, let completed):
@@ -772,10 +1003,7 @@ private struct MessageRow: View {
                                   action: handleCopy)
                 MessageActionIcon(kind: .branchArrows,
                                   label: forkLabel) {
-                    appState.forkConversation(
-                        chatId: chatId,
-                        atMessageId: message.id
-                    )
+                    onForkConversation()
                 }
                 timestampLabel
                     .opacity(isLastAssistantMessage ? (rowHovered ? 1 : 0) : 1)
@@ -796,27 +1024,17 @@ private struct MessageRow: View {
 
     private var formattedTimestamp: String {
         let cal = Calendar.current
-        let timeFmt = DateFormatter()
-        timeFmt.locale = AppLocale.current
-        timeFmt.dateStyle = .none
-        timeFmt.timeStyle = .short
+        let fmts = TimestampFormatters.resolved()
         if cal.isDateInToday(message.timestamp) {
-            return timeFmt.string(from: message.timestamp)
+            return fmts.time.string(from: message.timestamp)
         }
         let startOfMsg = cal.startOfDay(for: message.timestamp)
         let startOfToday = cal.startOfDay(for: Date())
         let dayDiff = cal.dateComponents([.day], from: startOfMsg, to: startOfToday).day ?? 0
         if dayDiff >= 1 && dayDiff <= 6 {
-            let weekdayFmt = DateFormatter()
-            weekdayFmt.locale = AppLocale.current
-            weekdayFmt.dateFormat = "EEEE"
-            return "\(weekdayFmt.string(from: message.timestamp)), \(timeFmt.string(from: message.timestamp))"
+            return "\(fmts.weekday.string(from: message.timestamp)), \(fmts.time.string(from: message.timestamp))"
         }
-        let dateFmt = DateFormatter()
-        dateFmt.locale = AppLocale.current
-        dateFmt.dateStyle = .short
-        dateFmt.timeStyle = .none
-        return dateFmt.string(from: message.timestamp)
+        return fmts.date.string(from: message.timestamp)
     }
 
     private func handleCopy() {
@@ -876,7 +1094,7 @@ private struct MessageActionIcon: View {
         switch kind {
         case .copy(let showCheck):
             if showCheck {
-                LucideIcon(.check, size: 12)
+                LucideIcon(.check, size: 13)
                     .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
@@ -976,7 +1194,7 @@ private struct ChatFooterPill: View {
                 Text(label)
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .lineLimit(1)
-                LucideIcon(.chevronDown, size: 9)
+                LucideIcon(.chevronDown, size: 10)
             }
             .foregroundColor(Color(white: (hovered || isOpen) ? 0.82 : 0.55))
             .padding(.horizontal, 4)
@@ -1054,7 +1272,7 @@ private struct WorkLocallyRow: View {
                     LucideIcon(.check, size: 11)
                         .foregroundColor(MenuStyle.rowText)
                 case .chevron:
-                    LucideIcon(.chevronRight)
+                    LucideIcon(.chevronRight, size: 11)
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1621,7 +1839,7 @@ private struct LinkPreviewCard: View {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(Color(red: 0.20, green: 0.45, blue: 0.92))
                     .frame(width: 38, height: 38)
-                LucideIcon(.globe, size: 17)
+                LucideIcon(.globe, size: 12)
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 2) {

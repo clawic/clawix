@@ -14,6 +14,15 @@ public final class BridgeBus {
     private var snapshot: [String: ChatProjection] = [:]
     private var listShape: [String] = []
     private var emit: ((BridgeFrame) -> Void)?
+    /// When a subscribed chat gains more than this many messages in a
+    /// single publisher tick, the bus emits a single `messagesSnapshot`
+    /// instead of N `messageAppended` frames. Protects clients from the
+    /// "transcript fills in visibly one row per render" pattern when the
+    /// host applies a bulk hydration (e.g. opening a chat that wasn't
+    /// pre-hydrated). Live-streaming a turn produces small deltas (1-3
+    /// messages: agentMessage + workItems + final), well under the
+    /// threshold, so the existing append path keeps its tight latency.
+    private let bridgeBatchAppendThreshold = 5
     /// Last `BridgeRuntimeState` seen on the wire. Cached so a peer
     /// connecting after `startObserving` can pull the current state
     /// synchronously without waiting for the next publisher tick.
@@ -216,12 +225,27 @@ public final class BridgeBus {
             // Subscribed chats get message-level updates.
             if subscribedChatIds.contains(snap.id) {
                 if let prev, prev.messageCount < proj.messageCount {
-                    let added = snap.messages.suffix(proj.messageCount - prev.messageCount)
-                    for msg in added {
-                        emit(BridgeFrame(.messageAppended(
+                    let delta = proj.messageCount - prev.messageCount
+                    if delta > bridgeBatchAppendThreshold {
+                        // Bulk gain (typical: lazy hydration finished and
+                        // the chat went from 0 to N in one tick). Emitting
+                        // N appends would make the client paint rows one
+                        // by one. A single snapshot resets the transcript
+                        // atomically and keeps the scroll anchor at the
+                        // tail on the first render.
+                        emit(BridgeFrame(.messagesSnapshot(
                             chatId: snap.id,
-                            message: msg
+                            messages: snap.messages,
+                            hasMore: nil
                         )))
+                    } else {
+                        let added = snap.messages.suffix(delta)
+                        for msg in added {
+                            emit(BridgeFrame(.messageAppended(
+                                chatId: snap.id,
+                                message: msg
+                            )))
+                        }
                     }
                 } else if prev?.messageCount != proj.messageCount {
                     // Count decreased (rare: turn cancelled with placeholder

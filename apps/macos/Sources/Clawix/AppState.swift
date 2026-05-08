@@ -17,11 +17,16 @@ enum SidebarRoute: Equatable {
     case chat(UUID)
     case settings
     case secretsHome
+    /// Database admin (3-pane explorer over all collections).
+    case databaseHome
+    /// Curated entry pointing at a single collection. Renders the same
+    /// adaptive UI as `.databaseHome` but filtered + with curated tabs.
+    case databaseCollection(String)
 }
 
 // MARK: - Models
 
-struct ChatMessage: Identifiable {
+struct ChatMessage: Identifiable, Equatable {
     let id: UUID
     let role: MessageRole
     var content: String
@@ -264,7 +269,7 @@ struct ContextUsage: Equatable {
     }
 }
 
-struct Chat: Identifiable {
+struct Chat: Identifiable, Equatable {
     let id: UUID
     var title: String
     var messages: [ChatMessage]
@@ -735,6 +740,13 @@ final class AppState: ObservableObject {
     /// whatever was open in that chat last (or closes if the chat had no
     /// items).
     @Published var chatSidebars: [UUID: ChatSidebarState] = [:]
+    /// Right-sidebar state used on every non-chat route (home / new
+    /// conversation, search, plugins, automations, project, settings).
+    /// Without this the toggle would no-op outside chats because
+    /// `currentSidebar`'s setter has nowhere to attach the state. Lives
+    /// only in memory: a relaunch resets the global panel, but switching
+    /// between home and a chat preserves whatever tabs were open here.
+    @Published var globalSidebar: ChatSidebarState = .empty
     /// Cross-tab favicon memory keyed by the registrable host. A tab freshly
     /// opened to a host visited before therefore renders its real favicon
     /// from the very first frame instead of cycling through the monogram and
@@ -878,6 +890,36 @@ final class AppState: ObservableObject {
     /// re-firing on every turn of the same chat.
     private var titledChatIds: Set<UUID> = []
 
+    /// Per-chat pagination state for the bridge's `loadOlderMessages`
+    /// flow. Mirrors the iOS `BridgeStore` model: `oldestKnownId` is the
+    /// cursor passed to the next request, `hasMore` is whether the
+    /// daemon told us older history exists, `loadingOlder` guards
+    /// against duplicate requests when the scroll-up sentinel
+    /// re-materializes during fast scrolls. Reset whenever a fresh
+    /// `messagesSnapshot` arrives for the chat.
+    struct ChatPagination: Equatable {
+        var oldestKnownId: String?
+        var hasMore: Bool
+        var loadingOlder: Bool
+    }
+    @Published var messagesPaginationByChat: [UUID: ChatPagination] = [:]
+
+    /// Wire mirror of what the daemon (or the on-disk snapshot) last
+    /// delivered, kept in lock-step with `chats` / `chats[i].messages`
+    /// so we can persist the same `WireChat` / `WireMessage` shapes the
+    /// iPhone uses without round-tripping through `Chat`/`ChatMessage`.
+    /// Updated by every `applyDaemon*` and `appendDaemonMessage` path.
+    /// Streaming partials are deliberately NOT mirrored here: the on-
+    /// disk snapshot only holds settled messages, matching iOS.
+    private var cachedWireChats: [WireChat] = []
+    private var cachedWireMessagesByChat: [String: [WireMessage]] = [:]
+    /// Drives `SnapshotCache.save` after a quiet 500ms window. Each
+    /// call cancels the previous in-flight task; streaming bursts and
+    /// rapid chat updates collapse into a single write. The actual IO
+    /// runs on a background priority Task so the main thread stays out
+    /// of the file-system path entirely.
+    private var persistTask: Task<Void, Never>?
+
     init() {
         // Initial language: read directly from persisted storage so the
         // didSet observer doesn't fire (and re-apply) during init.
@@ -940,6 +982,11 @@ final class AppState: ObservableObject {
         self.titleGenerator = nil
 
         backendState = BackendStateReader.read()
+        // Mirror Codex's pin set into the local repo. One-way: any pin
+        // present in `.codex-global-state.json` that we don't have yet
+        // is appended to the local order. We never write back to Codex,
+        // and pins removed from Codex stay locally pinned.
+        pinsRepo.addIfMissing(backendState.pinnedThreadIds)
         installBackendStateWatcher()
         manualProjectOrder = projectOrdersRepo.orderedIds()
         loadMockData()
@@ -953,6 +1000,13 @@ final class AppState: ObservableObject {
             // reconciles via applyThreads once clawix.bootstrap()
             // resolves, preserving Chat.id thanks to oldByThread.
             applySnapshotForFirstPaint()
+            // Hydrate the most-recent transcripts from the on-disk
+            // bridge snapshot (~/Library/Application Support/clawix/
+            // snapshot.json) so a tap on a chat in the sidebar lands
+            // immediately on the last-known body instead of an empty
+            // ScrollView while the daemon's `messagesSnapshot` races
+            // back. Idempotent / silent if the file is missing.
+            loadCachedSnapshot()
         }
         loadHostFavicons()
         loadChatSidebars()
@@ -965,11 +1019,17 @@ final class AppState: ObservableObject {
         }
 
         // Forward auth coordinator changes so views observing AppState
-        // also rebuild when login / logout state flips.
+        // also rebuild when login / logout state flips. Coalesce bursts
+        // into one tick per 150 ms: auth flips are user-visible but
+        // never urgent, and an unthrottled forward fans out an
+        // `objectWillChange` storm to every `@EnvironmentObject`
+        // observer (sidebar, chat, composer, message rows, ...).
         auth.bootstrap()
-        authObserver = auth.objectWillChange.sink { [weak self] in
-            self?.objectWillChange.send()
-        }
+        authObserver = auth.objectWillChange
+            .throttle(for: .milliseconds(150), scheduler: DispatchQueue.main, latest: true)
+            .sink { [weak self] in
+                self?.objectWillChange.send()
+            }
         willChangeProbe = objectWillChange.sink { _ in
             RenderProbe.tick("AppState.willChange")
         }
@@ -1012,7 +1072,14 @@ final class AppState: ObservableObject {
         // up as enabled for the GUI's own SMAppService.agent. Treat any
         // reachable daemon on loopback as authoritative — otherwise the
         // GUI would race the CLI-installed daemon for Codex ownership.
-        let daemonBridgeEnabled = BackgroundBridgeService.shared.isActive
+        //
+        // Fixture mode (showcase / dummy / E2E) overrides this: the
+        // fixture is the canonical dataset and the daemon owns the
+        // user's REAL Codex sessions, so connecting would let the
+        // daemon's `chatsSnapshot` overwrite the curated fixture chats
+        // with live data and leak the user's real chats into a recording.
+        let fixtureActive = AgentThreadStore.fixtureThreads() != nil
+        let daemonBridgeEnabled = !fixtureActive && BackgroundBridgeService.shared.isActive
         clawix?.appState = self
         if let clawix,
            ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] != "1",
@@ -1257,8 +1324,11 @@ final class AppState: ObservableObject {
             let pinnedTargets = Set(backendState.pinnedThreadIds)
             var resolvedPins = Set<String>()
             // Safety cap so a corrupt cursor or a stale pin id doesn't
-            // turn this into an unbounded sweep.
-            let maxPages = 12
+            // turn this into an unbounded sweep. Adaptive: scales with
+            // the number of pins so heavy users (dozens of pins
+            // scattered across years of history) actually resolve them
+            // all, with an absolute ceiling for the pathological case.
+            let maxPages = min(200, max(60, pinnedTargets.count * 4))
 
             repeat {
                 let result = try await clawix.listThreadsPage(
@@ -1502,11 +1572,6 @@ final class AppState: ObservableObject {
         hiddenRootsRepo.allHidden()
     }
 
-    /// True when the user has taken local control of pins (after the
-    /// first pin/unpin/reorder action). False on a fresh install where
-    /// pins still come from Codex's global state file.
-    var pinsAreLocal: Bool { metaRepo.hasLocalPins }
-
     func localOverrideCounts() -> Database.LocalOverrideCounts {
         Database.LocalOverrideCounts(
             pins: pinsRepo.count(),
@@ -1557,11 +1622,19 @@ final class AppState: ObservableObject {
         var restored: [Chat] = []
         var seenThreadIds = Set<String>()
 
+        // Drive `isPinned` from the live local repo (which already
+        // mirrors Codex on boot) rather than the snapshot's `pinned`
+        // column, so a pin added in Codex CLI shows up on first paint
+        // even though the snapshot was written before that pin existed.
+        let pinIds = pinsRepo.orderedThreadIds()
+        let pinnedSet = Set(pinIds)
+
         let firstPaintLimit = 200
         let topRows = snapshotRepo.loadTop(limit: firstPaintLimit)
         for row in topRows {
             guard let id = UUID(uuidString: row.chatUuid) else { continue }
             let projectId = row.projectPath.flatMap { path in projectByPath[path]?.id }
+            let archived = row.archived != 0
             restored.append(Chat(
                 id: id,
                 title: row.title,
@@ -1572,8 +1645,8 @@ final class AppState: ObservableObject {
                 historyHydrated: false,
                 hasActiveTurn: false,
                 projectId: projectId,
-                isArchived: row.archived != 0,
-                isPinned: row.pinned != 0,
+                isArchived: archived,
+                isPinned: !archived && pinnedSet.contains(row.threadId),
                 hasUnreadCompletion: false,
                 cwd: row.cwd,
                 hasGitRepo: false,
@@ -1594,6 +1667,7 @@ final class AppState: ObservableObject {
         for row in projectRows where !seenThreadIds.contains(row.threadId) {
             guard let id = UUID(uuidString: row.chatUuid) else { continue }
             guard let project = projectByPath[row.projectPath] else { continue }
+            let archived = row.archived != 0
             restored.append(Chat(
                 id: id,
                 title: row.title,
@@ -1604,8 +1678,8 @@ final class AppState: ObservableObject {
                 historyHydrated: false,
                 hasActiveTurn: false,
                 projectId: project.id,
-                isArchived: row.archived != 0,
-                isPinned: row.pinned != 0,
+                isArchived: archived,
+                isPinned: !archived && pinnedSet.contains(row.threadId),
                 hasUnreadCompletion: false,
                 cwd: row.cwd,
                 hasGitRepo: false,
@@ -1623,7 +1697,6 @@ final class AppState: ObservableObject {
         restored.sort { $0.createdAt > $1.createdAt }
         chats = restored
 
-        let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds
         let threadToChat = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
             chat.clawixThreadId.map { ($0, chat.id) }
         })
@@ -1782,17 +1855,30 @@ final class AppState: ObservableObject {
                         self.projects = nextProjects
                     }
                 }
-                // Refresh the pinned ordering: if pins came from Codex
-                // (no local override yet) and the file just changed,
-                // the in-memory order must follow.
-                if !self.metaRepo.hasLocalPins {
-                    let threadToChat = Dictionary(uniqueKeysWithValues: self.chats.compactMap { chat in
-                        chat.clawixThreadId.map { ($0, chat.id) }
-                    })
-                    let nextPinned = self.backendState.pinnedThreadIds.compactMap { threadToChat[$0] }
-                    if nextPinned != self.pinnedOrder {
-                        self.pinnedOrder = nextPinned
+                // Mirror any newly-arrived Codex pins into the local
+                // repo, then recompute the pinned set against the live
+                // chats so a `codex pin <id>` from the CLI shows up in
+                // the sidebar without requiring a relaunch.
+                self.pinsRepo.addIfMissing(self.backendState.pinnedThreadIds)
+                let pinIds = self.pinsRepo.orderedThreadIds()
+                let pinnedSet = Set(pinIds)
+                var chatsCopy = self.chats
+                var changed = false
+                for i in chatsCopy.indices {
+                    guard let tid = chatsCopy[i].clawixThreadId else { continue }
+                    let shouldBe = !chatsCopy[i].isArchived && pinnedSet.contains(tid)
+                    if chatsCopy[i].isPinned != shouldBe {
+                        chatsCopy[i].isPinned = shouldBe
+                        changed = true
                     }
+                }
+                if changed { self.chats = chatsCopy }
+                let threadToChat = Dictionary(uniqueKeysWithValues: self.chats.compactMap { chat in
+                    chat.clawixThreadId.map { ($0, chat.id) }
+                })
+                let nextPinned = pinIds.compactMap { threadToChat[$0] }
+                if nextPinned != self.pinnedOrder {
+                    self.pinnedOrder = nextPinned
                 }
             }
         }
@@ -1804,7 +1890,7 @@ final class AppState: ObservableObject {
         // would block the main thread on disk I/O for no benefit.
         projects = mergedProjects()
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
-        let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds
+        let pinIds = pinsRepo.orderedThreadIds()
         let pinnedSet = Set(pinIds)
 
         reconcileArchivesFromRuntime(threads)
@@ -1861,7 +1947,7 @@ final class AppState: ObservableObject {
         // disk read that used to sit on the folder-expansion hot path.
         projects = mergedProjects()
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
-        let pinIds = metaRepo.hasLocalPins ? pinsRepo.orderedThreadIds() : backendState.pinnedThreadIds
+        let pinIds = pinsRepo.orderedThreadIds()
         let pinnedSet = Set(pinIds)
 
         reconcileArchivesFromRuntime(threads)
@@ -1941,19 +2027,33 @@ final class AppState: ObservableObject {
     }
 
     private func rootPath(for thread: AgentThreadSummary, projectByPath: [String: Project]) -> String? {
-        if chatProjectsRepo.isProjectless(thread.id) {
-            return nil
+        rootPath(threadId: thread.id, cwd: thread.cwd, projectByPath: projectByPath)
+    }
+
+    /// Same project-resolution logic as the `AgentThreadSummary`
+    /// variant but parameterised on the thread id + cwd directly so
+    /// wire chats coming from the daemon (which carry both via the
+    /// `threadId` field added to `WireChat`) can be reconciled
+    /// against `BackendStateReader`'s hints without first being
+    /// re-wrapped as an `AgentThreadSummary`. Returns nil when the
+    /// thread id is missing (legacy daemons that don't emit it yet),
+    /// preserving the previous "stay in flat list" behaviour.
+    private func rootPath(threadId: String?, cwd: String?, projectByPath: [String: Project]) -> String? {
+        if let threadId {
+            if chatProjectsRepo.isProjectless(threadId) {
+                return nil
+            }
+            if let local = chatProjectsRepo.overridePath(for: threadId), projectByPath[local] != nil {
+                return local
+            }
+            if backendState.projectlessThreadIds.contains(threadId) {
+                return nil
+            }
+            if let official = backendState.threadWorkspaceRootHints[threadId], projectByPath[official] != nil {
+                return official
+            }
         }
-        if let local = chatProjectsRepo.overridePath(for: thread.id), projectByPath[local] != nil {
-            return local
-        }
-        if backendState.projectlessThreadIds.contains(thread.id) {
-            return nil
-        }
-        if let official = backendState.threadWorkspaceRootHints[thread.id], projectByPath[official] != nil {
-            return official
-        }
-        guard let cwd = thread.cwd else { return nil }
+        guard let cwd else { return nil }
         return bestProjectRoot(for: cwd, in: projectByPath.keys)
     }
 
@@ -2193,6 +2293,17 @@ final class AppState: ObservableObject {
         composer.text = ""
         composer.attachments = []
 
+        if let localModel = localModelName(forSelected: selectedModel) {
+            let history = chats.first(where: { $0.id == chatId })?.messages ?? []
+            LocalModelChat.shared.send(
+                chatId: chatId,
+                model: localModel,
+                history: history,
+                appState: self
+            )
+            return
+        }
+
         if let daemonBridgeClient {
             daemonBridgeClient.sendPrompt(chatId: chatId, text: combined)
         } else if let clawix {
@@ -2201,6 +2312,17 @@ final class AppState: ObservableObject {
                 self.clawixBackendStatus = clawix.status
             }
         }
+    }
+
+    /// Returns the bare Ollama model name (e.g. `llama3.2:3b`) when the
+    /// composer's currently-selected model points at a local runtime
+    /// model. The composer encodes this with the `ollama:` prefix so the
+    /// rest of the app can keep treating `selectedModel` as an opaque
+    /// string. Returns nil for the GPT/Codex options.
+    func localModelName(forSelected raw: String) -> String? {
+        let prefix = "ollama:"
+        guard raw.hasPrefix(prefix) else { return nil }
+        return String(raw.dropFirst(prefix.count))
     }
 
     /// Submit a prompt from the QuickAsk HUD. Mirrors the home-route
@@ -2677,8 +2799,11 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func hydrateHistoryIfNeeded(chatId: UUID) {
+    private func hydrateHistoryIfNeeded(chatId: UUID, blocking: Bool = false) {
         guard let chat = chat(byId: chatId), !chat.historyHydrated else { return }
+        // Git inspect stays on the main actor: it's a few git binary
+        // calls, fast in practice, and the branch UI binds to these
+        // fields immediately after the call site.
         if !chat.hasGitRepo, let cwd = chat.cwd {
             let git = GitInspector.inspect(cwd: cwd)
             mutateChat(id: chatId) { c in
@@ -2707,28 +2832,52 @@ final class AppState: ObservableObject {
             }
         }
         if let path = resolvedPath {
-            let result = RolloutReader.readWithStatus(path: path)
-            let messages = result.entries.map { e in
-                ChatMessage(
-                    role: e.role == .user ? .user : .assistant,
-                    content: e.text,
-                    reasoningText: "",
-                    streamingFinished: true,
-                    timestamp: e.timestamp,
-                    timeline: e.timeline,
-                    attachments: e.attachments
-                )
-            }
-            mutateChat(id: chatId) { c in
-                c.messages = messages
-                c.lastTurnInterrupted = result.lastTurnInterrupted
-                c.historyHydrated = true
+            // Mac UI path (`blocking == false`): read off the main
+            // actor AND only the trailing window of the JSONL so a
+            // multi-hundred-MB rollout doesn't stall hydration. The
+            // chat opens at the latest turn, the user almost never
+            // scrolls hundreds of turns up immediately, and the
+            // snapshot has already painted the sidebar; capping the
+            // parse cost keeps "click chat → first paint" sub-second
+            // regardless of total file size. iOS-bridge path
+            // (`blocking == true`): the bridge composes its response
+            // inline and needs the full history before it returns,
+            // so keep the synchronous full read.
+            if blocking {
+                applyRolloutResult(RolloutReader.readWithStatus(path: path), chatId: chatId)
+            } else {
+                Task.detached(priority: .userInitiated) { [weak self] in
+                    let result = RolloutReader.readTailWithStatus(path: path)
+                    await MainActor.run { [weak self] in
+                        self?.applyRolloutResult(result, chatId: chatId)
+                    }
+                }
             }
         }
         if let threadId = chat.clawixThreadId, let clawix {
             Task { @MainActor in
                 await clawix.attach(chatId: chat.id, threadId: threadId)
             }
+        }
+    }
+
+    private func applyRolloutResult(_ result: RolloutReader.ReadResult, chatId: UUID) {
+        let messages = result.entries.map { e in
+            ChatMessage(
+                role: e.role == .user ? .user : .assistant,
+                content: e.text,
+                reasoningText: "",
+                streamingFinished: true,
+                timestamp: e.timestamp,
+                workSummary: e.workSummary,
+                timeline: e.timeline,
+                attachments: e.attachments
+            )
+        }
+        mutateChat(id: chatId) { c in
+            c.messages = messages
+            c.lastTurnInterrupted = result.lastTurnInterrupted
+            c.historyHydrated = true
         }
     }
 
@@ -2783,32 +2932,100 @@ final class AppState: ObservableObject {
     /// Idempotent: subsequent calls for the same chat are no-ops.
     func hydrateHistoryFromBridge(chatId: UUID) {
         guard chat(byId: chatId) != nil else { return }
-        hydrateHistoryIfNeeded(chatId: chatId)
+        // Bridge response composes inline; the iPhone needs messages
+        // before this returns. Keeps the legacy synchronous rollout
+        // read for that one call site.
+        hydrateHistoryIfNeeded(chatId: chatId, blocking: true)
     }
 
     func applyDaemonChats(_ wireChats: [WireChat]) {
+        cachedWireChats = wireChats
+        // Refresh `projects` from the latest backendState before
+        // resolving each wire chat's project: the daemon may have
+        // delivered a snapshot that references workspace roots Codex
+        // has just learned about, and `chat(from:wire,old:)` reads
+        // through the in-memory `projects` array.
+        projects = mergedProjects()
         let oldById = Dictionary(uniqueKeysWithValues: chats.map { ($0.id, $0) })
         let oldArchivedById = Dictionary(uniqueKeysWithValues: archivedChats.map { ($0.id, $0) })
+        // Wire chats from the daemon mint their own UUIDs each
+        // process restart, so matching `old` only by UUID misses
+        // every persisted chat. Add a thread-id index so we recover
+        // any per-chat metadata (messages, hasGitRepo, branch, etc.)
+        // the GUI had cached against the previous daemon UUID.
+        let oldByThreadId = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
+            chat.clawixThreadId.map { ($0, chat) }
+        })
+        let oldArchivedByThreadId = Dictionary(uniqueKeysWithValues: archivedChats.compactMap { chat in
+            chat.clawixThreadId.map { ($0, chat) }
+        })
+        func resolveOld(for wire: WireChat) -> Chat? {
+            if let id = UUID(uuidString: wire.id) {
+                if let hit = oldById[id] ?? oldArchivedById[id] { return hit }
+            }
+            if let tid = wire.threadId {
+                return oldByThreadId[tid] ?? oldArchivedByThreadId[tid]
+            }
+            return nil
+        }
         let nextChats: [Chat] = wireChats.compactMap { wire in
-            guard let id = UUID(uuidString: wire.id) else { return nil }
             guard !wire.isArchived else { return nil }
-            return chat(from: wire, old: oldById[id] ?? oldArchivedById[id])
+            return chat(from: wire, old: resolveOld(for: wire))
         }
         let nextArchived: [Chat] = wireChats.compactMap { wire in
-            guard let id = UUID(uuidString: wire.id), wire.isArchived else { return nil }
-            return chat(from: wire, old: oldArchivedById[id] ?? oldById[id])
+            guard wire.isArchived else { return nil }
+            return chat(from: wire, old: resolveOld(for: wire))
         }
-        // Animate diff so insertions / removals slide into the
-        // sidebar. The accordion's `ForEach(chats)` provides the
-        // per-row transition.
-        withAnimation(.easeOut(duration: 0.20)) {
-            chats = nextChats
-            archivedChats = nextArchived
+        // Fast path: the daemon resends the same chat snapshot on every
+        // streaming delta. When nothing actually changed, skip the
+        // assignment (which would trigger `objectWillChange` and fan
+        // out a full sidebar re-render) and skip the pinnedOrder
+        // recompute too (pins haven't moved if the chat list is
+        // identical).
+        if chats == nextChats && archivedChats == nextArchived { return }
+        // Identity-only diff: same ids in the same order, only some
+        // slot's contents differ. Mutate those slots in place so each
+        // updated row publishes a single change instead of triggering
+        // an animated insert/remove transition on every row of the
+        // sidebar via `withAnimation` over a wholesale array copy.
+        let sameIdentity = chats.count == nextChats.count
+            && zip(chats, nextChats).allSatisfy { $0.id == $1.id }
+            && archivedChats.count == nextArchived.count
+            && zip(archivedChats, nextArchived).allSatisfy { $0.id == $1.id }
+        if sameIdentity {
+            for idx in nextChats.indices where chats[idx] != nextChats[idx] {
+                chats[idx] = nextChats[idx]
+            }
+            for idx in nextArchived.indices where archivedChats[idx] != nextArchived[idx] {
+                archivedChats[idx] = nextArchived[idx]
+            }
+        } else {
+            // Structural diff (insert / remove / reorder). Animate so
+            // rows slide in/out via the accordion's per-row transition.
+            withAnimation(.easeOut(duration: 0.20)) {
+                chats = nextChats
+                archivedChats = nextArchived
+            }
         }
+        // Recompute `pinnedOrder` against the freshly applied chats:
+        // either honour the user's local pin order (if they've taken
+        // control) or fall back to Codex's global state. Without
+        // this the Pinned section would render unsorted because the
+        // daemon's wire chats have brand-new UUIDs every reconnect.
+        let pinIds = pinsRepo.orderedThreadIds()
+        let threadToChat = Dictionary(uniqueKeysWithValues: chats.compactMap { chat in
+            chat.clawixThreadId.map { ($0, chat.id) }
+        })
+        pinnedOrder = pinIds.compactMap { threadToChat[$0] }
     }
 
     func applyDaemonChat(_ wire: WireChat) {
         guard let id = UUID(uuidString: wire.id) else { return }
+        if let idx = cachedWireChats.firstIndex(where: { $0.id == wire.id }) {
+            cachedWireChats[idx] = wire
+        } else {
+            cachedWireChats.append(wire)
+        }
         withAnimation(.easeOut(duration: 0.20)) {
             if wire.isArchived {
                 let old = chats.first(where: { $0.id == id }) ?? archivedChats.first(where: { $0.id == id })
@@ -2835,27 +3052,61 @@ final class AppState: ObservableObject {
         }
     }
 
-    func applyDaemonMessages(chatId: String, messages: [WireMessage]) {
-        guard let id = UUID(uuidString: chatId),
-              let idx = chats.firstIndex(where: { $0.id == id })
-        else { return }
+    func applyDaemonMessages(chatId: String, messages: [WireMessage], hasMore: Bool? = nil) {
+        cachedWireMessagesByChat[chatId] = messages
+        guard let id = UUID(uuidString: chatId) else { return }
+        // Reset pagination state regardless of where the chat lives:
+        // the snapshot is the new baseline. Treat absent metadata as
+        // "no older history known" so legacy daemons keep their old
+        // eager behaviour.
+        messagesPaginationByChat[id] = ChatPagination(
+            oldestKnownId: messages.first?.id,
+            hasMore: hasMore ?? false,
+            loadingOlder: false
+        )
+        guard let idx = chats.firstIndex(where: { $0.id == id }) else { return }
         // Wholesale rehydrate from the daemon: drop any buffered text
         // delta that would otherwise pile on top of the canonical body.
         dropPendingAssistantText(chatId: id)
-        chats[idx].messages = messages.compactMap(chatMessage(from:))
+        // The daemon's `RolloutHistory` reader is intentionally minimal
+        // and never populates `timeline` / `workSummary`, so a fresh
+        // `messagesSnapshot` would wipe both fields off any local message
+        // that already had them (e.g. hydrated from cache or seeded by an
+        // earlier `RolloutReader` pass on this Mac). Carry them forward
+        // by id so the chat row's "Worked for Xs" header doesn't flash
+        // and disappear when the daemon snapshot lands.
+        let oldById = Dictionary(uniqueKeysWithValues: chats[idx].messages.map { ($0.id, $0) })
+        chats[idx].messages = messages.compactMap { wire in
+            chatMessage(from: wire, fallbackingTo: UUID(uuidString: wire.id).flatMap { oldById[$0] })
+        }
         chats[idx].historyHydrated = true
     }
 
     func appendDaemonMessage(chatId: String, message: WireMessage) {
+        // Mirror first so the snapshot persist sees the same shape the
+        // chat detail does, regardless of whether the chat exists in
+        // the local model yet (newChat path lands a `messageAppended`
+        // before `chatUpdated`).
+        if let mIdx = cachedWireMessagesByChat[chatId]?.firstIndex(where: { $0.id == message.id }) {
+            cachedWireMessagesByChat[chatId]?[mIdx] = message
+        } else {
+            cachedWireMessagesByChat[chatId, default: []].append(message)
+        }
         guard let id = UUID(uuidString: chatId),
-              let idx = chats.firstIndex(where: { $0.id == id }),
-              let msg = chatMessage(from: message)
+              let idx = chats.firstIndex(where: { $0.id == id })
         else { return }
+        // Same fallback as `applyDaemonMessages`: preserve any local
+        // `workSummary` / `timeline` the daemon's wire form drops on the
+        // floor, keyed by message id.
+        let existing = UUID(uuidString: message.id).flatMap { mid in
+            chats[idx].messages.first(where: { $0.id == mid })
+        }
+        guard let msg = chatMessage(from: message, fallbackingTo: existing) else { return }
         // The daemon's wire message is authoritative; any locally
         // buffered delta would double-append on top of it.
         dropPendingAssistantText(chatId: id)
-        if let existing = chats[idx].messages.firstIndex(where: { $0.id == msg.id }) {
-            chats[idx].messages[existing] = msg
+        if let existingIdx = chats[idx].messages.firstIndex(where: { $0.id == msg.id }) {
+            chats[idx].messages[existingIdx] = msg
         } else {
             chats[idx].messages.append(msg)
         }
@@ -2931,17 +3182,158 @@ final class AppState: ObservableObject {
         chats[cIdx].hasActiveTurn = !finished
     }
 
+    /// Apply a server-delivered page of older messages. Prepended to
+    /// the chat's transcript, deduped by id. Updates the pagination
+    /// cursor + clears the in-flight flag so the scroll-up sentinel
+    /// can fire again. Mirrors `BridgeStore.applyMessagesPage`.
+    func applyDaemonMessagesPage(chatId: String, messages: [WireMessage], hasMore: Bool) {
+        guard let id = UUID(uuidString: chatId) else { return }
+        var pag = messagesPaginationByChat[id] ?? ChatPagination(oldestKnownId: nil, hasMore: hasMore, loadingOlder: false)
+        pag.loadingOlder = false
+        pag.hasMore = hasMore
+        messagesPaginationByChat[id] = pag
+        guard !messages.isEmpty else { return }
+        let existing = cachedWireMessagesByChat[chatId] ?? []
+        let existingWireIds = Set(existing.map(\.id))
+        let prependWire = messages.filter { !existingWireIds.contains($0.id) }
+        guard !prependWire.isEmpty else { return }
+        cachedWireMessagesByChat[chatId] = prependWire + existing
+        mutateChat(id: id) { c in
+            let existingChatIds = Set(c.messages.map(\.id))
+            let toInsert = prependWire.compactMap { chatMessage(from: $0) }
+                .filter { !existingChatIds.contains($0.id) }
+            guard !toInsert.isEmpty else { return }
+            c.messages.insert(contentsOf: toInsert, at: 0)
+        }
+        messagesPaginationByChat[id]?.oldestKnownId = cachedWireMessagesByChat[chatId]?.first?.id
+    }
+
+    /// Ask the daemon for the next page of older messages if we have a
+    /// cursor, the daemon told us there are more, and we don't already
+    /// have a page in flight. Called by the chat transcript's scroll-
+    /// up sentinel; the guards short-circuit cheaply because the
+    /// callback can fire on every onScrollGeometryChange tick.
+    func requestOlderIfNeeded(chatId: UUID) {
+        guard let pag = messagesPaginationByChat[chatId],
+              pag.hasMore,
+              !pag.loadingOlder,
+              let cursor = pag.oldestKnownId else { return }
+        messagesPaginationByChat[chatId]?.loadingOlder = true
+        if let client = daemonBridgeClient {
+            client.loadOlderMessages(chatId: chatId, beforeMessageId: cursor)
+        } else {
+            // No daemon attached: clear the flag so a future sentinel
+            // firing can retry once the bridge connects.
+            messagesPaginationByChat[chatId]?.loadingOlder = false
+        }
+    }
+
+    /// Restore the on-disk snapshot if one exists. Called once at
+    /// startup right after `applySnapshotForFirstPaint()` so the chat
+    /// detail renders the last-known transcript immediately while the
+    /// daemon's `messagesSnapshot` is still in flight. Bridge frames
+    /// shortly overwrite this with the canonical truth.
+    func loadCachedSnapshot() {
+        guard let payload = SnapshotCache.load() else { return }
+        cachedWireChats = payload.chats
+        cachedWireMessagesByChat = payload.messagesByChat
+        if chats.isEmpty && archivedChats.isEmpty {
+            // Fresh install / no SQLite: populate `chats` from the
+            // snapshot. No animation; the user is staring at a launch
+            // screen, not at a list mutating under their cursor.
+            let active: [Chat] = payload.chats.compactMap { wire in
+                guard !wire.isArchived else { return nil }
+                var c = chat(from: wire, old: nil)
+                if let cached = payload.messagesByChat[wire.id] {
+                    c.messages = cached.compactMap { chatMessage(from: $0) }
+                    c.historyHydrated = true
+                }
+                return c
+            }
+            let arch: [Chat] = payload.chats.compactMap { wire in
+                guard wire.isArchived else { return nil }
+                var c = chat(from: wire, old: nil)
+                if let cached = payload.messagesByChat[wire.id] {
+                    c.messages = cached.compactMap { chatMessage(from: $0) }
+                    c.historyHydrated = true
+                }
+                return c
+            }
+            chats = active
+            archivedChats = arch
+        } else {
+            // SQLite already populated `chats`. Just hydrate messages
+            // for those that match a snapshot entry; leave the rest
+            // alone so the daemon can fill them in or the rollout
+            // fallback can.
+            for (chatIdString, msgs) in payload.messagesByChat {
+                guard let id = UUID(uuidString: chatIdString) else { continue }
+                mutateChat(id: id) { c in
+                    guard c.messages.isEmpty else { return }
+                    c.messages = msgs.compactMap { chatMessage(from: $0) }
+                    c.historyHydrated = true
+                }
+            }
+        }
+        // Seed pagination cursors so a scroll-up sentinel firing
+        // before the daemon (re)delivers `messagesSnapshot` still has
+        // an `oldestKnownId` to send. `hasMore` defaults to `false`
+        // because we don't know yet; the daemon will refresh on
+        // `messagesSnapshot`.
+        for (chatIdString, msgs) in payload.messagesByChat {
+            guard let id = UUID(uuidString: chatIdString) else { continue }
+            messagesPaginationByChat[id] = ChatPagination(
+                oldestKnownId: msgs.first?.id,
+                hasMore: false,
+                loadingOlder: false
+            )
+        }
+    }
+
+    /// Schedule a persist of the wire mirror after 500ms of quiet.
+    /// Streaming chunks and rapid chat updates collapse into a single
+    /// write; the IO runs on a background queue so the main thread is
+    /// never blocked. Safe to call from any of the bridge inbound
+    /// paths after a mutation.
+    func persistSnapshotDebounced() {
+        persistTask?.cancel()
+        persistTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let self else { return }
+            let chatsSnap = self.cachedWireChats
+            let messagesSnap = self.cachedWireMessagesByChat
+            await Task.detached(priority: .background) {
+                SnapshotCache.save(chats: chatsSnap, messages: messagesSnap)
+            }.value
+        }
+    }
+
     private func chat(from wire: WireChat, old: Chat?) -> Chat {
-        Chat(
+        // Wire chats from the daemon don't share UUIDs with our
+        // persisted snapshot, so `old` is usually nil and the chat
+        // arrives without `clawixThreadId` / `projectId`. The new
+        // `wire.threadId` field (and the daemon's pin-aware
+        // `wire.isPinned`) lets us reconstruct both: stamp the thread
+        // id, then resolve the project via the same `rootPath`
+        // logic `chatFromThread` uses for runtime-sourced summaries.
+        let threadId = wire.threadId ?? old?.clawixThreadId
+        let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
+        let resolvedRoot = rootPath(
+            threadId: threadId,
+            cwd: wire.cwd ?? old?.cwd,
+            projectByPath: projectByPath
+        )
+        let resolvedProjectId: UUID? = resolvedRoot.flatMap { projectByPath[$0]?.id } ?? old?.projectId
+        return Chat(
             id: UUID(uuidString: wire.id) ?? old?.id ?? UUID(),
             title: wire.title,
             messages: old?.messages ?? [],
             createdAt: wire.lastMessageAt ?? wire.createdAt,
-            clawixThreadId: old?.clawixThreadId,
+            clawixThreadId: threadId,
             rolloutPath: old?.rolloutPath,
             historyHydrated: old?.historyHydrated ?? false,
             hasActiveTurn: wire.hasActiveTurn,
-            projectId: old?.projectId,
+            projectId: resolvedProjectId,
             isArchived: wire.isArchived,
             isPinned: wire.isPinned,
             hasUnreadCompletion: old?.hasUnreadCompletion ?? false,
@@ -2957,8 +3349,19 @@ final class AppState: ObservableObject {
         )
     }
 
-    private func chatMessage(from wire: WireMessage) -> ChatMessage? {
+    private func chatMessage(from wire: WireMessage, fallbackingTo old: ChatMessage? = nil) -> ChatMessage? {
         guard let id = UUID(uuidString: wire.id) else { return nil }
+        // Daemon-bridge mode: the helper's `RolloutHistory` reader does
+        // not populate `timeline` / `workSummary` / `attachments` on the
+        // wire. When this assistant message already exists locally with
+        // those fields filled in (cache hydrate, earlier full-fidelity
+        // rollout pass, live streaming via ClawixService), preserve them
+        // so the chat row's "Worked for Xs" header and inline file/image
+        // cards survive the snapshot replay.
+        let timeline = wire.timeline.compactMap(timelineEntry(from:))
+        let resolvedTimeline = timeline.isEmpty ? (old?.timeline ?? []) : timeline
+        let resolvedSummary = wire.workSummary.map(workSummary(from:)) ?? old?.workSummary
+        let resolvedAttachments = wire.attachments.isEmpty ? (old?.attachments ?? []) : wire.attachments
         return ChatMessage(
             id: id,
             role: wire.role == .user ? .user : .assistant,
@@ -2967,8 +3370,18 @@ final class AppState: ObservableObject {
             streamingFinished: wire.streamingFinished,
             isError: wire.isError,
             timestamp: wire.timestamp,
-            timeline: wire.timeline.compactMap(timelineEntry(from:)),
-            audioRef: wire.audioRef
+            workSummary: resolvedSummary,
+            timeline: resolvedTimeline,
+            audioRef: wire.audioRef,
+            attachments: resolvedAttachments
+        )
+    }
+
+    private func workSummary(from wire: WireWorkSummary) -> WorkSummary {
+        WorkSummary(
+            startedAt: wire.startedAt,
+            endedAt: wire.endedAt,
+            items: wire.items.compactMap(workItem(from:))
         )
     }
 
@@ -3046,7 +3459,6 @@ final class AppState: ObservableObject {
         let chat = chats[idx]
         if chat.isPinned {
             pinsRepo.setPinned(threadId, atEnd: true)
-            metaRepo.hasLocalPins = true
         }
         if let pid = chat.projectId,
            let project = projects.first(where: { $0.id == pid }), !project.path.isEmpty {
@@ -3087,6 +3499,33 @@ final class AppState: ObservableObject {
         if delta.isEmpty { return }
         pendingAssistantTextBuffers[chatId, default: ""] += delta
         scheduleAssistantTextFlush()
+    }
+
+    /// Mark the most-recent assistant placeholder of a chat as finished.
+    /// Used by the local-model (Ollama) chat path which doesn't go
+    /// through the Codex turn-completion machinery.
+    func markAssistantFinished(chatId: UUID, messageId: UUID) {
+        flushPendingAssistantTextDeltas(chatId: chatId)
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }),
+              let last = chats[idx].messages.indices.last,
+              chats[idx].messages[last].id == messageId
+        else { return }
+        chats[idx].messages[last].streamingFinished = true
+    }
+
+    /// Replace the in-flight assistant placeholder with an error message.
+    func markAssistantFailed(chatId: UUID, messageId: UUID, error: String) {
+        dropPendingAssistantText(chatId: chatId)
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }),
+              let last = chats[idx].messages.indices.last,
+              chats[idx].messages[last].id == messageId
+        else { return }
+        let display = chats[idx].messages[last].content.isEmpty
+            ? error
+            : "\(chats[idx].messages[last].content)\n\n[error: \(error)]"
+        chats[idx].messages[last].content = display
+        chats[idx].messages[last].isError = true
+        chats[idx].messages[last].streamingFinished = true
     }
 
     private func scheduleAssistantTextFlush() {
@@ -3916,7 +4355,6 @@ final class AppState: ObservableObject {
                 pinsRepo.unpin(threadId)
             }
         }
-        metaRepo.hasLocalPins = true
     }
 
     /// Move a pinned chat to a new slot inside the pinned list. Pass the
@@ -3944,7 +4382,6 @@ final class AppState: ObservableObject {
         let chatsById = Dictionary(uniqueKeysWithValues: chats.map { ($0.id, $0) })
         let orderedThreadIds = order.compactMap { chatsById[$0]?.clawixThreadId }
         pinsRepo.setOrder(orderedThreadIds)
-        metaRepo.hasLocalPins = true
     }
 
     /// Move a project to a new slot in the manual ordering used by the
@@ -4101,16 +4538,21 @@ final class AppState: ObservableObject {
         return nil
     }
 
-    /// Sidebar state for the active chat (or `.empty` outside chat
-    /// routes). Setter persists and removes empty entries so the dict
-    /// doesn't grow forever.
+    /// Sidebar state for the active chat, or the in-memory global state
+    /// when there is no chat selected (home / new conversation, search,
+    /// plugins, etc.). The chat dict setter persists and removes empty
+    /// entries so it doesn't grow forever; the global setter just writes
+    /// through so toggling on home actually opens the panel.
     var currentSidebar: ChatSidebarState {
         get {
-            guard let id = currentChatId else { return .empty }
+            guard let id = currentChatId else { return globalSidebar }
             return chatSidebars[id] ?? .empty
         }
         set {
-            guard let id = currentChatId else { return }
+            guard let id = currentChatId else {
+                globalSidebar = newValue
+                return
+            }
             if newValue == .empty {
                 chatSidebars.removeValue(forKey: id)
             } else {
@@ -4181,7 +4623,6 @@ final class AppState: ObservableObject {
     /// time on this chat) reuses the first existing web tab so reopening the
     /// panel doesn't spawn an extra google.com every time.
     func openBrowser(initialURL: URL = URL(string: "https://www.google.com")!) {
-        guard currentChatId != nil else { return }
         var s = currentSidebar
         let hasWebTab = s.items.contains(where: {
             if case .web = $0 { return true } else { return false }
@@ -4220,7 +4661,6 @@ final class AppState: ObservableObject {
             openFileInSidebar(url.path)
             return
         }
-        guard currentChatId != nil else { return }
         var s = currentSidebar
         let key = Self.browserDedupKey(for: url)
         if let existing = s.items.first(where: {
@@ -4273,7 +4713,6 @@ final class AppState: ObservableObject {
     /// Re-activates an existing file tab for the same path instead of
     /// duplicating it.
     func openFileInSidebar(_ path: String) {
-        guard currentChatId != nil else { return }
         var s = currentSidebar
         if let existing = s.items.first(where: {
             if case .file(let p) = $0 { return p.path == path }
@@ -4293,7 +4732,6 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func newBrowserTab(url: URL = URL(string: "https://www.google.com")!) -> SidebarItem.WebPayload? {
-        guard currentChatId != nil else { return nil }
         var s = currentSidebar
         let payload = SidebarItem.WebPayload(
             id: UUID(),
@@ -4359,6 +4797,18 @@ final class AppState: ObservableObject {
             chatSidebars[chatId] = s
             persistChatSidebars()
             return
+        }
+        if let idx = globalSidebar.items.firstIndex(where: { $0.id == id }),
+           case .web(var payload) = globalSidebar.items[idx] {
+            if let url { payload.url = url }
+            if let title { payload.title = title }
+            if let faviconURL {
+                payload.faviconURL = faviconURL
+                recordHostFavicon(faviconURL, for: payload.url)
+            }
+            if let pageZoom { payload.pageZoom = pageZoom }
+            if let mobileMode { payload.mobileMode = mobileMode }
+            globalSidebar.items[idx] = .web(payload)
         }
     }
 
