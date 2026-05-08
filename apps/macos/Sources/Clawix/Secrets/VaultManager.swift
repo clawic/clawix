@@ -415,6 +415,7 @@ final class VaultManager: ObservableObject {
         self.store = store
         self.grants = grantStore
         self.vaults = try store.listVaults()
+        SecretsFixtureLoader.loadIfNeeded(store: store, vaults: self.vaults)
         self.secrets = try store.listSecrets()
         self.trashedSecrets = try store.listSecrets(includeTrashed: true).filter { $0.trashedAt != nil }
         self.activeGrants = (try? grantStore.listActive()) ?? []
