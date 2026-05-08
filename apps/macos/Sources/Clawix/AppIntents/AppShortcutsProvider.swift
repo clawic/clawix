@@ -3,7 +3,7 @@ import AppIntents
 
 /// Bundles every Clawix `AppIntent` into the system's Shortcuts.app
 /// catalog. The user sees these under "Clawix" in the Shortcuts.app
-/// sidebar on macOS 13+, and Spotlight surfaces them under the
+/// sidebar on macOS 13+, and system search surfaces them under the
 /// declared phrases (`Start dictation`, `Stop dictation`, …).
 ///
 /// Phrases must contain `\(.applicationName)` so Apple's matcher can
@@ -47,6 +47,24 @@ struct ClawixAppShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Retry last transcription",
             systemImageName: "arrow.clockwise"
+        )
+        AppShortcut(
+            intent: NewChatIntent(),
+            phrases: [
+                "New chat in \(.applicationName)",
+                "Start a new \(.applicationName) chat"
+            ],
+            shortTitle: "New chat",
+            systemImageName: "square.and.pencil"
+        )
+        AppShortcut(
+            intent: SendPromptIntent(),
+            phrases: [
+                "Send to \(.applicationName)",
+                "Ask \(.applicationName)"
+            ],
+            shortTitle: "Send prompt",
+            systemImageName: "paperplane.fill"
         )
     }
 }

@@ -1,9 +1,9 @@
 import Foundation
 import AppIntents
+import AppKit
 
 /// AppIntents that surface Clawix's dictation actions inside macOS
-/// Shortcuts.app, Stream Deck plugins, BetterTouchTool, Raycast and
-/// any other automation tool that consumes AppIntents.
+/// Shortcuts.app and any other automation tool that consumes AppIntents.
 ///
 /// We expose dictation actions as standalone intents (not parameterized
 /// commands) so the user can bind a system-wide hotkey via
@@ -69,6 +69,61 @@ struct RetryLastTranscriptionIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         try await LastTranscriptionStore.shared.retryLast()
+        return .result()
+    }
+}
+
+// MARK: - Chat intents (#13 NewChat + SendPrompt)
+
+/// `Notification.Name` constants the Clawix root view observes to
+/// react to AppIntent invocations from Shortcuts.app. Using
+/// notifications avoids forcing `AppState` into a singleton; the
+/// existing `@EnvironmentObject` flow keeps owning state.
+enum ClawixIntentNotifications {
+    static let newChatRequested = Notification.Name("clawix.intent.newChat")
+    static let sendPromptRequested = Notification.Name("clawix.intent.sendPrompt")
+    /// User-info key for the prompt text on `sendPromptRequested`.
+    static let promptUserInfoKey = "prompt"
+}
+
+@available(macOS 13.0, *)
+struct NewChatIntent: AppIntent {
+    static var title: LocalizedStringResource = "New chat in Clawix"
+    static var description = IntentDescription(
+        "Open Clawix and start a fresh chat ready for input."
+    )
+    static var openAppWhenRun: Bool = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        NSApp.activate(ignoringOtherApps: true)
+        NotificationCenter.default.post(
+            name: ClawixIntentNotifications.newChatRequested,
+            object: nil
+        )
+        return .result()
+    }
+}
+
+@available(macOS 13.0, *)
+struct SendPromptIntent: AppIntent {
+    static var title: LocalizedStringResource = "Send prompt to Clawix"
+    static var description = IntentDescription(
+        "Submit the given text as a new chat prompt."
+    )
+    static var openAppWhenRun: Bool = true
+
+    @Parameter(title: "Prompt", description: "What to send to Clawix.")
+    var prompt: String
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        NSApp.activate(ignoringOtherApps: true)
+        NotificationCenter.default.post(
+            name: ClawixIntentNotifications.sendPromptRequested,
+            object: nil,
+            userInfo: [ClawixIntentNotifications.promptUserInfoKey: prompt]
+        )
         return .result()
     }
 }

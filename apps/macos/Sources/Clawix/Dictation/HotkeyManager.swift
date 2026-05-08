@@ -236,9 +236,9 @@ final class HotkeyManager {
     /// works while Clawix itself is frontmost.
     func register(coordinator: DictationCoordinator) {
         self.coordinator = coordinator
-        // The custom-cancel shortcut shares the Input Monitoring grant
-        // with this manager, so register at the same lifecycle point.
-        CancelHotkey.shared.register(coordinator: coordinator)
+        // Cancel binding lives in `KeyboardShortcuts.Name.dictationCancel`
+        // wired by `DictationShortcutsInstaller.installAll()`. No
+        // separate monitor needed here.
         Self.debug("register() trigger1=\(trigger.rawValue) trigger2=\(trigger2.rawValue) inputMon=\(DictationPermissions.inputMonitoring())")
         if localMonitor == nil {
             localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
@@ -275,6 +275,12 @@ final class HotkeyManager {
         // Honors `dictation.prewarmOnLaunch`; skipped silently when
         // the model isn't downloaded.
         coordinator.prewarmIfEnabled()
+        // Install the user-customizable quick-action bindings (#9):
+        // Toggle / Cancel / Paste Last / Retry Last / Toggle
+        // Enhancement. The framework persists each binding under its
+        // Name, so the user's recorded combos survive relaunches
+        // without us touching UserDefaults.
+        DictationShortcutsInstaller.installAll()
     }
 
     /// Settings entry called when the user picks a non-`.off` trigger.
