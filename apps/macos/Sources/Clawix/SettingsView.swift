@@ -81,8 +81,7 @@ struct SettingsSidebar: View {
                 appState.currentRoute = .home
             } label: {
                 HStack(spacing: 11) {
-                    Image(systemName: "arrow.left")
-                        .font(BodyFont.system(size: 12, wght: 600))
+                    LucideIcon(.arrowLeft, size: 12)
                         .frame(width: 15, alignment: .center)
                         .foregroundColor(Color(white: backHovered ? 0.92 : 0.78))
                     Text("Back to app")
@@ -332,8 +331,7 @@ struct SettingsDropdown<T: Hashable>: View {
                 if let accessory = trailingAccessory?() {
                     accessory
                 }
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                LucideIcon(.chevronDown, size: 11)
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -499,8 +497,7 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                         }
                         Spacer(minLength: 8)
                         if opt.0 == selection {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .semibold))
+                            LucideIcon(.check, size: 10)
                                 .foregroundColor(MenuStyle.rowText)
                                 .padding(.top, hasAnyDescription ? 3 : 0)
                         }
@@ -647,6 +644,13 @@ private struct GeneralPage: View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: "General")
 
+#if DEBUG
+            // Beta + Experimental toggles ship in dev builds only. Release
+            // builds compile both flags as `let beta = false` /
+            // `let experimental = false` (see FeatureFlags.swift), so the
+            // setter Binding below cannot exist there. Hiding the whole
+            // card keeps the Settings page tidy and prevents users on a
+            // notarized build from poking at half-finished surfaces.
             SectionLabel(title: "Feature previews")
             SettingsCard {
                 ToggleRow(
@@ -668,6 +672,7 @@ private struct GeneralPage: View {
                 )
             }
             .padding(.bottom, 8)
+#endif
 
             if flags.experimental {
                 Text("Work mode")
@@ -1098,8 +1103,7 @@ private struct WorkModeCard: View {
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 14))
+                LucideIcon.auto(icon, size: 14)
                     .foregroundColor(Color(white: 0.86))
                     .frame(width: 28, height: 28)
                     .background(
@@ -1204,8 +1208,7 @@ private struct CollapsibleRow: View {
             HStack(alignment: .center, spacing: 14) {
                 RowLabel(title: title, detail: detail)
                 Spacer(minLength: 12)
-                Image(systemName: open ? "chevron.up" : "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 10)
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -1229,8 +1232,7 @@ private struct DictionaryExpandableRow: View {
                     RowLabel(title: "Dictation dictionary",
                              detail: "Words or phrases dictation should recognize")
                     Spacer(minLength: 12)
-                    Image(systemName: open ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .semibold))
+                    LucideIcon.auto(open ? "chevron.up" : "chevron.down", size: 10)
                         .foregroundColor(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -1254,8 +1256,7 @@ private struct DictionaryExpandableRow: View {
                         entries.append("")
                     } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "plus")
-                                .font(BodyFont.system(size: 11, wght: 700))
+                            LucideIcon(.plus, size: 11)
                             Text("Add entry")
                                 .font(BodyFont.system(size: 12.5))
                         }
@@ -1297,8 +1298,7 @@ private struct DictionaryEntryField: View {
                 .padding(.vertical, 9)
             Spacer(minLength: 8)
             Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(BodyFont.system(size: 12, wght: 500))
+                LucideIcon(.trash2, size: 12)
                     .foregroundColor(Color(white: trashHovered ? 0.94 : 0.55))
                     .frame(width: 30, height: 30)
                     .contentShape(Rectangle())
@@ -1351,8 +1351,7 @@ private struct RecentDictationRow: View {
             } label: {
                 Group {
                     if copied {
-                        Image(systemName: "checkmark")
-                            .font(BodyFont.system(size: 12, wght: 500))
+                        LucideIcon(.check, size: 12)
                     } else {
                         CopyIconViewSquircle(
                             color: Color(white: copyHovered ? 0.94 : 0.60),
@@ -1481,8 +1480,7 @@ private struct ThemeChip: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(BodyFont.system(size: 11, wght: 500))
+                LucideIcon.auto(icon, size: 11)
                 Text(label)
                     .font(BodyFont.system(size: 12, wght: 500))
             }
@@ -1799,8 +1797,7 @@ private struct ConfigurationPage: View {
                         Text("Open config.toml")
                             .font(BodyFont.system(size: 12, wght: 500))
                             .foregroundColor(Palette.textSecondary)
-                        Image(systemName: "arrow.up.right")
-                            .font(BodyFont.system(size: 9, weight: .semibold))
+                        LucideIcon(.arrowUpRight, size: 9)
                             .foregroundColor(Palette.textSecondary)
                     }
                 }
@@ -1887,8 +1884,7 @@ private struct PermissionToggleRow: View {
 private struct DeprecationBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.circle")
-                .font(BodyFont.system(size: 13, wght: 500))
+            LucideIcon(.circleAlert, size: 13)
                 .foregroundColor(Color(red: 0.95, green: 0.55, blue: 0.30))
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
@@ -1909,8 +1905,7 @@ private struct DeprecationBanner: View {
                 }
                 .font(BodyFont.system(size: 11.5, wght: 500))
                 HStack(spacing: 4) {
-                    Image(systemName: "globe")
-                        .font(BodyFont.system(size: 10))
+                    LucideIcon(.globe, size: 10)
                         .foregroundColor(Palette.pastelBlue)
                     Text("Toggle experimental features by editing the configuration file.")
                         .font(BodyFont.system(size: 11.5, wght: 500))
@@ -1965,8 +1960,7 @@ private struct ReinstallRow: View {
             Spacer(minLength: 12)
             Button {} label: {
                 HStack(spacing: 5) {
-                    Image(systemName: "arrow.down.circle")
-                        .font(BodyFont.system(size: 11, wght: 500))
+                    LucideIcon(.arrowDown, size: 11)
                     Text("Reinstall")
                         .font(BodyFont.system(size: 12, wght: 600))
                 }
@@ -2042,14 +2036,11 @@ private struct PersonalizationPage: View {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                     )
-                TextEditor(text: $instructions)
-                    .font(BodyFont.system(size: 12, design: .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 10)
-                    .padding(.top, 32)
-                    .disabled(!didLoad && loadError == nil)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                InstructionsTextEditor(
+                    text: $instructions,
+                    isEditable: didLoad || loadError != nil
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 ExpandIconButton { expanded = true }
                     .padding(8)
             }
@@ -2121,6 +2112,85 @@ private struct PersonalizationPage: View {
     }
 }
 
+private struct InstructionsTextEditor: NSViewRepresentable {
+    @Binding var text: String
+    var isEditable: Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.borderType = .noBorder
+        scrollView.autohidesScrollers = true
+        scrollView.scrollerStyle = .overlay
+        scrollView.scrollerInsets = NSEdgeInsets(top: 40, left: 0, bottom: 8, right: 0)
+
+        let textStorage = NSTextStorage()
+        let layoutManager = NSLayoutManager()
+        textStorage.addLayoutManager(layoutManager)
+        let bigSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+        let textContainer = NSTextContainer(size: bigSize)
+        textContainer.widthTracksTextView = true
+        textContainer.lineFragmentPadding = 4
+        layoutManager.addTextContainer(textContainer)
+
+        let textView = NSTextView(frame: .zero, textContainer: textContainer)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = .width
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.delegate = context.coordinator
+        textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.textColor = NSColor.white
+        textView.insertionPointColor = NSColor.white
+        textView.allowsUndo = true
+        textView.isRichText = false
+        textView.usesFontPanel = false
+        textView.usesFindPanel = false
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.smartInsertDeleteEnabled = false
+        textView.textContainerInset = NSSize(width: 6, height: 12)
+        textView.string = text
+        textView.isEditable = isEditable
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            textView.string = text
+        }
+        textView.isEditable = isEditable
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        let parent: InstructionsTextEditor
+        init(_ parent: InstructionsTextEditor) { self.parent = parent }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            let snapshot = textView.string
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if self.parent.text != snapshot {
+                    self.parent.text = snapshot
+                }
+            }
+        }
+    }
+}
+
 private struct ExpandIconButton: View {
     let onTap: () -> Void
     @State private var hovered = false
@@ -2140,8 +2210,99 @@ private struct ExpandIconButton: View {
                 )
         }
         .buttonStyle(.plain)
+        .background(PointingHandCursor())
         .onHover { hovered = $0 }
         .hoverHint(L10n.t("Edit in large view"))
+    }
+}
+
+private struct PointingHandCursor: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { CursorRectView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class CursorRectView: NSView {
+        private var trackingArea: NSTrackingArea?
+        private var moveMonitor: Any?
+
+        override func resetCursorRects() {
+            super.resetCursorRects()
+            addCursorRect(bounds, cursor: .pointingHand)
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            window?.invalidateCursorRects(for: self)
+            if window != nil {
+                installMoveMonitor()
+            } else {
+                removeMoveMonitor()
+            }
+        }
+
+        override func setFrameSize(_ newSize: NSSize) {
+            super.setFrameSize(newSize)
+            window?.invalidateCursorRects(for: self)
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let trackingArea {
+                removeTrackingArea(trackingArea)
+            }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .mouseMoved, .cursorUpdate, .activeAlways, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            trackingArea = area
+        }
+
+        override func cursorUpdate(with event: NSEvent) {
+            NSCursor.pointingHand.set()
+        }
+
+        override func mouseEntered(with event: NSEvent) {
+            NSCursor.pointingHand.set()
+        }
+
+        override func mouseMoved(with event: NSEvent) {
+            NSCursor.pointingHand.set()
+        }
+
+        private func installMoveMonitor() {
+            guard moveMonitor == nil else { return }
+            moveMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
+                self?.applyCursorIfInside(event: event)
+                return event
+            }
+        }
+
+        private func removeMoveMonitor() {
+            if let m = moveMonitor {
+                NSEvent.removeMonitor(m)
+                moveMonitor = nil
+            }
+        }
+
+        private func applyCursorIfInside(event: NSEvent) {
+            guard let window, event.window === window else { return }
+            let mouseLocal = convert(event.locationInWindow, from: nil)
+            guard bounds.contains(mouseLocal) else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let window = self.window else { return }
+                let screenPoint = NSEvent.mouseLocation
+                let windowPoint = window.convertPoint(fromScreen: screenPoint)
+                let local = self.convert(windowPoint, from: nil)
+                guard self.bounds.contains(local) else { return }
+                NSCursor.pointingHand.set()
+            }
+        }
+
+        deinit { removeMoveMonitor() }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
     }
 }
 
@@ -2157,8 +2318,7 @@ private struct InstructionsExpandedSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Button { isPresented = false } label: {
-                    Image(systemName: "xmark")
-                        .font(BodyFont.system(size: 11, wght: 700))
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Color(white: 0.78))
                         .frame(width: 22, height: 22)
                         .background(
@@ -2224,8 +2384,7 @@ private struct PlaceholderPage: View {
 
             SettingsCard {
                 HStack(spacing: 12) {
-                    Image(systemName: category.iconName)
-                        .font(BodyFont.system(size: 16))
+                    LucideIcon.auto(category.iconName, size: 16)
                         .foregroundColor(Palette.textSecondary)
                     Text("Coming soon")
                         .font(BodyFont.system(size: 13, wght: 500))
@@ -2576,8 +2735,7 @@ private struct BrowserPluginRow: View {
                         )
                     )
                     .frame(width: 36, height: 36)
-                Image(systemName: "paperplane.fill")
-                    .font(BodyFont.system(size: 15, wght: 600))
+                LucideIcon(.send, size: 15)
                     .foregroundColor(.white)
                     .rotationEffect(.degrees(-12))
             }
@@ -2590,8 +2748,7 @@ private struct BrowserPluginRow: View {
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
-            Image(systemName: "checkmark")
-                .font(BodyFont.system(size: 12, wght: 700))
+            LucideIcon(.check, size: 12)
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.horizontal, 14)
@@ -2613,8 +2770,7 @@ private struct DomainListSection: View {
                 Spacer()
                 Button {} label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(BodyFont.system(size: 10, wght: 700))
+                        LucideIcon(.plus, size: 10)
                         Text("Add")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -2878,8 +3034,7 @@ private struct MCPPage: View {
                     )
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "plus")
-                            .font(BodyFont.system(size: 10, wght: 700))
+                        LucideIcon(.plus, size: 10)
                         Text("Add server")
                             .font(BodyFont.system(size: 12, wght: 600))
                     }
@@ -3014,8 +3169,7 @@ private struct MCPEmptyState: View {
                 .foregroundColor(Palette.textSecondary)
             Button(action: onAdd) {
                 HStack(spacing: 5) {
-                    Image(systemName: "plus")
-                        .font(BodyFont.system(size: 10, wght: 700))
+                    LucideIcon(.plus, size: 10)
                     Text("Add server")
                         .font(BodyFont.system(size: 12, wght: 600))
                 }

@@ -156,8 +156,7 @@ struct InfoBanner: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: iconName)
-                .font(.system(size: 12))
+            LucideIcon.auto(iconName, size: 12)
                 .foregroundColor(.white)
             Text(text)
                 .font(BodyFont.system(size: 12, wght: 600))
@@ -209,8 +208,7 @@ struct IconChipButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 11, weight: .semibold))
+                LucideIcon.auto(symbol, size: 11)
                     .foregroundColor(Palette.textPrimary)
                 if let label {
                     Text(label)
@@ -257,7 +255,7 @@ struct IconCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
+            LucideIcon.auto(symbol)
                 .font(.system(size: symbolSize, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
                 .frame(width: size, height: size)

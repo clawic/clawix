@@ -8,6 +8,12 @@ import SwiftUI
 //
 // Stored under `appPrefsSuite` so prefs follow the same UserDefaults
 // suite as the rest of the app (sidebar prefs, sync settings, language).
+//
+// Release builds (`#if !DEBUG`) hard-pin both flags to `false` and drop
+// the persistence backing entirely. The shipped notarized binary cannot
+// surface beta or experimental features regardless of any prior
+// UserDefaults state inherited from a sideloaded dev build. This is
+// compile-time enforced rather than runtime config so it cannot fail.
 
 enum FeatureTier {
     case stable
@@ -41,6 +47,7 @@ enum AppFeature {
 final class FeatureFlags: ObservableObject {
     static let shared = FeatureFlags()
 
+#if DEBUG
     @Published var beta: Bool {
         didSet { store.set(beta, forKey: betaKey) }
     }
@@ -58,6 +65,11 @@ final class FeatureFlags: ObservableObject {
         self.beta = s.object(forKey: "FeatureFlags.beta") as? Bool ?? false
         self.experimental = s.object(forKey: "FeatureFlags.experimental") as? Bool ?? false
     }
+#else
+    let beta: Bool = false
+    let experimental: Bool = false
+    private init() {}
+#endif
 
     func isVisible(_ feature: AppFeature) -> Bool {
         switch feature.tier {
