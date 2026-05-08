@@ -23,6 +23,23 @@ struct LoginGateView: View {
     }
 }
 
+/// Wraps the main content view and overlays `DictationOnboardingView`
+/// the first time the user lands here after a fresh login. Once
+/// dismissed, `dictation.hasCompletedOnboarding` is set, so subsequent
+/// launches skip the sheet — the user can re-trigger it from
+/// Settings → Voice to Text → Avanzado → "Voice setup walk-through".
+struct DictationOnboardingHost<Content: View>: View {
+    @ViewBuilder var content: Content
+    @State private var presented: Bool = !DictationOnboardingTrigger.hasCompleted
+
+    var body: some View {
+        content
+            .sheet(isPresented: $presented) {
+                DictationOnboardingView(isPresented: $presented)
+            }
+    }
+}
+
 // MARK: - Card
 
 private struct LoginCard: View {
