@@ -8,6 +8,7 @@ struct ComposerView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var composer: ComposerState
     @EnvironmentObject private var dictation: DictationCoordinator
+    @StateObject private var localModelsService = LocalModelsService.shared
     @State private var sendOnStop = false
     @State private var addMenuOpen = false
     @State private var addMenuHover = false
@@ -172,18 +173,27 @@ struct ComposerView: View {
                 modelMenuOpen.toggle()
             } label: {
                 HStack(spacing: 4) {
-                    if appState.selectedSpeed == .fast {
-                        LucideIcon(.zap, size: 12)
+                    if let local = appState.localModelName(forSelected: appState.selectedModel) {
+                        LucideIcon(.laptop, size: 13)
                             .foregroundColor(Color(white: 0.92))
                             .accessibilityHidden(true)
+                        Text(local)
+                            .font(BodyFont.system(size: 11.5, wght: 500))
+                            .foregroundColor(Color(white: 0.92))
+                    } else {
+                        if appState.selectedSpeed == .fast {
+                            LucideIcon(.zap, size: 13)
+                                .foregroundColor(Color(white: 0.92))
+                                .accessibilityHidden(true)
+                        }
+                        Text(appState.selectedModel)
+                            .font(BodyFont.system(size: 11.5, wght: 500))
+                            .foregroundColor(Color(white: 0.92))
+                        Text(appState.selectedIntelligence.label)
+                            .font(BodyFont.system(size: 11.5, wght: 500))
+                            .foregroundColor(Color(white: 0.55))
                     }
-                    Text(appState.selectedModel)
-                        .font(BodyFont.system(size: 11.5, wght: 500))
-                        .foregroundColor(Color(white: 0.92))
-                    Text(appState.selectedIntelligence.label)
-                        .font(BodyFont.system(size: 11.5, wght: 500))
-                        .foregroundColor(Color(white: 0.55))
-                    LucideIcon(.chevronDown, size: 10)
+                    LucideIcon(.chevronDown, size: 11)
                         .foregroundColor(Color(white: 0.55))
                 }
                 .padding(.horizontal, 6)
@@ -230,7 +240,7 @@ struct ComposerView: View {
                 .hoverHint(L10n.t("Stop response"))
             } else {
                 Button { appState.sendMessage() } label: {
-                    LucideIcon(.arrowUp, size: 15)
+                    LucideIcon(.arrowUp, size: 14)
                         .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(canSend ? Color.white : Color.white.opacity(0.14)))
@@ -279,7 +289,7 @@ struct ComposerView: View {
             Button {
                 stopAndSend()
             } label: {
-                LucideIcon(.arrowUp, size: 15)
+                LucideIcon(.arrowUp, size: 14)
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(Color.white))
@@ -295,7 +305,7 @@ struct ComposerView: View {
         return Button {
             addMenuOpen.toggle()
         } label: {
-            LucideIcon(.plus, size: 16)
+            LucideIcon(.plus, size: 11)
                 .foregroundColor(.white)
                 .opacity(active ? 0.96 : 0.62)
                 .frame(width: 28, height: 28)
@@ -328,7 +338,7 @@ struct ComposerView: View {
                         Text(appState.permissionMode.label)
                             .font(BodyFont.system(size: 11.5, wght: 500))
                             .lineLimit(1)
-                        LucideIcon(.chevronDown, size: 10)
+                        LucideIcon(.chevronDown, size: 11)
                     }
                     .foregroundColor(appState.permissionMode.accent)
                     .fixedSize(horizontal: true, vertical: false)
@@ -538,6 +548,7 @@ struct ComposerView: View {
                             }
                         }
                     )
+                    .equatable()
                     .padding(.horizontal, 9)
                     .padding(.vertical, composerVerticalPadding)
                     .frame(height: composerFrameHeight)
@@ -660,7 +671,8 @@ struct ComposerView: View {
                         model: $appState.selectedModel,
                         speed: $appState.selectedSpeed,
                         primaryModels: appState.availableModels,
-                        otherModels: appState.otherModels
+                        otherModels: appState.otherModels,
+                        localModels: localModelsService.installedModels.map { $0.name }
                     )
                     .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
                     .alignmentGuide(.leading) { d in
@@ -887,7 +899,7 @@ private struct ProjectPickerRow: View {
                     .truncationMode(.tail)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 9)
+                    LucideIcon(.check, size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -956,7 +968,7 @@ private struct PermissionsMenuRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 9)
+                    LucideIcon(.check, size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1101,6 +1113,18 @@ private struct ModelChevronAnchorsKey: PreferenceKey {
     }
 }
 
+/// Collects the global window-coordinate frames of every popup column
+/// currently rendered (mainColumn + any visible submenu overlays). The
+/// `MenuOutsideClickWatcher` consults the union as additional "inside"
+/// hit area so clicks on submenu rows propagate to SwiftUI buttons
+/// instead of being swallowed as outside-clicks.
+private struct PopupFramesPref: PreferenceKey {
+    static var defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
 private struct ModelMenuPopup: View {
     @Binding var isPresented: Bool
     @Binding var intelligence: IntelligenceLevel
@@ -1108,6 +1132,7 @@ private struct ModelMenuPopup: View {
     @Binding var speed: SpeedLevel
     let primaryModels: [String]
     let otherModels: [String]
+    let localModels: [String]
 
     static let mainColumnWidth: CGFloat = 232
     private static let modelColumnWidth: CGFloat = 220
@@ -1116,6 +1141,7 @@ private struct ModelMenuPopup: View {
     private static let columnGap: CGFloat = 6
 
     @State private var openSubmenu: ModelSubmenu = .none
+    @State private var submenuFrames: [CGRect] = []
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -1133,6 +1159,7 @@ private struct ModelMenuPopup: View {
                         gap: Self.columnGap
                     )
                     speedColumn
+                        .background(popupFrameReader)
                         .alignmentGuide(.leading) { _ in placement.offset }
                         .alignmentGuide(.top) { _ in -row.minY }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -1155,7 +1182,29 @@ private struct ModelMenuPopup: View {
             }
             .animation(.easeOut(duration: 0.18), value: openSubmenu)
         }
-        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+        .onPreferenceChange(PopupFramesPref.self) { frames in
+            submenuFrames = frames
+        }
+        .background(
+            MenuOutsideClickWatcher(
+                isPresented: $isPresented,
+                extraInsideTest: { [submenuFrames] point in
+                    submenuFrames.contains { $0.contains(point) }
+                }
+            )
+        )
+    }
+
+    /// `.background` content that publishes the column's global frame
+    /// up to `PopupFramesPref` so the click watcher knows the submenu
+    /// is still inside the popup's hit area.
+    private var popupFrameReader: some View {
+        GeometryReader { geo in
+            Color.clear.preference(
+                key: PopupFramesPref.self,
+                value: [geo.frame(in: .global)]
+            )
+        }
     }
 
     private var mainColumn: some View {
@@ -1199,6 +1248,31 @@ private struct ModelMenuPopup: View {
                 if hovering { openSubmenu = .speed }
             }
             .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.velocidad: $0] }
+
+            // Local models live inline in the main column (NOT inside a
+            // submenu) so their click hit area is covered by the same
+            // `MenuOutsideClickWatcher` that wraps `mainColumn`.
+            // Submenu overlays sit outside the watcher's bounds; the
+            // watcher consumes mouseDown there as an "outside click",
+            // which would close the popup before SwiftUI's button could
+            // fire and the selection would silently no-op.
+            if !localModels.isEmpty {
+                MenuStandardDivider()
+                    .padding(.vertical, 5)
+                ModelMenuHeader(L10n.t("Local models"))
+                ForEach(localModels, id: \.self) { m in
+                    ModelMenuCheckRow(
+                        label: m,
+                        isSelected: model == "ollama:\(m)"
+                    ) {
+                        model = "ollama:\(m)"
+                        isPresented = false
+                    }
+                    .onHover { hovering in
+                        if hovering { openSubmenu = .none }
+                    }
+                }
+            }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: Self.mainColumnWidth, alignment: .leading)
@@ -1208,6 +1282,7 @@ private struct ModelMenuPopup: View {
     @ViewBuilder
     private func modelSubmenuTree(parentPlacedRight: Bool) -> some View {
         modelColumn
+            .background(popupFrameReader)
             .overlayPreferenceValue(ModelChevronAnchorsKey.self) { anchors in
                 GeometryReader { proxy in
                     let parentGlobalMinX = proxy.frame(in: .global).minX
@@ -1229,6 +1304,7 @@ private struct ModelMenuPopup: View {
                             return (-(row.minX - Self.columnGap - Self.otherModelsColumnWidth), false)
                         }()
                         otherModelsColumn
+                            .background(popupFrameReader)
                             .alignmentGuide(.leading) { _ in placement.offset }
                             .alignmentGuide(.top) { _ in -row.minY }
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -1266,6 +1342,7 @@ private struct ModelMenuPopup: View {
                 if hovering { openSubmenu = .otherModels }
             }
             .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.otrosModelos: $0] }
+
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: Self.modelColumnWidth, alignment: .leading)
@@ -1342,7 +1419,7 @@ private struct ModelMenuCheckRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 9)
+                    LucideIcon(.check, size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1372,7 +1449,7 @@ private struct ModelMenuChevronRow: View {
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
-                LucideIcon(.chevronRight)
+                LucideIcon(.chevronRight, size: 11)
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
             }
@@ -1413,7 +1490,7 @@ private struct ModelMenuDescriptionRow: View {
                 }
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 9)
+                    LucideIcon(.check, size: 10)
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 2)
                 }
@@ -1536,7 +1613,7 @@ private struct AddMenuRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if let trailing {
-                    LucideIcon.auto(trailing)
+                    LucideIcon.auto(trailing, size: 11)
                         .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                         .foregroundColor(MenuStyle.rowSubtle)
                 }
@@ -1649,6 +1726,12 @@ struct CompactMenuToggle: View {
 
 struct MenuOutsideClickWatcher: NSViewRepresentable {
     @Binding var isPresented: Bool
+    /// Optional extra hit-test, in window coordinates. Returns `true`
+    /// when a point should be treated as INSIDE the popup (so the click
+    /// propagates to SwiftUI instead of dismissing the menu). Used by
+    /// menus whose submenu overlays render outside the watcher view's
+    /// own bounds — without this their rows would silently no-op.
+    var extraInsideTest: ((NSPoint) -> Bool)? = nil
 
     func makeNSView(context: Context) -> NSView {
         let view = ClickWatcherView()
@@ -1659,7 +1742,9 @@ struct MenuOutsideClickWatcher: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView as? ClickWatcherView)?.isMonitoring = isPresented
+        guard let view = nsView as? ClickWatcherView else { return }
+        view.isMonitoring = isPresented
+        view.extraInsideTest = extraInsideTest
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: ()) {
@@ -1670,6 +1755,15 @@ struct MenuOutsideClickWatcher: NSViewRepresentable {
 final class ClickWatcherView: NSView {
     var onOutsideClick: (() -> Void)?
     private var monitor: Any?
+
+    /// Optional extra hit-test, in window coordinates. When present and
+    /// it returns `true` for the click point, the watcher treats the
+    /// click as INSIDE its popup (returns the event, skips dismiss).
+    /// Used by menus whose submenu overlays sit outside the watcher's
+    /// own view bounds (the model picker's GPT / Other models / Speed
+    /// columns and the local-models inline list) so clicks on those
+    /// submenu rows aren't swallowed by the watcher.
+    var extraInsideTest: ((NSPoint) -> Bool)?
 
     var isMonitoring: Bool = false {
         didSet {
@@ -1683,7 +1777,8 @@ final class ClickWatcherView: NSView {
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let win = self.window, event.window == win else { return event }
             let pointInSelf = self.convert(event.locationInWindow, from: nil)
-            guard !self.bounds.contains(pointInSelf) else { return event }
+            if self.bounds.contains(pointInSelf) { return event }
+            if let extra = self.extraInsideTest, extra(event.locationInWindow) { return event }
             // Swallow the dismissal click. SwiftUI Buttons fire on mouseUp,
             // so if we let mouseDown through to a trigger that does
             // `isOpen.toggle()`, the watcher closes the menu and the
@@ -1844,7 +1939,7 @@ final class ComposerNSTextView: NSTextView {
     }
 }
 
-struct ComposerTextEditor: NSViewRepresentable {
+struct ComposerTextEditor: NSViewRepresentable, Equatable {
     @Binding var text: String
     @Binding var contentHeight: CGFloat
     /// Whether to grab keyboard focus the first time the view mounts.
@@ -1857,6 +1952,23 @@ struct ComposerTextEditor: NSViewRepresentable {
     /// Fires when the user presses ⇧⇥ inside the editor. The composer
     /// uses this to toggle plan mode without leaving the keyboard.
     var onShiftTab: (() -> Void)? = nil
+
+    // Equatable on the inputs that actually affect the visible state
+    // of the wrapped NSTextView. The closures (`onSubmit`, `onShiftTab`)
+    // are recreated on every parent body eval but they capture
+    // EnvironmentObject references, so an older snapshot does the same
+    // work as a fresher one. Bindings (`$text`, `$contentHeight`)
+    // resolve back through the SwiftUI graph by stable identity so
+    // skipping `updateNSView` does not strand a write path. Wrapping
+    // the call site in `.equatable()` then lets SwiftUI skip the
+    // updateNSView storm we get when the parent `ComposerView` body
+    // re-evaluates because an unrelated environment object (auth,
+    // dictation, localModelsService) ticked.
+    static func == (lhs: ComposerTextEditor, rhs: ComposerTextEditor) -> Bool {
+        lhs.text == rhs.text
+            && lhs.autofocus == rhs.autofocus
+            && lhs.focusToken == rhs.focusToken
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -2054,7 +2166,7 @@ private struct ComposerAttachmentChip: View {
                 .layoutPriority(0)
             if hovered {
                 Button(action: onRemove) {
-                    LucideIcon(.x, size: 10)
+                    LucideIcon(.x, size: 11)
                         .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
                         .frame(width: 14, height: 14)
                         .contentShape(Rectangle())
