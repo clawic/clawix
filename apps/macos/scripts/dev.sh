@@ -223,6 +223,62 @@ cp "$PROJECT_DIR/.build/debug/${APP_NAME}" "$BIN"
 chmod +x "$BIN"
 cp "$ICON_FILE" "$BUNDLE/Contents/Resources/Clawix.icns"
 
+# 3.0) Compile SwiftPM package asset catalogs in place. `swift build`
+#      does NOT run `actool` on `.xcassets` folders for executable
+#      targets, it just copies them as raw resources. SwiftUI's
+#      `Image(name:bundle:)` cannot read a raw .xcassets folder, so any
+#      package that ships icons via an asset catalog (currently
+#      `lcandy2/LucideIcon`) renders as an empty view until we compile
+#      the catalog ourselves.
+#
+#      We compile in `.build/.../debug/<Pkg>_<Target>.bundle/` directly,
+#      because that is the path the synthesized `Bundle.module` accessor
+#      already falls back to when the .app's bundleURL lookup misses
+#      (which it does for macOS .app structure: SwiftPM looks for
+#      `<App>.app/<bundle>`, not `<App>.app/Contents/Resources/<bundle>`).
+#      Compiling in place therefore makes Lucide icons render at runtime
+#      without putting non-conventional files inside the .app, which
+#      would break codesign sealing of the bundle root.
+SWIFTPM_BUILD="$PROJECT_DIR/.build/arm64-apple-macosx/debug"
+if [[ ! -d "$SWIFTPM_BUILD" ]]; then
+    SWIFTPM_BUILD="$PROJECT_DIR/.build/debug"
+fi
+shopt -s nullglob
+for spm_bundle in "$SWIFTPM_BUILD"/*.bundle; do
+    while IFS= read -r -d '' xcassets; do
+        out_dir=$(dirname "$xcassets")
+        # Skip if Assets.car is already present and newer than the
+        # source xcassets (idempotent re-runs).
+        if [[ -f "$out_dir/Assets.car" && "$out_dir/Assets.car" -nt "$xcassets" ]]; then
+            continue
+        fi
+        xcrun actool --compile "$out_dir" "$xcassets" \
+            --platform macosx \
+            --minimum-deployment-target 14.0 \
+            --output-format human-readable-text >/dev/null
+    done < <(find "$spm_bundle" -type d -name "*.xcassets" -print0)
+    # Synthesize a minimal Info.plist if the package didn't ship one.
+    # Foundation `Bundle(path:)` returns a degraded bundle when there is
+    # no Info.plist — `bundle.url(forResource:withExtension:)` works but
+    # `Image(name:bundle:)`'s asset-catalog lookup silently fails. The
+    # SPM resource bundle template only writes Info.plist when there are
+    # localizations, so packages that ship just an .xcassets (like
+    # `lcandy2/LucideIcon`) need this stub.
+    if [[ ! -f "$spm_bundle/Info.plist" ]]; then
+        cat > "$spm_bundle/Info.plist" << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+</dict>
+</plist>
+PLIST
+    fi
+done
+shopt -u nullglob
+
 # 3.1) Embed the bridge daemon under Contents/Helpers/clawix-bridged.
 #      SMAppService.agent expects the helper to live next to the .app
 #      it ships with so the LaunchAgent plist's `ProgramArguments` can

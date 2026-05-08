@@ -98,6 +98,30 @@ if [[ -n "$RESOURCE_BUNDLE" ]]; then
     while IFS= read -r lproj; do
         cp -R "$lproj" "$BUNDLE_DIR/Contents/Resources/"
     done < <(find "$RESOURCE_BUNDLE" -maxdepth 1 -name "*.lproj" -type d | sort)
+    # Copy every other SwiftPM package bundle and compile any .xcassets
+    # they contain. `swift build` does not run actool on package
+    # resources for executables, so without this loop bundles like
+    # `LucideIcon_LucideIcon.bundle` ship a raw .xcassets folder that
+    # SwiftUI's `Image(name:bundle:)` cannot load at runtime.
+    SWIFTPM_BUILD_DIR="$(dirname "$RESOURCE_BUNDLE")"
+    shopt -s nullglob
+    for spm_bundle in "$SWIFTPM_BUILD_DIR"/*.bundle; do
+        bundle_name=$(basename "$spm_bundle")
+        if [[ "$bundle_name" == "${APP_NAME}_${APP_NAME}.bundle" ]]; then
+            continue
+        fi
+        dest="$BUNDLE_DIR/Contents/Resources/$bundle_name"
+        cp -R "$spm_bundle" "$dest"
+        while IFS= read -r -d '' xcassets; do
+            out_dir=$(dirname "$xcassets")
+            xcrun actool --compile "$out_dir" "$xcassets" \
+                --platform macosx \
+                --minimum-deployment-target 14.0 \
+                --output-format human-readable-text >/dev/null
+            rm -rf "$xcassets"
+        done < <(find "$dest" -type d -name "*.xcassets" -print0)
+    done
+    shopt -u nullglob
 else
     echo "ERROR: resource bundle not found for release build" >&2
     exit 1
