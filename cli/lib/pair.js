@@ -3,13 +3,11 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync, spawn } = require('node:child_process');
+const { execFileSync } = require('node:child_process');
 
 const qr = require('./qr');
 const ui = require('./ui');
 const { BRIDGE_PORT } = require('./platform');
-
-const QR_PNG_PATH = path.join(os.homedir(), '.clawix', 'state', 'pair-qr.png');
 
 const PLIST_BUDDY = '/usr/libexec/PlistBuddy';
 const PREFS_PATH = path.join(os.homedir(), 'Library', 'Preferences', 'clawix.bridge.plist');
@@ -112,23 +110,6 @@ function show({ json = false } = {}) {
         tailscaleHost: payload.tailscaleHost || undefined
     });
     qr.generate(qrJson, { small: true });
-
-    // Always write a PNG copy and auto-open it on macOS. Terminal QRs
-    // depend on font and theme (they render inverted on light themes,
-    // for example) and the PNG side-steps both. Opening it in Preview
-    // is the bulletproof scan path.
-    try {
-        fs.mkdirSync(path.dirname(QR_PNG_PATH), { recursive: true });
-        fs.writeFileSync(QR_PNG_PATH, qr.toPng(qrJson));
-        if (process.platform === 'darwin' && process.stdout.isTTY) {
-            spawn('open', [QR_PNG_PATH], { detached: true, stdio: 'ignore' }).unref();
-            process.stdout.write('\n  ' + ui.dim('png  ') + ' opened in Preview · ' + QR_PNG_PATH + '\n');
-        } else {
-            process.stdout.write('\n  ' + ui.dim('png  ') + ' ' + QR_PNG_PATH + '\n');
-        }
-    } catch (e) {
-        // Non-fatal; the in-terminal QR is still there.
-    }
 
     if (payload.shortCode) {
         ui.section('or paste this short code in the iOS app');
