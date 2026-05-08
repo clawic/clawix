@@ -853,7 +853,7 @@ struct IconImage: View {
         case "chart.bar", "gauge.with.dots.needle.33percent":
             UsageIcon(size: size)
         default:
-            Image(systemName: name)
+            LucideIcon.auto(name)
                 .font(BodyFont.system(size: size))
         }
     }

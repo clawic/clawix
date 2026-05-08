@@ -85,8 +85,7 @@ struct EditorPickerDropdown: View {
                     }
                     .frame(width: 22, height: 22)
 
-                    Image(systemName: "chevron.down")
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                    LucideIcon(.chevronDown, size: 10)
                         .foregroundColor(Color(white: 0.60))
                 }
                 .padding(.horizontal, 6)

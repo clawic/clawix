@@ -272,8 +272,7 @@ struct CommandPaletteView: View {
                     if item.icon == "magnifyingglass" {
                         SearchIcon(size: 14)
                     } else {
-                        Image(systemName: item.icon)
-                            .font(BodyFont.system(size: 14, weight: .regular))
+                        LucideIcon.auto(item.icon, size: 14)
                     }
                 }
                 .foregroundColor(Color(white: 0.85))

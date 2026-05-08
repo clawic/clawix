@@ -3,6 +3,7 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 import AppKit
 import ClawixEngine
+import LucideIcon
 
 private let daemonBridgePort: UInt16 = 7778
 
@@ -120,7 +121,7 @@ struct PairWindowView: View {
         if let nsImage = Self.makeQR(from: payload) {
             return Image(nsImage: nsImage)
         }
-        return Image(systemName: "questionmark.square.dashed")
+        return Image(lucide: .square_dashed)
     }
 
     static func makeQR(from string: String) -> NSImage? {

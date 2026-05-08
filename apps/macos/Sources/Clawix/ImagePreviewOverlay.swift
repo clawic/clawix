@@ -129,8 +129,7 @@ struct ImagePreviewOverlay: View {
     }
 
     private func roundIconLabel(systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(BodyFont.system(size: 13, weight: .semibold))
+        LucideIcon.auto(systemName, size: 13)
             .foregroundColor(Color(white: 0.94))
             .frame(width: 28, height: 28)
             .background(Circle().fill(Color.white.opacity(0.12)))
@@ -241,8 +240,7 @@ private struct ZoomCircleButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(BodyFont.system(size: 12, weight: .semibold))
+            LucideIcon.auto(systemName, size: 12)
                 .foregroundColor(Color(white: enabled ? 0.94 : 0.5))
                 .frame(width: 36, height: 36)
                 .background(
