@@ -48,7 +48,7 @@ struct PermissionsTab: View {
                 VStack(alignment: .leading, spacing: 12) {
                     section("Hosts and headers") {
                         labeledField("Allowed hosts", subtitle: "Comma-separated. `*.subdomain.com` allows wildcards on the leftmost label.") {
-                            TextField("api.openai.com, *.github.com", text: $hostsCSV)
+                            TextField("api.example.com, *.example.org", text: $hostsCSV)
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(size: 12, design: .monospaced))
                         }
