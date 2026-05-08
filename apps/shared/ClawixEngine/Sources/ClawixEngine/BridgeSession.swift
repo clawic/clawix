@@ -97,12 +97,19 @@ public final class BridgeSession: Identifiable {
     }
 
     private func handleAuth(token: String, deviceName: String?, clientKind: ClientKind?) {
-        guard pairing.acceptToken(token) else {
+        // The wire field stays `token` for compatibility, but the
+        // server now accepts either form: the long bearer (QR scan) or
+        // the human-typeable short code (the iOS pairing screen sends
+        // it through the same field, normalised to UTF-8 uppercase
+        // with hyphens stripped on the client side or here).
+        let valid = pairing.acceptToken(token) || pairing.acceptShortCode(token)
+        guard valid else {
             send(BridgeFrame(.authFailed(reason: "bad-token")))
             close(.protocolCode(.policyViolation))
             return
         }
         isAuthenticated = true
+        BridgeStats.shared.increment()
         self.deviceName = deviceName
         // Absent kind = legacy v1 client = treat as iOS so existing
         // iPhones keep working unchanged.
@@ -145,6 +152,9 @@ public final class BridgeSession: Identifiable {
     private func terminate() {
         guard !didTerminate else { return }
         didTerminate = true
+        if isAuthenticated {
+            BridgeStats.shared.decrement()
+        }
         connection.cancel()
         onTerminated(id)
     }

@@ -13,7 +13,14 @@ public final class PairingService {
 
     public let port: UInt16
     private let bearerKey = "ClawixBridge.Bearer.v1"
+    private let shortCodeKey = "ClawixBridge.ShortCode.v1"
     private let defaults: UserDefaults
+
+    /// Alphabet for the human-typeable short code: 32 unambiguous
+    /// symbols (no 0/O, no 1/I/L). 32 ^ 9 ≈ 35 trillion permutations,
+    /// enough for online brute-force resistance once the bridge
+    /// rate-limits failed handshakes.
+    private static let shortCodeAlphabet: [Character] = Array("23456789ABCDEFGHJKMNPQRSTUVWXYZ")
 
     /// Initialiser kept internal-but-overridable so the `shared`
     /// singleton uses the host app's `appPrefsSuite`. The default
@@ -58,6 +65,42 @@ public final class PairingService {
         defaults.set(Self.generateBearer(), forKey: bearerKey)
     }
 
+    /// 9-character short code in `XXX-XXX-XXX` form. Generated lazily
+    /// the first time the property is read, persisted in the same
+    /// suite as the bearer so the GUI, the daemon and a future iOS
+    /// pairing screen all see the same value. Useful as a typeable
+    /// alternative to the QR for users whose terminal output cannot
+    /// render a scannable code.
+    public var shortCode: String {
+        if let cached = defaults.string(forKey: shortCodeKey), !cached.isEmpty {
+            return cached
+        }
+        let token = Self.generateShortCode()
+        defaults.set(token, forKey: shortCodeKey)
+        return token
+    }
+
+    /// Force-rotate the short code. Should be called whenever the
+    /// bearer rotates so a leaked code does not outlive the bearer it
+    /// substitutes for.
+    public func rotateShortCode() {
+        defaults.set(Self.generateShortCode(), forKey: shortCodeKey)
+    }
+
+    /// Constant-time comparison after normalising the candidate to the
+    /// canonical form (uppercased, hyphens stripped). Mirrors
+    /// `acceptToken` for the pairing handshake.
+    public func acceptShortCode(_ candidate: String) -> Bool {
+        let normalised = candidate.uppercased().replacingOccurrences(of: "-", with: "")
+        let truth = shortCode.replacingOccurrences(of: "-", with: "")
+        guard normalised.utf8.count == truth.utf8.count else { return false }
+        var diff: UInt8 = 0
+        for (a, b) in zip(normalised.utf8, truth.utf8) {
+            diff |= a ^ b
+        }
+        return diff == 0
+    }
+
     /// JSON the QR encodes. The iPhone parses it, persists the host /
     /// port / token in its keychain (Phase 6), and connects.
     ///
@@ -74,6 +117,7 @@ public final class PairingService {
             "host": host,
             "port": Int(port),
             "token": bearer,
+            "shortCode": shortCode,
             "macName": Host.current().localizedName ?? "Mac"
         ]
         if let ts = Self.currentTailscaleIPv4() {
@@ -115,6 +159,19 @@ public final class PairingService {
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
+    }
+
+    private static func generateShortCode() -> String {
+        var bytes = [UInt8](repeating: 0, count: 9)
+        let rc = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        if rc != errSecSuccess {
+            for i in 0..<bytes.count { bytes[i] = UInt8.random(in: 0...255) }
+        }
+        var chars: [Character] = []
+        for b in bytes {
+            chars.append(shortCodeAlphabet[Int(b) % shortCodeAlphabet.count])
+        }
+        return "\(chars[0])\(chars[1])\(chars[2])-\(chars[3])\(chars[4])\(chars[5])-\(chars[6])\(chars[7])\(chars[8])"
     }
 
     /// First IPv4 in the Tailscale CGNAT range (`100.64.0.0/10`) we

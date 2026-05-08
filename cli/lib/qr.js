@@ -402,29 +402,48 @@ function encode(text) {
 }
 
 // ── Renderers ───────────────────────────────────────────────────────
-// Each module renders as 2 chars wide × 1 char tall. In a TTY we paint
-// the cells with ANSI background colors so the block is solid regardless
-// of font metrics, line-height, or terminal (this is the same trick
-// `qrcode-terminal` uses, validated by WhatsApp Web and many others).
-// When color is disabled (NO_COLOR, redirected to file) we fall back to
-// Unicode/ASCII blocks.
+// In a TTY we use ANSI half-block: each terminal cell covers two QR
+// rows, with bg=white + fg=black setup so line-padding inherits the
+// background color (no font/line-height seams). Same pattern as the
+// `qrcode` npm package's `small` terminal mode, used in production
+// by many CLIs (qrcode-terminal, whatsapp-web.js, etc.).
+//
+// When color is disabled (NO_COLOR, redirect to file) we fall back to
+// 2-char-wide Unicode/ASCII blocks (square per cell on any monospace).
 function toAnsi(modules, opts = {}) {
     const color = opts.color !== false;
     const utf8 = opts.utf8 !== false;
-    const quiet = opts.quietZone ?? 4;
+    const quiet = opts.quietZone ?? 2;
     const size = modules.length;
-    const lines = [];
+
+    // Pad the matrix with a quiet zone of 0-modules so the renderer
+    // doesn't have to special-case borders.
     const blank = quiet ? Array(quiet).fill(0) : [];
     const padded = [];
     for (let i = 0; i < quiet; i++) padded.push(new Array(size + quiet * 2).fill(0));
     for (const row of modules) padded.push([...blank, ...row, ...blank]);
     for (let i = 0; i < quiet; i++) padded.push(new Array(size + quiet * 2).fill(0));
 
-    const dark = color ? '\x1b[40m  \x1b[0m' : (utf8 ? '██' : '##');
-    const light = color ? '\x1b[47m  \x1b[0m' : '  ';
-    for (const row of padded) {
-        let line = '';
-        for (const cell of row) line += cell ? dark : light;
+    if (!color) {
+        const dark = utf8 ? '██' : '##';
+        const light = '  ';
+        return padded.map((row) => row.map((c) => c ? dark : light).join('')).join('\n');
+    }
+
+    const lineSetup = '\x1b[47m\x1b[30m'; // bg=white, fg=black
+    const reset = '\x1b[0m';
+    const lines = [];
+    for (let y = 0; y < padded.length; y += 2) {
+        let line = lineSetup;
+        for (let x = 0; x < padded[0].length; x++) {
+            const top = padded[y][x];
+            const bot = y + 1 < padded.length ? padded[y + 1][x] : 0;
+            if (!top && !bot) line += ' ';
+            else if (!top && bot) line += '▄';
+            else if (top && !bot) line += '▀';
+            else line += '█';
+        }
+        line += reset;
         lines.push(line);
     }
     return lines.join('\n');

@@ -94,6 +94,7 @@ public final class BridgeServer {
             session.close(.protocolCode(.goingAway))
         }
         sessions.removeAll()
+        BridgeStats.shared.reset()
         isRunning = false
     }
 

@@ -6,14 +6,15 @@ import ServiceManagement
 /// keeps the daemon alive across Cmd+Q of the GUI, app crashes, and
 /// logout/login. Bundle layout (helper at
 /// `Contents/Helpers/clawix-bridged`, plist at
-/// `Contents/Library/LaunchAgents/<bundle>.bridge.plist`) is set up by
+/// `Contents/Library/LaunchAgents/clawix.bridge.plist`) is set up by
 /// `dev.sh` and the release script; this service only flips the
 /// registration on or off.
 ///
-/// The plist filename is built from the GUI's bundle id so a forked
-/// build with a different bundle id automatically points at its own
-/// helper. The plist is copied into the .app at build time, never
-/// hardcoded under `clawix/`.
+/// The LaunchAgent label is the literal `clawix.bridge`, public and
+/// shared with the standalone `clawix` CLI: both register the same
+/// agent slot so installing the GUI on a machine that already runs the
+/// CLI (or vice versa) cleanly hands ownership over without leaking a
+/// second daemon on the same loopback port.
 @MainActor
 final class BackgroundBridgeService: ObservableObject {
 
@@ -22,15 +23,10 @@ final class BackgroundBridgeService: ObservableObject {
     @Published private(set) var status: SMAppService.Status = .notRegistered
     @Published private(set) var lastError: String?
 
-    /// Filename inside the .app of the LaunchAgent plist. Resolved at
-    /// runtime from the GUI's bundle id so the helper bundle id stays
-    /// aligned with whatever flavor of Clawix is running.
-    private let plistName: String
+    private let plistName = "clawix.bridge.plist"
     private let agent: SMAppService
 
     private init() {
-        let parentBundleId = Bundle.main.bundleIdentifier ?? "clawix.desktop"
-        self.plistName = "\(parentBundleId).bridge.plist"
         self.agent = SMAppService.agent(plistName: plistName)
         refresh()
     }

@@ -99,17 +99,21 @@ function show({ json = false } = {}) {
     }
 
     ui.section('scan with the Clawix iOS app');
+    // Note: shortCode is intentionally omitted from the QR. iOS ignores
+    // it on the scan path (the long bearer is what authenticates), and
+    // dropping it knocks ~26 bytes off the payload, which lets the QR
+    // fit in a smaller version (v8 instead of v10) and therefore in
+    // narrower terminal windows.
     const qrJson = JSON.stringify({
         v: payload.v,
         host: payload.host,
         port: payload.port,
         token: payload.token,
         macName: payload.macName,
-        shortCode: payload.shortCode || undefined,
         tailscaleHost: payload.tailscaleHost || undefined
     });
     const matrix = qr.encode(qrJson);
-    process.stdout.write(ui.indent(qr.toAnsi(matrix, { utf8: ui.isUtf8, color: ui.isColor, quietZone: 4 })) + '\n');
+    process.stdout.write(ui.indent(qr.toAnsi(matrix, { utf8: ui.isUtf8, color: ui.isColor, quietZone: 2 })) + '\n');
 
     // Always write a PNG copy too. Some terminals (font, line-height,
     // tmux) render the in-terminal QR with seams that confuse the iOS
