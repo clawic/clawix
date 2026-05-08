@@ -1,13 +1,17 @@
 import Foundation
 import SwiftUI
-import GRDB
-import SecretsCrypto
 import SecretsModels
-import SecretsPersistence
-import SecretsProxyCore
 import SecretsVault
-import ClawixArgon2
+import SecretsProxyCore
 
+/// VaultManager owns the lifecycle of the local Secrets UI but delegates
+/// every cryptographic and storage operation to the bundled ClawJS Vault
+/// HTTP server. It keeps the surface that the existing SwiftUI views
+/// consume (`store`, `audit`, `grants`, `vaults`, `secrets`, ...) so the
+/// migration to ClawJS Vault is invisible to them.
+///
+/// Auth model: a process-wide bearer token is unused (the local Vault
+/// trusts loopback callers). Future remote consumers can plug in a token.
 @MainActor
 final class PendingApprovalRequest: ObservableObject, Identifiable {
     nonisolated let id = UUID()
@@ -42,11 +46,13 @@ final class VaultManager: ObservableObject {
         case openFailed(String)
     }
 
+    // MARK: - Published surface (compatible with existing SwiftUI views)
+
     @Published private(set) var state: State = .loading
     @Published private(set) var lastError: String?
-    @Published private(set) var store: SecretsStore?
-    @Published private(set) var audit: AuditStore?
-    @Published private(set) var grants: AgentGrantStore?
+    @Published private(set) var store: ClawJSSecretsStore?
+    @Published private(set) var audit: ClawJSAuditStore?
+    @Published private(set) var grants: ClawJSGrantStore?
     @Published private(set) var vaults: [VaultRecord] = []
     @Published private(set) var secrets: [SecretRecord] = []
     @Published private(set) var trashedSecrets: [SecretRecord] = []
@@ -56,35 +62,48 @@ final class VaultManager: ObservableObject {
     @Published private(set) var openAnomalies: [Anomaly] = []
     private var seenAnomalyIDs: Set<String> = []
 
-    private(set) var database: SecretsDatabase?
-    private(set) var meta: VaultMetaSnapshot?
-    private(set) var masterKey: LockableSecret?
-    private(set) var auditMacKey: LockableSecret?
+    // MARK: - Internal
 
     var autoLockMinutes: Int = 5
     private var autoLockTask: Task<Void, Never>?
     private var lifecycle: VaultLifecycle?
-    @Published private(set) var proxyBridge: ProxyBridgeServer?
+
+    private let client: ClawJSVaultClient
 
     init() {
+        self.client = ClawJSVaultClient.local()
         self.lifecycle = VaultLifecycle(attaching: self)
-        let bridge = ProxyBridgeServer(vault: self)
-        bridge.start()
-        self.proxyBridge = bridge
         Task { await load() }
     }
+
+    init(client: ClawJSVaultClient) {
+        self.client = client
+        self.lifecycle = VaultLifecycle(attaching: self)
+        Task { await load() }
+    }
+
+    // MARK: - Lifecycle
 
     func load() async {
         state = .loading
         do {
-            try VaultPaths.ensureDirectory()
-            let db = try SecretsDatabase(at: VaultPaths.databaseFile)
-            self.database = db
-            if let snapshot = try VaultMetaStore.read(from: db) {
-                self.meta = snapshot
-                state = .locked
-            } else {
+            let info = try await client.state()
+            if !info.initialized {
+                #if DEBUG
+                if ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] == "1" {
+                    await autoBootstrapDummyVault()
+                    return
+                }
+                #endif
                 state = .uninitialized
+                return
+            }
+            if info.unlocked {
+                try await mountStores(seedDefaultVault: false)
+                state = .unlocked
+                scheduleAutoLock()
+            } else {
+                state = .locked
             }
         } catch {
             state = .openFailed(String(describing: error))
@@ -92,53 +111,34 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    func setUp(masterPassword: String) async throws -> [String] {
-        guard state == .uninitialized else { throw Error.invalidState }
-        guard let database else { throw Error.databaseUnavailable }
+    #if DEBUG
+    private func autoBootstrapDummyVault() async {
+        let throwaway = "dummy-throwaway-\(UUID().uuidString)"
+        do {
+            _ = try await setUp(masterPassword: throwaway)
+            autoLockMinutes = 0
+        } catch {
+            lastError = String(describing: error)
+            state = .uninitialized
+        }
+    }
+    #endif
 
-        let params = Calibration.calibrate()
-        let bootstrap = try VaultCrypto.setUp(
-            masterPassword: masterPassword,
-            kdfParams: params,
-            deviceId: VaultPaths.deviceId(),
-            appVersion: Self.bundleAppVersion()
-        )
-        try VaultMetaStore.write(bootstrap.meta, to: database)
-        self.meta = bootstrap.meta
-        self.masterKey = bootstrap.masterKey
-        self.auditMacKey = bootstrap.auditMacKey
-        try mountStore(
-            database: database,
-            masterKey: bootstrap.masterKey,
-            auditMacKey: bootstrap.auditMacKey,
-            meta: bootstrap.meta,
-            seedDefaultVault: true
-        )
-        try? audit?.append(NewAuditEvent(kind: .vaultSetup, source: .system, success: true))
+    func setUp(masterPassword: String) async throws -> [String] {
+        guard state == .uninitialized || state == .loading else { throw Error.invalidState }
+        let result = try await client.setup(password: masterPassword, appVersion: Self.bundleAppVersion())
+        try await mountStores(seedDefaultVault: true)
         state = .unlocked
         scheduleAutoLock()
-        return bootstrap.recoveryPhrase
+        return result.recoveryPhrase.split(separator: " ").map { String($0) }
     }
 
     func unlock(masterPassword: String) async throws {
-        guard let meta else { throw Error.notSetUp }
         guard state == .locked else { throw Error.invalidState }
         state = .unlocking
         do {
-            let result = try VaultCrypto.unlock(masterPassword: masterPassword, meta: meta)
-            self.masterKey = result.masterKey
-            self.auditMacKey = result.auditMacKey
-            if let database {
-                try mountStore(
-                    database: database,
-                    masterKey: result.masterKey,
-                    auditMacKey: result.auditMacKey,
-                    meta: meta,
-                    seedDefaultVault: false
-                )
-            }
-            try? audit?.append(NewAuditEvent(kind: .vaultUnlock, source: .system, success: true))
-            try? autoPurgeTrashIfNeeded()
+            try await client.unlock(password: masterPassword)
+            try await mountStores(seedDefaultVault: false)
             state = .unlocked
             scheduleAutoLock()
             Task { await AnomalyNotifier.requestAuthorizationIfNeeded() }
@@ -151,60 +151,31 @@ final class VaultManager: ObservableObject {
     }
 
     func recover(phrase: [String]) async throws {
-        guard let meta else { throw Error.notSetUp }
-        let result = try VaultCrypto.recover(recoveryPhrase: phrase, meta: meta)
-        self.masterKey = result.masterKey
-        self.auditMacKey = result.auditMacKey
-        if let database {
-            try mountStore(
-                database: database,
-                masterKey: result.masterKey,
-                auditMacKey: result.auditMacKey,
-                meta: meta,
-                seedDefaultVault: false
-            )
-        }
-        try? audit?.append(NewAuditEvent(kind: .vaultRecoveryUsed, source: .system, success: true))
+        let joined = phrase.map { $0.lowercased() }.joined(separator: " ")
+        try await client.recover(phrase: joined)
+        try await mountStores(seedDefaultVault: false)
         state = .unlocked
         scheduleAutoLock()
     }
 
     func changePassword(newPassword: String) async throws -> [String] {
-        guard state == .unlocked,
-              let database,
-              let currentMaster = masterKey,
-              let currentMeta = meta
-        else { throw Error.notUnlocked }
+        // We don't have the old password here; the HTTP server requires it.
+        // For now we surface an error; the UI can collect both passwords
+        // and call `changePassword(old:new:)` directly on the client.
+        _ = newPassword
+        throw Error.notUnlocked
+    }
 
-        let result = try VaultCrypto.changePassword(
-            currentMasterKey: currentMaster,
-            newPassword: newPassword,
-            currentMeta: currentMeta
-        )
-        try VaultMetaStore.write(result.meta, to: database)
-        self.meta = result.meta
-        self.masterKey = result.masterKey
-        // Rebuild store/audit with the new master + (preserved) audit MAC key.
-        try mountStore(
-            database: database,
-            masterKey: result.masterKey,
-            auditMacKey: result.auditMacKey,
-            meta: result.meta,
-            seedDefaultVault: false
-        )
-        try? audit?.append(NewAuditEvent(kind: .vaultPasswordChange, source: .system, success: true))
-        return result.newRecoveryPhrase
+    func changePassword(oldPassword: String, newPassword: String) async throws -> [String] {
+        guard state == .unlocked else { throw Error.notUnlocked }
+        let result = try await client.changePassword(old: oldPassword, new: newPassword)
+        return result.recoveryPhrase.split(separator: " ").map { String($0) }
     }
 
     func lock() {
         autoLockTask?.cancel()
         autoLockTask = nil
-        // Emit lock event BEFORE zeroing the audit key so the chain stays intact.
-        try? audit?.append(NewAuditEvent(kind: .vaultLock, source: .system, success: true))
-        masterKey?.zero()
-        auditMacKey?.zero()
-        masterKey = nil
-        auditMacKey = nil
+        Task { try? await self.client.lock() }
         store = nil
         audit = nil
         grants = nil
@@ -215,8 +186,6 @@ final class VaultManager: ObservableObject {
         activeGrants = []
         openAnomalies = []
         seenAnomalyIDs = []
-        // Resolve any pending approvals as denied so blocked helper threads
-        // don't hang forever after the vault locks behind them.
         for pending in pendingApprovals {
             pending.deny(reason: "vault locked while waiting for approval")
         }
@@ -225,6 +194,8 @@ final class VaultManager: ObservableObject {
             state = .locked
         }
     }
+
+    // MARK: - Reload
 
     func reload() {
         guard let store else { return }
@@ -236,6 +207,8 @@ final class VaultManager: ObservableObject {
             lastError = String(describing: error)
         }
     }
+
+    // MARK: - Imports / exports
 
     enum ImportFormat: Equatable {
         case onePassword
@@ -265,51 +238,28 @@ final class VaultManager: ObservableObject {
             do {
                 _ = try store.createSecret(in: target, draft: draft)
                 imported += 1
-            } catch SecretsStoreError.duplicateInternalName {
+            } catch {
                 skipped += 1
             }
         }
-        try? audit?.append(NewAuditEvent(
-            kind: .vaultImport,
-            source: .system,
-            success: true,
-            payload: AuditEventPayload(
-                notes: "Imported \(imported) from \(preview.format), skipped \(skipped) duplicates"
-            )
-        ))
         reload()
+        _ = imported // expose if we need a richer preview later
+        _ = skipped
         return preview
     }
 
     func exportEncryptedBackup(passphrase: String) throws -> Data {
-        guard let store else { throw Error.notUnlocked }
-        let snapshot = try store.snapshotForBackup()
-        try? audit?.append(NewAuditEvent(
-            kind: .vaultExport,
-            source: .system,
-            success: true,
-            payload: AuditEventPayload(
-                notes: "Exported \(snapshot.secrets.count) secret\(snapshot.secrets.count == 1 ? "" : "s")"
-            )
-        ))
-        return try BackupCodec.pack(contents: snapshot, passphrase: passphrase)
+        // The HTTP backend does not yet expose backup; surface a clear
+        // error rather than masquerade with empty data.
+        _ = passphrase
+        throw ClawJSBackendError.server("Encrypted backup not yet supported on the ClawJS Vault HTTP backend")
     }
 
     @discardableResult
     func importEncryptedBackup(_ data: Data, passphrase: String) throws -> (created: Int, skipped: Int) {
-        guard let store else { throw Error.notUnlocked }
-        let contents = try BackupCodec.unpack(data: data, passphrase: passphrase)
-        let result = try store.restoreBackup(contents)
-        try? audit?.append(NewAuditEvent(
-            kind: .vaultImport,
-            source: .system,
-            success: true,
-            payload: AuditEventPayload(
-                notes: "Imported \(result.created) from .clawixvault (skipped \(result.skipped))"
-            )
-        ))
-        reload()
-        return result
+        _ = data
+        _ = passphrase
+        throw ClawJSBackendError.server("Encrypted backup import not yet supported on the ClawJS Vault HTTP backend")
     }
 
     func staleSecrets(olderThanDays days: Int) -> [SecretRecord] {
@@ -322,25 +272,13 @@ final class VaultManager: ObservableObject {
 
     @discardableResult
     func installCliSymlink() -> URL? {
-        do {
-            let url = try ProxyBridgeServer.installCliSymlink()
-            try? audit?.append(NewAuditEvent(
-                kind: .adminEdit,
-                source: .system,
-                success: true,
-                payload: AuditEventPayload(notes: "Installed CLI symlink at \(url.path)")
-            ))
-            return url
-        } catch {
-            lastError = String(describing: error)
-            return nil
-        }
+        // No-op now: the bundled `claw` CLI lives inside the .app at
+        // Contents/Helpers/clawjs and is invoked by the Mac app directly.
+        return nil
     }
 
-    /// Sweeps the recent audit log for anomalies. New anomalies (not
-    /// seen this session) are recorded as `anomaly_detected` audit
-    /// events and surface as macOS notifications when the user has
-    /// granted UNUserNotificationCenter authorization.
+    // MARK: - Anomaly detector + integrity
+
     @discardableResult
     func runAnomalyDetector(notify: Bool = true) -> [Anomaly] {
         guard let audit else { return [] }
@@ -349,17 +287,6 @@ final class VaultManager: ObservableObject {
         let fresh = anomalies.filter { !seenAnomalyIDs.contains($0.id) }
         for anomaly in fresh {
             seenAnomalyIDs.insert(anomaly.id)
-            try? audit.append(NewAuditEvent(
-                kind: .anomalyDetected,
-                source: .system,
-                secretId: anomaly.secretId,
-                vaultId: nil,
-                success: false,
-                payload: AuditEventPayload(
-                    notes: anomaly.summary,
-                    secretInternalNameFrozen: anomaly.secretInternalName
-                )
-            ))
             if notify {
                 AnomalyNotifier.deliver(anomaly)
             }
@@ -374,9 +301,6 @@ final class VaultManager: ObservableObject {
         do {
             let report = try audit.verifyIntegrity()
             self.integrityReport = report
-            if !report.isIntact {
-                try? audit.append(NewAuditEvent(kind: .auditIntegrityFailed, source: .system, success: false))
-            }
             return report
         } catch {
             lastError = String(describing: error)
@@ -384,50 +308,7 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    private func autoPurgeTrashIfNeeded() throws {
-        guard let store else { return }
-        let cutoff = Clock.now() - (Int64(30) * 24 * 60 * 60 * 1000) // 30 days
-        _ = try store.purgeTrashed(olderThan: cutoff)
-    }
-
-    private func mountStore(
-        database: SecretsDatabase,
-        masterKey: LockableSecret,
-        auditMacKey: LockableSecret,
-        meta: VaultMetaSnapshot,
-        seedDefaultVault: Bool
-    ) throws {
-        let auditStore = AuditStore(
-            database: database,
-            auditMacKey: auditMacKey,
-            chainGenesis: meta.auditChainGenesis,
-            deviceId: meta.deviceId
-        )
-        let store = SecretsStore(database: database, masterKey: masterKey, audit: auditStore)
-        let grantStore = AgentGrantStore(database: database)
-        if seedDefaultVault {
-            let existing = try store.listVaults(includeTrashed: true)
-            if existing.isEmpty {
-                _ = try store.createVault(name: "Personal")
-            }
-        }
-        self.audit = auditStore
-        self.store = store
-        self.grants = grantStore
-        self.vaults = try store.listVaults()
-        SecretsFixtureLoader.loadIfNeeded(store: store, vaults: self.vaults)
-        self.secrets = try store.listSecrets()
-        self.trashedSecrets = try store.listSecrets(includeTrashed: true).filter { $0.trashedAt != nil }
-        self.activeGrants = (try? grantStore.listActive()) ?? []
-        // Sweep grants that expired while the vault was locked; emit grant_expired events.
-        let resolver = ProxyResolver(store: store, audit: auditStore, grants: grantStore)
-        _ = try? resolver.sweepAndAuditExpiredGrants()
-    }
-
-    func reloadGrants() {
-        guard let grants else { return }
-        self.activeGrants = (try? grants.listActive()) ?? []
-    }
+    // MARK: - Activation requests
 
     func requestActivationFromAgent(_ activation: ActivationRequest) async -> ProxyResolver.ActivationOutcome {
         await withCheckedContinuation { continuation in
@@ -443,6 +324,8 @@ final class VaultManager: ObservableObject {
         }
         pendingApprovals.removeAll { $0.id == pending.id }
     }
+
+    // MARK: - Auto-lock
 
     func touch() {
         scheduleAutoLock()
@@ -467,6 +350,36 @@ final class VaultManager: ObservableObject {
         lock()
     }
 
+    func reloadGrants() {
+        guard let grants else { return }
+        self.activeGrants = (try? grants.listActive()) ?? []
+    }
+
+    // MARK: - Mount
+
+    private func mountStores(seedDefaultVault: Bool) async throws {
+        let storeShim = ClawJSSecretsStore(client: client)
+        let auditShim = ClawJSAuditStore(client: client)
+        let grantsShim = ClawJSGrantStore(client: client)
+
+        if seedDefaultVault {
+            let containers = try storeShim.listVaults(includeTrashed: true)
+            if containers.isEmpty {
+                _ = try storeShim.createVault(name: "Personal")
+            }
+        }
+
+        self.store = storeShim
+        self.audit = auditShim
+        self.grants = grantsShim
+        self.vaults = (try? storeShim.listVaults()) ?? []
+        self.secrets = (try? storeShim.listSecrets()) ?? []
+        self.trashedSecrets = (try? storeShim.listSecrets(includeTrashed: true).filter { $0.trashedAt != nil }) ?? []
+        self.activeGrants = (try? grantsShim.listActive()) ?? []
+    }
+
+    // MARK: - Helpers
+
     private static func bundleAppVersion() -> String {
         let info = Bundle.main.infoDictionary
         let version = info?["CFBundleShortVersionString"] as? String ?? ""
@@ -481,14 +394,12 @@ final class VaultManager: ObservableObject {
 extension VaultManager {
     enum Error: Swift.Error, CustomStringConvertible {
         case invalidState
-        case databaseUnavailable
         case notSetUp
         case notUnlocked
 
         var description: String {
             switch self {
             case .invalidState: return "VaultManager: invalid state for this operation"
-            case .databaseUnavailable: return "VaultManager: database not available"
             case .notSetUp: return "VaultManager: vault has not been set up"
             case .notUnlocked: return "VaultManager: vault is not unlocked"
             }
