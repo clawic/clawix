@@ -2,6 +2,18 @@ import Foundation
 import AVFoundation
 import WhisperKit
 
+/// Joined text + the per-segment timing windows the auto-format
+/// pass walks to insert paragraph breaks at silence boundaries.
+public struct SegmentedTranscript: Sendable {
+    public struct Segment: Sendable {
+        public let text: String
+        public let start: Float
+        public let end: Float
+    }
+    public let text: String
+    public let segments: [Segment]
+}
+
 /// Errors surfaced to callers of `TranscriptionService`. The strings
 /// are user-facing: keep them short and don't leak file paths.
 public enum TranscriptionError: Error, LocalizedError, Sendable {
@@ -51,10 +63,14 @@ public actor TranscriptionService {
         samples: [Float],
         using model: DictationModel,
         language: String?,
-        prompt: String? = nil
+        prompt: String? = nil,
+        useVAD: Bool = false
     ) async throws -> String {
         let kit = try await ensureLoaded(model: model)
         var options = decodeOptions(language: language, prompt: prompt)
+        if useVAD {
+            options.chunkingStrategy = .vad
+        }
         if let tokens = tokenize(prompt: prompt, kit: kit) {
             options.promptTokens = tokens
         }
@@ -69,10 +85,14 @@ public actor TranscriptionService {
         fileURL: URL,
         using model: DictationModel,
         language: String?,
-        prompt: String? = nil
+        prompt: String? = nil,
+        useVAD: Bool = false
     ) async throws -> String {
         let kit = try await ensureLoaded(model: model)
         var options = decodeOptions(language: language, prompt: prompt)
+        if useVAD {
+            options.chunkingStrategy = .vad
+        }
         if let tokens = tokenize(prompt: prompt, kit: kit) {
             options.promptTokens = tokens
         }
@@ -90,6 +110,55 @@ public actor TranscriptionService {
 
     public var isLoaded: Bool { loaded != nil }
     public var loadedModel: DictationModel? { loaded?.model }
+
+    /// Transcribe + return per-segment timing alongside the joined
+    /// text. Used by the macOS GUI's auto-format pass (#7) to drop
+    /// paragraph breaks at silence boundaries instead of inferring
+    /// them from punctuation. The segments are flattened across all
+    /// `TranscriptionResult` chunks so the caller doesn't need to
+    /// know about WhisperKit's internal windowing.
+    public func transcribeWithSegments(
+        samples: [Float],
+        using model: DictationModel,
+        language: String?,
+        prompt: String? = nil,
+        useVAD: Bool = false
+    ) async throws -> SegmentedTranscript {
+        let kit = try await ensureLoaded(model: model)
+        var options = decodeOptions(language: language, prompt: prompt)
+        if useVAD {
+            options.chunkingStrategy = .vad
+        }
+        if let tokens = tokenize(prompt: prompt, kit: kit) {
+            options.promptTokens = tokens
+        }
+        let results = try await kit.transcribe(audioArray: samples, decodeOptions: options)
+        let text = joinedText(results)
+        // Each `TranscriptionResult` window restarts its `start` at
+        // 0 within its own coordinate space, so when we flatten we
+        // offset every segment by the cumulative window length so
+        // gaps across chunk boundaries don't read as artificial.
+        var flattened: [SegmentedTranscript.Segment] = []
+        var offset: Float = 0
+        for result in results {
+            for segment in result.segments {
+                flattened.append(
+                    SegmentedTranscript.Segment(
+                        text: segment.text,
+                        start: segment.start + offset,
+                        end: segment.end + offset
+                    )
+                )
+            }
+            // The window's effective length is the end of its last
+            // segment; if a window had no segments, fall back to the
+            // ratio of samples it consumed (less common path).
+            if let lastEnd = result.segments.last?.end {
+                offset += lastEnd
+            }
+        }
+        return SegmentedTranscript(text: text, segments: flattened)
+    }
 
     // MARK: - Internal
 
