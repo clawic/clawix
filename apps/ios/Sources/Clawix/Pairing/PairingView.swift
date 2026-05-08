@@ -168,8 +168,7 @@ private struct ScannerSheet: View {
                         Haptics.tap()
                         onCancel()
                     }) {
-                        Image(systemName: "xmark")
-                            .font(BodyFont.system(size: 16, weight: .semibold))
+                        LucideIcon(.x, size: 16)
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .glassCircle()
