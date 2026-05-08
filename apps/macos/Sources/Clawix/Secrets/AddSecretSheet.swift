@@ -2,9 +2,12 @@ import SwiftUI
 import SecretsModels
 import SecretsVault
 
-/// Minimum-viable form for v1: pick a vault, name, title, kind, and one
-/// primary value (token / password / note). Multi-field editor with field
-/// types and brand presets ships in step 9 of the plan.
+/// Modal for creating a new secret. Two-column composition: a left
+/// identity rail where the chosen `SecretKindIcon` is the visual hero
+/// (the same hand-drawn line-art used in the secrets list, scaled up),
+/// and a right column with the editable fields. Type and destination
+/// vault live as inline menus under the icon, so the form column never
+/// has to spell out "Vault" / "Type" rows: the rail already says it.
 struct AddSecretSheet: View {
     @EnvironmentObject private var vault: VaultManager
     @Binding var isPresented: Bool
@@ -15,142 +18,218 @@ struct AddSecretSheet: View {
     @State private var internalName: String = ""
     @State private var title: String = ""
     @State private var primaryValue: String = ""
-    @State private var primaryFieldName: String = "token"
     @State private var notes: String = ""
     @State private var error: String?
     @State private var isWorking: Bool = false
     @State private var primaryRevealed: Bool = false
 
     private let kindOptions: [SecretKind] = [
-        .apiKey, .passwordLogin, .oauthToken, .secureNote, .databaseUrl, .webhookSecret
+        .apiKey, .passwordLogin, .oauthToken, .databaseUrl, .webhookSecret, .secureNote
     ]
 
-    private var vaultDropdownOptions: [(EntityID?, String)] {
-        vault.vaults.map { (Optional<EntityID>.some($0.id), $0.name) }
-    }
-
-    private var kindDropdownOptions: [(SecretKind, String)] {
-        kindOptions.map { ($0, $0.rawValue.replacingOccurrences(of: "_", with: " ")) }
+    private var selectedVaultName: String {
+        vault.vaults.first(where: { $0.id == selectedVaultId })?.name ?? "—"
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-                .padding(.bottom, 14)
-
-            VStack(alignment: .leading, spacing: 14) {
-                whereCard
-                identityCard
-                valueCard
+        ZStack(alignment: .topTrailing) {
+            HStack(alignment: .top, spacing: 0) {
+                identityRail
+                    .frame(width: 188)
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 1)
+                formColumn
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            footer
-                .padding(.top, 14)
+            IconCircleButton(symbol: "xmark") {
+                isPresented = false
+            }
+            .padding(.top, 14)
+            .padding(.trailing, 14)
         }
-        .frame(width: 520)
-        .padding(.horizontal, 22)
-        .padding(.vertical, 22)
+        .frame(width: 620)
         .sheetStandardBackground(cornerRadius: 18)
         .onAppear {
             if selectedVaultId == nil {
                 selectedVaultId = vault.vaults.first?.id
             }
-            if primaryFieldName.isEmpty {
-                primaryFieldName = defaultFieldName(for: kind)
-            }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Identity rail (left)
 
-    private var header: some View {
-        HStack(spacing: 10) {
+    private var identityRail: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(spacing: 18) {
+                Spacer().frame(height: 6)
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
+                        )
+                        .frame(width: 96, height: 96)
+                    SecretKindIcon(
+                        kind: kind,
+                        size: 50,
+                        lineWidth: 1.4,
+                        color: Color(white: 0.93)
+                    )
+                }
+                .animation(.easeOut(duration: 0.18), value: kind)
+
+                VStack(spacing: 8) {
+                    kindMenu
+                    vaultMenu
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 14)
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 6) {
+                    LucideIcon(.key, size: 10)
+                        .foregroundColor(Palette.textSecondary)
+                    Text("Encrypted on this Mac")
+                        .font(BodyFont.system(size: 10.5, wght: 500))
+                        .foregroundColor(Palette.textSecondary)
+                }
+                Text("Only you can decrypt with the master password.")
+                    .font(BodyFont.system(size: 10.5, wght: 500))
+                    .foregroundColor(Color(white: 0.42))
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.bottom, 22)
+            .padding(.horizontal, 18)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 22)
+    }
+
+    private var kindMenu: some View {
+        Menu {
+            ForEach(kindOptions, id: \.self) { option in
+                Button(option.friendlyLabel) {
+                    withAnimation(.easeOut(duration: 0.18)) { kind = option }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(verbatim: kind.friendlyLabel)
+                    .font(BodyFont.system(size: 13, wght: 600))
+                    .foregroundColor(Palette.textPrimary)
+                LucideIcon(.chevronDown, size: 9)
+                    .foregroundColor(Palette.textSecondary)
+            }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private var vaultMenu: some View {
+        Menu {
+            ForEach(vault.vaults, id: \.id) { v in
+                Button(v.name) { selectedVaultId = v.id }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                LucideIcon(.folder, size: 10)
+                    .foregroundColor(Palette.textSecondary)
+                Text(verbatim: selectedVaultName)
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                LucideIcon(.chevronDown, size: 8)
+                    .foregroundColor(Palette.textSecondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(0.05))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                    )
+            )
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    // MARK: - Form column (right)
+
+    private var formColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text("New secret")
                 .font(BodyFont.system(size: 18, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Spacer()
-            IconCircleButton(symbol: "xmark") {
-                isPresented = false
-            }
-        }
-    }
+                .padding(.bottom, 22)
 
-    // MARK: - Cards
-
-    private var whereCard: some View {
-        SettingsCard {
-            SettingsRow {
-                RowLabel(title: "Vault", detail: nil)
-            } trailing: {
-                SettingsDropdown(
-                    options: vaultDropdownOptions,
-                    selection: $selectedVaultId,
-                    minWidth: 180
-                )
-            }
-            CardDivider()
-            SettingsRow {
-                RowLabel(title: "Type", detail: nil)
-            } trailing: {
-                SettingsDropdown(
-                    options: kindDropdownOptions,
-                    selection: $kind,
-                    minWidth: 180
-                )
-            }
-            .onChange(of: kind) { _, newKind in
-                withAnimation(.easeOut(duration: 0.18)) {
-                    primaryFieldName = defaultFieldName(for: newKind)
+            VStack(alignment: .leading, spacing: 16) {
+                stackedField(label: "Title") {
+                    TextField("Service · main", text: $title)
+                        .sheetTextFieldStyle()
                 }
-            }
-        }
-    }
-
-    private var identityCard: some View {
-        SettingsCard {
-            stackedFieldRow(label: "Internal name") {
-                TextField("e.g. service_main", text: $internalName)
-                    .sheetTextFieldStyle()
-            }
-            CardDivider()
-            stackedFieldRow(label: "Title") {
-                TextField("Service · main", text: $title)
-                    .sheetTextFieldStyle()
-            }
-        }
-    }
-
-    private var valueCard: some View {
-        SettingsCard {
-            stackedFieldRow(label: primaryFieldLabel) {
-                ZStack(alignment: .trailing) {
-                    Group {
-                        if primaryRevealed {
-                            TextField("paste secret value", text: $primaryValue)
-                        } else {
-                            SecureField("paste secret value", text: $primaryValue)
+                stackedField(label: "Internal name") {
+                    TextField("service_main", text: $internalName)
+                        .sheetTextFieldStyle()
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                }
+                stackedField(label: primaryFieldLabel) {
+                    ZStack(alignment: .trailing) {
+                        Group {
+                            if primaryRevealed {
+                                TextField("paste secret value", text: $primaryValue)
+                            } else {
+                                SecureField("paste secret value", text: $primaryValue)
+                            }
                         }
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundColor(Color(white: 0.96))
+                        .padding(.leading, 14)
+                        .padding(.trailing, 42)
+                        .padding(.vertical, 11)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.white.opacity(0.05))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .stroke(Color.white.opacity(0.10), lineWidth: 0.6)
+                                )
+                        )
+                        IconCircleButton(symbol: primaryRevealed ? "eye.slash" : "eye") {
+                            primaryRevealed.toggle()
+                        }
+                        .padding(.trailing, 5)
                     }
-                    .secretFieldStyle()
-                    IconCircleButton(symbol: primaryRevealed ? "eye.slash" : "eye") {
-                        primaryRevealed.toggle()
-                    }
-                    .padding(.trailing, 6)
+                }
+                stackedField(label: "Notes (optional)") {
+                    TextField("Free-form notes…", text: $notes, axis: .vertical)
+                        .lineLimit(2...4)
+                        .sheetTextFieldStyle()
                 }
             }
-            CardDivider()
-            stackedFieldRow(label: "Notes (optional)") {
-                TextField("Free-form notes…", text: $notes, axis: .vertical)
-                    .lineLimit(2...4)
-                    .sheetTextFieldStyle()
-            }
-        }
-    }
 
-    // MARK: - Footer
+            Spacer(minLength: 22)
+
+            footer
+        }
+        .padding(.top, 22)
+        .padding(.leading, 26)
+        .padding(.trailing, 26)
+        .padding(.bottom, 22)
+    }
 
     private var footer: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
             if let error {
                 InfoBanner(text: error, kind: .error)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -180,31 +259,35 @@ struct AddSecretSheet: View {
 
     // MARK: - Helpers
 
-    private var primaryFieldLabel: String {
-        primaryFieldName.replacingOccurrences(of: "_", with: " ").capitalized
-    }
-
     @ViewBuilder
-    private func stackedFieldRow<Content: View>(label: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func stackedField<Content: View>(
+        label: String,
+        @ViewBuilder _ content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text(verbatim: label)
-                .font(BodyFont.system(size: 12.5, wght: 500))
-                .foregroundColor(Palette.textPrimary)
+                .font(BodyFont.system(size: 11.5, wght: 600))
+                .foregroundColor(Color(white: 0.62))
             content()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var canSubmit: Bool {
-        selectedVaultId != nil
-            && !internalName.trimmingCharacters(in: .whitespaces).isEmpty
-            && !title.trimmingCharacters(in: .whitespaces).isEmpty
-            && !primaryValue.isEmpty
+    private var primaryFieldLabel: String {
+        switch kind {
+        case .apiKey: return "Token"
+        case .passwordLogin: return "Password"
+        case .oauthToken: return "Access token"
+        case .secureNote: return "Note"
+        case .databaseUrl: return "Connection URL"
+        case .webhookSecret: return "Signing key"
+        case .sshIdentity: return "Private key"
+        case .envBundle: return "Value"
+        case .structuredCredentials: return "Value"
+        case .certificate: return "Private key"
+        }
     }
 
-    private func defaultFieldName(for kind: SecretKind) -> String {
+    private var primaryFieldName: String {
         switch kind {
         case .apiKey: return "token"
         case .passwordLogin: return "password"
@@ -219,20 +302,25 @@ struct AddSecretSheet: View {
         }
     }
 
+    private var canSubmit: Bool {
+        selectedVaultId != nil
+            && !internalName.trimmingCharacters(in: .whitespaces).isEmpty
+            && !title.trimmingCharacters(in: .whitespaces).isEmpty
+            && !primaryValue.isEmpty
+    }
+
     private func submit() {
         guard let store = vault.store,
               let vaultId = selectedVaultId,
               let chosenVault = vault.vaults.first(where: { $0.id == vaultId })
         else {
-            withAnimation(.easeOut(duration: 0.18)) {
-                error = "Pick a vault."
-            }
+            withAnimation(.easeOut(duration: 0.18)) { error = "Pick a vault." }
             return
         }
         let trimmedName = internalName.trimmingCharacters(in: .whitespaces)
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
         let primaryField = DraftField(
-            name: primaryFieldName.isEmpty ? defaultFieldName(for: kind) : primaryFieldName,
+            name: primaryFieldName,
             fieldKind: kind == .secureNote ? .note : .password,
             placement: kind == .apiKey ? .header : .none,
             isSecret: true,
@@ -264,37 +352,5 @@ struct AddSecretSheet: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Secret-field style
-
-/// Same shape as `sheetTextFieldStyle` but the hairline stroke gets a
-/// faint orange tint so the user immediately reads the field as
-/// "this holds a secret value", distinct from the neutral name/title
-/// fields above it.
-private struct SecretFieldStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .textFieldStyle(.plain)
-            .font(BodyFont.system(size: 14, wght: 500))
-            .foregroundColor(Color(white: 0.96))
-            .padding(.leading, 14)
-            .padding(.trailing, 38)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.orange.opacity(0.18), lineWidth: 0.6)
-                    )
-            )
-    }
-}
-
-private extension View {
-    func secretFieldStyle() -> some View {
-        modifier(SecretFieldStyle())
     }
 }
