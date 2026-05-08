@@ -100,7 +100,15 @@ final class DictationOverlay {
         guard let panel else { return }
         position(panel: panel)
         panel.orderFront(nil)
-        armEscRegistrar()
+        // Only grab bare Esc system-wide while a recording / transcription
+        // session is live — not when the panel is just up to surface an
+        // error toast. Otherwise the user's foreground app would lose Esc
+        // for the toast's whole window for no reason.
+        if let coordinator, coordinator.state != .idle {
+            armEscRegistrar()
+        } else {
+            disarmEscRegistrar()
+        }
     }
 
     func hide() {

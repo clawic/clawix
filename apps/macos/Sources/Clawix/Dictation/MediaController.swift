@@ -32,6 +32,10 @@ final class MediaController {
 
     private let defaults: UserDefaults
     private var resumeWorkItem: DispatchWorkItem?
+    /// Tracks a deferred mute scheduled via `muteAfter(_:)` so it can
+    /// be cancelled if the session ends before it fires (would
+    /// otherwise leave the system permanently muted).
+    private var deferredMuteItem: DispatchWorkItem?
     /// Set to `true` only when *we* flipped the system mute on. The
     /// user might already have output muted before starting dictation;
     /// we leave that alone and restore nothing in that case.
@@ -66,10 +70,23 @@ final class MediaController {
     /// already muted it. Idempotent across repeated calls.
     func muteIfNeeded() {
         guard isEnabled else { return }
+        // Drop any deferred mute scheduled for this session — we're
+        // about to mute synchronously below.
+        deferredMuteItem?.cancel()
+        deferredMuteItem = nil
         // If a deferred unmute from a previous session is queued,
-        // cancel it so we don't accidentally unmute mid-session.
+        // cancel it AND inherit ownership: the system is currently
+        // muted because *we* muted it before, even if the AppleScript
+        // unmute didn't fire yet. Without this, a fast cancel→start
+        // sequence would orphan the mute (didMute=false), so the next
+        // stop wouldn't restore audio.
+        let inheritedPendingMute = (resumeWorkItem != nil)
         resumeWorkItem?.cancel()
         resumeWorkItem = nil
+        if inheritedPendingMute {
+            didMute = true
+            return
+        }
         // Don't re-mute: user already had output muted, keep their
         // state authoritative.
         if currentMutedState() == true {
@@ -81,8 +98,47 @@ final class MediaController {
         }
     }
 
+    /// Synchronously unmute now, ignoring `resumeDelaySeconds`. Used
+    /// just before playing a cue (cancel/stop/done) so the cue is
+    /// audible. No-op if we didn't mute.
+    func unmuteImmediately() {
+        // Drop any pending deferred mute from this session so it
+        // doesn't fire after the unmute and leave the system muted.
+        deferredMuteItem?.cancel()
+        deferredMuteItem = nil
+        resumeWorkItem?.cancel()
+        resumeWorkItem = nil
+        guard didMute else { return }
+        didMute = false
+        _ = setMuted(false)
+    }
+
+    /// Schedule `muteIfNeeded()` after `delay` seconds. Used at the
+    /// start of a session so the start cue plays into an unmuted
+    /// system; the mute kicks in once the cue has finished.
+    func muteAfter(_ delay: TimeInterval) {
+        guard isEnabled else { return }
+        // Cancel any pending unmute from a prior session so we don't
+        // re-enter a clean state mid-session.
+        resumeWorkItem?.cancel()
+        resumeWorkItem = nil
+        // Replace any in-flight deferred mute so we don't double-fire.
+        deferredMuteItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.deferredMuteItem = nil
+            self?.muteIfNeeded()
+        }
+        deferredMuteItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
     /// Unmute after `resumeDelaySeconds`. No-op if we didn't mute.
     func unmuteAfterDelay() {
+        // Drop any pending deferred mute scheduled by `muteAfter(_:)`
+        // so it doesn't fire after we return to idle and silently
+        // re-mute the system.
+        deferredMuteItem?.cancel()
+        deferredMuteItem = nil
         guard didMute else {
             // Make sure no stale work item is left behind (e.g. user
             // toggled the setting off mid-session).

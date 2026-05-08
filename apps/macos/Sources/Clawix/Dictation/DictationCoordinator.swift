@@ -95,6 +95,17 @@ final class DictationCoordinator: ObservableObject {
     private var escTimeoutTask: Task<Void, Never>?
     private let escDoubleTapWindow: TimeInterval = 1.5
 
+    /// User-facing error message that the overlay surfaces as a toast
+    /// when dictation finishes without delivering any text (e.g. the
+    /// active Whisper model isn't installed, mic was denied, the cloud
+    /// provider returned an error). Without this the overlay would
+    /// just disappear and the user has no signal as to why the press
+    /// produced nothing — exactly the silent failure mode the bug
+    /// report flagged.
+    @Published private(set) var errorToastMessage: String?
+    private var errorToastTask: Task<Void, Never>?
+    private let errorToastWindow: TimeInterval = 5.0
+
     let modelManager: DictationModelManager
 
     private let capture = AudioCapture()
@@ -264,7 +275,6 @@ final class DictationCoordinator: ObservableObject {
     /// which ignored the user's Settings choice — Spanish dictation
     /// against an English-locale app got translated to English text.
     func startFromHotkey(language: String? = nil) {
-        NSLog("[Clawix.Dictation] startFromHotkey() state=%@", String(describing: state))
         guard state == .idle else { return }
         source = .hotkey
         languageHint = language ?? resolvedLanguageHint()
@@ -407,6 +417,40 @@ final class DictationCoordinator: ObservableObject {
         escHintVisible = false
     }
 
+    /// Raise an error toast over the floating panel and auto-dismiss
+    /// after `errorToastWindow`. Called from `fail()` and from
+    /// `finish()` when the result is empty + an error was reported.
+    /// Idempotent — replaces any in-flight toast so two failures back
+    /// to back collapse to a single visible message.
+    private func showErrorToast(_ message: String) {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        errorToastMessage = trimmed
+        overlayVisible = true
+        errorToastTask?.cancel()
+        let window = errorToastWindow
+        errorToastTask = Task { [weak self] in
+            let nanos = UInt64(window * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: nanos)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.dismissErrorToast() }
+        }
+    }
+
+    /// Dismiss the error toast and tear down the overlay panel. Called
+    /// by the toast's close button and by the auto-dismiss timer.
+    func dismissErrorToast() {
+        errorToastTask?.cancel()
+        errorToastTask = nil
+        errorToastMessage = nil
+        // Only the toast was keeping the panel up; with it gone the
+        // panel should hide so it doesn't linger empty over the user's
+        // foreground app.
+        if state == .idle {
+            overlayVisible = false
+        }
+    }
+
     /// Stop recording and run transcription. Result is delivered to
     /// the composer completion or pasted into the foreground app
     /// depending on `source`. The samples + model + language used for
@@ -415,6 +459,11 @@ final class DictationCoordinator: ObservableObject {
     /// AppIntents (Paste Last, Retry Last) can replay the result.
     func stop() {
         guard state == .recording else { return }
+        // Unmute synchronously before the cue: AVAudioPlayer routes
+        // through the system mixer, so the stop sound would be silent
+        // otherwise. Mic capture is finished by this point, so there's
+        // no bleed risk from unmuting early.
+        MediaController.shared.unmuteImmediately()
         SoundManager.shared.playStop()
         state = .transcribing
         invalidateElapsedTimer()
@@ -541,6 +590,10 @@ final class DictationCoordinator: ObservableObject {
     /// a stuck transcription (no model downloaded, daemon hung, etc.)
     /// and gets the audio engine torn down cleanly.
     func cancel() {
+        // Unmute synchronously before the cue so it's audible even if
+        // mute from this session is still in effect. cleanup() below
+        // will re-enter the unmute path as a no-op (didMute=false).
+        MediaController.shared.unmuteImmediately()
         SoundManager.shared.playCancel()
         sessionToken &+= 1
         invalidateElapsedTimer()
@@ -685,7 +738,10 @@ final class DictationCoordinator: ObservableObject {
         // Mute system output and pause Music/Spotify per user prefs.
         // Both controllers are no-ops when their toggles are off, so
         // calling them unconditionally keeps the lifecycle simple.
-        MediaController.shared.muteIfNeeded()
+        // Defer the mute by ~0.5s so the start cue plays cleanly into
+        // an unmuted system; mic bleed during that small window is
+        // negligible and the cue clarity matters for UX.
+        MediaController.shared.muteAfter(0.5)
         PlaybackController.shared.pauseIfNeeded()
     }
 
@@ -786,6 +842,10 @@ final class DictationCoordinator: ObservableObject {
         // don't re-enter the LLM here.
 
         if errorMessage == nil, !processed.isEmpty {
+            // Unmute before the cue: the recording-time system mute
+            // may still be active. cleanup() runs after finish() and
+            // its unmuteAfterDelay becomes a no-op.
+            MediaController.shared.unmuteImmediately()
             SoundManager.shared.playDone()
             // Snapshot the result so AppIntents (Paste Last, Retry
             // Last) can replay it without redictating.
@@ -848,11 +908,20 @@ final class DictationCoordinator: ObservableObject {
             }
         }
 
+        // Surface failures over the floating panel so the user sees
+        // *why* a press produced nothing. Without this, an empty
+        // result + non-nil error makes the overlay disappear silently
+        // (e.g. when the active Whisper model is missing on disk).
+        if let errorMessage, processed.isEmpty {
+            showErrorToast(errorMessage)
+        }
+
         cleanup(deliveryText: processed)
     }
 
     private func fail(with message: String) {
         lastError = message
+        showErrorToast(message)
         cleanup(deliveryText: "")
     }
 
@@ -868,7 +937,11 @@ final class DictationCoordinator: ObservableObject {
         partialTranscript = ""
         state = .idle
         activeSource = .none
-        overlayVisible = false
+        // Keep the panel on screen while an error toast is up so the
+        // user actually sees why dictation didn't deliver text. The
+        // toast schedules its own dismissal which then clears
+        // `overlayVisible`.
+        overlayVisible = errorToastMessage != nil
         clearEscHint()
         // Restore system output and resume the paused media app, if
         // either was modified at session start. The controllers are

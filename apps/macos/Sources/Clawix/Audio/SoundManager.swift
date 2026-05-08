@@ -36,8 +36,8 @@ final class SoundManager {
         }
         loadStartPlayer()
         loadStopPlayer()
-        loadPlayer(name: "clawix-done", into: &donePlayer, volume: 0.4)
-        loadPlayer(name: "clawix-cancel", into: &cancelPlayer, volume: 0.35)
+        loadPlayer(name: "clawix-done", into: &donePlayer, volume: 1.0)
+        loadPlayer(name: "clawix-cancel", into: &cancelPlayer, volume: 0.85)
     }
 
     // MARK: - Loading
@@ -66,7 +66,7 @@ final class SoundManager {
             startPlayerURL = nil
             return
         }
-        startPlayer = makePlayer(url: url, volume: 0.4)
+        startPlayer = makePlayer(url: url, volume: 1.0)
         startPlayerURL = url
     }
 
@@ -76,7 +76,7 @@ final class SoundManager {
             stopPlayerURL = nil
             return
         }
-        stopPlayer = makePlayer(url: url, volume: 0.4)
+        stopPlayer = makePlayer(url: url, volume: 1.0)
         stopPlayerURL = url
     }
 
@@ -132,7 +132,7 @@ final class SoundManager {
     func preview(url: URL) {
         guard isMasterEnabled else { return }
         if let player = try? AVAudioPlayer(contentsOf: url) {
-            player.volume = 0.5
+            player.volume = 1.0
             player.prepareToPlay()
             Self.previewPlayer = player
             player.play()
@@ -169,7 +169,10 @@ final class SoundManager {
 
     private func play(_ player: AVAudioPlayer?) {
         guard isMasterEnabled, let player else { return }
-        if player.isPlaying { player.currentTime = 0 }
+        // Always rewind: AVAudioPlayer leaves currentTime at duration after a
+        // clip finishes, and the next play() can no-op silently otherwise.
+        player.stop()
+        player.currentTime = 0
         player.play()
     }
 

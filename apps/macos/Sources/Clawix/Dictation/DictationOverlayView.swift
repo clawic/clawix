@@ -26,6 +26,13 @@ struct DictationOverlayView: View {
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            if let errorMessage = coordinator.errorToastMessage {
+                DictationErrorToast(
+                    message: errorMessage,
+                    onClose: { coordinator.dismissErrorToast() }
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
             // Live preview (#19) — only meaningful when the active
             // backend streams partials (Apple Speech). Whisper local
             // leaves `partialTranscript` empty so this never shows.
@@ -42,6 +49,7 @@ struct DictationOverlayView: View {
         .padding(.bottom, 6)
         .animation(.easeInOut(duration: 0.22), value: coordinator.state)
         .animation(.easeInOut(duration: 0.22), value: coordinator.escHintVisible)
+        .animation(.easeInOut(duration: 0.22), value: coordinator.errorToastMessage)
         .animation(.easeInOut(duration: 0.18), value: coordinator.partialTranscript)
     }
 
@@ -191,6 +199,60 @@ private struct DictationEscToast: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Error toast
+
+/// Toast that surfaces a transcription / lifecycle error so the user
+/// knows *why* a press produced no text. Used when the active Whisper
+/// model isn't on disk, mic permission flips off mid-session, the
+/// cloud provider returns an error, or any other path that leaves
+/// `processed` empty + `lastError` set. Auto-dismisses after the
+/// coordinator's window; the `x` shortcuts that.
+private struct DictationErrorToast: View {
+    let message: String
+    let onClose: () -> Void
+
+    private let accent = Color(red: 0.92, green: 0.32, blue: 0.32)
+    private let corner: CGFloat = 10
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(accent)
+                .frame(width: 18, height: 18)
+
+            Text(message)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.leading)
+
+            Spacer(minLength: 6)
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.6))
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(width: 296)
+        .background(
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(Color.black)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+        )
     }
 }
 
