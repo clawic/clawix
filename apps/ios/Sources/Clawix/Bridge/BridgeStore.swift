@@ -71,6 +71,20 @@ final class BridgeStore {
     }
 
     var connection: ConnectionState = .unpaired
+    /// Mirrors the daemon's bootstrap state. Starts at `.booting` so a
+    /// freshly-launched, just-paired iPhone shows a "connecting" empty
+    /// state instead of "no chats" before the daemon's first
+    /// `bridgeState` frame lands. Updated by `BridgeClient` whenever a
+    /// `bridgeState` frame arrives. Promoted to `.error(...)` from
+    /// silent failures (schema mismatch, auth failed, decode failure)
+    /// so the UI can render a single empty/loading/error gate against
+    /// one source of truth instead of three.
+    var bridgeSync: BridgeRuntimeState = .booting
+    /// Wall-clock of the last `bridgeState` frame, used by the chat
+    /// list to know how stale the state line is when the connection
+    /// drops. Optional because we may have never received one (e.g.
+    /// talking to an old daemon that doesn't emit the frame).
+    var bridgeSyncUpdatedAt: Date?
     var chats: [WireChat] = []
     var messagesByChat: [String: [WireMessage]] = [:]
     /// Pagination state per chat. `true` means the daemon has older
@@ -248,6 +262,50 @@ final class BridgeStore {
     /// detail view shows nothing instead of the empty placeholder.
     func hasLoadedMessages(_ chatId: String) -> Bool {
         messagesByChat[chatId] != nil
+    }
+
+    /// True when the daemon told us it is mid-bootstrap. Drives the
+    /// chat list "syncing" overlay so an empty `chats` reads as
+    /// "loading" instead of "no chats". Also true while the
+    /// connection is in flight — even though the daemon hasn't told
+    /// us anything yet, the UI should show progress, not emptiness.
+    func isBridgeSyncing() -> Bool {
+        switch bridgeSync {
+        case .booting, .syncing: return true
+        case .ready, .error:     return false
+        }
+    }
+
+    /// Apply a `bridgeState` frame. Decoded inline by `BridgeClient`
+    /// rather than going through a typed enum on the wire because the
+    /// shared `BridgeRuntimeState` is the same type the daemon already
+    /// uses; we just translate the wire-tag string back to it.
+    @MainActor
+    func applyBridgeState(state: String, message: String?) {
+        switch state {
+        case "booting":
+            bridgeSync = .booting
+        case "syncing":
+            bridgeSync = .syncing
+        case "ready":
+            bridgeSync = .ready
+        case "error":
+            bridgeSync = .error(message ?? "Unknown error")
+        default:
+            bridgeSync = .syncing
+        }
+        bridgeSyncUpdatedAt = Date()
+    }
+
+    /// Reset `bridgeSync` to `.booting` when the WebSocket connection
+    /// drops. Without this the UI would keep claiming "ready" against
+    /// a snapshot that came from a session that no longer exists,
+    /// hiding the reconnecting state behind a populated list. Called
+    /// by `BridgeClient` from its disconnect path.
+    @MainActor
+    func resetBridgeSyncForReconnect() {
+        bridgeSync = .booting
+        bridgeSyncUpdatedAt = Date()
     }
 
     @MainActor

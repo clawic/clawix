@@ -1,5 +1,6 @@
 import SwiftUI
 import ClawixCore
+import LucideIcon
 
 // Home surface. Two-section scroll over a pure-black canvas with
 // floating Liquid Glass chrome:
@@ -97,6 +98,9 @@ struct ChatListView: View {
                     } else {
                         projectsSection
                         chatsSection
+                        if projects.isEmpty && visibleChats.isEmpty {
+                            emptyStateSection
+                        }
                     }
 
                     Color.clear.frame(height: 80)
@@ -307,7 +311,7 @@ struct ChatListView: View {
                         showAllProjects = true
                     } label: {
                         HStack(spacing: 12) {
-                            Image(systemName: "ellipsis")
+                            Image(lucide: .ellipsis)
                                 .font(BodyFont.system(size: 18, weight: .regular))
                                 .foregroundStyle(Palette.textPrimary)
                                 .frame(width: 24, alignment: .center)
@@ -407,6 +411,81 @@ struct ChatListView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
             }
+        }
+    }
+
+    // MARK: Empty / loading / error placeholder
+
+    /// Renders when the chat list is empty. Picks one of three
+    /// states from `store`:
+    ///   • bridge syncing → "Sincronizando con tu Mac…" + spinner
+    ///   • bridge error   → tarjeta con el motivo y subtítulo de ayuda
+    ///   • bridge ready   → empty state real ("No tienes chats todavía")
+    /// Centred vertically inside the scroll view so the placeholder
+    /// reads as a screen state, not a list row.
+    @ViewBuilder
+    private var emptyStateSection: some View {
+        VStack(spacing: 16) {
+            Spacer().frame(height: 120)
+            Group {
+                if case .error(let message) = store.bridgeSync {
+                    placeholderError(message: message)
+                } else if store.isBridgeSyncing() {
+                    placeholderSyncing
+                } else {
+                    placeholderEmpty
+                }
+            }
+            .frame(maxWidth: .infinity)
+            Spacer().frame(height: 40)
+        }
+        .padding(.horizontal, AppLayout.screenHorizontalPadding)
+    }
+
+    private var placeholderSyncing: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .controlSize(.regular)
+                .tint(Palette.textTertiary)
+            Text("Sincronizando con tu Mac…")
+                .font(BodyFont.system(size: 17, weight: .semibold))
+                .tracking(-0.4)
+                .foregroundStyle(Palette.textPrimary)
+            Text("Cargando tus chats por primera vez")
+                .font(BodyFont.system(size: 14))
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var placeholderEmpty: some View {
+        VStack(spacing: 12) {
+            Text("Aún no tienes chats")
+                .font(BodyFont.system(size: 17, weight: .semibold))
+                .tracking(-0.4)
+                .foregroundStyle(Palette.textPrimary)
+            Text("Empieza una conversación desde tu Mac y aparecerá aquí.")
+                .font(BodyFont.system(size: 14))
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        }
+    }
+
+    private func placeholderError(message: String) -> some View {
+        VStack(spacing: 12) {
+            Text("No se pudo conectar con tu Mac")
+                .font(BodyFont.system(size: 17, weight: .semibold))
+                .tracking(-0.4)
+                .foregroundStyle(Palette.textPrimary)
+            Text(message)
+                .font(BodyFont.system(size: 14))
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         }
     }
 
@@ -943,7 +1022,7 @@ private struct SettingsSheet: View {
             action()
         }) {
             HStack(spacing: 14) {
-                Image(systemName: iconName)
+                Image(lucideOrSystem: iconName)
                     .font(BodyFont.system(size: 16, weight: .regular))
                     .foregroundStyle(destructive ? Color(red: 0.95, green: 0.40, blue: 0.40) : Palette.textPrimary)
                     .frame(width: 24, alignment: .center)
@@ -952,7 +1031,7 @@ private struct SettingsSheet: View {
                     .foregroundStyle(destructive ? Color(red: 0.95, green: 0.40, blue: 0.40) : Palette.textPrimary)
                 Spacer(minLength: 8)
                 if showsChevron {
-                    Image(systemName: "chevron.right")
+                    Image(lucide: .chevron_right)
                         .font(BodyFont.system(size: 12, weight: .semibold))
                         .foregroundStyle(Palette.textTertiary)
                 }
@@ -998,7 +1077,7 @@ private struct SettingsScannerSheet: View {
                         Haptics.tap()
                         onCancel()
                     }) {
-                        Image(systemName: "xmark")
+                        Image(lucide: .x)
                             .font(BodyFont.system(size: 16, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)

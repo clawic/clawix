@@ -2,6 +2,7 @@ import SwiftUI
 import ClawixCore
 #if canImport(UIKit)
 import UIKit
+import LucideIcon
 #endif
 
 // ChatGPT-iOS-styled chat surface, rebuilt on iOS 26 Liquid Glass.
@@ -274,27 +275,33 @@ struct ChatDetailView: View {
                 }
                 Color.clear.frame(height: 8)
                 if hasLoaded {
-                    ForEach(messages, id: \.id) { msg in
-                        MessageView(
-                            message: msg,
-                            attachmentImages: store.attachmentImagesByMessageId[msg.id] ?? [],
-                            isReasoningExpanded: expandedReasoning.contains(msg.id),
-                            toggleReasoning: { toggleReasoning(messageId: msg.id) },
-                            onOpenFile: onOpenFile,
-                            onOpenImage: { startIndex, images in
-                                #if canImport(UIKit)
-                                imageViewer = ImageViewerSelection(
-                                    images: images,
-                                    startIndex: startIndex
-                                )
-                                #endif
-                            },
-                            shouldAnimateEntrance: shouldAnimateEntrance(for: msg),
-                            store: store
-                        )
-                        .id(msg.id)
-                        .onAppear { alreadySeenMessageIds.insert(msg.id) }
+                    if messages.isEmpty {
+                        chatEmptyPlaceholder
+                    } else {
+                        ForEach(messages, id: \.id) { msg in
+                            MessageView(
+                                message: msg,
+                                attachmentImages: store.attachmentImagesByMessageId[msg.id] ?? [],
+                                isReasoningExpanded: expandedReasoning.contains(msg.id),
+                                toggleReasoning: { toggleReasoning(messageId: msg.id) },
+                                onOpenFile: onOpenFile,
+                                onOpenImage: { startIndex, images in
+                                    #if canImport(UIKit)
+                                    imageViewer = ImageViewerSelection(
+                                        images: images,
+                                        startIndex: startIndex
+                                    )
+                                    #endif
+                                },
+                                shouldAnimateEntrance: shouldAnimateEntrance(for: msg),
+                                store: store
+                            )
+                            .id(msg.id)
+                            .onAppear { alreadySeenMessageIds.insert(msg.id) }
+                        }
                     }
+                } else {
+                    chatLoadingPlaceholder
                 }
                 Color.clear.frame(height: 30)
                 Color.clear.frame(height: 1).id(ChatScroll.tail)
@@ -469,7 +476,7 @@ struct ChatDetailView: View {
                     }
                 }
             } label: {
-                Image(systemName: "ellipsis")
+                Image(lucide: .ellipsis)
                     .font(BodyFont.system(size: 20, weight: .semibold))
                     .foregroundStyle(Palette.textPrimary)
                     .frame(width: 48, height: 46)
@@ -525,7 +532,7 @@ struct ChatDetailView: View {
                         .foregroundStyle(Palette.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Image(systemName: "chevron.down")
+                    Image(lucide: .chevron_down)
                         .font(BodyFont.system(size: 10, weight: .semibold))
                         .foregroundStyle(Palette.textSecondary)
                 }
@@ -618,7 +625,7 @@ struct ChatDetailView: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                Image(systemName: "arrow.down")
+                Image(lucide: .arrow_down)
                     .font(BodyFont.system(size: 15, weight: .semibold))
                     .foregroundStyle(Palette.textPrimary)
                 if unreadCount > 0 {
@@ -892,6 +899,45 @@ struct ChatDetailView: View {
             }
             try? FileManager.default.removeItem(at: audioURL)
         }
+    }
+
+    // MARK: - Empty / loading placeholders
+
+    /// Visible while the daemon hasn't sent the first `messagesSnapshot`
+    /// for this chat. Tiny progress indicator so the view doesn't read
+    /// as "blank black screen" while the round-trip is in flight. The
+    /// `loadOlderMessages` spinner already exists above the list; this
+    /// one is for the initial open.
+    private var chatLoadingPlaceholder: some View {
+        VStack(spacing: 12) {
+            Spacer().frame(height: 60)
+            ProgressView()
+                .controlSize(.regular)
+                .tint(Palette.textTertiary)
+            Text("Cargando este chat…")
+                .font(BodyFont.system(size: 14))
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Visible when the daemon delivered an empty `messagesSnapshot`
+    /// for this chat (genuinely empty conversation). Without this the
+    /// detail view would render as pure black.
+    private var chatEmptyPlaceholder: some View {
+        VStack(spacing: 8) {
+            Spacer().frame(height: 60)
+            Text("Aún no hay mensajes en este chat")
+                .font(BodyFont.system(size: 17, weight: .semibold))
+                .tracking(-0.4)
+                .foregroundStyle(Palette.textPrimary)
+            Text("Escribe abajo para empezar.")
+                .font(BodyFont.system(size: 14))
+                .tracking(-0.2)
+                .foregroundStyle(Palette.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -1167,7 +1213,7 @@ private struct MessageActions: View {
         Button(action: copy) {
             ZStack {
                 if copied {
-                    Image(systemName: "checkmark")
+                    Image(lucide: .check)
                         .font(BodyFont.system(size: 12, weight: .semibold))
                         .foregroundStyle(Palette.textTertiary)
                         .transition(.opacity.combined(with: .scale(scale: 0.85)))
@@ -1203,7 +1249,7 @@ private struct ReasoningDisclosure: View {
         VStack(alignment: .leading, spacing: 10) {
             Button(action: toggle) {
                 HStack(spacing: 6) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                    Image(lucideOrSystem: isExpanded ? "chevron.down" : "chevron.right")
                         .font(BodyFont.system(size: 11, weight: .semibold))
                         .foregroundStyle(Palette.textTertiary)
                     Text("Reasoning")

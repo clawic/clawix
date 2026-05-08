@@ -272,6 +272,11 @@ final class BridgeClient: NSObject {
         guard let creds, winner == nil else { return }
         cancelAllCandidates()
         store.connection = .connecting
+        // Reconnecting: forget the daemon's last claimed sync state.
+        // Otherwise an empty `chats` would briefly read as ".ready"
+        // (cached from the previous session) and the chat list would
+        // flash "no chats" while the new socket finishes auth.
+        store.resetBridgeSyncForReconnect()
 
         // Direct IPv4 candidates from the QR. Bonjour candidates are
         // added asynchronously by `handleBrowse` as soon as the
@@ -400,6 +405,7 @@ final class BridgeClient: NSObject {
                 winner = nil
                 stopKeepalive()
                 store.connection = .connecting
+                store.resetBridgeSyncForReconnect()
                 scheduleReconnect()
             } else {
                 candidates.removeAll { $0.id == candidate.id }
@@ -475,7 +481,10 @@ final class BridgeClient: NSObject {
             return
         }
         guard frame.schemaVersion == bridgeSchemaVersion else {
+            clientDbg.error("RX schema mismatch frame=\(frame.schemaVersion, privacy: .public) ours=\(bridgeSchemaVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
             store.connection = .error(message: "Update Clawix on the Mac")
+            store.bridgeSync = .error("Update Clawix on the Mac")
+            store.bridgeSyncUpdatedAt = Date()
             candidate.connection.cancel()
             return
         }
@@ -490,13 +499,19 @@ final class BridgeClient: NSObject {
                 promote(candidate, macName: macName)
             }
         case .authFailed(let reason):
+            clientDbg.error("RX authFailed reason=\(reason, privacy: .public) cand=\(candidate.label, privacy: .public)")
             store.connection = .error(message: "Pairing rejected (\(reason))")
+            store.bridgeSync = .error("Pairing rejected (\(reason))")
+            store.bridgeSyncUpdatedAt = Date()
             cancelAllCandidates()
             stopBrowser()
             CredentialStore.shared.clear()
             creds = nil
         case .versionMismatch:
+            clientDbg.error("RX versionMismatch cand=\(candidate.label, privacy: .public)")
             store.connection = .error(message: "Update Clawix on the Mac")
+            store.bridgeSync = .error("Update Clawix on the Mac")
+            store.bridgeSyncUpdatedAt = Date()
             candidate.connection.cancel()
         case .chatsSnapshot(let chats):
             if winner?.id == candidate.id {
@@ -514,6 +529,7 @@ final class BridgeClient: NSObject {
             }
         case .messagesSnapshot(let chatId, let messages, let hasMore):
             if winner?.id == candidate.id {
+                clientDbg.notice("RX messagesSnapshot chat=\(chatId, privacy: .public) count=\(messages.count, privacy: .public) hasMore=\(hasMore.map { "\($0)" } ?? "nil", privacy: .public)")
                 store.applyMessagesSnapshot(
                     chatId: chatId,
                     messages: messages,
@@ -592,13 +608,19 @@ final class BridgeClient: NSObject {
                     errorMessage: errorMessage
                 )
             }
+        case .bridgeState(let state, let chatCount, let message):
+            if winner?.id == candidate.id {
+                clientDbg.notice("RX bridgeState state=\(state, privacy: .public) chats=\(chatCount, privacy: .public) msg=\(message ?? "-", privacy: .public)")
+                store.applyBridgeState(state: state, message: message)
+            }
         case .auth, .listChats, .openChat, .loadOlderMessages,
              .sendPrompt, .newChat,
              .interruptTurn, .readFile, .editPrompt, .archiveChat,
              .unarchiveChat, .pinChat, .unpinChat, .renameChat,
              .pairingStart, .listProjects, .pairingPayload,
              .projectsSnapshot, .transcribeAudio,
-             .requestAudio, .requestGeneratedImage:
+             .requestAudio, .requestGeneratedImage,
+             .requestRateLimits, .rateLimitsSnapshot, .rateLimitsUpdated:
             // Outbound-from-desktop or server-to-desktop frames the
             // iPhone client neither emits nor consumes. Ignore.
             break
