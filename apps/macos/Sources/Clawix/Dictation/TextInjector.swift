@@ -57,6 +57,17 @@ enum TextInjector {
     ) throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw InjectError.empty }
+        if let capturePath = ProcessInfo.processInfo.environment["CLAWIX_E2E_TEXT_INJECTOR_CAPTURE"] {
+            try injectForE2E(
+                text: text,
+                restorePrevious: restorePrevious,
+                autoSendKey: autoSendKey,
+                restoreAfter: restoreAfter,
+                capturePath: capturePath,
+                addSpaceBefore: addSpaceBefore
+            )
+            return
+        }
         guard AXIsProcessTrusted() else {
             throw InjectError.accessibilityNotGranted
         }
@@ -74,7 +85,11 @@ enum TextInjector {
         pasteboard.clearContents()
         pasteboard.setString(payload, forType: .string)
 
-        postCommandV()
+        if shouldUseAppleScriptPaste {
+            pasteUsingAppleScript()
+        } else {
+            postCommandV()
+        }
 
         if autoSendKey != .none {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -89,8 +104,19 @@ enum TextInjector {
         }
     }
 
+    private static var shouldUseAppleScriptPaste: Bool {
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "useAppleScriptPaste") != nil {
+            return defaults.bool(forKey: "useAppleScriptPaste")
+        }
+        if defaults.object(forKey: "UseAppleScriptPaste") != nil {
+            return defaults.bool(forKey: "UseAppleScriptPaste")
+        }
+        return false
+    }
+
     private static func postCommandV() {
-        let source = CGEventSource(stateID: .combinedSessionState)
+        let source = CGEventSource(stateID: .hidSystemState)
         let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true)
         cmdDown?.flags = .maskCommand
         let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
@@ -116,7 +142,7 @@ enum TextInjector {
     /// delivered separately from the paste, so this is called from a
     /// delayed dispatch after `postCommandV`.
     private static func postReturn(flags: CGEventFlags) {
-        let source = CGEventSource(stateID: .combinedSessionState)
+        let source = CGEventSource(stateID: .hidSystemState)
         let down = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true)
         let up = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false)
         if !flags.isEmpty {
@@ -125,6 +151,47 @@ enum TextInjector {
         }
         down?.post(tap: .cghidEventTap)
         up?.post(tap: .cghidEventTap)
+    }
+
+    private static func pasteUsingAppleScript() {
+        let source = "tell application \"System Events\" to key code 9 using command down"
+        let script = NSAppleScript(source: source)
+        var error: NSDictionary?
+        script?.executeAndReturnError(&error)
+        if let error {
+            NSLog("[Clawix.TextInjector] AppleScript paste failed: %@", "\(error)")
+        }
+    }
+
+    private static func injectForE2E(
+        text: String,
+        restorePrevious: Bool,
+        autoSendKey: DictationAutoSendKey,
+        restoreAfter: TimeInterval,
+        capturePath: String,
+        addSpaceBefore: Bool
+    ) throws {
+        let pasteboard = NSPasteboard.general
+        let previous = pasteboard.string(forType: .string) ?? ""
+        let snapshot = pasteboard.snapshot()
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        let report: [String: Any] = [
+            "payload": text,
+            "previousClipboard": previous,
+            "restorePrevious": restorePrevious,
+            "autoSendKey": autoSendKey.rawValue,
+            "addSpaceBefore": addSpaceBefore
+        ]
+        let data = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: URL(fileURLWithPath: capturePath), options: .atomic)
+
+        if restorePrevious {
+            DispatchQueue.main.asyncAfter(deadline: .now() + restoreAfter) {
+                pasteboard.restore(snapshot)
+            }
+        }
     }
 
     // MARK: - Accessibility heuristic for "Add Space Before"

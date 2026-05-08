@@ -261,15 +261,56 @@ enum DictationAudioStorage {
         return dir
     }
 
+    /// Sibling of `storageDirectory()` used to keep WAV dumps of
+    /// transcriptions that returned empty text. We never delete from
+    /// here — the user keeps the last few so they can sanity-check
+    /// what was actually captured when Whisper insists "no speech".
+    static func emptyTranscriptDebugDirectory() throws -> URL {
+        let fm = FileManager.default
+        let support = try fm.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let dir = support.appendingPathComponent("Clawix/dictation-audio-debug", isDirectory: true)
+        if !fm.fileExists(atPath: dir.path) {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
+    /// Write a debug WAV for an empty-transcript event. Returns the
+    /// URL on success so the caller can log it. Skipped silently on
+    /// any error since this is purely a diagnostic aid.
+    static func writeEmptyTranscriptDebugWAV(samples: [Float]) -> URL? {
+        guard !samples.isEmpty else { return nil }
+        guard let dir = try? emptyTranscriptDebugDirectory() else { return nil }
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let url = dir.appendingPathComponent("empty-\(stamp).wav")
+        let id = "empty-\(stamp)"
+        guard let written = writeWAV(samples: samples, id: id, override: url) else { return nil }
+        return written
+    }
+
     /// Persist a 16 kHz mono Float32 PCM buffer as a 16-bit WAV.
     /// Skipped silently on any error — the transcript row is more
     /// important than the audio companion and shouldn't fail because
-    /// of an audio write hiccup.
-    static func writeWAV(samples: [Float], id: String) -> URL? {
+    /// of an audio write hiccup. `override`, when non-nil, bypasses
+    /// the default storage directory and writes the WAV at that
+    /// exact URL — used by the empty-transcript debug dump that
+    /// lives outside the regular transcript store.
+    static func writeWAV(samples: [Float], id: String, override: URL? = nil) -> URL? {
         guard !samples.isEmpty else { return nil }
         do {
-            let dir = try storageDirectory()
-            let url = dir.appendingPathComponent("\(id).wav")
+            let url: URL
+            if let override {
+                url = override
+            } else {
+                let dir = try storageDirectory()
+                url = dir.appendingPathComponent("\(id).wav")
+            }
             let sampleRate: Int = 16_000
             let bitsPerSample: Int = 16
             let channels: Int = 1

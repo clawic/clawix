@@ -90,14 +90,15 @@ final class LastTranscriptionStore {
         let language = coordinator.resolvedLanguageHintForExternalCallers()
 
         let prompt = DictationCoordinator.composeWhisperPrompt(language: language)
-        let raw = try await TranscriptionService.shared.transcribe(
+        let raw = try await DictationCoordinator.transcribeLocalWithFallback(
             samples: samples,
-            using: activeModel,
+            model: activeModel,
             language: language,
-            prompt: prompt
+            prompt: prompt,
+            useVAD: UserDefaults.standard.object(forKey: DictationCoordinator.vadEnabledKey) as? Bool ?? true,
+            autoFormat: UserDefaults.standard.object(forKey: DictationCoordinator.autoFormatParagraphsKey) as? Bool ?? true
         )
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let processed = DictationReplacementStore.shared.apply(to: trimmed)
+        let processed = DictationCoordinator.processForDelivery(raw, language: language)
         guard !processed.isEmpty else {
             throw QuickActionError.transcriptionEmpty
         }
