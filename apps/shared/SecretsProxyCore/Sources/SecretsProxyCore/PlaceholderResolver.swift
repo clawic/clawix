@@ -16,7 +16,7 @@ public enum PlaceholderResolver {
 
     /// Match `{{name}}` or `{{name.field}}`. Names and field names allow letters,
     /// digits, dashes, underscores. Whitespace inside the braces is tolerated so
-    /// `{{ openai_main . token }}` resolves the same as `{{openai_main.token}}`.
+    /// `{{ service_main . token }}` resolves the same as `{{service_main.token}}`.
     private static let regex: NSRegularExpression = {
         let pattern = #"\{\{\s*([A-Za-z0-9_\-]+)(?:\s*\.\s*([A-Za-z0-9_\-]+))?\s*\}\}"#
         return try! NSRegularExpression(pattern: pattern)

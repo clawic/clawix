@@ -41,7 +41,7 @@ final class RedactorTests: XCTestCase {
     }
 
     func testLabelHelper() {
-        XCTAssertEqual(Redactor.label(forSecretInternalName: "openai_main"), "[REDACTED:openai_main]")
+        XCTAssertEqual(Redactor.label(forSecretInternalName: "service_main"), "[REDACTED:service_main]")
         XCTAssertEqual(Redactor.label(forSecretInternalName: "x", customLabel: "[GH_TOKEN]"), "[GH_TOKEN]")
         XCTAssertEqual(Redactor.label(forSecretInternalName: "x", customLabel: ""), "[REDACTED:x]")
     }

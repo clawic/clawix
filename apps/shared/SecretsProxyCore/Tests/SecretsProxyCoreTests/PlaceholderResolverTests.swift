@@ -4,11 +4,11 @@ import XCTest
 final class PlaceholderResolverTests: XCTestCase {
 
     func testFindsBareName() {
-        let tokens = PlaceholderResolver.tokens(in: "Bearer {{openai_main}}")
+        let tokens = PlaceholderResolver.tokens(in: "Bearer {{service_main}}")
         XCTAssertEqual(tokens.count, 1)
-        XCTAssertEqual(tokens.first?.secretInternalName, "openai_main")
+        XCTAssertEqual(tokens.first?.secretInternalName, "service_main")
         XCTAssertNil(tokens.first?.fieldName)
-        XCTAssertEqual(tokens.first?.raw, "{{openai_main}}")
+        XCTAssertEqual(tokens.first?.raw, "{{service_main}}")
     }
 
     func testFindsFieldAccess() {
@@ -19,9 +19,9 @@ final class PlaceholderResolverTests: XCTestCase {
     }
 
     func testTolerantToWhitespace() {
-        let tokens = PlaceholderResolver.tokens(in: "{{ openai_main . token }}")
+        let tokens = PlaceholderResolver.tokens(in: "{{ service_main . token }}")
         XCTAssertEqual(tokens.count, 1)
-        XCTAssertEqual(tokens.first?.secretInternalName, "openai_main")
+        XCTAssertEqual(tokens.first?.secretInternalName, "service_main")
         XCTAssertEqual(tokens.first?.fieldName, "token")
     }
 
@@ -38,19 +38,19 @@ final class PlaceholderResolverTests: XCTestCase {
 
     func testSubstituteReplacesAllOccurrences() {
         let result = PlaceholderResolver.substitute(
-            "url=https://api.com?key={{openai_main}}&also={{openai_main}}",
-            with: ["{{openai_main}}": "sk-deadbeef"]
+            "url=https://api.com?key={{service_main}}&also={{service_main}}",
+            with: ["{{service_main}}": "sk-deadbeef"]
         )
         XCTAssertEqual(result, "url=https://api.com?key=sk-deadbeef&also=sk-deadbeef")
     }
 
     func testCollectionScan() {
         let tokens = PlaceholderResolver.tokens(in: [
-            "host=api.openai.com",
-            "Authorization: Bearer {{openai_main}}",
+            "host=api.example.com",
+            "Authorization: Bearer {{service_main}}",
             "X-Other: {{namecheap.api_key}}"
         ])
         XCTAssertEqual(tokens.count, 2)
-        XCTAssertEqual(Set(tokens.map { $0.secretInternalName }), ["openai_main", "namecheap"])
+        XCTAssertEqual(Set(tokens.map { $0.secretInternalName }), ["service_main", "namecheap"])
     }
 }
