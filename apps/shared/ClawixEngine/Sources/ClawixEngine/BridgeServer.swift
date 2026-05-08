@@ -79,9 +79,9 @@ public final class BridgeServer {
             self.bus = bus
 
             isRunning = true
-            print("[BridgeServer] listening on tcp/\(port.rawValue)")
+            BridgeLog.write("server-listening tcp/\(port.rawValue) bonjour=\(publishBonjour)")
         } catch {
-            print("[BridgeServer] failed to start: \(error)")
+            BridgeLog.write("server-listen-failed \(error)")
         }
     }
 

@@ -2,6 +2,25 @@ import Foundation
 import Combine
 import ClawixCore
 
+/// Pair of "general" + "per-bucket" rate-limit views the daemon ships
+/// to desktop clients. `snapshot` is the top-level Codex view (the same
+/// shape returned at `account/rateLimits/read.rateLimits`), while
+/// `byLimitId` carries the per-bucket map (e.g. `"codex_<model>"`).
+/// `nil` snapshot means "the daemon hasn't fetched the first read yet";
+/// empty `byLimitId` means "the backend doesn't surface per-bucket
+/// data". Hosts without a real Codex connection ship `.empty`.
+public struct WireRateLimitsPayload: Equatable, Sendable {
+    public var snapshot: WireRateLimitSnapshot?
+    public var byLimitId: [String: WireRateLimitSnapshot]
+
+    public init(snapshot: WireRateLimitSnapshot? = nil, byLimitId: [String: WireRateLimitSnapshot] = [:]) {
+        self.snapshot = snapshot
+        self.byLimitId = byLimitId
+    }
+
+    public static let empty = WireRateLimitsPayload()
+}
+
 /// Snapshot of one chat carrying everything the bridge needs to diff
 /// and emit frames for: the wire-level metadata (`WireChat`) plus the
 /// full ordered message list. The host (the macOS `AppState` today,
@@ -43,6 +62,31 @@ public protocol EngineHost: AnyObject {
     /// so the host can republish freely (every keystroke that touches
     /// chats is fine; the bus collapses to ~16ms ticks on loopback).
     var bridgeChatsPublisher: AnyPublisher<[BridgeChatSnapshot], Never> { get }
+
+    /// Current bootstrap state of the host. Surfaced over the wire as
+    /// a `bridgeState` frame so a peer that connected during boot
+    /// distinguishes "snapshot is empty because we're still loading"
+    /// from "snapshot is empty because there really are no chats".
+    /// Hosts that come up instantly (the in-process GUI server) keep
+    /// the default `.ready`.
+    var bridgeStateCurrent: BridgeRuntimeState { get }
+
+    /// Stream of bootstrap states. Default impl emits a single `.ready`
+    /// so hosts without a real bootstrap don't have to publish anything.
+    var bridgeStatePublisher: AnyPublisher<BridgeRuntimeState, Never> { get }
+
+    /// Most recent rate-limits view the host knows about. The bus reads
+    /// this synchronously when a desktop client sends `requestRateLimits`
+    /// so the reply doesn't have to wait for the next publisher tick.
+    /// Default impl returns `.empty` so hosts that don't track Codex
+    /// rate limits (the in-process GUI server) get a no-op.
+    var bridgeRateLimitsCurrent: WireRateLimitsPayload { get }
+
+    /// Stream of rate-limits views. The bus subscribes to this and
+    /// emits `rateLimitsUpdated` frames to all desktop sessions every
+    /// time a fresh value lands. Default impl emits a single empty
+    /// payload so the bus's `.sink` is well-formed without spamming.
+    var bridgeRateLimitsPublisher: AnyPublisher<WireRateLimitsPayload, Never> { get }
 
     /// iPhone or daemon-backed desktop client opened a chat. Hosts
     /// that read rollouts lazily should hydrate the history off disk
@@ -145,6 +189,22 @@ public extension EngineHost {
     func currentProjects() -> [WireProject] { [] }
     func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {}
     func handleInterruptTurn(chatId: UUID) {}
+
+    /// In-process hosts come up instantly: nothing to bootstrap, the
+    /// chat store is already populated from disk before the bridge
+    /// starts. They sit permanently at `.ready`.
+    var bridgeStateCurrent: BridgeRuntimeState { .ready }
+    var bridgeStatePublisher: AnyPublisher<BridgeRuntimeState, Never> {
+        Just(BridgeRuntimeState.ready).eraseToAnyPublisher()
+    }
+    /// Hosts that don't own a Codex backend (the in-process GUI server
+    /// reads rate limits straight from `AppState`, no bridge involved)
+    /// surface an empty payload here. The daemon overrides both with
+    /// a real CurrentValueSubject seeded from `account/rateLimits/read`.
+    var bridgeRateLimitsCurrent: WireRateLimitsPayload { .empty }
+    var bridgeRateLimitsPublisher: AnyPublisher<WireRateLimitsPayload, Never> {
+        Just(WireRateLimitsPayload.empty).eraseToAnyPublisher()
+    }
     func handleTranscribeAudio(
         requestId: String,
         audioBase64: String,

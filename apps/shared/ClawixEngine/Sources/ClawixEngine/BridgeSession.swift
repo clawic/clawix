@@ -104,6 +104,7 @@ public final class BridgeSession: Identifiable {
         // with hyphens stripped on the client side or here).
         let valid = pairing.acceptToken(token) || pairing.acceptShortCode(token)
         guard valid else {
+            BridgeLog.write("auth-fail reason=bad-token name=\(deviceName ?? "?")")
             send(BridgeFrame(.authFailed(reason: "bad-token")))
             close(.protocolCode(.policyViolation))
             return
@@ -116,6 +117,12 @@ public final class BridgeSession: Identifiable {
         self.clientKind = clientKind ?? .ios
         send(BridgeFrame(.authOk(macName: Host.current().localizedName)))
         send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
+        // Tell the peer where the host is in its bootstrap so an empty
+        // chats list reads as "syncing" instead of "no chats". The bus
+        // also re-emits this frame on every state transition, so a
+        // peer that connected during boot sees `syncing → ready`.
+        send(bus.currentBridgeStateFrame())
+        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")
     }
 
     public func send(_ frame: BridgeFrame) {

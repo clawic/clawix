@@ -159,13 +159,20 @@ public enum BridgeIntent {
                 }
             )
 
+        case .requestRateLimits:
+            // The bus caches the daemon's most recent snapshot so the
+            // reply is synchronous; subsequent pushes flow through
+            // `rateLimitsUpdated` automatically.
+            session.send(bus.currentRateLimitsFrame())
+
         case .auth, .authOk, .authFailed, .versionMismatch,
              .chatsSnapshot, .chatUpdated, .messagesSnapshot,
              .messagesPage,
              .messageAppended, .messageStreaming, .errorEvent,
              .pairingPayload, .projectsSnapshot, .fileSnapshot,
              .transcriptionResult, .audioSnapshot,
-             .generatedImageSnapshot:
+             .generatedImageSnapshot, .bridgeState,
+             .rateLimitsSnapshot, .rateLimitsUpdated:
             // Either already handled (auth) or server-only.
             break
         }

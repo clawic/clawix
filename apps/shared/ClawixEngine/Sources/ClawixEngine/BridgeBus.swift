@@ -14,6 +14,16 @@ public final class BridgeBus {
     private var snapshot: [String: ChatProjection] = [:]
     private var listShape: [String] = []
     private var emit: ((BridgeFrame) -> Void)?
+    /// Last `BridgeRuntimeState` seen on the wire. Cached so a peer
+    /// connecting after `startObserving` can pull the current state
+    /// synchronously without waiting for the next publisher tick.
+    private(set) var lastState: BridgeRuntimeState = .booting
+    /// Last rate-limits payload seen on the publisher. Cached for the
+    /// same reason as `lastState`: a desktop peer that sends
+    /// `requestRateLimits` between two publisher ticks gets the most
+    /// recent value the host published, not whatever empty seed the
+    /// bus started with.
+    private(set) var lastRateLimits: WireRateLimitsPayload = .empty
 
     /// Diff key: derived fields that, when changed, warrant a frame.
     /// Equality on this struct is what gates "did anything observable
@@ -58,6 +68,25 @@ public final class BridgeBus {
                 self?.process(chats: chats)
             }
             .store(in: &cancellables)
+        if let host {
+            // Seed the cache from whatever the host knows synchronously
+            // so the first peer that authenticates picks up the right
+            // state even if the publisher hasn't ticked yet.
+            lastState = host.bridgeStateCurrent
+            lastRateLimits = host.bridgeRateLimitsCurrent
+        }
+        host?.bridgeStatePublisher
+            .removeDuplicates()
+            .sink { [weak self] state in
+                self?.applyRuntimeState(state)
+            }
+            .store(in: &cancellables)
+        host?.bridgeRateLimitsPublisher
+            .removeDuplicates()
+            .sink { [weak self] payload in
+                self?.applyRateLimits(payload)
+            }
+            .store(in: &cancellables)
     }
 
     public func stop() {
@@ -66,6 +95,57 @@ public final class BridgeBus {
         snapshot.removeAll()
         listShape.removeAll()
         emit = nil
+        lastState = .booting
+        lastRateLimits = .empty
+    }
+
+    /// Build the current `bridgeState` frame for a peer that just
+    /// authenticated. Reads through to the host so the chat count is
+    /// always in sync with what `currentChats()` would return one
+    /// instruction earlier.
+    public func currentBridgeStateFrame() -> BridgeFrame {
+        let count = host?.bridgeChatsCurrent.count ?? 0
+        return BridgeFrame(.bridgeState(
+            state: lastState.wireTag,
+            chatCount: count,
+            message: lastState.errorMessage
+        ))
+    }
+
+    private func applyRuntimeState(_ state: BridgeRuntimeState) {
+        lastState = state
+        guard let emit else { return }
+        let count = host?.bridgeChatsCurrent.count ?? 0
+        emit(BridgeFrame(.bridgeState(
+            state: state.wireTag,
+            chatCount: count,
+            message: state.errorMessage
+        )))
+    }
+
+    /// Build the current `rateLimitsSnapshot` frame for a peer that
+    /// just sent `requestRateLimits`. Reads through to the host so the
+    /// payload is the freshest the host published, even if the bus
+    /// publisher hasn't ticked yet (the daemon seeds its subject
+    /// synchronously after `account/rateLimits/read` lands).
+    public func currentRateLimitsFrame() -> BridgeFrame {
+        let payload = host?.bridgeRateLimitsCurrent ?? lastRateLimits
+        return BridgeFrame(.rateLimitsSnapshot(
+            snapshot: payload.snapshot,
+            byLimitId: payload.byLimitId
+        ))
+    }
+
+    private func applyRateLimits(_ payload: WireRateLimitsPayload) {
+        lastRateLimits = payload
+        guard let emit else { return }
+        // Push every fresh value to all desktop sessions. iPhone clients
+        // ignore the frame (their switch lists it under the "drop"
+        // catch-all), so a single broadcast is fine.
+        emit(BridgeFrame(.rateLimitsUpdated(
+            snapshot: payload.snapshot,
+            byLimitId: payload.byLimitId
+        )))
     }
 
     /// Client called `openChat`. Returns the current snapshot of
