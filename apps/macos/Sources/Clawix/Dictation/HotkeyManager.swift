@@ -218,7 +218,7 @@ final class HotkeyManager {
 
     /// Connect to the coordinator that should react to presses and
     /// install the event monitors. Called from `AppDelegate` (via
-    /// `bootstrapIfPermitted`) and from the Settings toggle (via
+    /// `bootstrap`) and from the Settings toggle (via
     /// `requestPermissionAndRegister`). Idempotent — safe to call
     /// repeatedly; only installs each monitor once.
     ///
@@ -227,19 +227,33 @@ final class HotkeyManager {
     /// monitor the hotkey would feel broken whenever Clawix itself is
     /// frontmost.
     ///
-    /// The global monitor requires Input Monitoring (TCC). Calling
-    /// `addGlobalMonitorForEvents(matching: .flagsChanged)` without
-    /// the grant freezes event delivery on macOS 26 (Tahoe) — the
-    /// "frozen-input bug". So the global monitor is gated behind an
-    /// explicit `IOHIDCheckAccess` and silently skipped when not
-    /// permitted; the local monitor is still installed so dictation
-    /// works while Clawix itself is frontmost.
+    /// The global monitor requires Input Monitoring (TCC) to actually
+    /// receive events; without the grant the callback is silently a
+    /// no-op until the user enables the app from the Privacy pane.
+    /// We install it only after a trigger is configured so macOS adds
+    /// Clawix to the Input Monitoring privacy list in a user-initiated
+    /// flow. The explicit
+    /// `IOHIDRequestAccess` in `requestPermissionAndRegister` surfaces
+    /// the consent dialog as soon as the user picks a trigger so they
+    /// don't have to find Settings on their own.
+    ///
+    /// To avoid the macOS 26 (Tahoe) "frozen-input bug" — where
+    /// installing the global monitor with no user-facing reason at
+    /// cold start could freeze event delivery — both monitors are
+    /// only installed once at least one slot has a non-`.off` trigger.
+    /// On a fresh install the default is `.off`, so the monitors stay
+    /// uninstalled until the user opts in from Settings.
     func register(coordinator: DictationCoordinator) {
         self.coordinator = coordinator
         // Cancel binding lives in `KeyboardShortcuts.Name.dictationCancel`
         // wired by `DictationShortcutsInstaller.installAll()`. No
         // separate monitor needed here.
-        Self.debug("register() trigger1=\(trigger.rawValue) trigger2=\(trigger2.rawValue) inputMon=\(DictationPermissions.inputMonitoring())")
+        let anyTriggerActive = trigger != .off || trigger2 != .off
+        Self.debug("register() trigger1=\(trigger.rawValue) trigger2=\(trigger2.rawValue) inputMon=\(DictationPermissions.inputMonitoring()) anyActive=\(anyTriggerActive)")
+        guard anyTriggerActive else {
+            Self.debug("register() skipped: no trigger configured")
+            return
+        }
         if localMonitor == nil {
             localMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
                 guard let self else { return event }
@@ -250,25 +264,23 @@ final class HotkeyManager {
             }
             Self.debug("localMonitor installed=\(localMonitor != nil)")
         }
-        guard globalMonitor == nil else { return }
-        guard DictationPermissions.inputMonitoring() == .granted else {
-            Self.debug("globalMonitor skipped: Input Monitoring not granted")
-            return
+        if globalMonitor == nil {
+            globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                guard let self else { return }
+                Task { @MainActor in self.handle(event: event, scope: "global") }
+            }
+            Self.debug("globalMonitor installed=\(globalMonitor != nil)")
         }
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-            guard let self else { return }
-            Task { @MainActor in self.handle(event: event, scope: "global") }
-        }
-        Self.debug("globalMonitor installed=\(globalMonitor != nil)")
     }
 
     /// Bootstrap entry called once from `applicationDidFinishLaunching`.
-    /// Always installs the local monitor; the global one only if Input
-    /// Monitoring is already granted from a previous session. Users who
-    /// haven't granted yet pick a trigger from Settings, which routes
-    /// through `requestPermissionAndRegister` to surface the prompt
-    /// with the Settings window in focus.
-    func bootstrapIfPermitted(coordinator: DictationCoordinator) {
+    /// Installs both monitors if the user already had a trigger
+    /// configured from a previous session. Fresh installs default to
+    /// `.off` and the monitors stay uninstalled until the user picks
+    /// a trigger from Settings, which routes through
+    /// `requestPermissionAndRegister` and surfaces the Input Monitoring
+    /// prompt with the Settings window in focus.
+    func bootstrap(coordinator: DictationCoordinator) {
         register(coordinator: coordinator)
         // Push the model into the GPU cache early so the first real
         // dictation of the session doesn't pay the cold-load tax.

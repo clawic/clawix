@@ -294,14 +294,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         QuickAskController.shared.install()
         // Wire the dictation overlay (cheap: only creates an offscreen
         // NSPanel that ignoresMouseEvents, no run-loop side effects)
-        // and bootstrap the dictation hotkey monitors. The hotkey
-        // bootstrap installs the local monitor unconditionally and
-        // gates the global monitor behind Input Monitoring (TCC) so a
-        // pre-grant launch doesn't freeze event delivery — the user
-        // grants from Settings → Voice to Text where the consent
-        // dialog has visible context.
+        // and bootstrap the dictation hotkey monitors. Bootstrap is a
+        // no-op when no trigger is configured, so a fresh install
+        // doesn't touch `addGlobalMonitorForEvents` until the user
+        // opts in from Settings → Voice to Text.
         DictationOverlay.shared.install(coordinator: DictationCoordinator.shared)
-        HotkeyManager.shared.bootstrapIfPermitted(coordinator: DictationCoordinator.shared)
+        HotkeyManager.shared.bootstrap(coordinator: DictationCoordinator.shared)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
