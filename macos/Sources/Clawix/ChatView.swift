@@ -13,6 +13,7 @@ struct ChatView: View {
     @State private var branchMenuOpen = false
     @State private var branchCreateOpen = false
     @State private var branchSearch = ""
+    @State private var visibleMessageLimit = Self.initialVisibleMessageLimit
     /// Drives `scrollPosition`. `chatTailId` is the canonical "you are
     /// at the tail" marker; an `id`'d clear rectangle at the end of
     /// the LazyVStack carries the same id so SwiftUI knows where the
@@ -35,11 +36,15 @@ struct ChatView: View {
     /// at 80pt from the top gives the daemon a chance to deliver the
     /// next page before the user sees the gap.
     private static let loadOlderThreshold: CGFloat = 80
+    private static let initialVisibleMessageLimit = 24
+    private static let visibleMessagePageSize = 24
 
     var body: some View {
         RenderProbe.tick("ChatView")
         return Group {
             if let chat {
+                let visibleMessages = Array(chat.messages.suffix(visibleMessageLimit))
+                let hiddenLocalMessageCount = max(0, chat.messages.count - visibleMessages.count)
                 VStack(spacing: 0) {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -73,7 +78,7 @@ struct ChatView: View {
                                     return chat.hasActiveTurn
                                 }()
                                 let activeFindQuery = appState.isFindBarOpen ? appState.findQuery : ""
-                                ForEach(chat.messages) { msg in
+                                ForEach(visibleMessages) { msg in
                                     MessageRow(
                                         chatId: chat.id,
                                         message: msg,
@@ -128,7 +133,6 @@ struct ChatView: View {
                                     .frame(height: 1)
                                     .id(chatTailId)
                             }
-                            .textSelection(.enabled)
                             .frame(maxWidth: chatRailMaxWidth)
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.horizontal, 24)
@@ -173,7 +177,22 @@ struct ChatView: View {
                         // scrolls past it.
                         .modifier(ChatScrollUpSentinel(
                             threshold: Self.loadOlderThreshold,
-                            onTrigger: { appState.requestOlderIfNeeded(chatId: chatId) }
+                            onTrigger: {
+                                if hiddenLocalMessageCount > 0 {
+                                    let anchorId = visibleMessages.first?.id
+                                    visibleMessageLimit = min(
+                                        chat.messages.count,
+                                        visibleMessageLimit + Self.visibleMessagePageSize
+                                    )
+                                    if let anchorId {
+                                        DispatchQueue.main.async {
+                                            proxy.scrollTo(anchorId, anchor: .top)
+                                        }
+                                    }
+                                } else {
+                                    appState.requestOlderIfNeeded(chatId: chatId)
+                                }
+                            }
                         ))
                         .onAppear {
                             appState.ensureSelectedChat()
@@ -181,11 +200,13 @@ struct ChatView: View {
                             // a chat the user previously scrolled up
                             // in still pins to the latest message on
                             // reentry.
+                            visibleMessageLimit = Self.initialVisibleMessageLimit
                             bottomId = chatTailId
                         }
                         .onChange(of: chatId) { _, _ in
                             appState.ensureSelectedChat()
                             appState.requestComposerFocus()
+                            visibleMessageLimit = Self.initialVisibleMessageLimit
                             bottomId = chatTailId
                         }
                         .onChange(of: appState.currentFindIndex) { _, _ in
@@ -322,7 +343,7 @@ struct ChatView: View {
                     )
                 }
             } else {
-                Text("Chat not found")
+                    Text(verbatim: "Chat not found")
                     .foregroundColor(Palette.textTertiary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Palette.background)
@@ -360,18 +381,6 @@ struct ChatView: View {
     }
 }
 
-/// Equatable bundle of the scroll-geometry numbers we care about.
-/// Mirrors `ChatDetailView.ScrollMetrics` on iOS so SwiftUI's diff
-/// filters out the sub-pixel updates that fire while the composer is
-/// animating its height; the action callback only re-runs when one of
-/// these four members actually changes.
-private struct ChatScrollMetrics: Equatable {
-    let content: CGFloat
-    let container: CGFloat
-    let insets: CGFloat
-    let offsetY: CGFloat
-}
-
 /// macOS 15+ layered anchors. macOS 14 falls back to the
 /// `scrollPosition` binding alone (already applied at the call site).
 private struct ChatScrollDeclarativeAnchors: ViewModifier {
@@ -398,17 +407,12 @@ private struct ChatScrollUpSentinel: ViewModifier {
 
     func body(content: Content) -> some View {
         if #available(macOS 15, *) {
-            content.onScrollGeometryChange(for: ChatScrollMetrics.self) { geom in
-                ChatScrollMetrics(
-                    content: geom.contentSize.height,
-                    container: geom.containerSize.height,
-                    insets: geom.contentInsets.top + geom.contentInsets.bottom,
-                    offsetY: geom.contentOffset.y
-                )
-            } action: { _, m in
-                let nearTop = m.offsetY < threshold
-                let realOverflow = m.content > m.container - m.insets + 1
-                if nearTop, realOverflow {
+            content.onScrollGeometryChange(for: Bool.self) { geom in
+                let realOverflow = geom.contentSize.height
+                    > geom.containerSize.height - geom.contentInsets.top - geom.contentInsets.bottom + 1
+                return geom.contentOffset.y < threshold && realOverflow
+            } action: { wasNearTop, isNearTop in
+                if isNearTop && !wasNearTop {
                     onTrigger()
                 }
             }
@@ -478,8 +482,16 @@ enum UserBubbleContent {
     private static let mentionedFileRegex: NSRegularExpression? = try? NSRegularExpression(
         pattern: #"(?m)^##\s+.*?:\s+(/.+)$"#
     )
+    private static let cache = MarkdownBlockCache<Parsed>(countLimit: 256)
 
     static func parse(_ raw: String, attachments: [WireAttachment] = []) -> Parsed {
+        let key = cacheKey(raw: raw, attachments: attachments)
+        return cache.parse(key) { _ in
+            parseUncached(raw, attachments: attachments)
+        }
+    }
+
+    private static func parseUncached(_ raw: String, attachments: [WireAttachment]) -> Parsed {
         // Mentions in user messages come from `AppState.sendMessage`, which
         // builds them as `@<absolute-path>` joined by single spaces and
         // separated from the body by `\n\n`. Paths can contain spaces
@@ -531,6 +543,19 @@ enum UserBubbleContent {
             files: files,
             text: text
         )
+    }
+
+    private static func cacheKey(raw: String, attachments: [WireAttachment]) -> String {
+        guard !attachments.isEmpty else { return raw }
+        let attachmentKey = attachments.map { attachment in
+            [
+                attachment.id,
+                attachment.kind.rawValue,
+                attachment.filename ?? "",
+                String(attachment.dataBase64.count)
+            ].joined(separator: "\u{1f}")
+        }.joined(separator: "\u{1e}")
+        return raw + "\u{1d}" + attachmentKey
     }
 
     private static func extractFilesMentionedWrapper(from raw: String) -> (text: String, imageURLs: [URL], fileURLs: [URL]) {
@@ -674,7 +699,7 @@ private struct UserFileMentionChip: View {
         HStack(spacing: 6) {
             FileChipIcon(size: 11)
                 .foregroundColor(Color(white: 0.78))
-            Text(url.lastPathComponent)
+            Text(verbatim: url.lastPathComponent)
                 .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Palette.textPrimary)
                 .lineLimit(1)
@@ -830,7 +855,7 @@ private struct MessageRow: View, Equatable {
                                     if substringMatches(p, query: findQuery) {
                                         Text(highlightedAttributed(p, query: findQuery))
                                     } else {
-                                        Text(p)
+                                        Text(verbatim: p)
                                     }
                                 }
                                 .font(BodyFont.system(size: 13.5, wght: 500))
@@ -844,6 +869,8 @@ private struct MessageRow: View, Equatable {
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .fill(Color.white.opacity(0.08))
                         )
+                        .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(Text(verbatim: AccessibilityText.clipped(parsed.text)))
                     }
                 }
             } else {
@@ -1122,7 +1149,7 @@ private struct MessageRow: View, Equatable {
     }
 
     private var timestampLabel: some View {
-        Text(formattedTimestamp)
+        Text(verbatim: formattedTimestamp)
             .font(BodyFont.system(size: 11, wght: 500))
             .foregroundColor(Color(white: 0.45))
             .padding(.horizontal, 4)
@@ -1191,7 +1218,7 @@ private struct MessageActionIcon: View {
         .onHover { h in
             withAnimation(.easeOut(duration: 0.12)) { hovered = h }
         }
-        .accessibilityLabel(label)
+        .accessibilityLabel(Text(verbatim: label))
         .hoverHint(label)
     }
 
@@ -1297,7 +1324,7 @@ private struct ChatFooterPill: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 IconImage(icon, size: 12)
-                Text(label)
+                Text(verbatim: label)
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .lineLimit(1)
                 LucideIcon(.chevronDown, size: 10)
@@ -1309,7 +1336,7 @@ private struct ChatFooterPill: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .accessibilityLabel(accessibilityLabel)
+        .accessibilityLabel(Text(verbatim: accessibilityLabel))
     }
 }
 
@@ -1576,7 +1603,7 @@ private struct BranchCreateSheet: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Close")
+                .accessibilityLabel(Text(verbatim: "Close"))
             }
             .padding(.bottom, 18)
 
@@ -1859,7 +1886,7 @@ private struct ForkedFromBanner: View {
             }
             .buttonStyle(.plain)
             .onHover { hovered = $0 }
-            .accessibilityLabel("Open the conversation this chat was forked from")
+            .accessibilityLabel(Text(verbatim: "Open the conversation this chat was forked from"))
 
             Rectangle()
                 .fill(ruleColor)
@@ -1994,7 +2021,7 @@ private struct LinkPreviewCard: View {
         .onTapGesture { appState.openLinkInBrowser(url) }
         .onAppear { appState.linkMetadata.ensureTitle(for: url) }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(title), Website"))
+        .accessibilityLabel(Text(verbatim: "\(title), Website"))
         .accessibilityAddTraits(.isLink)
     }
 }

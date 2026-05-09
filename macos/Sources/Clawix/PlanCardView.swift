@@ -1,4 +1,5 @@
 import SwiftUI
+import ClawixCore
 
 // MARK: - Plan content segmentation
 //
@@ -22,8 +23,15 @@ enum PlanSegment: Hashable {
 enum PlanSegmenter {
     private static let openTag  = "<proposed_plan>"
     private static let closeTag = "</proposed_plan>"
+    private static let cache = MarkdownBlockCache<[PlanSegment]>(countLimit: 256)
 
     static func segments(from text: String) -> [PlanSegment] {
+        cache.parse(text) { source in
+            parseSegments(from: source)
+        }
+    }
+
+    private static func parseSegments(from text: String) -> [PlanSegment] {
         var out: [PlanSegment] = []
         var remaining = Substring(text)
 

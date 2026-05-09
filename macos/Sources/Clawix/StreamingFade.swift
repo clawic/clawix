@@ -12,8 +12,8 @@ import os
 /// Toggle to surface streaming-pipeline timing in the dev log. Flip to
 /// `false` once we've root-caused the perceived slowness; the logs are
 /// noisy and shouldn't ship enabled.
-let streamingPerfLogEnabled = true
-let streamingPerfLog = Logger(subsystem: "com.clawix.app", category: "stream-perf")
+let streamingPerfLogEnabled = false
+let streamingPerfLog = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Clawix", category: "stream-perf")
 
 enum StreamingFade {
     /// How long a word takes to ramp from invisible to fully opaque.
