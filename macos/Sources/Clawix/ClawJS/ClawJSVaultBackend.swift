@@ -49,7 +49,9 @@ fileprivate func runSync<T>(_ operation: @escaping @Sendable () async throws -> 
         lock.unlock()
         semaphore.signal()
     }
-    semaphore.wait()
+    if semaphore.wait(timeout: .now() + 5) == .timedOut {
+        throw ClawJSBackendError.server("Vault service did not respond within 5 seconds.")
+    }
     lock.lock()
     defer { lock.unlock() }
     return try captured.get()
@@ -208,7 +210,6 @@ enum ClawJSMapper {
 
 // MARK: - SecretsStore shim
 
-@MainActor
 final class ClawJSSecretsStore {
     private let client: ClawJSVaultClient
 
@@ -333,7 +334,6 @@ final class ClawJSSecretsStore {
 
 // MARK: - AuditStore shim
 
-@MainActor
 final class ClawJSAuditStore {
     private let client: ClawJSVaultClient
 
@@ -383,7 +383,6 @@ final class ClawJSAuditStore {
 
 // MARK: - Grants shim
 
-@MainActor
 final class ClawJSGrantStore {
     private let client: ClawJSVaultClient
 

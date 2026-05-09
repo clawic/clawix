@@ -395,19 +395,35 @@ final class VaultManager: ObservableObject {
         let grantsShim = ClawJSGrantStore(client: client)
 
         if seedDefaultVault {
-            let containers = try storeShim.listVaults(includeTrashed: true)
+            let containers = try await Task.detached(priority: .userInitiated) {
+                try storeShim.listVaults(includeTrashed: true)
+            }.value
             if containers.isEmpty {
-                _ = try storeShim.createVault(name: "Personal")
+                _ = try await Task.detached(priority: .userInitiated) {
+                    try storeShim.createVault(name: "Personal")
+                }.value
             }
         }
 
         self.store = storeShim
         self.audit = auditShim
         self.grants = grantsShim
-        self.vaults = (try? storeShim.listVaults()) ?? []
-        self.secrets = (try? storeShim.listSecrets()) ?? []
-        self.trashedSecrets = (try? storeShim.listSecrets(includeTrashed: true).filter { $0.trashedAt != nil }) ?? []
-        self.activeGrants = (try? grantsShim.listActive()) ?? []
+        let vaults = try? await Task.detached(priority: .userInitiated) {
+            try storeShim.listVaults()
+        }.value
+        let secrets = try? await Task.detached(priority: .userInitiated) {
+            try storeShim.listSecrets()
+        }.value
+        let trashed = try? await Task.detached(priority: .userInitiated) {
+            try storeShim.listSecrets(includeTrashed: true).filter { $0.trashedAt != nil }
+        }.value
+        let grants = try? await Task.detached(priority: .userInitiated) {
+            try grantsShim.listActive()
+        }.value
+        self.vaults = vaults ?? []
+        self.secrets = secrets ?? []
+        self.trashedSecrets = trashed ?? []
+        self.activeGrants = grants ?? []
     }
 
     // MARK: - Helpers
