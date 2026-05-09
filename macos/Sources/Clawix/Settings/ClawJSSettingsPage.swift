@@ -64,7 +64,9 @@ struct ClawJSSettingsPage: View {
                 }
                 Divider().background(Color.white.opacity(0.07))
                 row(label: "Bundle available") {
-                    if ClawJSRuntime.isAvailable {
+                    if BackgroundBridgeService.shared.isDaemonReachable && !ClawJSRuntime.isAvailable {
+                        statusPill(text: "Not required in daemon mode", color: .blue)
+                    } else if ClawJSRuntime.isAvailable {
                         statusPill(text: "Yes", color: .green)
                     } else {
                         statusPill(text: "Missing", color: .orange)
@@ -90,9 +92,12 @@ struct ClawJSSettingsPage: View {
                 if case .crashed(let reason) = state {
                     blockedReason(reason)
                 }
+                if case .daemonUnavailable(let reason) = state {
+                    blockedReason(reason)
+                }
                 Divider().background(Color.white.opacity(0.07))
                 row(label: "Port") {
-                    Text("127.0.0.1:\(service.port)")
+                    Text(verbatim: "127.0.0.1:\(service.port)")
                         .font(BodyFont.system(size: 12.5, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .monospacedDigit()
@@ -268,7 +273,9 @@ struct ClawJSSettingsPage: View {
         case .blocked:             return "Blocked"
         case .starting:            return "Starting"
         case .ready:               return "Running"
+        case .readyFromDaemon:     return "Running from daemon"
         case .crashed:             return "Crashed"
+        case .daemonUnavailable:   return "Unavailable from daemon"
         case .suspendedForDaemon:  return "Daemon owns this"
         }
     }
@@ -279,7 +286,9 @@ struct ClawJSSettingsPage: View {
         case .blocked:             return .orange
         case .starting:            return .yellow
         case .ready:               return .green
+        case .readyFromDaemon:     return .green
         case .crashed:             return .red
+        case .daemonUnavailable:   return .red
         case .suspendedForDaemon:  return .blue
         }
     }
@@ -301,10 +310,17 @@ struct ClawJSSettingsPage: View {
             dict["state"] = "ready"
             dict["pid"] = Int(pid)
             dict["readyPort"] = Int(port)
+        case .readyFromDaemon(let port):
+            dict["state"] = "readyFromDaemon"
+            dict["readyPort"] = Int(port)
         case .crashed(let reason):
             dict["state"] = "crashed"
             dict["reason"] = reason
-        case .suspendedForDaemon:  dict["state"] = "suspendedForDaemon"
+        case .daemonUnavailable(let reason):
+            dict["state"] = "daemonUnavailable"
+            dict["reason"] = reason
+        case .suspendedForDaemon:
+            dict["state"] = "suspendedForDaemon"
         }
         if let lastError = snapshot.lastError { dict["lastError"] = lastError }
         guard let data = try? JSONSerialization.data(
@@ -312,12 +328,5 @@ struct ClawJSSettingsPage: View {
             options: [.prettyPrinted, .sortedKeys]
         ) else { return nil }
         return String(data: data, encoding: .utf8)
-    }
-}
-
-private extension ClawJSServiceState {
-    var isReady: Bool {
-        if case .ready = self { return true }
-        return false
     }
 }

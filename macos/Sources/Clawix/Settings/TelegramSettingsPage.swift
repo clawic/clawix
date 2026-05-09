@@ -24,14 +24,10 @@ struct TelegramSettingsPage: View {
         supervisor.snapshots[.telegram]?.state ?? .idle
     }
 
-    /// True when the supervisor reports the sidecar as running. The UI
-    /// uses this to decide what banner to show, but never to disable
-    /// interaction outright: the user may run the surface manually
-    /// (`npm --prefix telegram run dev`), in which case the supervisor
-    /// reports `.blocked`/`.idle` even though the port is alive.
-    private var supervisorReady: Bool {
-        if case .ready = serviceState { return true }
-        return false
+    /// True when either the GUI or the background daemon has confirmed
+    /// the Telegram surface is reachable.
+    private var telegramAvailable: Bool {
+        serviceState.isReady
     }
 
     private var selectedBot: TelegramBot? {
@@ -56,7 +52,10 @@ struct TelegramSettingsPage: View {
             .padding(.top, 16)
         }
         .onAppear {
-            manager.startRefreshing()
+            updateRefreshLoop(for: serviceState)
+        }
+        .onChange(of: serviceState) { _, newState in
+            updateRefreshLoop(for: newState)
         }
         .onDisappear {
             manager.stopRefreshing()
@@ -91,7 +90,7 @@ struct TelegramSettingsPage: View {
     @ViewBuilder
     private var statusBanner: some View {
         switch serviceState {
-        case .ready:
+        case .ready, .readyFromDaemon:
             EmptyView()
         case .starting:
             banner(text: "Telegram surface starting…", color: .yellow)
@@ -99,6 +98,8 @@ struct TelegramSettingsPage: View {
             banner(text: reason, color: .orange)
         case .crashed(let reason):
             banner(text: "Telegram surface crashed: \(reason)", color: .red)
+        case .daemonUnavailable(let reason):
+            banner(text: reason, color: .red)
         case .suspendedForDaemon:
             banner(text: "Telegram surface owned by the bridge daemon.", color: .blue)
         case .idle:
@@ -132,7 +133,7 @@ struct TelegramSettingsPage: View {
                     .font(BodyFont.system(size: 12, wght: 600))
                     .foregroundColor(Palette.textSecondary)
                 Spacer()
-                if manager.isLoading {
+                if manager.isLoading && telegramAvailable {
                     ProgressView().controlSize(.mini)
                 }
             }
@@ -140,7 +141,7 @@ struct TelegramSettingsPage: View {
             .padding(.bottom, 6)
 
             if manager.bots.isEmpty {
-                Text("No bots yet.")
+                Text(telegramAvailable ? "No bots yet." : "Bot list unavailable until Telegram responds.")
                     .font(BodyFont.system(size: 11.5))
                     .foregroundColor(Palette.textSecondary)
                     .padding(.horizontal, 4)
@@ -158,7 +159,7 @@ struct TelegramSettingsPage: View {
                 }
             }
 
-            if let error = manager.lastError {
+            if telegramAvailable, let error = manager.lastError {
                 Text(error)
                     .font(BodyFont.system(size: 11))
                     .foregroundColor(.orange)
@@ -189,6 +190,8 @@ struct TelegramSettingsPage: View {
                 )
             }
             .buttonStyle(.plain)
+            .disabled(!telegramAvailable)
+            .opacity(telegramAvailable ? 1 : 0.45)
         }
         .padding(12)
         .background(
@@ -220,6 +223,14 @@ struct TelegramSettingsPage: View {
                     .foregroundColor(Palette.textSecondary)
             }
             .padding(.top, 4)
+        }
+    }
+
+    private func updateRefreshLoop(for state: ClawJSServiceState) {
+        if state.isReady {
+            manager.startRefreshing()
+        } else {
+            manager.resetForUnavailableService()
         }
     }
 }

@@ -54,6 +54,14 @@ final class TelegramServiceManager: ObservableObject {
         refreshTask = nil
     }
 
+    func resetForUnavailableService() {
+        refreshTask?.cancel()
+        refreshTask = nil
+        bots = []
+        isLoading = false
+        lastError = nil
+    }
+
     // MARK: - Listing
 
     func refresh() async {

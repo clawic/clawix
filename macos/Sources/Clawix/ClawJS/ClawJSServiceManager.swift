@@ -13,9 +13,9 @@ import Foundation
 /// updating that one method enables the entire supervisor with no
 /// further plumbing changes here.
 ///
-/// When `BackgroundBridgeService.isActive == true`, services move to
-/// `.suspendedForDaemon`: Phase 5 will host them inside `clawix-bridged`
-/// so iOS pairing benefits from shared state.
+/// When a background bridge daemon is actually reachable, the GUI first
+/// probes daemon-owned ports. If the daemon is alive but does not serve a
+/// ClawJS surface, the GUI falls back to owning that surface locally.
 @MainActor
 final class ClawJSServiceManager: ObservableObject {
 
@@ -63,18 +63,17 @@ final class ClawJSServiceManager: ObservableObject {
 
     // MARK: - Public API
 
-    /// Boots all three services. Idempotent: a service in `.starting`
-    /// or `.ready` is left alone. Skips entirely when the bridge daemon
-    /// is active (Phase 5 owns services in that mode).
+    /// Boots all services. Idempotent: a service in `.starting` or
+    /// `.ready` is left alone. When the bridge daemon is reachable the GUI
+    /// probes daemon-owned loopback ports first, then falls back locally for
+    /// surfaces the daemon does not provide.
     func start() async {
-        if bridgeService.isActive {
-            for service in ClawJSService.allCases {
-                update(service) { $0.state = .suspendedForDaemon }
-            }
+        if bridgeService.isDaemonReachable {
+            startDaemonOwnedProbes()
             return
         }
         for service in ClawJSService.allCases {
-            await launch(service)
+            await launchLocal(service)
         }
     }
 
@@ -92,7 +91,15 @@ final class ClawJSServiceManager: ObservableObject {
             $0.lastError = nil
             $0.state = .idle
         }
-        await launch(service)
+        if bridgeService.isDaemonReachable {
+            healthTasks[service]?.cancel()
+            update(service) { $0.state = .starting }
+            healthTasks[service] = Task { [weak self] in
+                await self?.pollDaemonOwnedService(service)
+            }
+            return
+        }
+        await launchLocal(service)
     }
 
     /// Synchronous SIGTERM to every running service plus cancellation of
@@ -151,12 +158,14 @@ final class ClawJSServiceManager: ObservableObject {
 
     // MARK: - Per-service launch
 
-    private func launch(_ service: ClawJSService) async {
-        switch snapshots[service]?.state {
-        case .starting, .ready:
-            return
-        default:
-            break
+    private func launchLocal(_ service: ClawJSService, force: Bool = false) async {
+        if !force {
+            switch snapshots[service]?.state {
+            case .starting, .ready, .readyFromDaemon:
+                return
+            default:
+                break
+            }
         }
 
         // Guard 1: the bundled tree must exist. dev.sh / build_release_app.sh
@@ -165,7 +174,7 @@ final class ClawJSServiceManager: ObservableObject {
         guard ClawJSRuntime.isAvailable else {
             update(service) {
                 $0.state = .blocked(reason:
-                    "ClawJS bundle missing at \(ClawJSRuntime.bundleRootURL.path). Run bundle_clawjs.sh.")
+                    "ClawJS bundle is not available in this build. Rebuild with ClawJS bundling enabled.")
             }
             return
         }
@@ -183,6 +192,50 @@ final class ClawJSServiceManager: ObservableObject {
         }
 
         await spawnAndSupervise(service)
+    }
+
+    private func startDaemonOwnedProbes() {
+        for task in healthTasks.values { task.cancel() }
+        healthTasks.removeAll()
+
+        for service in ClawJSService.allCases {
+            update(service) {
+                $0.lastError = nil
+                $0.state = .starting
+            }
+            healthTasks[service] = Task { [weak self] in
+                await self?.pollDaemonOwnedService(service)
+            }
+        }
+    }
+
+    private func pollDaemonOwnedService(_ service: ClawJSService) async {
+        let url = URL(string: "http://127.0.0.1:\(service.port)\(service.healthPath)")!
+        let readyDeadline = Date().addingTimeInterval(6)
+        var wasReady = false
+
+        while !Task.isCancelled {
+            let alive = await ping(url: url)
+            if alive {
+                wasReady = true
+                lastReadyAt[service] = Date()
+                update(service) {
+                    $0.state = .readyFromDaemon(port: service.port)
+                    $0.lastError = nil
+                }
+            } else if wasReady || Date() > readyDeadline {
+                if ClawJSRuntime.isAvailable, commandLine(for: service) != nil {
+                    await launchLocal(service, force: true)
+                    return
+                }
+                let reason = "\(service.displayName) is not reachable on 127.0.0.1:\(service.port) while the bridge daemon is active."
+                update(service) {
+                    $0.state = .daemonUnavailable(reason: reason)
+                    $0.lastError = reason
+                }
+            }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+        }
     }
 
     /// Argv (without the leading node binary) to launch `service` as a
@@ -312,7 +365,7 @@ final class ClawJSServiceManager: ObservableObject {
         restartTasks[service] = Task { [weak self] in
             try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
             guard !Task.isCancelled else { return }
-            await self?.launch(service)
+            await self?.launchLocal(service)
         }
     }
 
