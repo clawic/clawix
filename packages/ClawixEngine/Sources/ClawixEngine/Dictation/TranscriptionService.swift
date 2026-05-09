@@ -1,3 +1,4 @@
+#if canImport(WhisperKit)
 import Foundation
 import AVFoundation
 import WhisperKit
@@ -371,3 +372,4 @@ public actor TranscriptionService {
         return text
     }
 }
+#endif

@@ -1,5 +1,10 @@
+#if canImport(WhisperKit)
 import Foundation
+#if canImport(Combine)
 import Combine
+#else
+import OpenCombine
+#endif
 import WhisperKit
 
 /// Tracks which dictation models are downloaded and which one is the
@@ -364,3 +369,4 @@ public final class DictationModelManager: ObservableObject {
         return docs.appendingPathComponent("huggingface/models")
     }
 }
+#endif

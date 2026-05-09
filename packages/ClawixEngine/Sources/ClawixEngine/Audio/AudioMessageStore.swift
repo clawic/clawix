@@ -1,3 +1,4 @@
+#if canImport(AVFoundation)
 import Foundation
 import AVFoundation
 import ClawixCore
@@ -215,3 +216,4 @@ public actor AudioMessageStore {
         return Int((seconds * 1000).rounded())
     }
 }
+#endif
