@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Clawix.Core</RootNamespace>
+    <AssemblyName>Clawix.Core</AssemblyName>
+    <PackageId>Clawix.Core</PackageId>
+    <Description>Wire protocol types and models for the Clawix bridge. Port of packages/ClawixCore.</Description>
+  </PropertyGroup>
+</Project>
