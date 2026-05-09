@@ -151,13 +151,45 @@ struct ThreadStartParams: Encodable {
     let model: String?
     let approvalPolicy: String?      // "never" | "on-request" | "untrusted" | "on-failure"
     let sandbox: String?             // "read-only" | "workspace-write" | "danger-full-access"
-    let personality: String?         // "none" | "friendly" | "pragmatic"
+    let personality: String?         // "none" | "friendly" | "pragmatic" (legacy; subsumed by activeSkills kind=personality)
     /// "fast" | "flex" | nil. Matches the composer's speed picker.
     let serviceTier: String?
+    /// Skills active for this thread, resolved by the client from the
+    /// global/project/chat hierarchy. Order matters: lower priority
+    /// concatenated first, higher priority later (so it overrides).
+    /// The daemon resolves slugs into SKILL.md content via ClawJS and
+    /// prepends the compiled fragment to the system prompt before
+    /// dispatching to Codex.
+    let activeSkills: [ActiveSkill]?
     /// EXPERIMENTAL. Switches the session into collaboration mode
     /// machinery. `mode = "plan"` arms the agent to consult the user via
     /// `item/tool/requestUserInput`; `mode = "default"` is execute-as-you-go.
     let collaborationMode: CollaborationModePayload?
+}
+
+/// Wire description of a skill the thread should boot with. Only the
+/// slug travels; the daemon owns the SKILL.md filesystem and reads the
+/// body itself, keeping the request small. `params` is set when the
+/// active entry refers to a parametrizable template instance — the
+/// daemon substitutes them while rendering the body.
+struct ActiveSkill: Encodable {
+    /// Stable slug as it appears under `~/.clawjs/skills/<kind>/<slug>/`.
+    let slug: String
+    /// "personality" | "procedure" | "snippet" | "role". Helps the daemon
+    /// place the rendered fragment in the right slot of the compiled
+    /// system prompt (personality first, then snippets, then procedures).
+    let kind: String
+    /// "global" | "project:<id>" | "chat:<id>". Lets the daemon log/audit
+    /// where the activation came from without re-resolving on its side.
+    let scope: String
+    /// Lower numbers concatenate first; higher numbers override. Default
+    /// 0 when not known. Daemon stable-sorts on this before compiling.
+    let priority: Int
+    /// Free-form key/value bag for parametrized template instances. nil
+    /// for plain skills that don't take params. Values are encoded as
+    /// JSON-compatible primitives; the daemon substitutes them into the
+    /// body following the SKILL.md template conventions.
+    let params: [String: JSONValue]?
 }
 
 /// EXPERIMENTAL. Recent runtimes accept this payload on
@@ -253,6 +285,11 @@ struct TurnStartParams: Encodable {
     /// "fast" | "flex" | nil. Matches the composer's speed picker
     /// (Standard = nil → default tier, Fast = "fast" → priority queue).
     let serviceTier: String?
+    /// Per-turn override of the thread's active skill set. nil means
+    /// "reuse what was on `thread/start`". Useful when the user toggles
+    /// a skill after the thread has booted; the next turn carries the
+    /// fresh list and the daemon recomputes the prompt prelude.
+    let activeSkills: [ActiveSkill]?
     /// EXPERIMENTAL. Same shape as on ThreadStartParams; per-turn override
     /// so the user can flip plan mode on/off without restarting the thread.
     let collaborationMode: CollaborationModePayload?

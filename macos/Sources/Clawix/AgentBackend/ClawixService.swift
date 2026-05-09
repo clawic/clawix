@@ -216,6 +216,7 @@ final class ClawixService: ObservableObject {
                     model: modelSlug,
                     effort: effort,
                     serviceTier: serviceTier,
+                    activeSkills: nil,
                     collaborationMode: collab
                 ),
                 expecting: TurnStartResult.self
@@ -374,8 +375,9 @@ final class ClawixService: ObservableObject {
                 model: modelSlug,
                 approvalPolicy: permissionMode.codexApprovalPolicy,
                 sandbox: permissionMode.codexSandbox,
-                personality: nil,
+                personality: appState?.personality.rawValue,
                 serviceTier: serviceTier,
+                activeSkills: nil,
                 collaborationMode: nil
             ),
             expecting: ThreadStartResult.self
