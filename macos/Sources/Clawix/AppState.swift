@@ -22,6 +22,18 @@ enum SidebarRoute: Equatable {
     /// Curated entry pointing at a single collection. Renders the same
     /// adaptive UI as `.databaseHome` but filtered + with curated tabs.
     case databaseCollection(String)
+    /// Memory home (3-pane: Topics sidebar + memorias list + detail).
+    case memoryHome
+    /// Drive admin (full hierarchical browser).
+    case driveAdmin
+    /// Drive Photos timeline (curated grid of images).
+    case drivePhotos
+    /// Drive Documents (curated list of non-image files).
+    case driveDocuments
+    /// Drive Recent (last viewed items).
+    case driveRecent
+    /// Drive folder navigation (admin view focused on a specific folder).
+    case driveFolder(String)
 }
 
 // MARK: - Models

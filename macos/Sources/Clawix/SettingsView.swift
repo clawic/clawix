@@ -11,11 +11,13 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case quickAsk
     case localModels
     case mcp
+    case machines
     case git
     case browserUsage
     case usage
     case secrets
     case clawjs
+    case telegram
 
     var id: String { rawValue }
 
@@ -29,11 +31,13 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .quickAsk:         return "QuickAsk"
         case .localModels:      return "Local models"
         case .mcp:              return "MCP servers"
+        case .machines:         return "Machines"
         case .git:              return "Git"
         case .browserUsage:     return "Browser usage"
         case .usage:            return "Usage"
         case .secrets:          return "Secrets"
         case .clawjs:           return "ClawJS"
+        case .telegram:         return "Telegram"
         }
     }
 
@@ -47,11 +51,13 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .quickAsk:         return "command"
         case .localModels:      return "cpu"
         case .mcp:              return "server.rack"
+        case .machines:         return "laptopcomputer"
         case .git:              return "arrow.triangle.branch"
         case .browserUsage:     return "cursor"
         case .usage:            return "chart.bar"
         case .secrets:          return "lock.shield"
         case .clawjs:           return "shippingbox"
+        case .telegram:         return "paperplane.fill"
         }
     }
 }
@@ -234,8 +240,10 @@ struct SettingsContent: View {
                     case .browserUsage:    BrowserUsagePage()
                     case .usage:           UsagePage()
                     case .mcp:             MCPPage()
+                    case .machines:        MachinesPage()
                     case .secrets:         SecretsSettingsPage()
                     case .clawjs:          ClawJSSettingsPage()
+                    case .telegram:        TelegramSettingsPage()
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)

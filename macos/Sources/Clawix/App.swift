@@ -140,6 +140,15 @@ struct ClawixApp: App {
                     openWindow(id: "clawix-pair")
                 }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
+                Button("Quick Upload to Drive…") {
+                    appState.currentRoute = .driveAdmin
+                    NotificationCenter.default.post(name: .driveQuickUploadRequested, object: nil)
+                }
+                .keyboardShortcut("u", modifiers: [.command, .shift])
+                Button("Open Drive Photos") {
+                    appState.currentRoute = .drivePhotos
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift, .option])
             }
             CommandGroup(replacing: .help) {
                 HelpMenuCommands(appState: appState)

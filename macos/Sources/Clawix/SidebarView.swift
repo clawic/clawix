@@ -760,11 +760,41 @@ struct SidebarView: View {
                         appState.currentRoute = .secretsHome
                     }
                     DatabaseToolRow(
+                        title: "Memory",
+                        systemIcon: "brain",
+                        route: .memoryHome,
+                        isSelected: appState.currentRoute == .memoryHome
+                    ) { appState.currentRoute = .memoryHome }
+                    DatabaseToolRow(
                         title: "Database",
                         systemIcon: "cylinder.split.1x2",
                         route: .databaseHome,
                         isSelected: appState.currentRoute == .databaseHome
                     ) { appState.currentRoute = .databaseHome }
+                    DatabaseToolRow(
+                        title: "Photos",
+                        systemIcon: "photo.on.rectangle.angled",
+                        route: .drivePhotos,
+                        isSelected: appState.currentRoute == .drivePhotos
+                    ) { appState.currentRoute = .drivePhotos }
+                    DatabaseToolRow(
+                        title: "Documents",
+                        systemIcon: "doc.text",
+                        route: .driveDocuments,
+                        isSelected: appState.currentRoute == .driveDocuments
+                    ) { appState.currentRoute = .driveDocuments }
+                    DatabaseToolRow(
+                        title: "Recent",
+                        systemIcon: "clock.arrow.circlepath",
+                        route: .driveRecent,
+                        isSelected: appState.currentRoute == .driveRecent
+                    ) { appState.currentRoute = .driveRecent }
+                    DatabaseToolRow(
+                        title: "Drive",
+                        systemIcon: "internaldrive",
+                        route: .driveAdmin,
+                        isSelected: appState.currentRoute == .driveAdmin
+                    ) { appState.currentRoute = .driveAdmin }
                 }
                 .padding(.leading, 8)
                 Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
