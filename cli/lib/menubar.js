@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const { spawnSync } = require('node:child_process');
-const launchctl = require('./launchctl');
+const launchctl = require('./service');
 const { resolveMenubar } = require('./binary');
 const { MENUBAR_LABEL } = require('./platform');
 

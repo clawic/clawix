@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const path = require('node:path');
 const os = require('node:os');
-const launchctl = require('./launchctl');
+const launchctl = require('./service');
 const { resolveBridged, isAppInstalled } = require('./binary');
 const { BRIDGE_LABEL, BRIDGE_PORT } = require('./platform');
 

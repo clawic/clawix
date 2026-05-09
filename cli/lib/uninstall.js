@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const launchctl = require('./launchctl');
+const launchctl = require('./service');
 const { BIN_DIR, BRIDGE_LABEL, MENUBAR_LABEL } = require('./platform');
 
 function uninstall({ keepState = true } = {}) {
