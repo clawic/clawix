@@ -5,7 +5,9 @@
 # The window position is preserved by NSWindow.setFrameAutosaveName("ClawixMainWindow"),
 # so each rebuild reopens the window EXACTLY where the user left it.
 #
-# This is the ONE command an agent should run after edits, idempotent and safe.
+# This script assembles the app in a staging location outside Desktop. A
+# private workspace wrapper may set CLAWIX_DEV_INSTALL_BUNDLE to install that
+# staged app into the canonical local slot before launch.
 
 set -euo pipefail
 
@@ -17,11 +19,12 @@ APP_NAME="Clawix"
 # their own build should provide their own reverse-DNS bundle ID via
 # BUNDLE_ID. The maintainer's real bundle ID is NOT stored in this repo.
 BUNDLE_ID_DEFAULT="com.example.clawix.desktop"
-# The dev bundle and runtime state live OUTSIDE ~/Desktop. If the .app
-# sits inside ~/Desktop, macOS prompts for Desktop folder access every
-# launch. Putting it under ~/Library/Caches avoids that trigger.
+# The staging bundle and runtime state live OUTSIDE ~/Desktop. If the .app
+# sits inside ~/Desktop, macOS prompts for Desktop folder access every launch.
 DEV_DIR="$HOME/Library/Caches/Clawix-Dev"
-BUNDLE="$DEV_DIR/${APP_NAME}.app"
+STAGING_BUNDLE="${CLAWIX_DEV_STAGING_BUNDLE:-$DEV_DIR/${APP_NAME}.app}"
+INSTALL_BUNDLE="${CLAWIX_DEV_INSTALL_BUNDLE:-}"
+BUNDLE="$STAGING_BUNDLE"
 RELEASE_BUNDLE="$PROJECT_DIR/build/${APP_NAME}.app"
 BIN="$BUNDLE/Contents/MacOS/${APP_NAME}"
 ICON_FILE="$PROJECT_DIR/Sources/Clawix/Resources/Clawix.icns"
@@ -55,6 +58,11 @@ do
 done
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 BUNDLE_ID="${BUNDLE_ID:-$BUNDLE_ID_DEFAULT}"
+REQUIRE_STABLE_SIGNING="${CLAWIX_DEV_REQUIRE_STABLE_SIGNING:-0}"
+if [[ "$REQUIRE_STABLE_SIGNING" == "1" && ( -z "$SIGN_IDENTITY" || "$SIGN_IDENTITY" == "-" ) ]]; then
+    echo "ERROR: SIGN_IDENTITY is required for this dev install; refusing ad-hoc signing." >&2
+    exit 1
+fi
 
 # Resolve marketing + build version. Sourced so MARKETING_VERSION and
 # BUILD_NUMBER end up in this shell's environment for the plist heredoc.
@@ -217,7 +225,7 @@ fi
 PIDS=$({
     pgrep -f "${DEV_DIR}/.*/${APP_NAME}" 2>/dev/null || true
     pgrep -f "${PROJECT_DIR}/build/.*/${APP_NAME}" 2>/dev/null || true
-    pgrep -x "$APP_NAME" 2>/dev/null || true
+    pgrep -f "/Applications/${APP_NAME}.app/Contents/MacOS/${APP_NAME}" 2>/dev/null || true
 } | sort -u)
 if [[ -n "$PIDS" ]]; then
     echo "==> Stopping previous ${APP_NAME} (PIDs: $PIDS)"
@@ -228,12 +236,14 @@ if [[ -n "$PIDS" ]]; then
         REMAIN=$({
             pgrep -f "${DEV_DIR}/.*/${APP_NAME}" 2>/dev/null || true
             pgrep -f "${PROJECT_DIR}/build/.*/${APP_NAME}" 2>/dev/null || true
+            pgrep -f "/Applications/${APP_NAME}.app/Contents/MacOS/${APP_NAME}" 2>/dev/null || true
         } | sort -u)
         [[ -z "$REMAIN" ]] && break
     done
     REMAIN=$({
         pgrep -f "${DEV_DIR}/.*/${APP_NAME}" 2>/dev/null || true
         pgrep -f "${PROJECT_DIR}/build/.*/${APP_NAME}" 2>/dev/null || true
+        pgrep -f "/Applications/${APP_NAME}.app/Contents/MacOS/${APP_NAME}" 2>/dev/null || true
     } | sort -u)
     if [[ -n "$REMAIN" ]]; then
         kill -9 $REMAIN 2>/dev/null || true
@@ -502,6 +512,11 @@ sign_one() {
     local target="$1"
     local err
     if ! err="$(codesign --force --sign "$SIGN_IDENTITY" --timestamp=none "$target" 2>&1)"; then
+        if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
+            echo "ERROR: codesign with SIGN_IDENTITY failed for $target:" >&2
+            echo "$err" >&2
+            exit 1
+        fi
         echo "WARN: codesign with $SIGN_IDENTITY failed for $target, falling back to ad-hoc: $err" >&2
         codesign --force --sign - --timestamp=none "$target"
     fi
@@ -519,6 +534,11 @@ if [[ -f "$HELPER_BIN" ]]; then
                   --identifier "clawix.bridge" \
                   --timestamp=none \
                   "$HELPER_BIN" 2>/tmp/clawix-bridged-sign.err; then
+        if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
+            echo "ERROR: codesign for clawix-bridged failed:" >&2
+            cat /tmp/clawix-bridged-sign.err >&2
+            exit 1
+        fi
         echo "WARN: codesign for clawix-bridged with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
         cat /tmp/clawix-bridged-sign.err >&2
         codesign --force --sign - --identifier "clawix.bridge" "$HELPER_BIN"
@@ -531,6 +551,11 @@ if [[ -f "$SECRETS_PROXY_HELPER_BIN" ]]; then
                   --identifier "clawix.secrets-proxy" \
                   --timestamp=none \
                   "$SECRETS_PROXY_HELPER_BIN" 2>/tmp/clawix-secrets-proxy-sign.err; then
+        if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
+            echo "ERROR: codesign for clawix-secrets-proxy failed:" >&2
+            cat /tmp/clawix-secrets-proxy-sign.err >&2
+            exit 1
+        fi
         echo "WARN: codesign for clawix-secrets-proxy with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
         cat /tmp/clawix-secrets-proxy-sign.err >&2
         codesign --force --sign - --identifier "clawix.secrets-proxy" "$SECRETS_PROXY_HELPER_BIN"
@@ -554,9 +579,45 @@ if ! codesign --force --sign "$SIGN_IDENTITY" \
               --identifier "$BUNDLE_ID" \
               --timestamp=none \
               "$BUNDLE" 2>/tmp/clawix-codesign.err; then
+    if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
+        echo "ERROR: codesign for $BUNDLE failed:" >&2
+        cat /tmp/clawix-codesign.err >&2
+        exit 1
+    fi
     echo "WARN: codesign with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
     cat /tmp/clawix-codesign.err >&2
     codesign --force --sign - --identifier "$BUNDLE_ID" "$BUNDLE"
+fi
+
+LAUNCH_BUNDLE="$BUNDLE"
+if [[ -n "$INSTALL_BUNDLE" ]]; then
+    echo "==> Verifying staged signature before install"
+    if ! codesign --verify --strict "$BUNDLE" >/dev/null 2>&1; then
+        echo "ERROR: staged bundle signature verification failed: $BUNDLE" >&2
+        exit 1
+    fi
+    if codesign -dv "$BUNDLE" 2>&1 | grep -q 'Signature=adhoc'; then
+        echo "ERROR: staged bundle is ad-hoc signed; refusing install." >&2
+        exit 1
+    fi
+
+    echo "==> Installing $INSTALL_BUNDLE"
+    INSTALL_PARENT="$(dirname "$INSTALL_BUNDLE")"
+    INSTALL_TMP="$INSTALL_PARENT/.${APP_NAME}.app.installing.$$"
+    rm -rf "$INSTALL_TMP"
+    if ! /usr/bin/ditto "$BUNDLE" "$INSTALL_TMP"; then
+        echo "ERROR: failed to stage install at $INSTALL_TMP" >&2
+        rm -rf "$INSTALL_TMP"
+        exit 1
+    fi
+    rm -rf "$INSTALL_BUNDLE"
+    if ! mv "$INSTALL_TMP" "$INSTALL_BUNDLE"; then
+        echo "ERROR: failed to install $INSTALL_BUNDLE. Check write permissions for $INSTALL_PARENT." >&2
+        rm -rf "$INSTALL_TMP"
+        exit 1
+    fi
+    LAUNCH_BUNDLE="$INSTALL_BUNDLE"
+    echo "==> Installed canonical app: $LAUNCH_BUNDLE"
 fi
 
 # 5) Launch the app bundle. Window position is restored from the autosave
@@ -568,16 +629,26 @@ fi
 #    so the caller can find it.
 if [[ "${CLAWIX_DEV_NOLAUNCH:-0}" == "1" ]]; then
     echo "==> Build complete, launch skipped (CLAWIX_DEV_NOLAUNCH=1)"
-    echo "Bundle: $BUNDLE"
+    echo "Bundle: $LAUNCH_BUNDLE"
     exit 0
 fi
 echo "==> Launching ${APP_NAME}"
-/usr/bin/open -n "$BUNDLE"
+/usr/bin/open -n "$LAUNCH_BUNDLE"
 
 APP_PID=""
+EXPECTED_EXE="${CLAWIX_DEV_EXPECT_EXECUTABLE:-$LAUNCH_BUNDLE/Contents/MacOS/$APP_NAME}"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
     sleep 0.5
-    APP_PID="$(pgrep -x "$APP_NAME" | head -n 1 || true)"
+    APP_PID="$(
+        while IFS= read -r pid; do
+            [[ -n "$pid" ]] || continue
+            command="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+            if [[ "$command" == "$EXPECTED_EXE" || "$command" == "$EXPECTED_EXE "* ]]; then
+                echo "$pid"
+                break
+            fi
+        done < <(pgrep -x "$APP_NAME" 2>/dev/null || true)
+    )"
     [[ -n "$APP_PID" ]] && break
 done
 
