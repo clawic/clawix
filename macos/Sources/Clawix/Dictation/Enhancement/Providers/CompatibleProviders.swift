@@ -6,7 +6,7 @@ import Foundation
 /// so a single body builder + decoder covers them all. Each
 /// concrete provider only contributes its base URL, headers, and
 /// API-key handling.
-struct OpenAICompatibleClient {
+struct EnhancementOpenAICompatibleClient {
     let baseURL: URL
     let extraHeaders: [String: String]
     let apiKey: String?
@@ -97,7 +97,7 @@ struct GroqEnhancementProvider: EnhancementProvider {
         guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
-        let client = OpenAICompatibleClient(
+        let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://api.groq.com/openai/v1")!,
             apiKey: key
         )
@@ -131,7 +131,7 @@ struct MistralEnhancementProvider: EnhancementProvider {
         guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
-        let client = OpenAICompatibleClient(
+        let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://api.mistral.ai/v1")!,
             apiKey: key
         )
@@ -165,7 +165,7 @@ struct XAIEnhancementProvider: EnhancementProvider {
         guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
-        let client = OpenAICompatibleClient(
+        let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://api.x.ai/v1")!,
             apiKey: key
         )
@@ -201,7 +201,7 @@ struct OpenRouterEnhancementProvider: EnhancementProvider {
         }
         // OpenRouter recommends a referer + title for analytics; we
         // identify Clawix so the dashboard doesn't show "unknown".
-        let client = OpenAICompatibleClient(
+        let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://openrouter.ai/api/v1")!,
             apiKey: key,
             extraHeaders: [
@@ -252,7 +252,7 @@ struct CustomEnhancementProvider: EnhancementProvider {
             throw EnhancementError.notConfigured
         }
         let key = await EnhancementSecrets.apiKey(for: id) // may be nil
-        let client = OpenAICompatibleClient(baseURL: baseURL, apiKey: key)
+        let client = EnhancementOpenAICompatibleClient(baseURL: baseURL, apiKey: key)
         return try await client.enhance(
             text: text,
             systemPrompt: systemPrompt,

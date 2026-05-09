@@ -1,28 +1,28 @@
+import AIProviders
 import Foundation
 import AppKit
 
-/// Orchestrator que se sienta entre Whisper y el TextInjector. Si el
-/// master toggle (`EnhancementSettings.enabledKey`) está on, llama al
-/// LLM con el prompt activo y devuelve el texto procesado. Si está
-/// off, pasa el texto sin tocar.
+/// Orchestrator between Whisper and TextInjector. When the master toggle
+/// (`EnhancementSettings.enabledKey`) is on, it calls the LLM with the
+/// active prompt and returns processed text. When it is off, it passes
+/// text through untouched.
 ///
-/// La política de fallos respeta el preset del usuario:
-///   * `fail` — devuelve el texto raw (transparente para el usuario,
-///     paste sigue funcionando aunque el LLM no responda).
-///   * `retry` — hasta 3 intentos con backoff exponencial (1s, 2s, 4s)
-///     antes de caer al texto raw.
+/// Failure policy follows the user preset:
+///   * `fail` — returns raw text so paste still works when the LLM fails.
+///   * `retry` — up to 3 attempts with exponential backoff (1s, 2s, 4s)
+///     before falling back to raw text.
 ///
-/// Skip-short (#18) corta antes de la llamada cuando el transcript
-/// tiene menos palabras que el umbral configurado, para no quemar
-/// llamadas LLM en utterances tipo "ok" o "sí".
+/// Skip-short (#18) exits before the call when the transcript has fewer
+/// words than the configured threshold, avoiding LLM calls for short
+/// utterances like "ok" or "yes".
 @MainActor
 final class EnhancementService {
 
     static let shared = EnhancementService()
 
-    /// Rate-limit: como mínimo 1 segundo entre dos calls para
-    /// proteger la quota del usuario y evitar que un atajo doble
-    /// pulse dispare dos requests paralelos.
+    /// Rate-limit: at least 1 second between calls, protecting the
+    /// user's quota and preventing a double shortcut press from firing
+    /// two parallel requests.
     private static let minInterval: TimeInterval = 1.0
     private var lastCallAt: Date?
 
@@ -92,14 +92,51 @@ final class EnhancementService {
         }
         lastCallAt = Date()
 
+        let prompt = PromptLibrary.shared.activePrompt()
+        let timeoutPolicy = defaults.string(forKey: EnhancementSettings.timeoutPolicyKey) ?? "retry"
+        let timeoutFromDefaults = defaults.integer(forKey: EnhancementSettings.timeoutSecondsKey)
+        let timeout = timeoutFromDefaults > 0 ? timeoutFromDefaults : 7
+
+        // New routing: try Settings → Model Providers selection first.
+        // The legacy provider chain stays as a fallback for users who
+        // haven't picked a provider in the new panel yet.
+        if let routed = FeatureRouting.resolve(
+            feature: .enhancement,
+            capability: .chat,
+            store: AIAccountVaultStore.shared
+        ) {
+            let context = EnhancementContext(
+                clipboardText: defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
+                    ? clipboardSnapshot()
+                    : nil,
+                screenText: nil
+            )
+            do {
+                let client = try await AIClientFactory.client(for: routed.account, model: routed.model)
+                let user = composeUserMessage(text: trimmed, prompt: prompt.userPrompt, context: context)
+                let request = ChatRequest(
+                    messages: [
+                        AIChatMessage(role: .system, content: prompt.systemPrompt),
+                        AIChatMessage(role: .user, content: user)
+                    ],
+                    timeoutSeconds: timeout
+                )
+                let answer = try await client.chat(request).trimmingCharacters(in: .whitespacesAndNewlines)
+                try? AIAccountVaultStore.shared.touch(accountId: routed.account.id)
+                return answer.isEmpty ? raw : answer
+            } catch {
+                NSLog("[Clawix.Enhancement] new-routing failed, falling back: %@", String(describing: error))
+                // Fall through to legacy chain below.
+            }
+        }
+
         guard let provider = activeProvider else { return raw }
         guard await provider.isConfigured() else { return raw }
 
-        let prompt = PromptLibrary.shared.activePrompt()
         let model = defaults.string(forKey: EnhancementSettings.modelKey(for: provider.id.rawValue))
             ?? provider.id.defaultModels.first
             ?? ""
-        let timeout = defaults.integer(forKey: EnhancementSettings.timeoutSecondsKey)
+        _ = timeoutPolicy
         let policy = defaults.string(forKey: EnhancementSettings.timeoutPolicyKey) ?? "retry"
 
         let context = EnhancementContext(
@@ -143,5 +180,22 @@ final class EnhancementService {
 
     private func clipboardSnapshot() -> String? {
         NSPasteboard.general.string(forType: .string)
+    }
+
+    /// Mirrors the message composer in `EnhancementProvider` for the
+    /// new AIClient routing path so the model sees the same wrapper
+    /// the legacy implementations produce.
+    private func composeUserMessage(text: String, prompt: String, context: EnhancementContext?) -> String {
+        var parts: [String] = []
+        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPrompt.isEmpty { parts.append(trimmedPrompt) }
+        parts.append("<<<TRANSCRIPT>>>\n\(text)\n<<<END_TRANSCRIPT>>>")
+        if let clip = context?.clipboardText, !clip.isEmpty {
+            parts.append("Recent clipboard for context:\n\(clip.prefix(2000))")
+        }
+        if let screen = context?.screenText, !screen.isEmpty {
+            parts.append("Screen context:\n\(screen.prefix(2000))")
+        }
+        return parts.joined(separator: "\n\n")
     }
 }

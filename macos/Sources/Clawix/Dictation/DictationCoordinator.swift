@@ -1,3 +1,4 @@
+import AIProviders
 import Foundation
 import AppKit
 import SwiftUI
@@ -572,6 +573,32 @@ final class DictationCoordinator: ObservableObject {
         }
     }
 
+    @MainActor
+    private static func routedSTTTranscribe(samples: [Float], language: String?, autoFormat: Bool) async throws -> String? {
+        guard let routed = FeatureRouting.resolve(
+            feature: .sttCloud,
+            capability: .stt,
+            store: AIAccountVaultStore.shared
+        ) else { return nil }
+        do {
+            let client = try await AIClientFactory.client(for: routed.account, model: routed.model)
+            let wav = WAVEncoder.encodePCM16(samples: samples)
+            let request = TranscribeRequest(
+                audio: wav,
+                mimeType: "audio/wav",
+                language: language,
+                timeoutSeconds: 60
+            )
+            let raw = try await client.transcribe(request)
+            try? AIAccountVaultStore.shared.touch(accountId: routed.account.id)
+            trace("transcribe: routed-stt ok provider=\(routed.account.providerId.rawValue) chars=\(raw.count)")
+            return autoFormat ? TranscriptFormatter.format(raw) : raw
+        } catch {
+            trace("transcribe: routed-stt failed, falling back: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     private func transcribeCloudOrFallback(
         cloud: CloudTranscriptionProvider,
         samples: [Float],
@@ -581,6 +608,14 @@ final class DictationCoordinator: ObservableObject {
         useVAD: Bool,
         autoFormat: Bool
     ) async throws -> String {
+        // New routing: if Settings → Model Providers has a default for
+        // STT cloud, prefer it over the legacy `cloud` enum. Falls back
+        // to the legacy implementation transparently if the routed call
+        // fails or the user hasn't picked a provider yet.
+        if let raw = try? await Self.routedSTTTranscribe(samples: samples, language: language, autoFormat: autoFormat) {
+            return raw
+        }
+
         do {
             Self.trace("transcribe: cloud start provider=\(cloud.rawValue)")
             let cloudRaw = try await cloud.transcribe(
