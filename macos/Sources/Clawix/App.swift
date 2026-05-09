@@ -99,6 +99,7 @@ struct ClawixApp: App {
             AppRootView()
                 .environmentObject(appState)
                 .environmentObject(appState.composer)
+                .environmentObject(appState.meshStore)
                 .environmentObject(updater)
                 .environmentObject(windowState)
                 .environmentObject(dictation)

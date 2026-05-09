@@ -5,6 +5,7 @@ private let chatRailMaxWidth: CGFloat = 720
 struct ChatView: View {
     let chatId: UUID
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var meshStore: MeshStore
 
     @State private var workMenuOpen = false
     @State private var branchMenuOpen = false
@@ -194,6 +195,19 @@ struct ChatView: View {
                     }
 
                     VStack(spacing: 14) {
+                        let activeRemoteJobs = meshStore.jobs(forChat: chatId)
+                        if !activeRemoteJobs.isEmpty {
+                            VStack(spacing: 8) {
+                                ForEach(activeRemoteJobs) { job in
+                                    RemoteJobCard(
+                                        state: job,
+                                        onDismiss: { meshStore.clearJob(job.id) }
+                                    )
+                                }
+                            }
+                            .frame(maxWidth: chatRailMaxWidth)
+                        }
+
                         ComposerView(chatMode: true)
                             .frame(maxWidth: chatRailMaxWidth)
 

@@ -22,6 +22,7 @@ struct ComposerView: View {
     @State private var projectMenuOpen = false
     @State private var projectEditorContext: ProjectEditorContext?
     @State private var slashHighlightID: String? = nil
+    @State private var meshTargetMenuOpen = false
     @State private var composerContentHeight: CGFloat = 52
     @State private var planSuggestionDismissed = false
 
@@ -160,6 +161,10 @@ struct ComposerView: View {
 
             permissionsPill
 
+            if chatMode {
+                MeshTargetPill(style: .toolbarCompact, menuOpen: $meshTargetMenuOpen)
+            }
+
             Spacer()
 
             if let usage = appState.currentContextUsage {
@@ -173,7 +178,14 @@ struct ComposerView: View {
                 modelMenuOpen.toggle()
             } label: {
                 HStack(spacing: 4) {
-                    if let local = appState.localModelName(forSelected: appState.selectedModel) {
+                    if appState.selectedAgentRuntime == .opencode {
+                        LucideIcon(.globe, size: 13)
+                            .foregroundColor(Color(white: 0.92))
+                            .accessibilityHidden(true)
+                        Text(appState.openCodeModelSelection)
+                            .font(BodyFont.system(size: 11.5, wght: 500))
+                            .foregroundColor(Color(white: 0.92))
+                    } else if let local = appState.localModelName(forSelected: appState.selectedModel) {
                         LucideIcon(.laptop, size: 13)
                             .foregroundColor(Color(white: 0.92))
                             .accessibilityHidden(true)
@@ -230,8 +242,9 @@ struct ComposerView: View {
 
             if activeTurnInChat {
                 Button { appState.interruptActiveTurn() } label: {
-                    LucideIcon(.square, size: 14)
-                        .foregroundColor(Color(white: 0.06))
+                    StopSquircle()
+                        .fill(Color(white: 0.06))
+                        .frame(width: 14, height: 14)
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(Color.white))
                 }
@@ -277,8 +290,9 @@ struct ComposerView: View {
             Button {
                 stopAndAppendTranscription()
             } label: {
-                LucideIcon(.square, size: 13)
-                    .foregroundColor(Color(white: 0.92))
+                StopSquircle()
+                    .fill(Color(white: 0.92))
+                    .frame(width: 13, height: 13)
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color(white: 0.22)))
             }
@@ -592,6 +606,8 @@ struct ComposerView: View {
                     .anchorPreference(key: ProjectPickerAnchorKey.self, value: .bounds) { $0 }
 
                     Spacer()
+
+                    MeshTargetPill(style: .projectRow, menuOpen: $meshTargetMenuOpen)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, projectOverlap + 12)
@@ -667,6 +683,7 @@ struct ComposerView: View {
                     let buttonFrame = proxy[anchor]
                     ModelMenuPopup(
                         isPresented: $modelMenuOpen,
+                        runtime: $appState.selectedAgentRuntime,
                         intelligence: $appState.selectedIntelligence,
                         model: $appState.selectedModel,
                         speed: $appState.selectedSpeed,
@@ -683,6 +700,19 @@ struct ComposerView: View {
                 }
             }
             .allowsHitTesting(modelMenuOpen)
+        }
+        .overlayPreferenceValue(MeshTargetAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if meshTargetMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    MeshTargetPopup(isPresented: $meshTargetMenuOpen)
+                        .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
+                        .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(meshTargetMenuOpen)
         }
         .overlayPreferenceValue(ProjectPickerAnchorKey.self) { anchor in
             GeometryReader { proxy in
@@ -729,6 +759,7 @@ struct ComposerView: View {
         .animation(.easeOut(duration: 0.20), value: modelMenuOpen)
         .animation(.easeOut(duration: 0.14), value: contextHover)
         .animation(.easeOut(duration: 0.20), value: projectMenuOpen)
+        .animation(.easeOut(duration: 0.20), value: meshTargetMenuOpen)
         .sheet(item: $projectEditorContext) { ctx in
             ProjectEditorSheet(context: ctx) { projectEditorContext = nil }
                 .environmentObject(appState)
@@ -1127,6 +1158,7 @@ private struct PopupFramesPref: PreferenceKey {
 
 private struct ModelMenuPopup: View {
     @Binding var isPresented: Bool
+    @Binding var runtime: AgentRuntimeChoice
     @Binding var intelligence: IntelligenceLevel
     @Binding var model: String
     @Binding var speed: SpeedLevel
@@ -1209,6 +1241,29 @@ private struct ModelMenuPopup: View {
 
     private var mainColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(L10n.t("Runtime"))
+
+            ForEach(AgentRuntimeChoice.allCases) { choice in
+                ModelMenuCheckRow(
+                    label: choice.label,
+                    isSelected: runtime == choice
+                ) {
+                    runtime = choice
+                    if choice == .opencode, !model.contains("/") {
+                        model = AgentRuntimeChoice.defaultOpenCodeModel
+                    } else if choice == .codex, model.contains("/") {
+                        model = "5.5"
+                    }
+                    isPresented = false
+                }
+                .onHover { hovering in
+                    if hovering { openSubmenu = .none }
+                }
+            }
+
+            MenuStandardDivider()
+                .padding(.vertical, 5)
+
             ModelMenuHeader(L10n.t("Intelligence"))
 
             ForEach(IntelligenceLevel.allCases) { level in
@@ -1228,7 +1283,7 @@ private struct ModelMenuPopup: View {
                 .padding(.vertical, 5)
 
             ModelMenuChevronRow(
-                label: "GPT-\(model)",
+                label: runtime == .opencode ? model : "GPT-\(model)",
                 highlighted: openSubmenu == .model || openSubmenu == .otherModels
             ) {
                 openSubmenu = (openSubmenu == .model || openSubmenu == .otherModels) ? .none : .model
@@ -1319,30 +1374,45 @@ private struct ModelMenuPopup: View {
         VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader(L10n.t("Model"))
 
-            ForEach(primaryModels, id: \.self) { m in
+            if runtime == .opencode {
                 ModelMenuCheckRow(
-                    label: "GPT-\(m)",
-                    isSelected: model == m
+                    label: AgentRuntimeChoice.defaultOpenCodeModel,
+                    isSelected: model == AgentRuntimeChoice.defaultOpenCodeModel
                 ) {
-                    model = m
+                    model = AgentRuntimeChoice.defaultOpenCodeModel
                     isPresented = false
                 }
-                .onHover { hovering in
-                    if hovering { openSubmenu = .model }
+                Text("Images use a visible fallback when the model cannot read them.")
+                    .font(BodyFont.system(size: 11, wght: 500))
+                    .foregroundColor(Color(white: 0.58))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(primaryModels, id: \.self) { m in
+                    ModelMenuCheckRow(
+                        label: "GPT-\(m)",
+                        isSelected: model == m
+                    ) {
+                        model = m
+                        isPresented = false
+                    }
+                    .onHover { hovering in
+                        if hovering { openSubmenu = .model }
+                    }
                 }
-            }
 
-            ModelMenuChevronRow(
-                label: L10n.t("Other models"),
-                highlighted: openSubmenu == .otherModels
-            ) {
-                openSubmenu = openSubmenu == .otherModels ? .model : .otherModels
+                ModelMenuChevronRow(
+                    label: L10n.t("Other models"),
+                    highlighted: openSubmenu == .otherModels
+                ) {
+                    openSubmenu = openSubmenu == .otherModels ? .model : .otherModels
+                }
+                .onHover { hovering in
+                    if hovering { openSubmenu = .otherModels }
+                }
+                .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.otrosModelos: $0] }
             }
-            .onHover { hovering in
-                if hovering { openSubmenu = .otherModels }
-            }
-            .anchorPreference(key: ModelChevronAnchorsKey.self, value: .bounds) { [.otrosModelos: $0] }
-
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: Self.modelColumnWidth, alignment: .leading)
