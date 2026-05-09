@@ -38,12 +38,22 @@ let package = Package(
         .package(path: "../packages/SecretsVault"),
         // Wire types + placeholder resolver + redactor shared with the helper.
         .package(path: "../packages/SecretsProxyCore"),
+        // Static catalog of cloud AI providers (OpenAI, Anthropic, Groq,
+        // Gemini, ...) plus the AIAccountStore protocol the Settings →
+        // Model Providers panel persists accounts against. Pure Foundation,
+        // shared with iOS even though the macOS app is the only consumer
+        // for the v1 panel UI.
+        .package(path: "../packages/AIProviders"),
         // Global keyboard-shortcut binding library. Powers the
         // user-customizable cancel shortcut and the Last/Retry
         // quick-action bindings; supports any key + modifier combo
         // via Carbon EventHotKey so the bindings fire regardless of
         // foreground app.
-        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.0")
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.0"),
+        // PTY-backed terminal emulator (xterm-256color). Owns the
+        // `forkpty` + read loop + escape-sequence parser the integrated
+        // terminal panel renders. Pure Swift, no extra signing surface.
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0")
     ],
     targets: [
         .testTarget(
@@ -67,7 +77,9 @@ let package = Package(
                 .product(name: "SecretsPersistence", package: "SecretsPersistence"),
                 .product(name: "SecretsVault", package: "SecretsVault"),
                 .product(name: "SecretsProxyCore", package: "SecretsProxyCore"),
-                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts")
+                .product(name: "AIProviders", package: "AIProviders"),
+                .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
+                .product(name: "SwiftTerm", package: "SwiftTerm")
             ],
             path: "Sources/Clawix",
             resources: [
