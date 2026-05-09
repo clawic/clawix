@@ -254,7 +254,7 @@ struct ComposerView: View {
                 .hoverHint(L10n.t("Stop response"))
             } else {
                 Button { appState.sendMessage() } label: {
-                    LucideIcon(.arrowUp, size: 14)
+                    ArrowUpIcon(size: 14)
                         .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(canSend ? Color.white : Color.white.opacity(0.14)))
@@ -304,7 +304,7 @@ struct ComposerView: View {
             Button {
                 stopAndSend()
             } label: {
-                LucideIcon(.arrowUp, size: 14)
+                ArrowUpIcon(size: 14)
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(Color.white))

@@ -662,7 +662,7 @@ struct QuickAskView: View {
             Button {
                 stopAndSend()
             } label: {
-                LucideIcon(.arrowUp, size: 14)
+                ArrowUpIcon(size: 14)
                     .foregroundColor(Color(white: 0.06))
                     .frame(width: 28, height: 28)
                     .background(Circle().fill(Color.white))
@@ -779,7 +779,7 @@ struct QuickAskView: View {
     // down toward the bottom edge.
     private func sendButton(extraBottomPadding: CGFloat) -> some View {
         Button(action: submitIfReady) {
-            LucideIcon(.arrowUp, size: 12)
+            ArrowUpIcon(size: 12)
                 .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                 .frame(width: 33, height: 33)
                 .background(
