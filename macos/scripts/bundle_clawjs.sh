@@ -46,6 +46,7 @@ if [[ ! -d "$BUNDLE_DIR" ]]; then
     echo "ERROR: bundle path does not exist: $BUNDLE_DIR" >&2
     exit 1
 fi
+BUNDLE_DIR="$(cd "$BUNDLE_DIR" && pwd)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -90,20 +91,33 @@ fi
 mkdir -p "$CACHE_ROOT"
 
 # 1) Locate npm. The user's nvm shell shadow breaks invocation in
-#    non-interactive shells; bypass it with absolute paths.
-NPM=""
-for candidate in /opt/homebrew/bin/npm /usr/local/bin/npm; do
-    [[ -x "$candidate" ]] && NPM="$candidate" && break
+#    non-interactive shells; bypass it with absolute paths and run
+#    npm-cli.js through a Node binary that actually starts.
+NODE_FOR_NPM=""
+for candidate in /opt/homebrew/bin/node /usr/local/bin/node; do
+    if [[ -x "$candidate" ]] && "$candidate" --version >/dev/null 2>&1; then
+        NODE_FOR_NPM="$candidate"
+        break
+    fi
 done
-if [[ -z "$NPM" ]]; then
-    echo "ERROR: npm not found in /opt/homebrew/bin or /usr/local/bin" >&2
+if [[ -z "$NODE_FOR_NPM" ]]; then
+    echo "ERROR: working Node not found in /opt/homebrew/bin or /usr/local/bin" >&2
     exit 1
 fi
-NPM_CLI="$("$NPM" root -g)/npm/bin/npm-cli.js"
+NPM_CLI=""
+for candidate in \
+    /opt/homebrew/lib/node_modules/npm/bin/npm-cli.js \
+    /usr/local/lib/node_modules/npm/bin/npm-cli.js
+do
+    [[ -f "$candidate" ]] && NPM_CLI="$candidate" && break
+done
 if [[ ! -f "$NPM_CLI" ]]; then
-    echo "ERROR: npm CLI entrypoint not found next to $NPM" >&2
+    echo "ERROR: npm CLI entrypoint not found" >&2
     exit 1
 fi
+run_npm() {
+    "$NODE_FOR_NPM" "$NPM_CLI" "$@"
+}
 
 # 2) Stage the install. Cache by version: when CLAWJS_VERSION bumps the
 #    next run starts from a fresh stage; otherwise we re-use whatever
@@ -127,7 +141,7 @@ EOF
         npm_config_arch=arm64 \
         npm_config_target_arch=arm64 \
         npm_config_target_platform=darwin \
-        "$NPM" install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        run_npm install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
     )
     if [[ "$(read_pkg_version "$STAGE_CLI_PKG")" != "$CLAWJS_VERSION" ]]; then
         echo "ERROR: npm install resolved a @clawjs/cli version different from $CLAWJS_VERSION" >&2
@@ -174,6 +188,47 @@ fi
 # vault-server-launcher.mjs, …) and on the database package without
 # republishing npm. No-op in CI / release builds.
 if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
+    OVERLAY_DEPS_READY=0
+    ensure_overlay_dependencies() {
+        [[ "$OVERLAY_DEPS_READY" -eq 0 ]] || return 0
+        OVERLAY_DEPS_READY=1
+        if [[ -f "$CLAWJS_DEV_OVERLAY/package.json" && -f "$CLAWJS_DEV_OVERLAY/package-lock.json" && ! -d "$CLAWJS_DEV_OVERLAY/node_modules" ]]; then
+            echo "==> Dev overlay: installing workspace dependencies"
+            run_npm --prefix "$CLAWJS_DEV_OVERLAY" install --no-audit --no-fund >/dev/null
+        fi
+        if [[ -f "$CLAWJS_DEV_OVERLAY/packages/clawjs-core/package.json" ]]; then
+            echo "==> Dev overlay: building @clawjs/core"
+            PATH="/opt/homebrew/bin:/usr/local/bin:$CLAWJS_DEV_OVERLAY/node_modules/.bin:$PATH" \
+                run_npm --prefix "$CLAWJS_DEV_OVERLAY" run build --workspace @clawjs/core >/dev/null
+        fi
+    }
+
+    build_overlay_package() {
+        local pkg_dir="$1"
+        [[ -f "$pkg_dir/package.json" ]] || return 0
+        if /usr/bin/python3 - "$pkg_dir/package.json" <<'PY'
+import json, sys
+try:
+    scripts = json.load(open(sys.argv[1])).get("scripts", {})
+except Exception:
+    scripts = {}
+sys.exit(0 if scripts.get("build") else 1)
+PY
+        then
+            ensure_overlay_dependencies
+            if [[ -f "$pkg_dir/package-lock.json" && ! -d "$pkg_dir/node_modules" ]]; then
+                echo "==> Dev overlay: installing $(basename "$pkg_dir") dependencies"
+                run_npm --prefix "$pkg_dir" install --no-audit --no-fund >/dev/null
+            fi
+            if [[ -f "$pkg_dir/ui/package.json" && -f "$pkg_dir/ui/package-lock.json" && ! -d "$pkg_dir/ui/node_modules" ]]; then
+                echo "==> Dev overlay: installing $(basename "$pkg_dir") UI dependencies"
+                run_npm --prefix "$pkg_dir/ui" install --no-audit --no-fund >/dev/null
+            fi
+            PATH="/opt/homebrew/bin:/usr/local/bin:$CLAWJS_DEV_OVERLAY/node_modules/.bin:$pkg_dir/node_modules/.bin:$PATH" \
+                run_npm --prefix "$pkg_dir" run build >/dev/null
+        fi
+    }
+
     OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/packages/clawjs/bin"
     if [[ ! -d "$OVERLAY_BIN" && -d "$CLAWJS_DEV_OVERLAY/bin" ]]; then
         OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/bin"
@@ -183,10 +238,8 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
         cp -R "$OVERLAY_BIN/." "$CLAWJS_DEST/node_modules/@clawjs/cli/bin/"
     fi
     OVERLAY_DB="$CLAWJS_DEV_OVERLAY/packages/clawjs-database"
-    if [[ -d "$OVERLAY_DB/dist" ]]; then
-        if [[ -f "$OVERLAY_DB/package.json" ]]; then
-            "$NPM" --prefix "$OVERLAY_DB" run build >/dev/null
-        fi
+    if [[ -d "$OVERLAY_DB" ]]; then
+        build_overlay_package "$OVERLAY_DB"
         echo "==> Dev overlay: copying $OVERLAY_DB → $CLAWJS_DEST/node_modules/@clawjs/database"
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database"
         mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
@@ -196,14 +249,15 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
             npm_config_arch=arm64 \
             npm_config_target_arch=arm64 \
             npm_config_target_platform=darwin \
-            "$NPM" install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+            run_npm install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
         )
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/better-sqlite3"
     fi
     # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
     # from @clawjs/cli/bin, i.e. node_modules/vault/dist/server.js.
     OVERLAY_VAULT="$CLAWJS_DEV_OVERLAY/vault"
-    if [[ -d "$OVERLAY_VAULT/dist" ]]; then
+    if [[ -d "$OVERLAY_VAULT" ]]; then
+        build_overlay_package "$OVERLAY_VAULT"
         echo "==> Dev overlay: copying $OVERLAY_VAULT/dist → $CLAWJS_DEST/node_modules/vault/dist"
         rm -rf "$CLAWJS_DEST/node_modules/vault/dist"
         mkdir -p "$CLAWJS_DEST/node_modules/vault"
@@ -216,7 +270,8 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
     fi
     # Memory server: same layout as vault.
     OVERLAY_MEMORY="$CLAWJS_DEV_OVERLAY/memory"
-    if [[ -d "$OVERLAY_MEMORY/dist" ]]; then
+    if [[ -d "$OVERLAY_MEMORY" ]]; then
+        build_overlay_package "$OVERLAY_MEMORY"
         echo "==> Dev overlay: copying $OVERLAY_MEMORY/dist → $CLAWJS_DEST/node_modules/memory/dist"
         rm -rf "$CLAWJS_DEST/node_modules/memory/dist"
         mkdir -p "$CLAWJS_DEST/node_modules/memory"
@@ -230,7 +285,8 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
     fi
     # Drive surface.
     OVERLAY_DRIVE="$CLAWJS_DEV_OVERLAY/drive"
-    if [[ -d "$OVERLAY_DRIVE/dist" ]]; then
+    if [[ -d "$OVERLAY_DRIVE" ]]; then
+        build_overlay_package "$OVERLAY_DRIVE"
         echo "==> Dev overlay: copying $OVERLAY_DRIVE/dist → $CLAWJS_DEST/node_modules/drive/dist"
         rm -rf "$CLAWJS_DEST/node_modules/drive/dist"
         mkdir -p "$CLAWJS_DEST/node_modules/drive"
@@ -244,7 +300,8 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
     # Telegram surface: launcher tries
     # `<HERE>/../../../telegram/dist/server.js` next to the cli bin/.
     OVERLAY_TELEGRAM="$CLAWJS_DEV_OVERLAY/telegram"
-    if [[ -d "$OVERLAY_TELEGRAM/dist" ]]; then
+    if [[ -d "$OVERLAY_TELEGRAM" ]]; then
+        build_overlay_package "$OVERLAY_TELEGRAM"
         echo "==> Dev overlay: copying $OVERLAY_TELEGRAM/dist → $CLAWJS_DEST/node_modules/telegram/dist"
         rm -rf "$CLAWJS_DEST/node_modules/telegram/dist"
         mkdir -p "$CLAWJS_DEST/node_modules/telegram"
