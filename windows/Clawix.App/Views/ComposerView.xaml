@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Clawix.App.Views.ComposerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Border Padding="12" BorderThickness="0,1,0,0"
+          BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
+    <Grid ColumnSpacing="8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <Button Grid.Column="0" x:Name="AttachBtn" Content="📎" Click="Attach_Click" />
+      <TextBox Grid.Column="1" x:Name="InputBox"
+               PlaceholderText="Message Clawix"
+               AcceptsReturn="True" TextWrapping="Wrap"
+               MaxHeight="160" />
+      <Button Grid.Column="2" x:Name="SendBtn"
+              Content="Send" Style="{ThemeResource AccentButtonStyle}"
+              Click="Send_Click" />
+    </Grid>
+  </Border>
+</UserControl>
