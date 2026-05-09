@@ -3,6 +3,12 @@ id: macos.chat.lifecycle
 platform: macos
 surface: chat
 status: ready
+priority: P1
+tags:
+  - regression
+  - dummy
+  - host
+  - navigation
 intent: "Validate lifecycle operations for existing conversations: open, rename, edit, fork, copy, pin, archive, unarchive, unread completion, active turn interruption, and scroll restoration."
 entrypoints:
   - sidebar-row
@@ -27,6 +33,7 @@ required_state:
   backend: fake or intercepted for mutations
   window: main macOS app window visible and focused
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - real runtime archive mutation
@@ -88,6 +95,13 @@ Verify that existing conversations can be managed visually without losing select
 | Chat state | normal, pinned, archived, active turn, long transcript |
 | Validation | visual only, fake mutation, host clipboard |
 
+## Critical Cases
+
+- `P1-open-rename`: opening and renaming updates transcript header and sidebar row.
+- `P1-pin-archive`: pin, unpin, archive, and unarchive keep sidebar state coherent.
+- `P1-stop-active-turn`: active fake turn can be interrupted and returns to send state.
+- `P2-copy-host`: clipboard feedback is checked with public fixture text in host mode.
+
 ## Steps
 
 1. Open a fixture chat from the sidebar.
@@ -124,6 +138,17 @@ Alternate passes:
 - Edit or fork changes the wrong chat.
 - Stop response leaves the UI in active-turn state.
 - Copy feedback appears without copying, or no feedback appears.
+
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Opened chat matched selected sidebar row | pass/fail/no-run |
+| Rename updated visible state | pass/fail/no-run |
+| Pin and archive state stayed coherent | pass/fail/no-run |
+| Edit/fork/copy checked or marked no-run | pass/fail/no-run |
+| Active turn interruption checked | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
 
 ## Screenshot Checklist
 
