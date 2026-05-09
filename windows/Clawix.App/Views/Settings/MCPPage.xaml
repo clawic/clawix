@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Clawix.App.Views.Settings.MCPPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Padding="24">
+    <StackPanel Spacing="16" MaxWidth="720">
+      <TextBlock Text="MCP servers" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Opacity="0.7" Text="Model Context Protocol servers extend Codex with custom tools." TextWrapping="Wrap" />
+      <ListView x:Name="ServerList" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Add server" Style="{ThemeResource AccentButtonStyle}" />
+        <Button Content="Edit config.toml" Click="OpenConfig_Click" />
+      </StackPanel>
+      <Expander Header="Advanced" IsExpanded="False">
+        <StackPanel Spacing="12" Padding="0,8,0,0">
+          <ToggleSwitch Header="Auto-start MCP servers" />
+          <NumberBox Header="MCP request timeout (s)" Value="30" />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</Page>
