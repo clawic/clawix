@@ -161,6 +161,11 @@ struct ClawixApp: App {
 enum RootNav: Hashable {
     case chat(String)
     case project(String)
+    /// Skills catalog (read-only browser on iOS v1). Reached from the
+    /// chat-list overflow menu; `SkillsListView` runs its own internal
+    /// NavigationStack for skill detail so we just present it as a
+    /// destination here.
+    case skills
 }
 
 private struct PresentedFile: Identifiable, Equatable {
@@ -204,6 +209,9 @@ private struct RootView: View {
                             // pending-newChats path).
                             let id = store.startNewChat()
                             path.append(RootNav.chat(id))
+                        },
+                        onOpenSkills: {
+                            path.append(RootNav.skills)
                         }
                     )
                     .toolbar(.hidden, for: .navigationBar)
@@ -292,6 +300,8 @@ private struct RootView: View {
                                     onBack: popLast
                                 )
                             }
+                        case .skills:
+                            SkillsListView()
                         }
                     }
                 }

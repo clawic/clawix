@@ -25,6 +25,10 @@ struct ChatListView: View {
     let onPair: (Credentials) -> Void
     let onUnpair: () -> Void
     var onNewChat: () -> Void = {}
+    /// Optional escape hatch to push the Skills catalog onto the
+    /// parent NavigationStack. `nil` means the host doesn't expose a
+    /// Skills page (older builds); the entry button hides itself.
+    var onOpenSkills: (() -> Void)? = nil
 
     @State private var searchActive: Bool = false
     @State private var searchText: String = ""
@@ -214,6 +218,21 @@ struct ChatListView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Search")
+
+            if let onOpenSkills {
+                Button(action: {
+                    Haptics.tap()
+                    onOpenSkills()
+                }) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(Palette.textPrimary)
+                        .frame(width: 48, height: 46)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Skills")
+            }
 
             Button(action: {
                 guard !showSettings else { return }
@@ -448,11 +467,11 @@ struct ChatListView: View {
             ProgressView()
                 .controlSize(.regular)
                 .tint(Palette.textTertiary)
-            Text("Sincronizando con tu Mac…")
+            Text("Syncing with your Mac…")
                 .font(BodyFont.system(size: 17, weight: .semibold))
                 .tracking(-0.4)
                 .foregroundStyle(Palette.textPrimary)
-            Text("Cargando tus chats por primera vez")
+            Text("Loading your chats for the first time")
                 .font(BodyFont.system(size: 14))
                 .tracking(-0.2)
                 .foregroundStyle(Palette.textSecondary)
@@ -462,11 +481,11 @@ struct ChatListView: View {
 
     private var placeholderEmpty: some View {
         VStack(spacing: 12) {
-            Text("Aún no tienes chats")
+            Text("No chats yet")
                 .font(BodyFont.system(size: 17, weight: .semibold))
                 .tracking(-0.4)
                 .foregroundStyle(Palette.textPrimary)
-            Text("Empieza una conversación desde tu Mac y aparecerá aquí.")
+            Text("Start a conversation from your Mac and it will appear here.")
                 .font(BodyFont.system(size: 14))
                 .tracking(-0.2)
                 .foregroundStyle(Palette.textSecondary)
@@ -477,7 +496,7 @@ struct ChatListView: View {
 
     private func placeholderError(message: String) -> some View {
         VStack(spacing: 12) {
-            Text("No se pudo conectar con tu Mac")
+            Text("Could not connect to your Mac")
                 .font(BodyFont.system(size: 17, weight: .semibold))
                 .tracking(-0.4)
                 .foregroundStyle(Palette.textPrimary)
