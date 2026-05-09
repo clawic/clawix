@@ -89,7 +89,7 @@ struct RecordingOverlay: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular.tint(Color.black.opacity(0.45)), in: Circle())
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                StopSquircle()
                     .fill(Color.white)
                     .frame(width: 14, height: 14)
             }
@@ -125,7 +125,7 @@ struct RecordingOverlay: View {
             Circle()
                 .fill(.clear)
                 .glassEffect(.regular.tint(Color.black.opacity(0.30)), in: Circle())
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
+            StopSquircle()
                 .fill(Color(white: 0.55))
                 .frame(width: 14, height: 14)
         }

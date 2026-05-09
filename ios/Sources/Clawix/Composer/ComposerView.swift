@@ -405,7 +405,7 @@ struct ComposerView: View {
     @ViewBuilder
     private var primaryGlyph: some View {
         if hasActiveTurn {
-            RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+            StopSquircle()
                 .fill(Color.black)
                 .frame(width: 12, height: 12)
                 .transition(.scale.combined(with: .opacity))
