@@ -59,14 +59,14 @@ struct BridgedMain {
 
         BridgedLog.write("starting schemaVersion=\(bridgeSchemaVersion)")
         let env = ProcessInfo.processInfo.environment
-        if let bearer = env["CLAWIX_BRIDGED_BEARER"], !bearer.isEmpty {
-            UserDefaults.standard.set(bearer, forKey: "ClawixBridge.Bearer.v1")
-        }
-
         let port = env["CLAWIX_BRIDGED_PORT"].flatMap(UInt16.init) ?? 7778
+        let httpPort = env["CLAWIX_BRIDGED_HTTP_PORT"].flatMap(UInt16.init) ?? 7779
         let defaults = env["CLAWIX_BRIDGED_DEFAULTS_SUITE"]
             .flatMap { UserDefaults(suiteName: $0) }
             ?? .standard
+        if let bearer = env["CLAWIX_BRIDGED_BEARER"], !bearer.isEmpty {
+            defaults.set(bearer, forKey: "ClawixBridge.Bearer.v1")
+        }
         let pairing = PairingService(defaults: defaults, port: port)
         // Force the bearer + short code to materialize at startup so
         // external surfaces (the npm CLI's `clawix pair`, the menubar
@@ -81,23 +81,58 @@ struct BridgedMain {
         BridgedHeartbeat.start(port: port, hostBox: box)
 
         Task { @MainActor in
-            guard let binary = BackendBinary.resolve(environment: env) else {
-                BridgedLog.write("backend binary not found")
-                exit(78)
-            }
-            let host = DaemonEngineHost(binary: binary, pairing: pairing)
-            let server = BridgeServer(
-                host: host,
-                port: port,
-                pairing: pairing,
-                publishBonjour: publishBonjour
-            )
-            server.start()
-            box.host = host
-            box.server = server
-            BridgedLog.write("listening tcp/\(port) backend=\(binary.path.path)")
-            Task { @MainActor in
-                await host.bootstrap()
+            let runtime = AgentRuntimeSelection.resolve(environment: env, defaults: defaults)
+            switch runtime {
+            case .codex:
+                guard let binary = BackendBinary.resolve(environment: env) else {
+                    BridgedLog.write("backend binary not found")
+                    exit(78)
+                }
+                let host = DaemonEngineHost(binary: binary, pairing: pairing)
+                let meshStore = RemoteMeshStore()
+                let meshIdentity = RemoteMeshIdentity(root: meshStore.root)
+                let mesh = RemoteMeshHTTPController(
+                    identity: meshIdentity,
+                    store: meshStore,
+                    host: host,
+                    pairing: pairing,
+                    bridgePort: port,
+                    httpPort: httpPort
+                )
+                let server = BridgeServer(
+                    host: host,
+                    port: port,
+                    pairing: pairing,
+                    publishBonjour: publishBonjour
+                )
+                server.start()
+                box.host = host
+                box.server = server
+                BridgedLog.write("listening tcp/\(port) runtime=codex backend=\(binary.path.path)")
+                let webServer = WebStaticServer(httpPort: httpPort, wsPort: port, pairing: pairing, mesh: mesh)
+                webServer.start()
+                box.webServer = webServer
+                Task { @MainActor in
+                    await host.bootstrap()
+                }
+            case .opencode:
+                let host = OpenCodeDaemonEngineHost(pairing: pairing, defaults: defaults, environment: env)
+                let server = BridgeServer(
+                    host: host,
+                    port: port,
+                    pairing: pairing,
+                    publishBonjour: publishBonjour
+                )
+                server.start()
+                box.host = host
+                box.server = server
+                BridgedLog.write("listening tcp/\(port) runtime=opencode")
+                let webServer = WebStaticServer(httpPort: httpPort, wsPort: port, pairing: pairing)
+                webServer.start()
+                box.webServer = webServer
+                Task { @MainActor in
+                    await host.bootstrap()
+                }
             }
         }
 
@@ -108,6 +143,7 @@ struct BridgedMain {
 final class HostBox: @unchecked Sendable {
     var host: AnyObject?
     var server: AnyObject?
+    var webServer: AnyObject?
 
     /// Read snapshot of host state, decoupled from the host's
     /// MainActor isolation so the heartbeat timer (which runs on a
@@ -297,6 +333,8 @@ final class DaemonEngineHost: EngineHost {
     private var rolloutPathByThread: [String: String] = [:]
     private var activeAssistantIdByThread: [String: String] = [:]
     private var activeTurnByThread: [String: String] = [:]
+    private let meshStore = RemoteMeshStore()
+    private var remoteJobByThread: [String: String] = [:]
     /// Set of Codex thread ids the user has pinned, sourced from
     /// `~/.codex/.codex-global-state.json` (`pinned-thread-ids`).
     /// Refreshed on bootstrap and again at the top of every
@@ -730,6 +768,7 @@ final class DaemonEngineHost: EngineHost {
         language: String?,
         reply: @MainActor @escaping (String, String?) -> Void
     ) {
+        #if canImport(WhisperKit)
         // Audio blobs from the iPhone arrive base64-encoded inside the
         // bridge frame because the WebSocket transport is text-only.
         // Spool to a per-request file in the same /tmp tree the image
@@ -762,6 +801,13 @@ final class DaemonEngineHost: EngineHost {
                 reply("", error.localizedDescription)
             }
         }
+        #else
+        // Linux build: WhisperKit is unavailable. The Tauri shell handles
+        // dictation locally via whisper.cpp; remote dictation requests
+        // from iPhone clients are answered with an unavailable error
+        // until the Linux daemon ships its own whisper.cpp wrapper.
+        reply("", "Server-side transcription is not available on this host")
+        #endif
     }
 
     func handleInterruptTurn(chatId: UUID) {
@@ -863,6 +909,117 @@ final class DaemonEngineHost: EngineHost {
 
     func handlePairingStart() -> (qrJson: String, bearer: String)? {
         return (pairing.qrPayload(), pairing.bearer)
+    }
+
+    func startRemoteJob(
+        jobId: String,
+        requesterNodeId: String,
+        workspacePath: String,
+        prompt: String
+    ) async throws -> RemoteJob {
+        let workspace = URL(fileURLWithPath: workspacePath).standardizedFileURL.path
+        guard meshStore.allowsWorkspace(workspace) else {
+            throw RemoteMeshError.workspaceDenied
+        }
+        let chatId = UUID().uuidString
+        var job = RemoteJob(
+            id: jobId,
+            requesterNodeId: requesterNodeId,
+            workspacePath: workspace,
+            prompt: prompt,
+            status: .running,
+            remoteChatId: chatId
+        )
+        meshStore.upsert(job: job)
+        meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "accepted", message: "Remote job accepted"))
+
+        do {
+            let result = try await backend.send(
+                method: "thread/start",
+                params: ThreadStartParams(
+                    cwd: workspace,
+                    model: nil,
+                    approvalPolicy: nil,
+                    sandbox: nil,
+                    personality: nil,
+                    serviceTier: nil,
+                    collaborationMode: nil
+                ),
+                expecting: ThreadStartResult.self
+            )
+            let threadId = result.thread.id
+            chatByThread[threadId] = chatId
+            threadByChat[chatId] = threadId
+            remoteJobByThread[threadId] = jobId
+            job.remoteThreadId = threadId
+            job.updatedAt = Date()
+            meshStore.upsert(job: job)
+            ensureSnapshot(chatId: chatId, firstPrompt: prompt, cwd: workspace)
+            appendMessage(chatId: chatId, message: WireMessage(
+                id: UUID().uuidString,
+                role: .user,
+                content: prompt,
+                streamingFinished: true,
+                timestamp: Date()
+            ))
+            updateChat(chatId: chatId) {
+                $0.hasActiveTurn = true
+                $0.lastMessagePreview = String(prompt.prefix(140))
+                $0.lastMessageAt = Date()
+                $0.threadId = threadId
+            }
+            meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "threadStarted", message: threadId))
+            let turn = try await backend.send(
+                method: "turn/start",
+                params: TurnStartParams(
+                    threadId: threadId,
+                    input: [.text(prompt)],
+                    model: nil,
+                    effort: nil,
+                    serviceTier: nil,
+                    collaborationMode: nil
+                ),
+                expecting: TurnStartResult.self
+            )
+            activeTurnByThread[threadId] = turn.turn.id
+            meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "turnStarted", message: turn.turn.id))
+            job.updatedAt = Date()
+            meshStore.upsert(job: job)
+            return job
+        } catch {
+            job.status = .failed
+            job.errorMessage = "\(error)"
+            job.updatedAt = Date()
+            meshStore.upsert(job: job)
+            meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "failed", message: "\(error)"))
+            throw error
+        }
+    }
+
+    func cancelRemoteJob(jobId: String) async {
+        guard var job = meshStore.job(id: jobId) else { return }
+        if let threadId = job.remoteThreadId,
+           let chatId = chatByThread[threadId],
+           let turnId = activeTurnByThread[threadId] {
+            activeTurnByThread[threadId] = nil
+            do {
+                _ = try await backend.send(
+                    method: "turn/interrupt",
+                    params: TurnInterruptParams(threadId: threadId, turnId: turnId),
+                    expecting: EmptyResponse.self
+                )
+            } catch {
+                BridgedLog.write("mesh job cancel failed \(error)")
+            }
+            updateChat(chatId: chatId) {
+                $0.hasActiveTurn = false
+                $0.lastTurnInterrupted = true
+            }
+        }
+        job.status = .cancelled
+        job.updatedAt = Date()
+        meshStore.upsert(job: job)
+        meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "cancelled", message: "Remote job cancelled"))
     }
 
     private func reloadThreads() async {
@@ -1104,6 +1261,14 @@ final class DaemonEngineHost: EngineHost {
             guard let payload = try? params?.decode(AgentMessageDelta.self),
                   let chatId = chatByThread[payload.threadId]
             else { return }
+            if let jobId = remoteJobByThread[payload.threadId] {
+                if var job = meshStore.job(id: jobId) {
+                    job.resultText = (job.resultText ?? "") + payload.delta
+                    job.updatedAt = Date()
+                    meshStore.upsert(job: job)
+                }
+                meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "delta", message: payload.delta))
+            }
             let assistantId = ensureAssistant(chatId: chatId, threadId: payload.threadId)
             updateMessage(chatId: chatId, messageId: assistantId) { msg in
                 msg.content += payload.delta
@@ -1150,6 +1315,22 @@ final class DaemonEngineHost: EngineHost {
             updateChat(chatId: chatId) {
                 $0.hasActiveTurn = false
                 $0.lastTurnInterrupted = false
+            }
+            if let jobId = remoteJobByThread[payload.threadId] {
+                var job = meshStore.job(id: jobId) ?? RemoteJob(
+                    id: jobId,
+                    requesterNodeId: "",
+                    workspacePath: "",
+                    prompt: ""
+                )
+                job.status = .completed
+                if job.resultText == nil || job.resultText?.isEmpty == true {
+                    job.resultText = existingMessages(chatId: chatId).last(where: { $0.role == .assistant })?.content
+                }
+                job.updatedAt = Date()
+                meshStore.upsert(job: job)
+                meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "completed", message: job.resultText ?? ""))
+                remoteJobByThread[payload.threadId] = nil
             }
         case "account/rateLimits/updated":
             guard let payload = try? params?.decode(DaemonAccountRateLimitsUpdatedNotification.self) else { return }
