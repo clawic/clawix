@@ -46,4 +46,21 @@ final class ClawixUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Leaked cached chat"].waitForExistence(timeout: 1))
         XCTAssertFalse(app.staticTexts["leaked-cached-project"].waitForExistence(timeout: 1))
     }
+
+    func testArchiveFromChatMenuReturnsHome() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["CLAWIX_MOCK"] = "1"
+        app.launchEnvironment["CLAWIX_DISABLE_AUTOFOCUS"] = "1"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Clawix"].waitForExistence(timeout: 8))
+        app.buttons["New chat"].tap()
+        XCTAssertTrue(app.buttons["Chat actions"].waitForExistence(timeout: 3))
+
+        app.buttons["Chat actions"].tap()
+        app.buttons["Archive"].tap()
+
+        XCTAssertTrue(app.staticTexts["Clawix"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["Chat actions"].waitForExistence(timeout: 1))
+    }
 }
