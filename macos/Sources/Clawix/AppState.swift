@@ -950,11 +950,13 @@ final class AppState: ObservableObject {
     /// before the runtime bootstraps and paginates the real thread list.
     /// Rewritten at the end of every applyThreads / mergeThreads.
     private let snapshotRepo = SnapshotRepository()
+    private let dummyModeActive: Bool = ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] == "1"
     /// True when the snapshot cache is active. Disabled while fixtures
     /// are driving the threads list (CLAWIX_THREAD_FIXTURE) so tests
     /// stay deterministic and the snapshot table never sees fixture
     /// data.
-    private let snapshotEnabled: Bool = (AgentThreadStore.fixtureThreads() == nil)
+    private let snapshotEnabled: Bool = (AgentThreadStore.fixtureThreads() == nil
+                                         && ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] != "1")
     private var backendState: BackendState = .empty
     /// File-descriptor watcher for `~/.codex/.codex-global-state.json`.
     /// Refreshes `backendState` (and the projects list) off the main
@@ -1143,6 +1145,9 @@ final class AppState: ObservableObject {
         loadMockData()
         if let fixtureThreads = AgentThreadStore.fixtureThreads() {
             applyThreads(fixtureThreads)
+        } else if dummyModeActive {
+            chats = [computerUseSampleChat, browserSampleChat, sampleChat]
+            currentRoute = .chat(computerUseSampleChat.id)
         } else {
             // First paint: build chats[] + pinnedOrder from the SQLite
             // snapshot of the last applied state. Falls back to an empty
@@ -1229,7 +1234,7 @@ final class AppState: ObservableObject {
         // user's REAL Codex sessions, so connecting would let the
         // daemon's `chatsSnapshot` overwrite the curated fixture chats
         // with live data and leak the user's real chats into a recording.
-        let fixtureActive = AgentThreadStore.fixtureThreads() != nil
+        let fixtureActive = AgentThreadStore.fixtureThreads() != nil || dummyModeActive
         let daemonBridgeEnabled = !fixtureActive && BackgroundBridgeService.shared.isActive
         clawix?.appState = self
         if let clawix,

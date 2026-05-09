@@ -48,6 +48,11 @@ enum BackendStateReader {
     }
 
     static func read() -> BackendState {
+        let env = ProcessInfo.processInfo.environment
+        if env["CLAWIX_DUMMY_MODE"] == "1", env["CLAWIX_DESKTOP_STATE_FIXTURE"] == nil {
+            return .empty
+        }
+
         let url = sourceURL
         guard
             let data = try? Data(contentsOf: url),
