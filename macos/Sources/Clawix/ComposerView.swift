@@ -139,6 +139,15 @@ struct ComposerView: View {
         return false
     }
 
+    /// Chat the composer is currently anchored to (used by overlays
+    /// like `SkillsChipBar` that need the chat scope to resolve active
+    /// skills). nil when the composer is being rendered outside a
+    /// chat context (e.g. on the home view's compose-to-start surface).
+    private var currentComposerChatId: UUID? {
+        if case let .chat(id) = appState.currentRoute { return id }
+        return nil
+    }
+
     private var canSend: Bool {
         !composer.text.trimmingCharacters(in: .whitespaces).isEmpty
             || !composer.attachments.isEmpty
@@ -486,6 +495,12 @@ struct ComposerView: View {
 
     private var composerStack: some View {
         VStack(spacing: 8) {
+            // Active skills chip row. Renders only when at least one
+            // skill is active in the current chat (resolved across
+            // global → project → chat). Sits above the composer so the
+            // user always knows what's loading into the system prompt.
+            SkillsChipBar(chatId: currentComposerChatId)
+
             if showsPlanSuggestion {
                 PlanSuggestionBar(
                     onUsePlanMode: { activatePlanModeFromSuggestion() },
@@ -2087,6 +2102,11 @@ struct ComposerTextEditor: NSViewRepresentable, Equatable {
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
         textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isContinuousSpellCheckingEnabled = false
+        textView.isGrammarCheckingEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false
+        textView.isAutomaticDataDetectionEnabled = false
+        textView.isAutomaticTextCompletionEnabled = false
         textView.smartInsertDeleteEnabled = false
         textView.textContainerInset = NSSize(width: 0, height: 8)
         textView.string = text
