@@ -1,0 +1,38 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1701;CS1591</WarningsNotAsErrors>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <Company>Clawix</Company>
+    <Authors>Clawix</Authors>
+    <Product>Clawix</Product>
+  </PropertyGroup>
+
+  <!-- Stamp every assembly with VERSION + BUILD_NUMBER from the repo
+       so `Clawix-1.0.42 (build 137)` shows up in Settings -> About
+       and AssemblyInformationalVersion matches what release.ps1
+       publishes. Mirrors the macos/_emit_version.sh pattern. -->
+  <Target Name="StampVersion" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo;CoreCompile">
+    <PropertyGroup>
+      <ClawixVersionFile>$(MSBuildThisFileDirectory)VERSION</ClawixVersionFile>
+      <ClawixBuildNumberFile>$(MSBuildThisFileDirectory)BUILD_NUMBER</ClawixBuildNumberFile>
+    </PropertyGroup>
+    <ReadLinesFromFile File="$(ClawixVersionFile)" Condition="Exists('$(ClawixVersionFile)')">
+      <Output TaskParameter="Lines" PropertyName="ClawixVersion" />
+    </ReadLinesFromFile>
+    <ReadLinesFromFile File="$(ClawixBuildNumberFile)" Condition="Exists('$(ClawixBuildNumberFile)')">
+      <Output TaskParameter="Lines" PropertyName="ClawixBuild" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <ClawixVersion Condition="'$(ClawixVersion)' == ''">0.1.0</ClawixVersion>
+      <ClawixBuild Condition="'$(ClawixBuild)' == ''">0</ClawixBuild>
+      <Version>$(ClawixVersion)</Version>
+      <AssemblyVersion>$(ClawixVersion).$(ClawixBuild)</AssemblyVersion>
+      <FileVersion>$(ClawixVersion).$(ClawixBuild)</FileVersion>
+      <InformationalVersion>$(ClawixVersion)+$(ClawixBuild)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+</Project>

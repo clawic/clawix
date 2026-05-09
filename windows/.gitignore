@@ -1,0 +1,35 @@
+# .NET build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Publish output
+publish/
+out/
+
+# Rider / VS
+.idea/
+
+# MSIX packaging
+AppPackages/
+BundleArtifacts/
+*.msix
+*.msixupload
+*.appx
+*.appxbundle
+
+# Logs
+*.log
+
+# Local user secrets
+.local.env
+secrets.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated WinUI assets
+Generated Files/
