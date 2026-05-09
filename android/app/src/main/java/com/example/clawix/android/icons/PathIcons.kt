@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Hand-rolled Path-based icons mirroring the SVG-derived
- * `Sources/Clawix/Icons/*.swift` files on iOS. Stroke widths and corner
+ * the iOS custom icon files. Stroke widths and corner
  * curves match the SwiftUI `Path` originals.
  *
  * Intentionally NOT using Material Icons or `Icons.*` because user
@@ -207,4 +207,3 @@ fun McpIcon(modifier: Modifier = Modifier, size: Dp = 20.dp, tint: Color = Color
         p.lineTo(15 * s, 18 * s)
     }
 }
-

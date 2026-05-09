@@ -128,7 +128,7 @@ fun ComposerView(
                     .weight(1f)
                     .focusRequester(focusRequester)
                     .padding(vertical = 10.dp)
-                    .heightIn(min = 24.dp, max = 9 * 22.dp),
+                    .heightIn(min = 24.dp, max = 198.dp),
                 decorationBox = { inner ->
                     if (text.isEmpty()) {
                         Text("Message Codex…", style = AppTypography.body, color = Palette.textTertiary)
