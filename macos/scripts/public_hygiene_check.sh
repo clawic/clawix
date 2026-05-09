@@ -133,6 +133,44 @@ check_git_metadata() {
 
 check_git_metadata
 
+# The macOS app must never touch the system Keychain. Daemon admin auth
+# uses an ephemeral token in the daemon's private data dir; provider API
+# keys live in the user's encrypted vault under "Clawix System". The one
+# exception is `Bootstrap/LegacyKeychainPurge.swift`, which deletes
+# leftovers from pre-release builds and is whitelisted by the
+# `LEGACY-KEYCHAIN-PURGE-OK` marker on its first non-empty line.
+check_no_keychain_in_macos_sources() {
+  local sources_dir="$ROOT_DIR/macos/Sources/Clawix"
+  [[ -d "$sources_dir" ]] || return 0
+  local files
+  files="$(rg -l \
+      -e 'import Security' \
+      -e '\bkSecClass\b' \
+      -e '\bSecItemAdd\b' \
+      -e '\bSecItemCopyMatching\b' \
+      -e '\bSecItemUpdate\b' \
+      -e '\bSecItemDelete\b' \
+      "$sources_dir" 2>/dev/null || true)"
+  [[ -z "$files" ]] && return 0
+  local offenders=""
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    local first_line
+    first_line="$(grep -m 1 -E '\S' "$file" || true)"
+    if [[ "$first_line" == *"LEGACY-KEYCHAIN-PURGE-OK"* ]]; then
+      continue
+    fi
+    offenders+="${file}"$'\n'
+  done <<< "$files"
+  if [[ -n "$offenders" ]]; then
+    echo "public hygiene failed: macOS sources may not use Security.framework / Keychain APIs" >&2
+    printf "%s" "$offenders" >&2
+    FAIL=1
+  fi
+}
+
+check_no_keychain_in_macos_sources
+
 if compgen -G "$ROOT_DIR/*-[A-Za-z0-9_-]??????[A-Za-z0-9_-]*.js" > /dev/null; then
   echo "public hygiene failed: vendored hashed JS bundles at repo root" >&2
   ls "$ROOT_DIR"/*-*.js 2>/dev/null >&2 || true
