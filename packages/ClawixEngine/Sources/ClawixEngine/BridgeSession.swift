@@ -1,6 +1,8 @@
 import Foundation
-import Network
 import ClawixCore
+
+#if canImport(Network)
+import Network
 
 /// One client of the bridge (an iPhone or a co-located desktop GUI).
 /// Owns the `NWConnection`, drives the receive loop, gates frames
@@ -166,3 +168,4 @@ public final class BridgeSession: Identifiable {
         onTerminated(id)
     }
 }
+#endif

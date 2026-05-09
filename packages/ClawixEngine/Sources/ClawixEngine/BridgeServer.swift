@@ -1,11 +1,17 @@
 import Foundation
-import Network
 import ClawixCore
+
+#if canImport(Network)
+import Network
 
 /// Local-network WS server that exposes an `EngineHost` (the macOS
 /// `AppState` today, the LaunchAgent daemon's engine tomorrow) to the
 /// iPhone companion and to a co-located desktop client. Phase 2 is
 /// plaintext; TLS + cert pinning lands later.
+///
+/// Apple-platform implementation: NWListener + NWConnection. Keeps
+/// NWPathMonitor semantics for suspend/resume. The Linux build links
+/// `BridgeServerNIO.swift` instead, exposing the same public API.
 @MainActor
 public final class BridgeServer {
     private weak var host: EngineHost?
@@ -124,3 +130,4 @@ public final class BridgeServer {
         }
     }
 }
+#endif
