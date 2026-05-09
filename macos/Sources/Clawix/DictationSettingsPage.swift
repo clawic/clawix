@@ -1315,6 +1315,8 @@ private struct DictionaryFieldStyle: View {
 
 private struct CloudBackendsRow: View {
     @State private var sheetOpen = false
+    @State private var configuredCount: Int = 0
+    @ObservedObject private var vault: VaultManager = .shared
 
     var body: some View {
         SettingsRow {
@@ -1343,18 +1345,24 @@ private struct CloudBackendsRow: View {
         .sheet(isPresented: $sheetOpen) {
             CloudBackendsSheet(isPresented: $sheetOpen)
         }
+        .task(id: vault.state) { await refreshConfigured() }
     }
 
     private var detail: LocalizedStringKey {
-        let configured = [
-            CloudTranscriptionProvider.hasKey(for: .groq),
-            CloudTranscriptionProvider.hasKey(for: .deepgram),
-            CloudTranscriptionProvider.hasKey(for: .custom)
-        ].filter { $0 }.count
-        if configured == 0 {
+        if vault.state != .unlocked {
+            return "Vault locked. Unlock to manage cloud backend keys."
+        }
+        if configuredCount == 0 {
             return "Add Groq / Deepgram / Custom Whisper keys to use the cloud backends."
         }
-        return "\(configured) backend\(configured == 1 ? "" : "s") configured."
+        return "\(configuredCount) backend\(configuredCount == 1 ? "" : "s") configured."
+    }
+
+    private func refreshConfigured() async {
+        let groq = await CloudTranscriptionSecrets.hasAPIKey(for: .groq)
+        let deepgram = await CloudTranscriptionSecrets.hasAPIKey(for: .deepgram)
+        let custom = await CloudTranscriptionSecrets.hasAPIKey(for: .custom)
+        configuredCount = [groq, deepgram, custom].filter { $0 }.count
     }
 }
 

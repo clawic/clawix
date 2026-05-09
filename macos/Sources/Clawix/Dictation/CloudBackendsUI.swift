@@ -3,9 +3,11 @@ import SwiftUI
 /// Settings sheet that exposes API keys + base URLs for the cloud
 /// transcription backends (#22 cloud variants). Reachable from
 /// `DictationSettingsPage` Avanzado section when a cloud backend is
-/// selected. Keychain-backed; never writes the key to UserDefaults.
+/// selected. Persists keys in the user's encrypted vault under the
+/// "Clawix System" container; never touches the system Keychain.
 struct CloudBackendsSheet: View {
     @Binding var isPresented: Bool
+    @ObservedObject private var vault: VaultManager = .shared
 
     @State private var groqKey: String = ""
     @State private var deepgramKey: String = ""
@@ -35,10 +37,17 @@ struct CloudBackendsSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Cloud Whisper variants take the same audio you'd send to local Whisper and run it on a remote model. Add a key once and switch backends from the Engine picker. Keys live in macOS Keychain, never in plaintext on disk.")
+                    Text("Cloud Whisper variants take the same audio you'd send to local Whisper and run it on a remote model. Add a key once and switch backends from the Engine picker. Keys live in your encrypted vault, never in plaintext on disk.")
                         .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if vault.state != .unlocked {
+                        Text("Vault is locked. Unlock it from Settings → Secrets to manage cloud transcription keys.")
+                            .font(BodyFont.system(size: 11.5, wght: 600))
+                            .foregroundColor(Color(red: 0.95, green: 0.65, blue: 0.30))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     section("Groq") {
                         Text("Cloud-hosted transcription. <200 ms typical latency.")
@@ -49,10 +58,8 @@ struct CloudBackendsSheet: View {
                             value: $groqKey,
                             hidden: $groqHidden,
                             saveAction: {
-                                CloudTranscriptionProvider.writeKey(
-                                    groqKey,
-                                    for: .groq
-                                )
+                                let key = groqKey
+                                Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .groq) }
                             }
                         )
                     }
@@ -66,10 +73,8 @@ struct CloudBackendsSheet: View {
                             value: $deepgramKey,
                             hidden: $deepgramHidden,
                             saveAction: {
-                                CloudTranscriptionProvider.writeKey(
-                                    deepgramKey,
-                                    for: .deepgram
-                                )
+                                let key = deepgramKey
+                                Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .deepgram) }
                             }
                         )
                     }
@@ -109,10 +114,8 @@ struct CloudBackendsSheet: View {
                             value: $customKey,
                             hidden: $customHidden,
                             saveAction: {
-                                CloudTranscriptionProvider.writeKey(
-                                    customKey,
-                                    for: .custom
-                                )
+                                let key = customKey
+                                Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .custom) }
                             }
                         )
                     }
@@ -123,7 +126,7 @@ struct CloudBackendsSheet: View {
         }
         .frame(width: 600, height: 540)
         .background(Color(white: 0.10))
-        .onAppear { loadDrafts() }
+        .task(id: vault.state) { await loadDrafts() }
     }
 
     @ViewBuilder
@@ -180,10 +183,10 @@ struct CloudBackendsSheet: View {
             )
     }
 
-    private func loadDrafts() {
-        groqKey = CloudTranscriptionProvider.groq.readKey(for: .groq) ?? ""
-        deepgramKey = CloudTranscriptionProvider.deepgram.readKey(for: .deepgram) ?? ""
-        customKey = CloudTranscriptionProvider.custom.readKey(for: .custom) ?? ""
+    private func loadDrafts() async {
+        groqKey = (await CloudTranscriptionSecrets.apiKey(for: .groq)) ?? ""
+        deepgramKey = (await CloudTranscriptionSecrets.apiKey(for: .deepgram)) ?? ""
+        customKey = (await CloudTranscriptionSecrets.apiKey(for: .custom)) ?? ""
         customBaseURL = UserDefaults.standard.string(
             forKey: "\(CloudTranscriptionProvider.baseURLKeyPrefix).custom"
         ) ?? ""
