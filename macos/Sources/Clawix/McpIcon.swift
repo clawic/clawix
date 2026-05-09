@@ -77,9 +77,34 @@ private struct McpIconShape: Shape {
 /// reads as "Revenuecat" instead of being shown verbatim.
 func prettyMcpServer(_ server: String) -> String {
     if server.isEmpty { return "" }
-    switch server.lowercased() {
+    switch normalizedMcpServer(server) {
     case "node_repl", "node-repl", "noderepl": return "Node Repl"
+    case "computer_use", "computer-use", "computeruse": return "Computer Use"
     default: break
     }
     return server.prefix(1).uppercased() + server.dropFirst()
+}
+
+func isComputerUseMcpServer(_ server: String) -> Bool {
+    switch normalizedMcpServer(server) {
+    case "computer_use", "computer-use", "computeruse":
+        return true
+    default:
+        return false
+    }
+}
+
+private func normalizedMcpServer(_ server: String) -> String {
+    var value = server
+        .lowercased()
+        .split(separator: "@", maxSplits: 1)
+        .first
+        .map(String.init) ?? server.lowercased()
+    if value.hasPrefix("mcp__") {
+        value.removeFirst(5)
+    }
+    if value.hasSuffix("__") {
+        value.removeLast(2)
+    }
+    return value
 }
