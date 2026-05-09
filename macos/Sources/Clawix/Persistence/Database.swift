@@ -255,6 +255,36 @@ final class Database {
             """)
         }
 
+        // Per-chat integrated terminal panel state. Stores tab metadata
+        // (label, initial cwd, layout tree of splits, focused leaf, tab
+        // order) so reopening a chat repaints the same set of tabs the
+        // user left it with. Live PTY processes are NOT persisted; the
+        // store relaunches a fresh shell in `initial_cwd` for each leaf.
+        // `layout_json` is the encoded `TerminalSplitNode` tree (see
+        // Terminal/TerminalSplitNode.swift), kept as a single JSON blob
+        // because the tree is small, always rewritten as a whole, and
+        // never queried by sub-fields. No FK to sidebar_snapshot: that
+        // table is a regenerable cache; cleanup-on-delete is performed
+        // explicitly from the chat-archive / chat-delete code paths.
+        migrator.registerMigration("v8_terminal_tabs") { db in
+            try db.execute(sql: """
+                CREATE TABLE terminal_tabs (
+                    id           TEXT PRIMARY KEY NOT NULL,
+                    chat_id      TEXT NOT NULL,
+                    label        TEXT NOT NULL,
+                    initial_cwd  TEXT NOT NULL,
+                    layout_json  TEXT NOT NULL,
+                    focused_leaf TEXT,
+                    position     INTEGER NOT NULL,
+                    created_at   INTEGER NOT NULL
+                )
+            """)
+            try db.execute(sql: """
+                CREATE INDEX terminal_tabs_chat_position_idx
+                    ON terminal_tabs(chat_id, position)
+            """)
+        }
+
         return migrator
     }
 }
