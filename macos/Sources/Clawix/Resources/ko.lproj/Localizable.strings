@@ -121,6 +121,7 @@
 "Back" = "뒤로";
 "Back to app" = "앱으로 돌아가기";
 "Back to review panel" = "검토 패널로 돌아가기";
+"Background bridge is off. Enable Run bridge in background from Settings → General before pairing machines." = "Background bridge is off. Enable Run bridge in background from Settings → General before pairing machines.";
 "Background color" = "Background color";
 "Bare modifier press starts dictation in any app" = "Bare modifier press starts dictation in any app";
 "Base URL" = "Base URL";
@@ -307,6 +308,8 @@
 "Delete project" = "프로젝트 삭제";
 "Delete this model?" = "Delete this model?";
 "Deleting…" = "Deleting…";
+"Demo User" = "데모 사용자";
+"Demo account" = "데모 계정";
 "Description" = "Description";
 "Detached" = "분리";
 "Details (optional)" = "Details (optional)";

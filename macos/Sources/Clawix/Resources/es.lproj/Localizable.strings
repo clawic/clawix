@@ -121,6 +121,7 @@
 "Back" = "Atrás";
 "Back to app" = "Volver a la aplicación";
 "Back to review panel" = "Volver al panel de revisión";
+"Background bridge is off. Enable Run bridge in background from Settings → General before pairing machines." = "El bridge en segundo plano está desactivado. Activa Run bridge in background en Ajustes → General antes de enlazar máquinas.";
 "Background color" = "Color de fondo";
 "Bare modifier press starts dictation in any app" = "Pulsar el modificador solo inicia el dictado en cualquier app";
 "Base URL" = "Base URL";
@@ -307,6 +308,8 @@
 "Delete project" = "Eliminar proyecto";
 "Delete this model?" = "¿Borrar este modelo?";
 "Deleting…" = "Borrando…";
+"Demo User" = "Usuario de demo";
+"Demo account" = "Cuenta de demo";
 "Description" = "Description";
 "Detached" = "Desvinculado";
 "Details (optional)" = "Details (optional)";
