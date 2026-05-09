@@ -46,6 +46,14 @@ let package = Package(
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.2.0")
     ],
     targets: [
+        .testTarget(
+            name: "ClawixMeshTests",
+            dependencies: [
+                "Clawix",
+                .product(name: "ClawixCore", package: "ClawixCore")
+            ],
+            path: "Tests/ClawixMeshTests"
+        ),
         .executableTarget(
             name: "Clawix",
             dependencies: [
