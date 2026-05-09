@@ -213,13 +213,14 @@ struct AssistantMarkdownText: View {
             now: now
         )
 
+        let renderCheckpoints = animating ? checkpoints : []
         Group {
             if animating {
                 TimelineView(.animation) { ctx in
-                    blocksView(blocks, now: ctx.date)
+                    blocksView(blocks, checkpoints: renderCheckpoints, now: ctx.date)
                 }
             } else {
-                blocksView(blocks, now: now)
+                blocksView(blocks, checkpoints: renderCheckpoints, now: now)
             }
         }
         .task(id: TickKey(timestamp: checkpoints.last?.addedAt, finished: streamingFinished)) {
@@ -250,17 +251,17 @@ struct AssistantMarkdownText: View {
     }
 
     @ViewBuilder
-    private func blocksView(_ blocks: [AnnotatedBlock], now: Date) -> some View {
+    private func blocksView(_ blocks: [AnnotatedBlock], checkpoints: [StreamCheckpoint], now: Date) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block, now: now)
+                blockView(block, checkpoints: checkpoints, now: now)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     @ViewBuilder
-    private func blockView(_ block: AnnotatedBlock, now: Date) -> some View {
+    private func blockView(_ block: AnnotatedBlock, checkpoints: [StreamCheckpoint], now: Date) -> some View {
         switch block {
         case .paragraph(let p):
             ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now, findQuery: findQuery) { url in
@@ -578,22 +579,44 @@ struct ParagraphFlow: View, Equatable {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(paragraph.lines.enumerated()), id: \.offset) { _, line in
-                FlowLayout(horizontalSpacing: 0, verticalSpacing: 6) {
-                    ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, annotated in
-                        AtomView(
-                            atom: annotated.atom,
-                            opacity: opacityFor(offset: annotated.offset),
-                            weight: weight,
-                            color: color,
-                            fontSize: fontSize,
-                            findQuery: findQuery,
-                            onLinkTap: onLinkTap
-                        )
-                        .equatable()
+                if let plain = stablePlainText(for: line) {
+                    Text(plain)
+                        .font(BodyFont.system(size: fontSize, wght: assistantWght(for: weight)))
+                        .foregroundColor(color)
+                        .lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    FlowLayout(horizontalSpacing: 0, verticalSpacing: 6) {
+                        ForEach(Array(line.atoms.enumerated()), id: \.offset) { _, annotated in
+                            AtomView(
+                                atom: annotated.atom,
+                                opacity: opacityFor(offset: annotated.offset),
+                                weight: weight,
+                                color: color,
+                                fontSize: fontSize,
+                                findQuery: findQuery,
+                                onLinkTap: onLinkTap
+                            )
+                            .equatable()
+                        }
                     }
                 }
             }
         }
+    }
+
+    private func stablePlainText(for line: AnnotatedLine) -> String? {
+        guard checkpoints.isEmpty, findQuery.isEmpty else { return nil }
+        var text = ""
+        text.reserveCapacity(line.atoms.reduce(0) { total, annotated in
+            if case .word(let s) = annotated.atom { return total + s.count }
+            return total
+        })
+        for annotated in line.atoms {
+            guard case .word(let s) = annotated.atom else { return nil }
+            text.append(s)
+        }
+        return text
     }
 
     /// Hoists the per-atom opacity calculation out of `AtomView`. With
