@@ -2,16 +2,17 @@
 
 This directory defines public, agent-readable playbooks for visual end-to-end checks that use Computer Use or equivalent human-like UI control.
 
-The playbooks are documentation in v1. They do not run code, install hooks, send prompts, touch real accounts, or modify production services. They describe how an agent should exercise the product visually, what variants matter, what safety boundary applies, and what screenshots or state evidence should be collected.
+The playbooks are documentation. They do not run code, install hooks, send prompts, touch real accounts, or modify production services. They describe how an agent should exercise the product visually, what variants matter, what safety boundary applies, and what checklist evidence should be collected.
 
 ## Platforms
 
-- [macOS](macos/README.md) is populated in v1.
-- [iOS](ios/README.md) is a placeholder.
+- [macOS](macos/README.md) is the populated reference platform.
+- [iOS](ios/README.md) has planned coverage structure.
 - [Web](web/README.md) is a placeholder.
 - [Linux](linux/README.md) is a placeholder.
 - [Windows](windows/README.md) is a placeholder.
 - [Android](android/README.md) is a placeholder.
+- [Coverage Matrix](COVERAGE.md) tracks covered, partial, and missing areas.
 
 ## Canonical Format
 
@@ -23,6 +24,8 @@ Required front matter fields:
 - `platform`
 - `surface`
 - `status`
+- `priority`
+- `tags`
 - `intent`
 - `entrypoints`
 - `variants`
@@ -40,9 +43,11 @@ Required body sections:
 - Setup
 - Entry Points
 - Variant Matrix
+- Critical Cases
 - Steps
 - Expected Results
 - Failure Signals
+- Evidence Checklist
 - Screenshot Checklist
 - Notes for Future Automation
 
