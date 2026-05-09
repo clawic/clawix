@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Clawix.App.Views.Settings.GeneralPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Padding="24">
+    <StackPanel Spacing="16" MaxWidth="640">
+      <TextBlock Text="General" FontSize="22" FontWeight="SemiBold" />
+
+      <!-- Visible: top-level toggles users care about -->
+      <ToggleSwitch x:Name="StartAtLogin" Header="Start Clawix at login" />
+      <ToggleSwitch x:Name="ShowInTray" Header="Show in system tray" IsOn="True" />
+      <ComboBox Header="Theme" PlaceholderText="System default">
+        <ComboBoxItem>System default</ComboBoxItem>
+        <ComboBoxItem>Light</ComboBoxItem>
+        <ComboBoxItem>Dark</ComboBoxItem>
+      </ComboBox>
+      <ComboBox Header="Language" PlaceholderText="English (US)" />
+
+      <!-- Advanced: collapsed by default per user feedback -->
+      <Expander Header="Advanced" HorizontalAlignment="Stretch" IsExpanded="False">
+        <StackPanel Spacing="12" Padding="0,8,0,0">
+          <ToggleSwitch Header="Use experimental Mica backdrop" />
+          <ToggleSwitch Header="Disable hardware acceleration" />
+          <ToggleSwitch Header="Send anonymous diagnostics" />
+          <NumberBox Header="Bridge loopback port (advanced)" Value="7777" Minimum="1024" Maximum="65535" />
+          <Button Content="Reveal config folder..." Click="RevealConfig_Click" />
+          <Button Content="Reset all preferences..." Style="{ThemeResource AccentButtonStyle}" Click="Reset_Click" />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</Page>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Clawix.App.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <NavigationView IsBackButtonVisible="Collapsed" IsSettingsVisible="False" PaneDisplayMode="Left">
+    <NavigationView.MenuItems>
+      <NavigationViewItem Content="General" Tag="general" Icon="Setting" />
+      <NavigationViewItem Content="Account" Tag="account" Icon="Contact" />
+      <NavigationViewItem Content="Models" Tag="models" />
+      <NavigationViewItem Content="Local models" Tag="localModels" />
+      <NavigationViewItem Content="Dictation" Tag="dictation" Icon="Microphone" />
+      <NavigationViewItem Content="Quick Ask" Tag="quickAsk" />
+      <NavigationViewItem Content="Secrets" Tag="secrets" Icon="Lock" />
+      <NavigationViewItem Content="MCP servers" Tag="mcp" />
+      <NavigationViewItem Content="Database" Tag="database" />
+      <NavigationViewItem Content="Updates" Tag="updates" Icon="Sync" />
+      <NavigationViewItem Content="Pairing" Tag="pairing" />
+      <NavigationViewItem Content="Privacy" Tag="privacy" />
+      <NavigationViewItem Content="About" Tag="about" Icon="Help" />
+    </NavigationView.MenuItems>
+    <Frame x:Name="ContentFrame" />
+  </NavigationView>
+</UserControl>

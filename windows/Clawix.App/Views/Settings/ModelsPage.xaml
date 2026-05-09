@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Clawix.App.Views.Settings.ModelsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Padding="24">
+    <StackPanel Spacing="16" MaxWidth="640">
+      <TextBlock Text="Models" FontSize="22" FontWeight="SemiBold" />
+      <ComboBox Header="Default model" PlaceholderText="Codex Spark">
+        <ComboBoxItem>Codex Spark</ComboBoxItem>
+        <ComboBoxItem>Codex Pro</ComboBoxItem>
+      </ComboBox>
+      <ComboBox Header="Reasoning effort" PlaceholderText="Auto">
+        <ComboBoxItem>Auto</ComboBoxItem>
+        <ComboBoxItem>Low</ComboBoxItem>
+        <ComboBoxItem>Medium</ComboBoxItem>
+        <ComboBoxItem>High</ComboBoxItem>
+      </ComboBox>
+      <Expander Header="Advanced" IsExpanded="False">
+        <StackPanel Spacing="12" Padding="0,8,0,0">
+          <NumberBox Header="Temperature" Value="0.7" SmallChange="0.1" />
+          <NumberBox Header="Max output tokens" Value="4096" />
+          <ToggleSwitch Header="Stream by tokens (off = stream by chunks)" IsOn="True" />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </ScrollViewer>
+</Page>
