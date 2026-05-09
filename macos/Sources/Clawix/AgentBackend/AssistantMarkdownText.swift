@@ -128,7 +128,7 @@ func annotate(_ line: AssistantMarkdown.Line, with resolver: inout AtomOffsetRes
 /// dominant cost in the streaming pipeline is downstream rendering,
 /// not this parse.
 enum MarkdownParseCache {
-    fileprivate static let cache = MarkdownBlockCache<[AnnotatedBlock]>(countLimit: 128)
+    fileprivate static let cache = MarkdownBlockCache<[AnnotatedBlock]>(countLimit: 512)
 
     struct Result {
         let blocks: [AnnotatedBlock]
@@ -226,6 +226,15 @@ struct AssistantMarkdownText: View {
         .task(id: TickKey(timestamp: checkpoints.last?.addedAt, finished: streamingFinished)) {
             await scheduleSettle()
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: accessibilityPlainText))
+    }
+
+    private var accessibilityPlainText: String {
+        AccessibilityText.clipped(
+            text,
+            emptyFallback: String(localized: "Assistant message", bundle: AppLocale.bundle, locale: AppLocale.current)
+        )
     }
 
     private func scheduleSettle() async {
@@ -308,7 +317,7 @@ struct AssistantMarkdownText: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(idx + 1).")
+                        Text(verbatim: "\(idx + 1).")
                             .font(BodyFont.system(size: 13.5, wght: assistantWght(for: weight)))
                             .foregroundColor(color)
                             .fixedSize()
@@ -444,7 +453,7 @@ struct AssistantCodeBlockView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Text(language.isEmpty ? "code" : language)
+                Text(verbatim: language.isEmpty ? "code" : language)
                     .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                 Spacer(minLength: 8)
@@ -463,9 +472,7 @@ struct AssistantCodeBlockView: View {
                 .animation(.easeInOut(duration: 0.22), value: hoverWrap)
                 .animation(.easeInOut(duration: 0.22), value: appState.chatCodeBlockWordWrap)
                 .help(appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap")
-                .accessibilityLabel(
-                    appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap"
-                )
+                .accessibilityLabel(Text(verbatim: appState.chatCodeBlockWordWrap ? "Disable word wrap" : "Enable word wrap"))
                 Button(action: copyCode) {
                     Group {
                         if copied {
@@ -483,7 +490,7 @@ struct AssistantCodeBlockView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { hoverCopy = $0 }
-                .accessibilityLabel("Copy code")
+                .accessibilityLabel(Text(verbatim: "Copy code"))
             }
             .padding(.horizontal, 14)
             .padding(.top, 10)
@@ -504,7 +511,7 @@ struct AssistantCodeBlockView: View {
     @ViewBuilder
     private var codeBody: some View {
         if appState.chatCodeBlockWordWrap {
-            Text(code)
+            Text(verbatim: code)
                 .font(BodyFont.system(size: 12.5, design: .monospaced))
                 .foregroundColor(Palette.textPrimary.opacity(0.94))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -513,7 +520,7 @@ struct AssistantCodeBlockView: View {
                 .textSelection(.enabled)
         } else {
             ScrollView(.horizontal, showsIndicators: true) {
-                Text(code)
+                Text(verbatim: code)
                     .font(BodyFont.system(size: 12.5, design: .monospaced))
                     .foregroundColor(Palette.textPrimary.opacity(0.94))
                     .fixedSize(horizontal: true, vertical: false)
@@ -580,7 +587,7 @@ struct ParagraphFlow: View, Equatable {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(paragraph.lines.enumerated()), id: \.offset) { _, line in
                 if let plain = stablePlainText(for: line) {
-                    Text(plain)
+                    Text(verbatim: plain)
                         .font(BodyFont.system(size: fontSize, wght: assistantWght(for: weight)))
                         .foregroundColor(color)
                         .lineSpacing(6)
@@ -682,7 +689,7 @@ struct AtomView: View, Equatable {
         if substringMatches(s, query: findQuery) {
             return Text(highlightedAttributed(s, query: findQuery))
         }
-        return Text(s)
+        return Text(verbatim: s)
     }
 
     var body: some View {
@@ -754,7 +761,7 @@ struct LinkAtom: View {
                     }
                 }
                 .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
-                Text(label)
+                Text(verbatim: label)
                     .font(BodyFont.system(size: 14, wght: 600))
                     .foregroundColor(linkColor.opacity(hovered ? 0.78 : 1))
                     .underline(hovered, pattern: .dot, color: linkColor.opacity(0.85))
