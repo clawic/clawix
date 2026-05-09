@@ -62,6 +62,7 @@ final class BridgeClient: NSObject {
     private var lastInboundAt: Date?
 
     private static let perCandidateTimeout: TimeInterval = 5
+    private static let visibleConnectionFailureAfter = 2
     private static let keepalivePingInterval: TimeInterval = 15
     private static let keepaliveDeadAfter: TimeInterval = 30
 
@@ -754,11 +755,26 @@ final class BridgeClient: NSObject {
         }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor in
-                self?.startRace()
+                guard let self else { return }
+                self.startRace()
+                if self.reconnectAttempt >= Self.visibleConnectionFailureAfter {
+                    let message = self.connectionFailureMessage()
+                    self.store.connection = .error(message: message)
+                    self.store.bridgeSync = .error(message)
+                    self.store.bridgeSyncUpdatedAt = Date()
+                }
             }
         }
         reconnectWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
+    private func connectionFailureMessage() -> String {
+        guard let creds else { return "Pair with your Mac again." }
+        if creds.host.isEmpty {
+            return "Open Clawix on your Mac and keep both devices on the same network."
+        }
+        return "Open Clawix on your Mac and check that the bridge is running."
     }
 
     private func cancelReconnect() {
