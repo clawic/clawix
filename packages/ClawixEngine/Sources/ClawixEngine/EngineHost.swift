@@ -1,5 +1,10 @@
 import Foundation
+#if canImport(Combine)
 import Combine
+#else
+import OpenCombine
+import OpenCombineFoundation
+#endif
 import ClawixCore
 
 /// Pair of "general" + "per-bucket" rate-limit views the daemon ships

@@ -1,5 +1,10 @@
 import Foundation
+#if canImport(Combine)
 import Combine
+#else
+import OpenCombine
+import OpenCombineFoundation
+#endif
 import ClawixCore
 
 /// Sits between `EngineHost` (the chat-state owner) and the WS sessions.
