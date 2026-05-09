@@ -5,10 +5,11 @@ import Photos
 
 // Loads thumbnails of the most recent photos in the user's library for
 // the horizontal strip in the attachment sheet. Authorization is
-// requested with `.addOnly` first because most attachment flows don't
-// need full read access — but the strip itself does, since it shows
-// pre-existing photos. We fall back to `.readWrite` so the user only
-// sees one OS prompt.
+// never requested automatically: opening the attachment sheet should
+// not trigger a privacy prompt. The full-library entry point uses
+// PHPicker, which lets the user pick images without granting broad
+// read access; the recent strip only appears after the app already
+// has Photos access.
 //
 // Thumbnails are loaded on a background queue, decoded to a small
 // in-memory size, and pushed to the main actor as they arrive. The
@@ -55,17 +56,7 @@ final class RecentPhotosLoader {
         case .denied, .restricted:
             authorization = .denied
         case .notDetermined:
-            let granted = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            switch granted {
-            case .authorized:
-                authorization = .authorized
-                await fetchRecent()
-            case .limited:
-                authorization = .limited
-                await fetchRecent()
-            default:
-                authorization = .denied
-            }
+            authorization = .undetermined
         @unknown default:
             authorization = .denied
         }

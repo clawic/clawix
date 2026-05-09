@@ -6,7 +6,7 @@ import UIKit
 
 // Bottom sheet shown when the composer's "+" button is tapped. The
 // layout mirrors the screenshot the user provided: a header row with
-// the app name on the left and a "Todas las fotos" link on the right,
+// the app name on the left and an "All photos" link on the right,
 // followed by a horizontal strip whose first tile opens the camera
 // and whose remaining tiles are recent photos pulled from the library
 // via PhotoKit. Each photo tile carries a selection ring that fills
@@ -38,10 +38,9 @@ struct AttachmentSheetView: View {
                     .padding(.horizontal, 20)
                     .padding(.vertical, 32)
             case .undetermined:
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 60)
+                undeterminedState
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 32)
             }
 
             if !selectedAssetIds.isEmpty {
@@ -52,6 +51,7 @@ struct AttachmentSheetView: View {
             Spacer(minLength: 0)
         }
         .background(Palette.surface.ignoresSafeArea())
+        .accessibilityIdentifier("AttachmentSheet")
         .task {
             await loader.start()
         }
@@ -68,11 +68,13 @@ struct AttachmentSheetView: View {
                 Haptics.tap()
                 onAllPhotos()
             }) {
-                Text("Todas las fotos")
+                Text("All photos")
                     .font(BodyFont.system(size: 16, weight: .regular))
                     .foregroundStyle(Color(red: 0.27, green: 0.55, blue: 1.0))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("All photos")
+            .accessibilityIdentifier("AllPhotosButton")
         }
     }
 
@@ -182,7 +184,21 @@ struct AttachmentSheetView: View {
             Text("Photo access disabled")
                 .font(Typography.bodyEmphasized)
                 .foregroundStyle(Palette.textPrimary)
-            Text("Enable Photos in Settings to attach images, or open the system picker with \"Todas las fotos\" above.")
+            Text("Enable Photos in Settings to attach images, or open the system picker with \"All photos\" above.")
+                .font(Typography.secondaryFont)
+                .foregroundStyle(Palette.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var undeterminedState: some View {
+        VStack(spacing: 10) {
+            LucideIcon(.images, size: 51)
+                .foregroundStyle(Palette.textSecondary)
+            Text("Choose photos")
+                .font(Typography.bodyEmphasized)
+                .foregroundStyle(Palette.textPrimary)
+            Text("Use \"All photos\" to pick images without granting full library access.")
                 .font(Typography.secondaryFont)
                 .foregroundStyle(Palette.textSecondary)
                 .multilineTextAlignment(.center)

@@ -193,8 +193,7 @@ struct ComposerView: View {
 
     private var plusCircle: some View {
         Button(action: {
-            Haptics.tap()
-            showAttachmentSheet = true
+            openAttachmentSheet()
         }) {
             LucideIcon(.plus, size: 27)
                 .foregroundStyle(Color.white)
@@ -209,8 +208,7 @@ struct ComposerView: View {
 
     private var inlinePlusButton: some View {
         Button(action: {
-            Haptics.tap()
-            showAttachmentSheet = true
+            openAttachmentSheet()
         }) {
             LucideIcon(.plus, size: 27)
                 .foregroundStyle(Color.white)
@@ -266,6 +264,12 @@ struct ComposerView: View {
         let new = images.map { ComposerAttachment(preview: $0) }
         attachments.append(contentsOf: new)
         if !new.isEmpty { Haptics.selection() }
+    }
+
+    private func openAttachmentSheet() {
+        Haptics.tap()
+        focused = false
+        showAttachmentSheet = true
     }
 
     private var mainPill: some View {
