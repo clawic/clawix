@@ -30,10 +30,10 @@ export function StatusIndicator() {
   const ready = conn.kind === "ready";
   const dotColor =
     conn.kind === "ready"
-      ? "bg-[var(--color-success)]"
+      ? "bg-[var(--color-banner-ok-fg)]"
       : conn.kind === "auth-failed" || conn.kind === "version-mismatch"
-        ? "bg-[var(--color-danger)]"
-        : "bg-[var(--color-warning)]";
+        ? "bg-[var(--color-destructive)]"
+        : "bg-[var(--color-banner-danger-fg)]";
 
   let detail = "";
   if (conn.kind === "ready" && macName) detail = ` ${macName}`;
@@ -44,14 +44,14 @@ export function StatusIndicator() {
   if (conn.kind === "version-mismatch") detail = ` (server v${conn.serverVersion})`;
 
   return (
-    <div className="flex items-center gap-2 text-[12px] text-[var(--color-fg-muted)] select-none">
+    <div className="flex items-center gap-2 text-[12px] text-[var(--color-fg-secondary)] select-none">
       <span className={`inline-block size-2 rounded-full ${dotColor} ${ready ? "" : "animate-pulse"}`} />
       <span>
         {labels[conn.kind]}
         {detail}
       </span>
       {ready && bridge.state !== "ready" && (
-        <span className="text-[11px] text-[var(--color-fg-dim)]">· {bridge.state}</span>
+        <span className="text-[11px] text-[var(--color-fg-tertiary)]">· {bridge.state}</span>
       )}
     </div>
   );

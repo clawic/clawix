@@ -34,7 +34,7 @@ export function Squircle(props: SquircleProps) {
   const {
     width,
     height,
-    radius = tokens.radius.lg,
+    radius = tokens.radius.content,
     smoothing = tokens.smoothing.apple,
     background,
     border,
