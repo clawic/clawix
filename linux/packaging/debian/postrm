@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+case "$1" in
+  purge)
+    rm -f /etc/apt/sources.list.d/clawix.list
+    rm -f /usr/share/keyrings/clawix-archive-keyring.gpg
+    ;;
+esac
+exit 0

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -e
+
+# Stop the user-level systemd unit for any logged-in user before we
+# delete the binary it points at. Best-effort; we never block uninstall.
+for uid in $(loginctl list-users --no-legend | awk '{print $1}'); do
+  user="$(getent passwd "$uid" | cut -d: -f1)" || continue
+  sudo -u "$user" XDG_RUNTIME_DIR="/run/user/$uid" \
+    systemctl --user stop clawix-bridge.service 2>/dev/null || true
+done
+
+exit 0
