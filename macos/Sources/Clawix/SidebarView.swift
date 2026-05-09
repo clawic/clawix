@@ -3232,13 +3232,11 @@ private struct OrganizeMenuPopup: View {
                 if !chronoFilterDisabled.isEmpty {
                     PinnedFilterBulkRow(icon: "eye", label: "Show all") {
                         showAllChronoFilter()
-                        isPresented = false
                     }
                 }
                 if !allChronoHidden {
                     PinnedFilterBulkRow(icon: "eye.slash", label: "Hide all") {
                         hideAllChronoFilter()
-                        isPresented = false
                     }
                 }
             }
@@ -3246,7 +3244,6 @@ private struct OrganizeMenuPopup: View {
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: Self.byProjectColumnWidth, alignment: .leading)
         .menuStandardBackground()
-        .animation(.easeOut(duration: 0.18), value: chronoFilterDisabled)
     }
 
     @ViewBuilder
@@ -3442,13 +3439,11 @@ private struct PinnedFilterPopup: View {
                 if !disabled.isEmpty {
                     PinnedFilterBulkRow(icon: "eye", label: "Show all") {
                         showAll()
-                        isPresented = false
                     }
                 }
                 if !allHidden {
                     PinnedFilterBulkRow(icon: "eye.slash", label: "Hide all") {
                         hideAll()
-                        isPresented = false
                     }
                 }
             }
@@ -3456,7 +3451,6 @@ private struct PinnedFilterPopup: View {
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .menuStandardBackground()
         .background(MenuOutsideClickWatcher(isPresented: $isPresented))
-        .animation(.easeOut(duration: 0.18), value: disabled)
     }
 
     @ViewBuilder
