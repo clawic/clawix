@@ -1269,6 +1269,7 @@ final class AppState: ObservableObject {
             let server = BridgeServer(host: self, port: PairingService.shared.port)
             server.start()
             self.bridgeServer = server
+            Self.publishPairingForDevMenu(PairingService.shared)
         } else if daemonBridgeEnabled {
             // Bridge state (bearer token, paired peers) lives in the
             // public `clawix.bridge` suite so the daemon (started with
@@ -1279,6 +1280,7 @@ final class AppState: ObservableObject {
             let client = DaemonBridgeClient(appState: self, pairing: pairing)
             daemonBridgeClient = client
             client.connect()
+            Self.publishPairingForDevMenu(pairing)
         }
 
         // Auto-reload threads when the app gains focus, debounced to avoid
@@ -5271,6 +5273,28 @@ final class AppState: ObservableObject {
 
     private static func isGoogleS2Favicon(_ url: URL) -> Bool {
         url.host == "www.google.com" && url.path == "/s2/favicons"
+    }
+
+    /// Publishes the current pairing payload (host, port, bearer, optional
+    /// Tailscale host, etc.) to `~/Library/Caches/Clawix-Dev/pairing.json`
+    /// so external dev tools (the `Dev` menu-bar agent, scripts) can pre-pair
+    /// the iOS Simulator without scanning the on-screen QR. The bearer is
+    /// stable across rebuilds, but the LAN IP is not, so this rewrites on
+    /// every launch. Silent on failure: this is a developer convenience and
+    /// must never block the bridge from coming up.
+    static func publishPairingForDevMenu(_ pairing: PairingService) {
+        let payload = pairing.qrPayload()
+        guard let data = payload.data(using: .utf8) else { return }
+        let dir = (NSHomeDirectory() as NSString)
+            .appendingPathComponent("Library/Caches/Clawix-Dev")
+        let path = (dir as NSString).appendingPathComponent("pairing.json")
+        do {
+            try FileManager.default.createDirectory(
+                atPath: dir, withIntermediateDirectories: true)
+            try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+        } catch {
+            // dev convenience only; ignore.
+        }
     }
 }
 
