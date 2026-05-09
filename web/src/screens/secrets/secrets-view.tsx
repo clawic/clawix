@@ -1,12 +1,8 @@
-/**
- * Secrets Vault. The unlock flow derives the master key in the browser via
- * libsodium-wrappers Argon2id (paridad cripto con la app Mac). Until the
- * unlock frames are exposed by the bridge, we render a placeholder vault
- * lock pane plus a self-test button that proves the Argon2 derivation
- * matches a known fixture.
- */
+// Secrets Vault. Argon2id self-test wired locally; unlock frame still
+// pending. Layout mirrors the Mac SecretsView in placeholder form.
 import { useState } from "react";
 import { KeyIcon } from "../../icons";
+import { PageHeader, Card, Button, TextField } from "../../components/ui";
 import { deriveArgon2id, bytesToHex, hexToBytes } from "../../lib/argon2";
 
 export function SecretsView() {
@@ -33,42 +29,68 @@ export function SecretsView() {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="h-[56px] px-6 flex items-center gap-3 border-b border-[var(--color-border)]">
-        <KeyIcon size={16} className="text-[var(--color-fg-muted)]" />
-        <h1 className="text-[15px] font-medium tracking-[-0.01em]">Secrets Vault</h1>
-      </header>
       <div className="thin-scroll flex-1 overflow-y-auto">
-        <div className="max-w-[560px] mx-auto py-10 px-6 space-y-5">
-          <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-elev-1)] p-6 space-y-4">
-            <div className="size-12 rounded-[14px] bg-[var(--color-bg-elev-3)] grid place-items-center">
-              <KeyIcon size={20} />
+        <div className="max-w-[560px] mx-auto pt-8 pb-12 px-6 space-y-5">
+          <PageHeader title="Secrets vault" subtitle="Local-first crypto with Mac parity." />
+          <Card>
+            <div className="p-4 space-y-4">
+              <div
+                className="grid place-items-center"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background: "var(--color-sel-fill)",
+                }}
+              >
+                <KeyIcon size={20} />
+              </div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontVariationSettings: '"wght" 800',
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Vault locked
+              </div>
+              <p
+                style={{
+                  fontSize: 12.5,
+                  color: "var(--color-fg-secondary)",
+                  lineHeight: 1.55,
+                }}
+              >
+                Unlock via the web is gated on schema parity with the Mac. The crypto runs locally
+                with libsodium Argon2id; below is the parity self-test that proves the derivation
+                matches the Mac binding before we wire the actual unlock frame.
+              </p>
+              <TextField
+                type="password"
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                placeholder="Test passphrase"
+              />
+              <Button onClick={selfTest} disabled={busy} variant="primary">
+                {busy ? "Deriving…" : "Run Argon2 self-test"}
+              </Button>
+              {hash && (
+                <pre
+                  className="font-mono break-all"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--color-fg-secondary)",
+                    background: "var(--color-bg)",
+                    borderRadius: 10,
+                    padding: 12,
+                    boxShadow: "inset 0 0 0 0.5px var(--color-popup-stroke)",
+                  }}
+                >
+                  {hash}
+                </pre>
+              )}
             </div>
-            <div className="text-[16px] font-medium tracking-[-0.02em]">Vault locked</div>
-            <p className="text-[12.5px] text-[var(--color-fg-muted)] leading-relaxed">
-              Unlock via the web is gated on schema parity with the Mac. The crypto runs locally
-              with libsodium Argon2id; below is the parity self-test that proves the derivation
-              matches the Mac binding before we wire the actual unlock frame.
-            </p>
-            <input
-              type="password"
-              value={pass}
-              onChange={(e) => setPass(e.target.value)}
-              placeholder="Test passphrase"
-              className="w-full h-10 px-3 rounded-[10px] bg-[var(--color-bg-elev-2)] border border-[var(--color-border)] outline-none focus:border-[var(--color-border-strong)] text-[13px]"
-            />
-            <button
-              onClick={selfTest}
-              disabled={busy}
-              className="h-10 px-4 rounded-[10px] bg-[var(--color-bg-elev-3)] hover:bg-[var(--color-bg-elev-2)] text-[13px] disabled:opacity-50"
-            >
-              {busy ? "Deriving…" : "Run Argon2 self-test"}
-            </button>
-            {hash && (
-              <pre className="font-mono text-[11px] break-all text-[var(--color-fg-muted)] bg-[var(--color-bg)] rounded-[10px] p-3 border border-[var(--color-border)]">
-                {hash}
-              </pre>
-            )}
-          </div>
+          </Card>
         </div>
       </div>
     </div>
