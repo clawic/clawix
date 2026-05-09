@@ -212,6 +212,25 @@ final class BridgeStore {
         // empty". The detail view keys its empty-state visibility off
         // that, so a freshly-opened chat doesn't flash "No messages
         // loaded" for the few hundred ms before the bridge replies.
+        // Pre-warm the assistant markdown parser cache off the main
+        // actor for whatever transcript we already hold in memory
+        // (snapshot cache or a previous open). The eager `VStack` in
+        // `ChatDetailView` measures every row at mount; with the
+        // parses cached the measurement settles in a single frame
+        // instead of streaming up under the fade-in and surfacing as
+        // a visible reanchor on chat entry.
+        if let cached = messagesByChat[chatId] {
+            let bodies = cached
+                .filter { $0.role == .assistant && !$0.content.isEmpty }
+                .map(\.content)
+            if !bodies.isEmpty {
+                Task.detached(priority: .userInitiated) {
+                    for body in bodies {
+                        AssistantMarkdownParser.prewarm(body)
+                    }
+                }
+            }
+        }
         client?.openChat(chatId)
     }
 

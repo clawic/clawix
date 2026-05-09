@@ -2,7 +2,6 @@ import SwiftUI
 import ClawixCore
 #if canImport(UIKit)
 import UIKit
-import LucideIcon
 #endif
 
 // ChatGPT-iOS-styled chat surface, rebuilt on iOS 26 Liquid Glass.
@@ -357,21 +356,21 @@ struct ChatDetailView: View {
             alreadySeenMessageIds.formUnion(messages.map(\.id))
             unreadAnchorId = messages.last?.id
         }
-        .onChange(of: hasLoaded, initial: true) { _, loaded in
-            guard loaded, !transcriptVisible else { return }
-            // Wait one frame so the ForEach materializes and the
-            // ScrollView resolves its `.bottom` initialOffset before
-            // we fade the transcript in. Without this pause the flip
-            // races the first composition and the reanchor is visible.
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 16_000_000)
-                transcriptVisible = true
-            }
-        }
         .onChange(of: contentHeight) { _, h in
-            // Safety net: in chats with little content the geometry
-            // callback may settle in the same frame as the sleep
-            // above; whichever fires first wins thanks to the guard.
+            // Geometry-driven gate for the transcript fade-in: SwiftUI
+            // delivers a non-zero `contentHeight` only after the
+            // ScrollView has measured its content AND resolved the
+            // `.initialOffset = .bottom` anchor, so this is the
+            // canonical "the layout is settled, safe to fade in"
+            // signal. Previously we paired this with a 16ms
+            // `Task.sleep` safety net, but that was arbitrary and
+            // missed the mark on chats whose eager VStack took
+            // longer than one frame to measure (60 rows of markdown
+            // + timeline + inline images), causing a visible
+            // reanchor mid-fade. With the markdown parser pre-warmed
+            // off-main from `BridgeStore.openChat`, measurement
+            // settles in a single frame and this gate fires
+            // reliably before the user sees anything.
             guard !transcriptVisible, hasLoaded, h > 0 else { return }
             transcriptVisible = true
         }
@@ -476,8 +475,7 @@ struct ChatDetailView: View {
                     }
                 }
             } label: {
-                Image(lucide: .ellipsis)
-                    .font(BodyFont.system(size: 20, weight: .semibold))
+                LucideIcon(.ellipsis, size: 32)
                     .foregroundStyle(Palette.textPrimary)
                     .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
@@ -532,8 +530,7 @@ struct ChatDetailView: View {
                         .foregroundStyle(Palette.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                    Image(lucide: .chevron_down)
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                    LucideIcon(.chevronDown, size: 16)
                         .foregroundStyle(Palette.textSecondary)
                 }
                 .padding(.horizontal, 14)
@@ -625,8 +622,7 @@ struct ChatDetailView: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                Image(lucide: .arrow_down)
-                    .font(BodyFont.system(size: 15, weight: .semibold))
+                LucideIcon(.arrowDown, size: 24)
                     .foregroundStyle(Palette.textPrimary)
                 if unreadCount > 0 {
                     Text("\(unreadCount)")
@@ -1213,8 +1209,7 @@ private struct MessageActions: View {
         Button(action: copy) {
             ZStack {
                 if copied {
-                    Image(lucide: .check)
-                        .font(BodyFont.system(size: 12, weight: .semibold))
+                    LucideIcon(.check, size: 19)
                         .foregroundStyle(Palette.textTertiary)
                         .transition(.opacity.combined(with: .scale(scale: 0.85)))
                 } else {
@@ -1249,8 +1244,7 @@ private struct ReasoningDisclosure: View {
         VStack(alignment: .leading, spacing: 10) {
             Button(action: toggle) {
                 HStack(spacing: 6) {
-                    Image(lucideOrSystem: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(BodyFont.system(size: 11, weight: .semibold))
+                    LucideIcon.auto(isExpanded ? "chevron.down" : "chevron.right", size: 17.5)
                         .foregroundStyle(Palette.textTertiary)
                     Text("Reasoning")
                         .font(Typography.captionFont)

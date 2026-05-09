@@ -1,4 +1,5 @@
 import SwiftUI
+import ClawixCore
 
 @main
 struct ClawixApp: App {
