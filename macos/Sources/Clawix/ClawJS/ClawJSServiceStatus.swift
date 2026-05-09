@@ -9,17 +9,22 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case memory
     case drive
     case vault
+    case telegram
 
     var id: String { rawValue }
 
     /// Loopback port. Picked far from the bridge's `7778` so a
-    /// runaway service does not collide with the daemon.
+    /// runaway service does not collide with the daemon. Telegram lives
+    /// on the surface port the upstream `clawjs/telegram` server defaults
+    /// to (`CLAWJS_TELEGRAM_PORT=22011`) so a manual `npm --prefix
+    /// telegram run start` lines up with what the app expects.
     var port: UInt16 {
         switch self {
         case .database: return 7790
         case .memory:   return 7791
         case .drive:    return 7792
         case .vault:    return 7793
+        case .telegram: return 22011
         }
     }
 
@@ -29,6 +34,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .memory:   return "Memory"
         case .drive:    return "Drive"
         case .vault:    return "Vault"
+        case .telegram: return "Telegram"
         }
     }
 

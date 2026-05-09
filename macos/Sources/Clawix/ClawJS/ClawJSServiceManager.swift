@@ -200,13 +200,12 @@ final class ClawJSServiceManager: ObservableObject {
     ///       "--status-file", Self.statusFileURL(for: service).path,
     ///     ]
     private func commandLine(for service: ClawJSService) -> [String]? {
-        // Vault and Database are wired: `claw open <service>` launches the
-        // bundled server with deterministic port + workspace + status
-        // file. Memory and Drive stay blocked until @clawjs/cli ships
-        // their service-launch surface; flipping each to non-nil here is
-        // the only change needed when that happens.
+        // Every service launches via `claw open <service>` which the
+        // bundled CLI knows how to dispatch. Telegram included: the CLI
+        // forwards CLAW_BIN/CLAW_NODE so the surface can shell back into
+        // `claw telegram <subcommand> --json` for action endpoints.
         switch service {
-        case .vault, .database:
+        case .vault, .database, .memory, .drive, .telegram:
             return [
                 ClawJSRuntime.cliScriptURL.path,
                 "open", service.rawValue,
@@ -214,8 +213,6 @@ final class ClawJSServiceManager: ObservableObject {
                 "--workspace", Self.workspaceURL.path,
                 "--status-file", Self.statusFileURL(for: service).path,
             ]
-        case .memory, .drive:
-            return nil
         }
     }
 
@@ -416,6 +413,13 @@ final class ClawJSServiceManager: ObservableObject {
         env["CLAWJS_WORKSPACE"] = workspaceURL.path
         env["CLAWJS_PORT"] = String(service.port)
         env["CLAWJS_SERVICE"] = service.rawValue
+        // The Telegram surface reads its own variables (the CLI normally
+        // sets these, but pin them here too so a hand-launched `npm start`
+        // lines up with what the Swift client expects).
+        if service == .telegram {
+            env["CLAWJS_TELEGRAM_PORT"] = String(service.port)
+            env["CLAWJS_TELEGRAM_WORKSPACE"] = workspaceURL.path
+        }
         return env
     }
 

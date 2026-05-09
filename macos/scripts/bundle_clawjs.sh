@@ -183,6 +183,42 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/src"
         cp -R "$OVERLAY_DB/src" "$CLAWJS_DEST/node_modules/@clawjs/database/src"
     fi
+    # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
+    # in dev. Mirror the layout from the overlay's built dist/ tree.
+    OVERLAY_VAULT="$CLAWJS_DEV_OVERLAY/vault"
+    if [[ -d "$OVERLAY_VAULT/dist" ]]; then
+        echo "==> Dev overlay: copying $OVERLAY_VAULT/dist → $CLAWJS_DEST/vault/dist"
+        rm -rf "$CLAWJS_DEST/vault/dist"
+        mkdir -p "$CLAWJS_DEST/vault"
+        cp -R "$OVERLAY_VAULT/dist" "$CLAWJS_DEST/vault/dist"
+    fi
+    # Memory server: same layout as vault. The launcher tries
+    # `<HERE>/../../../memory/dist/server.js` next to the cli bin/.
+    OVERLAY_MEMORY="$CLAWJS_DEV_OVERLAY/memory"
+    if [[ -d "$OVERLAY_MEMORY/dist" ]]; then
+        echo "==> Dev overlay: copying $OVERLAY_MEMORY/dist → $CLAWJS_DEST/memory/dist"
+        rm -rf "$CLAWJS_DEST/memory/dist"
+        mkdir -p "$CLAWJS_DEST/memory"
+        cp -R "$OVERLAY_MEMORY/dist" "$CLAWJS_DEST/memory/dist"
+        # node_modules of the memory pkg are needed for native deps.
+        if [[ -d "$OVERLAY_MEMORY/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/memory/node_modules"
+            cp -R "$OVERLAY_MEMORY/node_modules" "$CLAWJS_DEST/memory/node_modules"
+        fi
+    fi
+    # Telegram surface: launcher tries
+    # `<HERE>/../../../telegram/dist/server.js` next to the cli bin/.
+    OVERLAY_TELEGRAM="$CLAWJS_DEV_OVERLAY/telegram"
+    if [[ -d "$OVERLAY_TELEGRAM/dist" ]]; then
+        echo "==> Dev overlay: copying $OVERLAY_TELEGRAM/dist → $CLAWJS_DEST/telegram/dist"
+        rm -rf "$CLAWJS_DEST/telegram/dist"
+        mkdir -p "$CLAWJS_DEST/telegram"
+        cp -R "$OVERLAY_TELEGRAM/dist" "$CLAWJS_DEST/telegram/dist"
+        if [[ -d "$OVERLAY_TELEGRAM/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/telegram/node_modules"
+            cp -R "$OVERLAY_TELEGRAM/node_modules" "$CLAWJS_DEST/telegram/node_modules"
+        fi
+    fi
 fi
 
 # 5) Re-sign every nested native module and the Node binary. npm-installed
