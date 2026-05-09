@@ -2080,6 +2080,7 @@ final class AppState: ObservableObject {
             chat.clawixThreadId.map { ($0, chat.id) }
         })
         pinnedOrder = pinIds.compactMap { threadToChat[$0] }
+        openFirstE2EChatIfRequested()
         writeE2EStateReportIfRequested()
         persistSidebarSnapshot()
     }
@@ -2232,6 +2233,11 @@ final class AppState: ObservableObject {
             let raw = ProcessInfo.processInfo.environment["CLAWIX_E2E_STATE_REPORT"],
             !raw.isEmpty
         else { return }
+        if ProcessInfo.processInfo.environment["CLAWIX_E2E_HYDRATE_REPORT"] == "1" {
+            for chatId in (chats + archivedChats).map(\.id) {
+                hydrateHistoryIfNeeded(chatId: chatId, blocking: true)
+            }
+        }
         let projectsById = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
         let payload: [String: Any] = [
             "projects": projects.map { ["name": $0.name, "path": $0.path] },
@@ -2241,7 +2247,8 @@ final class AppState: ObservableObject {
                     "title": chat.title,
                     "projectPath": chat.projectId.flatMap { projectsById[$0]?.path } ?? "",
                     "isPinned": chat.isPinned,
-                    "isArchived": chat.isArchived
+                    "isArchived": chat.isArchived,
+                    "toolRows": e2eToolRows(for: chat)
                 ] as [String: Any]
             },
             "pinnedCount": chats.filter { $0.isPinned }.count,
@@ -2252,6 +2259,25 @@ final class AppState: ObservableObject {
         if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]) {
             try? data.write(to: url, options: .atomic)
         }
+    }
+
+    private func e2eToolRows(for chat: Chat) -> [[String: String]] {
+        chat.messages.flatMap { message in
+            message.timeline.flatMap { entry -> [[String: String]] in
+                guard case .tools(_, let items) = entry else { return [] }
+                return ToolTimelinePresentation.aggregateRows(for: items).map {
+                    ["id": $0.id, "icon": $0.icon, "text": $0.text]
+                }
+            }
+        }
+    }
+
+    private func openFirstE2EChatIfRequested() {
+        guard ProcessInfo.processInfo.environment["CLAWIX_E2E_OPEN_FIRST_CHAT"] == "1",
+              let first = chats.first
+        else { return }
+        currentRoute = .chat(first.id)
+        hydrateHistoryIfNeeded(chatId: first.id, blocking: true)
     }
 
     private func applyLaunchRoute() {
