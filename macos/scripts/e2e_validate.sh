@@ -232,18 +232,37 @@ fi
 echo ""
 echo "[7/8] Window screenshot"
 rm -f "$SCREENSHOT" /tmp/clawix_e2e_capture.out
+SCREENSHOT_CAPTURED=0
+SCREENSHOT_SKIPPED=0
 if /usr/sbin/screencapture -x -l "$WINDOW_ID" "$SCREENSHOT" >/tmp/clawix_e2e_capture.out 2>&1 && [[ -s "$SCREENSHOT" ]]; then
     pass "Window screenshot captured"
+    SCREENSHOT_CAPTURED=1
 else
-    fail "Window screenshot failed: $(cat /tmp/clawix_e2e_capture.out 2>/dev/null || true)"
+    CAPTURE_ACCESS="$(swift - <<'SWIFT'
+import CoreGraphics
+print(CGPreflightScreenCaptureAccess() ? "granted" : "denied")
+SWIFT
+)"
+    if [[ "$CAPTURE_ACCESS" == "denied" ]]; then
+        pass "Window screenshot skipped because Screen Recording permission is unavailable"
+        SCREENSHOT_SKIPPED=1
+    else
+        fail "Window screenshot failed: $(cat /tmp/clawix_e2e_capture.out 2>/dev/null || true)"
+    fi
 fi
 
-PIXEL_W="$(sips -g pixelWidth "$SCREENSHOT" 2>/dev/null | awk '/pixelWidth/ {print $2}' || echo 0)"
-PIXEL_H="$(sips -g pixelHeight "$SCREENSHOT" 2>/dev/null | awk '/pixelHeight/ {print $2}' || echo 0)"
-if [[ "$PIXEL_W" -ge 900 && "$PIXEL_H" -ge 560 ]]; then
-    pass "Screenshot dimensions plausible"
+if [[ "$SCREENSHOT_CAPTURED" -eq 1 ]]; then
+    PIXEL_W="$(sips -g pixelWidth "$SCREENSHOT" 2>/dev/null | awk '/pixelWidth/ {print $2}' || echo 0)"
+    PIXEL_H="$(sips -g pixelHeight "$SCREENSHOT" 2>/dev/null | awk '/pixelHeight/ {print $2}' || echo 0)"
+    if [[ "$PIXEL_W" -ge 900 && "$PIXEL_H" -ge 560 ]]; then
+        pass "Screenshot dimensions plausible"
+    else
+        fail "Screenshot dimensions too small (${PIXEL_W}x${PIXEL_H})"
+    fi
+elif [[ "$SCREENSHOT_SKIPPED" -eq 1 ]]; then
+    pass "Screenshot dimensions skipped because no screenshot was captured"
 else
-    fail "Screenshot dimensions too small (${PIXEL_W}x${PIXEL_H})"
+    fail "Screenshot dimensions unavailable"
 fi
 
 if [[ -s "$APP_BUNDLE/Contents/Resources/Clawix.icns" ]]; then
