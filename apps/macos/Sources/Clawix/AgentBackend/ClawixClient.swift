@@ -240,7 +240,10 @@ actor ClawixClient {
 
     private func handleLine(_ data: Data) {
         let decoder = JSONDecoder()
-        guard let msg = try? decoder.decode(ClawixIncomingMessage.self, from: data) else {
+        let decoded: ClawixIncomingMessage? = PerfSignpost.ipcClient.interval("decode") {
+            try? decoder.decode(ClawixIncomingMessage.self, from: data)
+        }
+        guard let msg = decoded else {
             // Not all server output is JSON-RPC: log it and move on.
             if let log = stderrLogHandle, let s = String(data: data, encoding: .utf8) {
                 try? log.write(contentsOf: Data("[stdout-non-json] \(s)\n".utf8))
