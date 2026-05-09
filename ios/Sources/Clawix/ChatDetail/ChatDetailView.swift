@@ -483,6 +483,7 @@ struct ChatDetailView: View {
                     .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
             }
+            .accessibilityLabel("Chat actions")
             .menuOrder(.fixed)
             .simultaneousGesture(TapGesture().onEnded { Haptics.tap() })
         }
@@ -505,8 +506,8 @@ struct ChatDetailView: View {
     }
 
     private func handleArchive() {
-        // Wire-up pending: BridgeClient does not yet expose archiveChat
-        // outbound from iOS.
+        store.archiveChat(chatId: chatId)
+        handleBack()
     }
 
     private func handleBack() {

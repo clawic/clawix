@@ -717,6 +717,21 @@ final class BridgeStore {
         client?.renameChat(chatId: chatId, title: trimmed)
     }
 
+    /// Archive a chat from iOS. Hide it optimistically so the current
+    /// screen and lists behave like the Mac client while the daemon
+    /// writes the canonical state.
+    @MainActor
+    func archiveChat(chatId: String) {
+        if let idx = chats.firstIndex(where: { $0.id == chatId }) {
+            chats[idx].isArchived = true
+        }
+        if openChatId == chatId {
+            openChatId = nil
+        }
+        client?.archiveChat(chatId: chatId)
+        persistSnapshotDebounced()
+    }
+
     /// Stop the in-flight turn on `chatId`. Mirrors the Mac composer's
     /// stop button: clears `hasActiveTurn` synchronously and freezes
     /// (or drops) the trailing assistant placeholder so the "Thinking"

@@ -192,6 +192,11 @@ final class BridgeClient: NSObject {
         send(BridgeFrame(.renameChat(chatId: chatId, title: title)), on: winner)
     }
 
+    func archiveChat(chatId: String) {
+        guard let winner else { return }
+        send(BridgeFrame(.archiveChat(chatId: chatId)), on: winner)
+    }
+
     func readFile(path: String) {
         guard let winner else { return }
         send(BridgeFrame(.readFile(path: path)), on: winner)
