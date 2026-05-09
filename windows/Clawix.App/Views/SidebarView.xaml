@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Clawix.App.Views.SidebarView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Clawix.Core.Models"
+    xmlns:views="using:Clawix.App.Views">
+  <Grid Padding="8" Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Grid Grid.Row="0" Margin="6,12,6,8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBlock Grid.Column="0" Text="Clawix" FontWeight="SemiBold" FontSize="20" />
+      <Button Grid.Column="1" Click="Settings_Click" ToolTipService.ToolTip="Settings">
+        <FontIcon Glyph="&#xE713;" />
+      </Button>
+    </Grid>
+    <TextBox Grid.Row="1" x:Name="SearchBox" PlaceholderText="Search chats" Margin="6,4,6,8" />
+    <ListView Grid.Row="2" x:Name="ChatList"
+              ItemsSource="{x:Bind Chats, Mode=OneWay}"
+              SelectionChanged="ChatList_SelectionChanged"
+              SelectionMode="Single">
+      <ListView.ItemTemplate>
+        <DataTemplate x:DataType="models:WireChat">
+          <StackPanel Padding="6,4">
+            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+            <TextBlock Text="{x:Bind LastMessagePreview}" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </DataTemplate>
+      </ListView.ItemTemplate>
+    </ListView>
+    <Button Grid.Row="3" Content="New chat" HorizontalAlignment="Stretch" Margin="6" Click="NewChat_Click" />
+    <views:RateLimitsWidget Grid.Row="4" x:Name="RateLimits" Margin="6,8,6,4" />
+    <TextBlock Grid.Row="5" x:Name="BridgeStatusText" Margin="6,4,6,6" Style="{ThemeResource ClawixCaption}" />
+  </Grid>
+</UserControl>
