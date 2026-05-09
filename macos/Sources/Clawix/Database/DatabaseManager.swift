@@ -112,12 +112,7 @@ final class DatabaseManager: ObservableObject {
             }
         }
         do {
-            let credential = try DatabaseKeychain.loadOrCreateCredential()
-            let response = try await client.bootstrapAdmin(
-                email: credential.email,
-                password: credential.password
-            )
-            client.bearerToken = response.accessToken
+            client.bearerToken = try DatabaseAdminToken.currentAdminToken()
             _ = try await client.ensureNamespace(id: currentNamespace, displayName: "Clawix Local")
             let collections = try await client.listCollections(namespaceId: currentNamespace)
             self.collections = collections.sorted { lhs, rhs in
