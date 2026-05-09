@@ -35,7 +35,7 @@ internal fun StrokeIcon(
     block: (Path, Float) -> Unit,
 ) {
     val color = if (tint == Color.Unspecified) LocalContentColor.current else tint
-    Canvas(modifier = modifier.then(androidx.compose.foundation.layout.size(size))) {
+    Canvas(modifier = modifier.size(size)) {
         val scale = this.size.minDimension / ICON_VIEWPORT
         val sw = ICON_STROKE_BASE * scale
         val path = Path()
@@ -52,7 +52,7 @@ internal fun FillIcon(
     block: (Path, Float) -> Unit,
 ) {
     val color = if (tint == Color.Unspecified) LocalContentColor.current else tint
-    Canvas(modifier = modifier.then(androidx.compose.foundation.layout.size(size))) {
+    Canvas(modifier = modifier.size(size)) {
         val scale = this.size.minDimension / ICON_VIEWPORT
         val path = Path().apply { fillType = PathFillType.EvenOdd }
         block(path, scale)
