@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,16 +7,49 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// --- Build identity from workspace-private files ----------------------------
+//
+// `applicationId` is opt-in via `local.properties#clawix.bundleId` (or env
+// `CLAWIX_BUNDLE_ID`). Default is the placeholder so dev builds, the Android
+// launcher script and external contributors keep working out of the box.
+// Release pipelines (Play Console upload) set the real bundle id explicitly
+// via env var at invocation time. The owner-private real bundle id lives in
+// the workspace `.signing.env` (a sibling of the public `clawix/` repo) and
+// is NEVER hardcoded inside the public repo.
+//
+// `versionName` reads `clawix/android/VERSION` (mirror of ios/VERSION,
+// macos/VERSION) and `versionCode` reads `clawix/android/BUILD_NUMBER`
+// (mirror of ios/BUILD_NUMBER). Both are NOT bumped automatically; only a
+// release task should change them.
+
+val clawixBundleId: String = run {
+    val localProps = Properties().apply {
+        val f = rootProject.file("local.properties")
+        if (f.exists()) f.inputStream().use { load(it) }
+    }
+    localProps.getProperty("clawix.bundleId")
+        ?: System.getenv("CLAWIX_BUNDLE_ID")
+        ?: "com.example.clawix.android"
+}
+
+val clawixVersionName: String =
+    rootProject.file("VERSION").takeIf { it.exists() }?.readText()?.trim().orEmpty()
+        .ifBlank { "0.1.0" }
+
+val clawixVersionCode: Int =
+    rootProject.file("BUILD_NUMBER").takeIf { it.exists() }?.readText()?.trim()?.toIntOrNull()
+        ?: 1
+
 android {
     namespace = "com.example.clawix.android"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.clawix.android"
+        applicationId = clawixBundleId
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = clawixVersionCode
+        versionName = clawixVersionName
 
         vectorDrawables.useSupportLibrary = true
     }
