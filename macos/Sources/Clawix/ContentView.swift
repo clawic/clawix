@@ -936,7 +936,13 @@ private struct SearchPopoverOverlay: View {
     private var filteredPinnedChats: [Chat] {
         let q = appState.searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return pinnedChats }
-        return pinnedChats.filter { $0.title.lowercased().contains(q) }
+        return searchableChats.filter { $0.title.lowercased().contains(q) }
+    }
+
+    private var searchableChats: [Chat] {
+        appState.chats
+            .filter { !$0.isArchived && !$0.isQuickAskTemporary }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     private func scopedChats(for project: Project) -> [Chat] {
@@ -1089,7 +1095,7 @@ private struct SearchPopoverOverlay: View {
         if !pinned.isEmpty {
             ScrollView(showsIndicators: true) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Pinned chats")
+                    Text(appState.searchQuery.trimmingCharacters(in: .whitespaces).isEmpty ? "Pinned chats" : "Matches")
                         .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(MenuStyle.headerText)
                         .padding(.horizontal, 18)
@@ -1116,7 +1122,7 @@ private struct SearchPopoverOverlay: View {
             .thinScrollers()
         } else {
             emptyContent(message: appState.searchQuery.isEmpty
-                         ? "You do not have any pinned chats yet"
+                         ? "Search by chat title"
                          : "No matches")
         }
     }
