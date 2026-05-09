@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required"/>
+              <xsd:attribute name="xml:space" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="App.Title" xml:space="preserve"><value>Clawix</value></data>
+  <data name="Sidebar.SearchPlaceholder" xml:space="preserve"><value>Search chats</value></data>
+  <data name="Sidebar.NewChat" xml:space="preserve"><value>New chat</value></data>
+  <data name="Composer.Placeholder" xml:space="preserve"><value>Message Clawix</value></data>
+  <data name="Composer.Send" xml:space="preserve"><value>Send</value></data>
+  <data name="Settings.General" xml:space="preserve"><value>General</value></data>
+  <data name="Settings.Account" xml:space="preserve"><value>Account</value></data>
+  <data name="Settings.Models" xml:space="preserve"><value>Models</value></data>
+  <data name="Settings.LocalModels" xml:space="preserve"><value>Local models</value></data>
+  <data name="Settings.Dictation" xml:space="preserve"><value>Dictation</value></data>
+  <data name="Settings.QuickAsk" xml:space="preserve"><value>Quick Ask</value></data>
+  <data name="Settings.Secrets" xml:space="preserve"><value>Secrets</value></data>
+  <data name="Settings.MCP" xml:space="preserve"><value>MCP servers</value></data>
+  <data name="Settings.Database" xml:space="preserve"><value>Database</value></data>
+  <data name="Settings.Updates" xml:space="preserve"><value>Updates</value></data>
+  <data name="Settings.Pairing" xml:space="preserve"><value>Pairing</value></data>
+  <data name="Settings.Privacy" xml:space="preserve"><value>Privacy</value></data>
+  <data name="Settings.About" xml:space="preserve"><value>About</value></data>
+  <data name="Settings.Advanced" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Pairing.Headline" xml:space="preserve"><value>Pair iPhone</value></data>
+  <data name="Pairing.Instructions" xml:space="preserve"><value>Open Clawix on your iPhone, choose Add device, and scan the QR.</value></data>
+  <data name="Tray.Open" xml:space="preserve"><value>Open Clawix</value></data>
+  <data name="Tray.Pair" xml:space="preserve"><value>Pair iPhone</value></data>
+  <data name="Tray.Quit" xml:space="preserve"><value>Quit</value></data>
+</root>
