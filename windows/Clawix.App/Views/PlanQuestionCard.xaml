@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Clawix.App.Views.PlanQuestionCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Border Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}" CornerRadius="8" Padding="12">
+    <StackPanel Spacing="8">
+      <TextBlock x:Name="QuestionText" FontWeight="SemiBold" TextWrapping="Wrap" />
+      <ItemsControl x:Name="OptionsHost" />
+    </StackPanel>
+  </Border>
+</UserControl>
