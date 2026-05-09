@@ -5,8 +5,8 @@ import AVFoundation
 /// Groq, Deepgram, and a generic Custom OpenAI-compatible
 /// `/v1/audio/transcriptions` endpoint. Each takes a 16 kHz mono
 /// WAV blob and returns the transcript as a string. API keys live in
-/// the same Keychain namespace as the Enhancement keys but with a
-/// different `service` prefix so they don't collide.
+/// the user's encrypted vault under the "Clawix System" container
+/// (see `CloudTranscriptionSecrets`); the vault must be unlocked.
 ///
 /// These providers are dispatched from `DictationCoordinator.stop()`
 /// when the user picks one in Settings → Voice to Text → Avanzado →
@@ -23,12 +23,6 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         case .deepgram: return "Deepgram (cloud)"
         case .custom:   return "Custom Whisper endpoint"
         }
-    }
-
-    static let keychainServiceBase = "com.clawix.transcription"
-
-    func service() -> String {
-        "\(Self.keychainServiceBase).\(rawValue)"
     }
 
     static let baseURLKeyPrefix = "dictation.transcription.baseURL"
@@ -51,7 +45,7 @@ enum CloudTranscriptionProvider: String, CaseIterable {
     // MARK: - Groq
 
     private func transcribeGroq(samples: [Float], language: String?, prompt: String?) async throws -> String {
-        guard let key = readKey(for: .groq), !key.isEmpty else {
+        guard let key = await CloudTranscriptionSecrets.apiKey(for: .groq), !key.isEmpty else {
             throw CloudError.notConfigured
         }
         let model = UserDefaults.standard.string(forKey: "\(Self.modelKeyPrefix).\(rawValue)")
@@ -72,7 +66,7 @@ enum CloudTranscriptionProvider: String, CaseIterable {
     // MARK: - Deepgram
 
     private func transcribeDeepgram(samples: [Float], language: String?) async throws -> String {
-        guard let key = readKey(for: .deepgram), !key.isEmpty else {
+        guard let key = await CloudTranscriptionSecrets.apiKey(for: .deepgram), !key.isEmpty else {
             throw CloudError.notConfigured
         }
         var components = URLComponents(string: "https://api.deepgram.com/v1/listen")!
@@ -122,7 +116,7 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         }
         let model = UserDefaults.standard.string(forKey: "\(Self.modelKeyPrefix).\(rawValue)")
             ?? "whisper-1"
-        let key = readKey(for: .custom) // optional
+        let key = await CloudTranscriptionSecrets.apiKey(for: .custom) // optional
         let endpoint = baseURL.appendingPathComponent("/audio/transcriptions")
         let wav = makeWAV(samples: samples)
         let (data, response) = try await uploadMultipart(
@@ -192,48 +186,6 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         } catch {
             throw CloudError.decoding(error.localizedDescription)
         }
-    }
-
-    // MARK: - Keychain (separate namespace from Enhancement)
-
-    func readKey(for provider: CloudTranscriptionProvider) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: provider.service(),
-            kSecAttrAccount as String: "default",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    static func writeKey(_ key: String, for provider: CloudTranscriptionProvider) {
-        let baseQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: provider.service(),
-            kSecAttrAccount as String: "default"
-        ]
-        SecItemDelete(baseQuery as CFDictionary)
-        guard !key.isEmpty, let data = key.data(using: .utf8) else { return }
-        var addQuery = baseQuery
-        addQuery[kSecValueData as String] = data
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addQuery as CFDictionary, nil)
-    }
-
-    static func hasKey(for provider: CloudTranscriptionProvider) -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: provider.service(),
-            kSecAttrAccount as String: "default",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        return SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess
     }
 
     // MARK: - WAV encoder
