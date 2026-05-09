@@ -51,6 +51,7 @@ final class DatabaseManager: ObservableObject {
     private let filterStateKey = "clawix.database.filterStates.v1"
 
     private var supervisorObserver: AnyCancellable?
+    private var bootstrapGeneration: UUID?
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -74,18 +75,20 @@ final class DatabaseManager: ObservableObject {
             guard let self else { return }
             guard let snap = snapshots[.database] else { return }
             switch snap.state {
-            case .ready:
+            case .ready, .readyFromDaemon:
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     if case .ready = self.state { return }
                     await self.bootstrap()
                 }
-            case .crashed, .blocked, .idle, .suspendedForDaemon:
-                if case .ready = self.state {
-                    self.realtime.disconnect()
-                    self.state = .loading
-                }
+            case .crashed, .blocked, .idle, .daemonUnavailable, .suspendedForDaemon:
+                self.realtime.disconnect()
+                self.collections = []
+                self.recordsByCollection = [:]
+                self.state = .failed(snap.state.unavailableReason ?? "Database service is unavailable.")
             case .starting:
+                if case .ready = self.state { self.realtime.disconnect() }
+                self.state = .bootstrapping
                 break
             }
         }
@@ -99,6 +102,15 @@ final class DatabaseManager: ObservableObject {
     func bootstrap() async {
         if case .ready = state { return }
         state = .bootstrapping
+        let generation = UUID()
+        bootstrapGeneration = generation
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            guard let self, self.bootstrapGeneration == generation else { return }
+            if case .bootstrapping = self.state {
+                self.state = .failed("Database service did not become ready within 8 seconds.")
+            }
+        }
         do {
             let credential = try DatabaseKeychain.loadOrCreateCredential()
             let response = try await client.bootstrapAdmin(
@@ -119,9 +131,11 @@ final class DatabaseManager: ObservableObject {
             realtime.connect()
             state = .ready
             lastError = nil
+            bootstrapGeneration = nil
         } catch {
             state = .failed(error.localizedDescription)
             lastError = error.localizedDescription
+            bootstrapGeneration = nil
         }
     }
 

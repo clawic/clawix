@@ -300,6 +300,7 @@ struct DatabaseClient {
             throw Error.invalidURL
         }
         var req = URLRequest(url: url)
+        req.timeoutInterval = 5
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         if authenticated {
