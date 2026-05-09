@@ -1,0 +1,75 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'windows/**'
+      - 'packages/**'
+      - '.github/workflows/windows.yml'
+  pull_request:
+    paths:
+      - 'windows/**'
+      - 'packages/**'
+      - '.github/workflows/windows.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore Clawix.sln
+
+      - name: Build (Release | x64)
+        run: dotnet build Clawix.sln -c Release -p:Platform=x64 --no-restore
+
+      - name: Test
+        run: dotnet test Clawix.Tests/Clawix.Tests.csproj -c Release --no-build --logger "trx;LogFileName=test.trx"
+
+      - name: Hygiene check
+        run: pwsh ./scripts/public_hygiene_check.ps1
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-test-results
+          path: windows/**/TestResults/*.trx
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish (x64)
+        run: |
+          dotnet publish Clawix.App/Clawix.App.csproj -c Release -r win-x64 --self-contained false -o publish/x64 -p:Platform=x64
+          dotnet publish Clawix.Bridged/Clawix.Bridged.csproj -c Release -r win-x64 --self-contained false -o publish/x64/bridged
+      - name: Pack MSIX
+        env:
+          WIN_SIGN_THUMBPRINT: ${{ secrets.WIN_SIGN_THUMBPRINT }}
+          WIN_SIGN_TIMESTAMP_URL: http://timestamp.digicert.com
+        run: pwsh ./scripts/build-release.ps1 -Platform x64
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clawix-Setup.msix
+          path: windows/publish/Clawix-Setup.msix
