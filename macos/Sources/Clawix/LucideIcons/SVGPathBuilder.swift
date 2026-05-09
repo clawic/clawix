@@ -3,8 +3,11 @@ import CoreGraphics
 
 /// Builds a SwiftUI `Path` from an SVG `d` attribute string.
 ///
-/// Supports the line and curve commands used by the initial Lucide
-/// glyph catalog: `M m L l H h V v C c S s Q q T t Z z`.
+/// Supports every command Lucide ships with: `M m L l H h V v C c S s
+/// Q q T t A a Z z`. Arcs (`A` / `a`) are converted to a sequence of
+/// cubic Beziers using the standard SVG implementation note algorithm
+/// so the rendered geometry is faithful to the source SVG, not a
+/// hand-eyeballed approximation.
 ///
 /// We picked a runtime parser over hand-translating each path because
 /// hand-conversion of cubic Béziers produced visually broken silhouettes
@@ -62,6 +65,7 @@ enum SVGPathBuilder {
                 case "s": consumeSmoothCubic(rel: rel, scanner: &s)
                 case "q": consumeQuad(rel: rel, scanner: &s)
                 case "t": consumeSmoothQuad(rel: rel, scanner: &s)
+                case "a": consumeArc(rel: rel, scanner: &s)
                 case "z":
                     path.closeSubpath()
                     current = subpathStart
@@ -161,6 +165,24 @@ enum SVGPathBuilder {
             current = p
             lastQuadControl = c
             lastCubicControl = nil
+        }
+
+        private mutating func consumeArc(rel: Bool, scanner s: inout SVGPathScanner) {
+            guard let rxRaw = s.nextNumber(), let ryRaw = s.nextNumber(),
+                  let xRotDeg = s.nextNumber(),
+                  let largeArc = s.nextFlag(), let sweep = s.nextFlag(),
+                  let xEnd = s.nextNumber(), let yEnd = s.nextNumber()
+            else { return }
+            let end = rel
+                ? CGPoint(x: current.x + xEnd, y: current.y + yEnd)
+                : CGPoint(x: xEnd, y: yEnd)
+            appendArc(from: current, to: end,
+                      rx: abs(rxRaw), ry: abs(ryRaw),
+                      xRotDeg: xRotDeg,
+                      largeArc: largeArc, sweep: sweep)
+            current = end
+            lastCubicControl = nil
+            lastQuadControl = nil
         }
     }
 
