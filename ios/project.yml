@@ -67,3 +67,16 @@ targets:
         ENABLE_PREVIEWS: YES
     dependencies:
       - package: ClawixCore
+
+  ClawixUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Tests/ClawixUITests
+    dependencies:
+      - target: Clawix
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Clawix

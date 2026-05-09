@@ -139,6 +139,9 @@ struct ChatDetailView: View {
     private var showScrollToBottom: Bool {
         hasOverflow && !isAtBottom
     }
+    private var shouldAutofocusComposer: Bool {
+        ProcessInfo.processInfo.environment["CLAWIX_DISABLE_AUTOFOCUS"] != "1" && (isFreshChat ?? false)
+    }
 
     var body: some View {
         // The transcript is fully declarative: `defaultScrollAnchor`
@@ -553,7 +556,7 @@ struct ChatDetailView: View {
             onVoiceTap: { startRecording(.sendAsAudio) },
             onStop: { store.interruptTurn(chatId: chatId) },
             hasActiveTurn: chat?.hasActiveTurn ?? false,
-            autofocusOnAppear: isFreshChat ?? false,
+            autofocusOnAppear: shouldAutofocusComposer,
             compact: !messages.isEmpty,
             resetToken: composerResetToken
         )
