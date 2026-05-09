@@ -731,6 +731,7 @@ final class AppState: ObservableObject {
     static let archivedSidebarLimit: Int = 30
     let sampleChat: Chat
     let browserSampleChat: Chat
+    let computerUseSampleChat: Chat
     @Published var plugins: [Plugin] = []
     @Published var automations: [Automation] = []
     @Published var projects: [Project] = []
@@ -1073,6 +1074,53 @@ final class AppState: ObservableObject {
                 )
             ],
             createdAt: browserStart
+        )
+
+        let computerUseStart = Date().addingTimeInterval(-90)
+        let computerUseEnd = computerUseStart.addingTimeInterval(28)
+        computerUseSampleChat = Chat(
+            id: UUID(uuidString: "A11CE000-CAFE-4BAB-9B0E-C001A11CE001")!,
+            title: "Inspect the current Mac app",
+            messages: [
+                ChatMessage(
+                    role: .user,
+                    content: "Inspect the screen and tell me what is open.",
+                    timestamp: computerUseStart
+                ),
+                ChatMessage(
+                    role: .assistant,
+                    content: "The active window is visible and ready.",
+                    timestamp: computerUseEnd,
+                    workSummary: WorkSummary(
+                        startedAt: computerUseStart,
+                        endedAt: computerUseEnd,
+                        items: [
+                            WorkItem(
+                                id: "tool-computer-use-1",
+                                kind: .mcpTool(server: "computer_use", tool: "get_app_state"),
+                                status: .completed
+                            )
+                        ]
+                    ),
+                    timeline: [
+                        .tools(
+                            id: UUID(uuidString: "C0A111CE-0000-4000-8000-C0A111CE0001")!,
+                            items: [
+                                WorkItem(
+                                    id: "tool-computer-use-1",
+                                    kind: .mcpTool(server: "computer_use", tool: "get_app_state"),
+                                    status: .completed
+                                )
+                            ]
+                        ),
+                        .message(
+                            id: UUID(uuidString: "C0A111CE-0000-4000-8000-C0A111CE0002")!,
+                            text: "The active window is visible and ready."
+                        )
+                    ]
+                )
+            ],
+            createdAt: computerUseStart
         )
 
         let resolvedBinary = ClawixBinary.resolve()
@@ -2233,6 +2281,9 @@ final class AppState: ObservableObject {
         case "chat-browser":
             chats = [browserSampleChat, sampleChat]
             currentRoute = .chat(browserSampleChat.id)
+        case "chat-computer-use":
+            chats = [computerUseSampleChat, sampleChat]
+            currentRoute = .chat(computerUseSampleChat.id)
         case "browser":
             currentRoute = .home
             openBrowser()
