@@ -38,6 +38,7 @@ struct SecretsToolRow: View {
         .sidebarHover { hovered = $0 }
         .accessibilityLabel("Secrets")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .id("Secrets-\(isSelected)")
     }
 
     private var iconColor: Color {

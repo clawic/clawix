@@ -13,8 +13,7 @@ struct DatabaseToolRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 11) {
-                Image(systemName: systemIcon)
-                    .font(.system(size: 12.5, weight: .medium))
+                LucideIcon.auto(systemIcon, size: 12.5)
                     .frame(width: 15, height: 15)
                     .foregroundColor(iconColor)
                 Text(title)
@@ -35,6 +34,7 @@ struct DatabaseToolRow: View {
         .sidebarHover { hovered = $0 }
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .id("\(title)-\(isSelected)")
     }
 
     private var iconColor: Color {

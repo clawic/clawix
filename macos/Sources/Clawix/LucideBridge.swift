@@ -263,6 +263,12 @@ struct LucideIcon: View {
         case "list.bullet":      return .list
         case "checklist":        return .listChecks
         case "text.alignleft":   return .textAlignStart
+        case "flag":             return .listChecks
+        case "note.text", "doc.text": return .fileText
+        case "square.stack.3d.up": return .folder
+        case "brain":            return .audioWaveform
+        case "cylinder.split.1x2", "internaldrive": return .database
+        case "clock.arrow.circlepath": return .clock
         case "key.viewfinder":   return .key
         case "link", "link.circle": return .link
         case "laptopcomputer":   return .laptop
