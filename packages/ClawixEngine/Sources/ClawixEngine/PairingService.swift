@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(Darwin)
 import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
 
 /// Holds the stable bearer token the iPhone has to present during
 /// `auth`, and resolves the LAN IPv4 the QR payload should advertise.
