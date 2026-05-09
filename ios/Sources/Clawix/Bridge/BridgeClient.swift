@@ -283,18 +283,22 @@ final class BridgeClient: NSObject {
         // browser yields a match; we don't block on it.
         if !creds.host.isEmpty, creds.host != "0.0.0.0" {
             let route: BridgeStore.Route = isTailscaleHost(creds.host) ? .tailscale : .lan
-            addCandidate(
-                endpoint: makeEndpoint(host: creds.host, port: creds.port),
-                route: route,
-                label: "\(route.rawValue):\(creds.host)"
-            )
+            for (endpoint, suffix) in makeDirectEndpoints(host: creds.host, port: creds.port) {
+                addCandidate(
+                    endpoint: endpoint,
+                    route: route,
+                    label: "\(route.rawValue):\(creds.host):\(suffix)"
+                )
+            }
         }
         if let ts = creds.tailscaleHost, !ts.isEmpty, ts != creds.host {
-            addCandidate(
-                endpoint: makeEndpoint(host: ts, port: creds.port),
-                route: .tailscale,
-                label: "tailscale:\(ts)"
-            )
+            for (endpoint, suffix) in makeDirectEndpoints(host: ts, port: creds.port) {
+                addCandidate(
+                    endpoint: endpoint,
+                    route: .tailscale,
+                    label: "tailscale:\(ts):\(suffix)"
+                )
+            }
         }
 
         // No direct host means this pairing came in via the short-code
@@ -307,19 +311,21 @@ final class BridgeClient: NSObject {
         // between networks.
     }
 
-    private func makeEndpoint(host: String, port: Int) -> NWEndpoint {
+    private func makeDirectEndpoints(host: String, port: Int) -> [(NWEndpoint, String)] {
+        var endpoints: [(NWEndpoint, String)] = []
         // NWProtocolWebSocket clients need a URL endpoint to set the
         // `Host` header and request path of the upgrade GET. With a bare
         // `hostPort` endpoint the upgrade aborts on iOS 26 with
         // ECONNABORTED right after the TCP handshake, even against a
         // server that the same payload reaches fine over Python `ws://`.
         if let url = URL(string: "ws://\(host):\(port)/") {
-            return NWEndpoint.url(url)
+            endpoints.append((.url(url), "url"))
         }
-        return NWEndpoint.hostPort(
+        endpoints.append((.hostPort(
             host: NWEndpoint.Host(host),
             port: NWEndpoint.Port(rawValue: UInt16(port)) ?? .any
-        )
+        ), "hostport"))
+        return endpoints
     }
 
     private func endpointKey(for endpoint: NWEndpoint) -> String {
