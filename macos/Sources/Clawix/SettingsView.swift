@@ -2447,6 +2447,27 @@ private struct UsagePage: View {
                               detail: "Use credit to send messages when you hit your usage limits.")
                 }
             }
+
+            if !hasAnyBars && appState.rateLimits?.credits == nil {
+                SettingsCard {
+                    HStack(alignment: .center, spacing: 12) {
+                        UsageIcon(size: 15, lineWidth: 1.7)
+                            .foregroundColor(Palette.textSecondary)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(verbatim: "No usage data yet")
+                                .font(BodyFont.system(size: 13, wght: 600))
+                                .foregroundColor(Palette.textPrimary)
+                            Text(verbatim: "Usage limits appear here after the runtime reports a rate-limit snapshot.")
+                                .font(BodyFont.system(size: 11.5, wght: 500))
+                                .foregroundColor(Palette.textSecondary)
+                        }
+                        Spacer(minLength: 12)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                }
+                .padding(.top, 14)
+            }
         }
     }
 }
