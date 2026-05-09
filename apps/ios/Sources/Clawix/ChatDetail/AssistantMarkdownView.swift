@@ -1,7 +1,7 @@
 import SwiftUI
+import ClawixCore
 #if canImport(UIKit)
 import UIKit
-import LucideIcon
 #endif
 
 // Block-level markdown renderer used by the assistant message body in
@@ -27,13 +27,6 @@ enum AssistantBlock: Equatable {
     case codeBlock(language: String, code: String)
 }
 
-/// Cached parse result. Wrapped in a class so it can live in
-/// `NSCache`, which only stores `AnyObject` values.
-private final class CachedAssistantBlocks {
-    let blocks: [AssistantBlock]
-    init(_ blocks: [AssistantBlock]) { self.blocks = blocks }
-}
-
 enum AssistantMarkdownParser {
     /// Compiled once per process. The pattern is identical between
     /// calls so paying the regex compile cost on every `numberedMatch`
@@ -42,27 +35,25 @@ enum AssistantMarkdownParser {
     fileprivate static let numberedRegex: NSRegularExpression? =
         try? NSRegularExpression(pattern: #"^(\d+)[.)]\s+"#)
 
-    /// Memoizes block lists keyed by the exact source string. The
-    /// SwiftUI body of `AssistantMarkdownView` re-runs whenever any
-    /// observed state in the chat detail mutates (a streaming chunk
-    /// arrives for *another* message, the user toggles reasoning on
-    /// some message, etc). Without this cache, every body cycle
-    /// re-parses the full markdown of every visible message. Capped
-    /// at 64 entries; NSCache evicts under memory pressure for free.
-    fileprivate static let cache: NSCache<NSString, CachedAssistantBlocks> = {
-        let c = NSCache<NSString, CachedAssistantBlocks>()
-        c.countLimit = 64
-        return c
-    }()
+    /// Memoizes block lists keyed by the exact source string. Lives
+    /// process-wide (in `ClawixCore`) so closing and reopening a chat
+    /// keeps the parses warm; per-instance / per-view caches died on
+    /// unmount and forced a full reparse on every chat reopen.
+    /// `bridgeInitialPageLimit` (60) of trailing messages * a couple of
+    /// chats reopened in a session fits comfortably under the 128 cap;
+    /// NSCache evicts under memory pressure for free.
+    static let cache = MarkdownBlockCache<[AssistantBlock]>(countLimit: 128)
+
+    /// Pre-warm hook for callers that want to pay the parse cost off
+    /// the main thread (e.g. when the user taps a chat in the list,
+    /// before `ChatDetailView` mounts). Safe to call from any thread:
+    /// the underlying NSCache is thread-safe.
+    static func prewarm(_ source: String) {
+        _ = parse(source)
+    }
 
     static func parse(_ source: String) -> [AssistantBlock] {
-        let key = source as NSString
-        if let cached = cache.object(forKey: key) {
-            return cached.blocks
-        }
-        let blocks = parseUncached(source)
-        cache.setObject(CachedAssistantBlocks(blocks), forKey: key)
-        return blocks
+        cache.parse(source) { src in parseUncached(src) }
     }
 
     private static func parseUncached(_ source: String) -> [AssistantBlock] {
@@ -361,8 +352,7 @@ private struct AssistantCodeBlockView: View {
                 Button(action: copy) {
                     ZStack {
                         if copied {
-                            Image(lucide: .check)
-                                .font(BodyFont.system(size: 12, weight: .semibold))
+                            LucideIcon(.check, size: 19)
                                 .foregroundStyle(Color(white: 0.78))
                                 .transition(.opacity)
                         } else {

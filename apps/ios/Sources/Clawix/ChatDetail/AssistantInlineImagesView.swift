@@ -2,7 +2,6 @@ import SwiftUI
 import ClawixCore
 #if canImport(UIKit)
 import UIKit
-import LucideIcon
 #endif
 
 /// Pulls the inline images out of an assistant `WireMessage` and renders
@@ -307,8 +306,7 @@ struct AssistantInlineImagesView: View {
 
     private func failurePill(reason: String, path: String) -> some View {
         HStack(spacing: 8) {
-            Image(lucide: .image_off)
-                .font(.system(size: 14, weight: .regular))
+            LucideIcon(.imageOff, size: 22.5)
                 .foregroundStyle(.white.opacity(0.55))
             Text(reason)
                 .font(BodyFont.system(size: 13, weight: .regular))

@@ -1,6 +1,5 @@
 import SwiftUI
 import ClawixCore
-import LucideIcon
 
 // iOS-side rendering of an assistant message's chronological timeline,
 // mirroring what the macOS app shows. Behavior parity with Mac:
@@ -124,8 +123,7 @@ private struct WorkSummaryHeaderView: View {
                     Text(headerText(now: Date()))
                         .font(BodyFont.system(size: 13, weight: .regular))
                         .foregroundStyle(Palette.textSecondary)
-                    Image(lucide: .chevron_right)
-                        .font(BodyFont.system(size: 10, weight: .semibold))
+                    LucideIcon(.chevronRight, size: 16)
                         .foregroundStyle(Palette.textTertiary)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                         .animation(.easeOut(duration: 0.16), value: expanded)
@@ -237,8 +235,7 @@ private struct ToolRowIcon: View {
             PencilIconView(color: Palette.textTertiary, lineWidth: 1.0)
                 .frame(width: 14, height: 14)
         default:
-            Image(lucideOrSystem: systemImage)
-                .font(BodyFont.system(size: 12, weight: .regular))
+            LucideIcon.auto(systemImage, size: 19)
         }
     }
 }

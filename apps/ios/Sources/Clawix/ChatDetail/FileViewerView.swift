@@ -1,6 +1,5 @@
 import SwiftUI
 import ClawixCore
-import LucideIcon
 
 // Read-only viewer for the file pills under the assistant message. The
 // iPhone has no filesystem access to the Mac's working tree, so the
@@ -97,8 +96,7 @@ struct FileViewerView: View {
 
         case .failed(let reason):
             VStack(spacing: 10) {
-                Image(lucide: .file_question_mark)
-                    .font(BodyFont.system(size: 32, weight: .light))
+                LucideIcon(.fileQuestionMark, size: 51)
                     .foregroundStyle(Palette.textTertiary)
                 Text(reason)
                     .font(Typography.secondaryFont)
