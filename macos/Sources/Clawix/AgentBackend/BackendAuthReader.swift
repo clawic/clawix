@@ -23,9 +23,9 @@ enum BackendAuthReader {
         if environment["CLAWIX_DISABLE_BACKEND"] == "1" || environment["CLAWIX_DUMMY_MODE"] == "1" {
             return BackendAuthInfo(
                 email: "account@example.com",
-                accountLabel: "Personal account",
+                accountLabel: String(localized: "Demo account", bundle: AppLocale.bundle, locale: AppLocale.current),
                 planType: nil,
-                name: nil
+                name: String(localized: "Demo User", bundle: AppLocale.bundle, locale: AppLocale.current)
             )
         }
 
