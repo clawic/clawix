@@ -234,36 +234,30 @@ final class ClawJSServiceManager: ObservableObject {
     /// long-lived HTTP server on `service.port`. Returns `nil` while the
     /// bundled runtime lacks that service's surface.
     private func commandLine(for service: ClawJSService) -> [String]? {
+        guard Self.bundledLauncherScript(for: service) != nil else { return nil }
+
+        var arguments = [
+            ClawJSRuntime.cliScriptURL.path,
+            "open", service.rawValue,
+            "--host", "127.0.0.1",
+            "--port", String(service.port),
+            "--workspace", Self.workspaceURL.path,
+            "--status-file", Self.statusFileURL(for: service).path,
+        ]
+
         switch service {
         case .database:
-            return [
-                ClawJSRuntime.cliScriptURL.path,
-                "database", "serve",
-                "--host", "127.0.0.1",
-                "--port", String(service.port),
+            arguments += [
                 "--data-dir", Self.dataDirectoryURL(for: service).path,
+                "--files-dir", Self.dataDirectoryURL(for: service)
+                    .appendingPathComponent("files", isDirectory: true).path,
             ]
-        case .memory:
-            guard let cli = Self.bundledServiceScript(service, name: "cli.js") else { return nil }
-            return [
-                cli.path,
-                "serve",
-                "--port", String(service.port),
-            ]
-        case .drive:
-            guard let cli = Self.bundledServiceScript(service, name: "cli.js") else { return nil }
-            return [
-                cli.path,
-                "serve",
-                "--host", "127.0.0.1",
-                "--port", String(service.port),
-                "--data-dir", Self.dataDirectoryURL(for: service).path,
-            ]
+            return arguments
         case .vault, .telegram:
-            guard let server = Self.bundledServiceScript(service, name: "server.js") else { return nil }
-            return [
-                server.path,
-            ]
+            return arguments
+        case .memory, .drive:
+            arguments += ["--data-dir", Self.dataDirectoryURL(for: service).path]
+            return arguments
         }
     }
 
@@ -495,9 +489,11 @@ final class ClawJSServiceManager: ObservableObject {
             .appendingPathComponent(service.rawValue, isDirectory: true)
     }
 
-    private static func bundledServiceScript(_ service: ClawJSService, name: String) -> URL? {
-        let url = ClawJSRuntime.bundleRootURL
-            .appendingPathComponent("node_modules/\(service.rawValue)/dist/\(name)", isDirectory: false)
+    private static func bundledLauncherScript(for service: ClawJSService) -> URL? {
+        let url = ClawJSRuntime.bundleRootURL.appendingPathComponent(
+            "node_modules/@clawjs/cli/bin/\(service.rawValue)-server-launcher.mjs",
+            isDirectory: false
+        )
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
