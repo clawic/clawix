@@ -1,13 +1,14 @@
 # Clawix
 
-Monorepo for the Clawix project. Native clients for the [`codex`](https://github.com/openai/codex) CLI. The repo is designed to host several apps (macOS, iOS, …), each in its own subdirectory under `apps/`.
+Monorepo for the Clawix project. Native clients for the [`codex`](https://github.com/openai/codex) CLI. The repo hosts platform clients at the top level, with shared Swift packages under `packages/`.
 
 ## Repository layout
 
 ```
-apps/
-  macos/        # macOS client (SwiftUI), exists.
-  ios/          # iOS client (placeholder, not implemented yet).
+macos/          # macOS client (SwiftUI).
+ios/            # iOS client.
+packages/       # Shared Swift packages.
+cli/            # npm CLI surface.
 ```
 
 Each app is autonomous: its own `Package.swift` (or Xcode project), its own scripts, its own bundle id. The only repo-wide assets are the brand, this `CLAUDE.md`, and the hygiene gate run before publishing.
@@ -19,7 +20,7 @@ Requirements: macOS 14+, Swift 5.9+, Xcode Command Line Tools.
 ### Dev loop
 
 ```
-bash apps/macos/scripts/dev.sh
+bash macos/scripts/dev.sh
 ```
 
 Compiles debug, kills the previous instance, relaunches. By default the build is ad-hoc-signed and bundled as `com.example.clawix.desktop` (a placeholder); macOS will re-prompt for permissions (Desktop folder, microphone, etc.) on every relaunch.
@@ -38,20 +39,20 @@ BUNDLE_ID="com.yourdomain.clawix"
 ### Release
 
 ```
-bash apps/macos/scripts/build_app.sh
+bash macos/scripts/build_app.sh
 ```
 
-Produces `apps/macos/build/Clawix.app`. Same `SIGN_IDENTITY` / `BUNDLE_ID` resolution as `dev.sh`.
+Produces `macos/build/Clawix.app`. Same `SIGN_IDENTITY` / `BUNDLE_ID` resolution as `dev.sh`.
 
 ## Hygiene gate (publication)
 
 Before publishing anything, this must pass:
 
 ```
-bash apps/macos/scripts/public_hygiene_check.sh
+bash macos/scripts/public_hygiene_check.sh
 ```
 
-It scans the entire repo (root + `apps/*/Sources` + `apps/*/scripts` + `apps/*/Resources` + `apps/*/Helpers` + `cli/`) for: developer-machine paths, secret-looking literals, hex digests, hard-coded codesign material, Apple Team IDs and committed `.signing.env` files. When new apps are added under `apps/`, their tree is picked up automatically because the gate iterates `apps/*/`. The npm CLI under `cli/` is part of the same publish surface, so its source ships under the same blacklist.
+It scans the entire repo publish surface (root docs, `macos/`, `ios/`, `packages/*/` and `cli/`) for: developer-machine paths, secret-looking literals, hex digests, hard-coded codesign material, Apple Team IDs and committed `.signing.env` files. The npm CLI under `cli/` is part of the same publish surface, so its source ships under the same blacklist.
 
 ## Commits
 
@@ -78,7 +79,7 @@ Rules:
 This repository never contains the maintainer's real codesign identity, Apple Team ID, or bundle id. They live in a `.signing.env` file kept outside the public tree. When contributing code:
 
 - **Do not hard-code** a `CFBundleIdentifier`, a `DEVELOPMENT_TEAM`, or a codesign identity literal anywhere in this repository. Those values are read at runtime from `.signing.env` or environment variables.
-- **Do not commit** the file `.signing.env`. It is in `.gitignore` and `apps/macos/scripts/public_hygiene_check.sh` fails the build if a copy is detected inside the public tree.
+- **Do not commit** the file `.signing.env`. It is in `.gitignore` and `macos/scripts/public_hygiene_check.sh` fails the build if a copy is detected inside the public tree.
 - **Do not introduce** an `Info.plist` with a literal bundle id. The plist is generated in `build_app.sh` interpolating `${BUNDLE_ID}`.
 - **Do not add** an Xcode project with a concrete development team value. Leave the field empty; the script supplies it from the environment.
 
@@ -86,7 +87,7 @@ If you need to expose a new piece of local config (another identifier, another f
 
 ---
 
-# macOS app · `apps/macos/`
+# macOS app · `macos/`
 
 Native macOS client (SwiftUI) for the `codex` CLI. The visible app is a frontend. Runtime ownership is split by mode:
 
@@ -97,19 +98,19 @@ Do not reintroduce a second GUI-owned bridge/backend when background bridge mode
 
 ## Layout
 
-- `apps/macos/Package.swift`: Swift Package, target `Clawix`, macOS 14+. One external dependency: [Sparkle 2](https://sparkle-project.org) for in-app updates.
-- `apps/macos/VERSION`: single source of truth for the marketing version. `dev.sh` and the release scripts read it via `_emit_version.sh` and inject it into the generated Info.plist.
-- `apps/macos/Sources/Clawix/`: SwiftUI source.
-- `apps/macos/Sources/Clawix/AppVersion.swift`: reads `CFBundleShortVersionString` / `CFBundleVersion` at runtime so the app reports the version it was actually compiled with.
-- `apps/macos/Sources/Clawix/Updater/UpdaterController.swift`: thin wrapper around `SPUStandardUpdaterController`. Drives the "Update" chip in the top bar.
-- `apps/macos/Sources/Clawix/DaemonBridgeClient.swift`: loopback client used by the Mac app when the background bridge daemon is active.
-- `apps/macos/Helpers/Bridged/`: Swift helper executable that runs as the background bridge daemon and owns the Codex runtime connection in background bridge mode.
-- `apps/shared/ClawixCore/`: shared bridge wire protocol.
-- `apps/shared/ClawixEngine/`: shared bridge server/session/pairing runtime.
-- `apps/macos/scripts/dev.sh`: dev launcher (build + relaunch). Copies Sparkle.framework into the bundle and signs deep.
-- `apps/macos/scripts/build_app.sh`: release-only `.app` builder (single identity, deep sign).
-- `apps/macos/scripts/build_release_app.sh`: notarization-ready builder. Reads `DEVELOPER_ID_IDENTITY` from env and applies per-component hardened-runtime signing in the order Sparkle requires.
-- `apps/macos/scripts/public_hygiene_check.sh`: hygiene gate scanned across the whole repo.
+- `macos/Package.swift`: Swift Package, target `Clawix`, macOS 14+. One external dependency: [Sparkle 2](https://sparkle-project.org) for in-app updates.
+- `macos/VERSION`: single source of truth for the marketing version. `dev.sh` and the release scripts read it via `_emit_version.sh` and inject it into the generated Info.plist.
+- `macos/Sources/Clawix/`: SwiftUI source.
+- `macos/Sources/Clawix/AppVersion.swift`: reads `CFBundleShortVersionString` / `CFBundleVersion` at runtime so the app reports the version it was actually compiled with.
+- `macos/Sources/Clawix/Updater/UpdaterController.swift`: thin wrapper around `SPUStandardUpdaterController`. Drives the "Update" chip in the top bar.
+- `macos/Sources/Clawix/DaemonBridgeClient.swift`: loopback client used by the Mac app when the background bridge daemon is active.
+- `macos/Helpers/Bridged/`: Swift helper executable that runs as the background bridge daemon and owns the Codex runtime connection in background bridge mode.
+- `packages/ClawixCore/`: shared bridge wire protocol.
+- `packages/ClawixEngine/`: shared bridge server/session/pairing runtime.
+- `macos/scripts/dev.sh`: dev launcher (build + relaunch). Copies Sparkle.framework into the bundle and signs deep.
+- `macos/scripts/build_app.sh`: release-only `.app` builder (single identity, deep sign).
+- `macos/scripts/build_release_app.sh`: notarization-ready builder. Reads `DEVELOPER_ID_IDENTITY` from env and applies per-component hardened-runtime signing in the order Sparkle requires.
+- `macos/scripts/public_hygiene_check.sh`: hygiene gate scanned across the whole repo.
 
 The full release orchestration (notarytool, DMG packaging, Sparkle EdDSA signing, appcast regeneration, GitHub Release upload) is intentionally NOT in this public tree. It lives in the maintainer's private workspace and consumes `build_release_app.sh` plus credentials from `.signing.env`.
 
@@ -164,7 +165,7 @@ When a new component draws its own radius (canvas, hand-painting in a `GeometryR
 
 ## Segmented selectors: always `SlidingSegmented`
 
-App-wide standard for any 2-N mutually-exclusive choice picker (e.g. "Used / Remaining", "Queue / Drive", "Inline / Detached", "STDIO / HTTP streaming", merge methods, transport modes). The canonical component lives in `apps/macos/Sources/Clawix/SettingsView.swift` as `SlidingSegmented<T>` and is the only correct way to render this pattern.
+App-wide standard for any 2-N mutually-exclusive choice picker (e.g. "Used / Remaining", "Queue / Drive", "Inline / Detached", "STDIO / HTTP streaming", merge methods, transport modes). The canonical component lives in `macos/Sources/Clawix/SettingsView.swift` as `SlidingSegmented<T>` and is the only correct way to render this pattern.
 
 What `SlidingSegmented` looks like:
 
@@ -198,7 +199,7 @@ When migrating existing selectors:
 
 ## Custom icons (project canon)
 
-The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph that has a strong identity in the UI: documents, folders, terminal, globe, mic, search, branch, pin, archive, copy, pencil, branch-arrows, sidebar toggle, etc. They live in `apps/macos/Sources/Clawix/` next to the rest of the views and are exported as plain `View` types (e.g. `FileChipIcon`, `TerminalIcon`, `GlobeIcon`, `FolderOpenIcon`, `MicIcon`, `SearchIcon`, `CursorIcon`).
+The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph that has a strong identity in the UI: documents, folders, terminal, globe, mic, search, branch, pin, archive, copy, pencil, branch-arrows, sidebar toggle, etc. They live in `macos/Sources/Clawix/` next to the rest of the views and are exported as plain `View` types (e.g. `FileChipIcon`, `TerminalIcon`, `GlobeIcon`, `FolderOpenIcon`, `MicIcon`, `SearchIcon`, `CursorIcon`).
 
 **Before adding any `Image(systemName:)`, check whether a custom equivalent already exists.** SF Symbols look generic next to the rest of the chrome and break visual consistency. The canonical map (extend it as new icons are added):
 
@@ -232,7 +233,7 @@ The app ships its own hand-drawn icons (Canvas / Path / Shape) for every glyph t
 
 The Clawix mark itself is a custom shape too. Master vector lives at `brand/clawix-logo.svg` at the repo root: a single `evenodd`-filled `<path>` in a `100x100` viewBox. Geometry: outer iOS-style continuous-corner squircle (3 cubic beziers per corner with the Apple app-icon magic numbers, corner extent `38`), visor cut out (smaller squircle, corner extent `22`), two squircle eyes filled back in. `currentColor` so the consumer decides the tint.
 
-In code, the same path is reproduced in `apps/macos/Sources/Clawix/ClawixLogoIcon.swift`. Two entry points:
+In code, the same path is reproduced in `macos/Sources/Clawix/ClawixLogoIcon.swift`. Two entry points:
 
 - `ClawixLogoIcon(size:)` — SwiftUI `View`, fills with `.primary`. Use anywhere inside the SwiftUI hierarchy (splash, about screen, empty states, settings).
 - `ClawixLogoTemplateImage.make(size:)` — flattens the shape into an `NSImage` with `isTemplate = true`. Required for `MenuBarExtra` because its label slot does not render arbitrary SwiftUI `Shape`s reliably (renders as an empty hole). AppKit applies the menu bar's foreground tint automatically when the image is template.
@@ -241,7 +242,7 @@ Hard rules:
 
 - The brand mark is `ClawixLogoIcon` / `ClawixLogoTemplateImage`. Never re-derive the path inline somewhere else, never use `Image(systemName:)` as a stand-in.
 - When the SVG master changes (`brand/clawix-logo.svg`), update the path in `ClawixLogoIcon.swift` to match. The two are intentionally redundant: the SVG is the human-editable source, the Swift path is the runtime rendering. If the iOS app eventually ships, it imports `brand/clawix-logo.svg` (or replicates the same path natively); the master in `brand/` stays canonical.
-- For places that need the `.icns` / iOS asset catalog renders, those are produced from the same master (currently the `.icns` lives in `apps/macos/Sources/Clawix/Resources/Clawix.icns`). When updating the brand, regenerate both the in-code path and the rasterized asset; do not let them drift.
+- For places that need the `.icns` / iOS asset catalog renders, those are produced from the same master (currently the `.icns` lives in `macos/Sources/Clawix/Resources/Clawix.icns`). When updating the brand, regenerate both the in-code path and the rasterized asset; do not let them drift.
 
 Hard rules:
 
@@ -257,9 +258,9 @@ When a glyph has no project-custom icon (the table above), the fallback is **Luc
 
 Hard rules:
 
-- **Use the SPM-managed Lucide package, never hand-port the SVG paths.** A previous attempt to hand-port silhouettes into SwiftUI `Path` shapes was a visual fracaso (chevrons came out fine, complex glyphs like trash, paperclip, link, drama looked broken). The canonical install is `lcandy2/LucideIcon` from `https://github.com/lcandy2/LucideIcon.git`, declared in `apps/macos/Package.swift` and in `apps/ios/project.yml` (`packages.LucideIcon`). The package converts every Lucide SVG into a custom SF Symbol via `swiftdraw` and ships them as an asset catalog, so existing SwiftUI Image modifiers (`.font(.system(size:))`, `.foregroundStyle`, `.symbolRenderingMode`, `.imageScale`) all continue to work like a normal `Image(systemName:)`.
+- **Use the SPM-managed Lucide package, never hand-port the SVG paths.** A previous attempt to hand-port silhouettes into SwiftUI `Path` shapes was a visual fracaso (chevrons came out fine, complex glyphs like trash, paperclip, link, drama looked broken). The canonical install is `lcandy2/LucideIcon` from `https://github.com/lcandy2/LucideIcon.git`, declared in `macos/Package.swift` and in `ios/project.yml` (`packages.LucideIcon`). The package converts every Lucide SVG into a custom SF Symbol via `swiftdraw` and ships them as an asset catalog, so existing SwiftUI Image modifiers (`.font(.system(size:))`, `.foregroundStyle`, `.symbolRenderingMode`, `.imageScale`) all continue to work like a normal `Image(systemName:)`.
 - **Call sites use `Image(lucide: .name)`.** Hyphens become underscores: `chevron-down` → `.chevron_down`, `trash-2` → `.trash_2`, `arrow-up-right` → `.arrow_up_right`. The list of available cases lives in the package's `LucideIcon+All.swift`. Files that use Lucide need `import LucideIcon` at the top, alongside `import SwiftUI`.
-- **Bridge for legacy SF Symbol strings.** A small `LucideBridge.swift` lives at `apps/macos/Sources/Clawix/LucideBridge.swift` (and mirrored at `apps/ios/Sources/Clawix/Theme/LucideBridge.swift`). It exposes `LucideIcon.sfMapped(_: String) -> LucideIcon?` and `Image(lucideOrSystem: String)`. Use the latter at sites where the icon name is a runtime String coming from data tables (settings categories, plugin metadata, permission-mode `iconName` properties, etc.). The bridge's mapping table is the single place where a new SF-Symbol-string-to-Lucide entry is added.
+- **Bridge for legacy SF Symbol strings.** A small `LucideBridge.swift` lives at `macos/Sources/Clawix/LucideBridge.swift` (and mirrored at `ios/Sources/Clawix/Theme/LucideBridge.swift`). It exposes `LucideIcon.sfMapped(_: String) -> LucideIcon?` and `Image(lucideOrSystem: String)`. Use the latter at sites where the icon name is a runtime String coming from data tables (settings categories, plugin metadata, permission-mode `iconName` properties, etc.). The bridge's mapping table is the single place where a new SF-Symbol-string-to-Lucide entry is added.
 - **SF Symbols stay forbidden** as a generic fallback. The only legitimate `Image(systemName:)` left in the codebase is for genuinely OS-level chrome where the platform glyph is the right answer (e.g. `command` for the Cmd modifier in keyboard shortcut hints, `return` for the Return key, system menu/menubar conventions where AppKit owns the rendering). Anything that depicts a domain concept (folder, document, trash, search, chevron, plus, x, arrow, etc.) goes through Lucide.
 
 The brand mark is still `ClawixLogoIcon` / `ClawixLogoTemplateImage`. Lucide is for everything that is a domain glyph without project identity.
@@ -314,7 +315,7 @@ Before adding a new dropdown, look at `ModelMenuPopup` and replicate its structu
 
 App-wide standard for any scroll surface. The sidebar's scrollbar is the **visual reference**: a thin, low-opacity capsule that paints over the content, never the system's default fat gray bar with a track background. Anything new and anything retroactive must match it.
 
-The canonical implementation lives in `apps/macos/Sources/Clawix/ThinScrollbar.swift` and exposes two entry points; pick the one that matches the underlying scroll container, never roll a new scroller class.
+The canonical implementation lives in `macos/Sources/Clawix/ThinScrollbar.swift` and exposes two entry points; pick the one that matches the underlying scroll container, never roll a new scroller class.
 
 Spec (numbers come from `ThinScroller`; do not invent values when reusing the look elsewhere):
 
@@ -352,8 +353,8 @@ Top-level npm package, name `clawix`, distributed at https://www.npmjs.com/packa
 
 The CLI is a thin Node.js wrapper around two pre-built, pre-signed Swift binaries:
 
-- `clawix-bridged`: the same daemon `Clawix.app` ships under `Contents/Helpers/clawix-bridged`, sourced from `apps/macos/Helpers/Bridged/`. Owns the `codex app-server` subprocess and the bridge's WebSocket listener.
-- `clawix-menubar`: a tiny accessory app (NSStatusItem, no Dock, no main window) sourced from `apps/macos/Helpers/Menubar/`. Polls the daemon, exposes the pairing QR, offers "Install Clawix.app…" as a one-click install hop.
+- `clawix-bridged`: the same daemon `Clawix.app` ships under `Contents/Helpers/clawix-bridged`, sourced from `macos/Helpers/Bridged/`. Owns the `codex app-server` subprocess and the bridge's WebSocket listener.
+- `clawix-menubar`: a tiny accessory app (NSStatusItem, no Dock, no main window) sourced from `macos/Helpers/Menubar/`. Polls the daemon, exposes the pairing QR, offers "Install Clawix.app…" as a one-click install hop.
 
 `postinstall` downloads `clawix-cli-darwin-universal.tar.gz` from the GitHub release whose tag matches the npm package version, verifies SHA-256 against `cli/lib/checksums.json` (committed alongside the npm version bump), and unpacks both binaries into `~/.clawix/bin/` with `codesign --verify --strict` as the last gate. Nothing is built on the user's machine.
 
@@ -395,13 +396,13 @@ There is exactly one daemon process at any time.
 
 ## Hard rules for contributors and AI agents
 
-- **No private literals in `cli/`**: no Team ID, no maintainer bundle id, no codesign identity, no SKU. The hygiene gate now scans `cli/` along with `apps/*/`.
+- **No private literals in `cli/`**: no Team ID, no maintainer bundle id, no codesign identity, no SKU. The hygiene gate scans `cli/` along with the public platform and package trees.
 - **No competitor brand names in `cli/`**: the CLI is positioned standalone, not as a port or clone of any existing tool. Code, comments, copy and error messages must stay neutral.
 - **No hand-rolled JS-side crypto, signing or notarization**: the binaries arrive from GitHub releases pre-signed and pre-notarized with Developer ID. The CLI verifies, never re-signs.
 - **No third-party npm dependencies in v1**: the package is intentionally zero-dep. If you need an npm dep, justify it; smaller surface = less supply-chain risk for users who run `npm install -g clawix`.
 - **No `sudo` from postinstall or the CLI**: every path it writes (`~/.clawix/bin/`, `~/Library/LaunchAgents/`, `~/Library/Caches/clawix/`) is in the user's home. `clawix install-app` copies into `/Applications` via `ditto` (which works without sudo when the user has write access; if they don't, the copy fails cleanly without a privilege escalation prompt).
 
-# iOS app · `apps/ios/`
+# iOS app · `ios/`
 
 ## Design language: iOS 26 Liquid Glass
 
@@ -424,11 +425,11 @@ Reference for layout, hierarchy and motion: ChatGPT iOS. The chat detail surface
 
 Same hierarchy as macOS:
 
-1. **Project-custom icons first.** Glyphs that have identity in the product (the brand mark, the mic, the wrench, the family of folder/file/branch icons, etc.) are hand-drawn SwiftUI `Path`/`Shape` views. The macOS app already ships the canonical set (`ClawixLogoIcon`, `MicIcon`, `WrenchIcon`, `FileChipIcon`, `FolderOpenIcon`, ...). Where iOS needs the same concept, port the existing Mac struct into `apps/ios/Sources/Clawix/Theme/` (or move it to `apps/shared/` if it stabilises) rather than redrawing.
+1. **Project-custom icons first.** Glyphs that have identity in the product (the brand mark, the mic, the wrench, the family of folder/file/branch icons, etc.) are hand-drawn SwiftUI `Path`/`Shape` views. The macOS app already ships the canonical set (`ClawixLogoIcon`, `MicIcon`, `WrenchIcon`, `FileChipIcon`, `FolderOpenIcon`, ...). Where iOS needs the same concept, port the existing Mac struct into `ios/Sources/Clawix/Theme/` (or move it to `packages/` if it stabilises) rather than redrawing.
 2. **Lucide-sourced icons as fallback.** Same rules as the macOS section "Lucide-sourced icons":
-   - The SPM dep is `lcandy2/LucideIcon`, declared in `apps/ios/project.yml` under `packages` and added to the `Clawix` target's `dependencies`. Re-run `xcodegen generate` after editing `project.yml`.
+   - The SPM dep is `lcandy2/LucideIcon`, declared in `ios/project.yml` under `packages` and added to the `Clawix` target's `dependencies`. Re-run `xcodegen generate` after editing `project.yml`.
    - Call sites use `Image(lucide: .name)` (kebab-to-underscore naming: `chevron-down` → `.chevron_down`).
-   - The bridge is `apps/ios/Sources/Clawix/Theme/LucideBridge.swift`, mirroring the macOS file. Dynamic name strings flow through `Image(lucideOrSystem: name)`.
+   - The bridge is `ios/Sources/Clawix/Theme/LucideBridge.swift`, mirroring the macOS file. Dynamic name strings flow through `Image(lucideOrSystem: name)`.
    - Files that use Lucide need `import LucideIcon` next to `import SwiftUI`.
 3. **SF Symbols stay forbidden** as a generic fallback. The only legitimate `Image(systemName:)` left is for genuinely OS-level chrome (keyboard shortcut indicators, Liquid Glass system buttons that ship a fixed SF Symbol per Apple's HIG). Anything depicting a domain concept goes through Lucide.
 
