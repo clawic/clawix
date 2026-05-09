@@ -179,7 +179,6 @@ struct LucideIcon: View {
     var size: CGFloat
 
     init(_ kind: Kind, size: CGFloat = 16) {
-        Self.registerOnce
         self.kind = kind
         self.size = size
     }
@@ -193,18 +192,10 @@ struct LucideIcon: View {
             .frame(width: size, height: size)
     }
 
-    /// One-shot CTFontManager registration. macOS bundles `lucide.ttf`
-    /// next to Manrope under `Resources/Fonts/`; iOS lists it in
-    /// `UIAppFonts` so the system loads it before the first view
-    /// resolves. We register from code as a safety net so non-bundle
-    /// hosts (Xcode previews, command-line previews) also see the font.
-    static let registerOnce: Void = {
-        guard let url = Bundle.module.url(forResource: "lucide", withExtension: "ttf") else {
-            return
-        }
-        var error: Unmanaged<CFError>?
-        CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
-    }()
+    // Font registration: iOS loads `lucide.ttf` at process start via
+    // `UIAppFonts` in Info.plist; macOS loads it via `BodyFont.register()`
+    // which iterates every `.ttf` in `Bundle.module` (including
+    // `Resources/Fonts/lucide.ttf`). No per-view registration needed.
 
     /// Maps a legacy SF Symbol name to a Lucide kind. Used by the
     /// `auto(_:)` helper at sites where the icon name is computed at
@@ -307,5 +298,19 @@ struct LucideIcon: View {
             Image(systemName: systemName)
                 .font(.system(size: size))
         }
+    }
+}
+
+extension Image {
+    /// Compatibility shim used by call sites that pass an SF Symbol
+    /// name string for parity with platforms that haven't been migrated
+    /// to the `LucideIcon` enum yet. Routes everything through
+    /// `Image(systemName:)` for now; if a richer Lucide-as-Image
+    /// rendering is wanted later, swap this body for an `NSImage`-backed
+    /// glyph render based on `LucideIcon.sfMapped(name)`. The function
+    /// is intentionally `init` (not a static helper) so callers using
+    /// `Image(lucideOrSystem: …).font(…)` chain modifiers as expected.
+    init(lucideOrSystem name: String) {
+        self.init(systemName: name)
     }
 }

@@ -1,6 +1,5 @@
 import SwiftUI
 import ClawixCore
-import LucideIcon
 
 // Project surface. A "project" is the set of chats that share a
 // `cwd` (working directory) on the paired Mac. The Mac's Codex CLI
@@ -147,8 +146,7 @@ struct ProjectDetailView: View {
                 Circle()
                     .fill(.clear)
                     .glassEffect(.regular, in: Circle())
-                Image(lucide: .ellipsis)
-                    .font(BodyFont.system(size: 20, weight: .semibold))
+                LucideIcon(.ellipsis, size: 32)
                     .foregroundStyle(Palette.textPrimary)
             }
             .frame(width: 46, height: 46)
@@ -176,8 +174,7 @@ struct ProjectDetailView: View {
                     .foregroundStyle(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Image(lucide: .chevron_down)
-                    .font(BodyFont.system(size: 10, weight: .semibold))
+                LucideIcon(.chevronDown, size: 16)
                     .foregroundStyle(Palette.textSecondary)
             }
             .padding(.horizontal, 14)
@@ -194,8 +191,7 @@ struct ProjectDetailView: View {
     private var chatRows: some View {
         if chats.isEmpty {
             VStack(spacing: 10) {
-                Image(lucide: .message_circle)
-                    .font(BodyFont.system(size: 28))
+                LucideIcon(.messageCircle, size: 45)
                     .foregroundStyle(Palette.textTertiary)
                 Text("No chats yet")
                     .font(Typography.bodyEmphasized)
@@ -294,8 +290,7 @@ private struct ProjectPickerRow: View {
             Spacer(minLength: 8)
 
             if isCurrent {
-                Image(lucide: .check)
-                    .font(BodyFont.system(size: 13, weight: .bold))
+                LucideIcon(.check, size: 21)
                     .foregroundStyle(Palette.textPrimary)
             } else if project.hasActiveTurn {
                 Circle()

@@ -1,5 +1,4 @@
 import SwiftUI
-import LucideIcon
 
 // iOS 26 Liquid Glass surfaces. The whole iPhone companion is built
 // on top of `glassEffect(in:)` for capsules / circles / rounded rects
@@ -105,7 +104,7 @@ struct GlassIconButton: View {
     private var glyphView: some View {
         switch glyph {
         case .system(let name, let iconSize, let weight):
-            Image(lucideOrSystem: name)
+            LucideIcon.auto(name, size: 25.5)
                 .font(BodyFont.system(size: iconSize, weight: weight))
                 .foregroundStyle(Palette.textPrimary)
         case .custom(let view):

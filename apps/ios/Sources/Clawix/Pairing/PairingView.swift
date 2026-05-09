@@ -1,6 +1,5 @@
 import SwiftUI
 import ClawixCore
-import LucideIcon
 
 // First-run pairing screen. Pure black canvas, with a glass-bordered
 // instructions card and a glass capsule CTA. Stays consistent with
@@ -169,8 +168,7 @@ private struct ScannerSheet: View {
                         Haptics.tap()
                         onCancel()
                     }) {
-                        Image(lucide: .x)
-                            .font(BodyFont.system(size: 16, weight: .semibold))
+                        LucideIcon(.x, size: 25.5)
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .glassCircle()
