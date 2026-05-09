@@ -3,6 +3,13 @@ id: macos.chat.new-conversation
 platform: macos
 surface: chat
 status: reference
+priority: P0
+tags:
+  - smoke
+  - regression
+  - dummy
+  - host
+  - composer
 intent: "Start a new conversation through every major macOS entrypoint, compose a prompt, and verify the resulting chat appears exactly once with the expected composer, sidebar, and transcript state."
 entrypoints:
   - command-n
@@ -29,6 +36,7 @@ required_state:
   backend: fake or intercepted unless real prompt submission is explicitly approved
   window: main macOS app window visible and focused
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - real prompt submission
@@ -72,13 +80,12 @@ Verify that a user can start a fresh conversation from any supported macOS entry
 - Sending must create one visible user message.
 - After send, composer text, slash menu state, and staged attachment chips must clear.
 - If a project is selected before send, the new chat must visually belong to that project.
-- If plan mode is enabled before send, the plan mode state must be visible before submission and represented in the resulting flow.
+- Plan mode must be visible before send when enabled.
 
 ## Setup
 
 - Launch the macOS app in dummy or fixture-backed mode.
-- Use a data set with at least one existing chat, one project, and an empty home/new-chat state.
-- Keep the main app window focused.
+- Use a data set with an existing chat, one project, and an empty new-chat state.
 - If testing attachments, use synthetic public fixture files only.
 - If testing bridge-originated creation, use a fake bridge client or local isolated daemon.
 
@@ -96,12 +103,19 @@ Verify that a user can start a fresh conversation from any supported macOS entry
 
 | Dimension | Variants |
 | --- | --- |
-| Start path | keyboard, menu, sidebar button, command palette, project action, empty state, bridge |
-| Input method | typed short text, typed multiline text, pasted long text, slash command |
+| Start path | keyboard, menu, sidebar, command palette, project, empty state, bridge |
+| Input method | short, multiline, long paste, slash command |
 | Content | text only, attachment only, text plus attachment |
 | Configuration | default model, changed model, changed permission mode, plan mode on |
 | Project scope | no project, selected project, project action |
 | Runtime | hermetic fake backend, host-local daemon, real backend only with confirmation |
+
+## Critical Cases
+
+- `P0-keyboard-new-chat`: Command-N opens a focused empty composer and sends through a fake backend.
+- `P0-sidebar-new-chat`: sidebar button creates exactly one selected row.
+- `P1-project-new-chat`: project-scoped action keeps the new chat under the selected project.
+- `P1-plan-attachment`: plan mode plus fixture attachment remains visible before send and clears after send.
 
 ## Steps
 
@@ -109,61 +123,52 @@ Verify that a user can start a fresh conversation from any supported macOS entry
 2. Invoke one entrypoint, beginning with Command-N for the reference path.
 3. Confirm the new conversation surface appears and the composer is focused.
 4. Type `Summarize the fixture project status in one sentence.`
-5. Confirm the send button becomes enabled.
-6. Send the message.
-7. Wait for the user message to appear.
-8. Confirm the sidebar shows one new selected chat row.
-9. Confirm the composer is empty and ready for another message.
+5. Confirm send enables, submit, and wait for the user message.
+6. Confirm the sidebar shows one selected row and the composer resets.
 
-Alternate entrypoint passes:
+Alternate passes:
 
-1. Repeat the same happy path through File -> New Chat.
-2. Repeat through the sidebar new-chat button.
-3. Repeat through the command palette.
-4. Repeat through a project row and confirm the project pill or project grouping reflects the selected project.
-5. Repeat from an empty state.
-6. Repeat through a bridge-originated fake new-chat request.
-
-Composition variants:
-
-1. Use a three-line prompt and verify line wrapping does not obscure toolbar controls.
-2. Paste a long multi-paragraph prompt and verify the composer grows up to its limit while remaining scrollable.
-3. Type `/` and select the plan command; verify plan mode turns on and the command text is removed.
-4. Type a sentence containing `plan`; accept the plan suggestion and verify the plan mode pill appears.
-5. Stage a fixture image and send text plus image.
-6. Stage only a fixture attachment and verify send enables without text.
-7. Change permission mode before send and verify the pill updates before submission.
-8. Change model or reasoning before send and verify the model picker label updates before submission.
+1. Repeat through File -> New Chat, sidebar button, command palette, empty state, and bridge-originated fake request.
+2. Repeat through a project row and confirm project chrome or grouping reflects the selected project.
+3. Exercise multiline, pasted long text, slash plan command, plan suggestion, attachment-only, and text-plus-attachment drafts.
+4. Change permission mode and model/reasoning before send; confirm visible labels update before submission.
 
 ## Expected Results
 
-- The visual transition lands on a clean new-chat composer without stale text.
-- Keyboard focus is in the composer for keyboard, menu, sidebar, command palette, and project entrypoints.
+- The visual transition lands on a clean focused composer without stale text.
 - The user message appears once in the transcript.
 - The sidebar selects the newly created chat and does not create duplicates.
-- Attachment previews or chips appear before send and are represented in the user message after send.
-- Plan mode is visible before send when enabled.
-- Project-scoped creation leaves the chat under the expected project grouping.
+- Attachment previews or chips appear before send and in the user message after send.
+- Plan mode and project scope are visible when enabled.
 - No real network, cost, secret, or production write occurs in isolated mode.
 
 ## Failure Signals
 
 - Composer does not focus after starting a new chat.
-- Send remains disabled with valid text or attachment content.
-- Send enables for an empty composer with no attachment.
+- Send enablement does not match text or attachment state.
 - A stale draft from a previous chat remains.
 - The new chat appears twice in the sidebar.
 - The chat is created outside the selected project.
 - Attachments disappear before send or are not represented after send.
 - A real prompt is sent without explicit confirmation.
 
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Entry point executed with dummy or fixture-backed data | pass/fail/no-run |
+| Composer focused before typing | pass/fail/no-run |
+| Send button enablement matched draft state | pass/fail/no-run |
+| New user message appeared once | pass/fail/no-run |
+| Sidebar row was unique and selected | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
+
 ## Screenshot Checklist
 
-- New conversation composer focused before typing.
-- Composer with a long multiline draft.
-- Composer with plan mode visible.
-- Composer with fixture attachment staged.
-- Transcript after send with the new sidebar row selected.
+- Focused new conversation composer.
+- Long or multiline draft.
+- Plan mode or attachment staged.
+- Transcript after send with selected sidebar row.
 - Project-scoped new chat after send.
 
 ## Notes for Future Automation
