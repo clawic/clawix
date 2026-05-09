@@ -3,6 +3,13 @@ id: macos.chat.attachments
 platform: macos
 surface: chat
 status: ready
+priority: P1
+tags:
+  - regression
+  - dummy
+  - host
+  - composer
+  - attachments
 intent: "Validate visual attachment staging, preview, removal, drag-and-drop, and send behavior for composer files and images."
 entrypoints:
   - plus-menu-add
@@ -23,6 +30,7 @@ required_state:
   backend: fake or intercepted for send
   window: main macOS app window visible and focused
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - attaching private user files
@@ -85,6 +93,13 @@ Verify that users can add, inspect, remove, and send attachments through every s
 | Preview | thumbnail only, full preview overlay, close preview |
 | Runtime | fake send, host drag-and-drop, real send only with confirmation |
 
+## Critical Cases
+
+- `P1-plus-menu-image`: plus menu stages a fixture image and shows preview.
+- `P1-attachment-only-send`: attachment-only draft enables send and clears after fake send.
+- `P1-remove-last-attachment`: removing the final attachment disables send when text is empty.
+- `P2-host-drag-drop`: host validation confirms drag-to-window and drag-to-composer paths.
+
 ## Steps
 
 1. Open a new-chat composer.
@@ -120,6 +135,17 @@ Alternate passes:
 - Preview opens blank or cannot close.
 - Dragging into the window has no visible response in host mode.
 - A private file is used without explicit confirmation.
+
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Fixture-only attachment source confirmed | pass/fail/no-run |
+| Staged chip or preview visible | pass/fail/no-run |
+| Attachment-only send enablement verified | pass/fail/no-run |
+| Remove-before-send behavior verified | pass/fail/no-run |
+| Host drag-and-drop checked or marked no-run | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
 
 ## Screenshot Checklist
 
