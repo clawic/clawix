@@ -1003,6 +1003,7 @@ final class AppState: ObservableObject {
     /// disk snapshot only holds settled messages, matching iOS.
     private var cachedWireChats: [WireChat] = []
     private var cachedWireMessagesByChat: [String: [WireMessage]] = [:]
+    private var optimisticUserMessageIdsByChat: [UUID: Set<UUID>] = [:]
     /// Drives `SnapshotCache.save` after a quiet 500ms window. Each
     /// call cancels the previous in-flight task; streaming bursts and
     /// rapid chat updates collapse into a single write. The actual IO
@@ -2490,6 +2491,7 @@ final class AppState: ObservableObject {
         }
 
         if let daemonBridgeClient {
+            trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
             daemonBridgeClient.sendPrompt(chatId: chatId, text: combined, attachments: wireAttachments(from: attachments))
         } else if selectedAgentRuntime == .opencode {
             appendAssistantSystemMessage(
@@ -2700,6 +2702,7 @@ final class AppState: ObservableObject {
             // explicitly. openChat is idempotent (Set.insert) so
             // calling it on every submit is safe and also covers the
             // re-subscribe-after-reconnect case.
+            trackOptimisticUserMessage(chatId: resolvedId, messageId: userMsg.id)
             daemonBridgeClient.openChat(resolvedId)
             daemonBridgeClient.sendPrompt(chatId: resolvedId, text: combined)
         } else if let clawix {
@@ -2765,6 +2768,7 @@ final class AppState: ObservableObject {
             // The daemon spools the attachments itself and emits
             // `localImage` paths to Codex; we just forward the raw
             // wire payload over loopback.
+            trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
             daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         } else if let clawix {
             let imagePaths = AttachmentSpooler.write(
@@ -2894,6 +2898,7 @@ final class AppState: ObservableObject {
         }
 
         if let daemonBridgeClient {
+            trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
             daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
         } else if let clawix {
             let imagePaths = AttachmentSpooler.write(
@@ -3366,7 +3371,12 @@ final class AppState: ObservableObject {
         chats[idx].messages = messages.compactMap { wire in
             chatMessage(from: wire, fallbackingTo: UUID(uuidString: wire.id).flatMap { oldById[$0] })
         }
+        optimisticUserMessageIdsByChat[id] = nil
         chats[idx].historyHydrated = true
+    }
+
+    func trackOptimisticUserMessage(chatId: UUID, messageId: UUID) {
+        optimisticUserMessageIdsByChat[chatId, default: []].insert(messageId)
     }
 
     func appendDaemonMessage(chatId: String, message: WireMessage) {
@@ -3392,12 +3402,39 @@ final class AppState: ObservableObject {
         // The daemon's wire message is authoritative; any locally
         // buffered delta would double-append on top of it.
         dropPendingAssistantText(chatId: id)
+        if msg.role == .user,
+           let replacementIdx = optimisticUserReplacementIndex(chatId: id, remote: msg, messages: chats[idx].messages) {
+            let localId = chats[idx].messages[replacementIdx].id
+            chats[idx].messages[replacementIdx] = msg
+            optimisticUserMessageIdsByChat[id]?.remove(localId)
+            if optimisticUserMessageIdsByChat[id]?.isEmpty == true {
+                optimisticUserMessageIdsByChat[id] = nil
+            }
+            return
+        }
         if let existingIdx = chats[idx].messages.firstIndex(where: { $0.id == msg.id }) {
             chats[idx].messages[existingIdx] = msg
         } else {
             chats[idx].messages.append(msg)
         }
     }
+
+    private func optimisticUserReplacementIndex(
+        chatId: UUID,
+        remote: ChatMessage,
+        messages: [ChatMessage]
+    ) -> Int? {
+        guard let pending = optimisticUserMessageIdsByChat[chatId], !pending.isEmpty else { return nil }
+        if let exact = messages.firstIndex(where: {
+            pending.contains($0.id) && $0.role == .user && $0.content == remote.content
+        }) {
+            return exact
+        }
+        return messages.firstIndex(where: {
+            pending.contains($0.id) && $0.role == .user
+        })
+    }
+
 
     /// Daemon-bridge mode counterpart of `ClawixService.refreshRateLimits`:
     /// the GUI's own backend never bootstraps when the LaunchAgent owns
