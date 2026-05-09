@@ -3,6 +3,13 @@ id: macos.sidebar.projects
 platform: macos
 surface: sidebar
 status: ready
+priority: P1
+tags:
+  - regression
+  - dummy
+  - host
+  - projects
+  - navigation
 intent: "Validate sidebar organization, pinned and archived sections, project grouping, project actions, filters, and drag-and-drop reassignment."
 entrypoints:
   - sidebar
@@ -30,6 +37,7 @@ required_state:
   backend: fake or intercepted for project and archive mutations
   window: main macOS app window visible and focused
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - real workspace root creation
@@ -91,6 +99,13 @@ Verify that the sidebar helps users find, group, reorder, filter, and manage con
 | Drag | chat to project, chat to no-project bucket, project reorder |
 | Filter | pinned project filter, chronological project filter |
 
+## Critical Cases
+
+- `P1-grouped-chrono`: grouped and chronological modes preserve visible chat access.
+- `P1-project-actions`: create, rename, delete, new chat, and view all stay isolated.
+- `P1-pinned-archived`: pinned and archived sections remain distinct.
+- `P2-host-drag-project`: host drag moves a chat into the expected project.
+
 ## Steps
 
 1. Start in grouped mode.
@@ -126,6 +141,17 @@ Alternate passes:
 - Project deletion touches real files or external state.
 - Filters hide every row without a visible explanation.
 - Archived chats remain in normal lists.
+
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Grouped and chronological states checked | pass/fail/no-run |
+| Project expand/show more/view all checked | pass/fail/no-run |
+| Pin/archive state checked | pass/fail/no-run |
+| Project mutation stayed isolated | pass/fail/no-run |
+| Drag-and-drop checked or marked no-run | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
 
 ## Screenshot Checklist
 
