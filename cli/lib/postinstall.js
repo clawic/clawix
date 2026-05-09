@@ -14,11 +14,11 @@ const pkg = require('../package.json');
 // blocked install never leaves half-written state behind.
 // ──────────────────────────────────────────────────────────────────
 
-// Platform: macOS and Linux. Unsupported targets exit 0 (silent)
+// Platform: macOS, Linux, Windows. Unsupported targets exit 0 (silent)
 // so a workspace install that mentions clawix as a peer doesn't break
 // for developers on unsupported targets. The CLI's bin/clawix.js
 // refuses to run on those platforms with a clear message.
-if (!['darwin', 'linux'].includes(process.platform)) {
+if (!['darwin', 'linux', 'win32'].includes(process.platform)) {
   console.log(`clawix: skipping native install on ${process.platform} (unsupported).`);
   process.exit(0);
 }
@@ -68,7 +68,7 @@ if (process.geteuid && process.geteuid() === 0 && process.env.SUDO_USER) {
 // macOS minimum version. The Swift binaries were built with a
 // deployment target of macOS 14, so anything older crashes at first
 // launch with a cryptic dyld error. Surface the requirement here
-// instead. Skipped on Linux.
+// instead. Skipped on Linux/Windows.
 if (process.platform === 'darwin') {
   const macosMajor = (() => {
     try {
@@ -105,9 +105,14 @@ let ASSET;
 if (process.platform === 'darwin') {
   ASSET = 'clawix-cli-darwin-universal.tar.gz';
 } else if (process.platform === 'linux') {
+  // Match Rust target triple shorthand. Cross-arch GitHub Actions
+  // matrix produces both at release time.
   const linuxArch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
   ASSET = `clawix-cli-linux-${linuxArch}.tar.gz`;
+} else if (process.platform === 'win32') {
+  ASSET = 'clawix-cli-windows-x86_64.zip';
 } else {
+  // Should never happen given the guards above.
   process.exit(0);
 }
 const URL = `${BASE_URL}/${ASSET}`;
@@ -181,8 +186,7 @@ async function fetchWithRetry(url) {
 
 function chownToRealUser(filePath) {
   if (!chownTarget) return;
-  const group = process.platform === 'linux' ? chownTarget : 'staff';
-  spawnSync('chown', ['-R', `${chownTarget}:${group}`, filePath], { stdio: 'ignore' });
+  spawnSync('/usr/sbin/chown', ['-R', `${chownTarget}:staff`, filePath], { stdio: 'ignore' });
 }
 
 async function main() {
@@ -220,21 +224,40 @@ async function main() {
     }
   }
 
-  const archivePath = path.join(os.tmpdir(), `clawix-${pkg.version}-${process.pid}.tar.gz`);
+  const isZip = ASSET.endsWith('.zip');
+  const archivePath = path.join(os.tmpdir(),
+    `clawix-${pkg.version}-${process.pid}${isZip ? '.zip' : '.tar.gz'}`);
   fs.writeFileSync(archivePath, data);
   try {
-    const r = spawnSync('/usr/bin/tar', ['-xzf', archivePath, '-C', stagingDir], {
-      stdio: 'inherit'
-    });
-    if (r.status !== 0) throw new Error('tar extraction failed.');
+    if (isZip) {
+      // Windows: prefer the bundled `tar` (Windows 10+ ships libarchive
+      // and `tar -xf foo.zip` works), fall back to PowerShell.
+      const tarBin = process.platform === 'win32' ? 'tar' : '/usr/bin/tar';
+      let r = spawnSync(tarBin, ['-xf', archivePath, '-C', stagingDir], { stdio: 'inherit' });
+      if (r.status !== 0 && process.platform === 'win32') {
+        r = spawnSync('powershell.exe', [
+          '-NoProfile', '-Command',
+          `Expand-Archive -Path '${archivePath}' -DestinationPath '${stagingDir}' -Force`
+        ], { stdio: 'inherit' });
+      }
+      if (r.status !== 0) throw new Error('zip extraction failed.');
+    } else {
+      const r = spawnSync('/usr/bin/tar', ['-xzf', archivePath, '-C', stagingDir], {
+        stdio: 'inherit'
+      });
+      if (r.status !== 0) throw new Error('tar extraction failed.');
+    }
   } finally {
     try { fs.unlinkSync(archivePath); } catch {}
   }
 
-  for (const name of ['clawix-bridged', 'clawix-menubar']) {
+  const binNames = process.platform === 'win32'
+    ? ['clawix-bridged.exe', 'clawix-menubar.exe']
+    : ['clawix-bridged', 'clawix-menubar'];
+  for (const name of binNames) {
     const p = path.join(stagingDir, name);
     if (!fs.existsSync(p)) continue;
-    fs.chmodSync(p, 0o755);
+    if (process.platform !== 'win32') fs.chmodSync(p, 0o755);
     if (process.platform === 'darwin') {
       const v = spawnSync('/usr/bin/codesign', ['--verify', '--strict', p], { stdio: 'pipe' });
       if (v.status !== 0) {
@@ -242,6 +265,10 @@ async function main() {
         throw new Error(`${name} failed codesign verification; aborting install.`);
       }
     }
+    // Linux/Windows: integrity is the SHA-256 of the archive matched
+    // against checksums.json (verified above), plus the signed GitHub
+    // release asset that hosted it. On Windows we additionally trust
+    // signtool's Authenticode signature embedded in the .exe.
   }
 
   // Promote staging into place atomically. If a previous install

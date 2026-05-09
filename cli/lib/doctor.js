@@ -16,11 +16,45 @@ function check(name, level, message, fix) {
 function run() {
     const checks = [];
 
-    if (process.platform !== 'darwin') {
-        checks.push(check('platform', 'fail', `running on ${process.platform}; clawix requires macOS.`, 'install on a macOS host.'));
+    if (process.platform !== 'darwin' && process.platform !== 'win32') {
+        checks.push(check('platform', 'fail', `running on ${process.platform}; clawix requires macOS or Windows.`, 'install on a supported host.'));
         return checks;
     }
-    checks.push(check('platform', 'ok', `macOS (${process.platform})`, null));
+    checks.push(check('platform', 'ok', `${process.platform === 'win32' ? 'Windows' : 'macOS'} (${process.platform})`, null));
+
+    if (process.platform === 'win32') {
+        // Windows-specific check path. Heartbeat lives at the same logical
+        // location (~/.clawix/state/bridge-status.json) but resolved via
+        // %USERPROFILE%; mac-specific things (codesign, plist, launchctl)
+        // are skipped.
+        const stateFile = path.join(os.homedir(), '.clawix', 'state', 'bridge-status.json');
+        if (!fs.existsSync(stateFile)) {
+            checks.push(check('heartbeat', 'warn',
+                'bridge-status.json missing on Windows.',
+                'install the daemon: `clawix install` or run Clawix-Setup.msix.'));
+        } else {
+            try {
+                const j = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+                const last = Date.parse(j.lastHeartbeatAt || '');
+                const age = Number.isFinite(last) ? Date.now() - last : Infinity;
+                checks.push(check('heartbeat', age > 10_000 ? 'fail' : 'ok',
+                    age > 10_000 ? `last daemon heartbeat ${Math.round(age / 1000)}s ago.`
+                                 : `heartbeat fresh (${Math.round(age / 1000)}s ago)`,
+                    age > 10_000 ? 'restart Clawix from the system tray, or `clawix restart`.' : null));
+            } catch (_) {
+                checks.push(check('heartbeat', 'fail', 'bridge-status.json is not valid JSON.', 'restart the daemon.'));
+            }
+        }
+        const localApp = path.join(process.env.LOCALAPPDATA || os.homedir(), 'Clawix', 'clawix-bridged.exe');
+        if (!fs.existsSync(localApp)) {
+            checks.push(check('clawix-bridged-binary', 'warn',
+                `clawix-bridged.exe not found at ${localApp}.`,
+                'install via `clawix install` (downloads the signed MSIX).'));
+        } else {
+            checks.push(check('clawix-bridged-binary', 'ok', `clawix-bridged.exe at ${localApp}`, null));
+        }
+        return checks;
+    }
 
     const macos = diag.macosVersion();
     if (!macos) {

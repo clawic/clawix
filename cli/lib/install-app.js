@@ -6,8 +6,11 @@ const os = require('node:os');
 const { spawnSync, execFileSync } = require('node:child_process');
 const https = require('node:https');
 
+const IS_WINDOWS = process.platform === 'win32';
 const DMG_URL = 'https://github.com/clawic/clawix/releases/latest/download/Clawix.dmg';
+const MSIX_URL = 'https://github.com/clawic/clawix/releases/latest/download/Clawix-Setup.msix';
 const APP_DEST = '/Applications/Clawix.app';
+const APP_DEST_WIN = path.join(process.env.LOCALAPPDATA || os.homedir(), 'Clawix');
 
 function download(url, dest) {
   return new Promise((resolve, reject) => {
@@ -55,7 +58,27 @@ function download(url, dest) {
   });
 }
 
+async function installWindows() {
+  fs.mkdirSync(APP_DEST_WIN, { recursive: true });
+  const cacheDir = path.join(process.env.LOCALAPPDATA || os.homedir(), 'Clawix', 'cache');
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const msixPath = path.join(cacheDir, 'Clawix-Setup.msix');
+
+  console.log('Fetching Clawix-Setup.msix...');
+  await download(MSIX_URL, msixPath);
+
+  console.log('Installing MSIX (Add-AppxPackage)...');
+  const r = spawnSync('powershell.exe', [
+    '-NoProfile', '-Command',
+    `Add-AppxPackage -Path '${msixPath}'`
+  ], { stdio: 'inherit' });
+  if (r.status !== 0) throw new Error('Add-AppxPackage failed; check SmartScreen / cert.');
+
+  console.log('Done. Launch Clawix from the Start menu.');
+}
+
 async function install() {
+  if (IS_WINDOWS) return installWindows();
   if (fs.existsSync(APP_DEST)) {
     console.log(`${APP_DEST} already exists. Quit Clawix.app first to replace it.`);
     return;
