@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Clawix.App.Views.ProjectRenameSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Rename project"
+    PrimaryButtonText="Rename"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+  <TextBox x:Name="NameBox" />
+</ContentDialog>

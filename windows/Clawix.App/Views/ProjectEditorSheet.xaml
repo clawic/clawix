@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Clawix.App.Views.ProjectEditorSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="New project"
+    PrimaryButtonText="Create"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+  <StackPanel Spacing="8">
+    <TextBox x:Name="TitleBox" PlaceholderText="Project name" />
+    <Grid ColumnSpacing="8">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBox x:Name="CwdBox" Grid.Column="0" PlaceholderText="Working directory" />
+      <Button Grid.Column="1" Content="Browse..." Click="Browse_Click" />
+    </Grid>
+  </StackPanel>
+</ContentDialog>

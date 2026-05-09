@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Clawix.App.Views.CommandPalette"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid Padding="8" Width="640" RowSpacing="6">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+    <AutoSuggestBox Grid.Row="0" x:Name="QueryBox" PlaceholderText="Type a command, e.g. 'New chat'" />
+    <ListView Grid.Row="1" x:Name="Results" />
+  </Grid>
+</UserControl>
