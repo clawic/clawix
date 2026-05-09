@@ -14,6 +14,11 @@ enum SidebarRoute: Equatable {
     case plugins
     case automations
     case project
+    /// Apps surface routes. `.app(id)` opens one mini-app in the
+    /// center pane (full-bleed, no browser chrome); `.appsHome` is
+    /// the catalog grid the sidebar Apps header points at.
+    case app(UUID)
+    case appsHome
     case chat(UUID)
     case settings
     case secretsHome
@@ -34,6 +39,12 @@ enum SidebarRoute: Equatable {
     case driveRecent
     /// Drive folder navigation (admin view focused on a specific folder).
     case driveFolder(String)
+    /// Skills catalog (⌘⇧K). Top-level destination: a full page with
+    /// search, filters, grid of cards. Click a card → `.skillDetail`.
+    case skills
+    /// Detail panel for a single skill — activation toggles, params
+    /// form, sync targets, body editor.
+    case skillDetail(slug: String)
 }
 
 // MARK: - Models
@@ -602,6 +613,51 @@ enum AgentRuntimeChoice: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Personality
+
+/// Default tone preset applied to every new thread. Travels in
+/// `ThreadStartParams.personality` and the daemon prepends a short
+/// system-prompt prelude so the model leans warm or terse without the
+/// user typing it each turn. This is the legacy slot that the upcoming
+/// Skills system (kind: personality) will eventually subsume; until
+/// then it stays as a single-select global preference.
+enum Personality: String, CaseIterable, Identifiable {
+    case friendly
+    case pragmatic
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .friendly:  return "Friendly"
+        case .pragmatic: return "Pragmatic"
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .friendly:  return "Warm, collaborative, and helpful"
+        case .pragmatic: return "Concise, task-focused, and direct"
+        }
+    }
+
+    static let userDefaultsKey = "ClawixPersonality"
+
+    static func loadPersisted() -> Personality {
+        let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+        if let raw = defaults.string(forKey: userDefaultsKey),
+           let value = Personality(rawValue: raw) {
+            return value
+        }
+        return .pragmatic
+    }
+
+    func persist() {
+        let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+        defaults.set(rawValue, forKey: Personality.userDefaultsKey)
+    }
+}
+
 // MARK: - Composer attachments
 
 /// File the user has staged in the composer via the attach menu or
@@ -694,6 +750,12 @@ final class AppState: ObservableObject {
             }
         }
     }
+
+    func navigate(to route: SidebarRoute) {
+        guard currentRoute != route else { return }
+        currentRoute = route
+    }
+
     @Published var searchQuery: String = ""
     @Published var searchResults: [String] = []
     /// In-page Find (⌘F) state. Operates on the chat that owns the
@@ -773,6 +835,17 @@ final class AppState: ObservableObject {
             permissionMode.persist()
         }
     }
+    @Published var personality: Personality = Personality.loadPersisted() {
+        didSet {
+            guard oldValue != personality else { return }
+            personality.persist()
+        }
+    }
+    /// Central library of Skills. Owns the catalog (built-ins + user
+    /// + auto-imported), the active set per scope, and the registered
+    /// sync targets. `nil` until `bootstrap()` wires it up so views can
+    /// fall back to a local instance during preview-mode rendering.
+    @Published var skillsStore: SkillsStore? = nil
     /// Global plan-mode toggle. When on, subsequent turns are sent with
     /// `collaborationMode = "plan"` so the agent surfaces
     /// `item/tool/requestUserInput` instead of acting directly. Toggled by
@@ -1034,6 +1107,7 @@ final class AppState: ObservableObject {
         if persistedRuntime == .opencode {
             self.selectedModel = AgentRuntimeChoice.persistedOpenCodeModel()
         }
+        self.skillsStore = SkillsStore()
 
         sampleChat = Chat(
             id: UUID(uuidString: "8B46DFE1-B932-48E6-94E7-C86E65F7F18D")!,
@@ -2757,6 +2831,15 @@ final class AppState: ObservableObject {
     /// straight into the in-process `ClawixService`. Sending an
     /// attachment-only message (empty `text`) is supported so the
     /// composer can ship a photo with no caption.
+    /// Wrapper used by the Apps surface SDK (`window.clawix.agent.sendMessage`)
+    /// to inject a synthetic user message into the chat that originally
+    /// owned the app. Funnels through `sendUserMessageFromBridge` so
+    /// the optimistic-message + bridge-roundtrip plumbing is shared.
+    @MainActor
+    func dispatchAppMessage(_ text: String, toChatId chatId: UUID) {
+        sendUserMessageFromBridge(chatId: chatId, text: text, attachments: [])
+    }
+
     @MainActor
     func sendUserMessageFromBridge(
         chatId: UUID,
@@ -3074,6 +3157,20 @@ final class AppState: ObservableObject {
         case .standard: return nil
         case .fast:     return "fast"
         }
+    }
+
+    /// Resolve the active skills set for a chat at the moment we're
+    /// about to dispatch a `thread/start` or `turn/start`. Walks the
+    /// global → project → chat hierarchy via `SkillsStore.resolveActive`
+    /// and converts the result to the wire shape (`ActiveSkill`). Nil
+    /// when the store hasn't been initialised yet (e.g. during preview
+    /// rendering or extremely early bootstrap).
+    func skillsActiveSnapshot(for chatId: UUID) -> [ActiveSkill]? {
+        guard let store = skillsStore else { return nil }
+        let projectId = chat(byId: chatId)?.projectId?.uuidString
+        let states = store.resolveActive(projectId: projectId, chatId: chatId)
+        guard !states.isEmpty else { return nil }
+        return states.map { $0.toWire() }
     }
 
     func ensureSelectedChat(triggerHistoryHydration: Bool = true) {
