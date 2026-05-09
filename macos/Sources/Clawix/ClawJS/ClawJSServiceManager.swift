@@ -1,4 +1,5 @@
 import Foundation
+import SecretsCrypto
 
 /// In-process supervisor for the ClawJS sidecar services
 /// (database / memory / drive). One singleton owns three Process
@@ -38,6 +39,20 @@ final class ClawJSServiceManager: ObservableObject {
     private var healthTasks: [ClawJSService: Task<Void, Never>] = [:]
     private var restartTasks: [ClawJSService: Task<Void, Never>] = [:]
     private var lastReadyAt: [ClawJSService: Date] = [:]
+
+    /// Per-session admin tokens (32-byte URL-safe random) injected to the
+    /// daemons that authenticate admin requests. Generated lazily the first
+    /// time the GUI spawns each daemon. Replaces the previous Keychain-backed
+    /// admin password so the app never touches the system Keychain.
+    private var sessionAdminTokens: [ClawJSService: String] = [:]
+
+    /// Maps each service to the env var name its daemon reads to recognise
+    /// the per-session admin token. Services that don't use admin tokens
+    /// (memory, vault, telegram) are simply absent.
+    private static let adminTokenEnvVar: [ClawJSService: String] = [
+        .database: "CLAWJS_DATABASE_ADMIN_TOKEN",
+        .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
+    ]
 
     private let bridgeService: BackgroundBridgeService
 
@@ -299,11 +314,13 @@ final class ClawJSServiceManager: ObservableObject {
         do {
             try Self.prepareDirectories(for: service)
 
+            let adminToken = ensureAdminToken(for: service)
+
             let process = Process()
             process.executableURL = ClawJSRuntime.nodeBinaryURL
             process.arguments = extraArgs
             process.currentDirectoryURL = Self.workspaceURL
-            process.environment = Self.environment(for: service)
+            process.environment = Self.environment(for: service, adminToken: adminToken)
 
             let logURL = Self.logFileURL(for: service)
             if !FileManager.default.fileExists(atPath: logURL.path) {
@@ -487,7 +504,7 @@ final class ClawJSServiceManager: ObservableObject {
         )
     }
 
-    private static func environment(for service: ClawJSService) -> [String: String] {
+    private static func environment(for service: ClawJSService, adminToken: String?) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAWJS_WORKSPACE"] = workspaceURL.path
@@ -511,7 +528,45 @@ final class ClawJSServiceManager: ObservableObject {
             env["CLAWJS_TELEGRAM_PORT"] = String(service.port)
             env["CLAWJS_TELEGRAM_WORKSPACE"] = workspaceURL.path
         }
+        if let adminToken, let envVar = adminTokenEnvVar[service] {
+            env[envVar] = adminToken
+        }
         return env
+    }
+
+    /// Per-session admin token for `service` if this manager spawned the
+    /// daemon. `nil` for services without admin auth, or when the GUI is
+    /// not the daemon owner (e.g., background bridge mode).
+    func adminTokenIfSpawned(for service: ClawJSService) -> String? {
+        sessionAdminTokens[service]
+    }
+
+    /// Returns the existing per-session token or generates a fresh one and
+    /// stores it. `nil` for services that don't authenticate admin via token.
+    private func ensureAdminToken(for service: ClawJSService) -> String? {
+        guard Self.adminTokenEnvVar[service] != nil else { return nil }
+        if let existing = sessionAdminTokens[service] { return existing }
+        let token = SecureRandom.bytes(32).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        sessionAdminTokens[service] = token
+        return token
+    }
+
+    /// Filesystem fallback for the admin token, used when the GUI is not
+    /// the daemon owner (background bridge has the daemon alive). The
+    /// daemon writes a 0600 file on its own first launch; we read it.
+    static func adminTokenFromDataDir(for service: ClawJSService) throws -> String {
+        let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
+        let raw = try String(contentsOf: url, encoding: .utf8)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard raw.count >= 32 else {
+            throw NSError(domain: "ClawJSServiceManager", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Admin token at \(url.path) is too short."
+            ])
+        }
+        return raw
     }
 
     private static func dataDirectoryURL(for service: ClawJSService) -> URL {
