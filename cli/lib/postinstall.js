@@ -14,12 +14,12 @@ const pkg = require('../package.json');
 // blocked install never leaves half-written state behind.
 // ──────────────────────────────────────────────────────────────────
 
-// Platform: macOS only. Unsupported targets exit 0 (silent) so a
-// workspace install that mentions clawix as a peer doesn't break for
-// developers on Linux/Windows. The CLI's bin/clawix.js refuses to run
-// on those platforms with a clear message.
-if (process.platform !== 'darwin') {
-  console.log(`clawix: skipping native install on ${process.platform} (macOS only).`);
+// Platform: macOS and Linux. Unsupported targets exit 0 (silent)
+// so a workspace install that mentions clawix as a peer doesn't break
+// for developers on unsupported targets. The CLI's bin/clawix.js
+// refuses to run on those platforms with a clear message.
+if (!['darwin', 'linux'].includes(process.platform)) {
+  console.log(`clawix: skipping native install on ${process.platform} (unsupported).`);
   process.exit(0);
 }
 if (!['arm64', 'x64'].includes(process.arch)) {
@@ -29,14 +29,27 @@ if (!['arm64', 'x64'].includes(process.arch)) {
 
 // Sudo redirect. `npm install -g` often runs under sudo on systems
 // without a user-owned global prefix. If we honored process.env.HOME
-// in that case we'd write to /var/root/.clawix/ and the user could
-// never start the daemon. Detect the original user via SUDO_USER and
-// override HOME so os.homedir() reads from the real user's account
-// before we require ./platform (which captures HOME at module load).
+// in that case we'd write to /var/root/.clawix/ (mac) or /root/.clawix/
+// (linux), and the user could never start the daemon. Detect the
+// original user via SUDO_USER and override HOME so os.homedir() reads
+// from the real user's account before we require ./platform (which
+// captures HOME at module load).
 let chownTarget = null;
 if (process.geteuid && process.geteuid() === 0 && process.env.SUDO_USER) {
   const sudoUser = process.env.SUDO_USER;
-  const realHome = path.join('/Users', sudoUser);
+  let realHome;
+  if (process.platform === 'darwin') {
+    realHome = path.join('/Users', sudoUser);
+  } else {
+    // Linux: /etc/passwd is authoritative. Fall back to /home/<user> if
+    // getent is unavailable (e.g. sandboxed CI runners).
+    try {
+      const out = execFileSync('/usr/bin/getent', ['passwd', sudoUser], { encoding: 'utf8' });
+      realHome = out.split(':')[5] || path.join('/home', sudoUser);
+    } catch (e) {
+      realHome = path.join('/home', sudoUser);
+    }
+  }
   if (fs.existsSync(realHome)) {
     process.env.HOME = realHome;
     chownTarget = sudoUser;
@@ -55,23 +68,24 @@ if (process.geteuid && process.geteuid() === 0 && process.env.SUDO_USER) {
 // macOS minimum version. The Swift binaries were built with a
 // deployment target of macOS 14, so anything older crashes at first
 // launch with a cryptic dyld error. Surface the requirement here
-// instead.
-function macosMajor() {
-  try {
-    const out = execFileSync('/usr/bin/sw_vers', ['-productVersion'], { encoding: 'utf8' }).trim();
-    const major = parseInt(out.split('.')[0], 10);
-    return Number.isFinite(major) ? major : null;
-  } catch (e) {
-    return null;
+// instead. Skipped on Linux.
+if (process.platform === 'darwin') {
+  const macosMajor = (() => {
+    try {
+      const out = execFileSync('/usr/bin/sw_vers', ['-productVersion'], { encoding: 'utf8' }).trim();
+      const major = parseInt(out.split('.')[0], 10);
+      return Number.isFinite(major) ? major : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  if (macosMajor !== null && macosMajor < 14) {
+    console.error(
+      `clawix: requires macOS Sonoma 14 or later (detected macOS ${macosMajor}).\n` +
+      `        The bundled binaries will not launch on this system. Aborting.`
+    );
+    process.exit(1);
   }
-}
-const macosVer = macosMajor();
-if (macosVer !== null && macosVer < 14) {
-  console.error(
-    `clawix: requires macOS Sonoma 14 or later (detected macOS ${macosVer}).\n` +
-    `        The bundled binaries will not launch on this system. Aborting.`
-  );
-  process.exit(1);
 }
 
 // Module under test depends on os.homedir(); require AFTER the sudo
@@ -87,7 +101,15 @@ const manifest = require('./manifest');
 // ──────────────────────────────────────────────────────────────────
 
 const BASE_URL = `https://github.com/clawic/clawix/releases/download/v${pkg.version}`;
-const ASSET = 'clawix-cli-darwin-universal.tar.gz';
+let ASSET;
+if (process.platform === 'darwin') {
+  ASSET = 'clawix-cli-darwin-universal.tar.gz';
+} else if (process.platform === 'linux') {
+  const linuxArch = process.arch === 'arm64' ? 'aarch64' : 'x86_64';
+  ASSET = `clawix-cli-linux-${linuxArch}.tar.gz`;
+} else {
+  process.exit(0);
+}
 const URL = `${BASE_URL}/${ASSET}`;
 
 const checksumsPath = path.join(__dirname, 'checksums.json');
@@ -159,7 +181,8 @@ async function fetchWithRetry(url) {
 
 function chownToRealUser(filePath) {
   if (!chownTarget) return;
-  spawnSync('/usr/sbin/chown', ['-R', `${chownTarget}:staff`, filePath], { stdio: 'ignore' });
+  const group = process.platform === 'linux' ? chownTarget : 'staff';
+  spawnSync('chown', ['-R', `${chownTarget}:${group}`, filePath], { stdio: 'ignore' });
 }
 
 async function main() {
@@ -197,27 +220,27 @@ async function main() {
     }
   }
 
-  const tarPath = path.join(os.tmpdir(), `clawix-${pkg.version}-${process.pid}.tar.gz`);
-  fs.writeFileSync(tarPath, data);
+  const archivePath = path.join(os.tmpdir(), `clawix-${pkg.version}-${process.pid}.tar.gz`);
+  fs.writeFileSync(archivePath, data);
   try {
-    const r = spawnSync('/usr/bin/tar', ['-xzf', tarPath, '-C', stagingDir], {
+    const r = spawnSync('/usr/bin/tar', ['-xzf', archivePath, '-C', stagingDir], {
       stdio: 'inherit'
     });
-    if (r.status !== 0) {
-      throw new Error('tar extraction failed.');
-    }
+    if (r.status !== 0) throw new Error('tar extraction failed.');
   } finally {
-    try { fs.unlinkSync(tarPath); } catch {}
+    try { fs.unlinkSync(archivePath); } catch {}
   }
 
   for (const name of ['clawix-bridged', 'clawix-menubar']) {
     const p = path.join(stagingDir, name);
     if (!fs.existsSync(p)) continue;
     fs.chmodSync(p, 0o755);
-    const v = spawnSync('/usr/bin/codesign', ['--verify', '--strict', p], { stdio: 'pipe' });
-    if (v.status !== 0) {
-      fs.rmSync(stagingDir, { recursive: true, force: true });
-      throw new Error(`${name} failed codesign verification; aborting install.`);
+    if (process.platform === 'darwin') {
+      const v = spawnSync('/usr/bin/codesign', ['--verify', '--strict', p], { stdio: 'pipe' });
+      if (v.status !== 0) {
+        fs.rmSync(stagingDir, { recursive: true, force: true });
+        throw new Error(`${name} failed codesign verification; aborting install.`);
+      }
     }
   }
 
