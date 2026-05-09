@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* Design tokens espejean macOS app: colores, radii, sombras, fuentes. */
+@theme {
+  --color-bg: #0c0c0e;
+  --color-bg-elev-1: #131318;
+  --color-bg-elev-2: #1a1a20;
+  --color-bg-elev-3: #232329;
+  --color-fg: #f3f3f5;
+  --color-fg-muted: #a3a3ad;
+  --color-fg-dim: #6c6c78;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  --color-accent: #d4d4dc;
+  --color-danger: #ff6464;
+  --color-success: #5dd29c;
+  --color-warning: #f5b95c;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
+
+  --shadow-pop: 0 8px 22px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 4px 14px rgba(0, 0, 0, 0.18);
+  --shadow-glass: 0 8px 22px rgba(0, 0, 0, 0.30);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+html, body, #root { height: 100%; }
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "ss02", "cv01";
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+/* Headings: tighter tracking */
+h1, h2, h3, h4 { letter-spacing: -0.02em; }
+
+/* Thin scrollbar (regla de design taste) */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 120ms ease;
+}
+.thin-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  background-clip: padding-box;
+}
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
+.thin-scroll::-webkit-scrollbar-corner { background: transparent; }
+
+/* Hide scrollbars on mobile and inside the chat history (Apple-feel) */
+.no-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scroll::-webkit-scrollbar { display: none; }
+
+/* Focus ring for accessibility, keyboard-only */
+:focus-visible {
+  outline: 2px solid rgba(212, 212, 220, 0.55);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Selection */
+::selection {
+  background: rgba(212, 212, 220, 0.28);
+  color: var(--color-fg);
+}
+
+/* Glass pill (regla global del usuario) */
+.glass-pill {
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.30);
+}
+
+/* Squircle approximation when figma-squircle isn't applied */
+.squircle-md { border-radius: var(--radius-md); }
+.squircle-lg { border-radius: var(--radius-lg); }
+
+/* Edge fade (regla de design taste): wrappers que apliquen el fade top/bottom */
+.fade-edges {
+  position: relative;
+}
+.fade-edges::before,
+.fade-edges::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 64px;
+  pointer-events: none;
+  z-index: 1;
+}
+.fade-edges::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--color-bg) 0%, rgba(12, 12, 14, 0) 100%);
+}
+.fade-edges::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--color-bg) 0%, rgba(12, 12, 14, 0) 100%);
+}
+
+/* Streaming shimmer for assistant messages */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(243, 243, 245, 0.45) 0%,
+    rgba(243, 243, 245, 0.95) 50%,
+    rgba(243, 243, 245, 0.45) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2400ms ease-in-out infinite;
+}
+
+/* Light theme */
+@media (prefers-color-scheme: light) {
+  body {
+    background: #f7f7f8;
+    color: #15151a;
+  }
+}
+
+@layer base {
+  /* No element-level emoji; reset */
+  button, input, textarea, select { font: inherit; color: inherit; }
+}
