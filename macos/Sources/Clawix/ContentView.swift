@@ -125,6 +125,27 @@ struct ContentView: View {
         }
     }
 
+    private var routeRenderID: String {
+        switch appState.currentRoute {
+        case .home: return "home"
+        case .search: return "search"
+        case .plugins: return "plugins"
+        case .automations: return "automations"
+        case .project: return "project"
+        case .chat(let id): return "chat-\(id.uuidString)"
+        case .settings: return "settings"
+        case .secretsHome: return "secrets"
+        case .databaseHome: return "database"
+        case .databaseCollection(let name): return "database-\(name)"
+        case .memoryHome: return "memory"
+        case .driveAdmin: return "drive-admin"
+        case .drivePhotos: return "drive-photos"
+        case .driveDocuments: return "drive-documents"
+        case .driveRecent: return "drive-recent"
+        case .driveFolder(let id): return "drive-folder-\(id)"
+        }
+    }
+
     var body: some View {
         RenderProbe.tick("ContentView")
         return ZStack(alignment: .topLeading) {
@@ -185,6 +206,7 @@ struct ContentView: View {
                 if !appState.isRightSidebarMaximized {
                 VStack(spacing: 0) {
                     ContentTopChrome()
+                        .id(routeRenderID)
 
                     Group {
                         switch appState.currentRoute {
@@ -212,6 +234,7 @@ struct ContentView: View {
                         case .driveFolder(let id): DriveScreen(mode: .folder(id))
                         }
                     }
+                    .id(routeRenderID)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
