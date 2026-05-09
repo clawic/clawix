@@ -1,8 +1,9 @@
 .DS_Store
-apps/*/.build/
-apps/*/*/.build/
-apps/*/build/
-apps/*/artifacts/
+ios/.build/
+macos/.build/
+macos/build/
+macos/artifacts/
+packages/*/.build/
 *.app/
 *.xcodeproj/
 DerivedData/

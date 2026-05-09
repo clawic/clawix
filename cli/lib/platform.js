@@ -27,7 +27,7 @@ const BIN_DIR = path.join(CLAWIX_HOME, 'bin');
 const STATE_DIR = path.join(CLAWIX_HOME, 'state');
 const LAUNCH_AGENTS_DIR = path.join(HOME, 'Library', 'LaunchAgents');
 // Keep these three constants in sync with their Swift mirrors in
-// `apps/macos/Sources/Clawix/Bridge/BridgeAgentControl.swift`. The
+// `macos/Sources/Clawix/Bridge/BridgeAgentControl.swift`. The
 // GUI talks to the same launchd labels and loopback port, so a drift
 // silently splits the bridge in two on a machine that has both
 // installed.
