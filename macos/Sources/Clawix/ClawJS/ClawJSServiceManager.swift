@@ -65,7 +65,7 @@ final class ClawJSServiceManager: ObservableObject {
     /// surfaces the daemon does not provide.
     func start() async {
         if bridgeService.isDaemonReachable {
-            startDaemonOwnedProbes()
+            await startDaemonAwareServices()
             return
         }
         for service in ClawJSService.allCases {
@@ -197,6 +197,33 @@ final class ClawJSServiceManager: ObservableObject {
             }
             healthTasks[service] = Task { [weak self] in
                 await self?.pollDaemonOwnedService(service)
+            }
+        }
+    }
+
+    private func startDaemonAwareServices() async {
+        for task in healthTasks.values { task.cancel() }
+        healthTasks.removeAll()
+
+        for service in ClawJSService.allCases {
+            let url = URL(string: "http://127.0.0.1:\(service.port)\(service.healthPath)")!
+            if await ping(url: url) {
+                lastReadyAt[service] = Date()
+                update(service) {
+                    $0.state = .readyFromDaemon(port: service.port)
+                    $0.lastError = nil
+                }
+                healthTasks[service] = Task { [weak self] in
+                    await self?.pollDaemonOwnedService(service)
+                }
+            } else if ClawJSRuntime.isAvailable, commandLine(for: service) != nil {
+                await launchLocal(service, force: true)
+            } else {
+                let reason = "\(service.displayName) is not reachable on 127.0.0.1:\(service.port) while the bridge daemon is active."
+                update(service) {
+                    $0.state = .daemonUnavailable(reason: reason)
+                    $0.lastError = reason
+                }
             }
         }
     }
