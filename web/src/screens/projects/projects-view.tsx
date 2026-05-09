@@ -1,10 +1,9 @@
-/**
- * Projects mirrors the macOS ProjectPickerView. Lists the projects the
- * daemon derived from chat history + manual additions.
- */
+// Projects mirrors ProjectPickerView. Lists projects derived from chat
+// history + manual additions.
 import { useEffect } from "react";
 import { useBridgeStore } from "../../bridge/store";
 import { FolderOpenIcon } from "../../icons";
+import { PageHeader, Card, CardDivider } from "../../components/ui";
 
 export function ProjectsView() {
   const projects = useBridgeStore((s) => s.projects);
@@ -16,34 +15,49 @@ export function ProjectsView() {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="h-[56px] px-6 flex items-center gap-3 border-b border-[var(--color-border)]">
-        <FolderOpenIcon size={16} className="text-[var(--color-fg-muted)]" />
-        <h1 className="text-[15px] font-medium tracking-[-0.01em]">Projects</h1>
-      </header>
       <div className="thin-scroll flex-1 overflow-y-auto">
-        <div className="max-w-[720px] mx-auto py-8 px-6">
+        <div className="max-w-[720px] mx-auto pt-8 pb-12 px-6">
+          <PageHeader title="Projects" subtitle="The working directories your chats touched." />
           {projects.length === 0 ? (
-            <div className="text-[12.5px] text-[var(--color-fg-muted)] py-6">
+            <div
+              className="py-6"
+              style={{ fontSize: 12.5, color: "var(--color-fg-secondary)" }}
+            >
               No projects yet. Start a chat with a working directory to see it here.
             </div>
           ) : (
-            <ul className="space-y-2">
-              {projects.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center gap-3 px-3 py-3 rounded-[14px] bg-[var(--color-bg-elev-1)] border border-[var(--color-border)]"
-                >
-                  <FolderOpenIcon size={14} className="text-[var(--color-fg-muted)]" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13.5px] truncate">{p.title}</div>
-                    <div className="font-mono text-[11.5px] text-[var(--color-fg-muted)] truncate">{p.cwd}</div>
+            <Card>
+              {projects.map((p, i) => (
+                <div key={p.id}>
+                  {i > 0 && <CardDivider />}
+                  <div className="flex items-center gap-3" style={{ padding: "12px 14px" }}>
+                    <FolderOpenIcon size={14} color="var(--color-fg-secondary)" />
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="truncate"
+                        style={{ fontSize: 13, fontVariationSettings: '"wght" 700' }}
+                      >
+                        {p.title}
+                      </div>
+                      <div
+                        className="font-mono truncate"
+                        style={{ fontSize: 11.5, color: "var(--color-fg-secondary)" }}
+                      >
+                        {p.cwd}
+                      </div>
+                    </div>
+                    {p.branch && (
+                      <span
+                        className="font-mono"
+                        style={{ fontSize: 11, color: "var(--color-fg-secondary)" }}
+                      >
+                        {p.branch}
+                      </span>
+                    )}
                   </div>
-                  {p.branch && (
-                    <span className="text-[11px] text-[var(--color-fg-muted)] font-mono">{p.branch}</span>
-                  )}
-                </li>
+                </div>
               ))}
-            </ul>
+            </Card>
           )}
         </div>
       </div>
