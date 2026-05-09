@@ -40,7 +40,7 @@ def write_fake_backend(tmp: Path) -> Path:
         textwrap.dedent(
             f"""\
             #!/usr/bin/env python3
-            import json, sys, threading, time
+            import json, os, sys, threading, time
             rollout = {str(rollout)!r}
             cwd = {str(tmp)!r}
 
@@ -58,6 +58,8 @@ def write_fake_backend(tmp: Path) -> Path:
                 elif method == "initialized":
                     pass
                 elif method == "thread/list":
+                    if os.environ.get("CLAWIX_E2E_HANG_THREAD_LIST") == "1":
+                        continue
                     send({{"jsonrpc":"2.0","id":mid,"result":{{"data":[{{
                         "id":"thread-e2e",
                         "cwd":cwd,
@@ -260,6 +262,42 @@ def main():
                 )
             )
             ws.close()
+
+            timeout_port = port + 1
+            timeout_env = env.copy()
+            timeout_env.update(
+                {
+                    "CLAWIX_BRIDGED_PORT": str(timeout_port),
+                    "CLAWIX_E2E_HANG_THREAD_LIST": "1",
+                    "CLAWIX_BRIDGED_THREAD_LIST_TIMEOUT_SECONDS": "0.2",
+                    "CLAWIX_BRIDGED_RATE_LIMITS_TIMEOUT_SECONDS": "0.2",
+                }
+            )
+            timeout_daemon = subprocess.Popen([str(BIN)], cwd=ROOT, env=timeout_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            timeout_ws = None
+            try:
+                deadline = time.time() + 8
+                while time.time() < deadline:
+                    try:
+                        timeout_ws = WebSocket(timeout_port)
+                        break
+                    except OSError:
+                        time.sleep(0.05)
+                if timeout_ws is None:
+                    _, err = timeout_daemon.communicate(timeout=1)
+                    raise AssertionError(err)
+                timeout_ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "Timeout iPhone", "clientKind": "ios"})
+                timeout_ws.recv_until(lambda f: f["type"] == "authOk")
+                timeout_ws.recv_until(lambda f: f["type"] == "bridgeState" and f["state"] == "ready", timeout=5)
+            finally:
+                if timeout_ws is not None:
+                    timeout_ws.close()
+                timeout_daemon.terminate()
+                try:
+                    timeout_daemon.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    timeout_daemon.kill()
+                    timeout_daemon.wait(timeout=5)
         finally:
             daemon.terminate()
             try:

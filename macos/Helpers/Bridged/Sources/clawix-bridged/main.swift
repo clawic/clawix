@@ -324,6 +324,9 @@ final class DaemonEngineHost: EngineHost {
     /// via `requestRateLimits`; the bus also pushes a `rateLimitsUpdated`
     /// frame on each new payload for already-connected sessions.
     private let rateLimitsSubject = CurrentValueSubject<WireRateLimitsPayload, Never>(.empty)
+    private let initialRequestTimeoutSeconds: TimeInterval
+    private let threadListTimeoutSeconds: TimeInterval
+    private let rateLimitsTimeoutSeconds: TimeInterval
     /// Last `lastSyncAt` we recorded, exposed to the heartbeat so the
     /// CLI can show "synced 5s ago". Updated every time we publish a
     /// non-empty chats list; not bumped for empty placeholders.
@@ -357,6 +360,15 @@ final class DaemonEngineHost: EngineHost {
     init(binary: BackendBinary, pairing: PairingService) {
         self.backend = BackendClient(binary: binary)
         self.pairing = pairing
+        let env = ProcessInfo.processInfo.environment
+        self.initialRequestTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGED_INITIAL_TIMEOUT_SECONDS"], default: 12)
+        self.threadListTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGED_THREAD_LIST_TIMEOUT_SECONDS"], default: 10)
+        self.rateLimitsTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGED_RATE_LIMITS_TIMEOUT_SECONDS"], default: 4)
+    }
+
+    private static func timeout(from raw: String?, default fallback: TimeInterval) -> TimeInterval {
+        guard let raw, let value = TimeInterval(raw), value > 0 else { return fallback }
+        return value
     }
 
     /// Codex's global state file. Same path the GUI's
@@ -478,7 +490,8 @@ final class DaemonEngineHost: EngineHost {
                 params: InitializeParams(
                     clientInfo: InitializeClientInfo(name: "Clawix Bridged", title: "Clawix", version: "1"),
                     capabilities: InitializeCapabilities(experimentalApi: true, optOutNotificationMethods: nil)
-                )
+                ),
+                timeoutSeconds: initialRequestTimeoutSeconds
             )
             try await backend.notify(method: "initialized", params: EmptyObject())
             BridgedLog.write("backend-initialized")
@@ -509,7 +522,8 @@ final class DaemonEngineHost: EngineHost {
             let response = try await backend.send(
                 method: "account/rateLimits/read",
                 params: EmptyObject(),
-                expecting: DaemonGetAccountRateLimitsResponse.self
+                expecting: DaemonGetAccountRateLimitsResponse.self,
+                timeoutSeconds: rateLimitsTimeoutSeconds
             )
             rateLimitsSubject.send(WireRateLimitsPayload(
                 snapshot: wireSnapshot(from: response.rateLimits),
@@ -1046,7 +1060,8 @@ final class DaemonEngineHost: EngineHost {
                     sourceKinds: nil,
                     useStateDbOnly: true
                 ),
-                expecting: ThreadListResponse.self
+                expecting: ThreadListResponse.self,
+                timeoutSeconds: threadListTimeoutSeconds
             )
             let snapshots = response.data.map(snapshot(from:))
             BridgedLog.write("thread-list ok count=\(snapshots.count) pinned=\(pinnedThreadIds.count)")
@@ -1463,12 +1478,19 @@ actor BackendClient {
         }
     }
 
-    func send<P: Encodable>(method: String, params: P) async throws -> JSONValue? {
+    func send<P: Encodable>(method: String, params: P, timeoutSeconds: TimeInterval? = nil) async throws -> JSONValue? {
         guard process != nil else { throw BackendError.notRunning }
         let id = nextId
         nextId += 1
         return try await withCheckedThrowingContinuation { continuation in
             pending[id] = continuation
+            if let timeoutSeconds {
+                let nanoseconds = UInt64(timeoutSeconds * 1_000_000_000)
+                Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: nanoseconds)
+                    await self?.timeoutPending(id: id, method: method, seconds: timeoutSeconds)
+                }
+            }
             do {
                 try write(BackendRequest(id: id, method: method, params: params))
             } catch {
@@ -1478,8 +1500,8 @@ actor BackendClient {
         }
     }
 
-    func send<P: Encodable, R: Decodable>(method: String, params: P, expecting: R.Type) async throws -> R {
-        guard let raw = try await send(method: method, params: params) else {
+    func send<P: Encodable, R: Decodable>(method: String, params: P, expecting: R.Type, timeoutSeconds: TimeInterval? = nil) async throws -> R {
+        guard let raw = try await send(method: method, params: params, timeoutSeconds: timeoutSeconds) else {
             throw BackendError.invalidResponse
         }
         return try raw.decode(R.self)
@@ -1554,6 +1576,12 @@ actor BackendClient {
         try stdin.fileHandleForWriting.write(contentsOf: data)
     }
 
+    private func timeoutPending(id: Int, method: String, seconds: TimeInterval) {
+        guard let continuation = pending.removeValue(forKey: id) else { return }
+        BridgedLog.write("backend request timeout method=\(method) seconds=\(seconds)")
+        continuation.resume(throwing: BackendError.timeout(method, seconds))
+    }
+
     private func handleTermination() {
         process = nil
         for continuation in pending.values {
@@ -1581,12 +1609,14 @@ enum BackendError: Error, CustomStringConvertible {
     case notRunning
     case invalidResponse
     case rpc(String)
+    case timeout(String, TimeInterval)
 
     var description: String {
         switch self {
         case .notRunning: return "backend not running"
         case .invalidResponse: return "invalid backend response"
         case .rpc(let message): return message
+        case .timeout(let method, let seconds): return "\(method) timed out after \(Int(seconds))s"
         }
     }
 }
