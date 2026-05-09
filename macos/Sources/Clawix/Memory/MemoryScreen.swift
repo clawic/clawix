@@ -25,13 +25,21 @@ struct MemoryScreen: View {
             )
             CardDivider()
             Group {
-                switch section {
-                case .home:
-                    MemoryHomeView(manager: manager, onSelectSection: { section = $0 })
-                case .captures:
-                    MemoryCapturesView(manager: manager, onClose: { section = .home })
-                case .settings:
-                    MemorySettingsView(manager: manager, onClose: { section = .home })
+                if case .error(let message) = manager.state {
+                    ContentUnavailableView(
+                        "Memory unavailable",
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(message)
+                    )
+                } else {
+                    switch section {
+                    case .home:
+                        MemoryHomeView(manager: manager, onSelectSection: { section = $0 })
+                    case .captures:
+                        MemoryCapturesView(manager: manager, onClose: { section = .home })
+                    case .settings:
+                        MemorySettingsView(manager: manager, onClose: { section = .home })
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

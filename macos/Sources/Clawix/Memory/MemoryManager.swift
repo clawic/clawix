@@ -26,9 +26,12 @@ final class MemoryManager: ObservableObject {
 
     let client: ClawJSMemoryClient
     private var searchTask: Task<Void, Never>?
+    private var refreshGeneration: UUID?
+    private var supervisorObserver: AnyCancellable?
 
     init(client: ClawJSMemoryClient = .init()) {
         self.client = client
+        attachSupervisorObserver()
     }
 
     // MARK: - Loading
@@ -38,6 +41,15 @@ final class MemoryManager: ObservableObject {
     /// the notes call fails (captures + stats are best-effort).
     func refresh() async {
         state = .loading
+        let generation = UUID()
+        refreshGeneration = generation
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            guard let self, self.refreshGeneration == generation else { return }
+            if case .loading = self.state {
+                self.state = .error("Memory service did not become ready within 8 seconds.")
+            }
+        }
         do {
             async let notesTask = client.listNotes()
             async let capturesTask: [ClawJSMemoryClient.Capture] = (try? await client.listCaptures()) ?? []
@@ -46,10 +58,13 @@ final class MemoryManager: ObservableObject {
             self.captures = await capturesTask
             self.stats = await statsTask
             self.state = .ready
+            self.refreshGeneration = nil
         } catch let error as ClawJSMemoryClient.Error {
             self.state = .error(error.localizedDescription)
+            self.refreshGeneration = nil
         } catch {
             self.state = .error(error.localizedDescription)
+            self.refreshGeneration = nil
         }
     }
 
@@ -98,6 +113,28 @@ final class MemoryManager: ObservableObject {
         searchTask = nil
         lastSearch = nil
         isSearching = false
+    }
+
+    private func attachSupervisorObserver() {
+        supervisorObserver = ClawJSServiceManager.shared.$snapshots.sink { [weak self] snapshots in
+            guard let self, let snap = snapshots[.memory] else { return }
+            switch snap.state {
+            case .ready, .readyFromDaemon:
+                switch self.state {
+                case .idle, .error:
+                    Task { @MainActor [weak self] in await self?.refresh() }
+                case .loading, .ready:
+                    break
+                }
+            case .blocked, .crashed, .daemonUnavailable, .idle, .suspendedForDaemon:
+                self.notes = []
+                self.captures = []
+                self.stats = nil
+                self.state = .error(snap.state.unavailableReason ?? "Memory service is unavailable.")
+            case .starting:
+                if self.state != .ready { self.state = .loading }
+            }
+        }
     }
 
     // MARK: - Mutations

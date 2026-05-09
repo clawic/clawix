@@ -329,6 +329,7 @@ struct ClawJSMemoryClient {
         guard let url = components.url else { throw Error.invalidURL }
 
         var request = URLRequest(url: url)
+        request.timeoutInterval = 5
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         for (key, value) in extraHeaders {
