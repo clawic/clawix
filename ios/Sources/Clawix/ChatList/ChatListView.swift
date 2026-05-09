@@ -197,13 +197,7 @@ struct ChatListView: View {
     // why the glass goes on the container, not on the buttons).
     private var actionPill: some View {
         HStack(spacing: 0) {
-            Button(action: {}) {
-                SearchIcon(size: 20)
-                    .foregroundStyle(Palette.textPrimary)
-                    .frame(width: 48, height: 46)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(InstantPressButtonStyle {
+            Button(action: {
                 guard !searchActive else { return }
                 Haptics.tap()
                 withAnimation(.spring(response: 0.36, dampingFraction: 0.84)) {
@@ -212,19 +206,27 @@ struct ChatListView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     searchFocused = true
                 }
-            })
+            }) {
+                SearchIcon(size: 20)
+                    .foregroundStyle(Palette.textPrimary)
+                    .frame(width: 48, height: 46)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Search")
 
-            Button(action: {}) {
+            Button(action: {
+                guard !showSettings else { return }
+                Haptics.tap()
+                showSettings = true
+            }) {
                 SettingsIcon(size: 28, lineWidth: 2.0)
                     .foregroundStyle(Palette.textPrimary)
                     .frame(width: 48, height: 46)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(InstantPressButtonStyle {
-                guard !showSettings else { return }
-                Haptics.tap()
-                showSettings = true
-            })
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
         }
         .glassCapsule()
     }
@@ -279,6 +281,7 @@ struct ChatListView: View {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Close search")
     }
 
     // MARK: Projects section
@@ -1139,18 +1142,4 @@ private struct NewChatFAB: View {
         onUnpair: {}
     )
     .preferredColorScheme(.dark)
-}
-
-// Fires its action on touch-down (when `isPressed` flips to true)
-// instead of touch-up, eliminating the perceived latency of a stock
-// SwiftUI Button. Idempotency is the caller's responsibility.
-private struct InstantPressButtonStyle: ButtonStyle {
-    let onPress: () -> Void
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .onChange(of: configuration.isPressed) { _, pressed in
-                if pressed { onPress() }
-            }
-    }
 }
