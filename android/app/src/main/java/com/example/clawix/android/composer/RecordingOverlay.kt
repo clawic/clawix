@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +61,7 @@ fun RecordingOverlay(
     val recorder = remember { VoiceRecorder(container) }
     val samples = remember { mutableStateListOf<Float>() }
     var elapsed by remember { mutableStateOf(0L) }
+    val partial by recorder.partialTranscript.collectAsState()
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
@@ -116,6 +118,14 @@ fun RecordingOverlay(
                 style = AppTypography.bodyEmphasized,
                 color = Palette.textPrimary,
             )
+            if (partial.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    partial,
+                    style = AppTypography.body,
+                    color = Palette.textSecondary,
+                )
+            }
             Spacer(Modifier.height(12.dp))
             RecordingWaveform(samples = samples)
             Spacer(Modifier.height(16.dp))
