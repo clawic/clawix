@@ -2,7 +2,6 @@ import SwiftUI
 import Photos
 #if canImport(UIKit)
 import UIKit
-import LucideIcon
 #endif
 
 // Bottom sheet shown when the composer's "+" button is tapped. The
@@ -100,8 +99,7 @@ struct AttachmentSheetView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(white: 0.16))
-                Image(lucide: .camera)
-                    .font(BodyFont.system(size: 28, weight: .regular))
+                LucideIcon(.camera, size: 45)
                     .foregroundStyle(Color.white.opacity(0.9))
             }
             .frame(width: 132, height: 160)
@@ -146,8 +144,7 @@ struct AttachmentSheetView: View {
                 .stroke(Color.white, lineWidth: 1.5)
                 .frame(width: 26, height: 26)
             if isSelected {
-                Image(lucide: .check)
-                    .font(BodyFont.system(size: 12, weight: .bold))
+                LucideIcon(.check, size: 19)
                     .foregroundStyle(Color.white)
             }
         }
@@ -180,8 +177,7 @@ struct AttachmentSheetView: View {
 
     private var deniedState: some View {
         VStack(spacing: 10) {
-            Image(lucide: .images)
-                .font(BodyFont.system(size: 32, weight: .regular))
+            LucideIcon(.images, size: 51)
                 .foregroundStyle(Palette.textSecondary)
             Text("Photo access disabled")
                 .font(Typography.bodyEmphasized)
