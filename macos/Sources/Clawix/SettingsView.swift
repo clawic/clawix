@@ -60,6 +60,27 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .telegram:         return "paperplane.fill"
         }
     }
+
+    var gatedFeature: AppFeature? {
+        switch self {
+        case .dictation:    return .voiceToText
+        case .quickAsk:     return .quickAsk
+        case .secrets:      return .secrets
+        case .mcp:          return .mcp
+        case .localModels:  return .localModels
+        case .browserUsage: return .browserUsage
+        case .git:          return .git
+        case .machines:     return .remoteMesh
+        default:            return nil
+        }
+    }
+
+    static func visibleCases(isVisible: (AppFeature) -> Bool) -> [SettingsCategory] {
+        allCases.filter { category in
+            guard let feature = category.gatedFeature else { return true }
+            return isVisible(feature)
+        }
+    }
 }
 
 // MARK: - Settings sidebar (replaces the chat sidebar while in .settings)
@@ -70,18 +91,7 @@ struct SettingsSidebar: View {
     @State private var backHovered = false
 
     private var visibleCategories: [SettingsCategory] {
-        SettingsCategory.allCases.filter { cat in
-            switch cat {
-            case .dictation:    return flags.isVisible(.voiceToText)
-            case .quickAsk:     return flags.isVisible(.quickAsk)
-            case .secrets:      return flags.isVisible(.secrets)
-            case .mcp:          return flags.isVisible(.mcp)
-            case .localModels:  return flags.isVisible(.localModels)
-            case .browserUsage: return flags.isVisible(.browserUsage)
-            case .git:          return flags.isVisible(.git)
-            default:            return true
-            }
-        }
+        SettingsCategory.visibleCases(isVisible: flags.isVisible)
     }
 
     var body: some View {
@@ -212,16 +222,11 @@ struct SettingsContent: View {
     @EnvironmentObject var flags: FeatureFlags
 
     private var resolvedCategory: SettingsCategory {
-        switch appState.settingsCategory {
-        case .dictation:    return flags.isVisible(.voiceToText)  ? .dictation    : .general
-        case .quickAsk:     return flags.isVisible(.quickAsk)     ? .quickAsk     : .general
-        case .secrets:      return flags.isVisible(.secrets)      ? .secrets      : .general
-        case .mcp:          return flags.isVisible(.mcp)          ? .mcp          : .general
-        case .localModels:  return flags.isVisible(.localModels)  ? .localModels  : .general
-        case .browserUsage: return flags.isVisible(.browserUsage) ? .browserUsage : .general
-        case .git:          return flags.isVisible(.git)          ? .git          : .general
-        default:            return appState.settingsCategory
+        if let feature = appState.settingsCategory.gatedFeature,
+           !flags.isVisible(feature) {
+            return .general
         }
+        return appState.settingsCategory
     }
 
     var body: some View {

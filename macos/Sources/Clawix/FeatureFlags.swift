@@ -29,6 +29,7 @@ enum AppFeature {
     case localModels
     case browserUsage
     case git
+    case remoteMesh
 
     var tier: FeatureTier {
         switch self {
@@ -39,6 +40,7 @@ enum AppFeature {
         case .localModels:  return .experimental
         case .browserUsage: return .experimental
         case .git:          return .experimental
+        case .remoteMesh:   return .experimental
         }
     }
 }

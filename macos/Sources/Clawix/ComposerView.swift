@@ -7,6 +7,7 @@ struct ComposerView: View {
 
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var composer: ComposerState
+    @EnvironmentObject private var flags: FeatureFlags
     @EnvironmentObject private var dictation: DictationCoordinator
     @StateObject private var localModelsService = LocalModelsService.shared
     @State private var sendOnStop = false
@@ -161,7 +162,7 @@ struct ComposerView: View {
 
             permissionsPill
 
-            if chatMode {
+            if chatMode, flags.isVisible(.remoteMesh) {
                 MeshTargetPill(style: .toolbarCompact, menuOpen: $meshTargetMenuOpen)
             }
 
@@ -607,7 +608,9 @@ struct ComposerView: View {
 
                     Spacer()
 
-                    MeshTargetPill(style: .projectRow, menuOpen: $meshTargetMenuOpen)
+                    if flags.isVisible(.remoteMesh) {
+                        MeshTargetPill(style: .projectRow, menuOpen: $meshTargetMenuOpen)
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, projectOverlap + 12)
@@ -703,7 +706,7 @@ struct ComposerView: View {
         }
         .overlayPreferenceValue(MeshTargetAnchorKey.self) { anchor in
             GeometryReader { proxy in
-                if meshTargetMenuOpen, let anchor {
+                if flags.isVisible(.remoteMesh), meshTargetMenuOpen, let anchor {
                     let buttonFrame = proxy[anchor]
                     MeshTargetPopup(isPresented: $meshTargetMenuOpen)
                         .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }

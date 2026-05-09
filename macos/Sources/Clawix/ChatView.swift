@@ -7,6 +7,7 @@ struct ChatView: View {
     let chatId: UUID
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var meshStore: MeshStore
+    @EnvironmentObject private var flags: FeatureFlags
 
     @State private var workMenuOpen = false
     @State private var branchMenuOpen = false
@@ -196,7 +197,9 @@ struct ChatView: View {
                     }
 
                     VStack(spacing: 14) {
-                        let activeRemoteJobs = meshStore.jobs(forChat: chatId)
+                        let activeRemoteJobs = flags.isVisible(.remoteMesh)
+                            ? meshStore.jobs(forChat: chatId)
+                            : []
                         if !activeRemoteJobs.isEmpty {
                             VStack(spacing: 8) {
                                 ForEach(activeRemoteJobs) { job in
@@ -212,16 +215,19 @@ struct ChatView: View {
                         ComposerView(chatMode: true)
                             .frame(maxWidth: chatRailMaxWidth)
 
-                        HStack(spacing: 14) {
-                            ChatFooterPill(
-                                icon: "desktopcomputer",
-                                label: String(localized: "Work locally", bundle: AppLocale.bundle, locale: AppLocale.current),
-                                accessibilityLabel: "Work mode",
-                                isOpen: workMenuOpen
-                            ) {
-                                workMenuOpen.toggle()
-                            }
-                            .anchorPreference(key: WorkPillAnchorKey.self, value: .bounds) { $0 }
+                        if flags.isVisible(.remoteMesh) || chat.hasGitRepo {
+                            HStack(spacing: 14) {
+                                if flags.isVisible(.remoteMesh) {
+                                    ChatFooterPill(
+                                        icon: "desktopcomputer",
+                                        label: String(localized: "Work locally", bundle: AppLocale.bundle, locale: AppLocale.current),
+                                        accessibilityLabel: "Work mode",
+                                        isOpen: workMenuOpen
+                                    ) {
+                                        workMenuOpen.toggle()
+                                    }
+                                    .anchorPreference(key: WorkPillAnchorKey.self, value: .bounds) { $0 }
+                                }
 
                             if chat.hasGitRepo {
                                 ChatFooterPill(
@@ -235,10 +241,11 @@ struct ChatView: View {
                                 .anchorPreference(key: BranchPillAnchorKey.self, value: .bounds) { $0 }
                             }
 
-                            Spacer(minLength: 0)
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: chatRailMaxWidth)
+                            .padding(.leading, 6)
                         }
-                        .frame(maxWidth: chatRailMaxWidth)
-                        .padding(.leading, 6)
                     }
                     .padding(.horizontal, 38)
                     .padding(.top, 14)
@@ -258,7 +265,7 @@ struct ChatView: View {
                 .animation(.easeOut(duration: 0.18), value: appState.isFindBarOpen)
                 .overlayPreferenceValue(WorkPillAnchorKey.self) { anchor in
                     GeometryReader { proxy in
-                        if workMenuOpen, let anchor {
+                        if flags.isVisible(.remoteMesh), workMenuOpen, let anchor {
                             let buttonFrame = proxy[anchor]
                             WorkLocallyMenuPopup(isPresented: $workMenuOpen)
                                 .anchoredPopupPlacement(

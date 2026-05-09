@@ -240,6 +240,16 @@ final class MeshClientTests: XCTestCase {
         XCTAssertTrue(cancelled.isTerminal)
     }
 
+    @MainActor
+    func test_remoteMeshIsHiddenWithExperimentalFeaturesOff() {
+        XCTAssertEqual(AppFeature.remoteMesh.tier, .experimental)
+
+        let categories = SettingsCategory.visibleCases { feature in
+            feature.tier == .stable
+        }
+        XCTAssertFalse(categories.contains(.machines))
+    }
+
     // MARK: - Helpers
 
     private func bootDaemon(handler: @escaping FakeMeshDaemon.Handler) throws {

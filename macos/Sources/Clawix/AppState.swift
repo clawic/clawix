@@ -2269,7 +2269,12 @@ final class AppState: ObservableObject {
                 ] as [String: Any]
             },
             "pinnedCount": chats.filter { $0.isPinned }.count,
-            "archivedCount": chats.filter { $0.isArchived }.count
+            "archivedCount": chats.filter { $0.isArchived }.count,
+            "featureVisibility": [
+                "remoteMesh": FeatureFlags.shared.isVisible(.remoteMesh)
+            ],
+            "visibleSettingsCategories": SettingsCategory.visibleCases(isVisible: FeatureFlags.shared.isVisible).map(\.rawValue),
+            "selectedMeshTarget": selectedMeshTarget.isLocal ? "local" : "peer"
         ]
         let url = URL(fileURLWithPath: (raw as NSString).expandingTildeInPath)
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -2497,7 +2502,12 @@ final class AppState: ObservableObject {
             return
         }
 
-        if case .peer(let nodeId) = selectedMeshTarget,
+        if !FeatureFlags.shared.isVisible(.remoteMesh), !selectedMeshTarget.isLocal {
+            selectedMeshTarget = .local
+        }
+
+        if FeatureFlags.shared.isVisible(.remoteMesh),
+           case .peer(let nodeId) = selectedMeshTarget,
            let peer = meshStore.peers.first(where: { $0.nodeId == nodeId }) {
             dispatchRemoteMeshJob(peer: peer, chatId: chatId, prompt: combined)
             return
