@@ -241,7 +241,7 @@ final class DriveManager: ObservableObject {
                 if self.bootstrapTask == nil {
                     self.boot()
                 }
-            case .blocked, .crashed, .daemonUnavailable, .idle, .suspendedForDaemon:
+            case .blocked, .crashed, .daemonUnavailable, .idle:
                 self.items = []
                 self.breadcrumbs = []
                 self.state = .error(snap.state.unavailableReason ?? "Drive service is unavailable.")

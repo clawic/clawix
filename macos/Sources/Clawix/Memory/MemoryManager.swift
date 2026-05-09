@@ -126,7 +126,7 @@ final class MemoryManager: ObservableObject {
                 case .loading, .ready:
                     break
                 }
-            case .blocked, .crashed, .daemonUnavailable, .idle, .suspendedForDaemon:
+            case .blocked, .crashed, .daemonUnavailable, .idle:
                 self.notes = []
                 self.captures = []
                 self.stats = nil

@@ -78,9 +78,6 @@ enum ClawJSServiceState: Equatable {
     /// not answer on its canonical loopback port.
     case daemonUnavailable(reason: String)
 
-    /// Legacy daemon handoff state kept while call sites migrate to the
-    /// explicit ready/unavailable daemon states.
-    case suspendedForDaemon
 }
 
 /// Per-service snapshot the manager publishes. UI reads only; mutation
@@ -113,7 +110,7 @@ extension ClawJSServiceState {
             return "The service has not started yet."
         case .starting:
             return "The service is still starting."
-        case .ready, .readyFromDaemon, .suspendedForDaemon:
+        case .ready, .readyFromDaemon:
             return nil
         }
     }

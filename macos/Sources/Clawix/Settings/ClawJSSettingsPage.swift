@@ -276,7 +276,6 @@ struct ClawJSSettingsPage: View {
         case .readyFromDaemon:     return "Running from daemon"
         case .crashed:             return "Crashed"
         case .daemonUnavailable:   return "Unavailable from daemon"
-        case .suspendedForDaemon:  return "Daemon owns this"
         }
     }
 
@@ -289,7 +288,6 @@ struct ClawJSSettingsPage: View {
         case .readyFromDaemon:     return .green
         case .crashed:             return .red
         case .daemonUnavailable:   return .red
-        case .suspendedForDaemon:  return .blue
         }
     }
 
@@ -319,8 +317,6 @@ struct ClawJSSettingsPage: View {
         case .daemonUnavailable(let reason):
             dict["state"] = "daemonUnavailable"
             dict["reason"] = reason
-        case .suspendedForDaemon:
-            dict["state"] = "suspendedForDaemon"
         }
         if let lastError = snapshot.lastError { dict["lastError"] = lastError }
         guard let data = try? JSONSerialization.data(

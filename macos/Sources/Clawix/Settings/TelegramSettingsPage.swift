@@ -100,8 +100,6 @@ struct TelegramSettingsPage: View {
             banner(text: "Telegram surface crashed: \(reason)", color: .red)
         case .daemonUnavailable(let reason):
             banner(text: reason, color: .red)
-        case .suspendedForDaemon:
-            banner(text: "Telegram surface owned by the bridge daemon.", color: .blue)
         case .idle:
             banner(text: "Telegram surface is idle.", color: Color.white.opacity(0.4))
         }

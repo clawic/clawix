@@ -81,7 +81,7 @@ final class DatabaseManager: ObservableObject {
                     if case .ready = self.state { return }
                     await self.bootstrap()
                 }
-            case .crashed, .blocked, .idle, .daemonUnavailable, .suspendedForDaemon:
+            case .crashed, .blocked, .idle, .daemonUnavailable:
                 self.realtime.disconnect()
                 self.collections = []
                 self.recordsByCollection = [:]
