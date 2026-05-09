@@ -38,4 +38,9 @@ export const StorageKeys = {
   lastChatId: "ui.lastChatId",
   composerDraft: "ui.composerDraft",
   vaultUnlockedAt: "secrets.unlockedAt",
+  sidebarWidth: "ui.sidebarWidth",
+  sidebarOpen: "ui.sidebarOpen",
+  rightSidebarWidth: "ui.rightSidebarWidth",
+  rightSidebarOpen: "ui.rightSidebarOpen",
+  currentRoute: "ui.route",
 } as const;
