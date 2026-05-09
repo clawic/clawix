@@ -165,7 +165,7 @@ struct WorkSummary: Equatable {
 
     func elapsedSeconds(asOf now: Date) -> Int {
         let end = endedAt ?? now
-        return max(0, Int((end.timeIntervalSince(startedAt)).rounded()))
+        return max(0, Int(end.timeIntervalSince(startedAt)))
     }
 }
 

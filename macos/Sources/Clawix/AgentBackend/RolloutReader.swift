@@ -311,7 +311,10 @@ enum RolloutReader {
                     // Clawix re-injects internal scaffolding ("# In app
                     // browser:", "<turn_aborted>", …) into the response
                     // history as fake user_messages — skip those.
-                    let attachments = Self.loadImageAttachments(from: payload["images"])
+                    let attachments = Self.loadImageAttachments(
+                        from: payload["images"],
+                        localImages: payload["local_images"]
+                    )
                     if !trimmed.isEmpty,
                        !trimmed.hasPrefix("<turn_aborted>"),
                        !containsRequestMarker(trimmed) {
@@ -354,6 +357,15 @@ enum RolloutReader {
                     pending = PendingAssistant(timestamp: timestamp)
                 }
                 pending?.appendText(trimmed, isFinal: phase == "final_answer")
+
+            case ("event_msg", "task_complete"):
+                if let durationMs = payload["duration_ms"] as? NSNumber {
+                    pending?.setDuration(milliseconds: durationMs.doubleValue)
+                } else if let durationMs = payload["duration_ms"] as? Double {
+                    pending?.setDuration(milliseconds: durationMs)
+                } else if let durationMs = payload["duration_ms"] as? Int {
+                    pending?.setDuration(milliseconds: Double(durationMs))
+                }
 
             case ("event_msg", "exec_command_end"):
                 let callId = payload["call_id"] as? String ?? UUID().uuidString
@@ -777,14 +789,33 @@ enum RolloutReader {
     /// entries are dropped silently so a typo in a fixture doesn't break
     /// the whole chat hydrate. nil / non-array `images` returns [], so
     /// real Codex rollouts (which never carry this field) are no-ops.
-    fileprivate static func loadImageAttachments(from raw: Any?) -> [WireAttachment] {
-        guard let arr = raw as? [[String: Any]], !arr.isEmpty else { return [] }
-        guard let dirString = ProcessInfo.processInfo.environment["CLAWIX_IMAGE_FIXTURE_DIR"],
+    fileprivate static func loadImageAttachments(from raw: Any?, localImages: Any? = nil) -> [WireAttachment] {
+        var out: [WireAttachment] = []
+        var seenPaths: Set<String> = []
+        if let paths = localImages as? [String] {
+            for path in paths {
+                let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                let fileURL = URL(fileURLWithPath: trimmed)
+                guard seenPaths.insert(fileURL.standardizedFileURL.path).inserted,
+                      let data = try? Data(contentsOf: fileURL),
+                      !data.isEmpty else { continue }
+                out.append(WireAttachment(
+                    id: UUID().uuidString,
+                    kind: .image,
+                    mimeType: Self.guessMimeType(forFilename: fileURL.lastPathComponent),
+                    filename: fileURL.lastPathComponent,
+                    dataBase64: data.base64EncodedString()
+                ))
+            }
+        }
+
+        guard let arr = raw as? [[String: Any]], !arr.isEmpty,
+              let dirString = ProcessInfo.processInfo.environment["CLAWIX_IMAGE_FIXTURE_DIR"],
               !dirString.isEmpty else {
-            return []
+            return out
         }
         let dir = URL(fileURLWithPath: dirString, isDirectory: true)
-        var out: [WireAttachment] = []
         for entry in arr {
             guard let filename = (entry["filename"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -794,7 +825,9 @@ enum RolloutReader {
             // always rooted at CLAWIX_IMAGE_FIXTURE_DIR.
             let base = (filename as NSString).lastPathComponent
             let fileURL = dir.appendingPathComponent(base)
-            guard let data = try? Data(contentsOf: fileURL), !data.isEmpty else { continue }
+            guard seenPaths.insert(fileURL.standardizedFileURL.path).inserted,
+                  let data = try? Data(contentsOf: fileURL),
+                  !data.isEmpty else { continue }
             let mime = (entry["mimeType"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                 ?? Self.guessMimeType(forFilename: base)
             let id = (entry["id"] as? String) ?? UUID().uuidString
@@ -829,7 +862,7 @@ enum RolloutReader {
 /// invocations so the final ChatMessage matches what the live streaming
 /// pipeline produces.
 private struct PendingAssistant {
-    let timestamp: Date
+    var timestamp: Date
     /// Last parsed timestamp seen while this turn was being assembled.
     /// Bumped from the parser loop on every line that belongs to the
     /// turn so `finalize()` can stamp `WorkSummary.endedAt` with the
@@ -858,6 +891,12 @@ private struct PendingAssistant {
         if isFinal {
             finalText = text
         }
+    }
+
+    mutating func setDuration(milliseconds: Double) {
+        guard milliseconds.isFinite, milliseconds >= 0 else { return }
+        let seconds = milliseconds / 1000
+        timestamp = endedAt.addingTimeInterval(-seconds)
     }
 
     mutating func appendCommand(id: String, text: String?, actions: [CommandActionKind]) {
