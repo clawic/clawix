@@ -8,6 +8,7 @@ import { useBridgeStore } from "./bridge/store";
 import { storage, StorageKeys } from "./lib/storage";
 import { PairingScreen } from "./screens/pairing/pairing-screen";
 import { MainShell } from "./screens/shell/main-shell";
+import { ToastHost } from "./components/ui/toast-center";
 
 export function App() {
   const conn = useBridgeStore((s) => s.connection);
@@ -25,6 +26,7 @@ export function App() {
   return (
     <div className="h-full">
       {showShell ? <MainShell /> : <PairingScreen />}
+      <ToastHost />
     </div>
   );
 }
