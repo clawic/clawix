@@ -66,14 +66,20 @@ enum ClawJSServiceState: Equatable {
     /// Service alive on its port.
     case ready(pid: pid_t, port: UInt16)
 
+    /// Service is alive on its canonical port and is owned by the
+    /// background bridge daemon, not by the GUI process.
+    case readyFromDaemon(port: UInt16)
+
     /// Process exited unexpectedly. The manager will restart with
     /// exponential backoff unless `restartCount` exceeds the budget.
     case crashed(reason: String)
 
-    /// `BackgroundBridgeService.isActive == true`: the bridge daemon
-    /// owns long-lived services in that mode (Phase 5). The GUI
-    /// supervisor stays out so we never have two owners of the same
-    /// loopback port.
+    /// `BackgroundBridgeService.isActive == true`, but the service did
+    /// not answer on its canonical loopback port.
+    case daemonUnavailable(reason: String)
+
+    /// Legacy daemon handoff state kept while call sites migrate to the
+    /// explicit ready/unavailable daemon states.
     case suspendedForDaemon
 }
 
@@ -87,4 +93,28 @@ struct ClawJSServiceSnapshot: Equatable, Identifiable {
     var lastError: String?
 
     var id: ClawJSService.ID { service.id }
+}
+
+extension ClawJSServiceState {
+    var isReady: Bool {
+        switch self {
+        case .ready, .readyFromDaemon:
+            return true
+        default:
+            return false
+        }
+    }
+
+    var unavailableReason: String? {
+        switch self {
+        case .blocked(let reason), .crashed(let reason), .daemonUnavailable(let reason):
+            return reason
+        case .idle:
+            return "The service has not started yet."
+        case .starting:
+            return "The service is still starting."
+        case .ready, .readyFromDaemon, .suspendedForDaemon:
+            return nil
+        }
+    }
 }
