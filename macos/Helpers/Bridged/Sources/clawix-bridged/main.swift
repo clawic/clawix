@@ -1,8 +1,15 @@
 import Foundation
+#if canImport(Combine)
 import Combine
+#else
+import OpenCombine
+import OpenCombineFoundation
+#endif
 import ClawixCore
 import ClawixEngine
+#if canImport(WhisperKit)
 import WhisperKit
+#endif
 
 @main
 struct BridgedMain {
@@ -15,6 +22,7 @@ struct BridgedMain {
         // `large-v3_turbo`).
         let argv = CommandLine.arguments
         if argv.count >= 3, argv[1] == "--download-model" {
+            #if canImport(WhisperKit)
             let variant = argv[2]
             let semaphore = DispatchSemaphore(value: 0)
             Task {
@@ -41,6 +49,12 @@ struct BridgedMain {
             }
             semaphore.wait()
             exit(0)
+            #else
+            FileHandle.standardError.write(
+                Data("--download-model is not available on this platform; use whisper.cpp instead\n".utf8)
+            )
+            exit(2)
+            #endif
         }
 
         BridgedLog.write("starting schemaVersion=\(bridgeSchemaVersion)")
