@@ -14,7 +14,7 @@
 
     <style name="Theme.Clawix.SplashScreen" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/launch_bg</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Clawix</item>
     </style>
 
