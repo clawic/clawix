@@ -1,17 +1,13 @@
-/**
- * Pairing screen. Two paths:
- *  - Loopback (page served by the daemon): hit `/pairing/qr.json` to
- *    self-configure. The daemon responds only to loopback IPs.
- *  - Remote (Tailscale, mDNS): user pastes the short code (XXX-XXX-XXX)
- *    visible on their Mac.
- */
+// Pairing screen. Loopback auto-pair, or user pastes the short code from
+// the Mac. Uses the new design system: ClawixLogoIcon brand mark, Card,
+// Button, TextField.
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useBridgeStore } from "../../bridge/store";
 import { ZQrPayload, normaliseShortCode } from "../../bridge/frames";
 import { storage, StorageKeys } from "../../lib/storage";
-import { GlassPill } from "../../components/glass-pill";
-import { ChevronRightIcon, BotIcon } from "../../icons";
+import { Button, TextField, Card } from "../../components/ui";
+import { ClawixLogoIcon } from "../../icons";
 
 export function PairingScreen() {
   const attach = useBridgeStore((s) => s.attach);
@@ -20,7 +16,6 @@ export function PairingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [autoTried, setAutoTried] = useState(false);
 
-  // Auto-pair on loopback: request the QR JSON once on mount.
   useEffect(() => {
     if (autoTried) return;
     setAutoTried(true);
@@ -40,9 +35,7 @@ export function PairingScreen() {
   }, [attach, autoTried]);
 
   useEffect(() => {
-    if (conn.kind === "auth-failed") {
-      setError(conn.reason);
-    }
+    if (conn.kind === "auth-failed") setError(conn.reason);
     if (conn.kind === "ready") setError(null);
   }, [conn]);
 
@@ -58,57 +51,73 @@ export function PairingScreen() {
     attach(normalised);
   }
 
+  const connecting = conn.kind === "connecting" || conn.kind === "authenticating";
+
   return (
-    <div className="min-h-full flex items-center justify-center px-6 py-16">
+    <div className="min-h-full flex items-center justify-center px-6 py-16 sidebar-backdrop">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.32, ease: [0, 0, 0.2, 1] }}
         className="w-full max-w-[440px]"
       >
         <div className="flex items-center gap-3 mb-7">
-          <div className="size-10 rounded-[12px] bg-[var(--color-bg-elev-2)] grid place-items-center text-[var(--color-fg)]">
-            <BotIcon size={22} />
-          </div>
+          <ClawixLogoIcon size={40} color="var(--color-fg)" />
           <div>
-            <div className="text-[18px] font-medium tracking-[-0.02em]">Clawix Web</div>
-            <div className="text-[12px] text-[var(--color-fg-muted)]">Pair with your Mac to start</div>
+            <div
+              style={{
+                fontSize: 18,
+                fontVariationSettings: '"wght" 800',
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Clawix Web
+            </div>
+            <div style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>
+              Pair with your Mac to start
+            </div>
           </div>
         </div>
 
-        <p className="text-[13px] text-[var(--color-fg-muted)] mb-6 leading-relaxed">
+        <p
+          className="mb-6"
+          style={{ fontSize: 13, color: "var(--color-fg-secondary)", lineHeight: 1.55 }}
+        >
           Open Clawix on your Mac, enable the background bridge in Settings, and copy the short
-          code. Or just open this page from <code className="font-mono text-[12px] text-[var(--color-fg)]">localhost:7778</code> and
-          we will pair automatically.
+          code. Or just open this page from{" "}
+          <code className="font-mono" style={{ fontSize: 12, color: "var(--color-fg)" }}>
+            localhost:7778
+          </code>{" "}
+          and we will pair automatically.
         </p>
 
-        <form onSubmit={submit} className="space-y-3">
-          <label className="block">
-            <span className="text-[12px] text-[var(--color-fg-muted)]">Short code</span>
-            <input
-              autoFocus
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="XXX-XXX-XXX"
-              spellCheck={false}
-              autoComplete="off"
-              className="mt-1.5 w-full h-11 px-3.5 rounded-[12px] bg-[var(--color-bg-elev-1)] border border-[var(--color-border)] outline-none focus:border-[var(--color-border-strong)] font-mono text-[15px] tracking-[0.04em]"
-            />
-          </label>
+        <Card>
+          <form onSubmit={submit} className="p-4 space-y-3">
+            <label className="block">
+              <span style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>Short code</span>
+              <TextField
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="XXX-XXX-XXX"
+                spellCheck={false}
+                autoComplete="off"
+                className="mt-1.5 font-mono"
+                style={{ letterSpacing: "0.04em", fontSize: 15 }}
+              />
+            </label>
 
-          {error && (
-            <div className="text-[12px] text-[var(--color-danger)]">
-              {error}
+            {error && (
+              <div style={{ fontSize: 12, color: "var(--color-destructive)" }}>{error}</div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <Button type="submit" variant="primary" disabled={connecting}>
+                {connecting ? "Connecting…" : "Connect"}
+              </Button>
             </div>
-          )}
-
-          <div className="flex justify-end pt-2">
-            <GlassPill type="submit" size="md" disabled={conn.kind === "connecting" || conn.kind === "authenticating"}>
-              {conn.kind === "connecting" || conn.kind === "authenticating" ? "Connecting…" : "Connect"}
-              <ChevronRightIcon size={14} />
-            </GlassPill>
-          </div>
-        </form>
+          </form>
+        </Card>
       </motion.div>
     </div>
   );
