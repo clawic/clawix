@@ -39,6 +39,7 @@ fun AttachmentSheet(
     container: AppContainer,
     onDismiss: () -> Unit,
     onPickResult: (ComposerAttachment) -> Unit,
+    onOpenCamera: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
     val context = LocalContext.current
@@ -49,22 +50,6 @@ fun AttachmentSheet(
         if (uri != null) {
             val att = readImageAttachment(context, uri)
             if (att != null) onPickResult(att)
-        }
-    }
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bmp ->
-        if (bmp != null) {
-            val out = java.io.ByteArrayOutputStream()
-            bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, out)
-            onPickResult(
-                ComposerAttachment(
-                    kind = WireAttachmentKind.image,
-                    mimeType = "image/jpeg",
-                    filename = "photo.jpg",
-                    bytes = out.toByteArray(),
-                )
-            )
         }
     }
 
@@ -81,17 +66,23 @@ fun AttachmentSheet(
                 .padding(horizontal = AppLayout.screenHorizontalPadding, vertical = 12.dp)
         ) {
             Text("Attach", style = AppTypography.title, color = Palette.textPrimary)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            ActionRow(LucideGlyph.Image, "Photo library") {
+            // Recent photos grid (mirror iOS RecentPhotosLoader).
+            RecentPhotosRow(onPick = { att ->
+                onPickResult(att)
+            })
+            Spacer(Modifier.height(12.dp))
+
+            ActionRow(LucideGlyph.Camera, "Camera") {
+                onOpenCamera()
+            }
+            ActionRow(LucideGlyph.Images, "All photos") {
                 photoPicker.launch(
                     androidx.activity.result.PickVisualMediaRequest(
                         ActivityResultContracts.PickVisualMedia.ImageOnly
                     )
                 )
-            }
-            ActionRow(LucideGlyph.Camera, "Camera") {
-                runCatching { cameraLauncher.launch(null) }
             }
 
             Spacer(Modifier.height(24.dp))

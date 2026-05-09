@@ -62,6 +62,7 @@ fun ComposerView(
     val focusRequester = remember { FocusRequester() }
     val view = LocalView.current
     var showAttachmentSheet by remember { mutableStateOf(false) }
+    var showCamera by remember { mutableStateOf(false) }
     var voiceRecording by remember { mutableStateOf(false) }
     val recorderHook = remember { VoiceRecorder(container) }
 
@@ -193,6 +194,23 @@ fun ComposerView(
             onPickResult = { att ->
                 attachments.add(att)
                 showAttachmentSheet = false
+            },
+            onOpenCamera = {
+                showAttachmentSheet = false
+                showCamera = true
+            },
+        )
+    }
+    if (showCamera) {
+        CameraCaptureScreen(
+            onCancel = { showCamera = false },
+            onCapture = { att ->
+                attachments.add(att)
+                showCamera = false
+            },
+            onOpenLibrary = {
+                showCamera = false
+                showAttachmentSheet = true
             },
         )
     }
