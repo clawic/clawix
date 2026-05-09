@@ -70,17 +70,19 @@ class ChatListViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun togglePin(chat: WireChat) {
-        if (chat.isPinned) container.bridgeClient.send(BridgeBody.UnpinChat(chat.id))
-        else container.bridgeClient.send(BridgeBody.PinChat(chat.id))
+        if (chat.isPinned) container.bridgeClient.unpinChat(chat.id)
+        else container.bridgeClient.pinChat(chat.id)
     }
 
     fun toggleArchive(chat: WireChat) {
-        if (chat.isArchived) container.bridgeClient.send(BridgeBody.UnarchiveChat(chat.id))
-        else container.bridgeClient.send(BridgeBody.ArchiveChat(chat.id))
+        if (chat.isArchived) container.bridgeClient.unarchiveChat(chat.id)
+        else container.bridgeClient.archiveChat(chat.id)
     }
 
     fun rename(chat: WireChat, newTitle: String) {
-        container.bridgeClient.send(BridgeBody.RenameChat(chat.id, newTitle))
+        val trimmed = newTitle.trim()
+        if (trimmed.isEmpty()) return
+        container.bridgeClient.renameChat(chat.id, trimmed)
     }
 
     fun refreshConnection() {
