@@ -4812,7 +4812,7 @@ final class AppState: ObservableObject {
     /// expect from any browser. Only the cold case (panel closed, or first
     /// time on this chat) reuses the first existing web tab so reopening the
     /// panel doesn't spawn an extra google.com every time.
-    func openBrowser(initialURL: URL = URL(string: "https://www.google.com")!) {
+    func openBrowser(initialURL: URL = URL(string: "about:blank")!) {
         var s = currentSidebar
         let hasWebTab = s.items.contains(where: {
             if case .web = $0 { return true } else { return false }
@@ -4921,7 +4921,7 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
-    func newBrowserTab(url: URL = URL(string: "https://www.google.com")!) -> SidebarItem.WebPayload? {
+    func newBrowserTab(url: URL = URL(string: "about:blank")!) -> SidebarItem.WebPayload? {
         var s = currentSidebar
         let payload = SidebarItem.WebPayload(
             id: UUID(),
