@@ -853,7 +853,7 @@ private struct MessageRow: View, Equatable {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                // The runtime shows a "Sitio web · Abrir" preview card under the
+                // The runtime shows a "Website · Open" preview card under the
                 // final answer whenever the message embeds a URL. Limit it
                 // to the very last assistant message so older turns stay
                 // tight. Skip when the message carries a Plan card so a
@@ -1833,7 +1833,7 @@ struct BranchArrowsIconView: View {
 // MARK: - Trailing "Website" preview card
 
 /// Compact link card shown under the last assistant answer when the body
-/// embeds a URL. Renders the "Memory · Sitio web · Abrir" affordance:
+/// embeds a URL. Renders the "Memory · Website · Open" affordance:
 /// favicon-style globe pill, resolved `<title>` (or host while the fetch
 /// is in flight), subtitle "Website", and an "Open" button that hands
 /// off to the right-sidebar browser.
@@ -1902,7 +1902,7 @@ private struct LinkPreviewCard: View {
         .onTapGesture { appState.openLinkInBrowser(url) }
         .onAppear { appState.linkMetadata.ensureTitle(for: url) }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(title), Sitio web"))
+        .accessibilityLabel(Text("\(title), Website"))
         .accessibilityAddTraits(.isLink)
     }
 }

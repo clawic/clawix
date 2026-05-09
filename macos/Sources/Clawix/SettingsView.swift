@@ -2833,7 +2833,7 @@ private struct GitPage: View {
                 SegmentedRow(
                     title: "Pull request merge method",
                     detail: "Choose how Clawix merges pull requests",
-                    options: [(.merge, "Fusionar"), (.squash, "Squash")],
+                    options: [(.merge, "Merge"), (.squash, "Squash")],
                     selection: $mergeMethod
                 )
                 CardDivider()
