@@ -30,13 +30,13 @@ export function WorkSummary({ summary }: { summary: WireWorkSummary }) {
     <div className="rounded-[12px] border border-[var(--color-border)] overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-[12px] text-[var(--color-fg-muted)] hover:bg-[var(--color-bg-elev-1)]"
+        className="flex items-center gap-2 w-full px-3 py-2 text-[12px] text-[var(--color-fg-secondary)] hover:bg-[var(--color-card)]"
       >
         {open ? <ChevronDownIcon size={11} /> : <ChevronRightIcon size={11} />}
         <span>{summaryLine}</span>
       </button>
       {open && (
-        <ul className="divide-y divide-[var(--color-border)] bg-[var(--color-bg-elev-1)]/40">
+        <ul className="divide-y divide-[var(--color-border)] bg-[var(--color-card)]/40">
           {summary.items.map((item) => (
             <WorkItemRow key={item.id} item={item} />
           ))}
@@ -50,18 +50,18 @@ function WorkItemRow({ item }: { item: WireWorkItem }) {
   const Icon = iconFor(item.kind);
   return (
     <li className="flex items-start gap-2 px-3 py-2 text-[12px]">
-      <Icon size={12} className="mt-[3px] text-[var(--color-fg-muted)] shrink-0" />
+      <Icon size={12} className="mt-[3px] text-[var(--color-fg-secondary)] shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="text-[var(--color-fg)] truncate">{labelFor(item)}</div>
         {item.commandText && (
-          <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-[var(--color-fg-muted)] truncate">
+          <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px] text-[var(--color-fg-secondary)] truncate">
             {item.commandText}
           </pre>
         )}
         {item.paths && item.paths.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
             {item.paths.map((p) => (
-              <span key={p} className="font-mono text-[11px] text-[var(--color-fg-muted)]">
+              <span key={p} className="font-mono text-[11px] text-[var(--color-fg-secondary)]">
                 {p}
               </span>
             ))}
@@ -78,9 +78,9 @@ function StatusDot({ status }: { status: WireWorkItem["status"] }) {
     <span
       className={cx(
         "size-2 rounded-full mt-1.5",
-        status === "inProgress" && "bg-[var(--color-warning)] animate-pulse",
-        status === "completed" && "bg-[var(--color-success)]",
-        status === "failed" && "bg-[var(--color-danger)]",
+        status === "inProgress" && "bg-[var(--color-banner-danger-fg)] animate-pulse",
+        status === "completed" && "bg-[var(--color-banner-ok-fg)]",
+        status === "failed" && "bg-[var(--color-destructive)]",
       )}
     />
   );

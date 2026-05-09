@@ -31,12 +31,16 @@ export function MessageBubble({ message }: { message: WireMessage }) {
 
         {message.content && (
           <div
+            style={{
+              borderRadius: 14,
+              boxShadow: isUser ? "inset 0 0 0 0.5px rgba(255,255,255,0.10)" : undefined,
+            }}
             className={cx(
-              "rounded-[16px] px-3.5 py-2.5 text-[14px] leading-[1.55] whitespace-pre-wrap break-words",
+              "px-3.5 py-2.5 text-[14px] leading-[1.55] whitespace-pre-wrap break-words",
               isUser
-                ? "bg-[var(--color-bg-elev-3)] text-[var(--color-fg)]"
+                ? "bg-[var(--color-card)] text-[var(--color-fg)]"
                 : "text-[var(--color-fg)]",
-              message.isError && "text-[var(--color-danger)]",
+              message.isError && "text-[var(--color-destructive)]",
             )}
           >
             {streaming && !isUser ? <span className="shimmer-text">{message.content}</span> : message.content}
@@ -74,7 +78,7 @@ function ReasoningBlock({ text, streaming }: { text: string; streaming: boolean 
   return (
     <div
       className={cx(
-        "rounded-[12px] border border-[var(--color-border)] bg-[var(--color-bg-elev-1)] px-3 py-2 text-[12.5px] leading-[1.55] whitespace-pre-wrap font-mono text-[var(--color-fg-muted)]",
+        "rounded-[12px] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-[12.5px] leading-[1.55] whitespace-pre-wrap font-mono text-[var(--color-fg-secondary)]",
         streaming && "animate-pulse",
       )}
     >
