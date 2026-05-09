@@ -62,11 +62,28 @@ final class VaultManager: ObservableObject {
     @Published private(set) var openAnomalies: [Anomaly] = []
     private var seenAnomalyIDs: Set<String> = []
 
+    private static func userFacingError(_ error: Swift.Error) -> String {
+        if let localized = (error as? LocalizedError)?.errorDescription, !localized.isEmpty {
+            return localized
+        }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch URLError.Code(rawValue: nsError.code) {
+            case .cannotConnectToHost, .networkConnectionLost, .timedOut, .notConnectedToInternet:
+                return "Vault service is not reachable on 127.0.0.1:\(ClawJSService.vault.port)."
+            default:
+                return "Vault service request failed: \(nsError.localizedDescription)"
+            }
+        }
+        return error.localizedDescription
+    }
+
     // MARK: - Internal
 
     var autoLockMinutes: Int = 5
     private var autoLockTask: Task<Void, Never>?
     private var lifecycle: VaultLifecycle?
+    private var loadGeneration: UUID?
 
     private let client: ClawJSVaultClient
 
@@ -86,6 +103,17 @@ final class VaultManager: ObservableObject {
 
     func load() async {
         state = .loading
+        let generation = UUID()
+        loadGeneration = generation
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            guard let self, self.loadGeneration == generation else { return }
+            if case .loading = self.state {
+                let message = "Vault service did not become ready within 8 seconds."
+                self.state = .openFailed(message)
+                self.lastError = message
+            }
+        }
         do {
             let info = try await client.state()
             if !info.initialized {
@@ -96,6 +124,7 @@ final class VaultManager: ObservableObject {
                 }
                 #endif
                 state = .uninitialized
+                loadGeneration = nil
                 return
             }
             if info.unlocked {
@@ -105,9 +134,12 @@ final class VaultManager: ObservableObject {
             } else {
                 state = .locked
             }
+            loadGeneration = nil
         } catch {
-            state = .openFailed(String(describing: error))
-            lastError = String(describing: error)
+            let message = Self.userFacingError(error)
+            state = .openFailed(message)
+            lastError = message
+            loadGeneration = nil
         }
     }
 
@@ -118,7 +150,7 @@ final class VaultManager: ObservableObject {
             _ = try await setUp(masterPassword: throwaway)
             autoLockMinutes = 0
         } catch {
-            lastError = String(describing: error)
+            lastError = Self.userFacingError(error)
             state = .uninitialized
         }
     }
@@ -145,7 +177,7 @@ final class VaultManager: ObservableObject {
             _ = runAnomalyDetector()
         } catch {
             state = .locked
-            lastError = String(describing: error)
+            lastError = Self.userFacingError(error)
             throw error
         }
     }

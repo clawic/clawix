@@ -36,6 +36,11 @@ struct SecretsScreen: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task {
+            if case .openFailed = vault.state {
+                await vault.load()
+            }
+        }
         .sheet(isPresented: Binding(
             get: { vault.pendingApprovals.first != nil },
             set: { _ in }
