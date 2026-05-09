@@ -93,7 +93,7 @@ final class EnhancementService {
         lastCallAt = Date()
 
         guard let provider = activeProvider else { return raw }
-        guard provider.isConfigured() else { return raw }
+        guard await provider.isConfigured() else { return raw }
 
         let prompt = PromptLibrary.shared.activePrompt()
         let model = defaults.string(forKey: EnhancementSettings.modelKey(for: provider.id.rawValue))

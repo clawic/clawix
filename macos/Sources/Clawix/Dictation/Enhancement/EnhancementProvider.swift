@@ -13,7 +13,9 @@ protocol EnhancementProvider: Sendable {
     /// `true` when the provider has everything it needs to make a
     /// network call (API key configured, base URL reachable, etc.).
     /// The settings UI uses this to render a "connected" green dot.
-    func isConfigured() -> Bool
+    /// `async` because API keys live in the user's encrypted vault,
+    /// which is read over loopback HTTP from the bundled Vault daemon.
+    func isConfigured() async -> Bool
 
     /// Send the raw transcript + the prompt that should drive the
     /// post-processing. Returns the enhanced text. `model` is the

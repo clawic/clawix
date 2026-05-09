@@ -7,7 +7,7 @@ import Foundation
 struct OllamaEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .ollama
 
-    func isConfigured() -> Bool {
+    func isConfigured() async -> Bool {
         // We don't ping the host here — that would block the settings
         // UI on the network. Treat configuration as "user has set a
         // base URL" and let the actual call surface a descriptive

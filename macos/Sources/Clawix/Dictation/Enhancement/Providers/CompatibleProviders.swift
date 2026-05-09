@@ -84,7 +84,7 @@ struct OpenAICompatibleClient {
 struct GroqEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .groq
 
-    func isConfigured() -> Bool { EnhancementKeychain.hasAPIKey(for: id) }
+    func isConfigured() async -> Bool { await EnhancementSecrets.hasAPIKey(for: id) }
 
     func enhance(
         text: String,
@@ -94,7 +94,7 @@ struct GroqEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = EnhancementKeychain.apiKey(for: id) else {
+        guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         let client = OpenAICompatibleClient(
@@ -118,7 +118,7 @@ struct GroqEnhancementProvider: EnhancementProvider {
 struct MistralEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .mistral
 
-    func isConfigured() -> Bool { EnhancementKeychain.hasAPIKey(for: id) }
+    func isConfigured() async -> Bool { await EnhancementSecrets.hasAPIKey(for: id) }
 
     func enhance(
         text: String,
@@ -128,7 +128,7 @@ struct MistralEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = EnhancementKeychain.apiKey(for: id) else {
+        guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         let client = OpenAICompatibleClient(
@@ -152,7 +152,7 @@ struct MistralEnhancementProvider: EnhancementProvider {
 struct XAIEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .xai
 
-    func isConfigured() -> Bool { EnhancementKeychain.hasAPIKey(for: id) }
+    func isConfigured() async -> Bool { await EnhancementSecrets.hasAPIKey(for: id) }
 
     func enhance(
         text: String,
@@ -162,7 +162,7 @@ struct XAIEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = EnhancementKeychain.apiKey(for: id) else {
+        guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         let client = OpenAICompatibleClient(
@@ -186,7 +186,7 @@ struct XAIEnhancementProvider: EnhancementProvider {
 struct OpenRouterEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .openrouter
 
-    func isConfigured() -> Bool { EnhancementKeychain.hasAPIKey(for: id) }
+    func isConfigured() async -> Bool { await EnhancementSecrets.hasAPIKey(for: id) }
 
     func enhance(
         text: String,
@@ -196,7 +196,7 @@ struct OpenRouterEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = EnhancementKeychain.apiKey(for: id) else {
+        guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         // OpenRouter recommends a referer + title for analytics; we
@@ -226,7 +226,7 @@ struct OpenRouterEnhancementProvider: EnhancementProvider {
 struct CustomEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .custom
 
-    func isConfigured() -> Bool {
+    func isConfigured() async -> Bool {
         // Custom requires at minimum a base URL; API key is optional
         // (some self-hosted gateways don't authenticate locally).
         guard let raw = UserDefaults.standard.string(
@@ -251,7 +251,7 @@ struct CustomEnhancementProvider: EnhancementProvider {
         guard let baseURL = URL(string: raw) else {
             throw EnhancementError.notConfigured
         }
-        let key = EnhancementKeychain.apiKey(for: id) // may be nil
+        let key = await EnhancementSecrets.apiKey(for: id) // may be nil
         let client = OpenAICompatibleClient(baseURL: baseURL, apiKey: key)
         return try await client.enhance(
             text: text,

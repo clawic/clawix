@@ -8,8 +8,8 @@ import Foundation
 struct AnthropicEnhancementProvider: EnhancementProvider {
     let id: EnhancementProviderID = .anthropic
 
-    func isConfigured() -> Bool {
-        EnhancementKeychain.hasAPIKey(for: id)
+    func isConfigured() async -> Bool {
+        await EnhancementSecrets.hasAPIKey(for: id)
     }
 
     func enhance(
@@ -20,7 +20,7 @@ struct AnthropicEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = EnhancementKeychain.apiKey(for: id) else {
+        guard let key = await EnhancementSecrets.apiKey(for: id) else {
             throw EnhancementError.notConfigured
         }
 
