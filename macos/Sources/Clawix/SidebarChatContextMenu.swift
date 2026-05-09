@@ -84,7 +84,7 @@ struct SidebarChatContextMenuContent: View {
                  enabled: chat.clawixThreadId != nil,
                  action: onRename),
             Item(id: "archive",
-                 icon: "archivebox",
+                 icon: isArchived ? "unarchivebox" : "archivebox",
                  title: isArchived ? "Unarchive chat" : "Archive chat",
                  shortcut: "⇧⌘A",
                  enabled: true,
@@ -137,7 +137,7 @@ struct SidebarChatContextMenuContent: View {
     private var thirdGroup: [Item] {
         [
             Item(id: "forkLocal",
-                 icon: "laptopcomputer",
+                 icon: "arrow.triangle.branch",
                  title: "Fork into local",
                  shortcut: nil,
                  enabled: true,
@@ -227,6 +227,12 @@ struct SidebarChatContextMenuContent: View {
             Circle()
                 .fill(Palette.pastelBlue)
                 .frame(width: 7, height: 7)
+        case "archivebox":
+            ArchiveIcon(size: 13)
+                .foregroundColor(MenuStyle.rowIcon)
+        case "unarchivebox":
+            UnarchiveIcon(size: 13)
+                .foregroundColor(MenuStyle.rowIcon)
         default:
             IconImage(item.icon, size: 11)
                 .foregroundColor(MenuStyle.rowIcon)
