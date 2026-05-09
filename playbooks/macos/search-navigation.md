@@ -3,6 +3,14 @@ id: macos.search.navigation
 platform: macos
 surface: navigation
 status: ready
+priority: P1
+tags:
+  - regression
+  - dummy
+  - host
+  - search
+  - navigation
+  - browser
 intent: "Validate global search, project-scoped search, in-chat find, command palette navigation, browser route navigation, and settings route navigation."
 entrypoints:
   - command-palette
@@ -26,6 +34,7 @@ required_state:
   backend: fake or local fixture search
   window: main macOS app window visible and focused
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - external browser navigation to non-local URLs
@@ -90,6 +99,13 @@ Verify that users can move through the app and find conversations using global s
 | Trigger | keyboard, command palette, visible button, menu |
 | Browser | blank tab, local URL, blocked external URL without confirmation |
 
+## Critical Cases
+
+- `P1-global-search`: fixture query returns matching chats and opens selected result.
+- `P1-project-scoped-search`: project scope is visible and filters results.
+- `P1-command-palette-route`: command palette routes and closes.
+- `P2-browser-local`: browser route renders chrome with blank or local content.
+
 ## Steps
 
 1. Open global search.
@@ -125,6 +141,17 @@ Alternate passes:
 - No-results state is blank or misleading.
 - Command palette routes incorrectly or remains stuck.
 - Browser route opens an external URL without confirmation.
+
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Global search results verified | pass/fail/no-run |
+| Project-scoped search verified | pass/fail/no-run |
+| No-results state verified | pass/fail/no-run |
+| In-chat find checked or marked no-run | pass/fail/no-run |
+| Browser route stayed local or blank | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
 
 ## Screenshot Checklist
 
