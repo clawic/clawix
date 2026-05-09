@@ -167,7 +167,7 @@ struct MeshTargetPopup: View {
                 }
                 Spacer(minLength: 6)
                 if isSelected {
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                         .foregroundColor(Palette.textPrimary)
                 }
             }

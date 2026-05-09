@@ -81,7 +81,7 @@ private struct ProjectRow: View {
                 Spacer()
 
                 if isSelected {
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                         .foregroundColor(Color.accentColor)
                 }
             }

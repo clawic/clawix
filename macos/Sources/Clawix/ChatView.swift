@@ -1200,7 +1200,7 @@ private struct MessageActionIcon: View {
         switch kind {
         case .copy(let showCheck):
             if showCheck {
-                LucideIcon(.check, size: 13)
+                CheckIcon(size: 13)
                     .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
@@ -1375,7 +1375,7 @@ private struct WorkLocallyRow: View {
                 case .none:
                     EmptyView()
                 case .check:
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                         .foregroundColor(MenuStyle.rowText)
                 case .chevron:
                     LucideIcon(.chevronRight, size: 11)
@@ -1491,7 +1491,7 @@ private struct BranchRow: View {
                 }
                 Spacer(minLength: 8)
                 if isCurrent {
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 1)
                 }

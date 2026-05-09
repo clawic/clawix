@@ -526,7 +526,7 @@ private struct SettingsDropdownPopup<T: Hashable>: View {
                         }
                         Spacer(minLength: 8)
                         if opt.0 == selection {
-                            LucideIcon(.check, size: 11)
+                            CheckIcon(size: 11)
                                 .foregroundColor(MenuStyle.rowText)
                                 .padding(.top, hasAnyDescription ? 3 : 0)
                         }
@@ -1387,7 +1387,7 @@ private struct RecentDictationRow: View {
             } label: {
                 Group {
                     if copied {
-                        LucideIcon(.check, size: 13)
+                        CheckIcon(size: 13)
                     } else {
                         CopyIconViewSquircle(
                             color: Color(white: copyHovered ? 0.94 : 0.60),
@@ -2764,7 +2764,7 @@ private struct BrowserPluginRow: View {
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer(minLength: 12)
-            LucideIcon(.check, size: 13)
+            CheckIcon(size: 13)
                 .foregroundColor(Palette.textSecondary)
         }
         .padding(.horizontal, 14)

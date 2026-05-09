@@ -937,7 +937,7 @@ private struct ProjectPickerRow: View {
                     .truncationMode(.tail)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 10)
+                    CheckIcon(size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1006,7 +1006,7 @@ private struct PermissionsMenuRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 10)
+                    CheckIcon(size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1496,7 +1496,7 @@ private struct ModelMenuCheckRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 10)
+                    CheckIcon(size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1567,7 +1567,7 @@ private struct ModelMenuDescriptionRow: View {
                 }
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 10)
+                    CheckIcon(size: 10)
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 2)
                 }

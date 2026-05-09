@@ -145,7 +145,7 @@ struct FileViewerPanel: View {
                 copyContents()
             } icon: {
                 if copied {
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                 } else {
                     FolderStackIcon(size: 16)
                 }

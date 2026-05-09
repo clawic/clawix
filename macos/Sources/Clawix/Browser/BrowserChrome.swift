@@ -392,7 +392,7 @@ struct BrowserMoreOptionsMenu: View {
                     .foregroundColor(MenuStyle.rowText)
                 Spacer(minLength: 0)
                 if trailingCheck {
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }

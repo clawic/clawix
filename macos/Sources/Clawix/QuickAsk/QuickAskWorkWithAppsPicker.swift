@@ -133,7 +133,7 @@ private struct QuickAskWorkRow: View {
                 }
                 Spacer(minLength: 0)
                 if isActive {
-                    LucideIcon(.check, size: 11)
+                    CheckIcon(size: 11)
                         .foregroundColor(.white.opacity(0.9))
                 }
             }

@@ -3296,7 +3296,7 @@ private struct OrganizeMenuRow: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if isSelected {
-                    LucideIcon(.check, size: 10)
+                    CheckIcon(size: 10)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
