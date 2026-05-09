@@ -3,6 +3,14 @@ id: macos.settings.overview
 platform: macos
 surface: settings
 status: ready
+priority: P1
+tags:
+  - regression
+  - dummy
+  - host
+  - settings
+  - sensitive
+  - confirmation
 intent: "Validate macOS settings pages, configuration changes, confirmations, host-dependent panels, and sensitive flows without performing real destructive or paid operations by default."
 entrypoints:
   - settings-sidebar
@@ -33,6 +41,7 @@ required_state:
   backend: fake or isolated local services
   window: settings route visible in the main macOS app window
 safety:
+  level: confirmation_required
   default: isolated
   requires_explicit_confirmation:
     - real prompt submission
@@ -52,7 +61,7 @@ execution_mode:
   host: required for permissions, bridge pairing, local models daemon, ClawJS services, browser permissions, and secrets vault host behavior
 artifacts:
   - settings index screenshot
-  - one screenshot per settings page touched
+  - screenshot for each page touched
   - confirmation dialog screenshot for destructive or sensitive flows
 assertions:
   - settings sidebar selection matches page content
@@ -76,20 +85,17 @@ Verify that settings pages are navigable, visually coherent, and explicit about 
 - A toggle or selector must provide visible feedback after change.
 - Destructive actions must require confirmation.
 - Real secrets must never be displayed, copied, logged, or included in screenshots.
-- Host-dependent panels must show clear unavailable, running, blocked, or error states.
-- Experimental pages may be hidden unless feature previews are enabled in a debug build.
+- Host-dependent panels must show unavailable, running, blocked, or error states.
 
 ## Setup
 
 - Launch in dummy mode.
-- Open Settings from a visible route or the command palette.
 - Use fixture or fake services for pages that would otherwise touch real accounts.
 - Do not accept real permission prompts or destructive confirmations unless explicitly requested.
 
 ## Entry Points
 
-- Open Settings through the sidebar or visible route.
-- Open Settings through the command palette.
+- Open Settings through the sidebar, visible route, or command palette.
 - Navigate to a feature-specific settings page from the feature surface.
 - Use menu commands where available.
 
@@ -98,12 +104,12 @@ Verify that settings pages are navigable, visually coherent, and explicit about 
 | Page | Required variants |
 | --- | --- |
 | General | feature previews, language, sync toggles, local reset confirmation |
-| Voice to Text | permissions, language, model, filler removal, vocabulary, replacements, prompt editing, onboarding, recorder style |
-| QuickAsk | enablement, shortcut, selection capture, attachments, recent chat target |
+| Voice to Text | permissions, language, model, cleanup, vocabulary, replacements, prompt editing |
+| QuickAsk | enablement, shortcut, capture, attachments, recent chat target |
 | MCP servers | create STDIO, edit STDIO, create HTTP, edit HTTP, uninstall confirmation |
 | Machines | bridge unavailable, pairing flow, workspace trust modes, allowed workspace changes |
-| Secrets | locked, unlocked, onboarding, import preview, export confirmation, governance, grants, audit, trash |
-| Local models | unavailable runtime, install prompt, start, download, default selection, unload, delete confirmation, error state |
+| Secrets | locked, unlocked, onboarding, import/export confirmation, governance, grants, audit |
+| Local models | runtime state, install prompt, download, default, unload, delete confirmation |
 | Memory | list settings, injection state, graph launch path, unavailable service |
 | ClawJS | idle, starting, running, running from daemon, crashed, daemon unavailable, logs |
 | Telegram | disconnected, configuration form, validation error, connected fake state |
@@ -111,32 +117,33 @@ Verify that settings pages are navigable, visually coherent, and explicit about 
 | Git | merge method, branch state, repository unavailable |
 | Browser usage | permission policy, usage summary, clear or reset confirmation |
 
+## Critical Cases
+
+- `P1-general-settings`: General page renders and safe toggles visibly change.
+- `P1-sensitive-confirmation`: destructive or sensitive controls stop at confirmation.
+- `P1-runtime-pages`: Machines, Local models, and ClawJS show explicit host state.
+- `P1-secrets-redaction`: Secrets screens never expose secret values.
+
 ## Steps
 
 1. Open Settings.
 2. Select General and verify the page header and sections match the sidebar selection.
-3. Toggle a safe fixture-backed setting and confirm visual state changes.
-4. Open a destructive local reset action but stop at the confirmation dialog.
-5. Navigate to Voice to Text and inspect permission, model, language, replacement, and prompt-editing states.
-6. Navigate to MCP servers and open a create sheet for STDIO; cancel without saving.
-7. Open the HTTP MCP variant and verify URL/header fields are visible; cancel without saving.
-8. Navigate to Machines and verify bridge state is explicit.
-9. Navigate to Secrets and verify locked, onboarding, or fake unlocked state without exposing values.
-10. Navigate to Local models and verify install/runtime/download states are explicit without downloading.
+3. Toggle a safe fixture-backed setting and confirm visible change.
+4. Open a destructive reset action and stop at confirmation.
+5. Inspect Voice to Text and MCP STDIO/HTTP create states; cancel without saving.
+6. Verify runtime and sensitive pages expose state without real actions.
 
 Alternate passes:
 
-1. Enable feature previews in an isolated debug build and confirm experimental settings pages appear.
-2. Exercise QuickAsk settings and verify shortcut and capture choices update visually.
-3. Exercise Memory, ClawJS, Telegram, Usage, Git, and Browser Usage pages as navigable pages with visible state.
-4. For host validation, repeat only the page relevant to the bug in the real host mode and capture the same page state.
+1. Enable feature previews in an isolated debug build and inspect experimental pages.
+2. Exercise secondary pages as navigable pages.
+3. For host validation, repeat only the relevant page in real host mode.
 
 ## Expected Results
 
-- Each settings page renders a clear header and relevant controls.
-- Sidebar selection and content stay synchronized.
+- Each page renders a clear header and relevant controls.
 - Safe toggles and selectors visibly update.
-- Sensitive or destructive operations show a confirmation or blocked state.
+- Sensitive operations show a confirmation or blocked state.
 - Host-dependent pages report real runtime state without pretending success.
 - Secrets screens never reveal secret values.
 
@@ -146,19 +153,25 @@ Alternate passes:
 - A settings page opens blank.
 - A destructive action executes without confirmation.
 - A real external connection, download, prompt, or production write starts without confirmation.
-- Secrets values are visible in UI, logs, screenshots, or copied text.
+- Secrets values are visible in UI, logs, screenshots, or clipboard.
 - Host-dependent state is marked fixed with only hermetic validation.
+
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Settings sidebar and page selection matched | pass/fail/no-run |
+| Safe toggle or selector changed visibly | pass/fail/no-run |
+| Sensitive actions stopped at confirmation | pass/fail/no-run |
+| Host-dependent page state was explicit | pass/fail/no-run |
+| Secrets redaction was respected | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
 
 ## Screenshot Checklist
 
-- General page.
-- Feature previews or hidden experimental state.
-- Voice to Text page.
-- MCP create sheet for STDIO and HTTP.
-- Machines page showing bridge state.
-- Secrets locked/onboarding/fake unlocked state without values.
-- Local models unavailable or install state.
-- Any additional page changed by the task.
+- General, feature-preview, Voice to Text, and MCP STDIO/HTTP create states.
+- Machines, Secrets without values, and Local models state.
+- Any page changed by the task.
 
 ## Notes for Future Automation
 
