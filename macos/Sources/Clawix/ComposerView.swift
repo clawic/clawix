@@ -553,7 +553,7 @@ struct ComposerView: View {
                     ComposerTextEditor(
                         text: $composer.text,
                         contentHeight: $composerContentHeight,
-                        autofocus: true,
+                        autofocus: !projectMenuOpen,
                         focusToken: composer.focusToken,
                         onSubmit: { appState.sendMessage() },
                         onShiftTab: {
@@ -845,7 +845,7 @@ private struct ProjectPickerPopup: View {
                 ) { onCreate() }
 
                 ProjectPickerRow(
-                    label: String(localized: "No trabajar en un proyecto", bundle: AppLocale.bundle, locale: AppLocale.current),
+                    label: "No project",
                     iconName: "folder.badge.minus",
                     isSelected: selectedId == nil
                 ) { onSelect(nil) }
@@ -855,7 +855,11 @@ private struct ProjectPickerPopup: View {
         .frame(width: Self.popupWidth, alignment: .leading)
         .menuStandardBackground()
         .background(MenuOutsideClickWatcher(isPresented: $isPresented))
-        .onAppear { searchFocused = true }
+        .onAppear {
+            searchFocused = true
+            DispatchQueue.main.async { searchFocused = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { searchFocused = true }
+        }
     }
 
     private var searchField: some View {
