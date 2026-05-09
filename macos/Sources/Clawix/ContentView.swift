@@ -999,7 +999,7 @@ private struct SearchPopoverOverlay: View {
                     x: 0, y: MenuStyle.shadowOffsetY)
         )
         .background(MenuOutsideClickWatcher(isPresented: searchOpenBinding))
-        .background(SearchEscapeMonitor(onEscape: { closePopover() }))
+        .background(SearchKeyMonitor(query: $appState.searchQuery, onEscape: { closePopover() }))
         .task {
             // Re-arming the focus in a Task keeps the textfield reliably
             // first responder even when the popup is reopened from the
@@ -1198,24 +1198,41 @@ private struct SearchPopoverOverlay: View {
     }
 }
 
-private struct SearchEscapeMonitor: NSViewRepresentable {
+private struct SearchKeyMonitor: NSViewRepresentable {
+    @Binding var query: String
     var onEscape: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(query: $query)
+    }
 
     func makeNSView(context: Context) -> NSView {
         let view = MonitorView()
+        view.query = $query
         view.onEscape = onEscape
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView as? MonitorView)?.onEscape = onEscape
+        guard let view = nsView as? MonitorView else { return }
+        view.query = $query
+        view.onEscape = onEscape
     }
 
-    static func dismantleNSView(_ nsView: NSView, coordinator: ()) {
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
         (nsView as? MonitorView)?.detach()
     }
 
+    final class Coordinator {
+        var query: Binding<String>
+
+        init(query: Binding<String>) {
+            self.query = query
+        }
+    }
+
     final class MonitorView: NSView {
+        var query: Binding<String>?
         var onEscape: (() -> Void)?
         private var monitor: Any?
 
@@ -1232,8 +1249,30 @@ private struct SearchEscapeMonitor: NSViewRepresentable {
                     self.onEscape?()
                     return nil
                 }
+                if self.handleTextInput(event) {
+                    return nil
+                }
                 return event
             }
+        }
+
+        private func handleTextInput(_ event: NSEvent) -> Bool {
+            guard let query else { return false }
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if flags.contains(.command) || flags.contains(.control) || flags.contains(.option) {
+                return false
+            }
+            if event.keyCode == 51 {
+                guard !query.wrappedValue.isEmpty else { return true }
+                query.wrappedValue.removeLast()
+                return true
+            }
+            guard let characters = event.characters, !characters.isEmpty else { return false }
+            if characters.unicodeScalars.allSatisfy({ CharacterSet.newlines.contains($0) || CharacterSet.controlCharacters.contains($0) }) {
+                return false
+            }
+            query.wrappedValue.append(characters)
+            return true
         }
 
         func detach() {
@@ -1257,7 +1296,7 @@ private struct SearchQueryTextField: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSTextField {
-        let field = NSTextField()
+        let field = FocusableSearchTextField()
         field.isBordered = false
         field.isBezeled = false
         field.drawsBackground = false
@@ -1270,6 +1309,10 @@ private struct SearchQueryTextField: NSViewRepresentable {
         field.usesSingleLineMode = true
         field.cell?.wraps = false
         field.cell?.isScrollable = true
+        field.onWindowReady = {
+            guard context.coordinator.wantsFocus else { return }
+            context.coordinator.focus(field)
+        }
         return field
     }
 
@@ -1281,14 +1324,15 @@ private struct SearchQueryTextField: NSViewRepresentable {
             nsView.placeholderString = placeholder
         }
         context.coordinator.text = $text
-        guard wantsFocus, nsView.window?.firstResponder !== nsView.currentEditor() else { return }
-        DispatchQueue.main.async {
-            nsView.window?.makeFirstResponder(nsView)
+        context.coordinator.wantsFocus = wantsFocus
+        if wantsFocus {
+            context.coordinator.focus(nsView)
         }
     }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var text: Binding<String>
+        var wantsFocus: Bool = false
 
         init(text: Binding<String>) {
             self.text = text
@@ -1298,6 +1342,32 @@ private struct SearchQueryTextField: NSViewRepresentable {
             guard let field = notification.object as? NSTextField else { return }
             text.wrappedValue = field.stringValue
         }
+
+        func focus(_ field: NSTextField) {
+            DispatchQueue.main.async {
+                guard let window = field.window else { return }
+                if window.firstResponder !== field.currentEditor() {
+                    window.makeFirstResponder(field)
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
+                guard let window = field.window else { return }
+                if window.firstResponder !== field.currentEditor() {
+                    window.makeFirstResponder(field)
+                }
+            }
+        }
+    }
+}
+
+private final class FocusableSearchTextField: NSTextField {
+    var onWindowReady: (() -> Void)?
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil { onWindowReady?() }
     }
 }
 
