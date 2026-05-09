@@ -373,6 +373,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var observers: [NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Wipe any system Keychain entries left over from earlier
+        // pre-release builds before they show up in the user's
+        // `Keychain Access.app` search for "clawix". The app no longer
+        // touches the Keychain at all; this is a one-shot cleanup.
+        LegacyKeychainPurge.runOnce()
+
         NSApp.appearance = NSAppearance(named: .darkAqua)
         NSApp.windows.forEach(configure)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
