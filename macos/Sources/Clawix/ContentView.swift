@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var sidebarResizeHovered = false
     @State private var rightSidebarResizeHovered = false
     @State private var windowWidth: CGFloat = 0
+    @State private var windowHeight: CGFloat = 0
 
     /// Floor reserved for the centre content column when the right
     /// sidebar grows. Without this, dragging the right sidebar past the
@@ -120,7 +121,8 @@ struct ContentView: View {
         case .home, .search, .plugins, .project, .chat:
             return true
         case .automations, .settings, .secretsHome, .databaseHome, .databaseCollection, .memoryHome,
-             .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder:
+             .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder,
+             .app, .appsHome, .skills, .skillDetail:
             return false
         }
     }
@@ -143,6 +145,10 @@ struct ContentView: View {
         case .driveDocuments: return "drive-documents"
         case .driveRecent: return "drive-recent"
         case .driveFolder(let id): return "drive-folder-\(id)"
+        case .app(let id): return "app-\(id.uuidString)"
+        case .appsHome: return "apps-home"
+        case .skills: return "skills"
+        case .skillDetail(let slug): return "skill-detail-\(slug)"
         }
     }
 
@@ -208,34 +214,40 @@ struct ContentView: View {
                     ContentTopChrome()
                         .id(routeRenderID)
 
-                    Group {
-                        switch appState.currentRoute {
-                        case .home:          MainContentView()
-                        case .search:
-                            MainContentView()
-                                .overlay(alignment: .top) {
-                                    SearchPopoverOverlay()
-                                        .padding(.top, 120)
-                                }
-                        case .plugins:       MainContentView()
-                        case .automations:   AutomationsView()
-                        case .project:       MainContentView()
-                        case .chat(let id):  ChatView(chatId: id)
-                        case .settings:      SettingsContent()
-                        case .secretsHome:   SecretsScreen()
-                        case .databaseHome:  DatabaseScreen(mode: .admin)
-                        case .databaseCollection(let name):
-                            DatabaseScreen(mode: .curated(collectionName: name))
-                        case .memoryHome:    MemoryScreen()
-                        case .driveAdmin:    DriveScreen(mode: .admin)
-                        case .drivePhotos:   DriveScreen(mode: .photos)
-                        case .driveDocuments:DriveScreen(mode: .documents)
-                        case .driveRecent:   DriveScreen(mode: .recent)
-                        case .driveFolder(let id): DriveScreen(mode: .folder(id))
+                    ContentBodyWithTerminal(windowHeight: windowHeight) {
+                        Group {
+                            switch appState.currentRoute {
+                            case .home:          MainContentView()
+                            case .search:
+                                MainContentView()
+                                    .overlay(alignment: .top) {
+                                        SearchPopoverOverlay()
+                                            .padding(.top, 120)
+                                    }
+                            case .plugins:       MainContentView()
+                            case .automations:   AutomationsView()
+                            case .project:       MainContentView()
+                            case .appsHome:      AppsHomeView()
+                            case .app(let id):   AppSurfaceView(appId: id)
+                            case .chat(let id):  ChatView(chatId: id)
+                            case .settings:      SettingsContent()
+                            case .secretsHome:   SecretsScreen()
+                            case .databaseHome:  DatabaseScreen(mode: .admin)
+                            case .databaseCollection(let name):
+                                DatabaseScreen(mode: .curated(collectionName: name))
+                            case .memoryHome:    MemoryScreen()
+                            case .driveAdmin:    DriveScreen(mode: .admin)
+                            case .drivePhotos:   DriveScreen(mode: .photos)
+                            case .driveDocuments:DriveScreen(mode: .documents)
+                            case .driveRecent:   DriveScreen(mode: .recent)
+                            case .driveFolder(let id): DriveScreen(mode: .folder(id))
+                            case .skills:        SkillsView()
+                            case .skillDetail(let slug): SkillDetailView(slug: slug)
+                            }
                         }
+                        .id(routeRenderID)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .id(routeRenderID)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Palette.background, in: contentShape)
@@ -351,8 +363,12 @@ struct ContentView: View {
         .background(
             GeometryReader { proxy in
                 Color.clear
-                    .onAppear { windowWidth = proxy.size.width }
+                    .onAppear {
+                        windowWidth = proxy.size.width
+                        windowHeight = proxy.size.height
+                    }
                     .onChange(of: proxy.size.width) { _, w in windowWidth = w }
+                    .onChange(of: proxy.size.height) { _, h in windowHeight = h }
             }
         )
         .onChange(of: appState.isRightSidebarOpen) { _, open in
@@ -565,6 +581,11 @@ private struct ContentTopChrome: View {
                 .anchorPreference(key: ChatActionsAnchorKey.self, value: .bounds) { $0 }
             }
             Spacer()
+            if case .chat = appState.currentRoute {
+                TerminalToggleButton()
+                    .padding(.top, 6)
+                    .padding(.trailing, 2)
+            }
             EditorPickerDropdown(folderPath: resolvedFolderPath)
                 .padding(.trailing, 8)
             // Reserve the trailing footprint of the window chrome's right
@@ -619,6 +640,77 @@ private struct ChatActionsAnchorKey: PreferenceKey {
     static var defaultValue: Anchor<CGRect>? = nil
     static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
         value = value ?? nextValue()
+    }
+}
+
+// MARK: - Integrated terminal panel mount
+
+/// Wraps the route switch and, when the user is on a chat route AND the
+/// terminal panel is toggled open, hangs the panel below it. The panel
+/// height is persisted via `@AppStorage` and the top edge of the panel
+/// straddles a `TerminalResizeHandle` for drag-to-resize. Routes other
+/// than `.chat` always render content full-bleed (panel hidden).
+private struct ContentBodyWithTerminal<Content: View>: View {
+    @EnvironmentObject var appState: AppState
+    let windowHeight: CGFloat
+    let content: () -> Content
+
+    @AppStorage("TerminalPanelOpen", store: SidebarPrefs.store)
+    private var panelOpenRaw: Bool = false
+    @AppStorage("TerminalPanelHeight", store: SidebarPrefs.store)
+    private var panelHeightRaw: Double = Double(TerminalPanelMetrics.defaultHeight)
+    @State private var resizeHovered: Bool = false
+
+    init(windowHeight: CGFloat, @ViewBuilder content: @escaping () -> Content) {
+        self.windowHeight = windowHeight
+        self.content = content
+    }
+
+    private var chatId: UUID? {
+        if case .chat(let id) = appState.currentRoute { return id }
+        return nil
+    }
+
+    private var panelOpen: Bool { chatId != nil && panelOpenRaw }
+
+    /// Floor the chat area (composer + at least a couple of message
+    /// rows) keeps from being eaten by an over-tall panel. Mirrors
+    /// `dynamicRightSidebarMaxWidth` in spirit.
+    private var maxPanelHeight: CGFloat {
+        let usable = max(0, windowHeight - 240)
+        return max(TerminalPanelMetrics.minHeight + 40, usable)
+    }
+
+    private var clampedPanelHeight: CGFloat {
+        max(TerminalPanelMetrics.minHeight,
+            min(maxPanelHeight, CGFloat(panelHeightRaw)))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if let chatId, panelOpen {
+                TerminalPanel(chatId: chatId)
+                    .frame(height: clampedPanelHeight)
+                    .overlay(alignment: .top) {
+                        TerminalResizeHandle(
+                            heightRaw: $panelHeightRaw,
+                            hovered: $resizeHovered,
+                            maxHeightOverride: maxPanelHeight,
+                            onClose: {
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    panelOpenRaw = false
+                                }
+                            }
+                        )
+                        .frame(height: 10)
+                        .offset(y: -5)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: panelOpenRaw)
     }
 }
 
@@ -1132,7 +1224,7 @@ private struct SearchPopoverOverlay: View {
                                 projectName: projectName(for: chat),
                                 shortcutNumber: index + 1,
                                 isFirst: index == 0 && appState.searchQuery.isEmpty,
-                                onSelect: { appState.currentRoute = .chat(chat.id) }
+                                onSelect: { appState.navigate(to: .chat(chat.id)) }
                             )
                         }
                     }
@@ -1164,7 +1256,7 @@ private struct SearchPopoverOverlay: View {
                         SearchScopedRow(
                             title: chat.title,
                             createdAt: chat.createdAt,
-                            onSelect: { appState.currentRoute = .chat(chat.id) }
+                            onSelect: { appState.navigate(to: .chat(chat.id)) }
                         )
                     }
                 }
