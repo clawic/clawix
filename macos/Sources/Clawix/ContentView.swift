@@ -1024,14 +1024,14 @@ private struct SearchPopoverOverlay: View {
                     onRemove: { appState.searchScopedProjectId = nil }
                 )
             }
-            TextField(scopedProject == nil
-                      ? "Search chats"
-                      : "Search in \(scopedProject!.name)",
-                      text: $appState.searchQuery)
-                .textFieldStyle(.plain)
-                .font(BodyFont.system(size: 15, wght: 500))
-                .foregroundColor(Color(white: 0.94))
-                .focused($queryFocused)
+            SearchQueryTextField(
+                placeholder: scopedProject == nil
+                    ? "Search chats"
+                    : "Search in \(scopedProject!.name)",
+                text: $appState.searchQuery,
+                wantsFocus: queryFocused
+            )
+            .frame(height: 20)
             if scopedProject == nil, !sortedProjects.isEmpty {
                 projectFilterMenu
             }
@@ -1238,6 +1238,60 @@ private struct SearchEscapeMonitor: NSViewRepresentable {
         }
 
         deinit { detach() }
+    }
+}
+
+private struct SearchQueryTextField: NSViewRepresentable {
+    let placeholder: String
+    @Binding var text: String
+    let wantsFocus: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = NSTextField()
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.font = NSFont.systemFont(ofSize: 15, weight: .medium)
+        field.textColor = NSColor(white: 0.94, alpha: 1)
+        field.placeholderString = placeholder
+        field.delegate = context.coordinator
+        field.lineBreakMode = .byTruncatingTail
+        field.usesSingleLineMode = true
+        field.cell?.wraps = false
+        field.cell?.isScrollable = true
+        return field
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        if nsView.stringValue != text {
+            nsView.stringValue = text
+        }
+        if nsView.placeholderString != placeholder {
+            nsView.placeholderString = placeholder
+        }
+        context.coordinator.text = $text
+        guard wantsFocus, nsView.window?.firstResponder !== nsView.currentEditor() else { return }
+        DispatchQueue.main.async {
+            nsView.window?.makeFirstResponder(nsView)
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            text.wrappedValue = field.stringValue
+        }
     }
 }
 
