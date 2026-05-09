@@ -153,3 +153,20 @@ enum CodexSecretsBlock {
 - If you need a secret that doesn't exist, propose its exact metadata (internal name, allowed hosts, allowed headers, read-only, justification) so the user can create it once. Never request the literal value.
 """
 }
+
+enum CodexMemoryBlock {
+    static let id = "memory"
+
+    static let defaultBody: String = """
+# Memory (Clawix)
+
+- The user has a Memory service running locally. Use it instead of asking the user to repeat themselves across conversations.
+- Search what is already known before asking the user: `claw memory search "<query>"`. Returns ranked notes (semantic when embeddings are ready, full-text otherwise).
+- When the user states a preference, decision, or fact worth keeping across conversations, save it: `claw memory save --content "<markdown>" --title "<short>" [--class observation|decision|preference|...] [--scope-project <project>] [--tags a,b]`.
+- Don't save ephemeral working state, current-task to-dos, or chat-specific context. Save what would still be useful in a future, unrelated conversation.
+- Always include a short Why and How-to-apply line when saving a decision or preference, so the memory stays useful out of context.
+- Before recommending an action based on a memory, verify the underlying file or state still exists. Memories can become stale.
+- When wrapping up a task, call `claw memory conclude --content "<verbatim conclusion>"` so working memory promotes cleanly.
+- Set `CLAWJS_MEMORY_EDITOR=agent` in your environment so edits to existing memories are stamped correctly.
+"""
+}
