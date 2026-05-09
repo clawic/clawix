@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+  --clawix-radius: 14px;
+  --clawix-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.05),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .squircle {
+    border-radius: var(--clawix-radius);
+    -webkit-mask-image:
+      radial-gradient(white, black);
+  }
+  .glass-pill {
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 0.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow: var(--clawix-shadow);
+  }
+  .glass-pill-dark {
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    background-color: rgba(20, 20, 22, 0.55);
+    border: 0.5px solid rgba(255, 255, 255, 0.08);
+    box-shadow: var(--clawix-shadow);
+  }
+  .row-hover {
+    @apply hover:bg-zinc-100/70 dark:hover:bg-zinc-800/40 transition-colors duration-150;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.06) 50%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2200ms ease-in-out infinite;
+}
+
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+}
