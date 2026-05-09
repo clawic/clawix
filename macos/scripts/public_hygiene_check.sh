@@ -104,6 +104,35 @@ scan "apple team ids beside codesign markers" \
   '(DEVELOPMENT_TEAM|TEAM_ID)[^A-Z0-9]*[A-Z0-9]{10}' \
   "${TARGETS[@]}"
 
+check_git_metadata() {
+  if ! git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return
+  fi
+
+  local ranges=("HEAD")
+  local upstream
+  upstream="$(git -C "$ROOT_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+  if [[ -n "$upstream" ]]; then
+    ranges+=("$upstream..HEAD")
+  fi
+
+  local output=""
+  for range in "${ranges[@]}"; do
+    output+="$(
+      git -C "$ROOT_DIR" log --format='%h%x09%an <%ae>%x09%cn <%ce>' "$range" 2>/dev/null \
+        | awk -F'\t' '$2 ~ /@[^>]*\\.local>/ || $3 ~ /@[^>]*\\.local>/ { print }'
+    )"
+  done
+
+  if [[ -n "$output" ]]; then
+    echo "public hygiene failed: machine-local git identity" >&2
+    echo "$output" | sort -u >&2
+    FAIL=1
+  fi
+}
+
+check_git_metadata
+
 if compgen -G "$ROOT_DIR/*-[A-Za-z0-9_-]??????[A-Za-z0-9_-]*.js" > /dev/null; then
   echo "public hygiene failed: vendored hashed JS bundles at repo root" >&2
   ls "$ROOT_DIR"/*-*.js 2>/dev/null >&2 || true
