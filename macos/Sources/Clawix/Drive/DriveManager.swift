@@ -78,30 +78,13 @@ final class DriveManager: ObservableObject {
     }
 
     func ensureLoggedIn() async {
-        let email = DriveKeychain.adminEmail()
-        guard let password = DriveKeychain.ensureAdminPassword() else {
-            self.state = .error("Could not access Keychain for Drive admin password.")
-            return
-        }
         self.state = .authenticating
         do {
-            _ = try await client.login(email: email, password: password)
-            self.realtime.setToken(client.bearerToken)
+            let token = try DriveAdminToken.currentAdminToken()
+            client.bearerToken = token
+            self.realtime.setToken(token)
             self.realtime.subscribe()
             self.state = .ready
-        } catch ClawJSDriveClient.Error.http(let status, _) where status == 401 {
-            // First boot path: server seeded `admin@localhost / admin`. Try to migrate.
-            do {
-                _ = try await client.login(email: "admin@localhost", password: "admin")
-                // Now we own the JWT. The seed admin still uses default creds; in v1
-                // we keep the seed account and just store our own password locally.
-                // Future: add an endpoint that rotates the password.
-                self.realtime.setToken(client.bearerToken)
-                self.realtime.subscribe()
-                self.state = .ready
-            } catch {
-                self.state = .error("Drive auth failed: \(error.localizedDescription)")
-            }
         } catch {
             self.state = .error("Drive auth failed: \(error.localizedDescription)")
         }
