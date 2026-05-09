@@ -1,0 +1,146 @@
+package com.example.clawix.android.core
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.json.JsonObject
+
+/**
+ * Wire-format version. Bumped on any breaking change to BridgeFrame
+ * payloads. Mirrors `bridgeSchemaVersion` in
+ * `clawix/packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift`.
+ *
+ * v5 (2026-05): rate limits, generated images inline, voice notes, etc.
+ * v1..v4 frames decode cleanly because every new field is optional.
+ */
+const val BRIDGE_SCHEMA_VERSION: Int = 5
+
+const val BRIDGE_INITIAL_PAGE_LIMIT: Int = 60
+const val BRIDGE_OLDER_PAGE_LIMIT: Int = 40
+
+@Serializable
+enum class ClientKind {
+    @SerialName("ios") ios,
+    @SerialName("desktop") desktop,
+}
+
+/**
+ * Top-level frame. Wire format is flat: `{ "schemaVersion": N, "type": "...", ...payload-fields }`,
+ * no nested envelope. Implemented with a custom serializer because
+ * kotlinx-serialization's polymorphic discriminator support assumes the
+ * payload sits inside a sub-object.
+ */
+@Serializable(with = BridgeFrameSerializer::class)
+data class BridgeFrame(
+    val schemaVersion: Int = BRIDGE_SCHEMA_VERSION,
+    val body: BridgeBody,
+)
+
+/**
+ * All discriminated frame bodies. One sealed-class branch per `type` tag
+ * the Swift `BridgeBody` enum carries. Whenever a new frame is added on
+ * the daemon side, a new branch goes here AND in `BridgeFrameSerializer`
+ * (the encode + decode `when` arms).
+ */
+sealed class BridgeBody {
+    abstract val typeTag: String
+
+    // MARK: - v1 outbound (mobile -> daemon)
+    data class Auth(val token: String, val deviceName: String?, val clientKind: ClientKind?) : BridgeBody() {
+        override val typeTag = "auth"
+    }
+    data object ListChats : BridgeBody() { override val typeTag = "listChats" }
+    data class OpenChat(val chatId: String, val limit: Int?) : BridgeBody() {
+        override val typeTag = "openChat"
+    }
+    data class LoadOlderMessages(val chatId: String, val beforeMessageId: String, val limit: Int) : BridgeBody() {
+        override val typeTag = "loadOlderMessages"
+    }
+    data class SendPrompt(val chatId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
+        override val typeTag = "sendPrompt"
+    }
+    data class NewChat(val chatId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
+        override val typeTag = "newChat"
+    }
+    data class InterruptTurn(val chatId: String) : BridgeBody() {
+        override val typeTag = "interruptTurn"
+    }
+
+    // MARK: - v1 inbound (daemon -> mobile)
+    data class AuthOk(val macName: String?) : BridgeBody() { override val typeTag = "authOk" }
+    data class AuthFailed(val reason: String) : BridgeBody() { override val typeTag = "authFailed" }
+    data class VersionMismatch(val serverVersion: Int) : BridgeBody() { override val typeTag = "versionMismatch" }
+    data class ChatsSnapshot(val chats: List<WireChat>) : BridgeBody() { override val typeTag = "chatsSnapshot" }
+    data class ChatUpdated(val chat: WireChat) : BridgeBody() { override val typeTag = "chatUpdated" }
+    data class MessagesSnapshot(val chatId: String, val messages: List<WireMessage>, val hasMore: Boolean?) : BridgeBody() {
+        override val typeTag = "messagesSnapshot"
+    }
+    data class MessagesPage(val chatId: String, val messages: List<WireMessage>, val hasMore: Boolean) : BridgeBody() {
+        override val typeTag = "messagesPage"
+    }
+    data class MessageAppended(val chatId: String, val message: WireMessage) : BridgeBody() {
+        override val typeTag = "messageAppended"
+    }
+    data class MessageStreaming(
+        val chatId: String,
+        val messageId: String,
+        val content: String,
+        val reasoningText: String,
+        val finished: Boolean,
+    ) : BridgeBody() {
+        override val typeTag = "messageStreaming"
+    }
+    data class ErrorEvent(val code: String, val message: String) : BridgeBody() { override val typeTag = "errorEvent" }
+
+    // MARK: - v2 desktop-only outbound (kept for completeness; mobile won't emit)
+    data class EditPrompt(val chatId: String, val messageId: String, val text: String) : BridgeBody() { override val typeTag = "editPrompt" }
+    data class ArchiveChat(val chatId: String) : BridgeBody() { override val typeTag = "archiveChat" }
+    data class UnarchiveChat(val chatId: String) : BridgeBody() { override val typeTag = "unarchiveChat" }
+    data class PinChat(val chatId: String) : BridgeBody() { override val typeTag = "pinChat" }
+    data class UnpinChat(val chatId: String) : BridgeBody() { override val typeTag = "unpinChat" }
+    data class RenameChat(val chatId: String, val title: String) : BridgeBody() { override val typeTag = "renameChat" }
+    data object PairingStart : BridgeBody() { override val typeTag = "pairingStart" }
+    data object ListProjects : BridgeBody() { override val typeTag = "listProjects" }
+    data class ReadFile(val path: String) : BridgeBody() { override val typeTag = "readFile" }
+
+    // MARK: - v2 inbound
+    data class PairingPayload(val qrJson: String, val bearer: String) : BridgeBody() { override val typeTag = "pairingPayload" }
+    data class ProjectsSnapshot(val projects: List<WireProject>) : BridgeBody() { override val typeTag = "projectsSnapshot" }
+    data class FileSnapshot(val path: String, val content: String?, val isMarkdown: Boolean, val error: String?) : BridgeBody() {
+        override val typeTag = "fileSnapshot"
+    }
+
+    // MARK: - v3 voice notes
+    data class TranscribeAudio(val requestId: String, val audioBase64: String, val mimeType: String, val language: String?) : BridgeBody() {
+        override val typeTag = "transcribeAudio"
+    }
+    data class TranscriptionResult(val requestId: String, val text: String, val errorMessage: String?) : BridgeBody() {
+        override val typeTag = "transcriptionResult"
+    }
+    data class RequestAudio(val audioId: String) : BridgeBody() { override val typeTag = "requestAudio" }
+    data class AudioSnapshot(val audioId: String, val audioBase64: String?, val mimeType: String?, val errorMessage: String?) : BridgeBody() {
+        override val typeTag = "audioSnapshot"
+    }
+
+    // MARK: - v4 inline images
+    data class RequestGeneratedImage(val path: String) : BridgeBody() { override val typeTag = "requestGeneratedImage" }
+    data class GeneratedImageSnapshot(val path: String, val dataBase64: String?, val mimeType: String?, val errorMessage: String?) : BridgeBody() {
+        override val typeTag = "generatedImageSnapshot"
+    }
+
+    // MARK: - bridge bootstrap state
+    data class BridgeStateFrame(val state: String, val chatCount: Int, val message: String?) : BridgeBody() {
+        override val typeTag = "bridgeState"
+    }
+
+    // MARK: - v5 rate limits
+    data object RequestRateLimits : BridgeBody() { override val typeTag = "requestRateLimits" }
+    data class RateLimitsSnapshot(val snapshot: WireRateLimitSnapshot?, val byLimitId: Map<String, WireRateLimitSnapshot>) : BridgeBody() {
+        override val typeTag = "rateLimitsSnapshot"
+    }
+    data class RateLimitsUpdated(val snapshot: WireRateLimitSnapshot?, val byLimitId: Map<String, WireRateLimitSnapshot>) : BridgeBody() {
+        override val typeTag = "rateLimitsUpdated"
+    }
+
+    // MARK: - unknown future type (forward-compat)
+    data class Unknown(val type: String, val raw: JsonObject) : BridgeBody() { override val typeTag = type }
+}
