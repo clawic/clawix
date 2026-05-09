@@ -560,6 +560,48 @@ enum PermissionMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum AgentRuntimeChoice: String, CaseIterable, Identifiable {
+    case codex
+    case opencode
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .codex: return "Codex"
+        case .opencode: return "OpenCode"
+        }
+    }
+
+    static let runtimeKey = "ClawixAgentRuntime"
+    static let openCodeModelKey = "ClawixOpenCodeModel"
+    static let defaultOpenCodeModel = "deepseekv4/deepseek-v4-pro"
+
+    static func loadPersisted() -> AgentRuntimeChoice {
+        let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+        if let raw = defaults.string(forKey: runtimeKey),
+           let runtime = AgentRuntimeChoice(rawValue: raw) {
+            return runtime
+        }
+        return .codex
+    }
+
+    static func persistedOpenCodeModel() -> String {
+        let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+        return defaults.string(forKey: openCodeModelKey) ?? defaultOpenCodeModel
+    }
+
+    static func persist(runtime: AgentRuntimeChoice, openCodeModel: String) {
+        for defaults in [
+            UserDefaults(suiteName: appPrefsSuite) ?? .standard,
+            UserDefaults(suiteName: "clawix.bridge") ?? .standard
+        ] {
+            defaults.set(runtime.rawValue, forKey: runtimeKey)
+            defaults.set(openCodeModel, forKey: openCodeModelKey)
+        }
+    }
+}
+
 // MARK: - Composer attachments
 
 /// File the user has staged in the composer via the attach menu or
@@ -697,7 +739,31 @@ final class AppState: ObservableObject {
     /// IDs not present here fall back to natural order from `projects`.
     /// Persisted via `ProjectOrdersRepository`.
     @Published var manualProjectOrder: [UUID] = []
-    @Published var selectedModel: String = "5.5"
+    @Published var selectedAgentRuntime: AgentRuntimeChoice = .codex {
+        didSet {
+            guard oldValue != selectedAgentRuntime else { return }
+            if selectedAgentRuntime == .opencode, !selectedModel.contains("/") {
+                selectedModel = AgentRuntimeChoice.persistedOpenCodeModel()
+            } else if selectedAgentRuntime == .codex, selectedModel.contains("/") {
+                selectedModel = "5.5"
+            }
+            AgentRuntimeChoice.persist(
+                runtime: selectedAgentRuntime,
+                openCodeModel: openCodeModelSelection
+            )
+        }
+    }
+    @Published var selectedModel: String = "5.5" {
+        didSet {
+            guard oldValue != selectedModel else { return }
+            if selectedAgentRuntime == .opencode {
+                AgentRuntimeChoice.persist(
+                    runtime: selectedAgentRuntime,
+                    openCodeModel: openCodeModelSelection
+                )
+            }
+        }
+    }
     @Published var selectedIntelligence: IntelligenceLevel = .high
     @Published var selectedSpeed: SpeedLevel = .standard
     @Published var permissionMode: PermissionMode = .defaultPermissions {
@@ -731,6 +797,17 @@ final class AppState: ObservableObject {
     /// typing only fires `objectWillChange` on this child object,
     /// leaving AppState's other observers untouched.
     let composer = ComposerState()
+    /// Remote Agent Mesh state (paired Macs, allowed workspaces,
+    /// outbound jobs in flight). Refreshed lazily from the Settings
+    /// page and the composer's "Run on" menu. Initialised in the
+    /// init body (not as a default expression) so that calling a
+    /// `@MainActor` initialiser does not defer past the rest of the
+    /// stored-property setup the rest of init relies on.
+    let meshStore: MeshStore
+    /// Currently-selected destination for outbound prompts. `.local`
+    /// runs through the regular Codex/daemon path. `.peer(nodeId)`
+    /// routes through `/mesh/remote-jobs` instead.
+    @Published var selectedMeshTarget: MeshTarget = .local
     @Published var pinnedItems: [PinnedItem] = []
     @Published var isLeftSidebarOpen: Bool = true
     @Published var isCommandPaletteOpen: Bool = false
@@ -933,6 +1010,11 @@ final class AppState: ObservableObject {
     private var persistTask: Task<Void, Never>?
 
     init() {
+        // Mesh store has to be wired before any other stored-property
+        // assignment that uses `self`, because Swift's definite-init
+        // analysis treats any read of `self.foo` as requiring every
+        // stored property to already be in place.
+        self.meshStore = MeshStore()
         // Initial language: read directly from persisted storage so the
         // didSet observer doesn't fire (and re-apply) during init.
         // ClawixApp.init() has already called AppLanguage.bootstrap()
@@ -940,6 +1022,11 @@ final class AppState: ObservableObject {
         // AppleLanguages override are already in place.
         self.preferredLanguage = AppLanguage.loadPersisted()
         self.permissionMode = PermissionMode.loadPersisted()
+        let persistedRuntime = AgentRuntimeChoice.loadPersisted()
+        self.selectedAgentRuntime = persistedRuntime
+        if persistedRuntime == .opencode {
+            self.selectedModel = AgentRuntimeChoice.persistedOpenCodeModel()
+        }
 
         sampleChat = Chat(
             id: UUID(uuidString: "8B46DFE1-B932-48E6-94E7-C86E65F7F18D")!,
@@ -2316,14 +2403,99 @@ final class AppState: ObservableObject {
             return
         }
 
+        if case .peer(let nodeId) = selectedMeshTarget,
+           let peer = meshStore.peers.first(where: { $0.nodeId == nodeId }) {
+            dispatchRemoteMeshJob(peer: peer, chatId: chatId, prompt: combined)
+            return
+        }
+
         if let daemonBridgeClient {
-            daemonBridgeClient.sendPrompt(chatId: chatId, text: combined)
+            daemonBridgeClient.sendPrompt(chatId: chatId, text: combined, attachments: wireAttachments(from: attachments))
+        } else if selectedAgentRuntime == .opencode {
+            appendAssistantSystemMessage(
+                to: chatId,
+                text: "OpenCode runs through the background bridge. Enable the bridge, restart it, then send again."
+            )
         } else if let clawix {
             Task { @MainActor in
                 await clawix.sendUserMessage(chatId: chatId, text: combined)
                 self.clawixBackendStatus = clawix.status
             }
         }
+    }
+
+    private func wireAttachments(from attachments: [ComposerAttachment]) -> [WireAttachment] {
+        attachments.compactMap { attachment in
+            guard attachment.isImage,
+                  let data = try? Data(contentsOf: attachment.url)
+            else { return nil }
+            return WireAttachment(
+                id: attachment.id.uuidString,
+                kind: .image,
+                mimeType: mimeType(forImageURL: attachment.url),
+                filename: attachment.filename,
+                dataBase64: data.base64EncodedString()
+            )
+        }
+    }
+
+    private func mimeType(forImageURL url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "png": return "image/png"
+        case "gif": return "image/gif"
+        case "heic", "heif": return "image/heic"
+        case "webp": return "image/webp"
+        default: return "image/jpeg"
+        }
+    }
+
+    /// Outbound mesh dispatch. Validates that a remote workspace has
+    /// been configured for this peer (without one, the remote daemon
+    /// would always reject the job with `workspaceDenied`), starts
+    /// the job through `MeshStore`, and surfaces a synthetic system
+    /// message in the chat so the user has feedback that "this turn
+    /// is running on a different Mac". The actual streaming card
+    /// renders against `meshStore.activeJobs[…]` from `ChatView`.
+    private func dispatchRemoteMeshJob(peer: PeerRecord, chatId: UUID, prompt: String) {
+        let workspace = meshStore.remoteWorkspace(for: peer.nodeId)
+        guard !workspace.isEmpty else {
+            appendAssistantSystemMessage(
+                to: chatId,
+                text: "No remote workspace set for \(peer.displayName). Open Settings → Machines and add one before sending."
+            )
+            return
+        }
+        Task { @MainActor in
+            let result = await meshStore.startRemoteJob(
+                peer: peer,
+                workspacePath: workspace,
+                prompt: prompt,
+                chatId: chatId
+            )
+            switch result {
+            case .success(let job):
+                appendAssistantSystemMessage(
+                    to: chatId,
+                    text: "Running on \(peer.displayName) · job \(job.id.prefix(8))…"
+                )
+            case .failure(let error):
+                appendAssistantSystemMessage(
+                    to: chatId,
+                    text: "Could not start remote job: \(error.localizedDescription)"
+                )
+            }
+        }
+    }
+
+    /// Append a transient system note to a chat. Used by the mesh
+    /// dispatch path so the user always sees something happen even
+    /// when the assistant reply is going to land on a remote Mac, and
+    /// by the OpenCode-bridge nudge path that already called this
+    /// helper before the function existed.
+    func appendAssistantSystemMessage(to chatId: UUID, text: String) {
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        let note = ChatMessage(role: .assistant, content: text, streamingFinished: true, timestamp: Date())
+        chats[idx].messages.append(note)
     }
 
     /// Returns the bare Ollama model name (e.g. `llama3.2:3b`) when the
@@ -2335,6 +2507,11 @@ final class AppState: ObservableObject {
         let prefix = "ollama:"
         guard raw.hasPrefix(prefix) else { return nil }
         return String(raw.dropFirst(prefix.count))
+    }
+
+    var openCodeModelSelection: String {
+        if selectedModel.contains("/") { return selectedModel }
+        return AgentRuntimeChoice.persistedOpenCodeModel()
     }
 
     /// Submit a prompt from the QuickAsk HUD. Mirrors the home-route
@@ -2765,6 +2942,7 @@ final class AppState: ObservableObject {
 
     /// Maps the dropdown label ("5.5", "5.4 Mini", …) to a Clawix slug.
     var clawixModelSlug: String? {
+        guard selectedAgentRuntime == .codex else { return nil }
         let raw = selectedModel.lowercased().replacingOccurrences(of: " ", with: "-")
         return "gpt-\(raw)"
     }
