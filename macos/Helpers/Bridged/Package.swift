@@ -1,19 +1,12 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-// `clawix-bridged` is the LaunchAgent daemon that hosts the bridge to
-// the iPhone companion (and, in Phase 3, to the macOS GUI as a
-// loopback client). It is shipped inside the .app bundle at
-// `Contents/Helpers/clawix-bridged` and registered with launchd via
-// `SMAppService.agent(plistName:)` so it survives Cmd+Q of the GUI,
-// app crashes, and logout/login.
-//
-// The daemon is a thin shell over `ClawixEngine`: it instantiates a
-// `BridgeServer`, plugs in an `EngineHost` adapter to its in-process
-// chat store, and runs the main run loop. Today the daemon ships with
-// a stub `EmptyEngineHost` (no chats, no codex subprocess) so the
-// build chain can be validated end-to-end while the AgentBackend
-// layer is migrated piece by piece.
+// `clawix-bridged` is the bridge daemon shared between Apple platforms
+// (where launchd hosts it via `SMAppService.agent(plistName:)`) and
+// Linux (where systemd hosts it via a user unit at
+// `~/.config/systemd/user/clawix-bridge.service`). The same Swift source
+// powers both targets; platform-specific symbols are guarded with
+// `#if canImport(...)`.
 
 let package = Package(
     name: "clawix-bridged",
@@ -23,12 +16,8 @@ let package = Package(
     dependencies: [
         .package(path: "../../../packages/ClawixCore"),
         .package(path: "../../../packages/ClawixEngine"),
-        // Re-pinned here even though `ClawixEngine` already pulls it in
-        // transitively: `import WhisperKit` from the executable's own
-        // sources requires the symbol in the package graph at this
-        // level so SwiftPM exposes the public products. Used by the
-        // `--download-model <variant>` maintenance flag.
-        .package(url: "https://github.com/argmaxinc/WhisperKit", from: "0.9.0")
+        .package(url: "https://github.com/argmaxinc/WhisperKit", from: "0.9.0"),
+        .package(url: "https://github.com/OpenCombine/OpenCombine.git", from: "0.14.0")
     ],
     targets: [
         .executableTarget(
@@ -36,9 +25,14 @@ let package = Package(
             dependencies: [
                 .product(name: "ClawixCore", package: "ClawixCore"),
                 .product(name: "ClawixEngine", package: "ClawixEngine"),
-                .product(name: "WhisperKit", package: "WhisperKit")
+                .product(name: "WhisperKit", package: "WhisperKit", condition: .when(platforms: [.macOS, .iOS])),
+                .product(name: "OpenCombine", package: "OpenCombine", condition: .when(platforms: [.linux])),
+                .product(name: "OpenCombineFoundation", package: "OpenCombine", condition: .when(platforms: [.linux]))
             ],
-            path: "Sources/clawix-bridged"
+            path: "Sources/clawix-bridged",
+            swiftSettings: [
+                .unsafeFlags(["-parse-as-library"])
+            ]
         )
     ]
 )
