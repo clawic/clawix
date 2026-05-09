@@ -62,11 +62,15 @@ enum BodyFont {
     // returns `alreadyRegistered` on subsequent calls and we ignore it.
     private static let registerOnce: Void = {
         let executableDirectory = Bundle.main.executableURL?.deletingLastPathComponent()
-        let urls = [
-            Bundle.main.resourceURL?.appendingPathComponent("Manrope.ttf", isDirectory: false),
-            Bundle.main.resourceURL?.appendingPathComponent("Clawix_Clawix.bundle/Manrope.ttf", isDirectory: false),
-            executableDirectory?.appendingPathComponent("Clawix_Clawix.bundle/Manrope.ttf", isDirectory: false),
+        let fontNames = ["Manrope.ttf", "lucide.ttf"]
+        let roots = [
+            Bundle.main.resourceURL,
+            Bundle.main.resourceURL?.appendingPathComponent("Clawix_Clawix.bundle", isDirectory: true),
+            executableDirectory?.appendingPathComponent("Clawix_Clawix.bundle", isDirectory: true),
         ] as [URL?]
+        let urls = roots.flatMap { root in
+            fontNames.map { name in root?.appendingPathComponent(name, isDirectory: false) }
+        }
         let existingURLs = urls.compactMap { candidate -> URL? in
             guard let candidate, FileManager.default.fileExists(atPath: candidate.path) else { return nil }
             return candidate
