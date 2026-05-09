@@ -1,29 +1,28 @@
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#elseif canImport(AppKit)
-import AppKit
-#endif
-import CoreText
 
-/// Lucide icon registry. Renders glyphs from the official Lucide font
-/// (`lucide.ttf`, bundled in Resources/Fonts) via `Text + Font.custom`.
+/// Lucide icon registry. Renders glyphs from a static table of SVG
+/// primitives (`LucideIconRegistry`) parsed at runtime by
+/// `SVGPathBuilder`. The 79 Kind cases below cover every icon the app
+/// references plus the SF Symbol → Lucide mappings used by
+/// `LucideIcon.auto(_:)`.
 ///
-/// We tried `lcandy2/LucideIcon` (SVG -> custom SF Symbol asset catalog
-/// via swiftdraw): the catalog compiled cleanly but `UIImage(named:in:)`
-/// always returned nil at runtime, so the icons rendered as empty views.
-/// The font path is bulletproof: SwiftUI Text + Font.custom is the same
-/// path Manrope and PlusJakartaSans already use in this app, so we are
-/// not introducing a new code path.
+/// Why this shape (vs. the previous Text + Font.custom("lucide", ...)
+/// path): bundling the Lucide TTF carried a custom font everywhere the
+/// app shipped, and the codepoint indirection made every site read the
+/// font even when only a handful of glyphs were used. Going through
+/// SwiftUI Path lets the icons inherit `.foregroundStyle` /
+/// `.foregroundColor` like SF Symbols, and the rendered geometry is the
+/// official Lucide vector data (translated by `SVGPathBuilder`), not a
+/// hand-eyeballed approximation.
 ///
-/// Usage:
+/// Usage is unchanged from the font-based version:
 ///
 ///     LucideIcon(.chevronDown, size: 13)
 ///         .foregroundColor(Color(white: 0.86))
 ///
-/// `.foregroundColor` / `.foregroundStyle` work because this is a
-/// `Text` underneath. `.font(.system(...))` set on the call site is
-/// IGNORED — pass the size explicitly via the `size:` parameter.
+/// `.font(.system(...))` set on the call site is IGNORED — pass the
+/// size explicitly via the `size:` parameter so the stroke weight scales
+/// correctly.
 struct LucideIcon: View {
     enum Kind {
         case chevronDown
@@ -105,90 +104,6 @@ struct LucideIcon: View {
         case badgeCheck
         case webhook
         case fileText
-
-        var codepoint: String {
-            switch self {
-            case .chevronDown: return "\u{e06d}"
-            case .chevronUp: return "\u{e070}"
-            case .chevronLeft: return "\u{e06e}"
-            case .chevronRight: return "\u{e06f}"
-            case .x: return "\u{e1b2}"
-            case .plus: return "\u{e13d}"
-            case .minus: return "\u{e11c}"
-            case .check: return "\u{e06c}"
-            case .ellipsis: return "\u{e0b6}"
-            case .arrowUp: return "\u{e04a}"
-            case .arrowDown: return "\u{e042}"
-            case .arrowLeft: return "\u{e048}"
-            case .arrowRight: return "\u{e049}"
-            case .arrowUpRight: return "\u{e04d}"
-            case .squareArrowOutUpRight: return "\u{e5a4}"
-            case .arrowRightToLine: return "\u{e459}"
-            case .arrowDownToLine: return "\u{e455}"
-            case .undo2: return "\u{e2a1}"
-            case .rotateCw: return "\u{e149}"
-            case .rotateCcw: return "\u{e148}"
-            case .refreshCw: return "\u{e145}"
-            case .maximize2: return "\u{e113}"
-            case .minimize2: return "\u{e11b}"
-            case .trash: return "\u{e18d}"
-            case .search: return "\u{e151}"
-            case .folder: return "\u{e0d7}"
-            case .archive: return "\u{e041}"
-            case .messageCircle: return "\u{e116}"
-            case .globe: return "\u{e0e8}"
-            case .paperclip: return "\u{e12d}"
-            case .camera: return "\u{e064}"
-            case .image: return "\u{e0f6}"
-            case .images: return "\u{e5c4}"
-            case .imageOff: return "\u{e1c0}"
-            case .send: return "\u{e152}"
-            case .zap: return "\u{e1b4}"
-            case .zapOff: return "\u{e1b5}"
-            case .star: return "\u{e176}"
-            case .clock: return "\u{e087}"
-            case .list: return "\u{e106}"
-            case .listChecks: return "\u{e1d0}"
-            case .textAlignStart: return "\u{e185}"
-            case .key: return "\u{e0fd}"
-            case .link: return "\u{e102}"
-            case .laptop: return "\u{e1cd}"
-            case .scan: return "\u{e257}"
-            case .tornado: return "\u{e218}"
-            case .drama: return "\u{e521}"
-            case .fileQuestionMark: return "\u{e322}"
-            case .squareDashed: return "\u{e1cb}"
-            case .appWindow: return "\u{e426}"
-            case .workflow: return "\u{e425}"
-            case .download: return "\u{e0b2}"
-            case .share2: return "\u{e156}"
-            case .inbox: return "\u{e0f7}"
-            case .play: return "\u{e13c}"
-            case .pause: return "\u{e12e}"
-            case .square: return "\u{e167}"
-            case .circleStop: return "\u{e083}"
-            case .moon: return "\u{e11e}"
-            case .audioWaveform: return "\u{e55b}"
-            case .triangleAlert: return "\u{e193}"
-            case .circleAlert: return "\u{e077}"
-            case .shieldAlert: return "\u{e1fe}"
-            case .info: return "\u{e0f9}"
-            case .circleCheck: return "\u{e226}"
-            case .circleX: return "\u{e084}"
-            case .circleDot: return "\u{e345}"
-            case .eye: return "\u{e0ba}"
-            case .eyeOff: return "\u{e0bb}"
-            case .glasses: return "\u{e20d}"
-            case .lock: return "\u{e10b}"
-            case .terminal: return "\u{e181}"
-            case .database: return "\u{e0ad}"
-            case .braces: return "\u{e36a}"
-            case .idCard: return "\u{e617}"
-            case .badgeCheck: return "\u{e241}"
-            case .webhook: return "\u{e374}"
-            case .fileText: return "\u{e0cc}"
-            }
-        }
     }
 
     let kind: Kind
@@ -199,19 +114,99 @@ struct LucideIcon: View {
         self.size = size
     }
 
+    @ViewBuilder
     var body: some View {
-        Text(kind.codepoint)
-            .font(.custom("lucide", size: size))
-            // The font's glyph metrics include vertical padding; cap the
-            // line height to the rendered size so the icon does not push
-            // surrounding rows apart.
-            .frame(width: size, height: size)
-    }
+        Group {
+            switch kind {
+            // Cases that already have a hand-crafted custom struct in the
+            // project — dispatch to the existing one so its design DNA
+            // (squircle elbows, custom proportions) wins over the
+            // SVG-derived render.
+            case .search:    SearchIcon(size: size)
+            case .globe:     GlobeIcon(size: size)
+            case .check:     CheckIcon(size: size)
+            case .arrowUp:   ArrowUpIcon(size: size)
+            case .terminal:  TerminalIcon(size: size)
+            case .archive:   ArchiveIcon(size: size)
 
-    // Font registration: iOS loads `lucide.ttf` at process start via
-    // `UIAppFonts` in Info.plist; macOS loads it via `BodyFont.register()`
-    // which iterates every `.ttf` in `Bundle.module` (including
-    // `Resources/Fonts/lucide.ttf`). No per-view registration needed.
+            // SVG-derived custom icons (one file per kind in LucideIcons/).
+            case .chevronDown:            ChevronDownIcon(size: size)
+            case .chevronUp:              ChevronUpIcon(size: size)
+            case .chevronLeft:            ChevronLeftIcon(size: size)
+            case .chevronRight:           ChevronRightIcon(size: size)
+            case .x:                      XIcon(size: size)
+            case .plus:                   PlusIcon(size: size)
+            case .minus:                  MinusIcon(size: size)
+            case .ellipsis:               EllipsisIcon(size: size)
+            case .arrowDown:              ArrowDownIcon(size: size)
+            case .arrowLeft:              ArrowLeftIcon(size: size)
+            case .arrowRight:             ArrowRightIcon(size: size)
+            case .arrowUpRight:           ArrowUpRightIcon(size: size)
+            case .squareArrowOutUpRight:  SquareArrowOutUpRightIcon(size: size)
+            case .arrowRightToLine:       ArrowRightToLineIcon(size: size)
+            case .arrowDownToLine:        ArrowDownToLineIcon(size: size)
+            case .undo2:                  Undo2Icon(size: size)
+            case .rotateCw:               RotateCwIcon(size: size)
+            case .rotateCcw:              RotateCcwIcon(size: size)
+            case .refreshCw:              RefreshCwIcon(size: size)
+            case .maximize2:              Maximize2Icon(size: size)
+            case .minimize2:              Minimize2Icon(size: size)
+            case .trash:                  TrashIcon(size: size)
+            case .folder:                 FolderIcon(size: size)
+            case .messageCircle:          MessageCircleIcon(size: size)
+            case .paperclip:              PaperclipIcon(size: size)
+            case .camera:                 CameraIcon(size: size)
+            case .image:                  ImageIcon(size: size)
+            case .images:                 ImagesIcon(size: size)
+            case .imageOff:               ImageOffIcon(size: size)
+            case .send:                   SendIcon(size: size)
+            case .zap:                    ZapIcon(size: size)
+            case .zapOff:                 ZapOffIcon(size: size)
+            case .star:                   StarIcon(size: size)
+            case .clock:                  ClockIcon(size: size)
+            case .list:                   ListIcon(size: size)
+            case .listChecks:             ListChecksIcon(size: size)
+            case .textAlignStart:         TextAlignStartIcon(size: size)
+            case .key:                    KeyIcon(size: size)
+            case .link:                   LinkIcon(size: size)
+            case .laptop:                 LaptopIcon(size: size)
+            case .scan:                   ScanIcon(size: size)
+            case .tornado:                TornadoIcon(size: size)
+            case .drama:                  DramaIcon(size: size)
+            case .fileQuestionMark:       FileQuestionMarkIcon(size: size)
+            case .squareDashed:           SquareDashedIcon(size: size)
+            case .appWindow:              AppWindowIcon(size: size)
+            case .workflow:               WorkflowIcon(size: size)
+            case .download:               DownloadIcon(size: size)
+            case .share2:                 Share2Icon(size: size)
+            case .inbox:                  InboxIcon(size: size)
+            case .play:                   PlayIcon(size: size)
+            case .pause:                  PauseIcon(size: size)
+            case .square:                 SquareIcon(size: size)
+            case .circleStop:             CircleStopIcon(size: size)
+            case .moon:                   MoonIcon(size: size)
+            case .audioWaveform:          AudioWaveformIcon(size: size)
+            case .triangleAlert:          TriangleAlertIcon(size: size)
+            case .circleAlert:            CircleAlertIcon(size: size)
+            case .shieldAlert:            ShieldAlertIcon(size: size)
+            case .info:                   InfoIcon(size: size)
+            case .circleCheck:            CircleCheckIcon(size: size)
+            case .circleX:                CircleXIcon(size: size)
+            case .circleDot:              CircleDotIcon(size: size)
+            case .eye:                    EyeIcon(size: size)
+            case .eyeOff:                 EyeOffIcon(size: size)
+            case .glasses:                GlassesIcon(size: size)
+            case .lock:                   LockIcon(size: size)
+            case .database:               DatabaseIcon(size: size)
+            case .braces:                 BracesIcon(size: size)
+            case .idCard:                 IdCardIcon(size: size)
+            case .badgeCheck:             BadgeCheckIcon(size: size)
+            case .webhook:                WebhookIcon(size: size)
+            case .fileText:               FileTextIcon(size: size)
+            }
+        }
+        .accessibilityHidden(true)
+    }
 
     /// Maps a legacy SF Symbol name to a Lucide kind. Used by the
     /// `auto(_:)` helper at sites where the icon name is computed at
@@ -309,9 +304,7 @@ struct LucideIcon: View {
     /// Resolves an SF Symbol-style name at runtime: renders a Lucide
     /// glyph for known mappings, falls back to `Image(systemName:)` for
     /// genuinely OS-level chrome (`command`, `return` for keyboard
-    /// shortcut hints) or any name we have not mapped yet. Returns
-    /// `AnyView` because the two branches produce different concrete
-    /// view types.
+    /// shortcut hints) or any name we have not mapped yet.
     @ViewBuilder
     static func auto(_ systemName: String, size: CGFloat = 16) -> some View {
         if let kind = LucideIcon.sfMapped(systemName) {
@@ -327,11 +320,9 @@ extension Image {
     /// Compatibility shim used by call sites that pass an SF Symbol
     /// name string for parity with platforms that haven't been migrated
     /// to the `LucideIcon` enum yet. Routes everything through
-    /// `Image(systemName:)` for now; if a richer Lucide-as-Image
-    /// rendering is wanted later, swap this body for an `NSImage`-backed
-    /// glyph render based on `LucideIcon.sfMapped(name)`. The function
-    /// is intentionally `init` (not a static helper) so callers using
-    /// `Image(lucideOrSystem: …).font(…)` chain modifiers as expected.
+    /// `Image(systemName:)`; sites that need Lucide rendering should
+    /// use `LucideIcon.auto(_:)` instead, which this `Image` extension
+    /// can't reach because `Image` is a fixed concrete type.
     init(lucideOrSystem name: String) {
         self.init(systemName: name)
     }
