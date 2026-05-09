@@ -19,7 +19,8 @@ enum BackendAuthReader {
     }
 
     static func read() -> BackendAuthInfo {
-        if ProcessInfo.processInfo.environment["CLAWIX_DISABLE_BACKEND"] == "1" {
+        let environment = ProcessInfo.processInfo.environment
+        if environment["CLAWIX_DISABLE_BACKEND"] == "1" || environment["CLAWIX_DUMMY_MODE"] == "1" {
             return BackendAuthInfo(
                 email: "account@example.com",
                 accountLabel: "Personal account",
