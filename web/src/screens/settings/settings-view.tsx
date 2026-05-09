@@ -1,13 +1,10 @@
-/**
- * Settings mirrors the macOS Settings panel. Sections that are macOS-only
- * (dictation hotkey, menu bar, login items) appear as a "Manage on Mac"
- * affordance instead of being silently dropped.
- */
+// Settings mirrors the Mac SettingsView: PageHeader, SectionLabel, Card,
+// CardDivider rows. SlidingSegmented for the tab strip.
 import { useState } from "react";
 import { useBridgeStore } from "../../bridge/store";
 import { SlidingSegmented } from "../../components/sliding-segmented";
+import { PageHeader, SectionLabel, Card, CardDivider, Button } from "../../components/ui";
 import { storage, StorageKeys } from "../../lib/storage";
-import cx from "../../lib/cx";
 
 type Tab = "general" | "appearance" | "advanced";
 
@@ -15,8 +12,22 @@ export function SettingsView() {
   const [tab, setTab] = useState<Tab>("general");
   return (
     <div className="h-full flex flex-col">
-      <header className="h-[56px] px-6 flex items-center gap-4 border-b border-[var(--color-border)]">
-        <h1 className="text-[15px] font-medium tracking-[-0.01em]">Settings</h1>
+      <header
+        className="px-6 flex items-center gap-4"
+        style={{
+          height: 56,
+          borderBottom: "0.5px solid var(--color-popup-stroke)",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: 15,
+            fontVariationSettings: '"wght" 700',
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Settings
+        </h1>
         <SlidingSegmented<Tab>
           size="sm"
           options={[
@@ -29,7 +40,19 @@ export function SettingsView() {
         />
       </header>
       <div className="thin-scroll flex-1 overflow-y-auto">
-        <div className="max-w-[720px] mx-auto py-8 px-6 space-y-6">
+        <div className="max-w-[720px] mx-auto pt-8 pb-12 px-6">
+          <PageHeader
+            title={
+              tab === "general" ? "General" : tab === "appearance" ? "Appearance" : "Advanced"
+            }
+            subtitle={
+              tab === "general"
+                ? "Pairing, identity, Mac-only affordances."
+                : tab === "appearance"
+                ? "Theme. Web matches the Mac dark palette."
+                : "Bridge runtime, rate limits, diagnostics."
+            }
+          />
           {tab === "general" && <GeneralSettings />}
           {tab === "appearance" && <AppearanceSettings />}
           {tab === "advanced" && <AdvancedSettings />}
@@ -39,15 +62,152 @@ export function SettingsView() {
   );
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function GeneralSettings() {
+  const macName = useBridgeStore((s) => s.macName);
+  const detach = useBridgeStore((s) => s.detach);
+  const [deviceName, setDeviceName] = useState(() => storage.get<string>(StorageKeys.deviceName) ?? "");
+
   return (
-    <section className="rounded-[16px] border border-[var(--color-border)] bg-[var(--color-bg-elev-1)] p-5 space-y-4">
-      <div>
-        <div className="text-[14px] font-medium tracking-[-0.01em]">{title}</div>
-        {description && <div className="text-[12px] text-[var(--color-fg-muted)] mt-1">{description}</div>}
-      </div>
-      {children}
-    </section>
+    <>
+      <SectionLabel>Connection</SectionLabel>
+      <Card>
+        <Row label="Paired with" hint={macName ? `Currently bonded to ${macName}` : "Not paired"}>
+          <code style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>{macName ?? "—"}</code>
+        </Row>
+        <CardDivider />
+        <Row label="Device label" hint="Shown in the Mac app's connected peers list.">
+          <input
+            value={deviceName}
+            onChange={(e) => {
+              setDeviceName(e.target.value);
+              storage.set(StorageKeys.deviceName, e.target.value);
+            }}
+            placeholder="Web"
+            style={{
+              height: 32,
+              width: 220,
+              padding: "0 12px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.06)",
+              boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.10)",
+              outline: "none",
+              fontSize: 13,
+              color: "var(--color-fg)",
+              fontVariationSettings: '"wght" 600',
+            }}
+          />
+        </Row>
+        <CardDivider />
+        <Row label="Unpair this browser" hint="Clears the local token. You will need to enter the short code again.">
+          <Button
+            variant="destructive"
+            onClick={() => {
+              storage.remove(StorageKeys.bearer);
+              detach();
+              window.location.reload();
+            }}
+          >
+            Unpair
+          </Button>
+        </Row>
+      </Card>
+
+      <SectionLabel>Mac-only</SectionLabel>
+      <Card>
+        <Row label="Global dictation hotkey">
+          <span style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>Manage on Mac</span>
+        </Row>
+        <CardDivider />
+        <Row label="Menu bar item">
+          <span style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>Manage on Mac</span>
+        </Row>
+        <CardDivider />
+        <Row label="Open at login">
+          <span style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>Manage on Mac</span>
+        </Row>
+      </Card>
+    </>
+  );
+}
+
+function AppearanceSettings() {
+  return (
+    <>
+      <SectionLabel>Theme</SectionLabel>
+      <Card>
+        <Row
+          label="Color scheme"
+          hint="Web matches the Mac, which is dark-only by design."
+        >
+          <span style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>Always dark</span>
+        </Row>
+      </Card>
+    </>
+  );
+}
+
+function AdvancedSettings() {
+  const bridge = useBridgeStore((s) => s.bridge);
+  const conn = useBridgeStore((s) => s.connection);
+  const rl = useBridgeStore((s) => s.rateLimits);
+
+  return (
+    <>
+      <SectionLabel>Bridge runtime</SectionLabel>
+      <Card>
+        <Row label="Daemon state">
+          <code style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>{bridge.state}</code>
+        </Row>
+        <CardDivider />
+        <Row label="Chat count">
+          <code style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>{bridge.chatCount}</code>
+        </Row>
+        <CardDivider />
+        <Row label="Connection">
+          <code style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>{conn.kind}</code>
+        </Row>
+      </Card>
+
+      <SectionLabel>Rate limits</SectionLabel>
+      <Card>
+        {!rl ? (
+          <div style={{ padding: "12px 14px", fontSize: 12, color: "var(--color-fg-secondary)" }}>
+            No data yet.
+          </div>
+        ) : (
+          <>
+            {rl.primary && (
+              <>
+                <Row label="Primary window">
+                  <code style={{ fontSize: 12 }}>{rl.primary.usedPercent}% used</code>
+                </Row>
+                {(rl.secondary || rl.credits) && <CardDivider />}
+              </>
+            )}
+            {rl.secondary && (
+              <>
+                <Row label="Secondary window">
+                  <code style={{ fontSize: 12 }}>{rl.secondary.usedPercent}% used</code>
+                </Row>
+                {rl.credits && <CardDivider />}
+              </>
+            )}
+            {rl.credits && (
+              <Row label="Credits">
+                <code
+                  style={{
+                    fontSize: 12,
+                    color: rl.credits.unlimited ? "var(--color-banner-ok-fg)" : undefined,
+                  }}
+                >
+                  {rl.credits.unlimited ? "Unlimited" : (rl.credits.balance ?? "—")}
+                </code>
+              </Row>
+            )}
+          </>
+        )}
+      </Card>
+    </>
   );
 }
 
@@ -61,130 +221,23 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-6 py-2 border-t first:border-t-0 border-[var(--color-border)]">
-      <div className="min-w-0">
-        <div className="text-[13px]">{label}</div>
-        {hint && <div className="text-[11.5px] text-[var(--color-fg-muted)] mt-0.5">{hint}</div>}
+    <div className="flex items-center justify-between gap-6" style={{ padding: "12px 14px" }}>
+      <div className="min-w-0 flex flex-col gap-[3px]">
+        <div style={{ fontSize: 12.5, color: "var(--color-fg)" }}>{label}</div>
+        {hint && (
+          <div
+            style={{
+              fontSize: 11,
+              color: "var(--color-fg-secondary)",
+              fontVariationSettings: '"wght" 700',
+              lineHeight: 1.4,
+            }}
+          >
+            {hint}
+          </div>
+        )}
       </div>
       {children}
     </div>
-  );
-}
-
-function GeneralSettings() {
-  const macName = useBridgeStore((s) => s.macName);
-  const detach = useBridgeStore((s) => s.detach);
-  const [deviceName, setDeviceName] = useState(() => storage.get<string>(StorageKeys.deviceName) ?? "");
-
-  return (
-    <>
-      <Section title="Connection" description="Bridge identity for this browser session.">
-        <Row label="Paired with" hint={macName ? `Currently bonded to ${macName}` : "Not paired"}>
-          <code className="text-[12px] text-[var(--color-fg-muted)]">{macName ?? "—"}</code>
-        </Row>
-        <Row label="Device label" hint="Shown in the Mac app's connected peers list.">
-          <input
-            value={deviceName}
-            onChange={(e) => {
-              setDeviceName(e.target.value);
-              storage.set(StorageKeys.deviceName, e.target.value);
-            }}
-            placeholder="Web"
-            className="h-9 w-[220px] px-3 rounded-[10px] bg-[var(--color-bg-elev-2)] border border-[var(--color-border)] outline-none focus:border-[var(--color-border-strong)] text-[13px]"
-          />
-        </Row>
-        <Row label="Unpair this browser" hint="Clears the local token. You will need to enter the short code again.">
-          <button
-            onClick={() => {
-              storage.remove(StorageKeys.bearer);
-              detach();
-              window.location.reload();
-            }}
-            className="h-9 px-3 rounded-[10px] border border-[var(--color-border)] hover:bg-[var(--color-bg-elev-2)] text-[12px] text-[var(--color-danger)]"
-          >
-            Unpair
-          </button>
-        </Row>
-      </Section>
-
-      <Section title="Mac-only" description="These features live on your Mac. Use the Mac app to change them.">
-        <Row label="Global dictation hotkey">
-          <span className="text-[12px] text-[var(--color-fg-muted)]">Manage on Mac</span>
-        </Row>
-        <Row label="Menu bar item">
-          <span className="text-[12px] text-[var(--color-fg-muted)]">Manage on Mac</span>
-        </Row>
-        <Row label="Open at login">
-          <span className="text-[12px] text-[var(--color-fg-muted)]">Manage on Mac</span>
-        </Row>
-      </Section>
-    </>
-  );
-}
-
-function AppearanceSettings() {
-  const [scheme, setScheme] = useState<"system" | "dark" | "light">("system");
-  return (
-    <Section title="Appearance">
-      <Row label="Color scheme">
-        <SlidingSegmented
-          size="sm"
-          options={[
-            { value: "system", label: "System" },
-            { value: "dark", label: "Dark" },
-            { value: "light", label: "Light" },
-          ]}
-          value={scheme}
-          onChange={setScheme}
-        />
-      </Row>
-    </Section>
-  );
-}
-
-function AdvancedSettings() {
-  const bridge = useBridgeStore((s) => s.bridge);
-  const conn = useBridgeStore((s) => s.connection);
-  const rl = useBridgeStore((s) => s.rateLimits);
-
-  return (
-    <>
-      <Section title="Bridge runtime">
-        <Row label="Daemon state">
-          <code className="text-[12px] text-[var(--color-fg-muted)]">{bridge.state}</code>
-        </Row>
-        <Row label="Chat count">
-          <code className="text-[12px] text-[var(--color-fg-muted)]">{bridge.chatCount}</code>
-        </Row>
-        <Row label="Connection">
-          <code className="text-[12px] text-[var(--color-fg-muted)]">{conn.kind}</code>
-        </Row>
-      </Section>
-      <Section title="Rate limits" description="Pulled from your Mac. Reflects the current Codex account state.">
-        {!rl ? (
-          <div className="text-[12px] text-[var(--color-fg-muted)]">No data yet.</div>
-        ) : (
-          <div className="space-y-2">
-            {rl.primary && (
-              <Row label="Primary window">
-                <code className="text-[12px]">{rl.primary.usedPercent}% used</code>
-              </Row>
-            )}
-            {rl.secondary && (
-              <Row label="Secondary window">
-                <code className="text-[12px]">{rl.secondary.usedPercent}% used</code>
-              </Row>
-            )}
-            {rl.credits && (
-              <Row label="Credits">
-                <code className={cx("text-[12px]", rl.credits.unlimited && "text-[var(--color-success)]")}>
-                  {rl.credits.unlimited ? "Unlimited" : (rl.credits.balance ?? "—")}
-                </code>
-              </Row>
-            )}
-          </div>
-        )}
-      </Section>
-    </>
   );
 }
