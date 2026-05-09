@@ -24,6 +24,11 @@ COMMON_GLOBS=(
   --glob '!**/Package.resolved'
   --glob '!**/*.icns'
   --glob '!**/scripts/public_hygiene_check.sh'
+  # Web SPA build output (pnpm --filter @clawix/web build) and the daemon's
+  # mirrored copy ship with hashed filenames and minified bundles that are
+  # uninteresting for hygiene scans.
+  --glob '!**/web/dist/**'
+  --glob '!**/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/**'
 )
 
 scan() {
@@ -58,6 +63,16 @@ for surface in "$ROOT_DIR/macos" "$ROOT_DIR/ios" "$ROOT_DIR/packages"/* ; do
       [[ -e "$candidate" ]] && TARGETS+=("$candidate")
   done
 done
+
+# Web SPA target. Same blacklist applies (no Team ID, bundle id real,
+# SKU literals, codesign identities). dist/ and node_modules/ are
+# excluded above via COMMON_GLOBS so we only scan source code.
+if [[ -d "$ROOT_DIR/web" ]]; then
+  for sub in package.json tsconfig.json vite.config.ts tailwind.config.ts index.html src public scripts tests README.md ; do
+      candidate="$ROOT_DIR/web/$sub"
+      [[ -e "$candidate" ]] && TARGETS+=("$candidate")
+  done
+fi
 
 # Top-level npm CLI package: ships to npmjs.com under the public name
 # `clawix`, so its source tree is part of the public publish surface
