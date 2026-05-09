@@ -249,6 +249,7 @@ final class QuickAskController: ObservableObject {
            let appState,
            appState.selectedModel != preferred
         {
+            appState.selectedAgentRuntime = preferred.contains("/") ? .opencode : .codex
             appState.selectedModel = preferred
         }
         if let id = activeChatId {

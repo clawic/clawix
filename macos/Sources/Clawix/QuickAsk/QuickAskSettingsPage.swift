@@ -77,6 +77,7 @@ struct QuickAskSettingsPage: View {
                     Spacer(minLength: 12)
                     Picker("", selection: $defaultModelSelection) {
                         Text("Follow main composer").tag("")
+                        Text(AgentRuntimeChoice.defaultOpenCodeModel).tag(AgentRuntimeChoice.defaultOpenCodeModel)
                         ForEach(appState.availableModels + appState.otherModels, id: \.self) { m in
                             Text("GPT-\(m)").tag(m)
                         }

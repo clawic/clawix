@@ -604,6 +604,7 @@ struct QuickAskView: View {
                 .padding(.bottom, -secondaryDrop)
             QuickAskModelPicker(
                 selection: $appState.selectedModel,
+                runtime: $appState.selectedAgentRuntime,
                 primary: appState.availableModels,
                 others: appState.otherModels
             )
@@ -648,8 +649,9 @@ struct QuickAskView: View {
             Button {
                 stopAndAppendTranscription()
             } label: {
-                LucideIcon(.square, size: 13)
-                    .foregroundColor(Color(white: 0.92))
+                StopSquircle()
+                    .fill(Color(white: 0.92))
+                    .frame(width: 13, height: 13)
                     .frame(width: 26, height: 26)
                     .background(Circle().fill(Color(white: 0.22)))
             }
@@ -1106,13 +1108,39 @@ private struct QuickAskPlusMenu: View {
 /// squircle background that highlights the label as a hit target.
 private struct QuickAskModelPicker: View {
     @Binding var selection: String
+    @Binding var runtime: AgentRuntimeChoice
     let primary: [String]
     let others: [String]
     @State private var hovered = false
 
     var body: some View {
         Menu {
+            Section("Runtime") {
+                Button {
+                    runtime = .codex
+                    if selection.contains("/") { selection = "5.5" }
+                } label: {
+                    if runtime == .codex { Label("Codex", systemImage: "checkmark") } else { Text("Codex") }
+                }
+                Button {
+                    runtime = .opencode
+                    selection = AgentRuntimeChoice.defaultOpenCodeModel
+                } label: {
+                    if runtime == .opencode { Label("OpenCode", systemImage: "checkmark") } else { Text("OpenCode") }
+                }
+            }
             Section("Model") {
+                if runtime == .opencode {
+                    Button {
+                        selection = AgentRuntimeChoice.defaultOpenCodeModel
+                    } label: {
+                        if selection == AgentRuntimeChoice.defaultOpenCodeModel {
+                            Label(AgentRuntimeChoice.defaultOpenCodeModel, systemImage: "checkmark")
+                        } else {
+                            Text(AgentRuntimeChoice.defaultOpenCodeModel)
+                        }
+                    }
+                } else {
                 ForEach(primary, id: \.self) { m in
                     Button {
                         selection = m
@@ -1124,8 +1152,9 @@ private struct QuickAskModelPicker: View {
                         }
                     }
                 }
+                }
             }
-            if !others.isEmpty {
+            if runtime == .codex && !others.isEmpty {
                 Section("Other models") {
                     ForEach(others, id: \.self) { m in
                         Button {
@@ -1141,7 +1170,7 @@ private struct QuickAskModelPicker: View {
                 }
             }
         } label: {
-            Text("GPT-\(selection)")
+            Text(runtime == .opencode ? selection : "GPT-\(selection)")
                 .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Color(white: 0.85))
                 .padding(.horizontal, 8)
