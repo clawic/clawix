@@ -895,9 +895,6 @@ private struct MessageRow: View, Equatable {
         }
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
         .padding(.leading, isUser ? chatRailMaxWidth * 0.2 : 0)
-        .accessibilityLabel(isUser
-                            ? L10n.a11yYou(message.content)
-                            : L10n.a11yAssistant(message.content))
     }
 
     /// Walk the message timeline and return every absolute file path the

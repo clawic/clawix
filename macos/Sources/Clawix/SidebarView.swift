@@ -2256,11 +2256,12 @@ struct RecentChatRow: View, Equatable {
             .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.hasUnreadCompletion)
             .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.lastTurnInterrupted)
 
-            if !archivedRow {
-                // Always rendered so the opacity fade is smooth and the
-                // hit area exists from the start. The 22x22 frame around
-                // the 15.5pt icon gives a generous halo so the cursor
-                // catches the button before it lands on the glyph.
+            if !archivedRow && archiveVisible {
+                // Render only while visible so hidden row actions do not
+                // flood the accessibility tree during sidebar navigation.
+                // The 22x22 frame around the 15.5pt icon gives a generous
+                // halo so the cursor catches the button before it lands
+                // on the glyph.
                 Button(action: callbacks.onArchive) {
                     ArchiveIcon(size: 15.5)
                         .foregroundColor(archiveHovered ? Color(white: 0.94) : Color(white: 0.5))
@@ -2270,8 +2271,6 @@ struct RecentChatRow: View, Equatable {
                 .buttonStyle(.plain)
                 .sidebarHover { archiveHovered = $0 }
                 .help(L10n.t("Archive"))
-                .opacity(archiveVisible ? 1 : 0)
-                .allowsHitTesting(archiveVisible)
             }
         }
         .animation(.easeOut(duration: 0.16), value: archiveVisible)
@@ -2401,6 +2400,7 @@ struct RecentChatRow: View, Equatable {
         .buttonStyle(.plain)
         .sidebarHover { pinHovered = $0 }
         .disabled(!visible)
+        .accessibilityHidden(!visible)
         .help(help)
     }
 
