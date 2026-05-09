@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Post-install hook: registers the apt repo (signed-by) so future
+# updates flow through `apt`, opens the firewall ports the bridge needs
+# for iPhone pairing, and pre-flights mDNS via Avahi.
+
+set -e
+
+KEYRING="/usr/share/keyrings/clawix-archive-keyring.gpg"
+SOURCES="/etc/apt/sources.list.d/clawix.list"
+
+if [ -f "$KEYRING" ] && [ ! -f "$SOURCES" ]; then
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=$KEYRING] https://pkg.clawix.com/apt stable main" \
+    > "$SOURCES"
+fi
+
+# Open the bridge port + mDNS for any user that pairs an iPhone. We add
+# rules to whichever firewall manager the host runs (firewalld is default
+# on Fedora/RHEL; ufw on Ubuntu; nothing on Arch). Failures are best-effort.
+if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
+  firewall-cmd --permanent --add-port=7777/tcp || true
+  firewall-cmd --permanent --add-port=5353/udp || true
+  firewall-cmd --reload || true
+elif command -v ufw >/dev/null 2>&1; then
+  ufw allow 7777/tcp || true
+  ufw allow 5353/udp || true
+fi
+
+if ! systemctl is-active --quiet avahi-daemon; then
+  echo "clawix: avahi-daemon is not running. Pairing by mDNS will be unavailable until you 'systemctl enable --now avahi-daemon'." >&2
+fi
+
+# The systemd user unit is written by the GUI on first launch via
+# `service_manager::ensure_daemon_running`. We do NOT enable it
+# system-wide here; per-user activation keeps multi-user installs sane.
+
+exit 0

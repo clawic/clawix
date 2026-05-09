@@ -1,0 +1,14 @@
+Package: clawix
+Version: __VERSION__
+Section: utils
+Priority: optional
+Architecture: __ARCH__
+Maintainer: Clawix <support@clawix.com>
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0, libayatana-appindicator3-1, libssl3, avahi-daemon, libnotify4
+Recommends: wtype | xdotool, wl-clipboard | xclip
+Suggests: nodejs, libvulkan1
+Homepage: https://clawix.com
+Description: Clawix desktop companion for Linux
+ Clawix pairs with your iPhone over a local WebSocket bridge, runs
+ dictation locally with whisper.cpp, and orchestrates AI workflows
+ through the same engine that powers the macOS and iOS apps.
