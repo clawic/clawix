@@ -37,6 +37,7 @@ fun SettingsSheet(
     onDismiss: () -> Unit,
     onUnpair: () -> Unit,
     onReconnect: () -> Unit,
+    onPairAnother: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(
@@ -58,6 +59,7 @@ fun SettingsSheet(
             Spacer(Modifier.height(16.dp))
 
             ActionRow(LucideGlyph.Refresh, "Reconnect", onClick = onReconnect)
+            ActionRow(LucideGlyph.QrCode, "Pair another Mac", onClick = onPairAnother)
             ActionRow(LucideGlyph.Unlock, "Unpair Mac", danger = true, onClick = onUnpair)
             Spacer(Modifier.height(24.dp))
         }

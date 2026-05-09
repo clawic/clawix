@@ -94,6 +94,7 @@ fun AppNav(container: AppContainer) {
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onPairAnother = { nav.navigate(Routes.PairingQr) },
             )
         }
         composable(

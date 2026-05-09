@@ -63,6 +63,7 @@ fun ChatListScreen(
     onOpenChat: (String) -> Unit,
     onOpenProject: (String) -> Unit,
     onUnpair: () -> Unit,
+    onPairAnother: () -> Unit,
 ) {
     val vm: ChatListViewModel = viewModel(factory = ViewModelFactory { ChatListViewModel(container) })
     val ui by vm.ui.collectAsStateWithLifecycle()
@@ -72,6 +73,8 @@ fun ChatListScreen(
     var searchExpanded by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showAllProjects by remember { mutableStateOf(false) }
+    var actionsTarget by remember { mutableStateOf<WireChat?>(null) }
+    var renameTarget by remember { mutableStateOf<WireChat?>(null) }
 
     LaunchedEffect(Unit) {
         // Refresh chats list once on entry
@@ -135,7 +138,10 @@ fun ChatListScreen(
                         chat = chat,
                         isUnread = chat.id in ui.unread,
                         onClick = { onOpenChat(chat.id) },
-                        onLongClick = { Haptics.longPress(view); /* TODO menu */ },
+                        onLongClick = {
+                            Haptics.longPress(view)
+                            actionsTarget = chat
+                        },
                     )
                 }
                 item { Spacer(Modifier.height(12.dp)) }
@@ -155,7 +161,10 @@ fun ChatListScreen(
                         chat = chat,
                         isUnread = chat.id in ui.unread,
                         onClick = { onOpenChat(chat.id) },
-                        onLongClick = { Haptics.longPress(view); /* TODO menu */ },
+                        onLongClick = {
+                            Haptics.longPress(view)
+                            actionsTarget = chat
+                        },
                     )
                 }
             } else if (ui.pinnedChats.isEmpty() && ui.projects.isEmpty()) {
@@ -249,6 +258,7 @@ fun ChatListScreen(
                 onDismiss = { showSettings = false },
                 onUnpair = { showSettings = false; onUnpair() },
                 onReconnect = { showSettings = false; vm.refreshConnection() },
+                onPairAnother = { showSettings = false; onPairAnother() },
             )
         }
         if (showAllProjects) {
@@ -256,6 +266,22 @@ fun ChatListScreen(
                 projects = ui.projects,
                 onDismiss = { showAllProjects = false },
                 onProject = { onOpenProject(it.id) },
+            )
+        }
+        actionsTarget?.let { target ->
+            ChatActionsSheet(
+                chat = target,
+                onDismiss = { actionsTarget = null },
+                onTogglePin = { vm.togglePin(target) },
+                onRename = { renameTarget = target },
+                onToggleArchive = { vm.toggleArchive(target) },
+            )
+        }
+        renameTarget?.let { target ->
+            RenameChatDialog(
+                initialTitle = target.title,
+                onDismiss = { renameTarget = null },
+                onSave = { vm.rename(target, it) },
             )
         }
     }
