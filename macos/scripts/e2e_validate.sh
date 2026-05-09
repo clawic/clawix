@@ -17,12 +17,12 @@ echo "=== Clawix Desktop - E2E Validation ==="
 mkdir -p "$ARTIFACT_DIR"
 
 echo ""
-echo "[1/7] Build"
+echo "[1/8] Build"
 bash "$SCRIPT_DIR/build_app.sh" || { echo "Build failed"; exit 1; }
 pass "App bundle present"
 
 echo ""
-echo "[2/7] Localization resources"
+echo "[2/8] Localization resources"
 python3 - "$PROJECT_DIR" <<'PY' || { fail "Localization resources incomplete"; exit 1; }
 import json
 import plistlib
@@ -130,7 +130,30 @@ PY
 pass "Localization catalog complete"
 
 echo ""
-echo "[3/7] Speech recognition language"
+echo ""
+echo "[3/8] Runtime surface regression guards"
+if grep -R -nE 'Fusionar|No trabajar en un proyecto|Preguntar siempre|Sitio web' "$PROJECT_DIR/Sources/Clawix" --include='*.swift' >/tmp/clawix_e2e_spanish_ui.out; then
+    fail "Spanish text leaked into Swift UI source: $(head -n 1 /tmp/clawix_e2e_spanish_ui.out)"
+else
+    pass "Swift UI source has no accidental Spanish labels"
+fi
+
+if grep -Fq 'func openBrowser(initialURL: URL = URL(string: "about:blank")!)' "$PROJECT_DIR/Sources/Clawix/AppState.swift" \
+   && grep -Fq 'func newBrowserTab(url: URL = URL(string: "about:blank")!)' "$PROJECT_DIR/Sources/Clawix/AppState.swift"; then
+    pass "Browser opens blank tabs by default"
+else
+    fail "Browser default tab still performs external navigation"
+fi
+
+if grep -Fq 'readyFromDaemon' "$PROJECT_DIR/Sources/Clawix/ClawJS/ClawJSServiceStatus.swift" \
+   && grep -Fq 'daemonUnavailable' "$PROJECT_DIR/Sources/Clawix/ClawJS/ClawJSServiceStatus.swift"; then
+    pass "ClawJS daemon-owned service states are explicit"
+else
+    fail "ClawJS daemon-owned service states are missing"
+fi
+
+echo ""
+echo "[4/8] Speech recognition language"
 if grep -Fq 'Locale(identifier: "es-ES")' "$PROJECT_DIR/Sources/Clawix/VoiceRecorder.swift"; then
     fail "Voice transcription is hard-coded to a single locale"
 else
@@ -146,7 +169,7 @@ for expected in "en-US" "es-ES" "fr-FR" "de-DE" "it-IT" "pt-BR" "ja-JP" "zh-CN" 
 done
 
 echo ""
-echo "[4/7] Launch"
+echo "[5/8] Launch"
 pkill -x Clawix >/dev/null 2>&1 || true
 launchctl setenv CLAWIX_DISABLE_BACKEND 1 >/dev/null 2>&1 || true
 open -n "$APP_BUNDLE"
@@ -161,7 +184,7 @@ else
 fi
 
 echo ""
-echo "[5/7] Window discovery"
+echo "[6/8] Window discovery"
 WINDOW_INFO="$(swift - "$APP_PID" <<'SWIFT'
 import CoreGraphics
 import Foundation
@@ -207,7 +230,7 @@ else
 fi
 
 echo ""
-echo "[6/7] Window screenshot"
+echo "[7/8] Window screenshot"
 rm -f "$SCREENSHOT" /tmp/clawix_e2e_capture.out
 if /usr/sbin/screencapture -x -l "$WINDOW_ID" "$SCREENSHOT" >/tmp/clawix_e2e_capture.out 2>&1 && [[ -s "$SCREENSHOT" ]]; then
     pass "Window screenshot captured"
@@ -230,7 +253,7 @@ else
 fi
 
 echo ""
-echo "[7/7] Public hygiene"
+echo "[8/8] Public hygiene"
 bash "$SCRIPT_DIR/public_hygiene_check.sh" || {
     fail "Public hygiene scan failed"
     exit 1
