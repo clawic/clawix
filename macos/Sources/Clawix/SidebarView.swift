@@ -2196,7 +2196,6 @@ struct RecentChatRow: View, Equatable {
             && lhs.chat.title == rhs.chat.title
             && lhs.chat.hasActiveTurn == rhs.chat.hasActiveTurn
             && lhs.chat.hasUnreadCompletion == rhs.chat.hasUnreadCompletion
-            && lhs.chat.lastTurnInterrupted == rhs.chat.lastTurnInterrupted
             && lhs.chat.createdAt == rhs.chat.createdAt
             && lhs.isSelected == rhs.isSelected
             && lhs.indent == rhs.indent
@@ -2210,7 +2209,7 @@ struct RecentChatRow: View, Equatable {
     @ViewBuilder
     private var trailingStatusView: some View {
         // Archive layered on top of the default trailing content
-        // (spinner / dot / age label) and fades in/out via opacity so
+        // (spinner / unread dot / age label) and fades in/out via opacity so
         // it reads as a smooth crossfade on hover instead of a hard
         // view swap. Hit testing follows visibility so the button only
         // catches the cursor while the row is hovered.
@@ -2223,17 +2222,6 @@ struct RecentChatRow: View, Equatable {
                         .frame(width: 14, height: 14)
                         .frame(width: 28)
                         .transition(.opacity.combined(with: .scale(scale: 0.7)))
-                } else if !archivedRow && chat.lastTurnInterrupted {
-                    // Amber dot. Distinct from the unread-completion blue
-                    // dot so the user can tell at a glance "the assistant
-                    // didn't finish" from "the assistant finished while I
-                    // was elsewhere".
-                    Circle()
-                        .fill(Color(red: 1.0, green: 0.78, blue: 0.30))
-                        .frame(width: 7, height: 7)
-                        .frame(width: 28, height: 14)
-                        .help(L10n.t("Last turn interrupted"))
-                        .transition(.scale(scale: 0.0, anchor: .center).combined(with: .opacity))
                 } else if !archivedRow && chat.hasUnreadCompletion {
                     Circle()
                         .fill(Palette.pastelBlue)
@@ -2254,7 +2242,6 @@ struct RecentChatRow: View, Equatable {
             .opacity(archiveVisible ? 0 : 1)
             .animation(.smooth(duration: 0.55, extraBounce: 0), value: chat.hasActiveTurn)
             .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.hasUnreadCompletion)
-            .animation(.spring(response: 0.55, dampingFraction: 0.62), value: chat.lastTurnInterrupted)
 
             if !archivedRow && archiveVisible {
                 // Render only while visible so hidden row actions do not
@@ -2526,7 +2513,6 @@ private struct ProjectAccordion: View, Equatable {
                 || l.title != r.title
                 || l.hasActiveTurn != r.hasActiveTurn
                 || l.hasUnreadCompletion != r.hasUnreadCompletion
-                || l.lastTurnInterrupted != r.lastTurnInterrupted
                 || l.createdAt != r.createdAt {
                 return false
             }
@@ -3689,7 +3675,6 @@ private struct PinnedReorderableList: View, Equatable {
                 || l.title != r.title
                 || l.hasActiveTurn != r.hasActiveTurn
                 || l.hasUnreadCompletion != r.hasUnreadCompletion
-                || l.lastTurnInterrupted != r.lastTurnInterrupted
                 || l.createdAt != r.createdAt {
                 return false
             }
