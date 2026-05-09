@@ -81,6 +81,8 @@ fun ChatDetailScreen(
 
     var fileViewerPath by remember { mutableStateOf<String?>(null) }
     var imageViewerPath by remember { mutableStateOf<String?>(null) }
+    var showActions by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
 
     // Auto-scroll to bottom when streaming
     LaunchedEffect(ui.messages.size, ui.isStreaming) {
@@ -177,7 +179,10 @@ fun ChatDetailScreen(
                 Modifier
                     .size(AppLayout.topBarPillHeight)
                     .glassCircle()
-                    .clickable { Haptics.tap(view); /* TODO menu */ },
+                    .clickable {
+                        Haptics.tap(view)
+                        if (ui.chat != null) showActions = true
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 LucideIcon(LucideGlyph.Edit2, size = 20.dp, tint = Palette.textPrimary)
@@ -211,6 +216,30 @@ fun ChatDetailScreen(
         }
         imageViewerPath?.let { path ->
             ImageViewerDialog(container = container, path = path, onDismiss = { imageViewerPath = null })
+        }
+        if (showActions) {
+            ui.chat?.let { chat ->
+                com.example.clawix.android.chatlist.ChatActionsSheet(
+                    chat = chat,
+                    onDismiss = { showActions = false },
+                    onTogglePin = { vm.togglePin() },
+                    onRename = { showRename = true },
+                    onToggleArchive = {
+                        val wasArchived = chat.isArchived
+                        vm.toggleArchive()
+                        if (!wasArchived) onBack()
+                    },
+                )
+            }
+        }
+        if (showRename) {
+            ui.chat?.let { chat ->
+                com.example.clawix.android.chatlist.RenameChatDialog(
+                    initialTitle = chat.title,
+                    onDismiss = { showRename = false },
+                    onSave = { vm.rename(it) },
+                )
+            }
         }
     }
 }

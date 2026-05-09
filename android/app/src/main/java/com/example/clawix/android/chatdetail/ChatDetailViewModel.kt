@@ -63,4 +63,22 @@ class ChatDetailViewModel(
     fun stop() {
         container.bridgeClient.interruptTurn(chatId)
     }
+
+    fun togglePin() {
+        val chat = container.bridgeStore.state.value.chats.firstOrNull { it.id == chatId } ?: return
+        if (chat.isPinned) container.bridgeClient.unpinChat(chatId)
+        else container.bridgeClient.pinChat(chatId)
+    }
+
+    fun toggleArchive() {
+        val chat = container.bridgeStore.state.value.chats.firstOrNull { it.id == chatId } ?: return
+        if (chat.isArchived) container.bridgeClient.unarchiveChat(chatId)
+        else container.bridgeClient.archiveChat(chatId)
+    }
+
+    fun rename(newTitle: String) {
+        val trimmed = newTitle.trim()
+        if (trimmed.isEmpty()) return
+        container.bridgeClient.renameChat(chatId, trimmed)
+    }
 }
