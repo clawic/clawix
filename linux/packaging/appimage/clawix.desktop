@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Clawix
+Comment=Companion desktop client for the Clawix family of apps
+Exec=clawix %U
+Icon=clawix
+Terminal=false
+Type=Application
+Categories=Utility;Network;Office;
+StartupWMClass=Clawix
+Keywords=AI;assistant;clawix;

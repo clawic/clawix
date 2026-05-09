@@ -1,0 +1,2 @@
+REPLACE: drop a 256x256 PNG here named `clawix.png` before running build_release_appimage.sh.
+The release script aborts if the icon is missing.
