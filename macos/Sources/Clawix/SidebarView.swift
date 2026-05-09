@@ -12,6 +12,68 @@ import UniformTypeIdentifiers
 /// requires for SwiftUI's `.onDrop(of:)` filter to recognise it.
 private let clawixProjectURLScheme = "clawix-project"
 
+/// Custom URL scheme used by tool rows in the sidebar's "Tools" section
+/// when reordering. Same rationale as `clawixProjectURLScheme`: registering
+/// the drag as `public.url` keeps it invisible to chat / project drop
+/// targets, which match different schemes.
+private let clawixToolURLScheme = "clawix-tool"
+
+/// Catalog of every entry rendered in the sidebar's `Tools` section.
+/// The IDs are stable strings (NOT route descriptions) so the user's
+/// custom order persists even if a route's path changes; new tools added
+/// in future releases simply append at the bottom of the saved order on
+/// first launch.
+fileprivate enum SidebarToolIcon: Equatable {
+    case system(String)
+    case secrets
+}
+
+fileprivate struct SidebarToolEntry: Identifiable, Equatable {
+    let id: String
+    let title: LocalizedStringKey
+    let titleString: String
+    let icon: SidebarToolIcon
+    let route: SidebarRoute
+
+    static func == (lhs: SidebarToolEntry, rhs: SidebarToolEntry) -> Bool {
+        lhs.id == rhs.id
+            && lhs.titleString == rhs.titleString
+            && lhs.icon == rhs.icon
+            && lhs.route == rhs.route
+    }
+}
+
+fileprivate enum SidebarToolsCatalog {
+    static let entries: [SidebarToolEntry] = [
+        SidebarToolEntry(id: "tasks",     title: "Tasks",     titleString: "Tasks",
+                         icon: .system("checkmark.circle"),          route: .databaseCollection("tasks")),
+        SidebarToolEntry(id: "goals",     title: "Goals",     titleString: "Goals",
+                         icon: .system("flag"),                      route: .databaseCollection("goals")),
+        SidebarToolEntry(id: "notes",     title: "Notes",     titleString: "Notes",
+                         icon: .system("note.text"),                 route: .databaseCollection("notes")),
+        SidebarToolEntry(id: "projects",  title: "Projects",  titleString: "Projects",
+                         icon: .system("square.stack.3d.up"),        route: .databaseCollection("projects")),
+        SidebarToolEntry(id: "secrets",   title: "Secrets",   titleString: "Secrets",
+                         icon: .secrets,                             route: .secretsHome),
+        SidebarToolEntry(id: "memory",    title: "Memory",    titleString: "Memory",
+                         icon: .system("brain"),                     route: .memoryHome),
+        SidebarToolEntry(id: "database",  title: "Database",  titleString: "Database",
+                         icon: .system("cylinder.split.1x2"),        route: .databaseHome),
+        SidebarToolEntry(id: "photos",    title: "Photos",    titleString: "Photos",
+                         icon: .system("photo.on.rectangle.angled"), route: .drivePhotos),
+        SidebarToolEntry(id: "documents", title: "Documents", titleString: "Documents",
+                         icon: .system("doc.text"),                  route: .driveDocuments),
+        SidebarToolEntry(id: "recent",    title: "Recent",    titleString: "Recent",
+                         icon: .system("clock.arrow.circlepath"),    route: .driveRecent),
+        SidebarToolEntry(id: "drive",     title: "Drive",     titleString: "Drive",
+                         icon: .system("internaldrive"),             route: .driveAdmin),
+    ]
+
+    static func entry(byId id: String) -> SidebarToolEntry? {
+        entries.first { $0.id == id }
+    }
+}
+
 /// Top-level layout of the chat list. Either group chats under their
 /// project (with a "Chats" bucket for the projectless ones) or render a
 /// single flat chronological list.
@@ -115,6 +177,23 @@ struct SidebarView: View {
     @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
     @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarArchivedExpanded", default: false)
     @State private var toolsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarToolsExpanded", default: true)
+    /// Master switch for the Apps surface. Mirrors the Settings toggle
+    /// that lives on `SidebarPrefs.store`; defaults on for new users.
+    @AppStorage("AppsFeatureEnabled", store: SidebarPrefs.store)
+    private var appsFeatureEnabled: Bool = true
+    /// Custom order of tools, persisted as a comma-separated list of
+    /// catalog ids. Empty string means "use the catalog's natural order".
+    /// New tools added to the catalog in future releases append at the
+    /// end of the saved order on first launch.
+    @AppStorage("SidebarToolsOrder", store: SidebarPrefs.store)
+    private var toolsOrderRaw: String = ""
+    /// Hidden tools, persisted as a comma-separated list of catalog ids.
+    /// Toggled from the section's filter popup; tools in this set are
+    /// dropped from the rendered list but stay in the saved order so
+    /// re-enabling them restores their previous position.
+    @AppStorage("SidebarToolsHidden", store: SidebarPrefs.store)
+    private var toolsHiddenRaw: String = ""
+    @State private var toolsFilterMenuOpen: Bool = false
     @State private var chronoLimit: Int = 100
 
     private var viewMode: SidebarViewMode {
@@ -294,6 +373,14 @@ struct SidebarView: View {
                 toolsSection
             }
 
+            // Apps is its own peer of Tools: the user explicitly asked
+            // for it OUT of Tools, even though both are top-level
+            // entry points to non-chat surfaces. Gated by the
+            // `AppsFeatureEnabled` toggle in Settings → Apps.
+            if appsFeatureEnabled {
+                AppsSidebarSection(appsStore: .shared)
+            }
+
             if !snapshot.pinned.isEmpty {
                 let pinnedSources = pinnedFilterSources(from: snapshot.pinned)
                 let visiblePinned = applyPinnedFilter(to: snapshot.pinned)
@@ -319,7 +406,7 @@ struct SidebarView: View {
                     // no list, so we add the spacer manually to match the
                     // bottom gap every other closable section shows.
                     if visiblePinned.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) {
+                        LazyVStack(alignment: .leading, spacing: 0) {
                             Text("No pinned chats match the filter")
                                 .font(BodyFont.system(size: 13.5, wght: 500))
                                 .foregroundColor(Color(white: 0.40))
@@ -404,7 +491,7 @@ struct SidebarView: View {
                     ) {
                         let currentChatId = selectedChatId
                         VStack(alignment: .leading, spacing: 0) {
-                            VStack(alignment: .leading, spacing: 0) {
+                            LazyVStack(alignment: .leading, spacing: 0) {
                                 ForEach(projectlessChats) { chat in
                                     RecentChatRow(
                                         chat: chat,
@@ -590,6 +677,76 @@ struct SidebarView: View {
         }
     }
 
+    /// Tools the user has hidden via the filter popup. Stored as a
+    /// comma-separated string of catalog ids inside
+    /// `toolsHiddenRaw` so the existing `SidebarPrefs` UserDefaults
+    /// suite holds it without a custom codec.
+    private var toolsHidden: Set<String> {
+        let parts = toolsHiddenRaw.split(separator: ",").map(String.init)
+        return Set(parts.filter { !$0.isEmpty })
+    }
+
+    private func setToolsHidden(_ next: Set<String>) {
+        toolsHiddenRaw = next.sorted().joined(separator: ",")
+    }
+
+    /// Catalog entries laid out in the user's custom order. New tools
+    /// (i.e. entries in the catalog whose id isn't in the saved order)
+    /// append at the end in catalog order, so adding a new tool in a
+    /// future release lands it predictably without erasing the user's
+    /// arrangement of the existing ones.
+    private var orderedTools: [SidebarToolEntry] {
+        let saved = toolsOrderRaw.split(separator: ",").map(String.init)
+        var seen: Set<String> = []
+        var result: [SidebarToolEntry] = []
+        for id in saved {
+            guard !seen.contains(id), let entry = SidebarToolsCatalog.entry(byId: id) else { continue }
+            result.append(entry)
+            seen.insert(id)
+        }
+        for entry in SidebarToolsCatalog.entries where !seen.contains(entry.id) {
+            result.append(entry)
+        }
+        return result
+    }
+
+    private var visibleTools: [SidebarToolEntry] {
+        let hidden = toolsHidden
+        return orderedTools.filter { !hidden.contains($0.id) }
+    }
+
+    /// Persists a reorder of the tools list. `beforeId == nil` drops the
+    /// tool at the end. Operates on the FULL ordered list (including
+    /// hidden tools) so toggling a tool's visibility doesn't lose its
+    /// position in the user's arrangement.
+    fileprivate func reorderTools(toolId: String, beforeId: String?) {
+        var current = orderedTools.map(\.id)
+        current.removeAll { $0 == toolId }
+        if let beforeId, let idx = current.firstIndex(of: beforeId) {
+            current.insert(toolId, at: idx)
+        } else {
+            current.append(toolId)
+        }
+        toolsOrderRaw = current.joined(separator: ",")
+    }
+
+    /// Funnel button anchoring `ToolsFilterPopup`. Mirrors
+    /// `pinnedFilterButton` so both filter affordances share the same
+    /// visual language and animation.
+    private var toolsFilterButton: some View {
+        HeaderHoverIcon(tooltip: "Show or hide tools") {
+            toolsFilterMenuOpen.toggle()
+        } label: { color in
+            OrganizeFunnelIcon()
+                .foregroundColor(color)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .anchorPreference(key: ToolsFilterAnchorKey.self, value: .bounds) { anchor in
+            toolsFilterMenuOpen ? anchor : nil
+        }
+    }
+
     /// Funnel button anchoring `PinnedFilterPopup`. Same icon shape as
     /// the `Organize` button on Projects/All chats so the two filter
     /// affordances share the same visual language across the sidebar.
@@ -678,8 +835,8 @@ struct SidebarView: View {
                 : SidebarRowMetrics.recentChats(count: appState.archivedChats.count)
                     + SidebarRowMetrics.sectionEdgePadding
         ) {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            LazyVStack(alignment: .leading, spacing: 0) {
                     if appState.archivedChats.isEmpty {
                         HStack(spacing: 6) {
                             if appState.archivedLoading {
@@ -714,91 +871,53 @@ struct SidebarView: View {
         }
     }
 
-    /// Tools section: top-level entries to feature areas other than chat
-    /// (currently only the secrets vault). The header is collapsible like
-    /// the rest of the sidebar; the entry inside routes to `.secretsHome`
-    /// and shows a status dot reflecting the vault lock state.
+    /// Tools section: top-level entries to feature areas other than chat.
+    /// The header is collapsible like the rest of the sidebar and exposes
+    /// a per-tool visibility filter on hover (mirrors the Pinned section's
+    /// funnel button). Rows are drag-reorderable; their order persists via
+    /// `toolsOrderRaw`.
     @ViewBuilder
     private var toolsSection: some View {
-        sectionHeader(
-            "Tools",
+        BasicSectionHeader(
+            title: "Tools",
             expanded: $toolsExpanded,
-            leadingIcon: AnyView(WrenchIcon(size: 16.5, lineWidth: 1.28))
+            leadingIcon: AnyView(WrenchIcon(size: 16.5, lineWidth: 1.28)),
+            trailingIcon: SidebarToolsCatalog.entries.count >= 2 ? AnyView(toolsFilterButton) : nil,
+            trailingForceVisible: toolsFilterMenuOpen
         )
         SidebarAccordion(
             expanded: toolsExpanded,
-            // 5 productivity rows + secrets + database admin = 7 rows of 28pt
-            targetHeight: 7 * 28 + SidebarRowMetrics.sectionEdgePadding
+            targetHeight: visibleTools.isEmpty
+                ? 26 + SidebarRowMetrics.sectionEdgePadding
+                : CGFloat(visibleTools.count) * ToolsReorderableList.rowSlotHeight
+                    + SidebarRowMetrics.sectionEdgePadding
         ) {
+            toolsAccordionContent
+        }
+    }
+
+    @ViewBuilder
+    private var toolsAccordionContent: some View {
+        let visible = visibleTools
+        if visible.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 2) {
-                    DatabaseToolRow(
-                        title: "Tasks",
-                        systemIcon: "checkmark.circle",
-                        route: .databaseCollection("tasks"),
-                        isSelected: appState.currentRoute == .databaseCollection("tasks")
-                    ) { appState.currentRoute = .databaseCollection("tasks") }
-                    DatabaseToolRow(
-                        title: "Goals",
-                        systemIcon: "flag",
-                        route: .databaseCollection("goals"),
-                        isSelected: appState.currentRoute == .databaseCollection("goals")
-                    ) { appState.currentRoute = .databaseCollection("goals") }
-                    DatabaseToolRow(
-                        title: "Notes",
-                        systemIcon: "note.text",
-                        route: .databaseCollection("notes"),
-                        isSelected: appState.currentRoute == .databaseCollection("notes")
-                    ) { appState.currentRoute = .databaseCollection("notes") }
-                    DatabaseToolRow(
-                        title: "Projects",
-                        systemIcon: "square.stack.3d.up",
-                        route: .databaseCollection("projects"),
-                        isSelected: appState.currentRoute == .databaseCollection("projects")
-                    ) { appState.currentRoute = .databaseCollection("projects") }
-                    SecretsToolRow(isSelected: appState.currentRoute == .secretsHome) {
-                        appState.currentRoute = .secretsHome
-                    }
-                    DatabaseToolRow(
-                        title: "Memory",
-                        systemIcon: "brain",
-                        route: .memoryHome,
-                        isSelected: appState.currentRoute == .memoryHome
-                    ) { appState.currentRoute = .memoryHome }
-                    DatabaseToolRow(
-                        title: "Database",
-                        systemIcon: "cylinder.split.1x2",
-                        route: .databaseHome,
-                        isSelected: appState.currentRoute == .databaseHome
-                    ) { appState.currentRoute = .databaseHome }
-                    DatabaseToolRow(
-                        title: "Photos",
-                        systemIcon: "photo.on.rectangle.angled",
-                        route: .drivePhotos,
-                        isSelected: appState.currentRoute == .drivePhotos
-                    ) { appState.currentRoute = .drivePhotos }
-                    DatabaseToolRow(
-                        title: "Documents",
-                        systemIcon: "doc.text",
-                        route: .driveDocuments,
-                        isSelected: appState.currentRoute == .driveDocuments
-                    ) { appState.currentRoute = .driveDocuments }
-                    DatabaseToolRow(
-                        title: "Recent",
-                        systemIcon: "clock.arrow.circlepath",
-                        route: .driveRecent,
-                        isSelected: appState.currentRoute == .driveRecent
-                    ) { appState.currentRoute = .driveRecent }
-                    DatabaseToolRow(
-                        title: "Drive",
-                        systemIcon: "internaldrive",
-                        route: .driveAdmin,
-                        isSelected: appState.currentRoute == .driveAdmin
-                    ) { appState.currentRoute = .driveAdmin }
-                }
-                .padding(.leading, 8)
+                Text("No tools visible")
+                    .font(BodyFont.system(size: 13.5, wght: 500))
+                    .foregroundColor(Color(white: 0.40))
+                    .padding(.leading, 34)
+                    .padding(.vertical, 4)
                 Color.clear.frame(height: SidebarRowMetrics.sectionEdgePadding)
             }
+        } else {
+            ToolsReorderableList(
+                tools: visible,
+                selectedRoute: appState.currentRoute,
+                onSelect: { route in appState.navigate(to: route) },
+                onReorder: { toolId, beforeId in
+                    reorderTools(toolId: toolId, beforeId: beforeId)
+                }
+            )
+            .padding(.leading, 8)
         }
     }
 
@@ -824,6 +943,10 @@ struct SidebarView: View {
                                   customShapeStroke: 1.65,
                                   route: .search,
                                   shortcut: "⌘G")
+                    SidebarButton(title: "Skills",
+                                  icon: "wand.and.stars",
+                                  route: .skills,
+                                  shortcut: "⌘⇧K")
                     /*
                     SidebarButton(title: "Plugins",
                                   icon: "circle.grid.2x2",
@@ -1029,6 +1152,40 @@ struct SidebarView: View {
             }
             .allowsHitTesting(pinnedFilterMenuOpen)
             .animation(MenuStyle.openAnimation, value: pinnedFilterMenuOpen)
+        }
+        .overlayPreferenceValue(ToolsFilterAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if toolsFilterMenuOpen, let anchor {
+                    let buttonFrame = proxy[anchor]
+                    let popupWidth: CGFloat = 244
+                    let allIds = SidebarToolsCatalog.entries.map(\.id)
+                    ToolsFilterPopup(
+                        isPresented: $toolsFilterMenuOpen,
+                        entries: orderedTools,
+                        hidden: toolsHidden,
+                        toggle: { id in
+                            var next = toolsHidden
+                            if next.contains(id) {
+                                next.remove(id)
+                            } else {
+                                next.insert(id)
+                            }
+                            setToolsHidden(next)
+                        },
+                        showAll: { setToolsHidden([]) },
+                        hideAll: { setToolsHidden(Set(allIds)) }
+                    )
+                    .frame(width: popupWidth)
+                    .anchoredPopupPlacement(
+                        buttonFrame: buttonFrame,
+                        proxy: proxy,
+                        horizontal: .trailing()
+                    )
+                    .transition(.softNudge(y: 4))
+                }
+            }
+            .allowsHitTesting(toolsFilterMenuOpen)
+            .animation(MenuStyle.openAnimation, value: toolsFilterMenuOpen)
         }
     }
 
@@ -2142,7 +2299,7 @@ private func makeRecentChatCallbacks(appState: AppState, chat: Chat, archived: B
     let chatId = chat.id
     let chatSnapshot = chat
     return RecentChatRowCallbacks(
-        onSelect: { appState.currentRoute = .chat(chatId) },
+        onSelect: { appState.navigate(to: .chat(chatId)) },
         onArchive: { appState.archiveChat(chatId: chatId) },
         onUnarchive: { appState.unarchiveChat(chatId: chatId) },
         onTogglePin: { appState.togglePin(chatId: chatId) },
@@ -2266,11 +2423,12 @@ struct RecentChatRow: View, Equatable {
 
     var body: some View {
         RenderProbe.tick("RecentChatRow")
+        let title = chat.title.isEmpty
+            ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
+            : chat.title
         return HStack(spacing: 10) {
             leadingIconView
-            Text(chat.title.isEmpty
-                 ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
-                 : chat.title)
+            Text(verbatim: title)
                 .font(BodyFont.system(size: 13.5, wght: 500))
                 .foregroundColor(isSelected ? .white : Color(white: 0.82))
                 .lineLimit(1)
@@ -4765,4 +4923,548 @@ private func projectId(from url: URL) -> UUID? {
     }
     let trimmed = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     return UUID(uuidString: trimmed)
+}
+
+// MARK: - Tools section: filter popup + reorderable list
+
+private struct ToolsFilterAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+/// Popup that mirrors `PinnedFilterPopup` but operates on the static tools
+/// catalog rather than per-project buckets. Each row toggles a tool's
+/// presence in the sidebar list; the footer offers `Show all` / `Hide all`
+/// shortcuts so the user can recover from "I hid everything" in one click.
+private struct ToolsFilterPopup: View {
+    @Binding var isPresented: Bool
+    let entries: [SidebarToolEntry]
+    let hidden: Set<String>
+    let toggle: (String) -> Void
+    let showAll: () -> Void
+    let hideAll: () -> Void
+
+    private static let maxListHeight: CGFloat = 280
+    private static let inlineThreshold = 8
+
+    private var allHidden: Bool {
+        !entries.isEmpty && hidden.count >= entries.count
+    }
+
+    private var hasFooter: Bool { !hidden.isEmpty || !allHidden }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader("Show or hide tools")
+            list
+            if hasFooter {
+                MenuStandardDivider()
+                    .padding(.vertical, 5)
+                if !hidden.isEmpty {
+                    ToolsFilterBulkRow(icon: "eye", label: "Show all") {
+                        showAll()
+                    }
+                }
+                if !allHidden {
+                    ToolsFilterBulkRow(icon: "eye.slash", label: "Hide all") {
+                        hideAll()
+                    }
+                }
+            }
+        }
+        .padding(.vertical, MenuStyle.menuVerticalPadding)
+        .menuStandardBackground()
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
+    }
+
+    @ViewBuilder
+    private var list: some View {
+        if entries.count > Self.inlineThreshold {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(entries) { entry in
+                        ToolsFilterRow(
+                            entry: entry,
+                            isActive: !hidden.contains(entry.id),
+                            action: { toggle(entry.id) }
+                        )
+                    }
+                }
+            }
+            .frame(maxHeight: Self.maxListHeight)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(entries) { entry in
+                    ToolsFilterRow(
+                        entry: entry,
+                        isActive: !hidden.contains(entry.id),
+                        action: { toggle(entry.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct ToolsFilterRow: View {
+    let entry: SidebarToolEntry
+    let isActive: Bool
+    let action: () -> Void
+
+    @State private var hovered = false
+    @EnvironmentObject private var vault: VaultManager
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                iconView
+                    .frame(width: 18, alignment: .center)
+                Text(entry.title)
+                    .font(BodyFont.system(size: 12))
+                    .foregroundColor(isActive ? MenuStyle.rowText : MenuStyle.rowSubtle)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer(minLength: 8)
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .font(BodyFont.system(size: 9.5, weight: .semibold))
+                        .foregroundColor(MenuStyle.rowText)
+                }
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        switch entry.icon {
+        case .system(let name):
+            Image(systemName: name)
+                .font(BodyFont.system(size: 11))
+                .foregroundColor(isActive ? MenuStyle.rowIcon : MenuStyle.rowSubtle)
+        case .secrets:
+            SecretsIcon(
+                size: 11.5,
+                lineWidth: 1.28,
+                color: isActive ? MenuStyle.rowIcon : MenuStyle.rowSubtle,
+                isLocked: vault.state == .locked || vault.state == .unlocking
+            )
+        }
+    }
+}
+
+private struct ToolsFilterBulkRow: View {
+    let icon: String
+    let label: LocalizedStringKey
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: MenuStyle.rowIconLabelSpacing) {
+                Image(systemName: icon)
+                    .font(BodyFont.system(size: 11))
+                    .foregroundColor(MenuStyle.rowIcon)
+                    .frame(width: 18, alignment: .center)
+                Text(label)
+                    .font(BodyFont.system(size: 12))
+                    .foregroundColor(MenuStyle.rowText)
+                Spacer(minLength: 8)
+            }
+            .padding(.horizontal, MenuStyle.rowHorizontalPadding)
+            .padding(.vertical, MenuStyle.rowVerticalPadding)
+            .contentShape(Rectangle())
+            .background(MenuRowHover(active: hovered))
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+    }
+}
+
+// MARK: - Tools reorderable list
+
+/// Bubbles each tool row's frame (window coords, top-left origin) up so
+/// `ToolsReorderableList` can compute the cursor's offset within the row
+/// at drag start (mirrors `ProjectRowFrameKey`, keyed by tool id rather
+/// than UUID).
+private struct ToolRowFrameKey: PreferenceKey {
+    static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
+private final class ToolRowFrameStore: ObservableObject {
+    var byId: [String: CGRect] = [:]
+}
+
+/// File-private constant outside the type so it stays consistent with
+/// the existing `projectReorderMoveAnimation`.
+private let toolReorderMoveAnimation: Animation = .easeInOut(duration: 0.20)
+
+/// Drag-reorderable list for the Tools section. Mirrors the structure of
+/// `ProjectReorderableList`: gap placeholders between rows, a borderless
+/// `DragChipPanel` that follows the cursor while AppKit's drag preview
+/// renders a 1pt transparent stand-in (no settle fade on drop). External
+/// drags (chats, projects) are rejected because the drop delegate only
+/// accepts the `clawix-tool` URL scheme.
+private struct ToolsReorderableList: View {
+    let tools: [SidebarToolEntry]
+    let selectedRoute: SidebarRoute
+    let onSelect: (SidebarRoute) -> Void
+    let onReorder: (String, String?) -> Void
+
+    @State private var draggingId: String? = nil
+    @State private var targetIndex: Int? = nil
+    @State private var mouseUpMonitor: Any? = nil
+    @State private var dragChipPanel: DragChipPanel? = nil
+    @StateObject private var rowFrames = ToolRowFrameStore()
+    @StateObject private var scrollBox = EnclosingScrollViewBox()
+    @State private var autoScroller: PinnedDragAutoScroller? = nil
+
+    /// Slot height used both as the row height and the gap height during
+    /// drag. The two cancel out so the list height stays constant while
+    /// the gap migrates between slots. Matches the natural intrinsic
+    /// height of `DatabaseToolRow` / `SecretsToolRow` (~28 pt: 6 pt
+    /// vertical padding + ~16 pt content).
+    static let rowSlotHeight: CGFloat = 28
+    private let baseSpacing: CGFloat = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(tools.enumerated()), id: \.element.id) { (i, entry) in
+                slotZone(entry: entry, slot: i)
+            }
+            trailingSlotZone
+        }
+        .background(EnclosingScrollViewLocator(box: scrollBox).allowsHitTesting(false))
+        .onAppear { installMouseUpMonitor() }
+        .onDisappear {
+            cleanupDragChip()
+            removeMouseUpMonitor()
+        }
+        .onPreferenceChange(ToolRowFrameKey.self) { rowFrames.byId = $0 }
+        .onChange(of: tools.map(\.id)) { _, _ in
+            // Defensive sweep: any external mutation to the tools array
+            // (filter toggle, reorder) clears lingering drag state so a
+            // stale gap can never persist.
+            guard draggingId != nil || targetIndex != nil else {
+                cleanupDragChip()
+                return
+            }
+            cleanupDragChip()
+            targetIndex = nil
+            draggingId = nil
+        }
+    }
+
+    @ViewBuilder
+    private func slotZone(entry: SidebarToolEntry, slot: Int) -> some View {
+        let isDragging = draggingId == entry.id
+        VStack(alignment: .leading, spacing: 0) {
+            gapPlaceholder(at: slot)
+                .contentShape(Rectangle())
+                .onDrop(of: [.url], delegate: ToolRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { id, chosen in performReorder(toolId: id, beforeIndex: chosen) }
+                ))
+            ToolDisplayRow(
+                entry: entry,
+                isSelected: selectedRoute == entry.route,
+                onTap: { onSelect(entry.route) }
+            )
+            .background(WindowDragInhibitor())
+            .opacity(isDragging ? 0 : 1)
+            .frame(height: isDragging ? 0 : nil, alignment: .top)
+            .clipped()
+            .allowsHitTesting(!isDragging)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: ToolRowFrameKey.self,
+                        value: [entry.id: proxy.frame(in: .global)]
+                    )
+                }
+            )
+            .onDrag {
+                handleDragStart(entry: entry)
+                let provider = NSItemProvider()
+                let urlString = "\(clawixToolURLScheme)://\(entry.id)"
+                provider.registerDataRepresentation(
+                    forTypeIdentifier: UTType.url.identifier,
+                    visibility: .ownProcess
+                ) { completion in
+                    completion(urlString.data(using: .utf8), nil)
+                    return nil
+                }
+                provider.suggestedName = entry.titleString
+                return provider
+            } preview: {
+                Color.clear.frame(width: 1, height: 1)
+            }
+            .onDrop(of: [.url], delegate: ToolRowDropDelegate(
+                computeSlot: { y in y < Self.rowSlotHeight / 2 ? slot : slot + 1 },
+                onSet: { setTarget(slot: $0) },
+                onPerform: { id, chosen in performReorder(toolId: id, beforeIndex: chosen) }
+            ))
+        }
+    }
+
+    @ViewBuilder
+    private var trailingSlotZone: some View {
+        let slot = tools.count
+        VStack(alignment: .leading, spacing: 0) {
+            gapPlaceholder(at: slot)
+                .contentShape(Rectangle())
+                .onDrop(of: [.url], delegate: ToolRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { id, chosen in performReorder(toolId: id, beforeIndex: chosen) }
+                ))
+            Color.clear
+                .frame(height: SidebarRowMetrics.sectionEdgePadding)
+                .contentShape(Rectangle())
+                .onDrop(of: [.url], delegate: ToolRowDropDelegate(
+                    computeSlot: { _ in slot },
+                    onSet: { setTarget(slot: $0) },
+                    onPerform: { id, chosen in performReorder(toolId: id, beforeIndex: chosen) }
+                ))
+        }
+    }
+
+    @ViewBuilder
+    private func gapPlaceholder(at index: Int) -> some View {
+        let isOpen = targetIndex == index
+        let isFirst = index == 0
+        let isLast = index == tools.count
+        let baseHeight: CGFloat = (isFirst || isLast) ? 0 : baseSpacing
+        Color.clear.frame(height: isOpen ? Self.rowSlotHeight : baseHeight)
+    }
+
+    private func handleDragStart(entry: SidebarToolEntry) {
+        let src = tools.firstIndex(where: { $0.id == entry.id })
+        targetIndex = src
+        draggingId = entry.id
+        let (anchor, width) = grabAnchor(for: entry)
+        dragChipPanel?.close()
+        let chip = ToolDragChipView(
+            entry: entry,
+            width: width,
+            shadowInset: 24
+        )
+        dragChipPanel = DragChipPanel(
+            content: AnyView(chip),
+            grabAnchor: anchor,
+            width: width,
+            fallbackHeight: Self.rowSlotHeight
+        )
+        dragChipPanel?.show()
+        autoScroller?.stop()
+        let scroller = PinnedDragAutoScroller(box: scrollBox)
+        scroller.start()
+        autoScroller = scroller
+    }
+
+    private func grabAnchor(for entry: SidebarToolEntry) -> (CGPoint, CGFloat) {
+        let fallbackWidth: CGFloat = 240
+        guard let rowFrame = rowFrames.byId[entry.id] else {
+            return (CGPoint(x: 30, y: 14), fallbackWidth)
+        }
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow,
+              let contentView = window.contentView
+        else {
+            return (CGPoint(x: 30, y: 14), rowFrame.width)
+        }
+        let cursorScreen = NSEvent.mouseLocation
+        let cursorInWindow = window.convertPoint(fromScreen: cursorScreen)
+        let cursorSwiftUI = CGPoint(
+            x: cursorInWindow.x,
+            y: contentView.frame.height - cursorInWindow.y
+        )
+        let dx = cursorSwiftUI.x - rowFrame.origin.x
+        let dy = cursorSwiftUI.y - rowFrame.origin.y
+        return (CGPoint(x: dx, y: dy), rowFrame.width)
+    }
+
+    private func cleanupDragChip() {
+        dragChipPanel?.close()
+        dragChipPanel = nil
+        autoScroller?.stop()
+        autoScroller = nil
+    }
+
+    private func setTarget(slot: Int) {
+        guard draggingId != nil else { return }
+        guard targetIndex != slot else { return }
+        withAnimation(toolReorderMoveAnimation) {
+            targetIndex = slot
+        }
+    }
+
+    private func performReorder(toolId: String, beforeIndex: Int) {
+        cleanupDragChip()
+        // Skip a no-op drop onto the source's own slot (either the gap
+        // immediately above or the slot immediately below it). Otherwise
+        // we'd churn the persisted order and re-fire the onChange watcher
+        // on every drop that didn't actually move anything.
+        if let src = tools.firstIndex(where: { $0.id == toolId }),
+           (beforeIndex == src || beforeIndex == src + 1) {
+            targetIndex = nil
+            draggingId = nil
+            return
+        }
+        let beforeId: String? = (beforeIndex < tools.count) ? tools[beforeIndex].id : nil
+        onReorder(toolId, beforeId)
+        targetIndex = nil
+        draggingId = nil
+    }
+
+    private func installMouseUpMonitor() {
+        guard mouseUpMonitor == nil else { return }
+        mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseUp]) { event in
+            DispatchQueue.main.async {
+                cleanupDragChip()
+                guard draggingId != nil || targetIndex != nil else { return }
+                targetIndex = nil
+                draggingId = nil
+            }
+            return event
+        }
+    }
+
+    private func removeMouseUpMonitor() {
+        if let m = mouseUpMonitor {
+            NSEvent.removeMonitor(m)
+            mouseUpMonitor = nil
+        }
+    }
+}
+
+/// Drop delegate scoped to the `clawix-tool://<id>` URL scheme so chat /
+/// project drags never highlight tool slot zones.
+private struct ToolRowDropDelegate: DropDelegate {
+    let computeSlot: (CGFloat) -> Int
+    let onSet: (Int) -> Void
+    let onPerform: (String, Int) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.url])
+    }
+
+    func dropEntered(info: DropInfo) {
+        onSet(computeSlot(info.location.y))
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        onSet(computeSlot(info.location.y))
+        return DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let slot = computeSlot(info.location.y)
+        guard let provider = info.itemProviders(for: [.url]).first else { return false }
+        provider.loadDataRepresentation(forTypeIdentifier: UTType.url.identifier) { data, _ in
+            guard let data,
+                  let s = String(data: data, encoding: .utf8),
+                  let url = URL(string: s),
+                  url.scheme == clawixToolURLScheme
+            else { return }
+            // The id sits in the URL host slot. Tool ids in the catalog
+            // are already lowercase so macOS's hostname canonicalisation
+            // is a no-op.
+            let id = url.host ?? url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            guard !id.isEmpty else { return }
+            DispatchQueue.main.async {
+                onPerform(id, slot)
+            }
+        }
+        return true
+    }
+}
+
+/// Display-only tool row used inside `ToolsReorderableList`. Wraps
+/// `SecretsToolRow` for the secrets entry and `DatabaseToolRow` for
+/// everything else, so the visual treatment stays identical to the
+/// pre-reorder design.
+private struct ToolDisplayRow: View {
+    let entry: SidebarToolEntry
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        switch entry.icon {
+        case .secrets:
+            SecretsToolRow(isSelected: isSelected, onTap: onTap)
+        case .system(let name):
+            DatabaseToolRow(
+                title: entry.titleString,
+                systemIcon: name,
+                route: entry.route,
+                isSelected: isSelected,
+                onTap: onTap
+            )
+        }
+    }
+}
+
+/// Visual content of the tool drag chip. Matches the look of the row
+/// underneath (icon + title) inside the same translucent capsule used by
+/// `DragChipView` / `ProjectDragChipView` so chat, project and tool
+/// chips composite identically over the desktop.
+private struct ToolDragChipView: View {
+    let entry: SidebarToolEntry
+    let width: CGFloat
+    let shadowInset: CGFloat
+    @EnvironmentObject private var vault: VaultManager
+
+    var body: some View {
+        HStack(spacing: 11) {
+            iconView
+                .frame(width: 15, height: 15)
+            Text(entry.title)
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(Color(white: 0.82))
+                .lineLimit(1)
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .frame(height: ToolsReorderableList.rowSlotHeight)
+        .background(
+            ZStack {
+                VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
+                Color.white.opacity(0.035)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        )
+        .padding(.trailing, 3)
+        .frame(width: width, alignment: .leading)
+        .shadow(color: .black.opacity(0.22), radius: 9, x: 0, y: 4)
+        .padding(shadowInset)
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        switch entry.icon {
+        case .system(let name):
+            Image(systemName: name)
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundColor(Color(white: 0.82))
+        case .secrets:
+            SecretsIcon(
+                size: 13.8,
+                lineWidth: 1.28,
+                color: Color(white: 0.82),
+                isLocked: vault.state == .locked || vault.state == .unlocking
+            )
+        }
+    }
 }
