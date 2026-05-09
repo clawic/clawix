@@ -423,7 +423,11 @@ final class ClawJSServiceManager: ObservableObject {
     }
 
     static var applicationSupportRoot: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let env = ProcessInfo.processInfo.environment
+        if env["CLAWIX_DUMMY_MODE"] == "1", let root = env["CLAWIX_CLAWJS_ROOT"], !root.isEmpty {
+            return URL(fileURLWithPath: root, isDirectory: true)
+        }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Clawix/clawjs", isDirectory: true)
     }
 
