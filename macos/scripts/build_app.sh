@@ -32,6 +32,8 @@ SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/_emit_version.sh"
 
+python3 "$SCRIPT_DIR/compile_xcstrings.py"
+
 echo "==> Building Swift package (release)…"
 cd "$PROJECT_DIR"
 swift build -c release 2>&1
