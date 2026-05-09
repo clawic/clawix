@@ -195,11 +195,26 @@ final class BridgeStore {
     @ObservationIgnored
     private var persistTask: Task<Void, Never>?
 
+    @ObservationIgnored
+    private var snapshotCacheKey: String?
+
     init() {}
 
     @MainActor
     func attach(client: BridgeClient) {
         self.client = client
+    }
+
+    @MainActor
+    func useSnapshotCacheKey(_ cacheKey: String?) {
+        guard snapshotCacheKey != cacheKey else { return }
+        snapshotCacheKey = cacheKey
+        chats = []
+        messagesByChat = [:]
+        openChatId = nil
+        hasMoreByChat = [:]
+        loadingOlderByChat = [:]
+        oldestKnownIdByChat = [:]
     }
 
     @MainActor
@@ -1032,7 +1047,7 @@ final class BridgeStore {
     @MainActor
     func loadCachedSnapshot() {
         guard chats.isEmpty, messagesByChat.isEmpty else { return }
-        guard let payload = SnapshotCache.load() else { return }
+        guard let payload = SnapshotCache.load(cacheKey: snapshotCacheKey) else { return }
         chats = payload.chats
         messagesByChat = payload.messagesByChat
     }
@@ -1050,8 +1065,9 @@ final class BridgeStore {
             guard !Task.isCancelled, let self else { return }
             let chatsSnap = self.chats
             let messagesSnap = self.messagesByChat
+            let cacheKey = self.snapshotCacheKey
             Task.detached(priority: .background) {
-                SnapshotCache.save(chats: chatsSnap, messages: messagesSnap)
+                SnapshotCache.save(chats: chatsSnap, messages: messagesSnap, cacheKey: cacheKey)
             }
         }
     }

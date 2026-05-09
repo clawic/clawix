@@ -30,6 +30,15 @@ struct Credentials: Codable, Equatable {
         }
         return urls
     }
+
+    var snapshotCacheKey: String {
+        [
+            macName ?? "",
+            host.trimmingCharacters(in: .whitespacesAndNewlines),
+            "\(port)",
+            tailscaleHost?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        ].joined(separator: "|")
+    }
 }
 
 final class CredentialStore {

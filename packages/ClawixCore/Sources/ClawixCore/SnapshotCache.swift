@@ -20,10 +20,12 @@ public enum SnapshotCache {
     /// instead of leaking into the consumers because nothing outside of
     /// this cache should be reading from / writing to it.
     public struct Payload: Codable {
+        public let cacheKey: String?
         public let chats: [WireChat]
         public let messagesByChat: [String: [WireMessage]]
 
-        public init(chats: [WireChat], messagesByChat: [String: [WireMessage]]) {
+        public init(cacheKey: String? = nil, chats: [WireChat], messagesByChat: [String: [WireMessage]]) {
+            self.cacheKey = cacheKey
             self.chats = chats
             self.messagesByChat = messagesByChat
         }
@@ -61,19 +63,25 @@ public enum SnapshotCache {
     /// Load the persisted snapshot if any. Silent on every failure path
     /// (corrupt JSON, missing file, schema mismatch): the bridge will
     /// re-deliver the truth shortly anyway.
-    public static func load() -> Payload? {
+    public static func load(cacheKey: String? = nil) -> Payload? {
         guard let url = fileURL,
               FileManager.default.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url) else {
             return nil
         }
-        return try? BridgeCoder.decoder.decode(Payload.self, from: data)
+        guard let payload = try? BridgeCoder.decoder.decode(Payload.self, from: data) else {
+            return nil
+        }
+        if let cacheKey, payload.cacheKey != cacheKey {
+            return nil
+        }
+        return payload
     }
 
     /// Persist a clipped snapshot. Safe to call from a background
     /// queue; writes through a temp file so a mid-write process kill
     /// does not leave a partial JSON in place.
-    public static func save(chats: [WireChat], messages: [String: [WireMessage]]) {
+    public static func save(chats: [WireChat], messages: [String: [WireMessage]], cacheKey: String? = nil) {
         guard let url = fileURL else { return }
         let topChats = chats
             .filter { !$0.isArchived }
@@ -89,7 +97,7 @@ public enum SnapshotCache {
         for (chatId, list) in messages where topIds.contains(chatId) {
             clipped[chatId] = Array(list.suffix(maxMessagesPerChat))
         }
-        let payload = Payload(chats: topChats, messagesByChat: clipped)
+        let payload = Payload(cacheKey: cacheKey, chats: topChats, messagesByChat: clipped)
         guard let data = try? BridgeCoder.encoder.encode(payload) else { return }
         let tmp = url.appendingPathExtension("tmp")
         do {

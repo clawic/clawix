@@ -64,6 +64,8 @@ struct ClawixApp: App {
 
     private func bootstrap() {
         #if DEBUG
+        installTestCredentialsIfNeeded()
+        installTestSnapshotIfNeeded()
         // Designer preview mode: launch with `CLAWIX_MOCK=1` (passed via
         // simctl `--launch-args ... --setenv CLAWIX_MOCK 1`) to bypass
         // the QR pairing flow and render the chat list / detail
@@ -87,6 +89,9 @@ struct ClawixApp: App {
         // populated chat list / detail screen instead of a blank one
         // while we negotiate WebSocket + auth. The bridge later
         // overwrites this with the canonical state.
+        if let creds {
+            store.useSnapshotCacheKey(creds.snapshotCacheKey)
+        }
         store.loadCachedSnapshot()
         if client == nil {
             let c = BridgeClient(store: store)
@@ -99,6 +104,7 @@ struct ClawixApp: App {
     }
 
     private func connect(with creds: Credentials) {
+        store.useSnapshotCacheKey(creds.snapshotCacheKey)
         client?.connect(creds)
     }
 
@@ -115,6 +121,37 @@ struct ClawixApp: App {
         store.openChatId = nil
         creds = nil
     }
+
+    #if DEBUG
+    private func installTestCredentialsIfNeeded() {
+        let env = ProcessInfo.processInfo.environment
+        guard let host = env["CLAWIX_TEST_CREDENTIALS_HOST"],
+              let portRaw = env["CLAWIX_TEST_CREDENTIALS_PORT"],
+              let port = Int(portRaw) else { return }
+        creds = Credentials(
+            host: host,
+            port: port,
+            token: env["CLAWIX_TEST_CREDENTIALS_TOKEN"] ?? "test-token",
+            macName: env["CLAWIX_TEST_CREDENTIALS_MAC"],
+            tailscaleHost: nil
+        )
+    }
+
+    private func installTestSnapshotIfNeeded() {
+        let env = ProcessInfo.processInfo.environment
+        guard let title = env["CLAWIX_TEST_SNAPSHOT_TITLE"] else { return }
+        let cacheKey = env["CLAWIX_TEST_SNAPSHOT_KEY"]
+        let cwd = env["CLAWIX_TEST_SNAPSHOT_CWD"] ?? "/tmp/\(title)"
+        let chat = WireChat(
+            id: "test-snapshot-chat",
+            title: title,
+            createdAt: Date(),
+            lastMessageAt: Date(),
+            cwd: cwd
+        )
+        SnapshotCache.save(chats: [chat], messages: [:], cacheKey: cacheKey)
+    }
+    #endif
 }
 
 // One NavigationStack at the root rules them all. Both `chat` and

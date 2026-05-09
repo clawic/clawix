@@ -30,4 +30,20 @@ final class ClawixUITests: XCTestCase {
         attachmentButton?.tap()
         XCTAssertFalse(app.alerts.element.waitForExistence(timeout: 1))
     }
+
+    func testSnapshotCacheDoesNotBleedAcrossBridgeIdentities() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["CLAWIX_DISABLE_AUTOFOCUS"] = "1"
+        app.launchEnvironment["CLAWIX_TEST_CREDENTIALS_HOST"] = "127.0.0.1"
+        app.launchEnvironment["CLAWIX_TEST_CREDENTIALS_PORT"] = "9"
+        app.launchEnvironment["CLAWIX_TEST_CREDENTIALS_MAC"] = "Real Mac"
+        app.launchEnvironment["CLAWIX_TEST_SNAPSHOT_TITLE"] = "Leaked cached chat"
+        app.launchEnvironment["CLAWIX_TEST_SNAPSHOT_CWD"] = "/tmp/leaked-cached-project"
+        app.launchEnvironment["CLAWIX_TEST_SNAPSHOT_KEY"] = "Other Mac|127.0.0.1|9|"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Clawix"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts["Leaked cached chat"].waitForExistence(timeout: 1))
+        XCTAssertFalse(app.staticTexts["leaked-cached-project"].waitForExistence(timeout: 1))
+    }
 }
