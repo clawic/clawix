@@ -44,7 +44,22 @@ import Foundation
 /// Codex emits `account/rateLimits/updated`. iPhone clients ignore the
 /// new types. All additions are additive frames; v4 peers decode v5
 /// frames as `unknownType` and fall through to their default branch.
-public let bridgeSchemaVersion: Int = 5
+///
+/// v6 (2026-05): Skills. Surfaces the unified Skills library
+/// (kind: personality | procedure | snippet | role, agentskills.io
+/// compatible; central source of truth at `~/.clawjs/skills/`). The
+/// daemon owns the SKILL.md filesystem and the SQLite index; clients
+/// browse, search, view, edit, activate/deactivate per scope, and
+/// trigger sync to external agent dirs (Codex CLI, HermesAgent,
+/// Cursor) — the daemon materializes these as symlinks. Wire payloads
+/// keep frontmatter as opaque JSON strings so the bridge does not need
+/// a Swift mirror for every new frontmatter field ClawJS adds.
+/// Push frame `skillsActiveChanged` lets cross-device clients refresh
+/// their resolved active set without polling. iPhone clients only need
+/// the read frames (`skillsList`, `skillsView`, results); desktop
+/// uses the full surface. v5 peers receiving v6 frames fall through
+/// the decode `default` branch and surface a "needs update" toast.
+public let bridgeSchemaVersion: Int = 6
 
 /// Default count of trailing messages the server returns on
 /// `openChat(limit:)` when the client opts into pagination. 60 covers
@@ -295,7 +310,71 @@ public enum BridgeBody: Equatable, Sendable {
     /// so clients can apply both through the same code path.
     case rateLimitsUpdated(snapshot: WireRateLimitSnapshot?, byLimitId: [String: WireRateLimitSnapshot])
 
+    // MARK: - v6 outbound (client -> daemon)
+    /// List skills the daemon has, optionally pre-filtered. The daemon
+    /// scans `~/.clawjs/skills/` (single source of truth) and any
+    /// configured `external_dirs` (read-only discovery). Reply is
+    /// `skillsListResult`.
+    case skillsList(filter: WireSkillListFilter?)
+    /// Pull the full SKILL.md (frontmatter + body) for a single slug.
+    /// Reply is `skillsViewResult`.
+    case skillsView(slug: String)
+    /// Create a new SKILL.md in the central library. Reply carries the
+    /// resolved slug (slugifier may dedupe) plus a `skillsListResult`
+    /// push for every connected client so catalogs refresh.
+    case skillsCreate(input: WireSkillCreateInput)
+    case skillsCreateResult(slug: String, error: String?)
+    /// Patch an existing skill. Daemon writes the SKILL.md atomically
+    /// (tmp + rename) and emits `skillsActiveChanged` if the change
+    /// affected an active scope.
+    case skillsUpdate(slug: String, patch: WireSkillUpdate)
+    case skillsUpdateResult(slug: String, error: String?)
+    /// Remove a skill. The daemon deletes the directory, drops index
+    /// rows, removes any sync-target symlinks pointing at it, and
+    /// strips it from every active scope so chats with it on don't
+    /// carry a ghost reference.
+    case skillsRemove(slug: String)
+    case skillsRemoveResult(slug: String, error: String?)
+    /// Toggle a skill on at the given scope. The daemon updates
+    /// `~/.clawjs/state.json` and emits `skillsActiveChanged`. Param
+    /// overrides for parametrizable templates ride along as JSON.
+    case skillsActivate(slug: String, scopeTag: String, paramsJSON: String?)
+    case skillsDeactivate(slug: String, scopeTag: String)
+    /// Trigger a re-sync to external agent dirs. `targets` is a list
+    /// of registered target ids (e.g. ["codex", "hermes"]); empty
+    /// means "all". The daemon walks each skill, materializes
+    /// `metadata.clawjs.syncTo` into symlinks (or copies if mode is
+    /// copy), and streams progress via `skillsSyncProgress`.
+    case skillsSync(targets: [String])
+    case skillsSyncProgress(target: String, processed: Int, total: Int, error: String?)
+    /// Trigger an external-dir scan + auto-import. `dirs` is empty for
+    /// "use the configured external_dirs". The daemon copies any new
+    /// SKILL.md found into central + replaces the original with a
+    /// symlink back, and emits `skillsListResult` afterward.
+    case skillsImport(dirs: [String])
+
+    // MARK: - v6 inbound (daemon -> client)
+    case skillsListResult(skills: [WireSkillSummary])
+    case skillsViewResult(spec: WireSkillSpec?, error: String?)
+    /// Daemon push: the resolved active set for `scopeTag` changed.
+    /// Clients re-query `skillsList(filter: nil)` (or the slimmer
+    /// per-scope endpoint when it exists) and re-render their chip
+    /// bars / active toggles. Sent on activate/deactivate, on
+    /// successful create/update/remove that touched an active scope,
+    /// and on filesystem-watch events from `~/.clawjs/skills/`.
+    case skillsActiveChanged(scopeTag: String)
+
     fileprivate var typeTag: String {
+        // Split into legacy (v1-v5) and v6 helpers so the Swift type-checker
+        // doesn't time out on a single ~56-case switch ("compiler is unable
+        // to type-check this expression in reasonable time"). Each helper
+        // covers a disjoint set of cases; the dispatcher tries v6 first
+        // and falls through.
+        if let tag = v6TypeTag { return tag }
+        return legacyTypeTag
+    }
+
+    private var legacyTypeTag: String {
         switch self {
         case .auth:               return "auth"
         case .listChats:          return "listChats"
@@ -336,6 +415,35 @@ public enum BridgeBody: Equatable, Sendable {
         case .requestRateLimits:  return "requestRateLimits"
         case .rateLimitsSnapshot: return "rateLimitsSnapshot"
         case .rateLimitsUpdated:  return "rateLimitsUpdated"
+        default:
+            // Unreachable: every legacy (v1-v5) case is enumerated above
+            // and v6 cases are handled by `v6TypeTag` before this branch.
+            // If a new case is added without updating either helper this
+            // will trip in tests, which is the desired behaviour.
+            preconditionFailure("BridgeBody.legacyTypeTag missing case for \(self)")
+        }
+    }
+
+    private var v6TypeTag: String? {
+        switch self {
+        case .skillsList:           return "skillsList"
+        case .skillsView:           return "skillsView"
+        case .skillsCreate:         return "skillsCreate"
+        case .skillsCreateResult:   return "skillsCreateResult"
+        case .skillsUpdate:         return "skillsUpdate"
+        case .skillsUpdateResult:   return "skillsUpdateResult"
+        case .skillsRemove:         return "skillsRemove"
+        case .skillsRemoveResult:   return "skillsRemoveResult"
+        case .skillsActivate:       return "skillsActivate"
+        case .skillsDeactivate:     return "skillsDeactivate"
+        case .skillsSync:           return "skillsSync"
+        case .skillsSyncProgress:   return "skillsSyncProgress"
+        case .skillsImport:         return "skillsImport"
+        case .skillsListResult:     return "skillsListResult"
+        case .skillsViewResult:     return "skillsViewResult"
+        case .skillsActiveChanged:  return "skillsActiveChanged"
+        default:
+            return nil
         }
     }
 
@@ -356,10 +464,22 @@ public enum BridgeBody: Equatable, Sendable {
         case limit, beforeMessageId, hasMore
         case state, chatCount
         case rateLimits, rateLimitsByLimitId
+        // v6 (Skills)
+        case slug, kind, scopeKind, scopeTag, tag, query, tags
+        case filter, skills, spec, input, patch
+        case dirs, targets, target, processed, total
+        case paramsJSON
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: FlatKeys.self)
+        // v6 cases handled in a dedicated helper to keep this switch
+        // small enough for the Swift type-checker.
+        if try encodeV6Payload(into: &c) { return }
+        try encodeLegacyPayload(into: &c)
+    }
+
+    private func encodeLegacyPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws {
         switch self {
         case .auth(let token, let deviceName, let clientKind):
             try c.encode(token, forKey: .token)
@@ -477,11 +597,75 @@ public enum BridgeBody: Equatable, Sendable {
         case .rateLimitsUpdated(let snapshot, let byLimitId):
             try c.encodeIfPresent(snapshot, forKey: .rateLimits)
             try c.encode(byLimitId, forKey: .rateLimitsByLimitId)
+        default:
+            // v6 cases are handled in encodeV6Payload, called before
+            // this method by the encodePayload dispatcher. Unknown
+            // legacy cases would be a programming error caught by the
+            // round-trip tests.
+            break
         }
+    }
+
+    private func encodeV6Payload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {
+        switch self {
+        case .skillsList(let filter):
+            try c.encodeIfPresent(filter, forKey: .filter)
+        case .skillsView(let slug):
+            try c.encode(slug, forKey: .slug)
+        case .skillsCreate(let input):
+            try c.encode(input, forKey: .input)
+        case .skillsCreateResult(let slug, let error):
+            try c.encode(slug, forKey: .slug)
+            try c.encodeIfPresent(error, forKey: .error)
+        case .skillsUpdate(let slug, let patch):
+            try c.encode(slug, forKey: .slug)
+            try c.encode(patch, forKey: .patch)
+        case .skillsUpdateResult(let slug, let error):
+            try c.encode(slug, forKey: .slug)
+            try c.encodeIfPresent(error, forKey: .error)
+        case .skillsRemove(let slug):
+            try c.encode(slug, forKey: .slug)
+        case .skillsRemoveResult(let slug, let error):
+            try c.encode(slug, forKey: .slug)
+            try c.encodeIfPresent(error, forKey: .error)
+        case .skillsActivate(let slug, let scopeTag, let paramsJSON):
+            try c.encode(slug, forKey: .slug)
+            try c.encode(scopeTag, forKey: .scopeTag)
+            try c.encodeIfPresent(paramsJSON, forKey: .paramsJSON)
+        case .skillsDeactivate(let slug, let scopeTag):
+            try c.encode(slug, forKey: .slug)
+            try c.encode(scopeTag, forKey: .scopeTag)
+        case .skillsSync(let targets):
+            try c.encode(targets, forKey: .targets)
+        case .skillsSyncProgress(let target, let processed, let total, let error):
+            try c.encode(target, forKey: .target)
+            try c.encode(processed, forKey: .processed)
+            try c.encode(total, forKey: .total)
+            try c.encodeIfPresent(error, forKey: .error)
+        case .skillsImport(let dirs):
+            try c.encode(dirs, forKey: .dirs)
+        case .skillsListResult(let skills):
+            try c.encode(skills, forKey: .skills)
+        case .skillsViewResult(let spec, let error):
+            try c.encodeIfPresent(spec, forKey: .spec)
+            try c.encodeIfPresent(error, forKey: .error)
+        case .skillsActiveChanged(let scopeTag):
+            try c.encode(scopeTag, forKey: .scopeTag)
+        default:
+            return false
+        }
+        return true
     }
 
     fileprivate static func decode(type: String, from decoder: Decoder) throws -> BridgeBody {
         let c = try decoder.container(keyedBy: FlatKeys.self)
+        // v6 cases handled in a dedicated helper to keep this switch
+        // small enough for the Swift type-checker.
+        if let body = try decodeV6(type: type, from: c) { return body }
+        return try decodeLegacy(type: type, from: c)
+    }
+
+    private static func decodeLegacy(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody {
         switch type {
         case "auth":
             return .auth(
@@ -648,6 +832,72 @@ public enum BridgeBody: Equatable, Sendable {
             throw BridgeDecodingError.unknownType(type)
         }
     }
+
+    private static func decodeV6(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
+        switch type {
+        case "skillsList":
+            return .skillsList(filter: try c.decodeIfPresent(WireSkillListFilter.self, forKey: .filter))
+        case "skillsView":
+            return .skillsView(slug: try c.decode(String.self, forKey: .slug))
+        case "skillsCreate":
+            return .skillsCreate(input: try c.decode(WireSkillCreateInput.self, forKey: .input))
+        case "skillsCreateResult":
+            return .skillsCreateResult(
+                slug: try c.decode(String.self, forKey: .slug),
+                error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
+        case "skillsUpdate":
+            return .skillsUpdate(
+                slug: try c.decode(String.self, forKey: .slug),
+                patch: try c.decode(WireSkillUpdate.self, forKey: .patch)
+            )
+        case "skillsUpdateResult":
+            return .skillsUpdateResult(
+                slug: try c.decode(String.self, forKey: .slug),
+                error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
+        case "skillsRemove":
+            return .skillsRemove(slug: try c.decode(String.self, forKey: .slug))
+        case "skillsRemoveResult":
+            return .skillsRemoveResult(
+                slug: try c.decode(String.self, forKey: .slug),
+                error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
+        case "skillsActivate":
+            return .skillsActivate(
+                slug: try c.decode(String.self, forKey: .slug),
+                scopeTag: try c.decode(String.self, forKey: .scopeTag),
+                paramsJSON: try c.decodeIfPresent(String.self, forKey: .paramsJSON)
+            )
+        case "skillsDeactivate":
+            return .skillsDeactivate(
+                slug: try c.decode(String.self, forKey: .slug),
+                scopeTag: try c.decode(String.self, forKey: .scopeTag)
+            )
+        case "skillsSync":
+            return .skillsSync(targets: try c.decodeIfPresent([String].self, forKey: .targets) ?? [])
+        case "skillsSyncProgress":
+            return .skillsSyncProgress(
+                target: try c.decode(String.self, forKey: .target),
+                processed: try c.decode(Int.self, forKey: .processed),
+                total: try c.decode(Int.self, forKey: .total),
+                error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
+        case "skillsImport":
+            return .skillsImport(dirs: try c.decodeIfPresent([String].self, forKey: .dirs) ?? [])
+        case "skillsListResult":
+            return .skillsListResult(skills: try c.decode([WireSkillSummary].self, forKey: .skills))
+        case "skillsViewResult":
+            return .skillsViewResult(
+                spec: try c.decodeIfPresent(WireSkillSpec.self, forKey: .spec),
+                error: try c.decodeIfPresent(String.self, forKey: .error)
+            )
+        case "skillsActiveChanged":
+            return .skillsActiveChanged(scopeTag: try c.decode(String.self, forKey: .scopeTag))
+        default:
+            return nil
+        }
+    }
 }
 
 public enum BridgeDecodingError: Error, Equatable {
@@ -768,5 +1018,169 @@ public enum BridgeCoder {
 
     public static func decode(_ data: Data) throws -> BridgeFrame {
         try decoder.decode(BridgeFrame.self, from: data)
+    }
+}
+
+// MARK: - v6 wire types (Skills)
+
+/// Filter for `skillsList`. All fields optional; nil filter means
+/// "give me everything". Encoded as a small object so callers don't
+/// have to send a sentinel.
+public struct WireSkillListFilter: Codable, Equatable, Sendable {
+    public let kind: String?
+    public let scopeKind: String?
+    public let tag: String?
+    public let query: String?
+
+    public init(kind: String? = nil, scopeKind: String? = nil, tag: String? = nil, query: String? = nil) {
+        self.kind = kind
+        self.scopeKind = scopeKind
+        self.tag = tag
+        self.query = query
+    }
+}
+
+/// Catalog row. Carried by `skillsListResult`. Lightweight on purpose
+/// (no body, no full frontmatter) so the daemon can ship a 100-skill
+/// catalog without bloating the frame.
+public struct WireSkillSummary: Codable, Equatable, Sendable {
+    public let slug: String
+    public let name: String
+    public let description: String
+    public let kind: String          // "personality" | "procedure" | "snippet" | "role"
+    public let tags: [String]
+    public let scopeKind: String     // "global" | "project" | "tag" | "chat"
+    public let builtin: Bool
+    public let importedFrom: String?
+    public let isInstance: Bool
+    public let isTemplate: Bool
+
+    public init(
+        slug: String,
+        name: String,
+        description: String,
+        kind: String,
+        tags: [String],
+        scopeKind: String,
+        builtin: Bool,
+        importedFrom: String?,
+        isInstance: Bool,
+        isTemplate: Bool
+    ) {
+        self.slug = slug
+        self.name = name
+        self.description = description
+        self.kind = kind
+        self.tags = tags
+        self.scopeKind = scopeKind
+        self.builtin = builtin
+        self.importedFrom = importedFrom
+        self.isInstance = isInstance
+        self.isTemplate = isTemplate
+    }
+}
+
+/// Full SKILL.md view. `frontmatterJSON` carries `metadata.clawjs.*`
+/// as a compact JSON string so the bridge doesn't need a Swift mirror
+/// for every new frontmatter field ClawJS adds. The macOS UI parses
+/// this into typed model on receipt; iPhone v1 doesn't unpack it
+/// (read-only catalog), v2 will when it adds editing.
+public struct WireSkillSpec: Codable, Equatable, Sendable {
+    public let slug: String
+    public let name: String
+    public let description: String
+    public let version: String
+    public let kind: String
+    public let body: String
+    public let tags: [String]
+    public let frontmatterJSON: String
+    public let builtin: Bool
+    public let importedFrom: String?
+    public let author: String?
+    public let updatedAt: String?
+
+    public init(
+        slug: String,
+        name: String,
+        description: String,
+        version: String,
+        kind: String,
+        body: String,
+        tags: [String],
+        frontmatterJSON: String,
+        builtin: Bool,
+        importedFrom: String?,
+        author: String?,
+        updatedAt: String?
+    ) {
+        self.slug = slug
+        self.name = name
+        self.description = description
+        self.version = version
+        self.kind = kind
+        self.body = body
+        self.tags = tags
+        self.frontmatterJSON = frontmatterJSON
+        self.builtin = builtin
+        self.importedFrom = importedFrom
+        self.author = author
+        self.updatedAt = updatedAt
+    }
+}
+
+/// Payload for `skillsCreate`. Same fields the SKILL.md frontmatter
+/// requires (name + description + kind) plus the body and any
+/// vendor-extension JSON. The daemon slugifies + dedupes; the client
+/// gets the resolved slug back via `skillsCreateResult`.
+public struct WireSkillCreateInput: Codable, Equatable, Sendable {
+    public let slug: String?         // optional; daemon slugifies from name when nil
+    public let name: String
+    public let description: String
+    public let kind: String
+    public let body: String
+    public let tags: [String]
+    public let frontmatterJSON: String?
+
+    public init(
+        slug: String? = nil,
+        name: String,
+        description: String,
+        kind: String,
+        body: String,
+        tags: [String] = [],
+        frontmatterJSON: String? = nil
+    ) {
+        self.slug = slug
+        self.name = name
+        self.description = description
+        self.kind = kind
+        self.body = body
+        self.tags = tags
+        self.frontmatterJSON = frontmatterJSON
+    }
+}
+
+/// Payload for `skillsUpdate`. All fields optional; only provided keys
+/// get patched. The daemon writes the SKILL.md atomically (tmp +
+/// rename) so partial reads never see a half-written file.
+public struct WireSkillUpdate: Codable, Equatable, Sendable {
+    public let name: String?
+    public let description: String?
+    public let body: String?
+    public let tags: [String]?
+    public let frontmatterJSON: String?
+
+    public init(
+        name: String? = nil,
+        description: String? = nil,
+        body: String? = nil,
+        tags: [String]? = nil,
+        frontmatterJSON: String? = nil
+    ) {
+        self.name = name
+        self.description = description
+        self.body = body
+        self.tags = tags
+        self.frontmatterJSON = frontmatterJSON
     }
 }

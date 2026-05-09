@@ -172,7 +172,15 @@ public enum BridgeIntent {
              .pairingPayload, .projectsSnapshot, .fileSnapshot,
              .transcriptionResult, .audioSnapshot,
              .generatedImageSnapshot, .bridgeState,
-             .rateLimitsSnapshot, .rateLimitsUpdated:
+             .rateLimitsSnapshot, .rateLimitsUpdated,
+             .skillsList, .skillsView, .skillsCreate,
+             .skillsCreateResult, .skillsUpdate,
+             .skillsUpdateResult, .skillsRemove,
+             .skillsRemoveResult, .skillsActivate,
+             .skillsDeactivate, .skillsSync,
+             .skillsSyncProgress, .skillsImport,
+             .skillsListResult, .skillsViewResult,
+             .skillsActiveChanged:
             // Either already handled (auth) or server-only.
             break
         }
