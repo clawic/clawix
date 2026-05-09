@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Clawix.App.Views.RecoveryPhraseSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Recovery phrase"
+    PrimaryButtonText="Done"
+    DefaultButton="Primary">
+  <StackPanel Spacing="12">
+    <TextBlock Text="Write these 24 words on paper and store them somewhere safe. They are the only way to recover your vault." TextWrapping="Wrap" Opacity="0.7" />
+    <Border Background="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}" CornerRadius="6" Padding="12">
+      <TextBlock x:Name="PhraseText" FontFamily="Cascadia Mono" TextWrapping="Wrap" />
+    </Border>
+  </StackPanel>
+</ContentDialog>
