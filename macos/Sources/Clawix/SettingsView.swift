@@ -7,9 +7,11 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     // case appearance  // hidden temporarily
     case configuration
     case personalization
+    case skills
     case dictation
     case quickAsk
     case localModels
+    case modelProviders
     case mcp
     case machines
     case git
@@ -18,6 +20,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case secrets
     case clawjs
     case telegram
+    case apps
 
     var id: String { rawValue }
 
@@ -27,9 +30,11 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         // case .appearance:       return "Appearance"
         case .configuration:    return "Settings"
         case .personalization:  return "Personalization"
+        case .skills:           return "Skills"
         case .dictation:        return "Voice to Text"
         case .quickAsk:         return "QuickAsk"
         case .localModels:      return "Local models"
+        case .modelProviders:   return "Model Providers"
         case .mcp:              return "MCP servers"
         case .machines:         return "Machines"
         case .git:              return "Git"
@@ -38,6 +43,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .secrets:          return "Secrets"
         case .clawjs:           return "ClawJS"
         case .telegram:         return "Telegram"
+        case .apps:             return "Apps"
         }
     }
 
@@ -47,9 +53,11 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         // case .appearance:       return "circle.lefthalf.filled"
         case .configuration:    return "slider.horizontal.3"
         case .personalization:  return "person.crop.circle"
+        case .skills:           return "wand.and.stars"
         case .dictation:        return "mic.fill"
         case .quickAsk:         return "command"
         case .localModels:      return "cpu"
+        case .modelProviders:   return "layers"
         case .mcp:              return "server.rack"
         case .machines:         return "laptopcomputer"
         case .git:              return "arrow.triangle.branch"
@@ -58,6 +66,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .secrets:          return "lock.shield"
         case .clawjs:           return "shippingbox"
         case .telegram:         return "paperplane.fill"
+        case .apps:             return "square.grid.2x2"
         }
     }
 
@@ -238,9 +247,11 @@ struct SettingsContent: View {
                     // case .appearance:      AppearancePage()
                     case .configuration:   ConfigurationPage()
                     case .personalization: PersonalizationPage()
+                    case .skills:          SkillsSettingsPage()
                     case .dictation:       DictationSettingsPage()
                     case .quickAsk:        QuickAskSettingsPage()
                     case .localModels:     LocalModelsPage()
+                    case .modelProviders:  ProvidersSettingsPage()
                     case .git:             GitPage()
                     case .browserUsage:    BrowserUsagePage()
                     case .usage:           UsagePage()
@@ -249,6 +260,7 @@ struct SettingsContent: View {
                     case .secrets:         SecretsSettingsPage()
                     case .clawjs:          ClawJSSettingsPage()
                     case .telegram:        TelegramSettingsPage()
+                    case .apps:            AppsSettingsPage()
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -2023,7 +2035,7 @@ private struct ReinstallRow: View {
 
 private struct PersonalizationPage: View {
     @EnvironmentObject var flags: FeatureFlags
-    @State private var personality: String = "Pragmatic"
+    @EnvironmentObject var appState: AppState
     @State private var expanded: Bool = false
     @State private var instructions: String = ""
     @State private var savedSnapshot: String = ""
@@ -2033,6 +2045,20 @@ private struct PersonalizationPage: View {
 
     private var isDirty: Bool { instructions != savedSnapshot }
 
+    private func localizedPersonalityLabel(_ personality: Personality) -> String {
+        switch personality {
+        case .friendly: return L10n.t("Friendly")
+        case .pragmatic: return L10n.t("Pragmatic")
+        }
+    }
+
+    private func localizedPersonalityBlurb(_ personality: Personality) -> String {
+        switch personality {
+        case .friendly: return L10n.t("Warm, collaborative, and helpful")
+        case .pragmatic: return L10n.t("Concise, task-focused, and direct")
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PageHeader(title: "Personalization")
@@ -2041,17 +2067,17 @@ private struct PersonalizationPage: View {
                 DropdownRow(
                     title: "Personality",
                     detail: "Choose a default tone for Clawix's responses",
-                    options: [
-                        ("Friendly", L10n.t("Friendly")),
-                        ("Pragmatic", L10n.t("Pragmatic"))
-                    ],
-                    selection: $personality,
-                    descriptionForOption: { key in
-                        switch key {
-                        case "Friendly":  return L10n.t("Warm, collaborative, and helpful")
-                        case "Pragmatic": return L10n.t("Concise, task-focused, and direct")
-                        default:          return nil
+                    options: Personality.allCases.map { ($0.rawValue, localizedPersonalityLabel($0)) },
+                    selection: Binding(
+                        get: { appState.personality.rawValue },
+                        set: { newValue in
+                            if let next = Personality(rawValue: newValue) {
+                                appState.personality = next
+                            }
                         }
+                    ),
+                    descriptionForOption: { key in
+                        Personality(rawValue: key).map { localizedPersonalityBlurb($0) }
                     }
                 )
             }

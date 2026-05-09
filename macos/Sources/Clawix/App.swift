@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ClawixEngine
+import KeyboardShortcuts
 
 let appDisplayName: String = {
     let info = Bundle.main.infoDictionary
@@ -62,6 +63,7 @@ struct ClawixApp: App {
     @StateObject private var vaultManager = VaultManager.shared
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
+    @StateObject private var terminalStore = TerminalSessionStore.shared
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -84,8 +86,25 @@ struct ClawixApp: App {
         // .onAppear) so the panel works the very first time the user
         // hits the global hotkey, even before any window appears.
         QuickAskController.shared.attach(appState: state)
+        // Wire the integrated terminal panel's keyboard shortcuts.
+        // Toggle (Ctrl+`), new tab, close tab, next/prev tab, split
+        // vertical/horizontal. Installed once; the resolver pulls the
+        // current chat id from `state` so the shortcuts only act on the
+        // chat the user is viewing.
+        TerminalShortcutsInstaller.installIfNeeded(
+            store: TerminalSessionStore.shared,
+            resolveChatId: { [weak state] in
+                guard case let .chat(id) = state?.currentRoute else { return nil }
+                return id
+            }
+        )
         _appState = StateObject(wrappedValue: state)
         DictationE2ERunner.runIfRequested()
+        // Background refresher for OAuth provider accounts (Anthropic
+        // Claude.ai, GitHub Copilot). Pauses while the vault is locked;
+        // resumes implicitly because each tick checks the vault state
+        // before calling refresh.
+        TokenRefreshService.shared.start()
         // Dictation hotkey + overlay are wired from
         // `applicationDidFinishLaunching`, NOT here. Calling
         // `addGlobalMonitorForEvents(matching: .flagsChanged)` from
@@ -106,6 +125,7 @@ struct ClawixApp: App {
                 .environmentObject(vaultManager)
                 .environmentObject(databaseManager)
                 .environmentObject(featureFlags)
+                .environmentObject(terminalStore)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until
@@ -426,6 +446,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         NSApp.windows.forEach(saveFrame)
+        // Send SIGHUP to every live integrated-terminal shell so the
+        // children get a chance to flush before the process exits.
+        // macOS reaps any stragglers via SIGKILL once the parent
+        // process is gone, but giving them a clean signal first makes
+        // shells like zsh write `.zsh_history` correctly.
+        TerminalSessionStore.shared.shutdown()
         // SIGTERM every ClawJS sidecar service before the run loop
         // unwinds. macOS reaps stragglers via SIGKILL once the parent
         // process exits, so this synchronous fan-out is enough.
