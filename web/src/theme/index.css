@@ -1,34 +1,77 @@
 @import "tailwindcss";
 
-/* Design tokens espejean macOS app: colores, radii, sombras, fuentes. */
+/* Manrope variable. wght axis 200..800. The app is dark-only. */
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Variable.ttf") format("truetype-variations"),
+       url("/fonts/Manrope-Variable.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: block;
+}
+
+/* Tokens mirror the Mac Palette/MenuStyle (ContentView.swift:1696-1741). */
 @theme {
-  --color-bg: #0c0c0e;
-  --color-bg-elev-1: #131318;
-  --color-bg-elev-2: #1a1a20;
-  --color-bg-elev-3: #232329;
-  --color-fg: #f3f3f5;
-  --color-fg-muted: #a3a3ad;
-  --color-fg-dim: #6c6c78;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-strong: rgba(255, 255, 255, 0.14);
-  --color-accent: #d4d4dc;
-  --color-danger: #ff6464;
-  --color-success: #5dd29c;
-  --color-warning: #f5b95c;
+  --color-bg: #0a0a0a;
+  --color-sidebar: #3e3e3e;
+  --color-card: #242424;
+  --color-card-hover: #2b2b2b;
+  --color-border: #333333;
+  --color-border-subtle: #262626;
+  --color-popup-stroke: rgba(255, 255, 255, 0.10);
+  --color-sel-fill: #474747;
+  --color-fg: #ffffff;
+  --color-fg-secondary: #8c8c8c;
+  --color-fg-tertiary: #616161;
+  --color-pastel-blue: #73a6ff;
 
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-  --radius-2xl: 28px;
+  --color-menu-fill: rgba(34, 34, 34, 0.82);
+  --color-menu-divider: rgba(255, 255, 255, 0.06);
+  --color-menu-row-text: #f0f0f0;
+  --color-menu-row-icon: #dbdbdb;
+  --color-menu-row-subtle: #8c8c8c;
+  --color-menu-header: #808080;
 
-  --shadow-pop: 0 8px 22px rgba(0, 0, 0, 0.32), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 4px 14px rgba(0, 0, 0, 0.18);
-  --shadow-glass: 0 8px 22px rgba(0, 0, 0, 0.30);
+  --color-toast-fill: rgba(29, 29, 29, 0.92);
+  --color-sheet-fill: rgba(26, 26, 26, 0.78);
+  --color-settings-card: #161616;
+  --color-hint-fill: #2e2e2e;
+  --color-hint-stroke: rgba(255, 255, 255, 0.22);
+  --color-card-divider: rgba(255, 255, 255, 0.07);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --color-destructive: #f26b6b;
+  --color-destructive-fill: rgba(242, 107, 107, 0.14);
+
+  --color-banner-ok: rgba(76, 177, 127, 0.18);
+  --color-banner-ok-fg: #7fd0a3;
+  --color-banner-err: rgba(208, 98, 98, 0.18);
+  --color-banner-err-fg: #e58a8a;
+  --color-banner-danger: rgba(228, 142, 77, 0.18);
+  --color-banner-danger-fg: #eaa76d;
+
+  /* Radii: exact values used by the Mac app, with semantic names. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-hint: 7px;
+  --radius-row: 8px;
+  --radius-banner: 9px;
+  --radius-card: 10px;
+  --radius-menu: 12px;
+  --radius-content: 14px;
+
+  --shadow-menu: 0 10px 18px rgba(0, 0, 0, 0.40);
+  --shadow-sheet: 0 12px 22px rgba(0, 0, 0, 0.40);
+  --shadow-toast: 0 8px 18px rgba(0, 0, 0, 0.34);
+  --shadow-hint: 0 3px 8px rgba(0, 0, 0, 0.30);
+
+  --font-sans: "Manrope", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Easings matching the Mac app. */
+  --ease-press: cubic-bezier(0, 0, 0.2, 1);
+  --ease-row: cubic-bezier(0, 0, 0.2, 1);
+  --ease-menu: cubic-bezier(0, 0, 0.2, 1);
+  --ease-card: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html, body, #root { height: 100%; }
@@ -36,7 +79,7 @@ body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "ss02", "cv01";
+  font-variation-settings: "wght" 600;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -44,54 +87,64 @@ body {
 
 * { box-sizing: border-box; }
 
-/* Headings: tighter tracking */
-h1, h2, h3, h4 { letter-spacing: -0.02em; }
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  font-variation-settings: "wght" 800;
+}
 
-/* Thin scrollbar (regla de design taste) */
+/* Invisible scrollbar. */
 .thin-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.10) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.thin-scroll::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
-  background: transparent;
-}
-.thin-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.10);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background 120ms ease;
-}
-.thin-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  background-clip: padding-box;
-}
-.thin-scroll::-webkit-scrollbar-track { background: transparent; }
-.thin-scroll::-webkit-scrollbar-corner { background: transparent; }
-
-/* Hide scrollbars on mobile and inside the chat history (Apple-feel) */
+.thin-scroll::-webkit-scrollbar { display: none; }
 .no-scroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 .no-scroll::-webkit-scrollbar { display: none; }
 
-/* Focus ring for accessibility, keyboard-only */
+/* Keyboard focus ring. */
 :focus-visible {
-  outline: 2px solid rgba(212, 212, 220, 0.55);
+  outline: 2px solid rgba(255, 255, 255, 0.35);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
-/* Selection */
 ::selection {
-  background: rgba(212, 212, 220, 0.28);
+  background: rgba(115, 166, 255, 0.30);
   color: var(--color-fg);
 }
 
-/* Glass pill (regla global del usuario) */
+/* Sidebar backdrop: blur + 26% black overlay, mirroring VisualEffectBlur(.sidebar, .behindWindow). */
+.sidebar-backdrop {
+  background-color: var(--color-sidebar);
+  backdrop-filter: blur(40px) saturate(140%);
+  -webkit-backdrop-filter: blur(40px) saturate(140%);
+}
+
+/* Menu/dropdown backdrop chrome (Mac MenuStyle). */
+.menu-backdrop {
+  background: var(--color-menu-fill);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* Sheet backdrop (Mac SheetChrome). */
+.sheet-backdrop {
+  background: var(--color-sheet-fill);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+}
+
+/* Toast capsule backdrop. */
+.toast-backdrop {
+  background: var(--color-toast-fill);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* Glass pill over wallpaper / media. Still used for floating buttons. */
 .glass-pill {
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
@@ -100,11 +153,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.30);
 }
 
-/* Squircle approximation when figma-squircle isn't applied */
-.squircle-md { border-radius: var(--radius-md); }
-.squircle-lg { border-radius: var(--radius-lg); }
-
-/* Edge fade (regla de design taste): wrappers que apliquen el fade top/bottom */
+/* Edge fade in long vertical lists. */
 .fade-edges {
   position: relative;
 }
@@ -120,14 +169,14 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 }
 .fade-edges::before {
   top: 0;
-  background: linear-gradient(to bottom, var(--color-bg) 0%, rgba(12, 12, 14, 0) 100%);
+  background: linear-gradient(to bottom, var(--color-bg) 0%, rgba(10, 10, 10, 0) 100%);
 }
 .fade-edges::after {
   bottom: 0;
-  background: linear-gradient(to top, var(--color-bg) 0%, rgba(12, 12, 14, 0) 100%);
+  background: linear-gradient(to top, var(--color-bg) 0%, rgba(10, 10, 10, 0) 100%);
 }
 
-/* Streaming shimmer for assistant messages */
+/* Shimmer for streaming text. */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -135,9 +184,9 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
 .shimmer-text {
   background: linear-gradient(
     90deg,
-    rgba(243, 243, 245, 0.45) 0%,
-    rgba(243, 243, 245, 0.95) 50%,
-    rgba(243, 243, 245, 0.45) 100%
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0.45) 100%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;
@@ -146,15 +195,10 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   animation: shimmer 2400ms ease-in-out infinite;
 }
 
-/* Light theme */
-@media (prefers-color-scheme: light) {
-  body {
-    background: #f7f7f8;
-    color: #15151a;
-  }
-}
-
 @layer base {
-  /* No element-level emoji; reset */
-  button, input, textarea, select { font: inherit; color: inherit; }
+  button, input, textarea, select {
+    font: inherit;
+    color: inherit;
+    font-variation-settings: inherit;
+  }
 }
