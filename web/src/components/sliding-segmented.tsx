@@ -1,13 +1,7 @@
-/**
- * SlidingSegmented mirrors `SlidingSegmented<T>` from the macOS app. The
- * indicator pill animates to the selected option with a snappy spring.
- *
- * Visual contract:
- *  - Outer container 13pt rounded squircle with subtle inner padding (10pt)
- *  - Indicator inset 4pt inside the container, rounded with same smoothing
- *  - Snappy 320ms transition; non-bouncy curve
- *  - Unselected labels at 60% alpha, selected at full
- */
+// SlidingSegmented mirrors `SlidingSegmented<T>` from the macOS app. The
+// indicator pill animates to the selected option with the Mac's easeOut
+// curve (200ms) instead of a spring. Container chrome aligns with the
+// Settings dropdown chrome.
 import { useLayoutEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import cx from "../lib/cx";
@@ -52,18 +46,33 @@ export function SlidingSegmented<T extends string>({
       ref={containerRef}
       role="tablist"
       className={cx(
-        "relative inline-flex items-center rounded-[13px] bg-[var(--color-bg-elev-1)] border border-[var(--color-border)] p-[3px]",
-        size === "sm" ? "h-8 text-[12px]" : "h-10 text-[13px]",
+        "relative inline-flex items-center",
+        size === "sm" ? "h-7 text-[11.5px]" : "h-9 text-[12.5px]",
         className,
       )}
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        boxShadow: "inset 0 0 0 0.5px var(--color-popup-stroke)",
+        borderRadius: 12,
+        padding: 3,
+        fontVariationSettings: '"wght" 700',
+      }}
     >
       {rect && (
         <motion.div
           aria-hidden
-          className="absolute inset-y-[3px] rounded-[10px] bg-[var(--color-bg-elev-3)] shadow-[0_1px_0_rgba(255,255,255,0.06)_inset,0_2px_8px_rgba(0,0,0,0.18)]"
+          className="absolute"
+          style={{
+            top: 3,
+            bottom: 3,
+            background: "rgba(255,255,255,0.10)",
+            borderRadius: 9,
+            boxShadow:
+              "inset 0 0 0 0.5px rgba(255,255,255,0.08), 0 1px 2px rgba(0,0,0,0.18)",
+          }}
           initial={false}
           animate={{ x: rect.x, width: rect.w }}
-          transition={{ type: "spring", stiffness: 500, damping: 40, mass: 0.8 }}
+          transition={{ duration: 0.2, ease: [0, 0, 0.2, 1] }}
         />
       )}
       {options.map((opt) => (
@@ -73,10 +82,11 @@ export function SlidingSegmented<T extends string>({
           aria-selected={opt.value === value}
           onClick={() => onChange(opt.value)}
           className={cx(
-            "relative z-[1] flex items-center justify-center gap-1.5 px-3.5 rounded-[10px] transition-opacity",
-            size === "sm" ? "h-[26px]" : "h-[34px]",
+            "relative z-[1] flex items-center justify-center gap-1.5 transition-opacity",
+            size === "sm" ? "h-[22px] px-3" : "h-[30px] px-3.5",
             opt.value === value ? "opacity-100" : "opacity-60 hover:opacity-90",
           )}
+          style={{ borderRadius: 9 }}
         >
           {opt.icon}
           {opt.label}
