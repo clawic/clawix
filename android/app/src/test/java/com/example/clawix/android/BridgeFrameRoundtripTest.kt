@@ -111,6 +111,15 @@ class BridgeFrameRoundtripTest {
         )
     }
 
+    @Test fun roundtrip_chat_management_v2() {
+        roundtrip(BridgeBody.ArchiveChat("c-1"))
+        roundtrip(BridgeBody.UnarchiveChat("c-1"))
+        roundtrip(BridgeBody.PinChat("c-1"))
+        roundtrip(BridgeBody.UnpinChat("c-1"))
+        roundtrip(BridgeBody.RenameChat("c-1", "New title"))
+        roundtrip(BridgeBody.RenameChat("c-1", ""))
+    }
+
     @Test fun roundtrip_voice_v3() {
         roundtrip(BridgeBody.TranscribeAudio("req-1", "AAA=", "audio/m4a", "en"))
         roundtrip(BridgeBody.TranscribeAudio("req-1", "AAA=", "audio/m4a", null))
