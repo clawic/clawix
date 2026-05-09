@@ -17,7 +17,7 @@ enum MeshClientError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .daemonUnreachable:
-            return "Local Clawix daemon is not reachable. Start the bridge from Settings → General."
+            return "Background bridge is off. Enable Run bridge in background from Settings → General before pairing machines."
         case .http(let status, let body):
             return "HTTP \(status): \(body)"
         case .decoding(let message):
