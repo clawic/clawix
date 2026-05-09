@@ -59,6 +59,7 @@ struct EnhancementSummaryRow: View {
 struct EnhancementSettingsSheet: View {
     @ObservedObject var library: PromptLibrary
     @Binding var isPresented: Bool
+    @ObservedObject private var vault: VaultManager = .shared
 
     @AppStorage(EnhancementSettings.providerKey) private var providerRaw = EnhancementProviderID.openai.rawValue
     @AppStorage(EnhancementSettings.skipShortEnabledKey) private var skipShortEnabled = true
@@ -72,6 +73,7 @@ struct EnhancementSettingsSheet: View {
     @State private var apiKeyVisible: Bool = false
     @State private var modelDraft: String = ""
     @State private var baseURLDraft: String = ""
+    @State private var isConnected: Bool = false
 
     private var provider: EnhancementProviderID {
         EnhancementProviderID(rawValue: providerRaw) ?? .openai
@@ -106,8 +108,8 @@ struct EnhancementSettingsSheet: View {
         }
         .frame(width: 660, height: 600)
         .background(Color(white: 0.10))
-        .onAppear { reloadDrafts() }
-        .onChange(of: providerRaw) { _, _ in reloadDrafts() }
+        .task(id: providerRaw) { await reloadDrafts() }
+        .task(id: vault.state) { await refreshConnected() }
     }
 
     // MARK: - Sections
@@ -158,8 +160,14 @@ struct EnhancementSettingsSheet: View {
                     }
                     .buttonStyle(.plain)
                     Button("Save") {
-                        EnhancementKeychain.setAPIKey(apiKeyDraft, for: provider)
+                        let key = apiKeyDraft
+                        let target = provider
+                        Task {
+                            try? await EnhancementSecrets.setAPIKey(key, for: target)
+                            await refreshConnected()
+                        }
                     }
+                    .disabled(vault.state != .unlocked)
                 }
             } else if provider == .ollama {
                 TextField("Base URL", text: $baseURLDraft)
@@ -330,26 +338,40 @@ struct EnhancementSettingsSheet: View {
     }
 
     private var connectedDot: some View {
-        let connected = (provider.requiresAPIKey && EnhancementKeychain.hasAPIKey(for: provider))
-            || (!provider.requiresAPIKey)
-        return HStack(spacing: 6) {
+        HStack(spacing: 6) {
             Circle()
-                .fill(connected ? Color(red: 0.27, green: 0.74, blue: 0.42) : Color(white: 0.45))
+                .fill(isConnected ? Color(red: 0.27, green: 0.74, blue: 0.42) : Color(white: 0.45))
                 .frame(width: 8, height: 8)
-            Text(connected ? "Connected" : "Not configured")
+            Text(connectionLabel)
                 .font(BodyFont.system(size: 11, wght: 600))
                 .foregroundColor(Palette.textSecondary)
         }
     }
 
-    private func reloadDrafts() {
-        apiKeyDraft = EnhancementKeychain.apiKey(for: provider) ?? ""
+    private var connectionLabel: LocalizedStringKey {
+        if vault.state != .unlocked && provider.requiresAPIKey {
+            return "Vault locked"
+        }
+        return isConnected ? "Connected" : "Not configured"
+    }
+
+    private func reloadDrafts() async {
+        apiKeyDraft = (await EnhancementSecrets.apiKey(for: provider)) ?? ""
         modelDraft = UserDefaults.standard.string(
             forKey: EnhancementSettings.modelKey(for: provider.rawValue)
         ) ?? (provider.defaultModels.first ?? "")
         baseURLDraft = UserDefaults.standard.string(
             forKey: EnhancementSettings.baseURLKey(for: provider.rawValue)
         ) ?? "http://localhost:11434"
+        await refreshConnected()
+    }
+
+    private func refreshConnected() async {
+        if !provider.requiresAPIKey {
+            isConnected = true
+            return
+        }
+        isConnected = await EnhancementSecrets.hasAPIKey(for: provider)
     }
 }
 
