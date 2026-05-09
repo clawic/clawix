@@ -116,7 +116,7 @@ if [[ ! -f "$NPM_CLI" ]]; then
     exit 1
 fi
 run_npm() {
-    "$NODE_FOR_NPM" "$NPM_CLI" "$@"
+    PATH="$(dirname "$NODE_FOR_NPM"):$PATH" "$NODE_FOR_NPM" "$NPM_CLI" "$@"
 }
 
 # 2) Stage the install. Cache by version: when CLAWJS_VERSION bumps the
@@ -141,7 +141,7 @@ EOF
         npm_config_arch=arm64 \
         npm_config_target_arch=arm64 \
         npm_config_target_platform=darwin \
-        run_npm install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
     )
     if [[ "$(read_pkg_version "$STAGE_CLI_PKG")" != "$CLAWJS_VERSION" ]]; then
         echo "ERROR: npm install resolved a @clawjs/cli version different from $CLAWJS_VERSION" >&2
@@ -194,7 +194,7 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
         OVERLAY_DEPS_READY=1
         if [[ -f "$CLAWJS_DEV_OVERLAY/package.json" && -f "$CLAWJS_DEV_OVERLAY/package-lock.json" && ! -d "$CLAWJS_DEV_OVERLAY/node_modules" ]]; then
             echo "==> Dev overlay: installing workspace dependencies"
-            run_npm --prefix "$CLAWJS_DEV_OVERLAY" install --no-audit --no-fund >/dev/null
+            run_npm --prefix "$CLAWJS_DEV_OVERLAY" install --ignore-scripts --no-audit --no-fund >/dev/null
         fi
         if [[ -f "$CLAWJS_DEV_OVERLAY/packages/clawjs-core/package.json" ]]; then
             echo "==> Dev overlay: building @clawjs/core"
@@ -218,11 +218,11 @@ PY
             ensure_overlay_dependencies
             if [[ -f "$pkg_dir/package-lock.json" && ! -d "$pkg_dir/node_modules" ]]; then
                 echo "==> Dev overlay: installing $(basename "$pkg_dir") dependencies"
-                run_npm --prefix "$pkg_dir" install --no-audit --no-fund >/dev/null
+                run_npm --prefix "$pkg_dir" install --ignore-scripts --no-audit --no-fund >/dev/null
             fi
             if [[ -f "$pkg_dir/ui/package.json" && -f "$pkg_dir/ui/package-lock.json" && ! -d "$pkg_dir/ui/node_modules" ]]; then
                 echo "==> Dev overlay: installing $(basename "$pkg_dir") UI dependencies"
-                run_npm --prefix "$pkg_dir/ui" install --no-audit --no-fund >/dev/null
+                run_npm --prefix "$pkg_dir/ui" install --ignore-scripts --no-audit --no-fund >/dev/null
             fi
             PATH="/opt/homebrew/bin:/usr/local/bin:$CLAWJS_DEV_OVERLAY/node_modules/.bin:$pkg_dir/node_modules/.bin:$PATH" \
                 run_npm --prefix "$pkg_dir" run build >/dev/null
@@ -249,7 +249,7 @@ PY
             npm_config_arch=arm64 \
             npm_config_target_arch=arm64 \
             npm_config_target_platform=darwin \
-            run_npm install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+            run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
         )
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/better-sqlite3"
     fi
@@ -319,7 +319,7 @@ fi
     npm_config_arch=arm64 \
     npm_config_target_arch=arm64 \
     npm_config_target_platform=darwin \
-    "$CLAWJS_DEST/node" "$NPM_CLI" rebuild better-sqlite3 --build-from-source 2>&1 | tail -3
+    PATH="$CLAWJS_DEST:$PATH" "$CLAWJS_DEST/node" "$NPM_CLI" rebuild better-sqlite3 --build-from-source 2>&1 | tail -3
 )
 
 # 5) Re-sign every nested native module and the Node binary. npm-installed
