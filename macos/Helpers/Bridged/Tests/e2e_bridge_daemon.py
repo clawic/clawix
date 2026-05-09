@@ -197,6 +197,19 @@ def main():
 
             ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E iPhone", "clientKind": "ios"})
             ws.recv_until(lambda f: f["type"] == "authOk")
+
+            desktop = WebSocket(port)
+            desktop.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E Mac", "clientKind": "desktop"})
+            desktop.recv_until(lambda f: f["type"] == "authOk")
+            desktop.send_json({"schemaVersion": 2, "type": "pairingStart"})
+            pairing = desktop.recv_until(lambda f: f["type"] == "pairingPayload")
+            qr = json.loads(pairing["qrJson"])
+            qr_ws = WebSocket(port)
+            qr_ws.send_json({"schemaVersion": 2, "type": "auth", "token": qr["token"], "deviceName": "QR iPhone", "clientKind": "ios"})
+            qr_ws.recv_until(lambda f: f["type"] == "authOk")
+            qr_ws.close()
+            desktop.close()
+
             snapshot = ws.recv_until(lambda f: f["type"] == "chatsSnapshot" and f["chats"])
             chat_id = snapshot["chats"][0]["id"]
 

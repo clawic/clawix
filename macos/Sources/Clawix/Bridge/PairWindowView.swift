@@ -13,7 +13,7 @@ struct PairWindowView: View {
     @StateObject private var backgroundBridge: BackgroundBridgeService = .shared
 
     private var pairing: PairingService {
-        if backgroundBridge.isEnabled {
+        if backgroundBridge.isActive {
             return PairingService(defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
                                   port: daemonBridgePort)
         }
