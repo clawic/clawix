@@ -4,7 +4,7 @@
 const platform = require('../lib/platform');
 const pkg = require('../package.json');
 
-const COMMANDS = ['up', 'start', 'stop', 'status', 'pair', 'unpair', 'logs', 'doctor', 'install-app', 'restart', 'uninstall'];
+const COMMANDS = ['up', 'start', 'stop', 'status', 'pair', 'unpair', 'logs', 'doctor', 'install-app', 'restart', 'uninstall', 'mesh'];
 
 // Honour --no-color BEFORE require()ing ui.js: ui.js samples
 // process.stdout.isTTY + NO_COLOR at module load.
@@ -29,6 +29,7 @@ ${ui.bold('commands')}
   status           bridge state, port, peers, app presence
   pair             show pairing QR + short code
   unpair           rotate bearer + short code (kicks every paired device)
+  mesh             manage paired Macs, workspaces, and remote jobs
   doctor           run health checks across the whole environment
   logs [-f]        tail bridge logs
   install-app      install /Applications/Clawix.app from the latest release
@@ -157,6 +158,11 @@ async function main(argv) {
         case 'logs': {
             const logs = require('../lib/logs');
             logs.tail({ follow: flag('-f') || flag('--follow') });
+            return;
+        }
+        case 'mesh': {
+            const mesh = require('../lib/mesh');
+            await mesh.run(rest.filter((a) => a !== '--json'), { json: flag('--json') });
             return;
         }
         case 'doctor': {
