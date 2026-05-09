@@ -71,7 +71,7 @@ final class BrowserTabController: NSObject, ObservableObject {
         webView.navigationDelegate = self
         attachObservers()
         startBackgroundSampling()
-        webView.load(URLRequest(url: initialURL))
+        load(initialURL)
     }
 
     deinit {
@@ -80,6 +80,23 @@ final class BrowserTabController: NSObject, ObservableObject {
     }
 
     func load(_ url: URL) {
+        switch BrowserPermissionPolicy.decision(for: url) {
+        case .allow:
+            loadApproved(url)
+        case .block:
+            ToastCenter.shared.show("Website blocked by browser settings", icon: .error)
+        case .ask:
+            appState?.pendingConfirmation = ConfirmationRequest(
+                title: "Open website?",
+                body: "Clawix wants to open an external website in the browser.",
+                confirmLabel: "Open"
+            ) { [weak self] in
+                self?.loadApproved(url)
+            }
+        }
+    }
+
+    private func loadApproved(_ url: URL) {
         webView.load(URLRequest(url: url))
     }
 

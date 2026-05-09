@@ -2624,9 +2624,9 @@ private struct CreditRow: View {
 // MARK: - Browser usage page
 
 private struct BrowserUsagePage: View {
+    @AppStorage(BrowserPermissionPolicy.approvalStorageKey) private var approval: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
+    @AppStorage("clawix.browser.historyApproval") private var history: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
     @State private var browsingData: String = "Clear all browsing data"
-    @State private var approval: String = "Preguntar siempre"
-    @State private var history: String = "Preguntar siempre"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -2664,9 +2664,9 @@ private struct BrowserUsagePage: View {
                     title: "Approval",
                     detail: "Choose whether Clawix asks for permission before opening websites",
                     options: [
-                        ("Always ask", "Always ask"),
-                        ("Always allow", "Always allow"),
-                        ("Always block", "Always block")
+                        (BrowserPermissionPolicy.Approval.alwaysAsk.rawValue, "Always ask"),
+                        (BrowserPermissionPolicy.Approval.alwaysAllow.rawValue, "Always allow"),
+                        (BrowserPermissionPolicy.Approval.alwaysBlock.rawValue, "Always block")
                     ],
                     selection: $approval
                 )
@@ -2675,9 +2675,9 @@ private struct BrowserUsagePage: View {
                     title: "History",
                     detail: "Choose whether Clawix asks for approval before accessing your history",
                     options: [
-                        ("Always ask", "Always ask"),
-                        ("Always allow", "Always allow"),
-                        ("Always block", "Always block")
+                        (BrowserPermissionPolicy.Approval.alwaysAsk.rawValue, "Always ask"),
+                        (BrowserPermissionPolicy.Approval.alwaysAllow.rawValue, "Always allow"),
+                        (BrowserPermissionPolicy.Approval.alwaysBlock.rawValue, "Always block")
                     ],
                     selection: $history
                 )
@@ -2693,6 +2693,19 @@ private struct BrowserUsagePage: View {
                               emptyText: "No allowed domains")
                 .padding(.top, 28)
         }
+        .onAppear {
+            normalizeBrowserPermissionValues()
+        }
+    }
+
+    private func normalizeBrowserPermissionValues() {
+        let valid = [
+            BrowserPermissionPolicy.Approval.alwaysAsk.rawValue,
+            BrowserPermissionPolicy.Approval.alwaysAllow.rawValue,
+            BrowserPermissionPolicy.Approval.alwaysBlock.rawValue,
+        ]
+        if !valid.contains(approval) { approval = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue }
+        if !valid.contains(history) { history = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue }
     }
 }
 
