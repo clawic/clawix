@@ -2,6 +2,8 @@
 
 Computer Use playbooks describe visual user flows, not implementation details. Write them so a capable agent can run the app, operate it like a human, inspect the result, and know when to stop.
 
+Playbooks are not a runner specification. Use human-readable steps with stable anchors: visible labels, keyboard shortcuts, menu names, expected focus, screenshots, and user-visible state changes.
+
 ## Naming
 
 - Use lowercase kebab-case file names.
@@ -17,10 +19,53 @@ Use one of:
 - `ready`: broad enough for real agent use.
 - `draft`: structure exists, but coverage is incomplete.
 - `placeholder`: platform or surface exists, but no real playbook is defined.
+- `deprecated`: retained for historical context; do not choose it for new validation.
+
+## Priority
+
+Use one of:
+
+- `P0`: critical smoke or release-blocking capability.
+- `P1`: common user flow or high-risk regression area.
+- `P2`: important but less common flow.
+- `P3`: low-risk exploratory or edge coverage.
+
+## Controlled Tags
+
+Use only these tags in front matter:
+
+- `smoke`
+- `regression`
+- `host`
+- `dummy`
+- `sensitive`
+- `confirmation`
+- `navigation`
+- `composer`
+- `attachments`
+- `settings`
+- `runtime`
+- `bridge`
+- `services`
+- `secrets`
+- `voice`
+- `browser`
+- `memory`
+- `models`
+- `projects`
+- `search`
+- `ios-planned`
 
 ## Safety
 
 Every playbook must declare whether the flow is safe in isolation and what requires explicit user confirmation.
+
+Safety levels:
+
+- `safe_dummy`: safe in dummy, fixture-backed, or intercepted mode.
+- `host_local`: touches host-local state but not real external services by default.
+- `confirmation_required`: must stop for explicit user confirmation before the risky step.
+- `forbidden`: must not be performed by a playbook.
 
 Default rules:
 
@@ -40,6 +85,10 @@ id: macos.chat.example
 platform: macos
 surface: chat
 status: ready
+priority: P1
+tags:
+  - regression
+  - dummy
 intent: "Describe the user-visible behavior being checked."
 entrypoints:
   - keyboard shortcut
@@ -52,6 +101,7 @@ required_state:
   app_mode: dummy
   data: fixture-backed chats
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - real prompt submission
@@ -79,11 +129,15 @@ known_risks:
 
 `Variant Matrix` names the dimensions that should be combined over time. It does not need to enumerate every Cartesian product.
 
+`Critical Cases` lists the highest-value named cases agents should prioritize.
+
 `Steps` gives a concrete happy path first, then alternate paths.
 
 `Expected Results` describes visual, accessibility, and state outcomes.
 
 `Failure Signals` describes what should make the agent stop and report a regression.
+
+`Evidence Checklist` gives checkboxes or rows that an agent marks as `pass`, `fail`, or `no-run`.
 
 `Screenshot Checklist` names the exact screens or states to capture.
 
@@ -96,3 +150,4 @@ known_risks:
 - Keep one-off content checks out of persistent playbooks unless they protect durable behavior.
 - Prefer broad capability coverage over implementation-specific instructions.
 - Keep screenshots out of the repo unless they are intentional public assets.
+- Any visible feature change should update an existing playbook, add a new playbook, or update the coverage matrix with a clear `partial` or `missing` entry.
