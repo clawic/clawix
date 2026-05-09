@@ -125,11 +125,11 @@ XCTRACE_ARGS=(
     record
     --template "$TEMPLATE"
     --output "$TRACE_PATH"
-    --target-launch "$BIN"
 )
 if [[ -n "$DURATION" ]]; then
     XCTRACE_ARGS+=( --time-limit "${DURATION}s" )
 fi
+XCTRACE_ARGS+=( --launch -- "$BIN" )
 
 echo ""
 echo "==> Recording trace"
