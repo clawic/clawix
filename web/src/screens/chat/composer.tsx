@@ -1,14 +1,17 @@
-/**
- * Composer mirrors `ComposerView` from the macOS app: text area with
- * auto-grow, send button, mic button (Web Audio recording → daemon
- * transcription), attachment chips. Stop button replaces send while a
- * turn is active.
- */
+// Composer mirrors ComposerView from the Mac. Auto-grow textarea, send
+// button (white circle with ArrowUpIcon), interrupt (StopSquircle), mic,
+// attachments. Layout follows the Mac: rounded chrome with tinted fill,
+// hairline stroke, soft top blur on the page edge.
 import { useEffect, useRef, useState } from "react";
 import { useBridgeStore } from "../../bridge/store";
-import { MicIcon, SendIcon, StopIcon, FileChipIcon, PlusIcon } from "../../icons";
+import {
+  ArrowUpIcon,
+  StopSquircle,
+  FileChipIcon,
+  PlusIcon,
+  MicIcon,
+} from "../../icons";
 import cx from "../../lib/cx";
-import { GlassPill } from "../../components/glass-pill";
 import { storage, StorageKeys } from "../../lib/storage";
 
 interface Props {
@@ -121,19 +124,33 @@ export function Composer({ chatId, hasActiveTurn }: Props) {
 
   return (
     <div className="px-4 pb-4 pt-2">
-      <div className="max-w-[920px] mx-auto rounded-[20px] bg-[var(--color-bg-elev-1)] border border-[var(--color-border)] focus-within:border-[var(--color-border-strong)] transition-colors p-3 space-y-2">
+      <div
+        className="max-w-[920px] mx-auto p-3"
+        style={{
+          background: "var(--color-card)",
+          borderRadius: 18,
+          boxShadow:
+            "inset 0 0 0 0.5px rgba(255,255,255,0.10), 0 8px 24px rgba(0,0,0,0.30)",
+        }}
+      >
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mb-2">
             {attachments.map((a) => (
               <span
                 key={a.id}
-                className="inline-flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-[8px] bg-[var(--color-bg-elev-3)] text-[12px]"
+                className="inline-flex items-center gap-1.5 h-7 pl-2 pr-1.5 text-[12px]"
+                style={{
+                  borderRadius: 8,
+                  background: "var(--color-card-hover)",
+                  fontVariationSettings: '"wght" 700',
+                }}
               >
-                <FileChipIcon size={12} className="text-[var(--color-fg-muted)]" />
+                <FileChipIcon size={12} color="var(--color-fg-secondary)" />
                 <span className="max-w-[180px] truncate">{a.filename}</span>
                 <button
                   onClick={() => setAttachments((cur) => cur.filter((x) => x.id !== a.id))}
-                  className="size-5 rounded-md hover:bg-[var(--color-bg-elev-2)] grid place-items-center text-[var(--color-fg-muted)]"
+                  className="size-5 grid place-items-center hover:bg-[rgba(255,255,255,0.08)]"
+                  style={{ borderRadius: 6, color: "var(--color-fg-secondary)" }}
                   aria-label="Remove attachment"
                 >
                   ×
@@ -150,11 +167,26 @@ export function Composer({ chatId, hasActiveTurn }: Props) {
           rows={1}
           placeholder={chatId ? "Reply to Codex" : "Start a new conversation"}
           spellCheck={false}
-          className="thin-scroll w-full bg-transparent outline-none resize-none text-[14px] leading-[1.55] placeholder:text-[var(--color-fg-dim)] max-h-[260px]"
+          className="thin-scroll w-full bg-transparent outline-none resize-none"
+          style={{
+            fontSize: 14,
+            lineHeight: 1.55,
+            color: "var(--color-fg)",
+            maxHeight: 260,
+            fontVariationSettings: '"wght" 600',
+          }}
         />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <label className="size-8 rounded-full hover:bg-[var(--color-bg-elev-2)] grid place-items-center cursor-pointer text-[var(--color-fg-muted)]">
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1">
+            <label
+              className="size-8 grid place-items-center cursor-pointer transition-colors"
+              style={{
+                color: "var(--color-fg-secondary)",
+                borderRadius: 999,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
               <input type="file" className="hidden" multiple onChange={(e) => attachFile(e.target.files)} />
               <PlusIcon size={14} />
             </label>
@@ -162,27 +194,42 @@ export function Composer({ chatId, hasActiveTurn }: Props) {
               type="button"
               onClick={toggleRecord}
               className={cx(
-                "size-8 rounded-full grid place-items-center transition-colors",
-                recording
-                  ? "bg-[var(--color-danger)]/20 text-[var(--color-danger)]"
-                  : "hover:bg-[var(--color-bg-elev-2)] text-[var(--color-fg-muted)]",
+                "size-8 grid place-items-center transition-colors",
+                recording && "bg-[var(--color-destructive-fill)]",
               )}
+              style={{
+                borderRadius: 999,
+                color: recording ? "var(--color-destructive)" : "var(--color-fg-secondary)",
+              }}
               title="Voice"
             >
               <MicIcon size={14} />
             </button>
             {busyTranscribing && (
-              <span className="text-[11px] text-[var(--color-fg-muted)]">Transcribing…</span>
+              <span className="text-[11px]" style={{ color: "var(--color-fg-secondary)" }}>
+                Transcribing…
+              </span>
             )}
           </div>
           {hasActiveTurn ? (
-            <GlassPill size="sm" onClick={() => chatId && interruptTurn(chatId)}>
-              <StopIcon size={10} /> Stop
-            </GlassPill>
+            <button
+              onClick={() => chatId && interruptTurn(chatId)}
+              className="size-8 grid place-items-center transition-opacity"
+              style={{ borderRadius: 999, background: "#ffffff" }}
+              title="Stop"
+            >
+              <StopSquircle size={12} color="#000" />
+            </button>
           ) : (
-            <GlassPill size="sm" onClick={send} disabled={!text.trim() && attachments.length === 0}>
-              Send <SendIcon size={12} />
-            </GlassPill>
+            <button
+              onClick={send}
+              disabled={!text.trim() && attachments.length === 0}
+              className="size-8 grid place-items-center transition-opacity disabled:opacity-40"
+              style={{ borderRadius: 999, background: "#ffffff" }}
+              title="Send"
+            >
+              <ArrowUpIcon size={14} color="#000" strokeWidth={2.6} />
+            </button>
           )}
         </div>
       </div>
