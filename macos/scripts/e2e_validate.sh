@@ -12,17 +12,21 @@ ERRORS=()
 
 pass() { echo "  [PASS] $1"; PASS=$((PASS+1)); }
 fail() { echo "  [FAIL] $1"; FAIL=$((FAIL+1)); ERRORS+=("$1"); }
+cleanup_launch_env() {
+    launchctl unsetenv CLAWIX_DISABLE_BACKEND >/dev/null 2>&1 || true
+}
+trap cleanup_launch_env EXIT
 
 echo "=== Clawix Desktop - E2E Validation ==="
 mkdir -p "$ARTIFACT_DIR"
 
 echo ""
-echo "[1/8] Build"
+echo "[1/9] Build"
 bash "$SCRIPT_DIR/build_app.sh" || { echo "Build failed"; exit 1; }
 pass "App bundle present"
 
 echo ""
-echo "[2/8] Localization resources"
+echo "[2/9] Localization resources"
 python3 - "$PROJECT_DIR" <<'PY' || { fail "Localization resources incomplete"; exit 1; }
 import json
 import plistlib
@@ -131,7 +135,7 @@ pass "Localization catalog complete"
 
 echo ""
 echo ""
-echo "[3/8] Runtime surface regression guards"
+echo "[3/9] Runtime surface regression guards"
 if grep -R -nE 'Fusionar|No trabajar en un proyecto|Preguntar siempre|Sitio web' "$PROJECT_DIR/Sources/Clawix" --include='*.swift' >/tmp/clawix_e2e_spanish_ui.out; then
     fail "Spanish text leaked into Swift UI source: $(head -n 1 /tmp/clawix_e2e_spanish_ui.out)"
 else
@@ -153,7 +157,7 @@ else
 fi
 
 echo ""
-echo "[4/8] Speech recognition language"
+echo "[4/9] Speech recognition language"
 if grep -Fq 'Locale(identifier: "es-ES")' "$PROJECT_DIR/Sources/Clawix/VoiceRecorder.swift"; then
     fail "Voice transcription is hard-coded to a single locale"
 else
@@ -169,11 +173,12 @@ for expected in "en-US" "es-ES" "fr-FR" "de-DE" "it-IT" "pt-BR" "ja-JP" "zh-CN" 
 done
 
 echo ""
-echo "[5/8] Launch"
+echo "[5/9] Launch"
 pkill -x Clawix >/dev/null 2>&1 || true
 launchctl setenv CLAWIX_DISABLE_BACKEND 1 >/dev/null 2>&1 || true
 open -n "$APP_BUNDLE"
 sleep 3
+cleanup_launch_env
 
 APP_PID="$(pgrep -x Clawix | head -n 1 || true)"
 if [[ -n "$APP_PID" ]]; then
@@ -184,7 +189,7 @@ else
 fi
 
 echo ""
-echo "[6/8] Window discovery"
+echo "[6/9] Window discovery"
 WINDOW_INFO="$(swift - "$APP_PID" <<'SWIFT'
 import CoreGraphics
 import Foundation
@@ -230,7 +235,66 @@ else
 fi
 
 echo ""
-echo "[7/8] Window screenshot"
+echo "[7/9] Accessibility tree budget"
+swift - "$APP_PID" <<'SWIFT' || { fail "Accessibility tree exposes oversized repeated message labels"; exit 1; }
+import ApplicationServices
+import Foundation
+
+let pid = pid_t(CommandLine.arguments[1])!
+let app = AXUIElementCreateApplication(pid)
+var visited = 0
+var offenders: [String] = []
+
+func copyAttribute(_ element: AXUIElement, _ name: String) -> AnyObject? {
+    var value: AnyObject?
+    let result = AXUIElementCopyAttributeValue(element, name as CFString, &value)
+    return result == .success ? value : nil
+}
+
+func stringAttribute(_ element: AXUIElement, _ name: String) -> String? {
+    copyAttribute(element, name) as? String
+}
+
+func repeatedRolePrefixCount(_ text: String) -> Int {
+    max(
+        text.components(separatedBy: "Assistant:").count - 1,
+        text.components(separatedBy: "You:").count - 1
+    )
+}
+
+func inspect(_ element: AXUIElement, depth: Int = 0) {
+    if visited > 6000 || depth > 14 || offenders.count >= 8 { return }
+    visited += 1
+
+    let values = [
+        stringAttribute(element, kAXTitleAttribute),
+        stringAttribute(element, kAXValueAttribute),
+        stringAttribute(element, kAXDescriptionAttribute)
+    ].compactMap { $0 }
+
+    for value in values {
+        if value.count > 3000 || repeatedRolePrefixCount(value) >= 3 {
+            offenders.append(String(value.prefix(180)).replacingOccurrences(of: "\n", with: " "))
+        }
+    }
+
+    guard let children = copyAttribute(element, kAXChildrenAttribute) as? [AXUIElement] else { return }
+    for child in children { inspect(child, depth: depth + 1) }
+}
+
+inspect(app)
+if offenders.isEmpty {
+    exit(0)
+}
+for offender in offenders {
+    print(offender)
+}
+exit(1)
+SWIFT
+pass "Accessibility labels stay bounded"
+
+echo ""
+echo "[8/9] Window screenshot"
 rm -f "$SCREENSHOT" /tmp/clawix_e2e_capture.out
 SCREENSHOT_CAPTURED=0
 SCREENSHOT_SKIPPED=0
@@ -272,7 +336,7 @@ else
 fi
 
 echo ""
-echo "[8/8] Public hygiene"
+echo "[9/9] Public hygiene"
 bash "$SCRIPT_DIR/public_hygiene_check.sh" || {
     fail "Public hygiene scan failed"
     exit 1
