@@ -2252,6 +2252,19 @@ final class AppState: ObservableObject {
                     "projectPath": chat.projectId.flatMap { projectsById[$0]?.path } ?? "",
                     "isPinned": chat.isPinned,
                     "isArchived": chat.isArchived,
+                    "messages": chat.messages.map { message in
+                        let renderedUser = message.role == .user
+                            ? UserBubbleContent.parse(message.content, attachments: message.attachments)
+                            : nil
+                        return [
+                            "role": message.role == .user ? "user" : "assistant",
+                            "content": message.content,
+                            "attachmentCount": message.attachments.count,
+                            "renderedText": renderedUser?.text ?? message.content,
+                            "renderedImageCount": renderedUser?.images.count ?? 0,
+                            "workElapsedSeconds": message.workSummary.map { $0.elapsedSeconds(asOf: Date()) } ?? NSNull()
+                        ] as [String: Any]
+                    },
                     "toolRows": e2eToolRows(for: chat)
                 ] as [String: Any]
             },
