@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Clawix.App.Views.PairingView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid Padding="32" RowSpacing="16" ColumnSpacing="32">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <StackPanel Grid.Column="0" Spacing="12">
+      <TextBlock Text="Pair iPhone" FontWeight="SemiBold" FontSize="22" />
+      <TextBlock Text="Open Clawix on your iPhone, choose Add device, and scan the QR." TextWrapping="Wrap" Opacity="0.7" />
+      <TextBlock x:Name="ShortCodeText" FontFamily="Cascadia Mono" FontSize="22" />
+      <TextBlock Text="Same network as the iPhone, or both on Tailscale." Opacity="0.6" />
+    </StackPanel>
+    <Image Grid.Column="1" x:Name="QrImage" Width="280" Height="280" Stretch="Uniform" />
+  </Grid>
+</UserControl>
