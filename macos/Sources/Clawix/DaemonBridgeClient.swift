@@ -63,7 +63,8 @@ final class DaemonBridgeClient {
     /// is the id of the oldest message the desktop currently has; the
     /// daemon replies with `messagesPage` carrying the slice prior to
     /// it (oldest first). No-op when not yet authenticated.
-    func loadOlderMessages(chatId: UUID, beforeMessageId: String) {
+    @discardableResult
+    func loadOlderMessages(chatId: UUID, beforeMessageId: String) -> Bool {
         send(.loadOlderMessages(
             chatId: chatId.uuidString,
             beforeMessageId: beforeMessageId,
@@ -168,19 +169,21 @@ final class DaemonBridgeClient {
         }
     }
 
-    private func send(_ body: BridgeBody) {
-        guard let connection else { return }
+    @discardableResult
+    private func send(_ body: BridgeBody) -> Bool {
+        guard let connection else { return false }
         guard isAuthenticated || {
             if case .auth = body { return true }
             return false
-        }() else { return }
-        guard let data = try? BridgeCoder.encode(BridgeFrame(body)) else { return }
+        }() else { return false }
+        guard let data = try? BridgeCoder.encode(BridgeFrame(body)) else { return false }
         let metadata = NWProtocolWebSocket.Metadata(opcode: .text)
         let context = NWConnection.ContentContext(identifier: "frame", metadata: [metadata])
         connection.send(content: data,
                         contentContext: context,
                         isComplete: true,
                         completion: .contentProcessed { _ in })
+        return true
     }
 
     private func scheduleReconnect() {

@@ -3486,12 +3486,23 @@ final class AppState: ObservableObject {
               !pag.loadingOlder,
               let cursor = pag.oldestKnownId else { return }
         messagesPaginationByChat[chatId]?.loadingOlder = true
-        if let client = daemonBridgeClient {
-            client.loadOlderMessages(chatId: chatId, beforeMessageId: cursor)
-        } else {
+        guard let client = daemonBridgeClient,
+              client.loadOlderMessages(chatId: chatId, beforeMessageId: cursor)
+        else {
             // No daemon attached: clear the flag so a future sentinel
             // firing can retry once the bridge connects.
             messagesPaginationByChat[chatId]?.loadingOlder = false
+            return
+        }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            guard let self,
+                  var pag = self.messagesPaginationByChat[chatId],
+                  pag.loadingOlder,
+                  pag.oldestKnownId == cursor
+            else { return }
+            pag.loadingOlder = false
+            self.messagesPaginationByChat[chatId] = pag
         }
     }
 
