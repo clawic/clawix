@@ -3,6 +3,13 @@ id: macos.chat.message-composition
 platform: macos
 surface: chat
 status: ready
+priority: P0
+tags:
+  - smoke
+  - regression
+  - dummy
+  - composer
+  - voice
 intent: "Exercise composer text entry, model/runtime controls, permission controls, plan mode, voice entry states, and send-button enablement without relying on real model calls."
 entrypoints:
   - focused-composer
@@ -27,6 +34,7 @@ required_state:
   backend: fake or intercepted for send actions
   window: main macOS app window visible and focused
 safety:
+  level: safe_dummy
   default: isolated
   requires_explicit_confirmation:
     - real prompt submission
@@ -89,6 +97,13 @@ Verify that the composer behaves predictably across text sizes, input methods, c
 | Permission | default, read-only, workspace-write, approval-heavy mode |
 | Voice | idle, recording, transcribing, stopped without send, stopped with send |
 
+## Critical Cases
+
+- `P0-empty-send-disabled`: empty and whitespace-only drafts keep send disabled.
+- `P0-multiline-stability`: multiline and long pasted drafts keep toolbar controls usable.
+- `P1-model-permission-state`: model and permission controls visibly update before send.
+- `P1-voice-fixture`: fixture transcription moves through recording and transcribing states.
+
 ## Steps
 
 1. Focus the composer.
@@ -126,6 +141,17 @@ Alternate passes:
 - Model or permission changes do not update the visible label.
 - Voice recording state gets stuck.
 - Fake send leaves stale text behind.
+
+## Evidence Checklist
+
+| Check | Result |
+| --- | --- |
+| Empty composer state verified | pass/fail/no-run |
+| Short, multiline, and long draft variants checked | pass/fail/no-run |
+| Configuration controls updated visibly | pass/fail/no-run |
+| Fake send cleared draft state | pass/fail/no-run |
+| Voice state checked or marked no-run with reason | pass/fail/no-run |
+| Required screenshots captured | pass/fail/no-run |
 
 ## Screenshot Checklist
 
