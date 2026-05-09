@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Clawix.App.Views.QuickAskCameraSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Capture"
+    PrimaryButtonText="Use"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+  <Grid Width="640" Height="360">
+    <CaptureElement x:Name="Preview" />
+  </Grid>
+</ContentDialog>

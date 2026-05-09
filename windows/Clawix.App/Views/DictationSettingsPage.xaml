@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Clawix.App.Views.DictationSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Padding="24">
+    <StackPanel Spacing="16" MaxWidth="640">
+      <TextBlock Text="Dictation" FontSize="22" FontWeight="SemiBold" />
+      <ToggleSwitch x:Name="EnableSwitch" Header="Enable dictation" />
+      <ComboBox x:Name="ModelCombo" Header="Whisper model" PlaceholderText="Choose model">
+        <ComboBoxItem Content="tiny" />
+        <ComboBoxItem Content="base" />
+        <ComboBoxItem Content="small" />
+        <ComboBoxItem Content="medium" />
+      </ComboBox>
+      <ComboBox x:Name="LanguageCombo" Header="Language" PlaceholderText="Auto detect" />
+      <ToggleSwitch x:Name="EnhanceSwitch" Header="Enhance with cloud model" />
+      <ToggleSwitch x:Name="PowerSwitch" Header="Power mode (replace selected text)" />
+    </StackPanel>
+  </ScrollViewer>
+</Page>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Clawix.App.Views.QuickAskSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Padding="24">
+    <StackPanel Spacing="16" MaxWidth="640">
+      <TextBlock Text="Quick Ask" FontSize="22" FontWeight="SemiBold" />
+      <ToggleSwitch x:Name="EnableSwitch" Header="Enable Quick Ask" />
+      <TextBox Header="Hotkey" Text="Ctrl + K" IsReadOnly="True" />
+      <ToggleSwitch Header="Include selected text" />
+      <ToggleSwitch Header="Include screenshot" />
+    </StackPanel>
+  </ScrollViewer>
+</Page>
