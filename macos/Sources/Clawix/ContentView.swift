@@ -931,7 +931,7 @@ private struct SearchContentHeightKey: PreferenceKey {
 
 private struct SearchPopoverOverlay: View {
     @EnvironmentObject var appState: AppState
-    @FocusState private var queryFocused: Bool
+    @State private var queryFocused: Bool = false
     /// Natural height of the inner content (rows or empty message),
     /// measured via `SearchContentHeightKey`. The popup's content slot
     /// renders at this height, capped at `contentAreaMaxHeight`. Anchored
@@ -1267,7 +1267,7 @@ private struct SearchKeyMonitor: NSViewRepresentable {
         private func attach() {
             guard monitor == nil else { return }
             monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                guard let self, let win = self.window, event.window == win else { return event }
+                guard let self, let win = self.window, NSApp.keyWindow === win else { return event }
                 if event.keyCode == 53 {
                     self.onEscape?()
                     return nil
