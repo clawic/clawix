@@ -117,12 +117,18 @@ enum GitInspector {
         proc.standardOutput = pipe
         proc.standardError = Pipe()
 
+        let finished = DispatchSemaphore(value: 0)
+        proc.terminationHandler = { _ in finished.signal() }
+
         do {
             try proc.run()
         } catch {
             return nil
         }
-        proc.waitUntilExit()
+        if finished.wait(timeout: .now() + 1.5) == .timedOut {
+            proc.terminate()
+            return nil
+        }
         guard proc.terminationStatus == 0 else { return nil }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()

@@ -1009,6 +1009,9 @@ final class AppState: ObservableObject {
     /// runs on a background priority Task so the main thread stays out
     /// of the file-system path entirely.
     private var persistTask: Task<Void, Never>?
+    /// Per-chat git probes. `git status` can block on large repos or
+    /// filesystem state, so chat navigation must never wait on it.
+    private var gitInspectionTasks: [UUID: Task<Void, Never>] = [:]
 
     init() {
         // Mesh store has to be wired before any other stored-property
@@ -3068,16 +3071,11 @@ final class AppState: ObservableObject {
 
     private func hydrateHistoryIfNeeded(chatId: UUID, blocking: Bool = false) {
         guard let chat = chat(byId: chatId), !chat.historyHydrated else { return }
-        // Git inspect stays on the main actor: it's a few git binary
-        // calls, fast in practice, and the branch UI binds to these
-        // fields immediately after the call site.
         if !chat.hasGitRepo, let cwd = chat.cwd {
-            let git = GitInspector.inspect(cwd: cwd)
-            mutateChat(id: chatId) { c in
-                c.hasGitRepo = git.hasRepo
-                c.branch = git.branch
-                c.availableBranches = git.branches
-                c.uncommittedFiles = git.uncommittedFiles
+            if blocking {
+                applyGitSnapshot(GitInspector.inspect(cwd: cwd), chatId: chatId)
+            } else {
+                scheduleGitInspection(chatId: chatId, cwd: cwd)
             }
         }
         // Resolve the rollout path. The first-paint snapshot loaded
@@ -3125,6 +3123,28 @@ final class AppState: ObservableObject {
             Task { @MainActor in
                 await clawix.attach(chatId: chat.id, threadId: threadId)
             }
+        }
+    }
+
+    private func scheduleGitInspection(chatId: UUID, cwd: String) {
+        guard gitInspectionTasks[chatId] == nil else { return }
+        gitInspectionTasks[chatId] = Task.detached(priority: .utility) { [weak self] in
+            let git = GitInspector.inspect(cwd: cwd)
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.gitInspectionTasks[chatId] = nil
+                guard self.chat(byId: chatId)?.cwd == cwd else { return }
+                self.applyGitSnapshot(git, chatId: chatId)
+            }
+        }
+    }
+
+    private func applyGitSnapshot(_ git: GitSnapshot, chatId: UUID) {
+        mutateChat(id: chatId) { c in
+            c.hasGitRepo = git.hasRepo
+            c.branch = git.branch
+            c.availableBranches = git.branches
+            c.uncommittedFiles = git.uncommittedFiles
         }
     }
 
