@@ -24,6 +24,9 @@ enum DatabaseKeychain {
     /// persists it transparently. Email is fixed; the password is a
     /// 32-byte URL-safe random string.
     static func loadOrCreateCredential() throws -> Credential {
+        if ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] == "1" {
+            return Credential(email: account, password: "clawix-dummy-database-admin")
+        }
         if let existing = try load() {
             return existing
         }
