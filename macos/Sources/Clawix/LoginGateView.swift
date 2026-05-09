@@ -30,7 +30,7 @@ struct LoginGateView: View {
 /// Settings → Voice to Text → Avanzado → "Voice setup walk-through".
 struct DictationOnboardingHost<Content: View>: View {
     @ViewBuilder var content: Content
-    @State private var presented: Bool = !DictationOnboardingTrigger.hasCompleted
+    @State private var presented: Bool = DictationOnboardingTrigger.shouldAutoPresent
 
     var body: some View {
         content

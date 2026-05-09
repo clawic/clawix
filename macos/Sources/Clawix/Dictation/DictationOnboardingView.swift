@@ -155,6 +155,12 @@ enum DictationOnboardingTrigger {
     static var hasCompleted: Bool {
         UserDefaults.standard.bool(forKey: completedKey)
     }
+
+    static var shouldAutoPresent: Bool {
+        guard !hasCompleted else { return false }
+        let env = ProcessInfo.processInfo.environment
+        return env["CLAWIX_DUMMY_MODE"] != "1" && env["CLAWIX_DISABLE_BACKEND"] != "1"
+    }
 }
 
 // MARK: - Permission row

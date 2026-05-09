@@ -42,7 +42,7 @@ struct MainContentView: View {
 }
 
 private struct DictationOnboardingHostModifier: ViewModifier {
-    @State private var presented: Bool = !DictationOnboardingTrigger.hasCompleted
+    @State private var presented: Bool = DictationOnboardingTrigger.shouldAutoPresent
 
     func body(content: Content) -> some View {
         content
