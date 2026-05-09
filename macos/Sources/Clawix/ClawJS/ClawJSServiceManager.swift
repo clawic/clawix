@@ -5,13 +5,9 @@ import Foundation
 /// instances, one log file per service, one `/healthz` poller per
 /// service, and the restart-with-backoff state machine.
 ///
-/// Today, `commandLine(for:)` returns `nil` for every service because
-/// `@clawjs/cli@\(ClawJSRuntime.expectedVersion)` does not yet expose a
-/// service-launch surface. The manager publishes `.blocked(reason:)`
-/// for each, and the spawn pipeline below stays dormant. The moment the
-/// CLI ships `claw open <service>` (or per-service serve commands),
-/// updating that one method enables the entire supervisor with no
-/// further plumbing changes here.
+/// `commandLine(for:)` maps each service to the concrete command that
+/// the bundled ClawJS runtime actually exposes. Services whose launch
+/// surface is missing publish `.blocked(reason:)` instead of crashing.
 ///
 /// When a background bridge daemon is actually reachable, the GUI first
 /// probes daemon-owned ports. If the daemon is alive but does not serve a
@@ -179,14 +175,10 @@ final class ClawJSServiceManager: ObservableObject {
             return
         }
 
-        // Guard 2: the CLI must expose a service-launch command. As long
-        // as `commandLine(for:)` returns nil, the supervisor stays in
-        // `.blocked` and nothing is spawned. This is THE swap point when
-        // ClawJS publishes the service-launch surface.
         guard commandLine(for: service) != nil else {
             update(service) {
                 $0.state = .blocked(reason:
-                    "@clawjs/cli@\(ClawJSRuntime.expectedVersion) does not expose a service-launch command yet")
+                    "@clawjs/cli@\(ClawJSRuntime.expectedVersion) does not expose a launch command for \(service.displayName)")
             }
             return
         }
@@ -240,31 +232,37 @@ final class ClawJSServiceManager: ObservableObject {
 
     /// Argv (without the leading node binary) to launch `service` as a
     /// long-lived HTTP server on `service.port`. Returns `nil` while the
-    /// bundled CLI lacks the surface.
-    ///
-    /// THIS IS THE ONE METHOD TO UPDATE WHEN THE PUBLISHED `@clawjs/cli`
-    /// SHIPS A SERVICE-LAUNCH SURFACE. Suggested shape once it lands:
-    ///
-    ///     [
-    ///       ClawJSRuntime.cliScriptURL.path,
-    ///       "open", service.rawValue,
-    ///       "--port", String(service.port),
-    ///       "--workspace", Self.workspaceURL.path,
-    ///       "--status-file", Self.statusFileURL(for: service).path,
-    ///     ]
+    /// bundled runtime lacks that service's surface.
     private func commandLine(for service: ClawJSService) -> [String]? {
-        // Every service launches via `claw open <service>` which the
-        // bundled CLI knows how to dispatch. Telegram included: the CLI
-        // forwards CLAW_BIN/CLAW_NODE so the surface can shell back into
-        // `claw telegram <subcommand> --json` for action endpoints.
         switch service {
-        case .vault, .database, .memory, .drive, .telegram:
+        case .database:
             return [
                 ClawJSRuntime.cliScriptURL.path,
-                "open", service.rawValue,
+                "database", "serve",
+                "--host", "127.0.0.1",
                 "--port", String(service.port),
-                "--workspace", Self.workspaceURL.path,
-                "--status-file", Self.statusFileURL(for: service).path,
+                "--data-dir", Self.dataDirectoryURL(for: service).path,
+            ]
+        case .memory:
+            guard let cli = Self.bundledServiceScript(service, name: "cli.js") else { return nil }
+            return [
+                cli.path,
+                "serve",
+                "--port", String(service.port),
+            ]
+        case .drive:
+            guard let cli = Self.bundledServiceScript(service, name: "cli.js") else { return nil }
+            return [
+                cli.path,
+                "serve",
+                "--host", "127.0.0.1",
+                "--port", String(service.port),
+                "--data-dir", Self.dataDirectoryURL(for: service).path,
+            ]
+        case .vault, .telegram:
+            guard let server = Self.bundledServiceScript(service, name: "server.js") else { return nil }
+            return [
+                server.path,
             ]
         }
     }
@@ -458,6 +456,10 @@ final class ClawJSServiceManager: ObservableObject {
             at: statusFileURL(for: service).deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
+        try fm.createDirectory(
+            at: dataDirectoryURL(for: service),
+            withIntermediateDirectories: true
+        )
     }
 
     private static func environment(for service: ClawJSService) -> [String: String] {
@@ -466,6 +468,17 @@ final class ClawJSServiceManager: ObservableObject {
         env["CLAWJS_WORKSPACE"] = workspaceURL.path
         env["CLAWJS_PORT"] = String(service.port)
         env["CLAWJS_SERVICE"] = service.rawValue
+        env["PORT"] = String(service.port)
+        env["HOST"] = "127.0.0.1"
+        env["DATABASE_HOST"] = "127.0.0.1"
+        env["DATABASE_PORT"] = String(ClawJSService.database.port)
+        env["DATABASE_DATA_DIR"] = dataDirectoryURL(for: .database).path
+        env["DRIVE_HOST"] = "127.0.0.1"
+        env["DRIVE_PORT"] = String(ClawJSService.drive.port)
+        env["DRIVE_DATA_DIR"] = dataDirectoryURL(for: .drive).path
+        env["VAULT_HOST"] = "127.0.0.1"
+        env["VAULT_PORT"] = String(ClawJSService.vault.port)
+        env["VAULT_DATA_DIR"] = dataDirectoryURL(for: .vault).path
         // The Telegram surface reads its own variables (the CLI normally
         // sets these, but pin them here too so a hand-launched `npm start`
         // lines up with what the Swift client expects).
@@ -474,6 +487,18 @@ final class ClawJSServiceManager: ObservableObject {
             env["CLAWJS_TELEGRAM_WORKSPACE"] = workspaceURL.path
         }
         return env
+    }
+
+    private static func dataDirectoryURL(for service: ClawJSService) -> URL {
+        workspaceURL
+            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent(service.rawValue, isDirectory: true)
+    }
+
+    private static func bundledServiceScript(_ service: ClawJSService, name: String) -> URL? {
+        let url = ClawJSRuntime.bundleRootURL
+            .appendingPathComponent("node_modules/\(service.rawValue)/dist/\(name)", isDirectory: false)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     // MARK: - State mutation
