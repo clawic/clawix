@@ -1,7 +1,6 @@
-/**
- * Sidebar mirrors `SidebarView` from the macOS app: pinned chats first,
- * then recent, then archived (collapsed). Search filters all groups.
- */
+// SidebarView mirror of SidebarView.swift. The sidebar inherits the
+// global blur from the shell (no own bg fill); width is controlled by
+// the shell's resizable column.
 import { useMemo, useState } from "react";
 import { useBridgeStore } from "../../bridge/store";
 import type { WireChat } from "../../bridge/wire";
@@ -30,30 +29,46 @@ export function SidebarView({ selectedChatId, onSelect, onNew }: Props) {
   const { pinned, recent, archived } = useMemo(() => groupChats(chats, query), [chats, query]);
 
   return (
-    <aside className="h-full flex flex-col bg-[var(--color-bg-elev-1)] border-r border-[var(--color-border)] w-[280px] shrink-0">
-      <div className="p-3 flex items-center gap-2">
+    <aside className="h-full flex flex-col">
+      <div className="px-3 pt-1 pb-2 flex items-center gap-2">
         <button
           onClick={onNew}
-          className="size-9 rounded-[10px] bg-[var(--color-bg-elev-3)] hover:bg-[var(--color-bg-elev-2)] grid place-items-center transition-colors"
+          className="grid place-items-center transition-colors size-8"
+          style={{
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.06)",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.10)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
           title="New chat"
         >
-          <PlusIcon size={16} />
+          <PlusIcon size={14} />
         </button>
-        <div className="flex items-center gap-2 flex-1 h-9 px-2.5 rounded-[10px] bg-[var(--color-bg-elev-2)] border border-[var(--color-border)] focus-within:border-[var(--color-border-strong)]">
-          <SearchIcon size={14} className="text-[var(--color-fg-muted)]" />
+        <div
+          className="flex items-center gap-2 flex-1"
+          style={{
+            height: 32,
+            padding: "0 10px",
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.06)",
+            boxShadow: "inset 0 0 0 0.5px rgba(255,255,255,0.06)",
+          }}
+        >
+          <SearchIcon size={13} className="text-[var(--color-fg-secondary)]" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search"
             spellCheck={false}
-            className="flex-1 bg-transparent outline-none text-[13px] placeholder:text-[var(--color-fg-dim)]"
+            className="flex-1 bg-transparent outline-none text-[12.5px] placeholder:text-[var(--color-fg-tertiary)]"
+            style={{ fontVariationSettings: '"wght" 600' }}
           />
         </div>
       </div>
 
       <div className="thin-scroll flex-1 overflow-y-auto px-2 pb-3 space-y-3">
         {pinned.length > 0 && (
-          <SidebarGroup label="Pinned" icon={<PinIcon size={12} />}>
+          <SidebarGroup label="Pinned" icon={<PinIcon size={11} />}>
             {pinned.map((c) => (
               <SidebarRow
                 key={c.id}
@@ -67,7 +82,7 @@ export function SidebarView({ selectedChatId, onSelect, onNew }: Props) {
 
         <SidebarGroup label="Recent">
           {recent.length === 0 && (
-            <div className="px-2 py-2 text-[12px] text-[var(--color-fg-dim)]">No chats yet</div>
+            <div className="px-2 py-2 text-[12px] text-[var(--color-fg-tertiary)]">No chats yet</div>
           )}
           {recent.map((c) => (
             <SidebarRow
@@ -83,7 +98,8 @@ export function SidebarView({ selectedChatId, onSelect, onNew }: Props) {
           <div>
             <button
               onClick={() => setShowArchived((v) => !v)}
-              className="flex items-center gap-1.5 px-2 py-1 w-full text-[11px] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] tracking-[-0.01em]"
+              className="flex items-center gap-1.5 px-2 py-1 w-full text-[11px] text-[var(--color-fg-secondary)] hover:text-[var(--color-fg)]"
+              style={{ letterSpacing: "-0.01em", fontVariationSettings: '"wght" 700' }}
             >
               {showArchived ? <ChevronDownIcon size={10} /> : <ChevronRightIcon size={10} />}
               <ArchiveIcon size={11} />
@@ -111,7 +127,10 @@ export function SidebarView({ selectedChatId, onSelect, onNew }: Props) {
 function SidebarGroup({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-[var(--color-fg-muted)] tracking-[-0.01em]">
+      <div
+        className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-[var(--color-menu-header)]"
+        style={{ letterSpacing: "-0.01em", fontVariationSettings: '"wght" 700' }}
+      >
         {icon}
         <span>{label}</span>
       </div>
@@ -126,26 +145,41 @@ function SidebarRow({ chat, selected, onClick }: { chat: WireChat; selected: boo
     <button
       onClick={onClick}
       className={cx(
-        "group flex flex-col gap-0.5 w-full text-left px-2.5 py-2 rounded-[10px] transition-colors",
-        selected ? "bg-[var(--color-bg-elev-3)]" : "hover:bg-[var(--color-bg-elev-2)]",
+        "group flex flex-col gap-0.5 w-full text-left transition-[background-color] duration-[150ms] ease-[var(--ease-row)]",
       )}
+      style={{
+        padding: "8px 10px",
+        borderRadius: 8,
+        background: selected ? "rgba(255,255,255,0.10)" : "transparent",
+      }}
+      onMouseEnter={(e) => {
+        if (!selected) e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+      }}
+      onMouseLeave={(e) => {
+        if (!selected) e.currentTarget.style.background = "transparent";
+      }}
     >
       <div className="flex items-center gap-2">
-        <ChatIcon size={13} className="text-[var(--color-fg-muted)] shrink-0" />
-        <span className="flex-1 truncate text-[13px]">{chat.title || "Untitled"}</span>
+        <ChatIcon size={13} className="text-[var(--color-fg-secondary)] shrink-0" />
+        <span
+          className="flex-1 truncate text-[13px]"
+          style={{ fontVariationSettings: '"wght" 600' }}
+        >
+          {chat.title || "Untitled"}
+        </span>
         {chat.hasActiveTurn && (
-          <span className="size-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
+          <span className="size-1.5 rounded-full bg-[var(--color-pastel-blue)] animate-pulse" />
         )}
         {chat.lastTurnInterrupted && !chat.hasActiveTurn && (
-          <span className="text-[10px] text-[var(--color-warning)]">⏸</span>
+          <span className="text-[10px] text-[var(--color-banner-danger-fg)]">⏸</span>
         )}
       </div>
       {chat.lastMessagePreview && (
-        <div className="pl-[20px] text-[11.5px] text-[var(--color-fg-dim)] truncate">
+        <div className="pl-[20px] text-[11.5px] text-[var(--color-fg-tertiary)] truncate">
           {chat.lastMessagePreview}
         </div>
       )}
-      <div className="pl-[20px] text-[10px] text-[var(--color-fg-dim)] flex items-center gap-1.5">
+      <div className="pl-[20px] text-[10px] text-[var(--color-fg-tertiary)] flex items-center gap-1.5">
         <span>{relativeTime(last)}</span>
         {chat.branch && <span>· {chat.branch}</span>}
       </div>
