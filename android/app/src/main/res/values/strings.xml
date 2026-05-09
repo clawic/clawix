@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clawix</string>
+    <string name="permission_camera_rationale">Clawix needs the camera to scan the pairing QR code from your Mac, capture photos to share, and let the assistant see what you point at.</string>
+    <string name="permission_microphone_rationale">Clawix needs the microphone so you can dictate prompts and send voice messages. Audio is uploaded to your paired Mac for transcription.</string>
+    <string name="permission_local_network_rationale">Clawix needs to discover your Mac on the local network to connect to the bridge daemon.</string>
+</resources>
