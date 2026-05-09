@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Clawix.Bridged</RootNamespace>
+    <AssemblyName>clawix-bridged</AssemblyName>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <Description>Background daemon. Owns the Codex CLI subprocess and the bridge WebSocket server.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Clawix.Core\Clawix.Core.csproj" />
+    <ProjectReference Include="..\Clawix.Engine\Clawix.Engine.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+</Project>
