@@ -31,10 +31,17 @@ final class ClawJSDriveClient {
     private let origin: URL
     var bearerToken: String?
 
+    private static let defaultSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 5
+        config.timeoutIntervalForResource = 20
+        return URLSession(configuration: config)
+    }()
+
     init(
         bearerToken: String? = nil,
         origin: URL = URL(string: "http://127.0.0.1:7792")!,
-        session: URLSession = .shared
+        session: URLSession = ClawJSDriveClient.defaultSession
     ) {
         self.bearerToken = bearerToken
         self.origin = origin

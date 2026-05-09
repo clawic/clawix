@@ -39,6 +39,8 @@ final class DriveManager: ObservableObject {
 
     private var refreshTask: Task<Void, Never>?
     private var bootstrapTask: Task<Void, Never>?
+    private var bootGeneration: UUID?
+    private var supervisorObserver: AnyCancellable?
 
     init(
         client: ClawJSDriveClient? = nil,
@@ -47,15 +49,31 @@ final class DriveManager: ObservableObject {
         self.client = client ?? ClawJSDriveClient()
         self.realtime = realtime ?? ClawJSDriveRealtimeClient()
         configureRealtime()
+        attachSupervisorObserver()
     }
 
     // MARK: - Lifecycle
 
     func boot() {
         guard bootstrapTask == nil else { return }
+        let generation = UUID()
+        bootGeneration = generation
         bootstrapTask = Task { @MainActor in
+            let timeout = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 8_000_000_000)
+                guard let self, self.bootGeneration == generation else { return }
+                switch self.state {
+                case .loading, .authenticating:
+                    self.state = .error("Drive service did not become ready within 8 seconds.")
+                default:
+                    break
+                }
+            }
             await ensureLoggedIn()
             await refresh()
+            timeout.cancel()
+            if bootGeneration == generation { bootGeneration = nil }
+            bootstrapTask = nil
         }
     }
 
@@ -213,5 +231,25 @@ final class DriveManager: ObservableObject {
             }
         }
         realtime.onDisconnect = { _ in /* backoff handled internally */ }
+    }
+
+    private func attachSupervisorObserver() {
+        supervisorObserver = ClawJSServiceManager.shared.$snapshots.sink { [weak self] snapshots in
+            guard let self, let snap = snapshots[.drive] else { return }
+            switch snap.state {
+            case .ready, .readyFromDaemon:
+                if self.bootstrapTask == nil {
+                    self.boot()
+                }
+            case .blocked, .crashed, .daemonUnavailable, .idle, .suspendedForDaemon:
+                self.items = []
+                self.breadcrumbs = []
+                self.state = .error(snap.state.unavailableReason ?? "Drive service is unavailable.")
+            case .starting:
+                if self.state != .ready {
+                    self.state = .loading
+                }
+            }
+        }
     }
 }

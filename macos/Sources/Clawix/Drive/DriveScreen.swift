@@ -43,7 +43,9 @@ struct DriveScreen: View {
         }
         .onChange(of: mode) { _, _ in applyMode() }
         .onReceive(NotificationCenter.default.publisher(for: .driveQuickUploadRequested)) { _ in
-            isUploadDialogPresented = true
+            if canUpload {
+                isUploadDialogPresented = true
+            }
         }
         .alert("Already in Drive", isPresented: Binding(
             get: { duplicatePromptForExisting != nil },
@@ -88,6 +90,7 @@ struct DriveScreen: View {
             Button { isUploadDialogPresented = true } label: {
                 Label("Upload", systemImage: "plus")
             }
+            .disabled(!canUpload)
         }
         .padding(12)
         .fileImporter(isPresented: $isUploadDialogPresented, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
@@ -180,6 +183,7 @@ struct DriveScreen: View {
             }
         }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            guard canUpload else { return false }
             handleDrop(providers: providers)
             return true
         }
@@ -200,6 +204,11 @@ struct DriveScreen: View {
         case .admin: return "Drive"
         case .folder: return manager.breadcrumbs.last?.name ?? "Folder"
         }
+    }
+
+    private var canUpload: Bool {
+        if case .ready = manager.state { return true }
+        return false
     }
 
     private func applyMode() {
