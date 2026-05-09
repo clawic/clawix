@@ -176,7 +176,7 @@ fi
 # Filtered console capture from the trace window. We grep our
 # subsystem so the log isn't 50 MB of unrelated system noise. `log
 # show` requires the timestamp in local time.
-SUBSYSTEM="${BUNDLE_ID:-com.clawix.app}"
+SUBSYSTEM="${BUNDLE_ID:-com.example.clawix.desktop}"
 echo "    subsystem: $SUBSYSTEM"
 log show \
     --predicate "subsystem == \"$SUBSYSTEM\"" \
