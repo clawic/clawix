@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Clawix.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:views="using:Clawix.App.Views"
+    Title="Clawix">
+  <Grid x:Name="Root">
+    <views:SplashView x:Name="Splash" Visibility="Visible" />
+    <views:LoginGateView x:Name="LoginGate" Visibility="Collapsed" />
+    <Grid x:Name="Shell" Visibility="Collapsed">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="280" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <views:SidebarView x:Name="Sidebar" Grid.Column="0" />
+      <views:ChatView x:Name="Chat" Grid.Column="1" />
+      <views:FileViewerPanel x:Name="FileViewer" Grid.Column="2" Width="0" />
+    </Grid>
+  </Grid>
+</Window>
