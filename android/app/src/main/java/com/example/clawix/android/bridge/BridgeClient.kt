@@ -153,6 +153,31 @@ class BridgeClient(
         send(BridgeBody.InterruptTurn(chatId))
     }
 
+    fun archiveChat(chatId: String) {
+        store.applyOptimisticArchive(chatId, archived = true)
+        send(BridgeBody.ArchiveChat(chatId))
+    }
+
+    fun unarchiveChat(chatId: String) {
+        store.applyOptimisticArchive(chatId, archived = false)
+        send(BridgeBody.UnarchiveChat(chatId))
+    }
+
+    fun pinChat(chatId: String) {
+        store.applyOptimisticPin(chatId, pinned = true)
+        send(BridgeBody.PinChat(chatId))
+    }
+
+    fun unpinChat(chatId: String) {
+        store.applyOptimisticPin(chatId, pinned = false)
+        send(BridgeBody.UnpinChat(chatId))
+    }
+
+    fun renameChat(chatId: String, title: String) {
+        store.applyOptimisticRename(chatId, title)
+        send(BridgeBody.RenameChat(chatId, title))
+    }
+
     fun listProjects() {
         send(BridgeBody.ListProjects)
     }

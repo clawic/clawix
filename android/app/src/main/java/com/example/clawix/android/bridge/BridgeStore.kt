@@ -69,6 +69,35 @@ class BridgeStore(
         persistAsync()
     }
 
+    /**
+     * Optimistic mutation. The UI updates immediately while the daemon
+     * confirms with a `chatUpdated` frame that overwrites the entire chat
+     * record. Mirrors how iOS `BridgeStore` patches `WireChat.isPinned`
+     * locally before the round-trip resolves.
+     */
+    private inline fun mutateChat(chatId: String, transform: (WireChat) -> WireChat) {
+        _state.update { current ->
+            val list = current.chats.toMutableList()
+            val idx = list.indexOfFirst { it.id == chatId }
+            if (idx < 0) return@update current
+            list[idx] = transform(list[idx])
+            current.copy(chats = list)
+        }
+        persistAsync()
+    }
+
+    fun applyOptimisticPin(chatId: String, pinned: Boolean) {
+        mutateChat(chatId) { it.copy(isPinned = pinned) }
+    }
+
+    fun applyOptimisticArchive(chatId: String, archived: Boolean) {
+        mutateChat(chatId) { it.copy(isArchived = archived) }
+    }
+
+    fun applyOptimisticRename(chatId: String, title: String) {
+        mutateChat(chatId) { it.copy(title = title) }
+    }
+
     fun applyMessagesSnapshot(chatId: String, messages: List<WireMessage>, hasMore: Boolean?) {
         _state.update { current ->
             val map = current.messagesByChat.toMutableMap()
