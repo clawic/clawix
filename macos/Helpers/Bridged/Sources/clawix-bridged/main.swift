@@ -633,7 +633,8 @@ final class DaemonEngineHost: EngineHost {
                     content: preview,
                     streamingFinished: true,
                     timestamp: Date(),
-                    audioRef: audioRef?.wireRef
+                    audioRef: audioRef?.wireRef,
+                    attachments: imageAttachments
                 ))
                 updateChat(chatId: chatIdString) { chat in
                     chat.hasActiveTurn = true
@@ -1174,6 +1175,7 @@ final class DaemonEngineHost: EngineHost {
         guard let threadId = threadByChat[chatId],
               let path = rolloutPathByThread[threadId]
         else { return }
+        let existing = existingMessages(chatId: chatId)
         let result = RolloutHistory.read(path: URL(fileURLWithPath: path))
         guard !result.messages.isEmpty || result.lastTurnInterrupted else { return }
         // Apply the canonical messages synchronously before returning so
@@ -1185,9 +1187,9 @@ final class DaemonEngineHost: EngineHost {
         // that landed after the Task ran emitted N `messageAppended`
         // frames in a row, which the client paints one row per render.
         updateSnapshot(chatId: chatId) { snap in
-            snap.messages = result.messages
+            snap.messages = preserveUserAttachments(existing: existing, incoming: result.messages)
             snap.chat.lastTurnInterrupted = result.lastTurnInterrupted
-            if let last = result.messages.last {
+            if let last = snap.messages.last {
                 snap.chat.lastMessageAt = last.timestamp
                 snap.chat.lastMessagePreview = String(last.content.prefix(140))
             }
@@ -1419,6 +1421,63 @@ final class DaemonEngineHost: EngineHost {
         snapshots[index] = mutable.snapshot
         chatsSubject.send(snapshots)
     }
+}
+
+private func preserveUserAttachments(existing: [WireMessage], incoming: [WireMessage]) -> [WireMessage] {
+    var remaining = existing.filter { $0.role == .user && !$0.attachments.isEmpty }
+    return incoming.map { message in
+        guard message.role == .user, message.attachments.isEmpty else { return message }
+        if let idx = remaining.firstIndex(where: { $0.id == message.id }) {
+            let source = remaining.remove(at: idx)
+            return preserveUserAttachments(existing: source, incoming: message)
+        }
+        if let idx = remaining.firstIndex(where: { isLikelySameUserPrompt($0.content, message.content) }) {
+            let source = remaining.remove(at: idx)
+            return preserveUserAttachments(existing: source, incoming: message)
+        }
+        return message
+    }
+}
+
+private func preserveUserAttachments(existing: WireMessage, incoming: WireMessage) -> WireMessage {
+    guard incoming.role == .user,
+          incoming.attachments.isEmpty,
+          !existing.attachments.isEmpty
+    else { return incoming }
+    return WireMessage(
+        id: incoming.id,
+        role: incoming.role,
+        content: incoming.content,
+        reasoningText: incoming.reasoningText,
+        streamingFinished: incoming.streamingFinished,
+        isError: incoming.isError,
+        timestamp: incoming.timestamp,
+        timeline: incoming.timeline,
+        workSummary: incoming.workSummary,
+        audioRef: incoming.audioRef ?? existing.audioRef,
+        attachments: existing.attachments
+    )
+}
+
+private func isLikelySameUserPrompt(_ lhs: String, _ rhs: String) -> Bool {
+    let left = normalizedPrompt(lhs)
+    let right = normalizedPrompt(rhs)
+    guard !left.isEmpty, !right.isEmpty else { return false }
+    return left == right || left.hasSuffix(right) || right.hasSuffix(left)
+}
+
+private func normalizedPrompt(_ text: String) -> String {
+    var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let labels = ["[image fallback]", "[image]", "[images]"]
+    for label in labels where value.hasPrefix(label) {
+        value = String(value.dropFirst(label.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        break
+    }
+    if value.hasPrefix("Attached images are preserved in Clawix UI,"),
+       let range = value.range(of: "\n\n") {
+        value = String(value[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    return value
 }
 
 private struct MutableSnapshot {

@@ -93,7 +93,11 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         Task { @MainActor in
             do {
                 let payload = try await client.messages(sessionID: sessionID)
-                let messages = self.messages(from: payload, fallbackSessionID: sessionID)
+                let existing = self.existingMessages(chatId: chatIdString)
+                let messages = preserveUserAttachments(
+                    existing: existing,
+                    incoming: self.messages(from: payload, fallbackSessionID: sessionID)
+                )
                 self.updateSnapshot(chatId: chatIdString) { snap in
                     snap.messages = messages
                     if let last = messages.last {
@@ -922,12 +926,69 @@ private func merge(existing: [WireMessage], incoming: [WireMessage]) -> [WireMes
     var output = existing
     for message in incoming {
         if let idx = output.firstIndex(where: { $0.id == message.id }) {
-            output[idx] = message
+            output[idx] = preserveUserAttachments(existing: output[idx], incoming: message)
         } else {
             output.append(message)
         }
     }
     return output
+}
+
+private func preserveUserAttachments(existing: [WireMessage], incoming: [WireMessage]) -> [WireMessage] {
+    var remaining = existing.filter { $0.role == .user && !$0.attachments.isEmpty }
+    return incoming.map { message in
+        guard message.role == .user, message.attachments.isEmpty else { return message }
+        if let idx = remaining.firstIndex(where: { $0.id == message.id }) {
+            let source = remaining.remove(at: idx)
+            return preserveUserAttachments(existing: source, incoming: message)
+        }
+        if let idx = remaining.firstIndex(where: { isLikelySameUserPrompt($0.content, message.content) }) {
+            let source = remaining.remove(at: idx)
+            return preserveUserAttachments(existing: source, incoming: message)
+        }
+        return message
+    }
+}
+
+private func preserveUserAttachments(existing: WireMessage, incoming: WireMessage) -> WireMessage {
+    guard incoming.role == .user,
+          incoming.attachments.isEmpty,
+          !existing.attachments.isEmpty
+    else { return incoming }
+    return WireMessage(
+        id: incoming.id,
+        role: incoming.role,
+        content: incoming.content,
+        reasoningText: incoming.reasoningText,
+        streamingFinished: incoming.streamingFinished,
+        isError: incoming.isError,
+        timestamp: incoming.timestamp,
+        timeline: incoming.timeline,
+        workSummary: incoming.workSummary,
+        audioRef: incoming.audioRef ?? existing.audioRef,
+        attachments: existing.attachments
+    )
+}
+
+private func isLikelySameUserPrompt(_ lhs: String, _ rhs: String) -> Bool {
+    let left = normalizedPrompt(lhs)
+    let right = normalizedPrompt(rhs)
+    guard !left.isEmpty, !right.isEmpty else { return false }
+    return left == right || left.hasSuffix(right) || right.hasSuffix(left)
+}
+
+private func normalizedPrompt(_ text: String) -> String {
+    var value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let labels = ["[image fallback]", "[image]", "[images]"]
+    for label in labels where value.hasPrefix(label) {
+        value = String(value.dropFirst(label.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        break
+    }
+    if value.hasPrefix("Attached images are preserved in Clawix UI,"),
+       let range = value.range(of: "\n\n") {
+        value = String(value[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    return value
 }
 
 private struct MutableSnapshot {
