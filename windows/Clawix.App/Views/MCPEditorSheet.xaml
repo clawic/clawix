@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="Clawix.App.Views.MCPEditorSheet"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="MCP server"
+    PrimaryButtonText="Save"
+    SecondaryButtonText="Cancel"
+    DefaultButton="Primary">
+  <StackPanel Spacing="8" MinWidth="480">
+    <TextBox x:Name="NameBox" PlaceholderText="Server name" />
+    <TextBox x:Name="CommandBox" PlaceholderText="Command (e.g. npx -y @modelcontextprotocol/server-foo)" />
+    <TextBox x:Name="EnvBox" PlaceholderText="Environment (KEY=value, one per line)" AcceptsReturn="True" TextWrapping="Wrap" Height="120" />
+  </StackPanel>
+</ContentDialog>

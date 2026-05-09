@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Clawix.App.Views.LocalModelsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ScrollViewer Padding="24">
+    <StackPanel Spacing="16" MaxWidth="720">
+      <TextBlock Text="Local models" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Opacity="0.7" Text="Run inference on your machine. Recommended for users with a discrete GPU." />
+      <ListView x:Name="ModelList" />
+      <Button Content="Download model..." Style="{ThemeResource AccentButtonStyle}" />
+    </StackPanel>
+  </ScrollViewer>
+</Page>
