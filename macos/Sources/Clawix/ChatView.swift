@@ -1,4 +1,5 @@
 import SwiftUI
+import ClawixCore
 
 private let chatRailMaxWidth: CGFloat = 720
 
@@ -436,9 +437,21 @@ private struct BranchPillAnchorKey: PreferenceKey {
 // raw `message.content` is preserved untouched so copy and edit still
 // see the mention syntax.
 
-private enum UserBubbleContent {
+enum UserBubbleContent {
+    enum ImageSource: Identifiable, Equatable {
+        case file(URL)
+        case attachment(WireAttachment)
+
+        var id: String {
+            switch self {
+            case .file(let url): return "file:\(url.standardizedFileURL.path)"
+            case .attachment(let attachment): return "attachment:\(attachment.id)"
+            }
+        }
+    }
+
     struct Parsed {
-        var images: [URL]
+        var images: [ImageSource]
         var files: [URL]
         var text: String
     }
@@ -455,23 +468,30 @@ private enum UserBubbleContent {
         pattern: #"@(/.+?)(?=\s+@/|\n|$)"#
     )
 
-    static func parse(_ raw: String) -> Parsed {
+    private static let mentionedFileRegex: NSRegularExpression? = try? NSRegularExpression(
+        pattern: #"(?m)^##\s+.*?:\s+(/.+)$"#
+    )
+
+    static func parse(_ raw: String, attachments: [WireAttachment] = []) -> Parsed {
         // Mentions in user messages come from `AppState.sendMessage`, which
         // builds them as `@<absolute-path>` joined by single spaces and
         // separated from the body by `\n\n`. Paths can contain spaces
         // (e.g. "My Project Folder"), so we can't stop at the first
         // whitespace. Stop on either ` @/` (next mention), `\n`, or end of
         // string. Lazy `.+?` ensures we don't swallow the body.
+        let extracted = extractFilesMentionedWrapper(from: raw)
+        let source = extracted.text
         guard let regex = mentionRegex else {
             return Parsed(
-                images: [], files: [],
-                text: raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                images: extracted.imageURLs.map { .file($0) } + attachmentImages(attachments),
+                files: extracted.fileURLs,
+                text: source.trimmingCharacters(in: .whitespacesAndNewlines)
             )
         }
-        let ns = raw as NSString
-        let matches = regex.matches(in: raw, range: NSRange(location: 0, length: ns.length))
-        var images: [URL] = []
-        var files: [URL] = []
+        let ns = source as NSString
+        let matches = regex.matches(in: source, range: NSRange(location: 0, length: ns.length))
+        var imageURLs = extracted.imageURLs
+        var files = extracted.fileURLs
         var ranges: [NSRange] = []
         for m in matches where m.numberOfRanges >= 2 {
             let path = ns.substring(with: m.range(at: 1))
@@ -479,7 +499,7 @@ private enum UserBubbleContent {
             guard path.hasPrefix("/") else { continue }
             let url = URL(fileURLWithPath: path)
             if imageExts.contains(url.pathExtension.lowercased()) {
-                images.append(url)
+                imageURLs.append(url)
             } else {
                 files.append(url)
             }
@@ -490,11 +510,64 @@ private enum UserBubbleContent {
             stripped = stripped.replacingCharacters(in: r, with: "") as NSString
         }
         let text = (stripped as String)
-            .components(separatedBy: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedImagePaths = Set(imageURLs.map { $0.standardizedFileURL.path })
+        let extraAttachments = attachmentImages(attachments).filter { source in
+            guard case .attachment(let attachment) = source else { return true }
+            let filename = attachment.filename ?? ""
+            return !normalizedImagePaths.contains { path in
+                (path as NSString).lastPathComponent == filename
+            }
+        }
+        return Parsed(
+            images: imageURLs.map { .file($0) } + extraAttachments,
+            files: files,
+            text: text
+        )
+    }
+
+    private static func extractFilesMentionedWrapper(from raw: String) -> (text: String, imageURLs: [URL], fileURLs: [URL]) {
+        let source = raw.replacingOccurrences(of: "\r\n", with: "\n")
+        let markers = [
+            "## My request for Clawix:",
+            "## My request for " + ["Co", "dex"].joined() + ":"
+        ]
+        guard let markerRange = markers.compactMap({ source.range(of: $0) }).first else {
+            return (source, [], [])
+        }
+
+        let header = "# Files mentioned by the user:"
+        let beforeHeader = source.range(of: header).map { String(source[..<$0.lowerBound]) } ?? ""
+        let fileBlockStart = source.range(of: header)?.lowerBound ?? source.startIndex
+        let fileBlock = String(source[fileBlockStart..<markerRange.lowerBound])
+        let request = String(source[markerRange.upperBound...])
+        let cleanText = [beforeHeader, request]
             .joined(separator: "\n")
-        return Parsed(images: images, files: files, text: text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let regex = mentionedFileRegex else { return (cleanText, [], []) }
+        let ns = fileBlock as NSString
+        let matches = regex.matches(in: fileBlock, range: NSRange(location: 0, length: ns.length))
+        var images: [URL] = []
+        var files: [URL] = []
+        for match in matches where match.numberOfRanges >= 2 {
+            let path = ns.substring(with: match.range(at: 1))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard path.hasPrefix("/") else { continue }
+            let url = URL(fileURLWithPath: path)
+            if imageExts.contains(url.pathExtension.lowercased()) {
+                images.append(url)
+            } else {
+                files.append(url)
+            }
+        }
+        return (cleanText, images, files)
+    }
+
+    private static func attachmentImages(_ attachments: [WireAttachment]) -> [ImageSource] {
+        attachments
+            .filter { $0.kind == .image }
+            .map { .attachment($0) }
     }
 }
 
@@ -511,11 +584,13 @@ private struct UserMentionPreviews: View {
         VStack(alignment: .trailing, spacing: 8) {
             if !parsed.images.isEmpty {
                 HStack(spacing: 8) {
-                    ForEach(Array(parsed.images.enumerated()), id: \.offset) { _, url in
-                        UserImageThumbnail(url: url)
+                    ForEach(Array(parsed.images.enumerated()), id: \.offset) { _, source in
+                        UserImageThumbnail(source: source)
                             .onTapGesture {
-                                withAnimation(.easeOut(duration: 0.18)) {
-                                    onOpenImage(url)
+                                if case .file(let url) = source {
+                                    withAnimation(.easeOut(duration: 0.18)) {
+                                        onOpenImage(url)
+                                    }
                                 }
                             }
                     }
@@ -533,7 +608,7 @@ private struct UserMentionPreviews: View {
 }
 
 private struct UserImageThumbnail: View {
-    let url: URL
+    let source: UserBubbleContent.ImageSource
     @State private var image: NSImage? = nil
     @State private var hovered = false
 
@@ -562,12 +637,25 @@ private struct UserImageThumbnail: View {
         .animation(.easeOut(duration: 0.12), value: hovered)
         .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .onHover { hovered = $0 }
-        .help(url.lastPathComponent)
-        .task(id: url) {
+        .help(helpText)
+        .task(id: source.id) {
             let loaded = await Task.detached(priority: .userInitiated) {
-                NSImage(contentsOf: url)
+                switch source {
+                case .file(let url):
+                    return NSImage(contentsOf: url)
+                case .attachment(let attachment):
+                    guard let data = Data(base64Encoded: attachment.dataBase64) else { return nil }
+                    return NSImage(data: data)
+                }
             }.value
             self.image = loaded
+        }
+    }
+
+    private var helpText: String {
+        switch source {
+        case .file(let url): return url.lastPathComponent
+        case .attachment(let attachment): return attachment.filename ?? "Image"
         }
     }
 }
@@ -716,7 +804,7 @@ private struct MessageRow: View, Equatable {
                     )
                     .frame(maxWidth: CGFloat.infinity)
                 } else {
-                    let parsed = UserBubbleContent.parse(message.content)
+                    let parsed = UserBubbleContent.parse(message.content, attachments: message.attachments)
                     if !parsed.images.isEmpty || !parsed.files.isEmpty {
                         UserMentionPreviews(parsed: parsed, onOpenImage: onOpenImage)
                     }
