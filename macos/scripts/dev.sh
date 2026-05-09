@@ -460,25 +460,30 @@ else
 fi
 
 # 3.4) Bundle the pinned @clawjs/cli release plus a Node runtime under
-#      Contents/Helpers/clawjs/. ClawJSRuntime.swift expects this layout
+#      Contents/Resources/clawjs/. ClawJSRuntime.swift expects this layout
 #      at runtime. The script is idempotent (skips when CLAWJS_VERSION
 #      already matches the installed tree) and signs every nested .node
-#      with SIGN_IDENTITY so the outer bundle codesign passes.
-#
-# TEMPORARILY DISABLED in the dev loop — the outer codesign on
-# Contents/Helpers/clawjs/ chokes on bundled npm packages whose package.json
-# layout is interpreted as a sub-bundle (zod/v4/locales/es.cjs). Re-enable
-# once the bundling layout moves to Contents/Resources/clawjs/ or the
-# clawjs tree is sealed as a self-contained signed sub-bundle. ClawJSRuntime.swift
-# already tolerates the missing tree (isAvailable returns false in dev).
-if [[ "${CLAWIX_DEV_BUNDLE_CLAWJS:-0}" == "1" ]]; then
+#      with SIGN_IDENTITY so native modules can load.
+if [[ "${CLAWIX_DEV_BUNDLE_CLAWJS:-1}" == "1" ]]; then
     echo "==> Bundling ClawJS runtime"
+    if [[ -z "${CLAWJS_DEV_OVERLAY:-}" ]]; then
+        for overlay_candidate in \
+            "$PROJECT_DIR/../../../clawjs" \
+            "$PROJECT_DIR/../../clawjs"
+        do
+            if [[ -d "$overlay_candidate/packages/clawjs/bin" ]]; then
+                CLAWJS_DEV_OVERLAY="$overlay_candidate"
+                export CLAWJS_DEV_OVERLAY
+                break
+            fi
+        done
+    fi
     CLAWJS_SIGN_IDENTITY="$SIGN_IDENTITY" \
     CLAWJS_SIGN_OPTS="--timestamp=none" \
         bash "$SCRIPT_DIR/bundle_clawjs.sh" "$BUNDLE"
 else
     echo "==> Skipping ClawJS bundling (set CLAWIX_DEV_BUNDLE_CLAWJS=1 to enable)"
-    rm -rf "$BUNDLE/Contents/Helpers/clawjs"
+    rm -rf "$BUNDLE/Contents/Resources/clawjs"
 fi
 
 # 4) Sign the bundle with the stable identity. TCC ties permissions to

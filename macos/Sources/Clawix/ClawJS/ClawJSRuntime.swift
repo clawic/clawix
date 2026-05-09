@@ -1,7 +1,7 @@
 import Foundation
 
 /// Locates the ClawJS runtime that `bundle_clawjs.sh` plants under
-/// `Clawix.app/Contents/Helpers/clawjs/`. The version is pinned in
+/// `Clawix.app/Contents/Resources/clawjs/`. The version is pinned in
 /// `macos/CLAWJS_VERSION` and surfaced through the generated
 /// `Info.plist` as `ClawJSVersion`. Phase 2's `ClawJSServiceManager`
 /// will spawn `nodeBinaryURL cliScriptURL open <service> ...`.
@@ -13,10 +13,10 @@ enum ClawJSRuntime {
         Bundle.main.infoDictionary?["ClawJSVersion"] as? String ?? "0.0.0"
     }()
 
-    /// `Clawix.app/Contents/Helpers/clawjs/` — root of the bundled tree.
+    /// `Clawix.app/Contents/Resources/clawjs/` — root of the bundled tree.
     static var bundleRootURL: URL {
         Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Helpers/clawjs", isDirectory: true)
+            .appendingPathComponent("Contents/Resources/clawjs", isDirectory: true)
     }
 
     /// The Node binary `bundle_clawjs.sh` placed at the bundle root.

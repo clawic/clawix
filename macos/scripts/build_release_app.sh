@@ -217,29 +217,16 @@ AGENTPLIST
 fi
 
 # Bundle the pinned @clawjs/cli release plus a Node runtime under
-# Contents/Helpers/clawjs/. The script signs every nested .node with the
-# Developer ID identity and hardened-runtime flags so the final
-# `codesign --verify --deep --strict` and notarization both pass.
-#
-# DISABLED by default in release until the deep-codesign issue is
-# resolved: `codesign --verify --deep --strict` chokes on bundled npm
-# packages whose internal layout (package.json + nested locale .cjs
-# files like `node_modules/zod/v4/locales/es.cjs`) is interpreted as
-# a sub-bundle. The dev path has the same gate
-# (CLAWIX_DEV_BUNDLE_CLAWJS) and `ClawJSRuntime.isAvailable` already
-# returns false when the tree is missing, so the app starts clean.
-# Re-enable here once `bundle_clawjs.sh` produces a layout that the
-# outer deep-strict pass accepts (sealed sub-bundle under
-# Contents/Helpers/, or a move to Contents/Resources/, both options
-# are tracked in the plan's "Requests al equipo de ClawJS" list).
-if [[ "${CLAWIX_RELEASE_BUNDLE_CLAWJS:-0}" == "1" ]]; then
+# Contents/Resources/clawjs/. The script signs every nested .node with the
+# Developer ID identity and hardened-runtime flags so native modules can load.
+if [[ "${CLAWIX_RELEASE_BUNDLE_CLAWJS:-1}" == "1" ]]; then
     echo "==> Bundling ClawJS runtime"
     CLAWJS_SIGN_IDENTITY="$DEVELOPER_ID_IDENTITY" \
     CLAWJS_SIGN_OPTS="--options runtime --timestamp" \
         bash "$SCRIPT_DIR/bundle_clawjs.sh" "$BUNDLE_DIR"
 else
-    echo "==> Skipping ClawJS bundling (set CLAWIX_RELEASE_BUNDLE_CLAWJS=1 once the deep-codesign layout is fixed)"
-    rm -rf "$BUNDLE_DIR/Contents/Helpers/clawjs"
+    echo "==> Skipping ClawJS bundling (CLAWIX_RELEASE_BUNDLE_CLAWJS=0)"
+    rm -rf "$BUNDLE_DIR/Contents/Resources/clawjs"
 fi
 
 # Strip absolute build paths from the binary. Swift's -file-prefix-map

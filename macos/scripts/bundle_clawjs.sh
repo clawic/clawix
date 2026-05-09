@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stages the pinned @clawjs/cli release plus a Node runtime into
-# Clawix.app/Contents/Helpers/clawjs/. ClawJSRuntime.swift expects
+# Clawix.app/Contents/Resources/clawjs/. ClawJSRuntime.swift expects
 # this exact layout at runtime; the release build's codesign --verify
 # --deep --strict pass exercises every native module sealed inside.
 #
@@ -21,7 +21,7 @@
 #                                 release / notarization).
 #
 # Outputs:
-#   <bundle>/Contents/Helpers/clawjs/{node, package.json, node_modules/}
+#   <bundle>/Contents/Resources/clawjs/{node, package.json, node_modules/}
 #
 # Idempotency:
 #   Skips re-install when <bundle>/Contents/Helpers/clawjs/package.json
@@ -59,7 +59,7 @@ NODE_ARCH="arm64"
 SIGN_ID="${CLAWJS_SIGN_IDENTITY:--}"
 SIGN_OPTS="${CLAWJS_SIGN_OPTS:-}"
 
-CLAWJS_DEST="$BUNDLE_DIR/Contents/Helpers/clawjs"
+CLAWJS_DEST="$BUNDLE_DIR/Contents/Resources/clawjs"
 CACHE_ROOT="$PROJECT_DIR/build/clawjs-cache/$CLAWJS_VERSION"
 STAGE_DIR="$CACHE_ROOT/stage"
 NODE_TARBALL="$CACHE_ROOT/node-v${NODE_VERSION}-darwin-${NODE_ARCH}.tar.gz"
@@ -82,7 +82,7 @@ PY
 #    package.json is just a manifest declaring the dep, so check the
 #    actually-installed @clawjs/cli package.json that holds the real
 #    version field.
-if [[ "$(read_pkg_version "$CLAWJS_DEST/node_modules/@clawjs/cli/package.json")" == "$CLAWJS_VERSION" ]]; then
+if [[ -z "${CLAWJS_DEV_OVERLAY:-}" && "$(read_pkg_version "$CLAWJS_DEST/node_modules/@clawjs/cli/package.json")" == "$CLAWJS_VERSION" ]]; then
     echo "==> ClawJS bundle already at $CLAWJS_VERSION, skipping"
     exit 0
 fi
@@ -97,6 +97,11 @@ for candidate in /opt/homebrew/bin/npm /usr/local/bin/npm; do
 done
 if [[ -z "$NPM" ]]; then
     echo "ERROR: npm not found in /opt/homebrew/bin or /usr/local/bin" >&2
+    exit 1
+fi
+NPM_CLI="$("$NPM" root -g)/npm/bin/npm-cli.js"
+if [[ ! -f "$NPM_CLI" ]]; then
+    echo "ERROR: npm CLI entrypoint not found next to $NPM" >&2
     exit 1
 fi
 
@@ -178,48 +183,87 @@ if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
         cp -R "$OVERLAY_BIN/." "$CLAWJS_DEST/node_modules/@clawjs/cli/bin/"
     fi
     OVERLAY_DB="$CLAWJS_DEV_OVERLAY/packages/clawjs-database"
-    if [[ -d "$OVERLAY_DB/src" ]]; then
-        echo "==> Dev overlay: copying $OVERLAY_DB/src → $CLAWJS_DEST/node_modules/@clawjs/database/src"
-        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/src"
-        cp -R "$OVERLAY_DB/src" "$CLAWJS_DEST/node_modules/@clawjs/database/src"
+    if [[ -d "$OVERLAY_DB/dist" ]]; then
+        if [[ -f "$OVERLAY_DB/package.json" ]]; then
+            "$NPM" --prefix "$OVERLAY_DB" run build >/dev/null
+        fi
+        echo "==> Dev overlay: copying $OVERLAY_DB → $CLAWJS_DEST/node_modules/@clawjs/database"
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database"
+        mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
+        cp -R "$OVERLAY_DB" "$CLAWJS_DEST/node_modules/@clawjs/database"
+        (
+            cd "$CLAWJS_DEST/node_modules/@clawjs/database"
+            npm_config_arch=arm64 \
+            npm_config_target_arch=arm64 \
+            npm_config_target_platform=darwin \
+            "$NPM" install --omit=dev --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        )
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/better-sqlite3"
     fi
     # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
-    # in dev. Mirror the layout from the overlay's built dist/ tree.
+    # from @clawjs/cli/bin, i.e. node_modules/vault/dist/server.js.
     OVERLAY_VAULT="$CLAWJS_DEV_OVERLAY/vault"
     if [[ -d "$OVERLAY_VAULT/dist" ]]; then
-        echo "==> Dev overlay: copying $OVERLAY_VAULT/dist → $CLAWJS_DEST/vault/dist"
-        rm -rf "$CLAWJS_DEST/vault/dist"
-        mkdir -p "$CLAWJS_DEST/vault"
-        cp -R "$OVERLAY_VAULT/dist" "$CLAWJS_DEST/vault/dist"
+        echo "==> Dev overlay: copying $OVERLAY_VAULT/dist → $CLAWJS_DEST/node_modules/vault/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/vault/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/vault"
+        cp -R "$OVERLAY_VAULT/dist" "$CLAWJS_DEST/node_modules/vault/dist"
+        if [[ -d "$OVERLAY_VAULT/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/node_modules/vault/node_modules"
+            cp -R "$OVERLAY_VAULT/node_modules" "$CLAWJS_DEST/node_modules/vault/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/vault/node_modules/better-sqlite3"
+        fi
     fi
-    # Memory server: same layout as vault. The launcher tries
-    # `<HERE>/../../../memory/dist/server.js` next to the cli bin/.
+    # Memory server: same layout as vault.
     OVERLAY_MEMORY="$CLAWJS_DEV_OVERLAY/memory"
     if [[ -d "$OVERLAY_MEMORY/dist" ]]; then
-        echo "==> Dev overlay: copying $OVERLAY_MEMORY/dist → $CLAWJS_DEST/memory/dist"
-        rm -rf "$CLAWJS_DEST/memory/dist"
-        mkdir -p "$CLAWJS_DEST/memory"
-        cp -R "$OVERLAY_MEMORY/dist" "$CLAWJS_DEST/memory/dist"
+        echo "==> Dev overlay: copying $OVERLAY_MEMORY/dist → $CLAWJS_DEST/node_modules/memory/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/memory/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/memory"
+        cp -R "$OVERLAY_MEMORY/dist" "$CLAWJS_DEST/node_modules/memory/dist"
         # node_modules of the memory pkg are needed for native deps.
         if [[ -d "$OVERLAY_MEMORY/node_modules" ]]; then
-            rm -rf "$CLAWJS_DEST/memory/node_modules"
-            cp -R "$OVERLAY_MEMORY/node_modules" "$CLAWJS_DEST/memory/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/memory/node_modules"
+            cp -R "$OVERLAY_MEMORY/node_modules" "$CLAWJS_DEST/node_modules/memory/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/memory/node_modules/better-sqlite3"
+        fi
+    fi
+    # Drive surface.
+    OVERLAY_DRIVE="$CLAWJS_DEV_OVERLAY/drive"
+    if [[ -d "$OVERLAY_DRIVE/dist" ]]; then
+        echo "==> Dev overlay: copying $OVERLAY_DRIVE/dist → $CLAWJS_DEST/node_modules/drive/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/drive/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/drive"
+        cp -R "$OVERLAY_DRIVE/dist" "$CLAWJS_DEST/node_modules/drive/dist"
+        if [[ -d "$OVERLAY_DRIVE/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/node_modules/drive/node_modules"
+            cp -R "$OVERLAY_DRIVE/node_modules" "$CLAWJS_DEST/node_modules/drive/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/drive/node_modules/better-sqlite3"
         fi
     fi
     # Telegram surface: launcher tries
     # `<HERE>/../../../telegram/dist/server.js` next to the cli bin/.
     OVERLAY_TELEGRAM="$CLAWJS_DEV_OVERLAY/telegram"
     if [[ -d "$OVERLAY_TELEGRAM/dist" ]]; then
-        echo "==> Dev overlay: copying $OVERLAY_TELEGRAM/dist → $CLAWJS_DEST/telegram/dist"
-        rm -rf "$CLAWJS_DEST/telegram/dist"
-        mkdir -p "$CLAWJS_DEST/telegram"
-        cp -R "$OVERLAY_TELEGRAM/dist" "$CLAWJS_DEST/telegram/dist"
+        echo "==> Dev overlay: copying $OVERLAY_TELEGRAM/dist → $CLAWJS_DEST/node_modules/telegram/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/telegram/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/telegram"
+        cp -R "$OVERLAY_TELEGRAM/dist" "$CLAWJS_DEST/node_modules/telegram/dist"
         if [[ -d "$OVERLAY_TELEGRAM/node_modules" ]]; then
-            rm -rf "$CLAWJS_DEST/telegram/node_modules"
-            cp -R "$OVERLAY_TELEGRAM/node_modules" "$CLAWJS_DEST/telegram/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/telegram/node_modules"
+            cp -R "$OVERLAY_TELEGRAM/node_modules" "$CLAWJS_DEST/node_modules/telegram/node_modules"
         fi
     fi
 fi
+
+(
+    cd "$CLAWJS_DEST"
+    npm_config_nodedir="$NODE_DIR" \
+    npm_config_arch=arm64 \
+    npm_config_target_arch=arm64 \
+    npm_config_target_platform=darwin \
+    "$CLAWJS_DEST/node" "$NPM_CLI" rebuild better-sqlite3 --build-from-source 2>&1 | tail -3
+)
 
 # 5) Re-sign every nested native module and the Node binary. npm-installed
 #    .node prebuilds ship as linker-signed adhoc; the outer .app codesign
