@@ -1,5 +1,5 @@
 import Foundation
-import CryptoKit
+import Crypto
 
 public enum AEAD {
 
@@ -58,9 +58,9 @@ public enum AEAD {
         let cipherEnd = blob.endIndex - tagSize
         guard nonceEnd <= cipherEnd else { throw Error.malformedBlob }
 
-        let nonce = try ChaChaPoly.Nonce(data: blob[nonceStart..<nonceEnd])
-        let cipher = blob[nonceEnd..<cipherEnd]
-        let tag = blob[cipherEnd..<blob.endIndex]
+        let nonce = try ChaChaPoly.Nonce(data: Data(blob[nonceStart..<nonceEnd]))
+        let cipher = Data(blob[nonceEnd..<cipherEnd])
+        let tag = Data(blob[cipherEnd..<blob.endIndex])
         let sealedBox: ChaChaPoly.SealedBox
         do {
             sealedBox = try ChaChaPoly.SealedBox(nonce: nonce, ciphertext: cipher, tag: tag)
