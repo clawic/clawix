@@ -37,6 +37,12 @@ final class PendingApprovalRequest: ObservableObject, Identifiable {
 @MainActor
 final class VaultManager: ObservableObject {
 
+    /// Process-wide singleton. The SwiftUI root mounts this as a
+    /// `@StateObject` (so views observe its `@Published` properties),
+    /// while non-UI code (e.g., enhancement / transcription providers
+    /// that need API keys at request time) reads it directly.
+    static let shared = VaultManager()
+
     enum State: Equatable {
         case loading
         case uninitialized

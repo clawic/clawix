@@ -59,7 +59,7 @@ struct ClawixApp: App {
     @StateObject private var updater = UpdaterController()
     @StateObject private var windowState = WindowState()
     @StateObject private var dictation = DictationCoordinator.shared
-    @StateObject private var vaultManager = VaultManager()
+    @StateObject private var vaultManager = VaultManager.shared
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
     @Environment(\.openWindow) private var openWindow
