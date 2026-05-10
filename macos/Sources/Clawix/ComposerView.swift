@@ -248,9 +248,15 @@ struct ComposerView: View {
             .hoverHint(L10n.t("Change model"))
 
             if dictation.state == .transcribing, dictation.activeSource == .composer {
-                TranscribingSpinner()
-                    .frame(width: 28, height: 28)
-                    .accessibilityLabel("Transcribing voice note")
+                Button {
+                    dictation.cancel()
+                } label: {
+                    TranscribingSpinner()
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Cancel voice transcription")
+                .hoverHint(L10n.t("Cancel transcription"))
             } else {
                 Button {
                     startVoice()
