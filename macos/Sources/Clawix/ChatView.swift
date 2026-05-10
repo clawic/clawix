@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ClawixCore
 
@@ -14,6 +15,7 @@ struct ChatView: View {
     @State private var branchCreateOpen = false
     @State private var branchSearch = ""
     @State private var visibleMessageLimit = Self.initialVisibleMessageLimit
+    @State private var lastLocalRevealAt: Date = .distantPast
     /// Drives `scrollPosition`. `chatTailId` is the canonical "you are
     /// at the tail" marker; an `id`'d clear rectangle at the end of
     /// the LazyVStack carries the same id so SwiftUI knows where the
@@ -36,8 +38,9 @@ struct ChatView: View {
     /// at 80pt from the top gives the daemon a chance to deliver the
     /// next page before the user sees the gap.
     private static let loadOlderThreshold: CGFloat = 80
-    private static let initialVisibleMessageLimit = 24
-    private static let visibleMessagePageSize = 24
+    private static let initialVisibleMessageLimit = 14
+    private static let visibleMessagePageSize = 6
+    private static let localRevealThrottle: TimeInterval = 0.5
 
     var body: some View {
         RenderProbe.tick("ChatView")
@@ -45,6 +48,23 @@ struct ChatView: View {
             if let chat {
                 let visibleMessages = Array(chat.messages.suffix(visibleMessageLimit))
                 let hiddenLocalMessageCount = max(0, chat.messages.count - visibleMessages.count)
+                let _ = PerfSignpost.uiChat.event("messages.visible", visibleMessages.count)
+                let prewarmKey = ChatMarkdownPrewarmKey(
+                    chatId: chat.id,
+                    visibleMessageCount: visibleMessages.count,
+                    firstMessageId: visibleMessages.first?.id,
+                    lastMessageId: visibleMessages.last?.id,
+                    lastTimelineCount: visibleMessages.last?.timeline.count ?? 0
+                )
+                let bottomScrollBinding = Binding<String?>(
+                    get: { bottomId },
+                    set: { newValue in
+                        let normalized = newValue == chatTailId ? chatTailId : nil
+                        if bottomId != normalized {
+                            bottomId = normalized
+                        }
+                    }
+                )
                 VStack(spacing: 0) {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -78,8 +98,8 @@ struct ChatView: View {
                                     return chat.hasActiveTurn
                                 }()
                                 let activeFindQuery = appState.isFindBarOpen ? appState.findQuery : ""
-                                ForEach(visibleMessages) { msg in
-                                    MessageRow(
+                            ForEach(visibleMessages) { msg in
+                                MessageRow(
                                         chatId: chat.id,
                                         message: msg,
                                         isLastUserMessage: msg.id == lastUserMessageId,
@@ -112,9 +132,12 @@ struct ChatView: View {
                                         onOpenImage: { url in
                                             appState.imagePreviewURL = url
                                         }
-                                    )
-                                    .equatable()
-                                    .id(msg.id)
+                                )
+                                .equatable()
+                                .id(msg.id)
+                                .transaction { transaction in
+                                    transaction.animation = nil
+                                }
 
                                     if msg.id == chat.forkBannerAfterMessageId,
                                        let parentChatId = chat.forkedFromChatId {
@@ -163,7 +186,7 @@ struct ChatView: View {
                         // the snapshot cache prepopulating the chat
                         // and the bridge's `bridgeInitialPageLimit`
                         // payload, gets us 90% of the same feel.
-                        .scrollPosition(id: $bottomId, anchor: .bottom)
+                        .scrollPosition(id: bottomScrollBinding, anchor: .bottom)
                         .modifier(ChatScrollDeclarativeAnchors())
                         // Scroll-up sentinel for `loadOlderMessages`.
                         // Fires whenever `offsetY` crosses the
@@ -179,14 +202,24 @@ struct ChatView: View {
                             threshold: Self.loadOlderThreshold,
                             onTrigger: {
                                 if hiddenLocalMessageCount > 0 {
+                                    let now = Date()
+                                    guard now.timeIntervalSince(lastLocalRevealAt) >= Self.localRevealThrottle else {
+                                        return
+                                    }
+                                    lastLocalRevealAt = now
                                     let anchorId = visibleMessages.first?.id
+                                    bottomId = nil
                                     visibleMessageLimit = min(
                                         chat.messages.count,
                                         visibleMessageLimit + Self.visibleMessagePageSize
                                     )
                                     if let anchorId {
                                         DispatchQueue.main.async {
-                                            proxy.scrollTo(anchorId, anchor: .top)
+                                            var transaction = Transaction()
+                                            transaction.disablesAnimations = true
+                                            withTransaction(transaction) {
+                                                proxy.scrollTo(anchorId, anchor: .top)
+                                            }
                                         }
                                     }
                                 } else {
@@ -201,12 +234,14 @@ struct ChatView: View {
                             // in still pins to the latest message on
                             // reentry.
                             visibleMessageLimit = Self.initialVisibleMessageLimit
+                            lastLocalRevealAt = .distantPast
                             bottomId = chatTailId
                         }
                         .onChange(of: chatId) { _, _ in
                             appState.ensureSelectedChat()
                             appState.requestComposerFocus()
                             visibleMessageLimit = Self.initialVisibleMessageLimit
+                            lastLocalRevealAt = .distantPast
                             bottomId = chatTailId
                         }
                         .onChange(of: appState.currentFindIndex) { _, _ in
@@ -214,6 +249,12 @@ struct ChatView: View {
                         }
                         .onChange(of: appState.findMatches.count) { _, _ in
                             scrollToCurrentFindMatch(proxy: proxy)
+                        }
+                        .task(id: prewarmKey) {
+                            await ChatMarkdownPrewarmer.prewarm(
+                                messages: visibleMessages,
+                                timelineEntryLimit: MessageRow.initialTimelineEntryLimit
+                            )
                         }
                     }
 
@@ -752,6 +793,49 @@ private enum TimestampFormatters {
     }
 }
 
+private struct ChatMarkdownPrewarmKey: Hashable {
+    let chatId: UUID
+    let visibleMessageCount: Int
+    let firstMessageId: UUID?
+    let lastMessageId: UUID?
+    let lastTimelineCount: Int
+}
+
+private enum ChatMarkdownPrewarmer {
+    static func prewarm(messages: [ChatMessage], timelineEntryLimit: Int) async {
+        let texts = markdownTexts(messages: messages, timelineEntryLimit: timelineEntryLimit)
+        guard !texts.isEmpty else { return }
+        PerfSignpost.renderMarkdown.event("prewarm.texts", texts.count)
+        await Task.detached(priority: .utility) {
+            for text in texts {
+                MarkdownParseCache.prewarm(text)
+            }
+        }.value
+    }
+
+    private static func markdownTexts(messages: [ChatMessage], timelineEntryLimit: Int) -> [String] {
+        var result: [String] = []
+        result.reserveCapacity(messages.count * 2)
+        for message in messages where message.role == .assistant {
+            if !message.content.isEmpty {
+                result.append(message.content)
+            }
+            let timeline = message.timeline.suffix(timelineEntryLimit)
+            for entry in timeline {
+                switch entry {
+                case .reasoning(_, let text), .message(_, let text):
+                    if !text.isEmpty {
+                        result.append(text)
+                    }
+                case .tools:
+                    break
+                }
+            }
+        }
+        return result
+    }
+}
+
 // MARK: - Message row
 
 // [QUICKASK<->CHAT PARITY]
@@ -807,8 +891,14 @@ private struct MessageRow: View, Equatable {
     /// `.tools` group; the visible portion is the closing reasoning chunk
     /// (the final answer Clawix writes after the work is done).
     @State private var timelineExpanded = false
+    @State private var visibleTimelineEntryLimit = Self.initialTimelineEntryLimit
+    @State private var lastTimelineRevealAt: Date = .distantPast
 
     private var isUser: Bool { message.role == .user }
+    private var exposeMessageAccessibility: Bool { NSWorkspace.shared.isVoiceOverEnabled }
+    fileprivate static let initialTimelineEntryLimit = 8
+    private static let timelineEntryPageSize = 8
+    private static let timelineRevealThrottle: TimeInterval = 0.15
 
     static func == (lhs: MessageRow, rhs: MessageRow) -> Bool {
         lhs.chatId == rhs.chatId
@@ -920,8 +1010,20 @@ private struct MessageRow: View, Equatable {
                 // expands the disclosure.
                 let showTimeline = isStreaming || timelineExpanded
                 if showTimeline {
-                    ForEach(message.timeline) { entry in
+                    let timelineEntries = visibleTimelineEntries(isStreaming: isStreaming)
+                    let _ = PerfSignpost.uiChat.event("timeline.entries.visible", timelineEntries.count)
+                    if !isStreaming, hiddenTimelineEntryCount > 0 {
+                        Color.clear
+                            .frame(height: 1)
+                            .onAppear {
+                                revealMoreTimelineEntriesIfNeeded()
+                            }
+                    }
+                    ForEach(timelineEntries) { entry in
                         timelineEntry(entry)
+                            .transaction { transaction in
+                                transaction.animation = nil
+                            }
                     }
                 }
 
@@ -1017,6 +1119,17 @@ private struct MessageRow: View, Equatable {
         }
         .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
         .padding(.leading, isUser ? chatRailMaxWidth * 0.2 : 0)
+        .onChange(of: timelineExpanded) { _, expanded in
+            visibleTimelineEntryLimit = Self.initialTimelineEntryLimit
+            lastTimelineRevealAt = .distantPast
+            if expanded {
+                prewarmVisibleTimelineMarkdown()
+            }
+        }
+        .onChange(of: message.id) { _, _ in
+            visibleTimelineEntryLimit = Self.initialTimelineEntryLimit
+            lastTimelineRevealAt = .distantPast
+        }
     }
 
     /// Walk the message timeline and return every absolute file path the
@@ -1035,6 +1148,60 @@ private struct MessageRow: View, Equatable {
             }
         }
         return result
+    }
+
+    private var hiddenTimelineEntryCount: Int {
+        max(0, message.timeline.count - visibleTimelineEntryLimit)
+    }
+
+    private func visibleTimelineEntries(isStreaming: Bool) -> [AssistantTimelineEntry] {
+        if isStreaming || visibleTimelineEntryLimit >= message.timeline.count {
+            return message.timeline
+        }
+        return Array(message.timeline.suffix(visibleTimelineEntryLimit))
+    }
+
+    private func revealMoreTimelineEntriesIfNeeded() {
+        guard timelineExpanded, hiddenTimelineEntryCount > 0 else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastTimelineRevealAt) >= Self.timelineRevealThrottle else {
+            return
+        }
+        lastTimelineRevealAt = now
+        let nextLimit = min(message.timeline.count, visibleTimelineEntryLimit + Self.timelineEntryPageSize)
+        guard nextLimit != visibleTimelineEntryLimit else { return }
+        PerfSignpost.uiChat.event("timeline.entries.revealed", nextLimit)
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            visibleTimelineEntryLimit = nextLimit
+        }
+        prewarmVisibleTimelineMarkdown(limit: nextLimit)
+    }
+
+    private func prewarmVisibleTimelineMarkdown(limit: Int? = nil) {
+        let count = min(message.timeline.count, limit ?? visibleTimelineEntryLimit)
+        let entries = count >= message.timeline.count
+            ? message.timeline
+            : Array(message.timeline.suffix(count))
+        let texts = Self.markdownTexts(in: entries)
+        guard !texts.isEmpty else { return }
+        Task.detached(priority: .utility) {
+            for text in texts {
+                MarkdownParseCache.prewarm(text)
+            }
+        }
+    }
+
+    private static func markdownTexts(in entries: [AssistantTimelineEntry]) -> [String] {
+        entries.compactMap { entry in
+            switch entry {
+            case .reasoning(_, let text), .message(_, let text):
+                return text.isEmpty ? nil : text
+            case .tools:
+                return nil
+            }
+        }
     }
 
     @ViewBuilder
