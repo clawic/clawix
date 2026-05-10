@@ -2316,19 +2316,21 @@ private struct ComposerAttachmentChip: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .layoutPriority(0)
-            if hovered {
-                Button(action: onRemove) {
-                    LucideIcon(.x, size: 11)
-                        .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
-                        .frame(width: 14, height: 14)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .onHover { removeHovered = $0 }
-                .help(L10n.t("Remove attachment"))
-                .transition(.opacity)
-                .layoutPriority(1)
+            Button(action: onRemove) {
+                LucideIcon(.x, size: 11)
+                    .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .opacity(hovered ? 1 : 0.001)
+            .accessibilityLabel(L10n.t("Remove attachment"))
+            .accessibilityAction(named: Text(L10n.t("Remove attachment"))) {
+                onRemove()
+            }
+            .onHover { removeHovered = $0 }
+            .help(L10n.t("Remove attachment"))
+            .layoutPriority(1)
         }
         .padding(.leading, attachment.isImage ? 9 : 7)
         .padding(.trailing, hovered ? 7 : 11)
