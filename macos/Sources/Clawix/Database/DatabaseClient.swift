@@ -130,6 +130,24 @@ struct DatabaseClient {
         try await get("/v1/namespaces/\(namespaceId)/collections/\(name)")
     }
 
+    func updateCollection(
+        namespaceId: String,
+        name: String,
+        displayName: String,
+        fields: [DBFieldDefinition],
+        indexes: [DBIndexDefinition]
+    ) async throws -> DBCollection {
+        try await request(
+            method: "PATCH",
+            path: "/v1/namespaces/\(namespaceId)/collections/\(name)",
+            body: [
+                "displayName": displayName,
+                "fields": fields.map(Self.fieldBody),
+                "indexes": indexes.map(Self.indexBody),
+            ]
+        )
+    }
+
     // MARK: - Records
 
     func listRecords(
@@ -281,6 +299,28 @@ struct DatabaseClient {
         let enc = JSONEncoder()
         return enc
     }()
+
+    private static func fieldBody(_ field: DBFieldDefinition) -> [String: Any] {
+        var body: [String: Any] = [
+            "name": field.name,
+            "type": field.type.rawValue,
+        ]
+        if let required = field.required { body["required"] = required }
+        if let options = field.options { body["options"] = options }
+        if let relation = field.relation {
+            body["relation"] = ["collectionName": relation.collectionName]
+        }
+        return body
+    }
+
+    private static func indexBody(_ index: DBIndexDefinition) -> [String: Any] {
+        var body: [String: Any] = [
+            "name": index.name,
+            "fields": index.fields,
+        ]
+        if let unique = index.unique { body["unique"] = unique }
+        return body
+    }
 
     private func get<T: Decodable>(_ path: String, authenticated: Bool = true) async throws -> T {
         try await request(method: "GET", path: path, body: nil, authenticated: authenticated)

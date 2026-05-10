@@ -114,7 +114,8 @@ final class DatabaseManager: ObservableObject {
         do {
             client.bearerToken = try DatabaseAdminToken.currentAdminToken()
             _ = try await client.ensureNamespace(id: currentNamespace, displayName: "Clawix Local")
-            let collections = try await client.listCollections(namespaceId: currentNamespace)
+            let listedCollections = try await client.listCollections(namespaceId: currentNamespace)
+            let collections = try await ensureArchivalFields(in: listedCollections)
             self.collections = collections.sorted { lhs, rhs in
                 if lhs.builtin != rhs.builtin { return lhs.builtin && !rhs.builtin }
                 return lhs.displayName < rhs.displayName
@@ -132,6 +133,28 @@ final class DatabaseManager: ObservableObject {
             lastError = error.localizedDescription
             bootstrapGeneration = nil
         }
+    }
+
+    private func ensureArchivalFields(in collections: [DBCollection]) async throws -> [DBCollection] {
+        var normalized = collections
+        for (index, collection) in collections.enumerated() where collection.builtin {
+            guard !collection.fields.contains(where: { $0.name == "archivedAt" }) else { continue }
+            let archivedAt = DBFieldDefinition(
+                name: "archivedAt",
+                type: .date,
+                required: nil,
+                options: nil,
+                relation: nil
+            )
+            normalized[index] = try await client.updateCollection(
+                namespaceId: currentNamespace,
+                name: collection.name,
+                displayName: collection.displayName,
+                fields: collection.fields + [archivedAt],
+                indexes: collection.indexes
+            )
+        }
+        return normalized
     }
 
     // MARK: - Records
