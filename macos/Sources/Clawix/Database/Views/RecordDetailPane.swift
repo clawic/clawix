@@ -13,6 +13,7 @@ struct RecordDetailPane: View {
     @State private var debounce: Task<Void, Never>?
     @State private var savedAt: Date?
     @State private var saving: Bool = false
+    @State private var confirmDelete: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -55,6 +56,14 @@ struct RecordDetailPane: View {
         .onChange(of: record) { _, _ in
             hydrateDraft()
         }
+        .alert("Delete record?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) {
+                Task { try? await manager.deleteRecord(collection: collection.name, id: record.id) }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This cannot be undone.")
+        }
     }
 
     private var header: some View {
@@ -72,15 +81,18 @@ struct RecordDetailPane: View {
                     .foregroundColor(Palette.textSecondary)
             }
             Menu {
-                Button("Archive") {
-                    Task { try? await manager.archiveRecord(collection: collection.name, id: record.id) }
-                }
-                Button("Restore") {
-                    Task { try? await manager.restoreRecord(collection: collection.name, id: record.id) }
+                if record.isArchived {
+                    Button("Restore") {
+                        Task { try? await manager.restoreRecord(collection: collection.name, id: record.id) }
+                    }
+                } else {
+                    Button("Archive") {
+                        Task { try? await manager.archiveRecord(collection: collection.name, id: record.id) }
+                    }
                 }
                 Divider()
                 Button("Delete", role: .destructive) {
-                    Task { try? await manager.deleteRecord(collection: collection.name, id: record.id) }
+                    confirmDelete = true
                 }
             } label: {
                 Image(systemName: "ellipsis.circle")
