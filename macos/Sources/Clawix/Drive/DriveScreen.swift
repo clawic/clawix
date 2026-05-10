@@ -369,22 +369,11 @@ struct DriveListView: View {
                         .foregroundStyle(.secondary)
                     Text(item.name)
                 }
-                .contentShape(Rectangle())
-                .highPriorityGesture(TapGesture(count: 2).onEnded {
-                    if item.kind == "folder" { manager.setParent(item.id) }
-                })
             }
             TableColumn("Modified") { item in Text(formatRelative(item.updatedAt)).foregroundStyle(.secondary) }
             TableColumn("Size") { item in Text(formatSize(item.sizeBytes)).foregroundStyle(.secondary) }
         }
-        .onTapGesture(count: 2) {
-            guard
-                let selectedId,
-                let item = items.first(where: { $0.id == selectedId }),
-                item.kind == "folder"
-            else { return }
-            manager.setParent(item.id)
-        }
+        .background(DriveListDoubleClickBridge(items: items, selectedId: selectedId, manager: manager))
     }
 
     private func formatRelative(_ iso: String) -> String {
@@ -398,6 +387,90 @@ struct DriveListView: View {
     private func formatSize(_ bytes: Int) -> String {
         if bytes == 0 { return "—" }
         return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+}
+
+private struct DriveListDoubleClickBridge: NSViewRepresentable {
+    let items: [ClawJSDriveClient.DriveItem]
+    let selectedId: String?
+    let manager: DriveManager
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        configure(context.coordinator, from: view)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        configure(context.coordinator, from: nsView)
+    }
+
+    private func configure(_ coordinator: Coordinator, from view: NSView) {
+        coordinator.items = items
+        coordinator.selectedId = selectedId
+        coordinator.manager = manager
+        DispatchQueue.main.async {
+            coordinator.install(from: view)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        var items: [ClawJSDriveClient.DriveItem] = []
+        var selectedId: String?
+        weak var manager: DriveManager?
+        private weak var installedTableView: NSTableView?
+
+        func install(from view: NSView) {
+            guard installedTableView == nil || installedTableView?.window == nil else { return }
+            guard let tableView = findTableView(from: view) else { return }
+            tableView.target = self
+            tableView.doubleAction = #selector(handleDoubleClick(_:))
+            installedTableView = tableView
+        }
+
+        @objc private func handleDoubleClick(_ sender: NSTableView) {
+            let row = sender.clickedRow
+            let item: ClawJSDriveClient.DriveItem?
+            if row >= 0, row < items.count {
+                item = items[row]
+            } else if let selectedId {
+                item = items.first { $0.id == selectedId }
+            } else {
+                item = nil
+            }
+            guard let item, item.kind == "folder", let manager else { return }
+            Task { @MainActor in
+                manager.setParent(item.id)
+            }
+        }
+
+        private func findTableView(from view: NSView) -> NSTableView? {
+            var current: NSView? = view
+            while let node = current {
+                if let tableView = node as? NSTableView {
+                    return tableView
+                }
+                current = node.superview
+            }
+            guard let root = view.window?.contentView else { return nil }
+            return firstTableView(in: root)
+        }
+
+        private func firstTableView(in view: NSView) -> NSTableView? {
+            if let tableView = view as? NSTableView {
+                return tableView
+            }
+            for child in view.subviews {
+                if let tableView = firstTableView(in: child) {
+                    return tableView
+                }
+            }
+            return nil
+        }
     }
 }
 
