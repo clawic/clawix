@@ -30,25 +30,29 @@ struct WorkSummaryHeader: View {
             withAnimation(.easeOut(duration: 0.14)) { expanded.toggle() }
             if willExpand { onExpand() }
         } label: {
-            // TimelineView re-renders once a second while the turn is
-            // still active so the seconds counter is live; once
-            // `endedAt` is set the period jumps to an hour and the value
-            // freezes for free.
-            TimelineView(.periodic(from: .now, by: summary.isActive ? 1.0 : 3600)) { ctx in
-                HStack(spacing: 6) {
-                    Text(L10n.workedFor(seconds: summary.elapsedSeconds(asOf: ctx.date)))
-                        .font(BodyFont.system(size: 13.5, wght: 500))
-                        .foregroundColor(Color(white: 0.55))
-                    LucideIcon(.chevronRight, size: 11)
-                        .foregroundColor(Color(white: 0.42))
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                        .animation(.easeOut(duration: 0.16), value: expanded)
+            if summary.isActive {
+                TimelineView(.periodic(from: .now, by: 1.0)) { ctx in
+                    label(asOf: ctx.date)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+            } else {
+                label(asOf: summary.endedAt ?? Date())
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Work summary")
+        .accessibilityLabel(Text(verbatim: "Work summary"))
+    }
+
+    private func label(asOf date: Date) -> some View {
+        HStack(spacing: 6) {
+            Text(verbatim: L10n.workedFor(seconds: summary.elapsedSeconds(asOf: date)))
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(Color(white: 0.55))
+            LucideIcon(.chevronRight, size: 11)
+                .foregroundColor(Color(white: 0.42))
+                .rotationEffect(.degrees(expanded ? 90 : 0))
+                .animation(.easeOut(duration: 0.16), value: expanded)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
