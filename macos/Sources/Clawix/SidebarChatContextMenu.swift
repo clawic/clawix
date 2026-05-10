@@ -28,8 +28,11 @@ struct SidebarRightClickCatcher: NSViewRepresentable {
         required init?(coder: NSCoder) { fatalError() }
 
         override func hitTest(_ point: NSPoint) -> NSView? {
+            let currentEvent = NSApp.currentEvent
+            let isSecondaryMouseEvent = currentEvent?.type == .rightMouseDown
+                || (currentEvent?.type == .otherMouseDown && currentEvent?.buttonNumber == 1)
             let rightDown = (NSEvent.pressedMouseButtons & (1 << 1)) != 0
-            return rightDown ? self : nil
+            return (isSecondaryMouseEvent || rightDown) ? self : nil
         }
 
         override func rightMouseDown(with event: NSEvent) {
