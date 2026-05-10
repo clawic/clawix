@@ -2126,22 +2126,25 @@ struct ComposerTextEditor: NSViewRepresentable, Equatable {
     }
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
-        RenderProbe.tick("ComposerTextEditor.updateNSView")
         guard let textView = scrollView.documentView as? NSTextView else { return }
+        let needsTextSync = textView.string != text
+        let needsFocusSync = focusToken != context.coordinator.lastFocusToken
+        guard needsTextSync || needsFocusSync else { return }
+        RenderProbe.tick("ComposerTextEditor.updateNSView")
         // Only push the binding's value into the text view (and re-measure)
         // when it actually differs from what the user is currently editing.
         // Doing this unconditionally on every SwiftUI re-render forces an
         // extra `ensureLayout` pass per keystroke, which lands in the run
         // loop *between* the character insertion and the caret redraw and
         // makes typing feel laggy ("letter appears, then cursor catches up").
-        if textView.string != text {
+        if needsTextSync {
             textView.string = text
             DispatchQueue.main.async { [weak textView] in
                 guard let tv = textView else { return }
                 context.coordinator.measure(tv)
             }
         }
-        if focusToken != context.coordinator.lastFocusToken {
+        if needsFocusSync {
             context.coordinator.lastFocusToken = focusToken
             if let composer = textView as? ComposerNSTextView {
                 if composer.window != nil {
