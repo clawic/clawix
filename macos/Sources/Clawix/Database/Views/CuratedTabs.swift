@@ -43,20 +43,46 @@ struct CuratedTabsView: View {
             // Apply default tab on first appear if state is empty.
             if state.chips.isEmpty {
                 if let tab = tabs.first { applyTab(tab) }
+            } else {
+                syncActiveTab(tabs)
             }
+        }
+        .onChange(of: state) { _, _ in
+            syncActiveTab(tabs)
         }
     }
 
     private func applyTab(_ tab: CuratedFilterRegistry.Tab) {
         activeTabId = tab.id
-        // Replace curated chips while preserving user-added chips. We
-        // tag curated chips by their field name; if the user added a
-        // chip with the same field name we leave their version alone.
-        let curatedFields = Set(tab.chips.map { $0.field })
+        // Replace the fields controlled by curated tabs so switching
+        // from Done back to Anytime cannot keep a stale status chip.
+        let curatedFields = Set(CuratedFilterRegistry.tabs(for: collection.name).flatMap { tab in
+            tab.chips.map(\.field)
+        })
         let userChips = state.chips.filter { !curatedFields.contains($0.field) }
         state.chips = tab.chips + userChips
         if let sort = tab.sort {
             state.sort = sort
+        }
+    }
+
+    private func syncActiveTab(_ tabs: [CuratedFilterRegistry.Tab]) {
+        let curatedFields = Set(tabs.flatMap { tab in tab.chips.map(\.field) })
+        let current = state.chips.filter { curatedFields.contains($0.field) }
+        if let match = tabs.first(where: { tabMatches($0, currentChips: current) }) {
+            activeTabId = match.id
+        }
+    }
+
+    private func tabMatches(_ tab: CuratedFilterRegistry.Tab, currentChips: [DBFilterState.Chip]) -> Bool {
+        guard tab.sort == nil || state.sort == tab.sort else { return false }
+        guard tab.chips.count == currentChips.count else { return false }
+        return tab.chips.allSatisfy { expected in
+            currentChips.contains { current in
+                current.field == expected.field
+                    && current.op == expected.op
+                    && current.value == expected.value
+            }
         }
     }
 }

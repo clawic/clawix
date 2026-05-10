@@ -91,7 +91,7 @@ struct DatabaseQuickAddOverlay: View {
             data["status"] = .string("active")
             data["level"] = .string("personal")
         case "projects":
-            data["status"] = .string("active")
+            data["status"] = .string("in_progress")
         default:
             break
         }

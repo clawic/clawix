@@ -98,7 +98,7 @@ enum CuratedFilterRegistry {
     private static let projectsTabs: [Tab] = [
         Tab(id: "active", label: "Active", chips: [
             DBFilterState.Chip(field: "archivedAt", op: .isNull, value: .null),
-            DBFilterState.Chip(field: "status", op: .eq, value: .string("active")),
+            DBFilterState.Chip(field: "status", op: .eq, value: .string("in_progress")),
         ], sort: DBFilterState.Sort(field: "updatedAt", descending: true)),
         Tab(id: "on_hold", label: "On hold", chips: [
             DBFilterState.Chip(field: "archivedAt", op: .isNull, value: .null),
