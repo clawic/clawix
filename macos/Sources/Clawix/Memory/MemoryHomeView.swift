@@ -12,6 +12,7 @@ struct MemoryHomeView: View {
     @State private var selectedNoteId: String? = nil
     @State private var searchText: String = ""
     @State private var editTarget: ClawJSMemoryClient.MemoryNote? = nil
+    @State private var deleteTarget: ClawJSMemoryClient.MemoryNote? = nil
 
     var body: some View {
         HStack(spacing: 0) {
@@ -40,7 +41,7 @@ struct MemoryHomeView: View {
                 },
                 onEdit: { note in editTarget = note },
                 onDelete: { note in
-                    Task { try? await manager.delete(id: note.id) }
+                    deleteTarget = note
                 }
             )
             .frame(minWidth: 320)
@@ -49,13 +50,12 @@ struct MemoryHomeView: View {
                 note: selectedNote,
                 onEdit: { note in editTarget = note },
                 onDelete: { note in
-                    Task { try? await manager.delete(id: note.id) }
-                    if selectedNoteId == note.id { selectedNoteId = nil }
+                    deleteTarget = note
                 }
             )
             .frame(maxWidth: .infinity)
         }
-        .onChange(of: searchText) { newValue in
+        .onChange(of: searchText) { _, newValue in
             manager.search(newValue)
         }
         .sheet(item: $editTarget) { note in
@@ -64,6 +64,27 @@ struct MemoryHomeView: View {
                 mode: .edit(note),
                 onDismiss: { editTarget = nil }
             )
+        }
+        .alert("Delete memory?", isPresented: Binding(
+            get: { deleteTarget != nil },
+            set: { if !$0 { deleteTarget = nil } }
+        )) {
+            Button("Delete", role: .destructive) {
+                guard let note = deleteTarget else { return }
+                let id = note.id
+                Task {
+                    _ = try? await manager.delete(id: id)
+                    await MainActor.run {
+                        if selectedNoteId == id { selectedNoteId = nil }
+                        deleteTarget = nil
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                deleteTarget = nil
+            }
+        } message: {
+            Text(deleteTarget.map { "This permanently deletes \"\($0.title)\" from Memory." } ?? "")
         }
     }
 
@@ -115,4 +136,3 @@ struct MemoryHomeView: View {
         return manager.notes.first(where: { $0.id == id })
     }
 }
-
