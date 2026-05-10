@@ -832,6 +832,7 @@ final class AppState: ObservableObject {
 
     @Published var searchQuery: String = ""
     @Published var searchResults: [String] = []
+    @Published var searchResultRoutes: [String: SidebarRoute] = [:]
     /// In-page Find (⌘F) state. Operates on the chat that owns the
     /// current view; closes when the user navigates anywhere else.
     @Published var isFindBarOpen: Bool = false
@@ -2500,12 +2501,77 @@ final class AppState: ObservableObject {
 
     func performSearch(_ query: String) {
         searchQuery = query
-        guard !query.isEmpty else { searchResults = []; return }
-        searchResults = [
-            "main.swift — match for \"\(query)\" on line 12",
-            "ContentView.swift — match for \"\(query)\" on line 34",
-            "AppState.swift — match for \"\(query)\" on line 78"
-        ]
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            searchResults = []
+            searchResultRoutes = [:]
+            return
+        }
+
+        var results: [String] = []
+        var routes: [String: SidebarRoute] = [:]
+        var seen: Set<String> = []
+        let searchableChats = (chats + archivedChats)
+            .filter { !$0.isQuickAskTemporary && !$0.isSideChat }
+
+        func append(_ text: String, chat: Chat) {
+            guard results.count < 50 else { return }
+            let unique = uniqueSearchResult(text, seen: &seen)
+            results.append(unique)
+            routes[unique] = .chat(chat.id)
+        }
+
+        for chat in searchableChats {
+            if chat.title.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) != nil {
+                append("\(chat.title) — title match", chat: chat)
+            }
+            guard results.count < 50 else { break }
+
+            var messageMatches = 0
+            for message in chat.messages where !message.content.isEmpty {
+                guard let range = message.content.range(of: trimmed, options: [.caseInsensitive, .diacriticInsensitive]) else {
+                    continue
+                }
+                let role = message.role == .user ? "User" : "Assistant"
+                append("\(chat.title) — \(role): \(searchSnippet(in: message.content, around: range))", chat: chat)
+                messageMatches += 1
+                if messageMatches >= 3 || results.count >= 50 { break }
+            }
+            if results.count >= 50 { break }
+        }
+
+        searchResults = results
+        searchResultRoutes = routes
+    }
+
+    private func uniqueSearchResult(_ text: String, seen: inout Set<String>) -> String {
+        guard seen.contains(text) else {
+            seen.insert(text)
+            return text
+        }
+        var counter = 2
+        while seen.contains("\(text) (\(counter))") {
+            counter += 1
+        }
+        let unique = "\(text) (\(counter))"
+        seen.insert(unique)
+        return unique
+    }
+
+    private func searchSnippet(in content: String, around range: Range<String.Index>) -> String {
+        let start = content.startIndex
+        let end = content.endIndex
+        let lower = content.index(range.lowerBound, offsetBy: -80, limitedBy: start) ?? start
+        let upper = content.index(range.upperBound, offsetBy: 80, limitedBy: end) ?? end
+        var snippet = String(content[lower..<upper])
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
+        while snippet.contains("  ") {
+            snippet = snippet.replacingOccurrences(of: "  ", with: " ")
+        }
+        if lower > start { snippet = "…" + snippet }
+        if upper < end { snippet += "…" }
+        return snippet.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     // MARK: - Find (in-page)

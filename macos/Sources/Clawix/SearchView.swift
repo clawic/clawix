@@ -25,6 +25,7 @@ struct SearchView: View {
                     Button {
                         appState.searchQuery = ""
                         appState.searchResults = []
+                        appState.searchResultRoutes = [:]
                     } label: {
                         LucideIcon(.circleX, size: 11)
                             .foregroundColor(Palette.textTertiary)
@@ -52,7 +53,11 @@ struct SearchView: View {
                 ScrollView {
                     LazyVStack(spacing: 5) {
                         ForEach(appState.searchResults, id: \.self) { result in
-                            SearchResultRow(text: result)
+                            SearchResultRow(text: result) {
+                                if let route = appState.searchResultRoutes[result] {
+                                    appState.currentRoute = route
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal, 24)
@@ -72,25 +77,30 @@ struct SearchView: View {
 
 private struct SearchResultRow: View {
     let text: String
+    let onOpen: () -> Void
     @State private var hovered = false
 
     var body: some View {
-        HStack(spacing: 10) {
-            FileChipIcon(size: 13)
-                .foregroundColor(Palette.textTertiary)
-            Text(text)
-                .font(BodyFont.system(size: 13, wght: 500))
-                .foregroundColor(Palette.textSecondary)
-            Spacer()
+        Button(action: onOpen) {
+            HStack(spacing: 10) {
+                FileChipIcon(size: 13)
+                    .foregroundColor(Palette.textTertiary)
+                Text(text)
+                    .font(BodyFont.system(size: 13, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(hovered ? Palette.cardHover : Palette.cardFill)
+            )
+            .contentShape(Rectangle())
+            .accessibilityLabel(text)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(hovered ? Palette.cardHover : Palette.cardFill)
-        )
+        .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .accessibilityLabel(text)
     }
 
 }
