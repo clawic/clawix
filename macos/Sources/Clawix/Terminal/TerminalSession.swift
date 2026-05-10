@@ -112,14 +112,15 @@ final class TerminalSession: ObservableObject, Identifiable {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let env = TerminalSession.composeEnvironment()
 
-        // `-l` (login) so dotfiles set PATH/aliases for an authentic
-        // terminal feel. Heavy startup scripts can be flipped to `-i`
-        // via a future setting; out of scope for v1.
+        let loginName = "-" + URL(fileURLWithPath: shell).lastPathComponent
+
+        // Prefix argv[0] with `-` to request a login shell. SwiftTerm
+        // already injects argv[0], so `args` must not repeat `shell`.
         terminalView.startProcess(
             executable: shell,
-            args: [shell, "-l"],
+            args: [],
             environment: env,
-            execName: nil,
+            execName: loginName,
             currentDirectory: resolvedCwd
         )
         if status != .missingCwd {
@@ -153,12 +154,43 @@ final class TerminalSession: ObservableObject, Identifiable {
         env.append("COLORTERM=truecolor")
         env.append("TERM_PROGRAM=Clawix")
         env.append("LC_TERMINAL=Clawix")
-        let localeId = Locale.current.identifier
-        if !localeId.isEmpty {
-            env.append("LANG=\(localeId).UTF-8")
-            env.append("LC_ALL=\(localeId).UTF-8")
+        let lang = processEnv["LANG"].flatMap(TerminalSession.validLocale) ?? "en_US.UTF-8"
+        env.append("LANG=\(lang)")
+        if let lcAll = processEnv["LC_ALL"].flatMap(TerminalSession.validLocale) {
+            env.append("LC_ALL=\(lcAll)")
         }
         return env
+    }
+
+    private static func validLocale(_ locale: String) -> String? {
+        locale.contains(".") ? locale : nil
+    }
+
+    nonisolated private static func runShellCommand(_ command: String, cwd: String) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-lc", command]
+        process.currentDirectoryURL = URL(fileURLWithPath: cwd)
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            return String(data: data, encoding: .utf8) ?? ""
+        } catch {
+            return "Failed to run command: \(error.localizedDescription)\n"
+        }
+    }
+
+    private func appendCommandOutput(_ output: String) {
+        guard !output.isEmpty else { return }
+        terminalView.feed(text: output)
+        if !output.hasSuffix("\n") {
+            terminalView.feed(text: "\r\n")
+        }
     }
 
     fileprivate func handleProcessTerminated(exitCode: Int32?) {
