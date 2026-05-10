@@ -13,6 +13,7 @@ struct SkillDetailView: View {
     @State private var editingBody = false
     @State private var bodyDraft: String = ""
     @State private var paramDraft: [String: SkillParamValue] = [:]
+    @State private var pendingDelete: SkillSpec?
 
     private var store: SkillsStore? { appState.skillsStore }
     private var skill: SkillSpec? { store?.skill(slug: slug) }
@@ -28,6 +29,17 @@ struct SkillDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { hydrateDrafts() }
         .onChange(of: slug) { _, _ in hydrateDrafts() }
+        .alert(item: $pendingDelete) { skill in
+            Alert(
+                title: Text("Delete \"\(skill.name)\"?"),
+                message: Text("This removes the skill from your local catalog. This cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    store?.remove(slug: skill.slug)
+                    appState.currentRoute = .skills
+                },
+                secondaryButton: .cancel()
+            )
+        }
     }
 
     // MARK: - Layout
@@ -443,8 +455,7 @@ struct SkillDetailView: View {
             HStack {
                 Spacer()
                 Button {
-                    store?.remove(slug: skill.slug)
-                    appState.currentRoute = .skills
+                    pendingDelete = skill
                 } label: {
                     Text("Delete skill")
                         .font(.system(size: 12, weight: .medium))
