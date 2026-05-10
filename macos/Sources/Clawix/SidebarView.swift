@@ -1127,8 +1127,7 @@ struct SidebarView: View {
                 if pinnedFilterMenuOpen, let anchor {
                     let buttonFrame = proxy[anchor]
                     let popupWidth: CGFloat = 244
-                    let snapshot = makeSnapshot()
-                    let sources = pinnedFilterSources(from: snapshot.pinned)
+                    let sources = pinnedFilterSources(from: sidebarSnapshot.pinned)
                     PinnedFilterPopup(
                         isPresented: $pinnedFilterMenuOpen,
                         sources: sources,
