@@ -23,6 +23,23 @@ private let frameKey = "ClawixMainWindowFrame"
 
 private let mainWindowMinSize = NSSize(width: 1100, height: 720)
 
+private enum ClawixAppRole {
+    static var isTasks: Bool {
+        (Bundle.main.infoDictionary?["CLXAppRole"] as? String) == "tasks"
+    }
+}
+
+@main
+enum ClawixAppEntry {
+    static func main() {
+        if ClawixAppRole.isTasks {
+            ClawixTasksApp.main()
+        } else {
+            ClawixApp.main()
+        }
+    }
+}
+
 /// Tracks window-level state that views need to reflow on, namely the
 /// fullscreen toggle. macOS hides the traffic lights in fullscreen, so the
 /// chrome reservation that protects the sidebar toggle from sitting under
@@ -53,7 +70,6 @@ final class WindowState: ObservableObject {
     }
 }
 
-@main
 struct ClawixApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
@@ -65,6 +81,13 @@ struct ClawixApp: App {
     @StateObject private var featureFlags = FeatureFlags.shared
     @StateObject private var terminalStore = TerminalSessionStore.shared
     @Environment(\.openWindow) private var openWindow
+
+    /// True when this binary is running as the embedded "Tasks" mini-app
+    /// bundle (separate `.app` in the Dock, same executable). Resolved
+    /// from a custom Info.plist key the build script injects.
+    static var isTasksRole: Bool {
+        ClawixAppRole.isTasks
+    }
 
     init() {
         // Apply the user-chosen language process-wide BEFORE any view
@@ -80,31 +103,35 @@ struct ClawixApp: App {
         // install or after the legacy key has been cleared.
         SidebarPrefs.migrateLegacySidebarPrefs()
         let state = AppState()
-        // Hand the QuickAsk HUD a back-reference into the live AppState
-        // so it can submit prompts into the real chat list and surface
-        // streaming replies inline. Done here (instead of from a view's
-        // .onAppear) so the panel works the very first time the user
-        // hits the global hotkey, even before any window appears.
-        QuickAskController.shared.attach(appState: state)
-        // Wire the integrated terminal panel's keyboard shortcuts.
-        // Toggle (Ctrl+`), new tab, close tab, next/prev tab, split
-        // vertical/horizontal. Installed once; the resolver pulls the
-        // current chat id from `state` so the shortcuts only act on the
-        // chat the user is viewing.
-        TerminalShortcutsInstaller.installIfNeeded(
-            store: TerminalSessionStore.shared,
-            resolveChatId: { [weak state] in
-                guard case let .chat(id) = state?.currentRoute else { return nil }
-                return id
-            }
-        )
+        if !Self.isTasksRole {
+            // Hand the QuickAsk HUD a back-reference into the live AppState
+            // so it can submit prompts into the real chat list and surface
+            // streaming replies inline. Done here (instead of from a view's
+            // .onAppear) so the panel works the very first time the user
+            // hits the global hotkey, even before any window appears.
+            QuickAskController.shared.attach(appState: state)
+            // Wire the integrated terminal panel's keyboard shortcuts.
+            // Toggle (Ctrl+`), new tab, close tab, next/prev tab, split
+            // vertical/horizontal. Installed once; the resolver pulls the
+            // current chat id from `state` so the shortcuts only act on the
+            // chat the user is viewing.
+            TerminalShortcutsInstaller.installIfNeeded(
+                store: TerminalSessionStore.shared,
+                resolveChatId: { [weak state] in
+                    guard case let .chat(id) = state?.currentRoute else { return nil }
+                    return id
+                }
+            )
+        }
         _appState = StateObject(wrappedValue: state)
-        DictationE2ERunner.runIfRequested()
-        // Background refresher for OAuth provider accounts (Anthropic
-        // Claude.ai, GitHub Copilot). Pauses while the vault is locked;
-        // resumes implicitly because each tick checks the vault state
-        // before calling refresh.
-        TokenRefreshService.shared.start()
+        if !Self.isTasksRole {
+            DictationE2ERunner.runIfRequested()
+            // Background refresher for OAuth provider accounts (Anthropic
+            // Claude.ai, GitHub Copilot). Pauses while the vault is locked;
+            // resumes implicitly because each tick checks the vault state
+            // before calling refresh.
+            TokenRefreshService.shared.start()
+        }
         // Dictation hotkey + overlay are wired from
         // `applicationDidFinishLaunching`, NOT here. Calling
         // `addGlobalMonitorForEvents(matching: .flagsChanged)` from
@@ -196,6 +223,31 @@ struct ClawixApp: App {
         } label: {
             Image(nsImage: ClawixLogoTemplateImage.make(size: 18))
         }
+    }
+}
+
+struct ClawixTasksApp: App {
+    @StateObject private var appState: AppState
+    @StateObject private var databaseManager = DatabaseManager()
+    @StateObject private var featureFlags = FeatureFlags.shared
+
+    init() {
+        AppLanguage.bootstrap()
+        BodyFont.register()
+        SidebarPrefs.migrateLegacySidebarPrefs()
+        _appState = StateObject(wrappedValue: AppState())
+    }
+
+    var body: some Scene {
+        WindowGroup("Tasks") {
+            DatabaseScreen(mode: .curated(collectionName: "tasks"))
+                .environmentObject(appState)
+                .environmentObject(databaseManager)
+                .environmentObject(featureFlags)
+                .preferredColorScheme(.dark)
+                .frame(minWidth: 720, minHeight: 480)
+        }
+        .defaultSize(width: 960, height: 640)
     }
 }
 
