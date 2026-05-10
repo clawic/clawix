@@ -35,6 +35,7 @@ struct DriveScreen: View {
             Divider()
             content
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             applyMode()
@@ -121,13 +122,27 @@ struct DriveScreen: View {
         case .unauthenticated, .ready:
             HSplitView {
                 folderTree
-                    .frame(minWidth: 220, idealWidth: 260, maxWidth: 320)
+                    .frame(
+                        minWidth: 220,
+                        idealWidth: 260,
+                        maxWidth: 320,
+                        maxHeight: .infinity,
+                        alignment: .topLeading
+                    )
                 contentBody
-                if let id = selectedItemId, let item = manager.items.first(where: { $0.id == id }) {
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                if let id = selectedItemId, let item = visibleItems.first(where: { $0.id == id }) {
                     DriveItemDetailPane(item: item, manager: manager)
-                        .frame(minWidth: 280, idealWidth: 320, maxWidth: 420)
+                        .frame(
+                            minWidth: 280,
+                            idealWidth: 320,
+                            maxWidth: 420,
+                            maxHeight: .infinity,
+                            alignment: .topLeading
+                        )
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -168,7 +183,7 @@ struct DriveScreen: View {
 
     private var contentBody: some View {
         Group {
-            if manager.items.isEmpty {
+            if visibleItems.isEmpty {
                 ContentUnavailableView(
                     "Empty",
                     systemImage: "tray",
@@ -176,12 +191,13 @@ struct DriveScreen: View {
                 )
             } else {
                 if effectiveLayout == .grid {
-                    DriveGridView(items: manager.items, selectedId: $selectedItemId, manager: manager)
+                    DriveGridView(items: visibleItems, selectedId: $selectedItemId, manager: manager)
                 } else {
-                    DriveListView(items: manager.items, selectedId: $selectedItemId, manager: manager)
+                    DriveListView(items: visibleItems, selectedId: $selectedItemId, manager: manager)
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard canUpload else { return false }
             handleDrop(providers: providers)
@@ -192,8 +208,23 @@ struct DriveScreen: View {
     private var effectiveLayout: ViewMode {
         if viewMode != .auto { return viewMode }
         // Auto: grid when ≥70% of items are images.
-        let images = manager.items.filter { ($0.mimeType ?? "").starts(with: "image/") }.count
-        return manager.items.count > 0 && Double(images) / Double(manager.items.count) >= 0.7 ? .grid : .list
+        let images = visibleItems.filter { isImage($0) }.count
+        return visibleItems.count > 0 && Double(images) / Double(visibleItems.count) >= 0.7 ? .grid : .list
+    }
+
+    private var visibleItems: [ClawJSDriveClient.DriveItem] {
+        switch mode {
+        case .photos:
+            return manager.items.filter { $0.kind == "folder" || isImage($0) }
+        case .documents:
+            return manager.items.filter { $0.kind == "folder" || !isImage($0) }
+        case .admin, .recent, .folder:
+            return manager.items
+        }
+    }
+
+    private func isImage(_ item: ClawJSDriveClient.DriveItem) -> Bool {
+        (item.mimeType ?? "").starts(with: "image/")
     }
 
     private var headerTitle: String {
@@ -212,6 +243,7 @@ struct DriveScreen: View {
     }
 
     private func applyMode() {
+        selectedItemId = nil
         switch mode {
         case .photos:
             manager.setView("my-drive")
