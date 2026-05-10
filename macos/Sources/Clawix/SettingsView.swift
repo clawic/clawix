@@ -275,6 +275,41 @@ struct SettingsContent: View {
     }
 }
 
+@MainActor
+private enum SettingsUtilities {
+    static func revealDiagnosticsFolder() {
+        ResourceSampler.persistLastSample()
+        guard let file = ResourceSampler.diagnosticsFileURL(named: "last-resources.json") else {
+            ToastCenter.shared.show("Diagnostics folder unavailable", icon: .error)
+            return
+        }
+        let dir = file.deletingLastPathComponent()
+        NSWorkspace.shared.activateFileViewerSelecting([dir])
+        ToastCenter.shared.show("Diagnostics folder opened")
+    }
+
+    static func openConfigToml(scope: String, selectedProject: Project?) {
+        let url: URL
+        if scope == "Project settings" {
+            guard let path = selectedProject?.path, !path.isEmpty else {
+                ToastCenter.shared.show("Select a project before opening project config", icon: .warning)
+                return
+            }
+            url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+                .appendingPathComponent(".codex/config.toml", isDirectory: false)
+        } else {
+            url = CodexConfigToml.configURL
+        }
+
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            ToastCenter.shared.show("config.toml not found", icon: .warning)
+            return
+        }
+        NSWorkspace.shared.open(url)
+        ToastCenter.shared.show("config.toml opened")
+    }
+}
+
 // MARK: - PillToggle (kept here, every other shared building block lives in SettingsKit.swift)
 
 struct PillToggle: View {
@@ -1840,7 +1875,9 @@ private struct ConfigurationPage: View {
                     minWidth: 230
                 )
                 Spacer()
-                Button {} label: {
+                Button {
+                    SettingsUtilities.openConfigToml(scope: configScope, selectedProject: appState.selectedProject)
+                } label: {
                     HStack(spacing: 4) {
                         Text("Open config.toml")
                             .font(BodyFont.system(size: 12, wght: 500))
@@ -1899,7 +1936,7 @@ private struct ConfigurationPage: View {
                     title: "Diagnose Clawix Workspace issues",
                     detail: "Check the current bundle and save diagnostic logs",
                     primaryLabel: "Diagnose",
-                    onPrimary: {}
+                    onPrimary: { SettingsUtilities.revealDiagnosticsFolder() }
                 )
                 CardDivider()
                 ReinstallRow()
