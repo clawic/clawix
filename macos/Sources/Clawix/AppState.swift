@@ -4819,8 +4819,13 @@ final class AppState: ObservableObject {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
-        guard let threadId = chats[idx].clawixThreadId,
-              let clawix,
+        guard let threadId = chats[idx].clawixThreadId else {
+            var copy = chats
+            copy[idx].title = trimmed
+            chats = copy
+            return
+        }
+        guard let clawix,
               case .ready = clawix.status else {
             appendErrorBubble(chatId: chatId, message: "Renaming requires the runtime to be available.")
             return
