@@ -50,6 +50,7 @@ final class SkillsStore: ObservableObject {
             installSeedCatalog()
             installSeedSyncTargets()
         }
+        loadUserCatalogFromDefaults()
         loadActiveFromDefaults()
     }
 
@@ -158,6 +159,7 @@ final class SkillsStore: ObservableObject {
         } else {
             catalog.append(skill)
         }
+        persistUserCatalogToDefaults()
     }
 
     func remove(slug: String) {
@@ -172,6 +174,7 @@ final class SkillsStore: ObservableObject {
                 activeByScope[scope] = filtered
             }
         }
+        persistUserCatalogToDefaults()
         persistActiveToDefaults()
     }
 
@@ -241,6 +244,7 @@ final class SkillsStore: ObservableObject {
             skill.syncTo.removeAll { $0 == target }
         }
         catalog[index] = skill
+        persistUserCatalogToDefaults()
     }
 
     func registerSyncTarget(_ target: SkillSyncTarget) {
@@ -258,6 +262,31 @@ final class SkillsStore: ObservableObject {
     // MARK: - Persistence (local UserDefaults until bridge is wired)
 
     private static let activeKey = "ClawixSkillsActiveByScope"
+    private static let userCatalogKey = "ClawixSkillsUserCatalog"
+
+    private func loadUserCatalogFromDefaults() {
+        guard let data = UserDefaults.standard.data(forKey: Self.userCatalogKey),
+              let decoded = try? JSONDecoder().decode([SkillSpec].self, from: data)
+        else { return }
+        for skill in decoded where !skill.builtin {
+            if let index = catalog.firstIndex(where: { $0.slug == skill.slug }) {
+                catalog[index] = skill
+            } else {
+                catalog.append(skill)
+            }
+        }
+    }
+
+    private func persistUserCatalogToDefaults() {
+        let userSkills = catalog.filter { !$0.builtin }
+        if userSkills.isEmpty {
+            UserDefaults.standard.removeObject(forKey: Self.userCatalogKey)
+            return
+        }
+        if let data = try? JSONEncoder().encode(userSkills) {
+            UserDefaults.standard.set(data, forKey: Self.userCatalogKey)
+        }
+    }
 
     private func loadActiveFromDefaults() {
         guard let data = UserDefaults.standard.data(forKey: Self.activeKey),
