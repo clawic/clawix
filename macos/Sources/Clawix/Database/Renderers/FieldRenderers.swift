@@ -381,17 +381,38 @@ private struct BooleanForm: View {
 private struct DateForm: View {
     @Binding var value: DBJSON
     var body: some View {
-        let date = parsed
-        DatePicker(
-            "",
-            selection: Binding(
-                get: { date ?? Date() },
-                set: { value = .string(ISO8601DateFormatter().string(from: $0)) }
-            ),
-            displayedComponents: [.date, .hourAndMinute]
-        )
-        .labelsHidden()
-        .datePickerStyle(.compact)
+        HStack(spacing: 8) {
+            if let date = parsed {
+                DatePicker(
+                    "",
+                    selection: Binding(
+                        get: { date },
+                        set: { value = .string(ISO8601DateFormatter().string(from: $0)) }
+                    ),
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+
+                Button("Clear") {
+                    value = .null
+                }
+                .buttonStyle(.borderless)
+                .font(BodyFont.system(size: 11.5, wght: 500))
+                .foregroundColor(Palette.textSecondary)
+            } else {
+                Text("—")
+                    .font(BodyFont.system(size: 13))
+                    .foregroundColor(Palette.textTertiary)
+
+                Button("Set date") {
+                    value = .string(ISO8601DateFormatter().string(from: Date()))
+                }
+                .buttonStyle(.borderless)
+                .font(BodyFont.system(size: 11.5, wght: 500))
+                .foregroundColor(Palette.textSecondary)
+            }
+        }
     }
 
     private var parsed: Date? {
