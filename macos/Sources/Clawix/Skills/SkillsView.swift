@@ -15,13 +15,18 @@ struct SkillsView: View {
 
     @State private var hoveringNew = false
     @State private var creatingNew = false
+    @State private var searchQuery = ""
+    @State private var kindFilter: SkillKind? = nil
+    @State private var scopeFilter: SkillScopeKind? = nil
+    @State private var tagFilter: String? = nil
+    @State private var storeRefreshToken = 0
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 filterStrip
-                if store.filtered().isEmpty {
+                if filteredSkills.isEmpty {
                     emptyState
                         .padding(.top, 60)
                 } else {
@@ -34,12 +39,19 @@ struct SkillsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $creatingNew) {
-            SkillNewSheet(store: store, onClose: { creatingNew = false })
+            SkillNewSheet(store: store, onClose: {
+                creatingNew = false
+                storeRefreshToken &+= 1
+            })
+        }
+        .onReceive(store.objectWillChange) { _ in
+            storeRefreshToken &+= 1
         }
         .onAppear {
             // Make sure the store seeded its catalog. If AppState owns
             // the canonical store this is a no-op; if we created a
             // local fallback the seed already ran in init.
+            _ = storeRefreshToken
         }
     }
 
@@ -68,14 +80,11 @@ struct SkillsView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
-            TextField("Search skills…", text: Binding(
-                get: { store.searchQuery },
-                set: { store.searchQuery = $0 }
-            ))
+            TextField("Search skills…", text: $searchQuery)
             .textFieldStyle(.plain)
             .font(.system(size: 13))
-            if !store.searchQuery.isEmpty {
-                Button { store.searchQuery = "" } label: {
+            if !searchQuery.isEmpty {
+                Button { searchQuery = "" } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
@@ -164,16 +173,16 @@ struct SkillsView: View {
 
     private func kindChip(_ kind: SkillKind?, label: String) -> some View {
         Button {
-            store.kindFilter = kind
+            kindFilter = kind
         } label: {
             Text(label)
                 .font(.system(size: 11.5, weight: .medium))
-                .foregroundColor(store.kindFilter == kind ? .white : .primary)
+                .foregroundColor(kindFilter == kind ? .white : .primary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(
                     Capsule()
-                        .fill(store.kindFilter == kind ? Color.accentColor : Color.gray.opacity(0.12))
+                        .fill(kindFilter == kind ? Color.accentColor : Color.gray.opacity(0.12))
                 )
         }
         .buttonStyle(.plain)
@@ -181,10 +190,10 @@ struct SkillsView: View {
 
     private var resetFiltersButton: some View {
         Button {
-            store.kindFilter = nil
-            store.scopeFilter = nil
-            store.tagFilter = nil
-            store.searchQuery = ""
+            kindFilter = nil
+            scopeFilter = nil
+            tagFilter = nil
+            searchQuery = ""
         } label: {
             Text("Reset filters")
                 .font(.system(size: 11, weight: .medium))
@@ -195,7 +204,7 @@ struct SkillsView: View {
     }
 
     private var hasAnyFilter: Bool {
-        store.kindFilter != nil || store.scopeFilter != nil || store.tagFilter != nil || !store.searchQuery.isEmpty
+        kindFilter != nil || scopeFilter != nil || tagFilter != nil || !searchQuery.isEmpty
     }
 
     private var tagCloud: some View {
@@ -211,16 +220,16 @@ struct SkillsView: View {
 
     private func tagChip(_ tag: String) -> some View {
         Button {
-            store.tagFilter = (store.tagFilter == tag) ? nil : tag
+            tagFilter = (tagFilter == tag) ? nil : tag
         } label: {
             Text("#\(tag)")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(store.tagFilter == tag ? .white : .secondary)
+                .foregroundColor(tagFilter == tag ? .white : .secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     Capsule()
-                        .fill(store.tagFilter == tag ? Color.accentColor.opacity(0.85) : Color.gray.opacity(0.10))
+                        .fill(tagFilter == tag ? Color.accentColor.opacity(0.85) : Color.gray.opacity(0.10))
                 )
         }
         .buttonStyle(.plain)
@@ -228,15 +237,33 @@ struct SkillsView: View {
 
     // MARK: - Grid
 
+    private var filteredSkills: [SkillSpec] {
+        _ = storeRefreshToken
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return store.catalog.filter { skill in
+            if let kindFilter, skill.kind != kindFilter { return false }
+            if let scopeFilter, skill.scope.kind != scopeFilter { return false }
+            if let tagFilter, !skill.tags.contains(tagFilter) { return false }
+            guard !q.isEmpty else { return true }
+            if skill.name.lowercased().contains(q) { return true }
+            if skill.description.lowercased().contains(q) { return true }
+            if skill.tags.contains(where: { $0.lowercased().contains(q) }) { return true }
+            if skill.body.lowercased().contains(q) { return true }
+            return false
+        }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
     private var grid: some View {
         let columns = [GridItem(.adaptive(minimum: 240, maximum: 360), spacing: 14)]
         return LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
-            ForEach(store.filtered()) { skill in
+            ForEach(filteredSkills) { skill in
                 SkillCardView(skill: skill, store: store) {
                     appState.currentRoute = .skillDetail(slug: skill.slug)
                 }
             }
         }
+        .id(storeRefreshToken)
     }
 
     // MARK: - Empty state
