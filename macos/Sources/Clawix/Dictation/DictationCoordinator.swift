@@ -660,7 +660,8 @@ final class DictationCoordinator: ObservableObject {
                 useVAD: useVAD,
                 autoFormat: autoFormat
             )
-            if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let normalized = normalizeTranscriptText(raw)
+            if normalized.isEmpty {
                 if useVAD {
                     trace("transcribe: local vad returned empty, retrying without vad")
                     let noVAD = try await transcribeLocal(
@@ -671,8 +672,9 @@ final class DictationCoordinator: ObservableObject {
                         useVAD: false,
                         autoFormat: autoFormat
                     )
-                    if !noVAD.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        return noVAD
+                    let normalizedNoVAD = normalizeTranscriptText(noVAD)
+                    if !normalizedNoVAD.isEmpty {
+                        return normalizedNoVAD
                     }
                 }
                 return try await transcribeLocalEmptyFallback(
@@ -683,8 +685,8 @@ final class DictationCoordinator: ObservableObject {
                     autoFormat: autoFormat
                 )
             }
-            trace("transcribe: local ok chars=\(raw.count)")
-            return raw
+            trace("transcribe: local ok chars=\(normalized.count)")
+            return normalized
         } catch {
             guard useVAD else { throw error }
             trace("transcribe: local vad failed, retrying without vad error=\(error.localizedDescription)")
@@ -696,7 +698,8 @@ final class DictationCoordinator: ObservableObject {
                 useVAD: false,
                 autoFormat: autoFormat
             )
-            if raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let normalized = normalizeTranscriptText(raw)
+            if normalized.isEmpty {
                 return try await transcribeLocalEmptyFallback(
                     samples: samples,
                     model: model,
@@ -705,7 +708,7 @@ final class DictationCoordinator: ObservableObject {
                     autoFormat: autoFormat
                 )
             }
-            return raw
+            return normalized
         }
     }
 
@@ -726,8 +729,9 @@ final class DictationCoordinator: ObservableObject {
                 useVAD: false,
                 autoFormat: false
             )
-            if !plain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return plain
+            let normalizedPlain = normalizeTranscriptText(plain)
+            if !normalizedPlain.isEmpty {
+                return normalizedPlain
             }
         }
 
@@ -742,8 +746,9 @@ final class DictationCoordinator: ObservableObject {
                 useVAD: false,
                 autoFormat: false
             )
-            if !forced.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return forced
+            let normalizedForced = normalizeTranscriptText(forced)
+            if !normalizedForced.isEmpty {
+                return normalizedForced
             }
         }
         for fallbackLanguage in languageHints {
@@ -754,8 +759,9 @@ final class DictationCoordinator: ObservableObject {
                 language: fallbackLanguage,
                 prompt: prompt
             )
-            if !permissive.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                return permissive
+            let normalizedPermissive = normalizeTranscriptText(permissive)
+            if !normalizedPermissive.isEmpty {
+                return normalizedPermissive
             }
         }
         return ""
@@ -1217,12 +1223,21 @@ final class DictationCoordinator: ObservableObject {
     }
 
     static func processForDelivery(_ text: String, language: String?) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = normalizeTranscriptText(text)
         trace("process: start chars=\(trimmed.count)")
         let deFillered = FillerWordsManager.shared.apply(to: trimmed, language: language)
         let processed = DictationReplacementStore.shared.apply(to: deFillered)
         trace("process: done chars=\(processed.count)")
         return processed
+    }
+
+    static func normalizeTranscriptText(_ text: String) -> String {
+        let withoutSpecialTokens = text.replacingOccurrences(
+            of: #"<\|[^>\n\r]*\|>"#,
+            with: "",
+            options: .regularExpression
+        )
+        return withoutSpecialTokens.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func fail(with message: String) {
