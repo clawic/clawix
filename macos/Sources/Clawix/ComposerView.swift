@@ -4,6 +4,12 @@ import UniformTypeIdentifiers
 
 struct ComposerView: View {
     var chatMode: Bool = false
+    /// When non-nil, the send button routes to this chat id using the
+    /// view-owned (env-injected) `composer` instance. Powers the
+    /// "Open in side chat" UI: the parent ChatView passes the side
+    /// chat's id and overrides the `ComposerState` env so the input
+    /// state is independent of the global composer.
+    var sideChatId: UUID? = nil
 
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var composer: ComposerState
@@ -60,6 +66,19 @@ struct ComposerView: View {
     }
 
     private var slashOpen: Bool { slashQuery != nil }
+
+    /// Sends the current draft. Routes to the side-chat-aware variant
+    /// when this composer drives a side chat tab, falls through to the
+    /// global `sendMessage()` for the main composer. Both variants
+    /// clear `composer.text` and `composer.attachments` internally,
+    /// so callers don't need to.
+    private func dispatchSend() {
+        if let target = sideChatId {
+            appState.sendMessage(forChatId: target, composer: composer)
+        } else {
+            appState.sendMessage()
+        }
+    }
 
     /// True when the draft contains the standalone word "plan"
     /// (case-insensitive, separated by word boundaries) so we can offer
@@ -262,7 +281,7 @@ struct ComposerView: View {
                 .accessibilityLabel("Stop response")
                 .hoverHint(L10n.t("Stop response"))
             } else {
-                Button { appState.sendMessage() } label: {
+                Button { dispatchSend() } label: {
                     ArrowUpIcon(size: 14)
                         .foregroundColor(canSend ? Color(white: 0.06) : Color.white.opacity(0.55))
                         .frame(width: 30, height: 30)
@@ -446,7 +465,7 @@ struct ComposerView: View {
             appendTranscribedText(text)
             if pendingSend.wrappedValue,
                !composer.text.trimmingCharacters(in: .whitespaces).isEmpty {
-                appState.sendMessage()
+                dispatchSend()
             }
             pendingSend.wrappedValue = false
         }
@@ -571,7 +590,7 @@ struct ComposerView: View {
                         contentHeight: $composerContentHeight,
                         autofocus: !projectMenuOpen,
                         focusToken: composer.focusToken,
-                        onSubmit: { appState.sendMessage() },
+                        onSubmit: { dispatchSend() },
                         onShiftTab: {
                             withAnimation(.easeOut(duration: 0.18)) {
                                 appState.togglePlanMode()

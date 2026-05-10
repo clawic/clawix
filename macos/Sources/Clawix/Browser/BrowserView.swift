@@ -15,6 +15,11 @@ struct BrowserView: View {
         return nil
     }
 
+    private var activeChat: SidebarItem.ChatPayload? {
+        if case .chat(let p) = appState.activeSidebarItem { return p }
+        return nil
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
@@ -38,6 +43,10 @@ struct BrowserView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let payload = activeFile {
                     FileViewerPanel(path: payload.path)
+                        .id(payload.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let payload = activeChat {
+                    ChatView(chatId: payload.id, isSideChat: true)
                         .id(payload.id)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {

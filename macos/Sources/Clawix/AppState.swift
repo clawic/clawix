@@ -4585,6 +4585,136 @@ final class AppState: ObservableObject {
         return newChat.id
     }
 
+    /// Silent variant of `forkConversation` that powers "Open in side
+    /// chat". Spawns a sibling conversation that inherits the parent's
+    /// full context server-side (via `clawix.forkThread`), but starts
+    /// with an empty visible transcript and no fork banner so the
+    /// experience reads as a fresh chat. The new chat is pinned to the
+    /// parent's right sidebar as a `SidebarItem.chat` tab and is
+    /// flagged `isSideChat` so the main sidebar list filters it out.
+    /// Returns the new chat's id.
+    @discardableResult
+    func openInSideChat(parentChatId: UUID) -> UUID? {
+        guard let srcIdx = chats.firstIndex(where: { $0.id == parentChatId }) else { return nil }
+        let source = chats[srcIdx]
+
+        let newChat = Chat(
+            id: UUID(),
+            title: "",
+            messages: [],
+            createdAt: Date(),
+            clawixThreadId: nil,
+            rolloutPath: nil,
+            historyHydrated: true,
+            hasActiveTurn: false,
+            projectId: source.projectId,
+            isArchived: false,
+            isPinned: false,
+            hasUnreadCompletion: false,
+            cwd: source.cwd,
+            hasGitRepo: source.hasGitRepo,
+            branch: source.branch,
+            availableBranches: source.availableBranches,
+            uncommittedFiles: source.uncommittedFiles,
+            forkedFromChatId: source.id,
+            forkedFromTitle: source.title,
+            // No banner: the side-chat UX is "looks like a fresh chat,
+            // but the daemon side carries the parent's context".
+            forkBannerAfterMessageId: nil,
+            isSideChat: true
+        )
+        chats.insert(newChat, at: 0)
+
+        // Mount the side chat as a tab in the parent's right sidebar.
+        // We mutate the parent's `ChatSidebarState` directly (rather
+        // than going through `currentSidebar`) so this works whether or
+        // not the user is currently viewing the parent route.
+        var sidebar = chatSidebars[parentChatId] ?? .empty
+        sidebar.items.append(.chat(.init(id: newChat.id)))
+        sidebar.activeItemId = newChat.id
+        sidebar.isOpen = true
+        chatSidebars[parentChatId] = sidebar
+        persistChatSidebars()
+
+        // Mirror the runtime fork so the side chat's first prompt
+        // resumes inside the parent's full thread context. Failures
+        // are non-fatal — if the runtime is down the side chat still
+        // works as a fresh thread.
+        if let parentThreadId = source.clawixThreadId,
+           let clawix,
+           case .ready = clawix.status {
+            Task { @MainActor in
+                do {
+                    _ = try await clawix.forkThread(
+                        parentThreadId: parentThreadId,
+                        newChatId: newChat.id
+                    )
+                } catch {
+                    // Swallow: see forkConversation for rationale.
+                }
+            }
+        }
+
+        return newChat.id
+    }
+
+    /// Send variant for a side-chat composer. Mirrors `sendMessage()`
+    /// but drives an explicit chat id and an explicit, view-owned
+    /// composer state — necessary because the side chat lives in the
+    /// right sidebar and uses its own `ComposerState`, independent of
+    /// `appState.composer` (the global one tied to the main route).
+    func sendMessage(forChatId chatId: UUID, composer: ComposerState) {
+        let trimmed = composer.text.trimmingCharacters(in: .whitespaces)
+        let attachments = composer.attachments
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return }
+
+        let mentions = attachments.map { "@\($0.url.path)" }.joined(separator: " ")
+        let combined: String
+        if trimmed.isEmpty {
+            combined = mentions
+        } else if mentions.isEmpty {
+            combined = trimmed
+        } else {
+            combined = mentions + "\n\n" + trimmed
+        }
+
+        let userMsg = ChatMessage(role: .user, content: combined, timestamp: Date())
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
+        chats[idx].messages.append(userMsg)
+        chats[idx].lastTurnInterrupted = false
+        // Side chats start with an empty title so the tab pill reads
+        // "Side chat" until the user types. On the first message we
+        // promote the prompt to the title — same convention as the
+        // home-route new-chat branch in `sendMessage()`.
+        if chats[idx].title.isEmpty {
+            let titleSeed = trimmed.isEmpty
+                ? (attachments.first?.filename ?? "Side chat")
+                : trimmed
+            chats[idx].title = String(titleSeed.prefix(40))
+        }
+
+        composer.text = ""
+        composer.attachments = []
+
+        if let daemonBridgeClient {
+            // Same as `sendMessage()`: keep the BridgeBus subscription
+            // explicit because we don't switch `currentRoute` here
+            // (the user is still on the parent chat route).
+            trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
+            daemonBridgeClient.openChat(chatId)
+            daemonBridgeClient.sendPrompt(
+                chatId: chatId,
+                text: combined,
+                attachments: wireAttachments(from: attachments)
+            )
+        } else if let clawix {
+            Task { @MainActor in
+                await clawix.sendUserMessage(chatId: chatId, text: combined)
+                self.clawixBackendStatus = clawix.status
+            }
+        }
+    }
+
     func appendErrorBubble(chatId: UUID, message: String) {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         let bubble = ChatMessage(

@@ -6,9 +6,24 @@ private let chatRailMaxWidth: CGFloat = 720
 
 struct ChatView: View {
     let chatId: UUID
+    /// True when this ChatView lives inside a parent chat's right
+    /// sidebar as a "side chat" tab. Drives two divergences from the
+    /// main route: the composer reads from a view-owned
+    /// `ComposerState` (so typing in the side chat doesn't bleed into
+    /// the main composer and vice versa), and the send button routes
+    /// to this `chatId` directly instead of going through
+    /// `currentRoute`. Default `false` keeps the main route untouched.
+    var isSideChat: Bool = false
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var meshStore: MeshStore
     @EnvironmentObject private var flags: FeatureFlags
+    /// View-owned composer used only when `isSideChat == true`.
+    /// Created once per ChatView identity (the right-sidebar tab keys
+    /// the view by `chatId`, so each side chat keeps its draft across
+    /// re-renders) and injected into the descendants' environment so
+    /// the inner `ComposerView` reads/writes this one instead of the
+    /// global `appState.composer`.
+    @StateObject private var sideComposer = ComposerState()
 
     @State private var workMenuOpen = false
     @State private var branchMenuOpen = false
@@ -274,8 +289,12 @@ struct ChatView: View {
                             .frame(maxWidth: chatRailMaxWidth)
                         }
 
-                        ComposerView(chatMode: true)
+                        ComposerView(
+                            chatMode: true,
+                            sideChatId: isSideChat ? chatId : nil
+                        )
                             .frame(maxWidth: chatRailMaxWidth)
+                            .environmentObject(isSideChat ? sideComposer : appState.composer)
 
                         if flags.isVisible(.remoteMesh) || chat.hasGitRepo {
                             HStack(spacing: 14) {

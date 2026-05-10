@@ -608,6 +608,9 @@ private struct ContentTopChrome: View {
                         onArchive: { appState.archiveChat(chatId: chat.id) },
                         onForkConversation: {
                             appState.forkConversation(chatId: chat.id)
+                        },
+                        onOpenSideChat: {
+                            appState.openInSideChat(parentChatId: chat.id)
                         }
                     )
                     .anchoredPopupPlacement(
@@ -899,6 +902,7 @@ private struct ChatActionsMenu: View {
     let onRename: () -> Void
     let onArchive: () -> Void
     let onForkConversation: () -> Void
+    let onOpenSideChat: () -> Void
     @State private var hovered: String?
 
     private struct Item {
@@ -959,6 +963,7 @@ private struct ChatActionsMenu: View {
             case "rename":    onRename()
             case "archive":   onArchive()
             case "forkConv":  onForkConversation()
+            case "openSide":  onOpenSideChat()
             default: break
             }
         } label: {
