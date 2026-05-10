@@ -487,6 +487,17 @@ final class DictationCoordinator: ObservableObject {
         let model = resolvedActiveModel()
         let prompt = Self.composeWhisperPrompt(language: language)
         let token = sessionToken
+        if Self.shouldSkipWhisperDecode(samples: samples) {
+            finishIfFresh(
+                token: token,
+                text: "",
+                errorMessage: nil,
+                samples: samples,
+                model: model,
+                language: language
+            )
+            return
+        }
 
         // Cloud Whisper backends (Groq / Deepgram / Custom) take the
         // captured PCM and upload as WAV. Same async + enhancement
@@ -1270,6 +1281,13 @@ final class DictationCoordinator: ObservableObject {
             if a > m { m = a }
         }
         return m
+    }
+
+    static func shouldSkipWhisperDecode(samples: [Float]) -> Bool {
+        guard !samples.isEmpty else { return true }
+        let durationSeconds = Double(samples.count) / 16_000.0
+        if durationSeconds < 0.6 { return true }
+        return rms(of: samples) < 0.01
     }
 
     private func cleanup(deliveryText: String) {
