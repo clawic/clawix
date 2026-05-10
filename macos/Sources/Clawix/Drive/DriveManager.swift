@@ -172,6 +172,36 @@ final class DriveManager: ObservableObject {
         }
     }
 
+    func restore(_ itemId: String) async {
+        do {
+            _ = try await client.restoreItem(itemId)
+            await refresh()
+        } catch {
+            self.lastError = error.localizedDescription
+        }
+    }
+
+    func delete(_ itemId: String) async {
+        do {
+            _ = try await client.deleteItem(itemId)
+            await refresh()
+        } catch {
+            self.lastError = error.localizedDescription
+        }
+    }
+
+    func replaceDuplicate(existingId: String, fileURL: URL, parentId: String?) async {
+        do {
+            _ = try await client.trashItem(existingId)
+            _ = try await client.upload(filePath: fileURL, parentId: parentId ?? currentParentId)
+            await refresh()
+            self.lastError = nil
+        } catch {
+            self.lastError = error.localizedDescription
+            await refresh()
+        }
+    }
+
     func star(_ itemId: String, starred: Bool) async {
         do {
             _ = try await client.updateItem(itemId, starred: starred)

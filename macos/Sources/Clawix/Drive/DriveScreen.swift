@@ -61,9 +61,14 @@ struct DriveScreen: View {
             set: { if !$0 { duplicatePromptForExisting = nil } }
         )) {
             Button("Replace") {
-                if let url = pendingUploadURL {
+                if let url = pendingUploadURL, let existing = duplicatePromptForExisting {
                     Task { @MainActor in
-                        _ = await manager.upload(fileURL: url, parentId: manager.currentParentId, allowOverwrite: true)
+                        await manager.replaceDuplicate(
+                            existingId: existing.id,
+                            fileURL: url,
+                            parentId: manager.currentParentId
+                        )
+                        pendingUploadURL = nil
                         duplicatePromptForExisting = nil
                     }
                 }
@@ -364,6 +369,10 @@ struct DriveListView: View {
                         .foregroundStyle(.secondary)
                     Text(item.name)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) {
+                    if item.kind == "folder" { manager.setParent(item.id) }
+                }
             }
             TableColumn("Modified") { item in Text(formatRelative(item.updatedAt)).foregroundStyle(.secondary) }
             TableColumn("Size") { item in Text(formatSize(item.sizeBytes)).foregroundStyle(.secondary) }
@@ -423,6 +432,7 @@ struct DriveItemDetailPane: View {
     let manager: DriveManager
     @State private var exif: ClawJSDriveClient.ExifRecord?
     @State private var shares: ClawJSDriveClient.AllSharesResponse?
+    @State private var confirmDelete = false
 
     var body: some View {
         ScrollView {
@@ -469,8 +479,17 @@ struct DriveItemDetailPane: View {
                 }
                 Divider()
                 HStack {
-                    Button("Trash", role: .destructive) {
-                        Task { @MainActor in await manager.trash(item.id) }
+                    if item.trashedAt == nil {
+                        Button("Trash", role: .destructive) {
+                            Task { @MainActor in await manager.trash(item.id) }
+                        }
+                    } else {
+                        Button("Restore") {
+                            Task { @MainActor in await manager.restore(item.id) }
+                        }
+                        Button("Delete", role: .destructive) {
+                            confirmDelete = true
+                        }
                     }
                     Button(item.starred ? "Unstar" : "Star") {
                         Task { @MainActor in await manager.star(item.id, starred: !item.starred) }
@@ -482,6 +501,14 @@ struct DriveItemDetailPane: View {
         .task(id: item.id) {
             self.exif = try? await manager.client.getExif(item.id)
             self.shares = try? await manager.client.listAllShares(item.id)
+        }
+        .alert("Delete item?", isPresented: $confirmDelete) {
+            Button("Delete", role: .destructive) {
+                Task { @MainActor in await manager.delete(item.id) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes \"\(item.name)\" from Drive.")
         }
     }
 }
