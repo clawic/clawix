@@ -712,16 +712,22 @@ private struct UserImageThumbnail: View {
         .onHover { hovered = $0 }
         .help(helpText)
         .task(id: source.id) {
-            let loaded = await Task.detached(priority: .userInitiated) {
+            let loaded = await Task.detached(priority: .userInitiated) { () -> (image: NSImage?, bytes: Int) in
                 switch source {
                 case .file(let url):
-                    return NSImage(contentsOf: url)
+                    let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+                    let size = (attrs?[.size] as? NSNumber)?.intValue ?? 0
+                    return (NSImage(contentsOf: url), size)
                 case .attachment(let attachment):
-                    guard let data = Data(base64Encoded: attachment.dataBase64) else { return nil }
-                    return NSImage(data: data)
+                    guard let data = Data(base64Encoded: attachment.dataBase64) else { return (nil, 0) }
+                    return (NSImage(data: data), data.count)
                 }
             }.value
-            self.image = loaded
+            PerfSignpost.imageLoad.event("thumbnail.bytes", loaded.bytes)
+            if loaded.image != nil {
+                PerfSignpost.imageLoad.event("thumbnail.loaded")
+            }
+            self.image = loaded.image
         }
     }
 
