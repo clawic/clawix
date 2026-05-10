@@ -10,6 +10,7 @@ struct ChangedFileCard: View {
 
     @EnvironmentObject var appState: AppState
     @State private var hovered = false
+    @State private var openPillHovered = false
     /// Window-coordinates frame of the entire "Open" pill, captured every
     /// layout pass via a GeometryReader. Used to anchor the NSPanel popup
     /// in screen coordinates so it can escape the chat scroll-view's clip
@@ -129,7 +130,7 @@ struct ChangedFileCard: View {
         )
         // Track the whole pill's window frame so the popup anchors on
         // the pill's bottom-left edge.
-        .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame))
+        .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame, enabled: openPillHovered))
     }
 
     private func presentMenuPanel() {
@@ -151,9 +152,11 @@ struct ChangedFileCard: View {
 /// even when the chat scroll view scrolls between layout passes.
 private struct OpenPillWindowFrameReader: NSViewRepresentable {
     @Binding var frame: CGRect
+    let enabled: Bool
 
     func makeNSView(context: Context) -> Reader {
         let v = Reader()
+        v.enabled = enabled
         v.onFrameChange = { rect in
             DispatchQueue.main.async { frame = rect }
         }
@@ -161,13 +164,17 @@ private struct OpenPillWindowFrameReader: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: Reader, context: Context) {
+        nsView.enabled = enabled
         nsView.onFrameChange = { rect in
             DispatchQueue.main.async { frame = rect }
         }
+        nsView.report()
     }
 
     final class Reader: NSView {
         var onFrameChange: ((CGRect) -> Void)?
+        var enabled = false
+        private var lastReported: CGRect = .null
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
@@ -179,9 +186,11 @@ private struct OpenPillWindowFrameReader: NSViewRepresentable {
             report()
         }
 
-        private func report() {
-            guard window != nil else { return }
+        func report() {
+            guard enabled, window != nil else { return }
             let r = convert(bounds, to: nil)
+            guard r != lastReported else { return }
+            lastReported = r
             onFrameChange?(r)
         }
     }
