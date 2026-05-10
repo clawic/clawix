@@ -7,6 +7,12 @@ import SwiftUI
 
 struct ToolGroupView: View {
     let items: [WorkItem]
+    private let snapshot: ToolTimelinePresentationSnapshot
+
+    init(items: [WorkItem]) {
+        self.items = items
+        self.snapshot = ToolTimelinePresentation.snapshot(for: items)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -29,15 +35,14 @@ struct ToolGroupView: View {
                 }
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: accessibilityLabel))
     }
 
     // MARK: - Live rows
 
     private var runningCommands: [WorkItem] {
-        items.filter { item in
-            guard case .command = item.kind else { return false }
-            return item.status == .inProgress
-        }
+        snapshot.runningCommands
     }
 
     private func inlineRow(prefix: String, body: String) -> some View {
@@ -60,7 +65,7 @@ struct ToolGroupView: View {
     // MARK: - Aggregated rows
 
     private var aggregateRows: [ToolTimelineRow] {
-        ToolTimelinePresentation.aggregateRows(for: items)
+        snapshot.aggregateRows
     }
 
     private func aggregateRow(_ row: ToolTimelineRow) -> some View {
@@ -99,10 +104,14 @@ struct ToolGroupView: View {
             }
             .foregroundColor(Color(white: 0.45))
             .frame(width: 16, alignment: .leading)
-            Text(row.text)
+            Text(verbatim: row.text)
                 .font(BodyFont.system(size: 13, wght: 500))
                 .foregroundColor(Color(white: 0.55))
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var accessibilityLabel: String {
+        snapshot.accessibilityLabel
     }
 }

@@ -6,8 +6,44 @@ struct ToolTimelineRow: Identifiable, Equatable {
     let text: String
 }
 
+struct ToolTimelinePresentationSnapshot: Equatable {
+    let aggregateRows: [ToolTimelineRow]
+    let runningCommands: [WorkItem]
+    let accessibilityLabel: String
+}
+
 enum ToolTimelinePresentation {
     static func aggregateRows(for items: [WorkItem]) -> [ToolTimelineRow] {
+        snapshot(for: items).aggregateRows
+    }
+
+    static func snapshot(for items: [WorkItem]) -> ToolTimelinePresentationSnapshot {
+        ToolTimelinePresentationCache.shared.snapshot(for: items)
+    }
+
+    fileprivate static func buildSnapshot(for items: [WorkItem]) -> ToolTimelinePresentationSnapshot {
+        let aggregateRows = buildAggregateRows(for: items)
+        let runningCommands = items.filter { item in
+            guard case .command = item.kind else { return false }
+            return item.status == .inProgress
+        }
+        let runningText = runningCommands.compactMap { item -> String? in
+            guard case .command(let text, _) = item.kind, let text, !text.isEmpty else {
+                return nil
+            }
+            return text
+        }
+        let accessibilityLabel = AccessibilityText.clipped(
+            (aggregateRows.map(\.text) + runningText).joined(separator: ". ")
+        )
+        return ToolTimelinePresentationSnapshot(
+            aggregateRows: aggregateRows,
+            runningCommands: runningCommands,
+            accessibilityLabel: accessibilityLabel
+        )
+    }
+
+    private static func buildAggregateRows(for items: [WorkItem]) -> [ToolTimelineRow] {
         var rows: [ToolTimelineRow] = []
 
         var readFiles = 0
@@ -166,5 +202,94 @@ enum ToolTimelinePresentation {
             ))
         }
         return rows
+    }
+}
+
+private final class ToolTimelinePresentationCache {
+    static let shared = ToolTimelinePresentationCache()
+
+    private var values: [Key: ToolTimelinePresentationSnapshot] = [:]
+    private var order: [Key] = []
+    private let limit = 512
+
+    private init() {}
+
+    func snapshot(for items: [WorkItem]) -> ToolTimelinePresentationSnapshot {
+        let key = Key(items: items)
+        if let cached = values[key] {
+            PerfSignpost.uiChat.event("tool.snapshot.cache_hit", items.count)
+            return cached
+        }
+        let snapshot = ToolTimelinePresentation.buildSnapshot(for: items)
+        values[key] = snapshot
+        order.append(key)
+        PerfSignpost.uiChat.event("tool.snapshot.cache_miss", items.count)
+        if order.count > limit {
+            let overflow = order.count - limit
+            for oldKey in order.prefix(overflow) {
+                values.removeValue(forKey: oldKey)
+            }
+            order.removeFirst(overflow)
+        }
+        return snapshot
+    }
+
+    private struct Key: Hashable {
+        let parts: [String]
+
+        init(items: [WorkItem]) {
+            parts = items.map(Self.part)
+        }
+
+        private static func part(_ item: WorkItem) -> String {
+            "\(item.id)|\(status(item.status))|\(kind(item.kind))|\(item.generatedImagePath ?? "")"
+        }
+
+        private static func status(_ status: WorkItemStatus) -> String {
+            switch status {
+            case .inProgress: return "inProgress"
+            case .completed: return "completed"
+            case .failed: return "failed"
+            }
+        }
+
+        private static func kind(_ kind: WorkItemKind) -> String {
+            switch kind {
+            case .command(let text, let actions):
+                return "command:\(text ?? ""):\(actions.map(action).joined(separator: ","))"
+            case .fileChange(let paths):
+                return "fileChange:\(paths.joined(separator: "||"))"
+            case .webSearch:
+                return "webSearch"
+            case .mcpTool(let server, let tool):
+                return "mcp:\(server):\(tool)"
+            case .dynamicTool(let name):
+                return "dynamic:\(name)"
+            case .imageGeneration:
+                return "imageGeneration"
+            case .imageView:
+                return "imageView"
+            case .jsCall(let title, let flavor):
+                return "js:\(title ?? ""):\(jsFlavor(flavor))"
+            case .jsReset:
+                return "jsReset"
+            }
+        }
+
+        private static func action(_ action: CommandActionKind) -> String {
+            switch action {
+            case .read: return "read"
+            case .listFiles: return "listFiles"
+            case .search: return "search"
+            case .unknown: return "unknown"
+            }
+        }
+
+        private static func jsFlavor(_ flavor: JSCallFlavor) -> String {
+            switch flavor {
+            case .browser: return "browser"
+            case .repl: return "repl"
+            }
+        }
     }
 }
