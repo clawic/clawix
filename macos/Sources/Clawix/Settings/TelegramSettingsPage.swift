@@ -753,10 +753,12 @@ private struct AddBotSheet: View {
             } else {
                 failure = envelope.stderr.isEmpty
                     ? "CLI exited with code \(envelope.exitCode.map(String.init) ?? "?")."
-                    : envelope.stderr
+                    : userFacingTelegramFailure(envelope.stderr)
             }
         case .failure(let error):
-            failure = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            failure = userFacingTelegramFailure(
+                (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            )
         }
     }
 
@@ -765,6 +767,41 @@ private struct AddBotSheet: View {
         if case let .string(s)? = dict["id"] { return s }
         if case let .string(s)? = dict["accountId"] { return s }
         return nil
+    }
+
+    private func userFacingTelegramFailure(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "Telegram connection failed." }
+        if trimmed.localizedCaseInsensitiveContains("command not found"),
+           trimmed.localizedCaseInsensitiveContains("secrets-proxy") {
+            return "Secrets proxy is not installed or is not executable."
+        }
+
+        let lines = trimmed
+            .split(whereSeparator: \.isNewline)
+            .map(String.init)
+        if let firstError = lines.first(where: { $0.localizedCaseInsensitiveContains("error:") }) {
+            return cleanErrorPrefix(firstError)
+        }
+        if let first = lines.first {
+            return cleanErrorPrefix(first)
+        }
+        return String(trimmed.prefix(240))
+    }
+
+    private func cleanErrorPrefix(_ raw: String) -> String {
+        var message = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        while message.localizedCaseInsensitiveComparePrefix("error:") {
+            message.removeFirst("error:".count)
+            message = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return message.isEmpty ? "Telegram connection failed." : message
+    }
+}
+
+private extension String {
+    func localizedCaseInsensitiveComparePrefix(_ prefix: String) -> Bool {
+        range(of: prefix, options: [.anchored, .caseInsensitive, .diacriticInsensitive]) != nil
     }
 }
 
