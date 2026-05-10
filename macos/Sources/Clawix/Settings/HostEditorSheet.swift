@@ -6,6 +6,8 @@ struct HostEditorSheet: View {
     let onClose: () -> Void
 
     @State private var mode: Mode = .pairMac
+
+    // Pair-a-Mac state
     @State private var pairingHost: String = ""
     @State private var pairingPort: String = "7779"
     @State private var pairingToken: String = ""
@@ -13,6 +15,19 @@ struct HostEditorSheet: View {
     @State private var pairingInFlight = false
     @State private var pairingError: String? = nil
     @State private var pairingSuccessName: String? = nil
+
+    // SSH host state
+    @State private var sshKind: SshKindChoice = .linuxServer
+    @State private var sshDisplayName: String = ""
+    @State private var sshHost: String = ""
+    @State private var sshPort: String = "22"
+    @State private var sshUser: String = ""
+    @State private var sshAuth: MeshStore.SshAuthMethodChoice = .privateKey
+    @State private var sshSecretValue: String = ""
+    @State private var sshProfile: PeerPermissionProfile = .scoped
+    @State private var sshInFlight = false
+    @State private var sshError: String? = nil
+    @State private var sshSuccessName: String? = nil
 
     enum Mode: String, CaseIterable, Equatable, Hashable {
         case pairMac
@@ -22,6 +37,31 @@ struct HostEditorSheet: View {
             switch self {
             case .pairMac:    return "Pair a Mac"
             case .sshServer:  return "Add SSH server"
+            }
+        }
+    }
+
+    enum SshKindChoice: String, CaseIterable, Equatable, Hashable {
+        case linuxServer
+        case linuxDesktop
+        case windowsPC
+        case sbc
+
+        var label: String {
+            switch self {
+            case .linuxServer:  return "Server"
+            case .linuxDesktop: return "Linux"
+            case .windowsPC:    return "Windows"
+            case .sbc:          return "Board"
+            }
+        }
+
+        var hostKind: HostKind {
+            switch self {
+            case .linuxServer:  return .linuxServer
+            case .linuxDesktop: return .linuxDesktop
+            case .windowsPC:    return .windowsPC
+            case .sbc:          return .sbc
             }
         }
     }
@@ -122,35 +162,65 @@ struct HostEditorSheet: View {
     @ViewBuilder
     private var sshServerBody: some View {
         EditorCard {
-            EditorFieldLabel("Coming soon")
-            Text("SSH host registration will become available when this Mac can store host credentials through the background bridge.")
-                .font(BodyFont.system(size: 12, wght: 500))
-                .foregroundColor(Palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            EditorFieldLabel("Kind")
+            SlidingSegmented(
+                selection: $sshKind,
+                options: SshKindChoice.allCases.map { ($0, $0.label) }
+            )
         }
         EditorCard {
-            EditorFieldLabel("What it will accept")
-            VStack(alignment: .leading, spacing: 6) {
-                fieldRow("Display name", "e.g. Hetzner VPS")
-                fieldRow("Host / IP", "vps.example.com")
-                fieldRow("SSH user", "ubuntu / root / deploy")
-                fieldRow("Auth", "Private key, password or agent")
-                fieldRow("Permission profile", "Scoped / Full trust / Ask per task")
+            EditorFieldLabel("Display name")
+            EditorTextField(placeholder: "e.g. Hetzner VPS", text: $sshDisplayName)
+        }
+        EditorCard {
+            EditorFieldLabel("Host")
+            EditorTextField(placeholder: "vps.example.com or 1.2.3.4", text: $sshHost)
+        }
+        EditorCard {
+            EditorFieldLabel("SSH port")
+            EditorTextField(placeholder: "22", text: $sshPort)
+        }
+        EditorCard {
+            EditorFieldLabel("SSH user")
+            EditorTextField(placeholder: "ubuntu / deploy / root", text: $sshUser)
+        }
+        EditorCard {
+            EditorFieldLabel("Auth")
+            SlidingSegmented(
+                selection: $sshAuth,
+                options: MeshStore.SshAuthMethodChoice.allCases.map { ($0, $0.label) }
+            )
+            if sshAuth != .agent {
+                EditorTextField(
+                    placeholder: sshAuth == .privateKey
+                        ? "Paste the private key (PEM)"
+                        : "Password",
+                    text: $sshSecretValue,
+                    secure: true
+                )
+            } else {
+                Text("Uses the SSH agent socket already exported to this Mac (SSH_AUTH_SOCK). The daemon will not store any credential for this host.")
+                    .font(BodyFont.system(size: 11.5, wght: 500))
+                    .foregroundColor(Palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-
-    @ViewBuilder
-    private func fieldRow(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(label)
-                .font(BodyFont.system(size: 12, wght: 600))
-                .foregroundColor(Palette.textPrimary)
-                .frame(width: 140, alignment: .leading)
-            Text(value)
-                .font(BodyFont.system(size: 12))
-                .foregroundColor(Palette.textSecondary)
-            Spacer()
+        EditorCard {
+            EditorFieldLabel("Trust profile")
+            SlidingSegmented(
+                selection: $sshProfile,
+                options: [
+                    (.scoped, "Scoped"),
+                    (.fullTrust, "Full trust"),
+                    (.askPerTask, "Ask")
+                ]
+            )
+        }
+        if let name = sshSuccessName {
+            InfoBanner(text: "Added \(name)", kind: .ok)
+        }
+        if let error = sshError {
+            InfoBanner(text: error, kind: .error)
         }
     }
 
@@ -164,7 +234,7 @@ struct HostEditorSheet: View {
                 .buttonStyle(SheetCancelButtonStyle())
             Button(action: { Task { await commit() } }) {
                 HStack(spacing: 6) {
-                    if pairingInFlight {
+                    if isInFlight {
                         ProgressView().controlSize(.small)
                     }
                     Text(commitLabel)
@@ -178,45 +248,95 @@ struct HostEditorSheet: View {
 
     private var commitLabel: String {
         switch mode {
-        case .pairMac:    return pairingInFlight ? "Linking…" : "Link Mac"
-        case .sshServer:  return "Add server"
+        case .pairMac:
+            return pairingInFlight ? "Linking…" : "Link Mac"
+        case .sshServer:
+            return sshInFlight ? "Adding…" : "Add host"
+        }
+    }
+
+    private var isInFlight: Bool {
+        switch mode {
+        case .pairMac:   return pairingInFlight
+        case .sshServer: return sshInFlight
         }
     }
 
     private var canCommit: Bool {
         switch mode {
-        case .sshServer:
-            return false
         case .pairMac:
             return !pairingInFlight
                 && !pairingHost.trimmingCharacters(in: .whitespaces).isEmpty
                 && Int(pairingPort) != nil
                 && !pairingToken.trimmingCharacters(in: .whitespaces).isEmpty
+        case .sshServer:
+            let portOK = (Int(sshPort) ?? 0) > 0
+            let secretOK = sshAuth == .agent || !sshSecretValue.isEmpty
+            return !sshInFlight
+                && portOK
+                && secretOK
+                && !sshDisplayName.trimmingCharacters(in: .whitespaces).isEmpty
+                && !sshHost.trimmingCharacters(in: .whitespaces).isEmpty
+                && !sshUser.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 
     private func commit() async {
         switch mode {
-        case .sshServer:
-            return
         case .pairMac:
-            pairingInFlight = true
-            pairingError = nil
-            pairingSuccessName = nil
-            defer { pairingInFlight = false }
-            let host = pairingHost.trimmingCharacters(in: .whitespaces)
-            let token = pairingToken.trimmingCharacters(in: .whitespaces)
-            let port = Int(pairingPort) ?? 7779
-            await store.pair(host: host, httpPort: port, token: token, profile: pairingProfile)
-            if case .success(let name) = store.lastPairingResult {
-                pairingSuccessName = name
-                pairingHost = ""
-                pairingToken = ""
-                try? await Task.sleep(nanoseconds: 600_000_000)
-                onClose()
-            } else if case .failure(let message) = store.lastPairingResult {
-                pairingError = message
-            }
+            await commitPairing()
+        case .sshServer:
+            await commitSshServer()
+        }
+    }
+
+    private func commitPairing() async {
+        pairingInFlight = true
+        pairingError = nil
+        pairingSuccessName = nil
+        defer { pairingInFlight = false }
+        let host = pairingHost.trimmingCharacters(in: .whitespaces)
+        let token = pairingToken.trimmingCharacters(in: .whitespaces)
+        let port = Int(pairingPort) ?? 7779
+        await store.pair(host: host, httpPort: port, token: token, profile: pairingProfile)
+        if case .success(let name) = store.lastPairingResult {
+            pairingSuccessName = name
+            pairingHost = ""
+            pairingToken = ""
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            onClose()
+        } else if case .failure(let message) = store.lastPairingResult {
+            pairingError = message
+        }
+    }
+
+    private func commitSshServer() async {
+        sshInFlight = true
+        sshError = nil
+        sshSuccessName = nil
+        defer { sshInFlight = false }
+        let port = Int(sshPort) ?? 22
+        let outcome = await store.upsertSshHost(
+            displayName: sshDisplayName,
+            kind: sshKind.hostKind,
+            host: sshHost,
+            port: port,
+            user: sshUser,
+            authMethod: sshAuth,
+            secretValue: sshSecretValue,
+            permissionProfile: sshProfile
+        )
+        switch outcome {
+        case .success(let peer):
+            sshSuccessName = peer.displayName
+            sshDisplayName = ""
+            sshHost = ""
+            sshUser = ""
+            sshSecretValue = ""
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            onClose()
+        case .failure(let err):
+            sshError = err.errorDescription
         }
     }
 }

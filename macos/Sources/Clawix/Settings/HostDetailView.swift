@@ -7,6 +7,8 @@ struct HostDetailView: View {
     let onClose: () -> Void
 
     @State private var workspaceDraft: String = ""
+    @State private var revokeConfirm = false
+    @State private var actionInFlight = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -38,6 +40,28 @@ struct HostDetailView: View {
         .onAppear {
             workspaceDraft = store.remoteWorkspace(for: peer.nodeId)
         }
+        .alert("Revoke this host?", isPresented: $revokeConfirm) {
+            Button("Cancel", role: .cancel) { }
+            Button("Revoke", role: .destructive) {
+                Task { await runRevoke() }
+            }
+        } message: {
+            Text("\(peer.displayName) will no longer be able to run jobs on this Mac. The pairing token is invalidated. You can clear the revocation later from the same screen.")
+        }
+    }
+
+    private func runRevoke() async {
+        actionInFlight = true
+        defer { actionInFlight = false }
+        if case .success = await store.revokePeer(nodeId: peer.nodeId) {
+            onClose()
+        }
+    }
+
+    private func runUnrevoke() async {
+        actionInFlight = true
+        defer { actionInFlight = false }
+        _ = await store.unrevokePeer(nodeId: peer.nodeId)
     }
 
     // MARK: - Header
@@ -233,6 +257,29 @@ struct HostDetailView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
+            if peer.revokedAt == nil {
+                Button(role: .destructive) {
+                    revokeConfirm = true
+                } label: {
+                    HStack(spacing: 6) {
+                        if actionInFlight { ProgressView().controlSize(.small) }
+                        Text("Revoke")
+                    }
+                }
+                .buttonStyle(SheetCancelButtonStyle())
+                .disabled(actionInFlight)
+            } else {
+                Button {
+                    Task { await runUnrevoke() }
+                } label: {
+                    HStack(spacing: 6) {
+                        if actionInFlight { ProgressView().controlSize(.small) }
+                        Text("Unrevoke")
+                    }
+                }
+                .buttonStyle(SheetCancelButtonStyle())
+                .disabled(actionInFlight)
+            }
             Spacer()
             Button("Close") { onClose() }
                 .keyboardShortcut(.cancelAction)
