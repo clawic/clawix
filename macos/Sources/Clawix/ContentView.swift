@@ -603,9 +603,28 @@ private struct ContentTopChrome: View {
                     ChatActionsMenu(
                         isOpen: $chatActionsOpen,
                         isPinned: chat.isPinned,
+                        canCopyWorkingDirectory: !(chat.cwd ?? "").isEmpty,
+                        canCopySessionID: !(chat.clawixThreadId ?? "").isEmpty,
+                        canCopyMarkdown: !chat.messages.isEmpty,
                         onTogglePin: { appState.togglePin(chatId: chat.id) },
                         onRename: { appState.pendingRenameChat = chat },
                         onArchive: { appState.archiveChat(chatId: chat.id) },
+                        onCopyWorkingDirectory: {
+                            if let cwd = chat.cwd, !cwd.isEmpty {
+                                setChatActionsPasteboard(cwd)
+                            }
+                        },
+                        onCopySessionID: {
+                            if let id = chat.clawixThreadId, !id.isEmpty {
+                                setChatActionsPasteboard(id)
+                            }
+                        },
+                        onCopyDirectLink: {
+                            setChatActionsPasteboard("clawix://chat/\(chat.clawixThreadId ?? chat.id.uuidString)")
+                        },
+                        onCopyMarkdown: {
+                            setChatActionsPasteboard(markdownTranscript(for: chat))
+                        },
                         onForkConversation: {
                             appState.forkConversation(chatId: chat.id, sourceSnapshot: chat)
                         },
@@ -898,9 +917,16 @@ private struct RightSidebarAddMenu: View {
 private struct ChatActionsMenu: View {
     @Binding var isOpen: Bool
     let isPinned: Bool
+    let canCopyWorkingDirectory: Bool
+    let canCopySessionID: Bool
+    let canCopyMarkdown: Bool
     let onTogglePin: () -> Void
     let onRename: () -> Void
     let onArchive: () -> Void
+    let onCopyWorkingDirectory: () -> Void
+    let onCopySessionID: () -> Void
+    let onCopyDirectLink: () -> Void
+    let onCopyMarkdown: () -> Void
     let onForkConversation: () -> Void
     let onOpenSideChat: () -> Void
     @State private var hovered: String?
@@ -910,6 +936,21 @@ private struct ChatActionsMenu: View {
         let icon: String
         let title: LocalizedStringKey
         let shortcut: String?
+        let enabled: Bool
+
+        init(
+            id: String,
+            icon: String,
+            title: LocalizedStringKey,
+            shortcut: String?,
+            enabled: Bool = true
+        ) {
+            self.id = id
+            self.icon = icon
+            self.title = title
+            self.shortcut = shortcut
+            self.enabled = enabled
+        }
     }
 
     private var groups: [[Item]] {
@@ -920,19 +961,14 @@ private struct ChatActionsMenu: View {
             .init(id: "archive",  icon: "archivebox",  title: "Archive chat",  shortcut: "⇧⌘A"),
         ],
         [
-            .init(id: "copyCwd",  icon: "doc.on.doc",  title: "Copy working directory", shortcut: "⇧⌘C"),
-            .init(id: "copyId",   icon: "doc.on.doc",  title: "Copy session ID",       shortcut: "⌥⌘C"),
+            .init(id: "copyCwd",  icon: "doc.on.doc",  title: "Copy working directory", shortcut: "⇧⌘C", enabled: canCopyWorkingDirectory),
+            .init(id: "copyId",   icon: "doc.on.doc",  title: "Copy session ID",       shortcut: "⌥⌘C", enabled: canCopySessionID),
             .init(id: "copyLink", icon: "doc.on.doc",  title: "Copy direct link",        shortcut: "⌥⌘L"),
-            .init(id: "copyMd",   icon: "doc.on.doc",  title: "Copy as Markdown",         shortcut: nil),
+            .init(id: "copyMd",   icon: "doc.on.doc",  title: "Copy as Markdown",         shortcut: nil, enabled: canCopyMarkdown),
         ],
         [
             .init(id: "forkConv",      icon: "branchArrows",             title: "Fork conversation",        shortcut: nil),
             .init(id: "openSide",      icon: "plus.app",                 title: "Open side chat",         shortcut: nil),
-            .init(id: "forkLocal",     icon: "laptopcomputer",           title: "Fork to local",            shortcut: nil),
-            .init(id: "forkWorktree",  icon: "arrow.triangle.branch",    title: "Fork to new worktree", shortcut: nil),
-        ],
-        [
-            .init(id: "miniWindow", icon: "macwindow.on.rectangle", title: "Open in mini window", shortcut: nil),
         ],
         ]
     }
@@ -957,11 +993,16 @@ private struct ChatActionsMenu: View {
 
     private func row(_ item: Item) -> some View {
         Button {
+            guard item.enabled else { return }
             isOpen = false
             switch item.id {
             case "togglePin": onTogglePin()
             case "rename":    onRename()
             case "archive":   onArchive()
+            case "copyCwd":    onCopyWorkingDirectory()
+            case "copyId":     onCopySessionID()
+            case "copyLink":   onCopyDirectLink()
+            case "copyMd":     onCopyMarkdown()
             case "forkConv":  onForkConversation()
             case "openSide":  onOpenSideChat()
             default: break
@@ -1006,11 +1047,33 @@ private struct ChatActionsMenu: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!item.enabled)
+        .opacity(item.enabled ? 1 : 0.45)
         .onHover { hovering in
-            if hovering { hovered = item.id }
+            if hovering && item.enabled { hovered = item.id }
             else if hovered == item.id { hovered = nil }
         }
     }
+}
+
+private func setChatActionsPasteboard(_ value: String) {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(value, forType: .string)
+}
+
+private func markdownTranscript(for chat: Chat) -> String {
+    var lines: [String] = ["# \(chat.title)", ""]
+    for message in chat.messages {
+        let role = message.role == .user ? "User" : "Assistant"
+        let body = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty else { continue }
+        lines.append("## \(role)")
+        lines.append("")
+        lines.append(body)
+        lines.append("")
+    }
+    return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 // MARK: - Search popover overlay
