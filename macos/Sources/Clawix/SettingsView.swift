@@ -645,6 +645,7 @@ private struct ActionPillRow: View {
     let detail: LocalizedStringKey?
     let primaryLabel: LocalizedStringKey
     var trailingDisabled: LocalizedStringKey? = nil
+    var isEnabled = true
     let onPrimary: () -> Void
 
     var body: some View {
@@ -662,7 +663,7 @@ private struct ActionPillRow: View {
                 Button(action: onPrimary) {
                     Text(primaryLabel)
                         .font(BodyFont.system(size: 12, wght: 600))
-                        .foregroundColor(Palette.textPrimary)
+                        .foregroundColor(isEnabled ? Palette.textPrimary : Palette.textSecondary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
                         .background(
@@ -675,6 +676,7 @@ private struct ActionPillRow: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .disabled(!isEnabled)
             }
         }
         .padding(.horizontal, 14)
@@ -860,6 +862,7 @@ private struct GeneralPage: View {
                         detail: "Set a global keyboard shortcut for the popover. Leave empty to keep it disabled.",
                         primaryLabel: "Change",
                         trailingDisabled: "⌥Space",
+                        isEnabled: false,
                         onPrimary: {}
                     )
                     CardDivider()
@@ -954,6 +957,7 @@ private struct GeneralPage: View {
                         detail: "Hold down anywhere on the desktop to dictate where the cursor is",
                         primaryLabel: "Set",
                         trailingDisabled: "Off",
+                        isEnabled: false,
                         onPrimary: {}
                     )
                     CardDivider()
@@ -962,6 +966,7 @@ private struct GeneralPage: View {
                         detail: "Press once anywhere on the desktop to dictate, press again to stop",
                         primaryLabel: "Set",
                         trailingDisabled: "Off",
+                        isEnabled: false,
                         onPrimary: {}
                     )
                     CardDivider()
@@ -1264,7 +1269,7 @@ private struct ImportAgentRow: View {
             Button {} label: {
                 Text("Import")
                     .font(BodyFont.system(size: 12, wght: 600))
-                    .foregroundColor(Palette.textPrimary)
+                    .foregroundColor(Palette.textSecondary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
                     .background(
@@ -1273,6 +1278,7 @@ private struct ImportAgentRow: View {
                     )
             }
             .buttonStyle(.plain)
+            .disabled(true)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -2062,6 +2068,7 @@ private struct ReinstallRow: View {
                 )
             }
             .buttonStyle(.plain)
+            .disabled(true)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
