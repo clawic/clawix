@@ -18,6 +18,7 @@ struct SecretsSettingsPage: View {
     @State private var importBanner: String?
     @State private var importErrorBanner: String?
     @State private var integrityResult: AuditIntegrityReport?
+    @State private var integrityMessage: String?
     @State private var symlinkResult: String?
     @State private var showBackupSheet = false
     @State private var showRestoreSheet = false
@@ -138,6 +139,12 @@ struct SecretsSettingsPage: View {
                 Text(verbatim: integritySummary(report))
                     .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(report.isIntact ? Color.green.opacity(0.78) : Color.red.opacity(0.85))
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 10)
+            } else if let integrityMessage {
+                Text(verbatim: integrityMessage)
+                    .font(BodyFont.system(size: 11.5, wght: 500))
+                    .foregroundColor(Color.red.opacity(0.85))
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
             }
@@ -331,6 +338,11 @@ struct SecretsSettingsPage: View {
 
     private func runIntegrity() {
         integrityResult = vault.runIntegrityCheck()
+        if integrityResult == nil {
+            integrityMessage = vault.lastError ?? "Unlock the vault before verifying the audit log."
+        } else {
+            integrityMessage = nil
+        }
     }
 
     private func pickAndImport(format: VaultManager.ImportFormat, allowed: [UTType]) {
