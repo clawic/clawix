@@ -607,7 +607,7 @@ private struct ContentTopChrome: View {
                         onRename: { appState.pendingRenameChat = chat },
                         onArchive: { appState.archiveChat(chatId: chat.id) },
                         onForkConversation: {
-                            appState.forkConversation(chatId: chat.id)
+                            appState.forkConversation(chatId: chat.id, sourceSnapshot: chat)
                         },
                         onOpenSideChat: {
                             appState.openInSideChat(parentChatId: chat.id)

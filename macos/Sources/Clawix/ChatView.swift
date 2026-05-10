@@ -141,7 +141,8 @@ struct ChatView: View {
                                         onForkConversation: {
                                             appState.forkConversation(
                                                 chatId: chat.id,
-                                                atMessageId: msg.id
+                                                atMessageId: msg.id,
+                                                sourceSnapshot: chat
                                             )
                                         },
                                         onOpenImage: { url in

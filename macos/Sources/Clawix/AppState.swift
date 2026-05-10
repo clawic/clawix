@@ -3541,6 +3541,12 @@ final class AppState: ObservableObject {
         // Wholesale rehydrate from the daemon: drop any buffered text
         // delta that would otherwise pile on top of the canonical body.
         dropPendingAssistantText(chatId: id)
+        if messages.isEmpty,
+           chats[idx].forkedFromChatId != nil,
+           !chats[idx].messages.isEmpty {
+            chats[idx].historyHydrated = true
+            return
+        }
         // The daemon's `RolloutHistory` reader is intentionally minimal
         // and never populates `timeline` / `workSummary`, so a fresh
         // `messagesSnapshot` would wipe both fields off any local message
@@ -4509,16 +4515,30 @@ final class AppState: ObservableObject {
     /// `thread/fork` so the server-side rollout carries the same prefix
     /// and the next turn resumes with full context.
     @discardableResult
-    func forkConversation(chatId: UUID, atMessageId anchorMessageId: UUID? = nil) -> UUID? {
+    func forkConversation(
+        chatId: UUID,
+        atMessageId anchorMessageId: UUID? = nil,
+        sourceSnapshot: Chat? = nil
+    ) -> UUID? {
         guard let srcIdx = chats.firstIndex(where: { $0.id == chatId }) else { return nil }
-        let source = chats[srcIdx]
+        var source = chats[srcIdx]
+        let snapshotMessages = sourceSnapshot.flatMap { $0.id == chatId ? $0.messages : nil } ?? []
+        if source.messages.isEmpty, !snapshotMessages.isEmpty {
+            source.messages = snapshotMessages
+            source.historyHydrated = sourceSnapshot?.historyHydrated ?? source.historyHydrated
+            if source.rolloutPath == nil {
+                source.rolloutPath = sourceSnapshot?.rolloutPath
+            }
+        }
+        let sourceMessages = forkableMessages(for: source, fallbackMessages: snapshotMessages)
+        guard !sourceMessages.isEmpty else { return nil }
 
         let cutIndex: Int
         if let anchorMessageId,
-           let mIdx = source.messages.firstIndex(where: { $0.id == anchorMessageId }) {
+           let mIdx = sourceMessages.firstIndex(where: { $0.id == anchorMessageId }) {
             cutIndex = mIdx
         } else {
-            cutIndex = source.messages.count - 1
+            cutIndex = sourceMessages.count - 1
         }
         guard cutIndex >= 0 else { return nil }
 
@@ -4526,7 +4546,7 @@ final class AppState: ObservableObject {
         // the forked chat is decoupled from the parent. Streaming state
         // is reset because the copied turns are by definition completed
         // history at fork time.
-        let copied: [ChatMessage] = source.messages[0...cutIndex].map { msg in
+        let copied: [ChatMessage] = sourceMessages[0...cutIndex].map { msg in
             ChatMessage(
                 id: UUID(),
                 role: msg.role,
@@ -4540,7 +4560,9 @@ final class AppState: ObservableObject {
                 streamCheckpoints: msg.streamCheckpoints,
                 streamPendingTail: "",
                 reasoningCheckpoints: msg.reasoningCheckpoints,
-                reasoningPendingTails: [:]
+                reasoningPendingTails: [:],
+                audioRef: msg.audioRef,
+                attachments: msg.attachments
             )
         }
         guard let bannerAfterId = copied.last?.id else { return nil }
@@ -4594,6 +4616,31 @@ final class AppState: ObservableObject {
         }
 
         return newChat.id
+    }
+
+    private func forkableMessages(for source: Chat, fallbackMessages: [ChatMessage] = []) -> [ChatMessage] {
+        if !source.messages.isEmpty {
+            return source.messages
+        }
+
+        if !fallbackMessages.isEmpty {
+            return fallbackMessages
+        }
+
+        if let cached = cachedWireMessagesByChat[source.id.uuidString], !cached.isEmpty {
+            return cached.compactMap { chatMessage(from: $0) }
+        }
+
+        if let path = source.rolloutPath {
+            return rolloutChatMessages(from: RolloutReader.readTailWithStatus(path: path))
+        }
+
+        if let threadId = source.clawixThreadId,
+           let path = rolloutPath(forThreadId: threadId) {
+            return rolloutChatMessages(from: RolloutReader.readTailWithStatus(path: path))
+        }
+
+        return []
     }
 
     /// Silent variant of `forkConversation` that powers "Open in side
