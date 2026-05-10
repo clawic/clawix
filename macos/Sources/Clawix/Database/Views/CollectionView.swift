@@ -28,6 +28,7 @@ struct CollectionView: View {
                 if detailVisible, let focused = focusedRecord {
                     Divider().background(Color.white.opacity(0.07))
                     RecordDetailPane(collection: collection, record: focused)
+                        .id("\(focused.id)-\(focused.updatedAt)")
                         .frame(width: 380)
                 }
             }
@@ -43,7 +44,7 @@ struct CollectionView: View {
             manager.subscribeRealtime(collection: collection.name)
             await manager.refreshRecords(collection: collection.name)
         }
-        .onChange(of: filterState) { _ in
+        .onChange(of: filterState) { _, _ in
             // refresh handled by setFilterState; keep here as a safety net
         }
         .sheet(isPresented: $showCreate) {

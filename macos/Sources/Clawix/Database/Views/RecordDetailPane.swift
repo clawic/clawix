@@ -49,7 +49,10 @@ struct RecordDetailPane: View {
         }
         .background(Color.white.opacity(0.02))
         .onAppear { hydrateDraft() }
-        .onChange(of: record.id) { _ in
+        .onChange(of: record.id) { _, _ in
+            hydrateDraft()
+        }
+        .onChange(of: record) { _, _ in
             hydrateDraft()
         }
     }

@@ -208,9 +208,7 @@ final class DatabaseManager: ObservableObject {
             collection: name,
             data: data
         )
-        var current = recordsByCollection[name] ?? []
-        current.insert(record, at: 0)
-        recordsByCollection[name] = current
+        upsertRecordInCache(record, collection: name)
         return record
     }
 
@@ -225,10 +223,7 @@ final class DatabaseManager: ObservableObject {
             id: id,
             data: data
         )
-        if var current = recordsByCollection[name], let index = current.firstIndex(where: { $0.id == id }) {
-            current[index] = updated
-            recordsByCollection[name] = current
-        }
+        upsertRecordInCache(updated, collection: name)
         return updated
     }
 
@@ -271,22 +266,66 @@ final class DatabaseManager: ObservableObject {
         var current = recordsByCollection[name] ?? []
         switch event.type {
         case .created:
-            if let record = event.record, !current.contains(where: { $0.id == record.id }) {
-                current.insert(record, at: 0)
+            if let record = event.record {
+                upsertRecordInCache(record, collection: name)
+                return
             }
         case .updated:
             if let record = event.record {
-                if let index = current.firstIndex(where: { $0.id == record.id }) {
-                    current[index] = record
-                } else {
-                    current.insert(record, at: 0)
-                }
+                upsertRecordInCache(record, collection: name)
+                return
             }
         case .deleted:
             current.removeAll { $0.id == event.recordId }
         }
         recordsByCollection[name] = current
         lastEventAt = Date()
+    }
+
+    private func upsertRecordInCache(_ record: DBRecord, collection name: String) {
+        let filter = filterState(for: name)
+        let matches = !filter.clientSidePostFilter(records: [record]).isEmpty
+        var current = recordsByCollection[name] ?? []
+        current.removeAll { $0.id == record.id }
+        if matches {
+            current.insert(record, at: 0)
+        }
+        recordsByCollection[name] = sortRecords(current, using: filter.sort)
+        lastEventAt = Date()
+    }
+
+    private func sortRecords(_ records: [DBRecord], using sort: DBFilterState.Sort?) -> [DBRecord] {
+        guard let sort else { return records }
+        return records.sorted { lhs, rhs in
+            let result = compareSortValue(
+                sortValue(for: lhs, field: sort.field),
+                sortValue(for: rhs, field: sort.field)
+            )
+            if result == .orderedSame {
+                return lhs.updatedAt > rhs.updatedAt
+            }
+            return sort.descending ? result == .orderedDescending : result == .orderedAscending
+        }
+    }
+
+    private func sortValue(for record: DBRecord, field: String) -> DBJSON {
+        switch field {
+        case "id": return .string(record.id)
+        case "createdAt": return .string(record.createdAt)
+        case "updatedAt": return .string(record.updatedAt)
+        default: return record.data[field] ?? .null
+        }
+    }
+
+    private func compareSortValue(_ lhs: DBJSON, _ rhs: DBJSON) -> ComparisonResult {
+        if let lhsNumber = lhs.doubleValue, let rhsNumber = rhs.doubleValue {
+            if lhsNumber < rhsNumber { return .orderedAscending }
+            if lhsNumber > rhsNumber { return .orderedDescending }
+            return .orderedSame
+        }
+        let lhsString = lhs.stringValue ?? ""
+        let rhsString = rhs.stringValue ?? ""
+        return lhsString.localizedStandardCompare(rhsString)
     }
 
     // MARK: - Persistence
