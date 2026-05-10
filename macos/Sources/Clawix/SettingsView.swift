@@ -3099,14 +3099,16 @@ private struct GitPage: View {
             CommitInstructionsBlock(
                 title: "Commit instructions",
                 detail: "Added to the prompts that generate commit messages",
-                placeholder: "Add a guideline for the commit message..."
+                placeholder: "Add a guideline for the commit message...",
+                storageKey: "clawix.git.commitInstructions"
             )
             .padding(.top, 28)
 
             CommitInstructionsBlock(
                 title: "Pull request instructions",
                 detail: "Added to the prompts that generate the PR title and description",
-                placeholder: "Add a guideline for the pull request..."
+                placeholder: "Add a guideline for the pull request...",
+                storageKey: "clawix.git.pullRequestInstructions"
             )
             .padding(.top, 28)
         }
@@ -3152,7 +3154,16 @@ private struct CommitInstructionsBlock: View {
     let title: LocalizedStringKey
     let detail: LocalizedStringKey
     let placeholder: String
+    let storageKey: String
     @State private var text: String = ""
+
+    init(title: LocalizedStringKey, detail: LocalizedStringKey, placeholder: String, storageKey: String) {
+        self.title = title
+        self.detail = detail
+        self.placeholder = placeholder
+        self.storageKey = storageKey
+        _text = State(initialValue: UserDefaults.standard.string(forKey: storageKey) ?? "")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -3166,7 +3177,10 @@ private struct CommitInstructionsBlock: View {
                         .foregroundColor(Palette.textSecondary)
                 }
                 Spacer()
-                Button {} label: {
+                Button {
+                    UserDefaults.standard.set(text, forKey: storageKey)
+                    ToastCenter.shared.show("Instructions saved")
+                } label: {
                     Text("Save")
                         .font(BodyFont.system(size: 12, wght: 600))
                         .foregroundColor(Palette.textSecondary)
