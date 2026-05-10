@@ -370,12 +370,20 @@ struct DriveListView: View {
                     Text(item.name)
                 }
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
+                .highPriorityGesture(TapGesture(count: 2).onEnded {
                     if item.kind == "folder" { manager.setParent(item.id) }
-                }
+                })
             }
             TableColumn("Modified") { item in Text(formatRelative(item.updatedAt)).foregroundStyle(.secondary) }
             TableColumn("Size") { item in Text(formatSize(item.sizeBytes)).foregroundStyle(.secondary) }
+        }
+        .onTapGesture(count: 2) {
+            guard
+                let selectedId,
+                let item = items.first(where: { $0.id == selectedId }),
+                item.kind == "folder"
+            else { return }
+            manager.setParent(item.id)
         }
     }
 
