@@ -2490,8 +2490,7 @@ struct RecentChatRow: View, Equatable {
         // NSView in the row that returns `mouseDownCanMoveWindow = false`
         // AppKit hijacks mouseDown for a window drag and SwiftUI's
         // `.onDrag` never fires.
-        .background(WindowDragInhibitor(onRightClick: callbacks.onContextMenu))
-        .overlay(SidebarRightClickCatcher(onRightClick: callbacks.onContextMenu))
+        .background(WindowDragInhibitor())
         .onDrag {
             // Carry the chat's UUID as plain text. Drop targets parse it
             // back to a UUID and route to AppState (reorder / move-to-
