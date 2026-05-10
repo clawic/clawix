@@ -30,16 +30,25 @@ feels like it freezes"), the workflow is fixed:
    ```
    bash macos/scripts/perf-capture.sh --template "<template>" --name <slug>
    ```
+   For broad or subjective reports, run `bash macos/scripts/perf-workout.sh`
+   in another terminal while the trace is recording so the artifacts
+   include repeatable phase boundaries.
    (The user reproduces the symptom inside the launched app, then
    quits / Ctrl-C the script.)
 3. Open `trace.trace` from the printed directory in Instruments.
-   Cross-reference with `console.ndjson`, `clawix-renders.log`, and
-   `Diagnostics-*/` in the same directory.
+   Cross-reference with `capture-metadata.env`, `git-status.txt`,
+   `console.ndjson`, `clawix-renders.log`, and `Diagnostics-*/` in
+   the same directory.
 4. Only then propose a fix, citing what the trace showed.
 
 Never start optimizing without a trace. Static-reading hot paths in
 this codebase is wrong often enough that a single capture pays for
 itself.
+
+If the trace cannot separate UI render cost, state publication, IPC,
+daemon/backend latency, disk IO and payload size, add the missing
+instrumentation first and capture again. A fix without the relevant
+measurement is not a completed performance investigation.
 
 The diagnostic stack (RenderProbe, PerfSignpost taxonomy,
 ResourceSampler, HangDetector, MetricKitObserver) is documented in
