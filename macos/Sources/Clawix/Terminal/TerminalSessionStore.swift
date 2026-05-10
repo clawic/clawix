@@ -227,6 +227,28 @@ final class TerminalSessionStore: ObservableObject {
         repository.upsert(list[idx])
     }
 
+    @discardableResult
+    func sendTextToFocusedTerminal(chatId: UUID, text: String) -> Bool {
+        guard let tab = activeTab(for: chatId),
+              let leafId = tab.focusedLeafId ?? tab.layout.firstLeafId,
+              let session = sessions[leafId] else {
+            return false
+        }
+        session.sendText(text)
+        return true
+    }
+
+    @discardableResult
+    func runCommandInFocusedTerminal(chatId: UUID, command: String) -> Bool {
+        guard let tab = activeTab(for: chatId),
+              let leafId = tab.focusedLeafId ?? tab.layout.firstLeafId,
+              let session = sessions[leafId] else {
+            return false
+        }
+        session.runCommand(command)
+        return true
+    }
+
     func adjustWeights(chatId: UUID,
                        tabId: UUID,
                        splitPath: [Int],

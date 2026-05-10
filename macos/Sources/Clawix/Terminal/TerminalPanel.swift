@@ -8,6 +8,7 @@ struct TerminalPanel: View {
     @EnvironmentObject var store: TerminalSessionStore
     @EnvironmentObject var appState: AppState
     let chatId: UUID
+    @State private var commandDraft = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -15,6 +16,7 @@ struct TerminalPanel: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black)
+            commandBar
         }
         .background(Palette.background)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -61,6 +63,41 @@ struct TerminalPanel: View {
         if store.tabs(for: target).isEmpty {
             let cwd = appState.chat(byId: target)?.cwd ?? NSHomeDirectory()
             store.createTab(chatId: target, cwd: cwd)
+        }
+    }
+
+    private var commandBar: some View {
+        HStack(spacing: 6) {
+            Text(">")
+                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                .foregroundColor(Palette.textSecondary)
+            TextField("Terminal command", text: $commandDraft)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12, weight: .regular, design: .monospaced))
+                .foregroundColor(Palette.textPrimary)
+                .accessibilityLabel("Terminal command")
+                .onSubmit(runCommand)
+            Button("Run", action: runCommand)
+                .buttonStyle(.plain)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(Palette.textSecondary)
+                .disabled(commandDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 28)
+        .background(Color(white: 0.06))
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Palette.popupStroke)
+                .frame(height: 0.5)
+        }
+    }
+
+    private func runCommand() {
+        let command = commandDraft
+        guard !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if store.runCommandInFocusedTerminal(chatId: chatId, command: command) {
+            commandDraft = ""
         }
     }
 }

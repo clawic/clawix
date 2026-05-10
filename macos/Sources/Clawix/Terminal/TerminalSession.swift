@@ -68,6 +68,20 @@ final class TerminalSession: ObservableObject, Identifiable {
         return kill(pid, signal) == 0
     }
 
+    func sendText(_ text: String) {
+        let bytes = Array(text.utf8)
+        terminalView.process.send(data: ArraySlice(bytes))
+    }
+
+    func runCommand(_ command: String) {
+        let resolvedCwd = TerminalSession.resolveCwd(initialCwd)
+        terminalView.feed(text: "\r\n$ \(command)\r\n")
+        Task.detached { [weak self] in
+            let output = Self.runShellCommand(command, cwd: resolvedCwd)
+            await self?.appendCommandOutput(output)
+        }
+    }
+
     /// Try to read the child PID from SwiftTerm's `LocalProcess` via
     /// `Mirror`. SwiftTerm exposes the property as `shellPid` on most
     /// recent versions; the reflective lookup keeps us forward-compatible
