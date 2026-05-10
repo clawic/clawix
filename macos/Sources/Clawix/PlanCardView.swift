@@ -127,7 +127,7 @@ struct PlanCardView: View {
         HStack(alignment: .center, spacing: 8) {
             Group {
                 if completed {
-                    Text(String(localized: "Plan", bundle: AppLocale.bundle, locale: AppLocale.current))
+                    Text(verbatim: String(localized: "Plan", bundle: AppLocale.bundle, locale: AppLocale.current))
                         .font(BodyFont.system(size: 14, wght: 700))
                         .foregroundColor(Color(white: 0.94))
                 } else {
@@ -200,7 +200,7 @@ struct PlanCardView: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered.wrappedValue = $0 }
-        .accessibilityLabel(accessibilityLabel)
+        .accessibilityLabel(Text(verbatim: accessibilityLabel))
     }
 
     // MARK: body
@@ -218,6 +218,8 @@ struct PlanCardView: View {
             .thinScrollers()
             .scrollDisabled(!collapsed)
             .frame(maxHeight: maxHeight)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: AccessibilityText.clipped(content)))
 
             if collapsed {
                 ZStack(alignment: .bottom) {

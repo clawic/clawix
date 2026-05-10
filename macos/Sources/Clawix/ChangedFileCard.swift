@@ -33,12 +33,12 @@ struct ChangedFileCard: View {
         HStack(spacing: 12) {
             iconBadge
             VStack(alignment: .leading, spacing: 4) {
-                Text(fileName)
+                Text(verbatim: fileName)
                     .font(BodyFont.system(size: 14, wght: 700))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Text(subtitle)
+                Text(verbatim: subtitle)
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }
@@ -68,8 +68,9 @@ struct ChangedFileCard: View {
         // Smoother, slightly longer easing so the highlight breathes
         // instead of snapping in/out of hover.
         .animation(.easeInOut(duration: 0.22), value: hovered)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(fileName), \(subtitle)"))
+        .accessibilityElement(children: .ignore)
+        .accessibilityHidden(!NSWorkspace.shared.isVoiceOverEnabled)
+        .accessibilityLabel(Text(verbatim: "\(fileName), \(subtitle)"))
     }
 
     // MARK: - Icon
@@ -92,9 +93,9 @@ struct ChangedFileCard: View {
     /// the editor dropdown.
     private var openPill: some View {
         HStack(spacing: 4) {
-            Text(String(localized: "Open",
-                        bundle: AppLocale.bundle,
-                        locale: AppLocale.current))
+            Text(verbatim: String(localized: "Open",
+                                  bundle: AppLocale.bundle,
+                                  locale: AppLocale.current))
                 .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.94))
                 // SwiftUI Text on macOS hijacks the I-beam cursor and
@@ -119,7 +120,13 @@ struct ChangedFileCard: View {
         .padding(.vertical, 9)
         .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .onContinuousHover { phase in
-            if case .active = phase { NSCursor.pointingHand.set() }
+            switch phase {
+            case .active(_):
+                openPillHovered = true
+                NSCursor.pointingHand.set()
+            case .ended:
+                openPillHovered = false
+            }
         }
         .onTapGesture {
             appState.openFileInSidebar(path)

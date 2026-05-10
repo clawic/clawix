@@ -966,7 +966,8 @@ private struct MessageRow: View, Equatable {
                                 .fill(Color.white.opacity(0.08))
                         )
                         .accessibilityElement(children: .ignore)
-                                .accessibilityLabel(Text(verbatim: AccessibilityText.clipped(parsed.text)))
+                        .accessibilityHidden(!exposeMessageAccessibility)
+                        .accessibilityLabel(Text(verbatim: AccessibilityText.clipped(parsed.text)))
                     }
                 }
             } else {
@@ -1059,9 +1060,11 @@ private struct MessageRow: View, Equatable {
                                 findQuery: findQuery
                             )
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .accessibilityHidden(!exposeMessageAccessibility)
                         case .plan(let body, let completed):
                             PlanCardView(content: body, completed: completed)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityHidden(!exposeMessageAccessibility)
                         }
                     }
                 }
@@ -1205,12 +1208,15 @@ private struct MessageRow: View, Equatable {
                 findQuery: findQuery
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityHidden(!exposeMessageAccessibility)
         case .message(let entryId, let text):
             messageEntryBody(entryId: entryId, text: text)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(!exposeMessageAccessibility)
         case .tools(_, let items):
             ToolGroupView(items: items)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(!exposeMessageAccessibility)
         }
     }
 
@@ -1602,7 +1608,7 @@ private struct WorkLocallyRow: View {
                 }
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
-                Text(label)
+                Text(verbatim: label)
                     .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
@@ -1715,12 +1721,12 @@ private struct BranchRow: View {
                     .frame(width: 18, alignment: .center)
                     .padding(.top, 1)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(label)
+                    Text(verbatim: label)
                         .font(BodyFont.system(size: 13.5, wght: 500))
                         .foregroundColor(MenuStyle.rowText)
                         .lineLimit(1)
                     if let files = uncommittedFiles, files > 0 {
-                        Text(uncommittedLabel(files))
+                        Text(verbatim: uncommittedLabel(files))
                             .font(BodyFont.system(size: 11.5, wght: 500))
                             .foregroundColor(MenuStyle.rowSubtle)
                     }
@@ -1759,7 +1765,7 @@ private struct BranchCreateRow: View {
                 LucideIcon(.plus, size: 13)
                     .foregroundColor(MenuStyle.rowIcon)
                     .frame(width: 18, alignment: .center)
-                Text(String(localized: "Create and switch to a new branch...", bundle: AppLocale.bundle, locale: AppLocale.current))
+                Text(verbatim: String(localized: "Create and switch to a new branch...", bundle: AppLocale.bundle, locale: AppLocale.current))
                     .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(MenuStyle.rowText)
                     .lineLimit(1)
@@ -2174,6 +2180,7 @@ private struct LinkPreviewCard: View {
     private var title: String {
         appState.linkMetadata.title(for: url) ?? LinkMetadataStore.fallback(for: url)
     }
+    private var exposeAccessibility: Bool { NSWorkspace.shared.isVoiceOverEnabled }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -2185,12 +2192,12 @@ private struct LinkPreviewCard: View {
                     .foregroundColor(.white)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(verbatim: title)
                     .font(BodyFont.system(size: 14, wght: 700))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text(String(localized: "Website", bundle: AppLocale.bundle, locale: AppLocale.current))
+                Text(verbatim: String(localized: "Website", bundle: AppLocale.bundle, locale: AppLocale.current))
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }
@@ -2198,7 +2205,7 @@ private struct LinkPreviewCard: View {
             Button {
                 appState.openLinkInBrowser(url)
             } label: {
-                Text(String(localized: "Open", bundle: AppLocale.bundle, locale: AppLocale.current))
+                Text(verbatim: String(localized: "Open", bundle: AppLocale.bundle, locale: AppLocale.current))
                     .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Color(white: 0.94))
                     .padding(.horizontal, 14)
@@ -2230,6 +2237,7 @@ private struct LinkPreviewCard: View {
         .onTapGesture { appState.openLinkInBrowser(url) }
         .onAppear { appState.linkMetadata.ensureTitle(for: url) }
         .accessibilityElement(children: .combine)
+        .accessibilityHidden(!exposeAccessibility)
         .accessibilityLabel(Text(verbatim: "\(title), Website"))
         .accessibilityAddTraits(.isLink)
     }
