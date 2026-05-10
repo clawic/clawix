@@ -99,8 +99,8 @@ final class DatabaseManager: ObservableObject {
     /// Establishes a JWT-authenticated client and ensures the namespace
     /// exists. Idempotent. Called automatically when the supervisor
     /// flips `database` to `.ready` and on app foregrounding.
-    func bootstrap() async {
-        if case .ready = state { return }
+    func bootstrap(force: Bool = false) async {
+        if case .ready = state, !force { return }
         state = .bootstrapping
         let generation = UUID()
         bootstrapGeneration = generation

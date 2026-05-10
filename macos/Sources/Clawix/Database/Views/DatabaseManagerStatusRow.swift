@@ -37,7 +37,7 @@ struct DatabaseManagerStatusRow: View {
             }
             HStack {
                 Button("Re-bootstrap") {
-                    Task { await manager.bootstrap() }
+                    Task { await manager.bootstrap(force: true) }
                 }
                 .buttonStyle(.borderless)
                 .font(BodyFont.system(size: 11.5, wght: 500))
