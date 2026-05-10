@@ -46,6 +46,23 @@ enum BridgeAgentControl {
         runLaunchctl(["kickstart", "-k", "\(userDomain())/\(bridgeLabel)"])
     }
 
+    /// Load the user's bridge LaunchAgent when the registration exists
+    /// on disk but launchd no longer has a running job for it.
+    @discardableResult
+    static func bootstrapBridgeAgentIfInstalled() -> Bool {
+        if isBridgeAgentLoaded() {
+            return true
+        }
+        guard FileManager.default.fileExists(atPath: bridgePlistPath) else {
+            return false
+        }
+        let result = runLaunchctl(["bootstrap", userDomain(), bridgePlistPath], capture: true)
+        if result.status != 0, !isBridgeAgentLoaded() {
+            return false
+        }
+        return isBridgeAgentLoaded()
+    }
+
     /// True if the standalone CLI menubar LaunchAgent is currently
     /// loaded in the user's launchd domain. Used at GUI startup to
     /// decide whether to bootout it (avoid duplicate menu bar icon).
@@ -87,6 +104,11 @@ enum BridgeAgentControl {
 
     private static var menubarPlistPath: String {
         ("~/Library/LaunchAgents/\(menubarLabel).plist" as NSString)
+            .expandingTildeInPath
+    }
+
+    private static var bridgePlistPath: String {
+        ("~/Library/LaunchAgents/\(bridgeLabel).plist" as NSString)
             .expandingTildeInPath
     }
 

@@ -29,6 +29,7 @@ final class BackgroundBridgeService: ObservableObject {
     private init() {
         self.agent = SMAppService.agent(plistName: plistName)
         refresh()
+        recoverRegisteredDaemonIfNeeded()
     }
 
     var isEnabled: Bool {
@@ -77,11 +78,10 @@ final class BackgroundBridgeService: ObservableObject {
     }
 
     /// True when the GUI should treat the daemon as the canonical
-    /// owner of Codex. Either we registered a LaunchAgent through
-    /// SMAppService ourselves, or there's already a daemon alive on
-    /// loopback (e.g. the CLI installed it). Used by `AppState` to
-    /// decide whether to spawn its own in-process backend or connect
-    /// over the bridge instead.
+    /// owner of Codex. A user-enabled LaunchAgent still owns that role
+    /// while launchd is starting it, so `recoverRegisteredDaemonIfNeeded`
+    /// makes a best effort to load stale registrations before `AppState`
+    /// decides whether to spawn an in-process backend.
     var isActive: Bool { isEnabled || isDaemonReachable }
 
     private static let isoParser: ISO8601DateFormatter = {
@@ -104,6 +104,7 @@ final class BackgroundBridgeService: ObservableObject {
             lastError = "register failed: \(error.localizedDescription)"
         }
         refresh()
+        recoverRegisteredDaemonIfNeeded()
     }
 
     func disable() {
@@ -118,6 +119,21 @@ final class BackgroundBridgeService: ObservableObject {
 
     func toggle(_ on: Bool) {
         if on { enable() } else { disable() }
+    }
+
+    /// `SMAppService.status` can survive an app reinstall or manual
+    /// launchd bootout while the actual user-domain job is gone. When
+    /// that happens, reconnect the installed LaunchAgent instead of
+    /// letting the GUI route to a daemon that will never start.
+    func recoverRegisteredDaemonIfNeeded() {
+        refresh()
+        guard isEnabled, !isDaemonReachable else { return }
+        if BridgeAgentControl.bootstrapBridgeAgentIfInstalled() {
+            lastError = nil
+        } else {
+            lastError = "background bridge registered but not loaded"
+        }
+        refresh()
     }
 
     /// Snapshot taken before a Sparkle install swap. We unregister the
@@ -156,7 +172,8 @@ final class BackgroundBridgeService: ObservableObject {
     var statusLabel: String {
         switch status {
         case .notRegistered: return "Not running"
-        case .enabled:       return "Running in background"
+        case .enabled:
+            return isDaemonReachable ? "Running in background" : "Starting background bridge"
         case .requiresApproval:
             return "Approve in System Settings → General → Login Items"
         case .notFound:
