@@ -179,6 +179,8 @@ final class ClawJSServiceManager: ObservableObject {
             }
         }
 
+        guard await preparePortForLocalLaunch(service) else { return }
+
         // Guard 1: the bundled tree must exist. dev.sh / build_release_app.sh
         // call `bundle_clawjs.sh` to plant Contents/Helpers/clawjs/; if that
         // step was skipped or failed, we cannot spawn anything.
@@ -199,6 +201,45 @@ final class ClawJSServiceManager: ObservableObject {
         }
 
         await spawnAndSupervise(service)
+    }
+
+    private func preparePortForLocalLaunch(_ service: ClawJSService) async -> Bool {
+        let url = URL(string: "http://127.0.0.1:\(service.port)\(service.healthPath)")!
+        guard await ping(url: url) else { return true }
+
+        if Self.canAdoptExistingService(service) {
+            lastReadyAt[service] = Date()
+            update(service) {
+                $0.state = .readyFromDaemon(port: service.port)
+                $0.lastError = nil
+            }
+            healthTasks[service]?.cancel()
+            healthTasks[service] = Task { [weak self] in
+                await self?.pollDaemonOwnedService(service)
+            }
+            return false
+        }
+
+        guard let pid = Self.listenerPID(on: service.port),
+              Self.isClawixSidecar(pid: pid) else {
+            let reason = "\(service.displayName) port \(service.port) is already in use by another process."
+            update(service) {
+                $0.state = .crashed(reason: reason)
+                $0.lastError = reason
+            }
+            return false
+        }
+
+        kill(pid, SIGTERM)
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline, Self.isRunning(pid: pid) {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        if Self.isRunning(pid: pid) {
+            kill(pid, SIGKILL)
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        return true
     }
 
     private func startDaemonOwnedProbes() {
@@ -564,9 +605,47 @@ final class ClawJSServiceManager: ObservableObject {
         guard raw.count >= 32 else {
             throw NSError(domain: "ClawJSServiceManager", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: "Admin token at \(url.path) is too short."
-            ])
+        ])
         }
         return raw
+    }
+
+    private static func canAdoptExistingService(_ service: ClawJSService) -> Bool {
+        guard adminTokenEnvVar[service] != nil else { return true }
+        return (try? adminTokenFromDataDir(for: service)).map { !$0.isEmpty } ?? false
+    }
+
+    private static func listenerPID(on port: UInt16) -> pid_t? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", "/usr/sbin/lsof -nP -tiTCP:\(port) -sTCP:LISTEN 2>/dev/null | head -n 1"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try? process.run()
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let raw = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard let value = Int32(raw) else { return nil }
+        return value
+    }
+
+    private static func isClawixSidecar(pid: pid_t) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.arguments = ["-p", String(pid), "-o", "command="]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try? process.run()
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let command = String(data: data, encoding: .utf8) ?? ""
+        return command.contains("/Clawix.app/Contents/Resources/clawjs/")
+            || command.contains("/Application Support/Clawix/clawjs/")
+    }
+
+    private static func isRunning(pid: pid_t) -> Bool {
+        kill(pid, 0) == 0
     }
 
     private static func dataDirectoryURL(for service: ClawJSService) -> URL {
