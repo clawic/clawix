@@ -3,6 +3,10 @@ import AppKit
 import UniformTypeIdentifiers
 
 struct ComposerView: View {
+    private enum ComposerPopup {
+        case add, permissions, model, project, meshTarget
+    }
+
     var chatMode: Bool = false
     /// When non-nil, the send button routes to this chat id using the
     /// view-owned (env-injected) `composer` instance. Powers the
@@ -45,6 +49,14 @@ struct ComposerView: View {
     private var composerFrameHeight: CGFloat {
         let clamped = min(composerMaxContentHeight, max(composerMinContentHeight, composerContentHeight))
         return clamped + composerVerticalPadding * 2
+    }
+
+    private func closeComposerPopups(except popup: ComposerPopup) {
+        if popup != .add { addMenuOpen = false }
+        if popup != .permissions { permissionsMenuOpen = false }
+        if popup != .model { modelMenuOpen = false }
+        if popup != .project { projectMenuOpen = false }
+        if popup != .meshTarget { meshTargetMenuOpen = false }
     }
 
     private var placeholderText: String {
@@ -803,6 +815,21 @@ struct ComposerView: View {
         .animation(.easeOut(duration: 0.14), value: contextHover)
         .animation(.easeOut(duration: 0.20), value: projectMenuOpen)
         .animation(.easeOut(duration: 0.20), value: meshTargetMenuOpen)
+        .onChange(of: addMenuOpen) { _, isOpen in
+            if isOpen { closeComposerPopups(except: .add) }
+        }
+        .onChange(of: permissionsMenuOpen) { _, isOpen in
+            if isOpen { closeComposerPopups(except: .permissions) }
+        }
+        .onChange(of: modelMenuOpen) { _, isOpen in
+            if isOpen { closeComposerPopups(except: .model) }
+        }
+        .onChange(of: projectMenuOpen) { _, isOpen in
+            if isOpen { closeComposerPopups(except: .project) }
+        }
+        .onChange(of: meshTargetMenuOpen) { _, isOpen in
+            if isOpen { closeComposerPopups(except: .meshTarget) }
+        }
         .sheet(item: $projectEditorContext) { ctx in
             ProjectEditorSheet(context: ctx) { projectEditorContext = nil }
                 .environmentObject(appState)
