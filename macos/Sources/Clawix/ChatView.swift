@@ -1065,7 +1065,7 @@ private struct MessageRow: View, Equatable {
                 // attachment cards. Order matches first-touch, deduped.
                 // Only surfaces once the turn fully ends so the cards
                 // don't pop in beside the still-streaming reasoning.
-                let changedFiles = Self.changedFilePaths(in: message.timeline)
+                let changedFiles = ChangedFilePathCache.shared.paths(for: message)
                 if !changedFiles.isEmpty, message.streamingFinished {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(changedFiles, id: \.self) { path in
@@ -1130,24 +1130,6 @@ private struct MessageRow: View, Equatable {
             visibleTimelineEntryLimit = Self.initialTimelineEntryLimit
             lastTimelineRevealAt = .distantPast
         }
-    }
-
-    /// Walk the message timeline and return every absolute file path the
-    /// agent edited via apply_patch during the turn, deduped, in
-    /// first-touch order. Drives the trailing `ChangedFileCard` strip.
-    static func changedFilePaths(in timeline: [AssistantTimelineEntry]) -> [String] {
-        var seen: Set<String> = []
-        var result: [String] = []
-        for entry in timeline {
-            guard case .tools(_, let items) = entry else { continue }
-            for item in items {
-                guard case .fileChange(let paths) = item.kind else { continue }
-                for path in paths where seen.insert(path).inserted {
-                    result.append(path)
-                }
-            }
-        }
-        return result
     }
 
     private var hiddenTimelineEntryCount: Int {
@@ -1411,6 +1393,60 @@ private struct MessageActionIcon: View {
         case .system(let name):
             IconImage(name, size: 13)
                 .foregroundColor(Color(white: hovered ? 0.82 : 0.45))
+        }
+    }
+}
+
+private final class ChangedFilePathCache {
+    static let shared = ChangedFilePathCache()
+
+    private var values: [Key: [String]] = [:]
+    private var order: [Key] = []
+    private let limit = 256
+
+    private init() {}
+
+    func paths(for message: ChatMessage) -> [String] {
+        let key = Key(message: message)
+        if let cached = values[key] {
+            return cached
+        }
+
+        var seen: Set<String> = []
+        var result: [String] = []
+        for entry in message.timeline {
+            guard case .tools(_, let items) = entry else { continue }
+            for item in items {
+                guard case .fileChange(let paths) = item.kind else { continue }
+                for path in paths where seen.insert(path).inserted {
+                    result.append(path)
+                }
+            }
+        }
+
+        values[key] = result
+        order.append(key)
+        if order.count > limit {
+            let overflow = order.count - limit
+            for oldKey in order.prefix(overflow) {
+                values.removeValue(forKey: oldKey)
+            }
+            order.removeFirst(overflow)
+        }
+        return result
+    }
+
+    private struct Key: Hashable {
+        let messageId: UUID
+        let timelineCount: Int
+        let lastTimelineId: UUID?
+        let workItemCount: Int
+
+        init(message: ChatMessage) {
+            messageId = message.id
+            timelineCount = message.timeline.count
+            lastTimelineId = message.timeline.last?.id
+            workItemCount = message.workSummary?.items.count ?? 0
         }
     }
 }
