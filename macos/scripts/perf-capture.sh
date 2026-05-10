@@ -9,11 +9,14 @@
 #   3. Runs `xctrace record` with the requested template, launching the
 #      built binary so xctrace owns the process from t=0 (launch
 #      timeline included).
-#   4. After the trace ends (Ctrl-C, --time-limit, or app quit) copies
+#   4. Writes build/session metadata next to the trace so later
+#      analysis knows exactly which bundle, version, git revision and
+#      reproduction plan were captured.
+#   5. After the trace ends (Ctrl-C, --time-limit, or app quit) copies
 #      the live RenderProbe log, the most recent MetricKit JSON
 #      payloads, the last-resources.json snapshot, and a filtered
 #      `log show` console capture into the trace directory.
-#   5. Prints the absolute path so the caller can `open trace.trace`
+#   6. Prints the absolute path so the caller can `open trace.trace`
 #      in Instruments.
 #
 # Templates supported (see PERF.md for which to pick per symptom):
@@ -38,23 +41,27 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+REPO_DIR="$(dirname "$PROJECT_DIR")"
 APP_NAME="Clawix"
 DEV_DIR="$HOME/Library/Caches/Clawix-Dev"
 BUNDLE="$DEV_DIR/${APP_NAME}.app"
 BIN="$BUNDLE/Contents/MacOS/${APP_NAME}"
+INFO_PLIST="$BUNDLE/Contents/Info.plist"
 
 TEMPLATE="os_signpost"
 LABEL=""
 DURATION=""
+SCENARIO=""
 
 usage() {
     cat <<USAGE
-Usage: $0 [--template <name>] [--name <label>] [--duration <seconds>]
+Usage: $0 [--template <name>] [--name <label>] [--duration <seconds>] [--scenario <name>]
 
 Defaults:
   --template "os_signpost"
   --name <unset>          (label appears in the trace directory name)
   --duration <unset>      (record until Ctrl-C / app quit)
+  --scenario <unset>      (free-form reproduction label)
 
 See the header comment of this script for the list of templates and
 PERF.md for which to pick per symptom.
@@ -66,6 +73,7 @@ while [[ $# -gt 0 ]]; do
         --template) TEMPLATE="$2"; shift 2 ;;
         --name)     LABEL="$2"; shift 2 ;;
         --duration) DURATION="$2"; shift 2 ;;
+        --scenario) SCENARIO="$2"; shift 2 ;;
         -h|--help)  usage; exit 0 ;;
         *)
             echo "ERROR: unknown argument: $1" >&2
@@ -96,6 +104,18 @@ if [[ ! -x "$BIN" ]]; then
     exit 1
 fi
 
+read_plist_value() {
+    local key="$1"
+    /usr/libexec/PlistBuddy -c "Print :${key}" "$INFO_PLIST" 2>/dev/null || true
+}
+
+BUNDLE_IDENTIFIER="$(read_plist_value CFBundleIdentifier)"
+APP_VERSION="$(read_plist_value CFBundleShortVersionString)"
+BUILD_NUMBER="$(read_plist_value CFBundleVersion)"
+if [[ -z "$BUNDLE_IDENTIFIER" ]]; then
+    BUNDLE_IDENTIFIER="com.example.clawix.desktop"
+fi
+
 # 2) Kill any previous instance so xctrace owns the only one. Same
 #    PID-collection logic as dev.sh.
 PIDS=$({
@@ -120,6 +140,46 @@ OUT_DIR="$PROJECT_DIR/artifacts/traces/${STAMP}-${LABEL_SLUG}"
 mkdir -p "$OUT_DIR"
 TRACE_PATH="$OUT_DIR/trace.trace"
 LAUNCH_TIME="$(date '+%Y-%m-%d %H:%M:%S')"
+LAUNCH_TIME_UTC="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+GIT_HEAD="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+GIT_BRANCH="$(git -C "$REPO_DIR" branch --show-current 2>/dev/null || true)"
+git -C "$REPO_DIR" status --short > "$OUT_DIR/git-status.txt" 2>/dev/null || true
+{
+    printf 'template=%q\n' "$TEMPLATE"
+    printf 'label=%q\n' "${LABEL:-}"
+    printf 'scenario=%q\n' "${SCENARIO:-}"
+    printf 'captured_local=%q\n' "$LAUNCH_TIME"
+    printf 'captured_utc=%q\n' "$LAUNCH_TIME_UTC"
+    printf 'bundle_path=%q\n' "$BUNDLE"
+    printf 'binary_path=%q\n' "$BIN"
+    printf 'bundle_identifier=%q\n' "$BUNDLE_IDENTIFIER"
+    printf 'app_version=%q\n' "${APP_VERSION:-}"
+    printf 'build_number=%q\n' "${BUILD_NUMBER:-}"
+    printf 'git_head=%q\n' "${GIT_HEAD:-}"
+    printf 'git_branch=%q\n' "${GIT_BRANCH:-}"
+} > "$OUT_DIR/capture-metadata.env"
+
+cat > "$OUT_DIR/reproduction-workout.txt" <<EOF
+Structured reproduction
+=======================
+
+Use this when the symptom is broad, subjective, or needs before/after
+comparison. Start this trace first, then run the workout in another
+terminal from the repository root:
+
+  bash macos/scripts/perf-workout.sh
+
+The workout writes phase boundaries to /tmp/clawix-renders.log. The
+capture copies that file here as clawix-renders.log, so the analysis
+can slice idle, hover, scroll, chat switching, typing and resize phases
+without relying on memory.
+
+For a symptom-specific run, mark only the relevant phase boundaries:
+
+  bash macos/scripts/perf-workout.sh --profile sidebar
+  bash macos/scripts/perf-workout.sh --profile chat
+EOF
 
 XCTRACE_ARGS=(
     record
@@ -134,12 +194,16 @@ XCTRACE_ARGS+=( --launch -- "$BIN" )
 echo ""
 echo "==> Recording trace"
 echo "    template:  $TEMPLATE"
+[[ -n "$SCENARIO" ]] && echo "    scenario:  $SCENARIO"
 echo "    target:    $BIN"
+echo "    bundle:    $BUNDLE_IDENTIFIER"
 echo "    output:    $TRACE_PATH"
 [[ -n "$DURATION" ]] && echo "    duration:  ${DURATION}s"
 echo ""
 echo "Reproduce the slow interaction in the app. Press Ctrl-C (or"
 echo "quit the app) to stop the recording."
+echo "For structured before/after runs, start this in another terminal:"
+echo "    bash macos/scripts/perf-workout.sh"
 echo ""
 
 # Forward Ctrl-C to xctrace so it flushes the trace cleanly.
@@ -176,7 +240,7 @@ fi
 # Filtered console capture from the trace window. We grep our
 # subsystem so the log isn't 50 MB of unrelated system noise. `log
 # show` requires the timestamp in local time.
-SUBSYSTEM="${BUNDLE_ID:-com.example.clawix.desktop}"
+SUBSYSTEM="$BUNDLE_IDENTIFIER"
 echo "    subsystem: $SUBSYSTEM"
 log show \
     --predicate "subsystem == \"$SUBSYSTEM\"" \
@@ -191,12 +255,18 @@ Clawix performance trace
 
 Template:   $TEMPLATE
 Label:      ${LABEL:-<none>}
+Scenario:   ${SCENARIO:-<none>}
 Captured:   $LAUNCH_TIME
 Bundle id:  $SUBSYSTEM
+Version:    ${APP_VERSION:-<unknown>} (${BUILD_NUMBER:-<unknown>})
+Git:        ${GIT_BRANCH:-<unknown>} ${GIT_HEAD:-<unknown>}
 
 Files
 -----
   trace.trace                 Open in Instruments.app:  open trace.trace
+  capture-metadata.env        Build, bundle, git and scenario metadata
+  git-status.txt              Dirty tree summary at capture time
+  reproduction-workout.txt    Phase-marker instructions for repeat runs
   console.ndjson              \`log show\` output filtered by subsystem
   clawix-renders.log          RenderProbe per-window counters
   Diagnostics-*/              MetricKit JSON payloads + last-resources.json
