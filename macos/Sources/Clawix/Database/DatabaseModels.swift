@@ -147,6 +147,17 @@ enum DBFieldType: String, Codable, Equatable, CaseIterable {
     case file
     case email
     case url
+    case money
+    case currency
+    case address
+    case phone
+    case geoPoint = "geo_point"
+    case rating
+    case duration
+    case percent
+    case markdown
+    case colorHex = "color_hex"
+    case barcode
 }
 
 struct DBFieldDefinition: Codable, Equatable, Hashable, Identifiable {
@@ -155,11 +166,52 @@ struct DBFieldDefinition: Codable, Equatable, Hashable, Identifiable {
     let required: Bool?
     let options: [String]?
     let relation: Relation?
+    let min: Double?
+    let max: Double?
+    let minLength: Int?
+    let maxLength: Int?
+    let pattern: String?
+    let unique: Bool?
+    let enumScale: Int?
+    let barcodeKind: String?
+    let durationDisplayUnit: String?
 
     var id: String { name }
 
     struct Relation: Codable, Equatable, Hashable {
         let collectionName: String
+    }
+
+    init(
+        name: String,
+        type: DBFieldType,
+        required: Bool? = nil,
+        options: [String]? = nil,
+        relation: Relation? = nil,
+        min: Double? = nil,
+        max: Double? = nil,
+        minLength: Int? = nil,
+        maxLength: Int? = nil,
+        pattern: String? = nil,
+        unique: Bool? = nil,
+        enumScale: Int? = nil,
+        barcodeKind: String? = nil,
+        durationDisplayUnit: String? = nil
+    ) {
+        self.name = name
+        self.type = type
+        self.required = required
+        self.options = options
+        self.relation = relation
+        self.min = min
+        self.max = max
+        self.minLength = minLength
+        self.maxLength = maxLength
+        self.pattern = pattern
+        self.unique = unique
+        self.enumScale = enumScale
+        self.barcodeKind = barcodeKind
+        self.durationDisplayUnit = durationDisplayUnit
     }
 
     var isRequired: Bool { required ?? false }
@@ -169,7 +221,7 @@ struct DBFieldDefinition: Codable, Equatable, Hashable, Identifiable {
     /// single-line input. Names that match common "long text" patterns
     /// promote earlier so we don't have to inspect the data first.
     var prefersLongText: Bool {
-        guard type == .text else { return false }
+        guard type == .text || type == .markdown || type == .address else { return false }
         let lower = name.lowercased()
         return lower.contains("description")
             || lower.contains("body")

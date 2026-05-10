@@ -112,16 +112,16 @@ struct RecordsTableView: View {
 
     private func columnWidth(for field: DBFieldDefinition) -> CGFloat {
         switch field.type {
-        case .text:    return field.prefersLongText ? 280 : 200
-        case .number:  return 100
+        case .text, .address, .markdown: return field.prefersLongText ? 280 : 200
+        case .number, .money, .rating, .duration, .percent: return 100
         case .boolean: return 60
         case .date:    return 130
         case .select:  return 120
-        case .json:    return 180
+        case .json, .geoPoint: return 180
         case .relation: return 160
         case .file:    return 80
-        case .email:   return 220
-        case .url:     return 240
+        case .email, .currency, .phone, .colorHex, .barcode: return 220
+        case .url: return 240
         }
     }
 

@@ -310,6 +310,15 @@ struct DatabaseClient {
         if let relation = field.relation {
             body["relation"] = ["collectionName": relation.collectionName]
         }
+        if let min = field.min { body["min"] = min }
+        if let max = field.max { body["max"] = max }
+        if let minLength = field.minLength { body["minLength"] = minLength }
+        if let maxLength = field.maxLength { body["maxLength"] = maxLength }
+        if let pattern = field.pattern { body["pattern"] = pattern }
+        if let unique = field.unique { body["unique"] = unique }
+        if let enumScale = field.enumScale { body["enumScale"] = enumScale }
+        if let barcodeKind = field.barcodeKind { body["barcodeKind"] = barcodeKind }
+        if let durationDisplayUnit = field.durationDisplayUnit { body["durationDisplayUnit"] = durationDisplayUnit }
         return body
     }
 

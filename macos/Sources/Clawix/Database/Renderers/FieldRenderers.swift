@@ -20,9 +20,9 @@ enum FieldCell {
         onCommit: @escaping (DBJSON) -> Void
     ) -> some View {
         switch field.type {
-        case .text:
+        case .text, .currency, .address, .phone, .markdown, .colorHex, .barcode:
             TextCell(field: field, value: value, onCommit: onCommit)
-        case .number:
+        case .number, .money, .rating, .duration, .percent:
             NumberCell(field: field, value: value, onCommit: onCommit)
         case .boolean:
             BooleanCell(value: value, onCommit: onCommit)
@@ -31,6 +31,8 @@ enum FieldCell {
         case .select:
             SelectCell(field: field, value: value, onCommit: onCommit)
         case .json:
+            JSONCell(value: value)
+        case .geoPoint:
             JSONCell(value: value)
         case .relation:
             RelationCell(field: field, value: value)
@@ -296,12 +298,14 @@ enum FieldForm {
         record: DBRecord
     ) -> some View {
         switch field.type {
-        case .text:     TextForm(field: field, value: value)
-        case .number:   NumberForm(value: value)
+        case .text, .currency, .address, .phone, .markdown, .colorHex, .barcode:
+            TextForm(field: field, value: value)
+        case .number, .money, .rating, .duration, .percent:
+            NumberForm(value: value)
         case .boolean:  BooleanForm(value: value)
         case .date:     DateForm(value: value)
         case .select:   SelectForm(field: field, value: value)
-        case .json:     JSONForm(value: value)
+        case .json, .geoPoint: JSONForm(value: value)
         case .relation: RelationForm(field: field, value: value)
         case .file:     FileForm(field: field, value: value, record: record)
         case .email:    EmailForm(value: value)
