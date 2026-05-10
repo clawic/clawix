@@ -130,6 +130,36 @@ struct MeshClient {
         try await get("/mesh/jobs/\(id)", as: JobOutput.self)
     }
 
+    /// POST /mesh/hosts — upsert a host record on the daemon. If
+    /// `sshSecret` is included, the daemon also persists it in its
+    /// loopback SshSecretStore so subsequent `ssh.*` jobs can resolve
+    /// the credential by id. Available only when the Node daemon is
+    /// the active bridge (the legacy Swift bridge does not expose
+    /// these CRUD endpoints).
+    func upsertHost(_ host: HostInput, sshSecret: SshSecretInput? = nil) async throws -> PeerRecord {
+        let body = HostUpsertInput(host: host, sshSecret: sshSecret)
+        let payload: HostUpsertOutput = try await post("/mesh/hosts", body: body)
+        return payload.host
+    }
+
+    /// POST /mesh/hosts/:id/revoke — soft-revoke a host. The peer
+    /// keeps its row but `revokedAt` is set; the daemon refuses jobs
+    /// signed by its node id from that point on.
+    func revokePeer(nodeId: String) async throws {
+        try await postEmpty("/mesh/hosts/\(nodeId)/revoke")
+    }
+
+    /// POST /mesh/hosts/:id/unrevoke — clear the revoked flag.
+    func unrevokePeer(nodeId: String) async throws {
+        try await postEmpty("/mesh/hosts/\(nodeId)/unrevoke")
+    }
+
+    /// DELETE /mesh/hosts/:id — drop the host record entirely.
+    /// Cascades to host_endpoints in the daemon's SQLite store.
+    func removeHost(nodeId: String) async throws {
+        try await delete("/mesh/hosts/\(nodeId)")
+    }
+
     // MARK: - Wire types
     //
     // These mirror the server's `RemoteMeshHTTPController` shapes 1:1
@@ -162,6 +192,18 @@ struct MeshClient {
     private struct WorkspaceOutput: Codable { var workspace: RemoteWorkspace }
     private struct WorkspacesOutput: Codable { var workspaces: [RemoteWorkspace] }
     private struct RemoteJobResponse: Codable { var job: RemoteJob }
+    private struct HostUpsertInput: Codable {
+        var host: HostInput
+        var sshSecret: SshSecretInput?
+    }
+    private struct HostUpsertOutput: Codable {
+        var host: PeerRecord
+        var sshSecret: SshSecretMetaOutput?
+    }
+    private struct SshSecretMetaOutput: Codable {
+        var id: String
+        var kind: String
+    }
 
     struct JobOutput: Codable, Equatable {
         var job: RemoteJob?
@@ -184,6 +226,24 @@ struct MeshClient {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try Self.encoder.encode(body)
         return try await send(req)
+    }
+
+    private func postEmpty(_ path: String) async throws {
+        let url = baseURL.appendingPathComponent(path)
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        let _: EmptyResponse = try await send(req)
+    }
+
+    private func delete(_ path: String) async throws {
+        let url = baseURL.appendingPathComponent(path)
+        var req = URLRequest(url: url)
+        req.httpMethod = "DELETE"
+        let _: EmptyResponse = try await send(req)
+    }
+
+    private struct EmptyResponse: Decodable {
+        init(from decoder: Decoder) throws {}
     }
 
     private func send<T: Decodable>(_ req: URLRequest) async throws -> T {
@@ -235,4 +295,110 @@ struct MeshClient {
         d.dateDecodingStrategy = .iso8601
         return d
     }()
+}
+
+// MARK: - Host upsert wire types
+
+struct HostInput: Codable, Sendable {
+    var id: String?
+    var kind: HostKind
+    var displayName: String
+    var endpoints: [RemoteEndpoint]?
+    var permissionProfile: PeerPermissionProfile?
+    var capabilities: [String]?
+    var ssh: HostSSHConfigInput?
+    var metadata: HostMetadataInput
+
+    init(
+        id: String? = nil,
+        kind: HostKind,
+        displayName: String,
+        endpoints: [RemoteEndpoint]? = nil,
+        permissionProfile: PeerPermissionProfile? = nil,
+        capabilities: [String]? = nil,
+        ssh: HostSSHConfigInput? = nil,
+        metadata: HostMetadataInput = HostMetadataInput()
+    ) {
+        self.id = id
+        self.kind = kind
+        self.displayName = displayName
+        self.endpoints = endpoints
+        self.permissionProfile = permissionProfile
+        self.capabilities = capabilities
+        self.ssh = ssh
+        self.metadata = metadata
+    }
+}
+
+struct HostSSHConfigInput: Codable, Sendable {
+    var user: String
+    var authMethod: String
+    var keySecretId: String?
+    var passwordSecretId: String?
+}
+
+struct HostMetadataInput: Codable, Sendable {
+    var tags: [String] = []
+    var provider: String?
+    var notes: String?
+
+    init(tags: [String] = [], provider: String? = nil, notes: String? = nil) {
+        self.tags = tags
+        self.provider = provider
+        self.notes = notes
+    }
+}
+
+struct SshSecretInput: Codable, Sendable {
+    var id: String
+    var secret: SshSecretPayload
+}
+
+enum SshSecretPayload: Codable, Sendable {
+    case privateKey(pem: String, passphrase: String?)
+    case password(String)
+    case passphrase(String)
+
+    private enum CodingKeys: String, CodingKey {
+        case kind
+        case privateKeyPem
+        case passphrase
+        case password
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .privateKey(let pem, let passphrase):
+            try c.encode("private-key", forKey: .kind)
+            try c.encode(pem, forKey: .privateKeyPem)
+            try c.encodeIfPresent(passphrase, forKey: .passphrase)
+        case .password(let value):
+            try c.encode("password", forKey: .kind)
+            try c.encode(value, forKey: .password)
+        case .passphrase(let value):
+            try c.encode("passphrase", forKey: .kind)
+            try c.encode(value, forKey: .passphrase)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try c.decode(String.self, forKey: .kind)
+        switch kind {
+        case "private-key":
+            let pem = try c.decode(String.self, forKey: .privateKeyPem)
+            let passphrase = try c.decodeIfPresent(String.self, forKey: .passphrase)
+            self = .privateKey(pem: pem, passphrase: passphrase)
+        case "password":
+            self = .password(try c.decode(String.self, forKey: .password))
+        case "passphrase":
+            self = .passphrase(try c.decode(String.self, forKey: .passphrase))
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .kind, in: c,
+                debugDescription: "unsupported ssh secret kind: \(kind)"
+            )
+        }
+    }
 }

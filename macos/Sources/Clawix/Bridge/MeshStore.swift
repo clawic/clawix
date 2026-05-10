@@ -47,6 +47,20 @@ final class MeshStore: ObservableObject {
         case failure(message: String)
     }
 
+    enum SshAuthMethodChoice: String, CaseIterable, Equatable {
+        case privateKey
+        case password
+        case agent
+
+        var label: String {
+            switch self {
+            case .privateKey: return "Private key"
+            case .password:   return "Password"
+            case .agent:      return "SSH agent"
+            }
+        }
+    }
+
     /// `client` is overridable so the E2E suite can plug a fake daemon
     /// running on a port other than 7779. Production code uses the
     /// no-arg form.
@@ -112,6 +126,145 @@ final class MeshStore: ObservableObject {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             lastPairingResult = .failure(message: message)
         }
+    }
+
+    // MARK: - Host CRUD (Node bridge daemon only)
+
+    /// Register an SSH-only host (Linux server, PC, SBC) on the
+    /// daemon. The daemon stores the host record and, if `secret` is
+    /// provided, persists it in its loopback SshSecretStore so future
+    /// `ssh.*` jobs resolve the credential by id. Requires the Node
+    /// bridge daemon (the legacy Swift bridge does not expose
+    /// `POST /mesh/hosts`).
+    func upsertSshHost(
+        displayName: String,
+        kind: HostKind,
+        host: String,
+        port: Int,
+        user: String,
+        authMethod: SshAuthMethodChoice,
+        secretValue: String,
+        permissionProfile: PeerPermissionProfile
+    ) async -> Result<PeerRecord, MeshClientError> {
+        let trimmedDisplay = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUser = user.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSecret = secretValue
+        guard !trimmedDisplay.isEmpty, !trimmedHost.isEmpty, !trimmedUser.isEmpty else {
+            return .failure(.unknown("Display name, host and user are required."))
+        }
+        let secretId = "host:\(slug(trimmedDisplay)):\(UUID().uuidString.prefix(8))"
+        let endpoint = RemoteEndpoint(kind: "ssh", host: trimmedHost, bridgePort: port, httpPort: port)
+        let sshConfig: HostSSHConfigInput
+        let secretPayload: SshSecretPayload
+        switch authMethod {
+        case .password:
+            sshConfig = HostSSHConfigInput(user: trimmedUser, authMethod: "password",
+                                           keySecretId: nil, passwordSecretId: secretId)
+            secretPayload = .password(trimmedSecret)
+        case .privateKey:
+            sshConfig = HostSSHConfigInput(user: trimmedUser, authMethod: "key",
+                                           keySecretId: secretId, passwordSecretId: nil)
+            secretPayload = .privateKey(pem: trimmedSecret, passphrase: nil)
+        case .agent:
+            sshConfig = HostSSHConfigInput(user: trimmedUser, authMethod: "agent",
+                                           keySecretId: nil, passwordSecretId: nil)
+            secretPayload = .password("")
+        }
+        let metadata = HostMetadataInput(tags: ["ssh"])
+        let input = HostInput(
+            kind: kind,
+            displayName: trimmedDisplay,
+            endpoints: [endpoint],
+            permissionProfile: permissionProfile,
+            capabilities: ["shell"],
+            ssh: sshConfig,
+            metadata: metadata
+        )
+        let secret = (authMethod == .agent)
+            ? nil
+            : SshSecretInput(id: secretId, secret: secretPayload)
+        do {
+            let peer = try await client.upsertHost(input, sshSecret: secret)
+            if let idx = peers.firstIndex(where: { $0.nodeId == peer.nodeId }) {
+                peers[idx] = peer
+            } else {
+                peers.append(peer)
+            }
+            lastError = nil
+            await refreshPeers()
+            return .success(peer)
+        } catch let err as MeshClientError {
+            lastError = err.errorDescription
+            return .failure(err)
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            lastError = message
+            return .failure(.unknown(message))
+        }
+    }
+
+    /// Revoke a peer. Soft-delete: the row stays but the daemon
+    /// refuses jobs signed by the peer's keys.
+    func revokePeer(nodeId: String) async -> Result<Void, MeshClientError> {
+        do {
+            try await client.revokePeer(nodeId: nodeId)
+            await refreshPeers()
+            lastError = nil
+            return .success(())
+        } catch let err as MeshClientError {
+            lastError = err.errorDescription
+            return .failure(err)
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            lastError = message
+            return .failure(.unknown(message))
+        }
+    }
+
+    /// Reverse a previous `revokePeer`.
+    func unrevokePeer(nodeId: String) async -> Result<Void, MeshClientError> {
+        do {
+            try await client.unrevokePeer(nodeId: nodeId)
+            await refreshPeers()
+            lastError = nil
+            return .success(())
+        } catch let err as MeshClientError {
+            lastError = err.errorDescription
+            return .failure(err)
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            lastError = message
+            return .failure(.unknown(message))
+        }
+    }
+
+    /// Hard-delete a host record. Cascades to endpoints in the
+    /// daemon's SQLite store.
+    func removeHost(nodeId: String) async -> Result<Void, MeshClientError> {
+        do {
+            try await client.removeHost(nodeId: nodeId)
+            peers.removeAll { $0.nodeId == nodeId }
+            await refreshPeers()
+            lastError = nil
+            return .success(())
+        } catch let err as MeshClientError {
+            lastError = err.errorDescription
+            return .failure(err)
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            lastError = message
+            return .failure(.unknown(message))
+        }
+    }
+
+    private func slug(_ text: String) -> String {
+        let lower = text.lowercased()
+        let mapped = lower.map { ch -> Character in
+            if ch.isLetter || ch.isNumber { return ch }
+            return "-"
+        }
+        return String(String(mapped).prefix(40))
     }
 
     // MARK: - Workspaces (local allowlist)
