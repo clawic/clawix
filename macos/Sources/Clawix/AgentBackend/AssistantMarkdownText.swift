@@ -147,9 +147,11 @@ enum MarkdownParseCache {
 
     static func parse(_ text: String) -> Result {
         if let cached = cache.get(for: text) {
+            PerfSignpost.renderMarkdown.event("parse.cache_hit.bytes", text.utf8.count)
             return Result(blocks: cached, cacheHit: true,
                           parseMs: 0, annotateMs: 0)
         }
+        PerfSignpost.renderMarkdown.event("parse.cache_miss.bytes", text.utf8.count)
         return PerfSignpost.renderMarkdown.interval("parse") {
             let parseT0 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
             let parsed = AssistantMarkdown.parseBlocks(text)
@@ -157,6 +159,7 @@ enum MarkdownParseCache {
             let annotated = annotateBlocks(parsed, source: text)
             let parseT2 = streamingPerfLogEnabled ? CFAbsoluteTimeGetCurrent() : 0
             cache.set(annotated, for: text)
+            PerfSignpost.renderMarkdown.event("parse.blocks", annotated.count)
             return Result(blocks: annotated, cacheHit: false,
                           parseMs: (parseT1 - parseT0) * 1000,
                           annotateMs: (parseT2 - parseT1) * 1000)
