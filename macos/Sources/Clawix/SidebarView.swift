@@ -230,6 +230,10 @@ struct SidebarView: View {
             var byProjectRaw: [UUID: [Chat]] = [:]
             var chronoRaw: [Chat] = []
             for chat in appState.chats {
+                // Side chats live only inside their parent's right
+                // sidebar; never surface them in the main sidebar list
+                // (chrono, per-project, or pinned).
+                if chat.isSideChat { continue }
                 if chat.isPinned {
                     pinnedRaw.append(chat)
                     continue

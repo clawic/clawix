@@ -408,6 +408,12 @@ struct Chat: Identifiable, Equatable {
     /// from `appState.chats` once the panel closes. Lets the user run
     /// throwaway prompts ("incognito") without polluting their history.
     var isQuickAskTemporary: Bool = false
+    /// Conversation lives only inside the parent chat's right sidebar
+    /// as a "side chat" tab (silent fork with inherited context). The
+    /// main sidebar list filters these out so they don't pollute the
+    /// chronological view; the parent's `ChatSidebarState` keeps the
+    /// reference via a `SidebarItem.chat` entry.
+    var isSideChat: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -431,7 +437,8 @@ struct Chat: Identifiable, Equatable {
         forkedFromTitle: String? = nil,
         forkBannerAfterMessageId: UUID? = nil,
         lastTurnInterrupted: Bool = false,
-        isQuickAskTemporary: Bool = false
+        isQuickAskTemporary: Bool = false,
+        isSideChat: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -455,6 +462,7 @@ struct Chat: Identifiable, Equatable {
         self.forkBannerAfterMessageId = forkBannerAfterMessageId
         self.lastTurnInterrupted = lastTurnInterrupted
         self.isQuickAskTemporary = isQuickAskTemporary
+        self.isSideChat = isSideChat
     }
 }
 

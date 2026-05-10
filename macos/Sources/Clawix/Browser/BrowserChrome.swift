@@ -52,6 +52,7 @@ private struct SidebarItemPill: View {
     let isLoading: Bool
     let onSelect: () -> Void
     let onClose: () -> Void
+    @EnvironmentObject private var appState: AppState
 
     var body: some View {
         Button(action: onSelect) {
@@ -121,6 +122,13 @@ private struct SidebarItemPill: View {
             FileChipIcon(size: 13)
                 .foregroundColor(Color(white: 0.78))
                 .frame(width: 14, height: 14)
+        case .chat:
+            // Branch arrows mark a side chat tab so users can tell it
+            // apart from web/file pills at a glance. Same icon used by
+            // the menu's "Fork conversation" entry, since a side chat
+            // is a silent fork at heart.
+            BranchArrowsIconView(color: Color(white: 0.78), lineWidth: 1.0)
+                .frame(width: 14, height: 14)
         }
     }
 
@@ -132,6 +140,15 @@ private struct SidebarItemPill: View {
             return p.url.absoluteString
         case .file(let p):
             return (p.path as NSString).lastPathComponent
+        case .chat(let p):
+            // Resolve dynamically from AppState so renames flow without
+            // having to keep a copy in `ChatPayload`. Falls back to
+            // "Side chat" until the user types the first prompt
+            // (sendMessage promotes the prompt to the chat title).
+            if let chat = appState.chat(byId: p.id), !chat.title.isEmpty {
+                return chat.title
+            }
+            return "Side chat"
         }
     }
 
@@ -195,6 +212,7 @@ private struct NewTabButton: View {
 // MARK: - Navigation bar
 
 struct BrowserNavigationBar: View {
+    @EnvironmentObject var appState: AppState
     @ObservedObject var controller: BrowserTabController
     @Binding var moreMenuOpen: Bool
 
@@ -236,7 +254,9 @@ struct BrowserNavigationBar: View {
             }
             .accessibilityLabel("Take screenshot")
             .hoverHint(L10n.t("Take screenshot"), placement: .below)
-            ChromeIconButton(systemName: "plus") {}
+            ChromeIconButton(systemName: "plus") {
+                appState.newBrowserTab()
+            }
                 .accessibilityLabel("Add")
                 .hoverHint(L10n.t("Add"), placement: .below)
             ChromeIconButton(systemName: "ellipsis", isActive: moreMenuOpen) {

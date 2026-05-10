@@ -1,11 +1,20 @@
 import Foundation
 
-/// One open "window" inside a chat's right sidebar. Web pages and file
-/// previews live side by side as siblings of the same tab strip, so a
-/// chat's sidebar can hold any mix of the two.
+/// One open "window" inside a chat's right sidebar. Web pages, file
+/// previews and side chats live side by side as siblings of the same
+/// tab strip, so a chat's sidebar can hold any mix of the three.
 enum SidebarItem: Identifiable, Equatable, Codable {
     case web(WebPayload)
     case file(FilePayload)
+    case chat(ChatPayload)
+
+    /// Side-chat tab. The `id` doubles as the underlying `Chat.id` of
+    /// the silently-forked conversation so the tab and the chat share
+    /// identity. The pill resolves its title dynamically from
+    /// `appState.chat(byId:)` so renames flow without state sync.
+    struct ChatPayload: Equatable, Codable {
+        let id: UUID
+    }
 
     struct WebPayload: Equatable, Codable {
         let id: UUID
@@ -54,6 +63,7 @@ enum SidebarItem: Identifiable, Equatable, Codable {
         switch self {
         case .web(let p):  return p.id
         case .file(let p): return p.id
+        case .chat(let p): return p.id
         }
     }
 }

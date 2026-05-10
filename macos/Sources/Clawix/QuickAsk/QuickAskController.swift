@@ -340,7 +340,7 @@ final class QuickAskController: ObservableObject {
     func cycleRecentChats(direction: Int) {
         guard let appState else { return }
         let ordered = appState.chats
-            .filter { !$0.isArchived && !$0.isQuickAskTemporary }
+            .filter { !$0.isArchived && !$0.isQuickAskTemporary && !$0.isSideChat }
             .sorted { $0.createdAt > $1.createdAt }
         guard !ordered.isEmpty else { return }
         let currentIndex = ordered.firstIndex(where: { $0.id == activeChatId }) ?? -1

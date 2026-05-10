@@ -1044,7 +1044,7 @@ private struct SearchPopoverOverlay: View {
 
     private var pinnedChats: [Chat] {
         appState.chats
-            .filter { $0.isPinned && !$0.isArchived && !$0.isQuickAskTemporary }
+            .filter { $0.isPinned && !$0.isArchived && !$0.isQuickAskTemporary && !$0.isSideChat }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -1056,13 +1056,13 @@ private struct SearchPopoverOverlay: View {
 
     private var searchableChats: [Chat] {
         appState.chats
-            .filter { !$0.isArchived && !$0.isQuickAskTemporary }
+            .filter { !$0.isArchived && !$0.isQuickAskTemporary && !$0.isSideChat }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
     private func scopedChats(for project: Project) -> [Chat] {
         appState.chats
-            .filter { $0.projectId == project.id && !$0.isArchived && !$0.isQuickAskTemporary }
+            .filter { $0.projectId == project.id && !$0.isArchived && !$0.isQuickAskTemporary && !$0.isSideChat }
             .sorted { $0.createdAt > $1.createdAt }
     }
 
