@@ -94,13 +94,15 @@ final class ClawJSServiceManager: ObservableObject {
     func restart(_ service: ClawJSService) async {
         restartTasks[service]?.cancel()
         restartTasks[service] = nil
-        if let process = processes[service], process.isRunning {
-            process.terminate()
-        }
+        let stoppedLocalProcess = await stopTrackedProcess(for: service)
         update(service) {
             $0.restartCount = 0
             $0.lastError = nil
             $0.state = .idle
+        }
+        if stoppedLocalProcess {
+            await launchLocal(service, force: true)
+            return
         }
         if bridgeService.isDaemonReachable {
             healthTasks[service]?.cancel()
@@ -111,6 +113,30 @@ final class ClawJSServiceManager: ObservableObject {
             return
         }
         await launchLocal(service)
+    }
+
+    private func stopTrackedProcess(for service: ClawJSService) async -> Bool {
+        guard let process = processes.removeValue(forKey: service) else { return false }
+
+        process.terminationHandler = nil
+        healthTasks[service]?.cancel()
+        healthTasks[service] = nil
+
+        if process.isRunning {
+            process.terminate()
+            let deadline = Date().addingTimeInterval(2)
+            while Date() < deadline, process.isRunning {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
+        }
+
+        try? logHandles[service]?.close()
+        logHandles[service] = nil
+        return true
     }
 
     /// Synchronous SIGTERM to every running service plus cancellation of
@@ -264,13 +290,17 @@ final class ClawJSServiceManager: ObservableObject {
         for service in ClawJSService.allCases {
             let url = URL(string: "http://127.0.0.1:\(service.port)\(service.healthPath)")!
             if await ping(url: url) {
-                lastReadyAt[service] = Date()
-                update(service) {
-                    $0.state = .readyFromDaemon(port: service.port)
-                    $0.lastError = nil
+                if await reclaimOrphanedSidecarIfPossible(service) {
+                    await launchLocal(service, force: true)
+                } else if Self.canAdoptExistingService(service) {
+                    publishDaemonReady(service)
+                } else {
+                    markReachableServiceUnavailable(service)
                 }
-                healthTasks[service] = Task { [weak self] in
-                    await self?.pollDaemonOwnedService(service)
+                if snapshots[service]?.state == .readyFromDaemon(port: service.port) {
+                    healthTasks[service] = Task { [weak self] in
+                        await self?.pollDaemonOwnedService(service)
+                    }
                 }
             } else if ClawJSRuntime.isAvailable, commandLine(for: service) != nil {
                 await launchLocal(service, force: true)
@@ -292,11 +322,14 @@ final class ClawJSServiceManager: ObservableObject {
         while !Task.isCancelled {
             let alive = await ping(url: url)
             if alive {
-                wasReady = true
-                lastReadyAt[service] = Date()
-                update(service) {
-                    $0.state = .readyFromDaemon(port: service.port)
-                    $0.lastError = nil
+                if await reclaimOrphanedSidecarIfPossible(service) {
+                    await launchLocal(service, force: true)
+                    return
+                } else if Self.canAdoptExistingService(service) {
+                    wasReady = true
+                    publishDaemonReady(service)
+                } else {
+                    markReachableServiceUnavailable(service)
                 }
             } else if wasReady || Date() > readyDeadline {
                 if ClawJSRuntime.isAvailable, commandLine(for: service) != nil {
@@ -311,6 +344,41 @@ final class ClawJSServiceManager: ObservableObject {
             }
             try? await Task.sleep(nanoseconds: 3_000_000_000)
         }
+    }
+
+    private func publishDaemonReady(_ service: ClawJSService) {
+        lastReadyAt[service] = Date()
+        update(service) {
+            $0.state = .readyFromDaemon(port: service.port)
+            $0.lastError = nil
+        }
+    }
+
+    private func markReachableServiceUnavailable(_ service: ClawJSService) {
+        let reason = "\(service.displayName) answered on 127.0.0.1:\(service.port), but its admin token is not available."
+        update(service) {
+            $0.state = .daemonUnavailable(reason: reason)
+            $0.lastError = reason
+        }
+    }
+
+    private func reclaimOrphanedSidecarIfPossible(_ service: ClawJSService) async -> Bool {
+        guard let pid = Self.listenerPID(on: service.port),
+              Self.isClawixSidecar(pid: pid),
+              Self.parentPID(of: pid) == 1 else {
+            return false
+        }
+
+        kill(pid, SIGTERM)
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline, Self.isRunning(pid: pid) {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        if Self.isRunning(pid: pid) {
+            kill(pid, SIGKILL)
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        return true
     }
 
     /// Argv (without the leading node binary) to launch `service` as a
@@ -642,6 +710,21 @@ final class ClawJSServiceManager: ObservableObject {
         let command = String(data: data, encoding: .utf8) ?? ""
         return command.contains("/Clawix.app/Contents/Resources/clawjs/")
             || command.contains("/Application Support/Clawix/clawjs/")
+    }
+
+    private static func parentPID(of pid: pid_t) -> pid_t? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/ps")
+        process.arguments = ["-p", String(pid), "-o", "ppid="]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        try? process.run()
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let raw = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard let value = Int32(raw) else { return nil }
+        return value
     }
 
     private static func isRunning(pid: pid_t) -> Bool {
