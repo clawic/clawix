@@ -36,6 +36,7 @@ struct ComposerView: View {
     @State private var meshTargetMenuOpen = false
     @State private var composerContentHeight: CGFloat = 52
     @State private var planSuggestionDismissed = false
+    @State private var mentionFilePickerActive = false
 
     private let cornerRadius: CGFloat = 22
     private let projectOverlap: CGFloat = 32
@@ -560,6 +561,9 @@ struct ComposerView: View {
         }
         .animation(.easeOut(duration: 0.20), value: showsPlanSuggestion)
         .onChange(of: composer.text) {
+            if !chatMode, composer.text == "@", !mentionFilePickerActive {
+                openFilePickerFromMentionTrigger()
+            }
             // Reset the user's "X" once the trigger word leaves the
             // draft, so the next time they re-type "plan" the hint
             // surfaces again.
@@ -573,6 +577,17 @@ struct ComposerView: View {
             if appState.planMode, planSuggestionDismissed {
                 planSuggestionDismissed = false
             }
+        }
+    }
+
+    private func openFilePickerFromMentionTrigger() {
+        mentionFilePickerActive = true
+        composer.text = ""
+        closeComposerPopups(except: .add)
+        addMenuOpen = false
+        DispatchQueue.main.async {
+            presentFilePicker()
+            mentionFilePickerActive = false
         }
     }
 
