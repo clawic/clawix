@@ -229,6 +229,17 @@ PY
         fi
     }
 
+    copy_overlay_core() {
+        local dest="$1"
+        local overlay_core="$CLAWJS_DEV_OVERLAY/packages/clawjs-core"
+        [[ -d "$overlay_core" ]] || return 0
+        ensure_overlay_dependencies
+        echo "==> Dev overlay: copying $overlay_core → $dest"
+        rm -rf "$dest"
+        mkdir -p "$(dirname "$dest")"
+        cp -R "$overlay_core" "$dest"
+    }
+
     OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/packages/clawjs/bin"
     if [[ ! -d "$OVERLAY_BIN" && -d "$CLAWJS_DEV_OVERLAY/bin" ]]; then
         OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/bin"
@@ -237,6 +248,7 @@ PY
         echo "==> Dev overlay: copying $OVERLAY_BIN → $CLAWJS_DEST/node_modules/@clawjs/cli/bin"
         cp -R "$OVERLAY_BIN/." "$CLAWJS_DEST/node_modules/@clawjs/cli/bin/"
     fi
+    copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/core"
     OVERLAY_DB="$CLAWJS_DEV_OVERLAY/packages/clawjs-database"
     if [[ -d "$OVERLAY_DB" ]]; then
         build_overlay_package "$OVERLAY_DB"
@@ -252,6 +264,7 @@ PY
             run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
         )
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/better-sqlite3"
+        copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/@clawjs/core"
     fi
     # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
     # from @clawjs/cli/bin, i.e. node_modules/vault/dist/server.js.
