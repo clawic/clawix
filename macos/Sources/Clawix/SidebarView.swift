@@ -2290,6 +2290,13 @@ struct RecentChatRowCallbacks {
     let onArchive: () -> Void
     let onUnarchive: () -> Void
     let onTogglePin: () -> Void
+    let onRename: () -> Void
+    let onToggleUnread: () -> Void
+    let onOpenInFinder: () -> Void
+    let onCopyWorkingDirectory: () -> Void
+    let onCopySessionId: () -> Void
+    let onCopyDeeplink: () -> Void
+    let onForkLocal: () -> Void
     let onContextMenu: (NSPoint) -> Void
 }
 
@@ -2306,6 +2313,28 @@ private func makeRecentChatCallbacks(appState: AppState, chat: Chat, archived: B
         onArchive: { appState.archiveChat(chatId: chatId) },
         onUnarchive: { appState.unarchiveChat(chatId: chatId) },
         onTogglePin: { appState.togglePin(chatId: chatId) },
+        onRename: { appState.pendingRenameChat = chatSnapshot },
+        onToggleUnread: { appState.toggleChatUnread(chatId: chatId) },
+        onOpenInFinder: {
+            guard let cwd = chatSnapshot.cwd, !cwd.isEmpty else { return }
+            let path = (cwd as NSString).expandingTildeInPath
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        },
+        onCopyWorkingDirectory: {
+            guard let cwd = chatSnapshot.cwd, !cwd.isEmpty else { return }
+            copySidebarStringToPasteboard(cwd)
+        },
+        onCopySessionId: {
+            guard let id = chatSnapshot.clawixThreadId else { return }
+            copySidebarStringToPasteboard(id)
+        },
+        onCopyDeeplink: {
+            guard let id = chatSnapshot.clawixThreadId else { return }
+            copySidebarStringToPasteboard("clawix://chat/\(id)")
+        },
+        onForkLocal: {
+            _ = appState.forkConversation(chatId: chatId, sourceSnapshot: chatSnapshot)
+        },
         onContextMenu: { screenPoint in
             SidebarChatContextMenuPanel.present(
                 at: screenPoint,
@@ -2315,6 +2344,12 @@ private func makeRecentChatCallbacks(appState: AppState, chat: Chat, archived: B
             )
         }
     )
+}
+
+private func copySidebarStringToPasteboard(_ value: String) {
+    let pb = NSPasteboard.general
+    pb.clearContents()
+    pb.setString(value, forType: .string)
 }
 
 struct RecentChatRow: View, Equatable {
@@ -2455,7 +2490,7 @@ struct RecentChatRow: View, Equatable {
         // NSView in the row that returns `mouseDownCanMoveWindow = false`
         // AppKit hijacks mouseDown for a window drag and SwiftUI's
         // `.onDrag` never fires.
-        .background(WindowDragInhibitor())
+        .background(WindowDragInhibitor(onRightClick: callbacks.onContextMenu))
         .onDrag {
             // Carry the chat's UUID as plain text. Drop targets parse it
             // back to a UUID and route to AppState (reorder / move-to-
@@ -2477,7 +2512,31 @@ struct RecentChatRow: View, Equatable {
             // we close instantly on drop.
             Color.clear.frame(width: 1, height: 1)
         }
-        .overlay(SidebarRightClickCatcher(onRightClick: callbacks.onContextMenu))
+        .contextMenu { nativeContextMenu }
+    }
+
+    @ViewBuilder
+    private var nativeContextMenu: some View {
+        Button(chat.isPinned ? "Unpin chat" : "Pin chat", action: callbacks.onTogglePin)
+            .disabled(archivedRow)
+        Button("Rename chat", action: callbacks.onRename)
+        Button(archivedRow ? "Unarchive chat" : "Archive chat") {
+            archivedRow ? callbacks.onUnarchive() : callbacks.onArchive()
+        }
+        if !archivedRow {
+            Button(chat.hasUnreadCompletion ? "Mark as read" : "Mark as unread", action: callbacks.onToggleUnread)
+        }
+        Divider()
+        Button("Open in Finder", action: callbacks.onOpenInFinder)
+            .disabled(chat.cwd?.isEmpty != false)
+        Button("Copy working directory", action: callbacks.onCopyWorkingDirectory)
+            .disabled(chat.cwd?.isEmpty != false)
+        Button("Copy session ID", action: callbacks.onCopySessionId)
+            .disabled(chat.clawixThreadId == nil)
+        Button("Copy direct link", action: callbacks.onCopyDeeplink)
+            .disabled(chat.clawixThreadId == nil)
+        Divider()
+        Button("Fork conversation", action: callbacks.onForkLocal)
     }
 
     @ViewBuilder
@@ -4378,10 +4437,26 @@ private struct OrganizeFunnelIcon: View {
 }
 
 struct WindowDragInhibitor: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { _NoWindowDragView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    var onRightClick: ((NSPoint) -> Void)? = nil
+
+    func makeNSView(context: Context) -> NSView {
+        _NoWindowDragView(onRightClick: onRightClick)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? _NoWindowDragView)?.onRightClick = onRightClick
+    }
 
     private final class _NoWindowDragView: NSView {
+        var onRightClick: ((NSPoint) -> Void)?
+
+        init(onRightClick: ((NSPoint) -> Void)?) {
+            self.onRightClick = onRightClick
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { fatalError() }
+
         override var mouseDownCanMoveWindow: Bool { false }
         override func mouseDown(with event: NSEvent) {
             nextResponder?.mouseDown(with: event)
@@ -4391,6 +4466,13 @@ struct WindowDragInhibitor: NSViewRepresentable {
         }
         override func mouseUp(with event: NSEvent) {
             nextResponder?.mouseUp(with: event)
+        }
+        override func rightMouseDown(with event: NSEvent) {
+            if let onRightClick {
+                onRightClick(NSEvent.mouseLocation)
+            } else {
+                nextResponder?.rightMouseDown(with: event)
+            }
         }
     }
 }
