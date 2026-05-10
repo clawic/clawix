@@ -55,8 +55,6 @@ struct SidebarChatContextMenuContent: View {
     let onCopySessionId: () -> Void
     let onCopyDeeplink: () -> Void
     let onForkLocal: () -> Void
-    let onForkWorktree: () -> Void
-    let onOpenMiniWindow: () -> Void
 
     @State private var hovered: String?
 
@@ -142,28 +140,11 @@ struct SidebarChatContextMenuContent: View {
                  shortcut: nil,
                  enabled: true,
                  action: onForkLocal),
-            Item(id: "forkWorktree",
-                 icon: "arrow.triangle.branch",
-                 title: "Fork into new worktree",
-                 shortcut: nil,
-                 enabled: true,
-                 action: onForkWorktree),
-        ]
-    }
-
-    private var fourthGroup: [Item] {
-        [
-            Item(id: "miniWindow",
-                 icon: "macwindow.on.rectangle",
-                 title: "Open in mini window",
-                 shortcut: nil,
-                 enabled: true,
-                 action: onOpenMiniWindow),
         ]
     }
 
     var body: some View {
-        let groups = [firstGroup, secondGroup, thirdGroup, fourthGroup]
+        let groups = [firstGroup, secondGroup, thirdGroup]
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(groups.enumerated()), id: \.offset) { idx, group in
                 if idx > 0 {
@@ -335,9 +316,10 @@ final class SidebarChatContextMenuPanel: NSObject {
                 }
                 dismiss()
             },
-            onForkLocal: { dismiss() },
-            onForkWorktree: { dismiss() },
-            onOpenMiniWindow: { dismiss() }
+            onForkLocal: {
+                _ = appState.forkConversation(chatId: chat.id)
+                dismiss()
+            }
         )
 
         // The popup itself draws a 0/10 offset shadow with 18 px radius,
