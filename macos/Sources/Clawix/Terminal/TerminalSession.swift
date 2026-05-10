@@ -19,6 +19,7 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     let terminalView: LocalProcessTerminalView
     private let coordinator: Coordinator
+    private var hasStarted = false
 
     enum Status: Equatable {
         case starting
@@ -48,8 +49,6 @@ final class TerminalSession: ObservableObject, Identifiable {
         self.coordinator = coordinator
         coordinator.session = self
         view.processDelegate = coordinator
-
-        spawnShell()
     }
 
     /// Default monospaced font for new sessions. macOS' system mono
@@ -91,10 +90,18 @@ final class TerminalSession: ObservableObject, Identifiable {
     /// Spawn (or respawn) the shell in `initialCwd`. Falls back to
     /// `$HOME` if the cwd no longer exists.
     func restart() {
+        hasStarted = false
+        spawnShell()
+    }
+
+    func startIfNeeded() {
+        guard !hasStarted else { return }
         spawnShell()
     }
 
     private func spawnShell() {
+        guard !hasStarted else { return }
+        hasStarted = true
         let resolvedCwd = TerminalSession.resolveCwd(initialCwd)
         if resolvedCwd != initialCwd {
             status = .missingCwd
