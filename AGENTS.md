@@ -258,3 +258,179 @@ When a glyph has no project-custom icon (the table above), the fallback is **Luc
 
 Hard rules:
 
+- **Use the SPM-managed Lucide package, never hand-port the SVG paths.** A previous attempt to hand-port silhouettes into SwiftUI `Path` shapes was a visual fracaso (chevrons came out fine, complex glyphs like trash, paperclip, link, drama looked broken). The canonical install is `lcandy2/LucideIcon` from `https://github.com/lcandy2/LucideIcon.git`, declared in `macos/Package.swift` and in `ios/project.yml` (`packages.LucideIcon`). The package converts every Lucide SVG into a custom SF Symbol via `swiftdraw` and ships them as an asset catalog, so existing SwiftUI Image modifiers (`.font(.system(size:))`, `.foregroundStyle`, `.symbolRenderingMode`, `.imageScale`) all continue to work like a normal `Image(systemName:)`.
+- **Call sites use `Image(lucide: .name)`.** Hyphens become underscores: `chevron-down` → `.chevron_down`, `trash-2` → `.trash_2`, `arrow-up-right` → `.arrow_up_right`. The list of available cases lives in the package's `LucideIcon+All.swift`. Files that use Lucide need `import LucideIcon` at the top, alongside `import SwiftUI`.
+- **Bridge for legacy SF Symbol strings.** A small `LucideBridge.swift` lives at `macos/Sources/Clawix/LucideBridge.swift` (and mirrored at `ios/Sources/Clawix/Theme/LucideBridge.swift`). It exposes `LucideIcon.sfMapped(_: String) -> LucideIcon?` and `Image(lucideOrSystem: String)`. Use the latter at sites where the icon name is a runtime String coming from data tables (settings categories, plugin metadata, permission-mode `iconName` properties, etc.). The bridge's mapping table is the single place where a new SF-Symbol-string-to-Lucide entry is added.
+- **SF Symbols stay forbidden** as a generic fallback. The only legitimate `Image(systemName:)` left in the codebase is for genuinely OS-level chrome where the platform glyph is the right answer (e.g. `command` for the Cmd modifier in keyboard shortcut hints, `return` for the Return key, system menu/menubar conventions where AppKit owns the rendering). Anything that depicts a domain concept (folder, document, trash, search, chevron, plus, x, arrow, etc.) goes through Lucide.
+
+The brand mark is still `ClawixLogoIcon` / `ClawixLogoTemplateImage`. Lucide is for everything that is a domain glyph without project identity.
+
+## Dropdowns / popups / context menus (project canon)
+
+The composer's model selector (`ModelMenuPopup` in `ComposerView.swift`) is the **visual reference** for any dropdown, popover-style menu, edit menu or context menu. Anything new and anything retroactive should match it.
+
+Chrome:
+
+- Background: `RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(white: 0.135))`.
+- Border: `.stroke(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)` (0.10 alpha, 0.5 px). Hairline, almost invisible.
+- Shadow: `.shadow(color: .black.opacity(0.40), radius: 18, x: 0, y: 10)`.
+- Container vertical padding: `6 pt`.
+- Canonical helper: `.menuStandardBackground()` in `ContentView.swift`. **Use it always**, do not re-create the rectangle by hand.
+
+Rows:
+
+- Padding: `.padding(.horizontal, 14).padding(.vertical, 7)`. Compact, NOT 10/8 nor 10/10.
+- Text: `font(.system(size: 13.5))`, color `Color(white: 0.94)`.
+- Icons: `font(.system(size: 13))` (14 if the row is heavy), color `Color(white: 0.86)`, fixed width `frame(width: 18, alignment: .center)` so columns align.
+- Subtitles, shortcuts, trailing chevrons: `Color(white: 0.55)`, sizes 11–12.
+- Hover: NOT a full-bleed background. Use the `MenuRowHover(active: hovered)` helper. It is a `RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.06)).padding(.horizontal, 5)` that breathes towards the menu's edges. For rows highlighted because their submenu is open, raise to `0.08`.
+- Selection check: `font(.system(size: 11, weight: .semibold))`, color `Color(white: 0.94)`.
+
+Opening + animation:
+
+- Anchoring: `anchorPreference` + `overlayPreferenceValue` (NOT SwiftUI `.popover`). `.popover` adds the system arrow chrome and breaks the look. Canonical pattern in `ComposerView.swift` for the model selector.
+- Position: anchored from above just below the trigger. `alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }` to hang 6 pt below; `alignmentGuide(.leading)` to align to the trigger (or to the right edge if the menu is wider).
+- Entry transition: `.transition(.softNudge(y: 4))` (defined in `ComposerView.swift`). Side submenus: `.transition(.softNudge(x: -4))`. Do NOT use `.opacity.combined(with: .scale)`.
+- Easing: `.animation(.easeOut(duration: 0.20), value: <openState>)` on the container.
+- Outside click: `.background(MenuOutsideClickWatcher(isPresented: $isOpen))` inside the menu so it closes on outside click.
+
+What to avoid:
+
+- `.popover(isPresented:arrowEdge:)` with system chrome.
+- Full-bleed hover backgrounds (highlights must inset from the menu edge).
+- Heavy borders `lineWidth: 1` with `Color.white.opacity(0.08)` or similar; always `Palette.popupStroke` with `Palette.popupStrokeWidth`.
+- `cornerRadius` 14/16; the standard is 12.
+- Tall rows (vertical 10+); compact at 7.
+
+Constants and helpers already available (in `ContentView.swift`):
+
+- `enum MenuStyle` with all sizes, colors and animation.
+- `extension View { func menuStandardBackground() }` for the container.
+- `struct MenuRowHover` for the hover highlight.
+- `extension AnyTransition { static func softNudge(x:y:) }` (in `ComposerView.swift`).
+
+Before adding a new dropdown, look at `ModelMenuPopup` and replicate its structure. If the behavior differs (side submenu, sectioned with header, divider), copy the building blocks `ModelMenuHeader`, `ModelMenuDivider`, `ModelMenuCheckRow`, `ModelMenuChevronRow`, `ModelMenuDescriptionRow` or build a new one with the same paddings and `MenuRowHover`.
+
+## Scrollbars: always `ThinScroller` (project canon)
+
+App-wide standard for any scroll surface. The sidebar's scrollbar is the **visual reference**: a thin, low-opacity capsule that paints over the content, never the system's default fat gray bar with a track background. Anything new and anything retroactive must match it.
+
+The canonical implementation lives in `macos/Sources/Clawix/ThinScrollbar.swift` and exposes two entry points; pick the one that matches the underlying scroll container, never roll a new scroller class.
+
+Spec (numbers come from `ThinScroller`; do not invent values when reusing the look elsewhere):
+
+- Scroller column width: `14 pt`.
+- Thumb (knob): `9 pt` wide, inset `3 pt` from the scroller's right edge, with `8 pt` of vertical padding at top and bottom of the track. Minimum thumb height `40 pt`.
+- Color: pure white (`NSColor(white: 1.0, alpha: …)`).
+- Alpha: `0.10` idle, `0.18` while the cursor is over the scroller. No other states.
+- Shape: capsule (`xRadius = yRadius = min(thumb.width, thumb.height) / 2`), rendered with `NSBezierPath(roundedRect:xRadius:yRadius:)`. The corner-radius lint exempts this site explicitly because at this radius the capsule is visually identical to a squircle (see the AppKit edge case noted under "Corner radius").
+- Track background: none. `drawKnobSlot` is overridden to a no-op.
+- Auto-hide on overflow: when content fits the viewport (`knobProportion >= 0.999`) `drawKnob` short-circuits, so an unscrollable list shows nothing. As soon as content overflows, the thumb is visible.
+- No system fade-out: `alphaValue` is pinned to `1.0` while there's something to scroll. The thumb does not fade away after a few seconds of idle, the way the macOS overlay scroller does. The user always sees their position.
+
+Two APIs, pick the right one:
+
+- **`ThinScrollView { … }`** — full `NSViewRepresentable` wrapping a real `NSScrollView` with a `ThinScroller`. Used by surfaces that need a real AppKit scroll view (sidebar, slash-command menu, composer file viewer): the legacy scroller style + `autohidesScrollers = false` + a small `trailingGutter` keep the knob from being clipped by the SwiftUI hosting layer. Reach for this when (a) you already need the AppKit scroll view for other reasons (`EnclosingScrollViewLocator`, edge auto-scroll, manual contentInsets), or (b) the scroll surface is a popover/menu where the system overlay would behave wrong.
+- **`.thinScrollers()`** — view modifier that walks up to the SwiftUI `ScrollView`'s underlying `NSScrollView` and swaps in a `ThinScroller` (overlay style, `autohidesScrollers = true`). Use this for any plain SwiftUI `ScrollView { … }`. It's the default for everything new.
+
+Hard rules:
+
+- **Every scroll surface uses `ThinScroller`.** A bare SwiftUI `ScrollView { … }` without `.thinScrollers()` is a bug. A bare `NSScrollView` without a `ThinScroller` as its `verticalScroller` is a bug. The only exceptions are `NSTextView` / scrolling text containers where AppKit owns the scroller for IME / cursor reasons; route those through `ThinScrollerInstaller` if practical.
+- **Do not reintroduce the system scroller** (`scrollView.verticalScroller = NSScroller()`, `Picker` with default chrome, `List` defaults). The system overlay scroller fades out, has a visible track on hover, and uses platform-default sizes that don't match this app.
+- **Do not change the alpha or thickness numbers per surface.** If a particular view feels too dim or too thin, fix it at the source in `ThinScroller` (and audit every screen) rather than forking the values for one place.
+- **Do not show a SwiftUI scrollbar via `showsIndicators: true` and call it a day.** That ships the system scroller. Use `.thinScrollers()` regardless of the `showsIndicators` argument; the modifier replaces whatever scroller the SwiftUI ScrollView produced.
+- **Horizontal scrollers** follow the same rule when present, but in practice most horizontal scroll surfaces in the app run with `showsIndicators: false` and rely on overflow gradients / chevrons. If a horizontal scroller ever needs a visible bar, extend `ThinScroller` rather than introducing a parallel custom class.
+
+When migrating existing scroll views:
+
+- A SwiftUI `ScrollView { … }`: append `.thinScrollers()` outside the closure (after any `.frame`, `.background`, etc., so the installer attaches once the hosting view is mounted).
+- A nested SwiftUI `ScrollView` already inside a `ThinScrollView`: leave it alone, the outer scroller is what the user sees.
+- A surface that wants `ScrollViewReader` / programmatic scroll: stick with SwiftUI `ScrollView` + `.thinScrollers()`. Do not migrate to `ThinScrollView` just for the look — the modifier already gives you the same look without losing `ScrollViewReader`.
+
+# CLI · `cli/`
+
+Top-level npm package, name `clawix`, distributed at https://www.npmjs.com/package/clawix. Source lives in `cli/`, ships to npm with `bin/`, `lib/`, `README.md`, `LICENSE`. The package is **macOS-only** (`os: ["darwin"]`, `cpu: ["arm64", "x64"]`); the postinstall no-ops on other platforms with a helpful message.
+
+The CLI is a thin Node.js wrapper around two pre-built, pre-signed Swift binaries:
+
+- `clawix-bridged`: the same daemon `Clawix.app` ships under `Contents/Helpers/clawix-bridged`, sourced from `macos/Helpers/Bridged/`. Owns the `codex app-server` subprocess and the bridge's WebSocket listener.
+- `clawix-menubar`: a tiny accessory app (NSStatusItem, no Dock, no main window) sourced from `macos/Helpers/Menubar/`. Polls the daemon, exposes the pairing QR, offers "Install Clawix.app…" as a one-click install hop.
+
+`postinstall` downloads `clawix-cli-darwin-universal.tar.gz` from the GitHub release whose tag matches the npm package version, verifies SHA-256 against `cli/lib/checksums.json` (committed alongside the npm version bump), and unpacks both binaries into `~/.clawix/bin/` with `codesign --verify --strict` as the last gate. Nothing is built on the user's machine.
+
+## Commands
+
+```
+clawix up           start daemon + menu bar, print pairing QR
+clawix start        start daemon as LaunchAgent (set & forget)
+clawix stop         bootout daemon + menu bar
+clawix restart      kickstart the daemon
+clawix status       daemon state, port, peers, app presence  (--json)
+clawix pair         re-print pairing QR  (--json)
+clawix logs [-f]    tail daemon stdout/stderr
+clawix install-app  download + install /Applications/Clawix.app
+clawix uninstall    remove ~/.clawix/bin/, bootout LaunchAgents  (--purge to drop pairing too)
+```
+
+## Files the CLI manages
+
+```
+~/.clawix/bin/clawix-bridged                   universal binary, signed
+~/.clawix/bin/clawix-menubar                   universal binary, signed
+~/.clawix/bin/manifest.json                    install metadata
+~/Library/LaunchAgents/clawix.bridge.plist     daemon registration
+~/Library/LaunchAgents/clawix.menubar.plist    menu bar registration
+~/Library/Preferences/clawix.bridge.plist      pairing bearer (shared with GUI)
+/tmp/clawix-bridged.{out,err}                  daemon logs
+```
+
+## Coexistence with `Clawix.app`
+
+Both surfaces register the same LaunchAgent **label** (`clawix.bridge`) and read/write the same UserDefaults **suite** (`clawix.bridge`). The pairing bearer (`ClawixBridge.Bearer.v1`) lives in that public suite, so:
+
+- A user with only the CLI pairs an iPhone, then runs `clawix install-app`. The GUI takes over the daemon slot on next launch; the iPhone keeps working with no re-pair.
+- A user with only the GUI later runs `npm install -g clawix` (e.g. to script automation). The CLI's `daemon.start()` detects the existing label loaded from `/Applications/Clawix.app/...`, defers, and just reports status.
+- `clawix-bridged` resolution prefers `/Applications/Clawix.app/Contents/Helpers/clawix-bridged` over the npm-shipped copy whenever the GUI is installed, so both surfaces drive a single binary.
+
+There is exactly one daemon process at any time.
+
+## Hard rules for contributors and AI agents
+
+- **No private literals in `cli/`**: no Team ID, no maintainer bundle id, no codesign identity, no SKU. The hygiene gate scans `cli/` along with the public platform and package trees.
+- **No competitor brand names in `cli/`**: the CLI is positioned standalone, not as a port or clone of any existing tool. Code, comments, copy and error messages must stay neutral.
+- **No hand-rolled JS-side crypto, signing or notarization**: the binaries arrive from GitHub releases pre-signed and pre-notarized with Developer ID. The CLI verifies, never re-signs.
+- **No third-party npm dependencies in v1**: the package is intentionally zero-dep. If you need an npm dep, justify it; smaller surface = less supply-chain risk for users who run `npm install -g clawix`.
+- **No `sudo` from postinstall or the CLI**: every path it writes (`~/.clawix/bin/`, `~/Library/LaunchAgents/`, `~/Library/Caches/clawix/`) is in the user's home. `clawix install-app` copies into `/Applications` via `ditto` (which works without sudo when the user has write access; if they don't, the copy fails cleanly without a privilege escalation prompt).
+
+# iOS app · `ios/`
+
+## Design language: iOS 26 Liquid Glass
+
+Default visual identity for every screen, view, modifier and reusable widget on iOS is **iOS 26 Liquid Glass**. Floating chrome (top-bar pills, composer, action buttons, sheets, badges, scroll-to-bottom dots, etc.) is built on `glassEffect(_:in:)` and grouped with `GlassEffectContainer` so adjacent shapes morph together when they animate.
+
+Hard rules:
+
+- **Always** prefer the native iOS 26 APIs over manual translucency. `.ultraThinMaterial`, custom blur views, opaque dark fills with low alpha, hand-rolled "fake glass" gradient stacks: NO. `.glassEffect(.regular, in: Capsule(style: .continuous))`, `.glassEffect(.regular, in: Circle())`, `.glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))`, `GlassEffectContainer`: YES.
+- **Always** keep deployment target at iOS 26 so the call sites can use `.glassEffect()` directly without `if #available` ladders. If a view ever has to ship to an older iOS, gate it with availability and fall back, but the code path used by default is the iOS 26 one.
+- **Pure black canvas** (`Color.black`) is the substrate beneath glass capsules: refraction reads cleanest against full black, not stacked dark grays.
+- **Pill heights ≈ 50pt** for top-bar chrome, **composer ≈ 64pt**: glass needs vertical room for the highlight + refraction to read, thinner pills look like flat capsules.
+- **No solid stroke borders on glass shapes**. The system glass effect already supplies the rim highlight; layering `.strokeBorder(Color.white.opacity(0.10))` on top kills the refraction.
+- **Squircle rule still applies**: any RoundedRectangle passed as the shape to `.glassEffect(in:)` must use `style: .continuous`. Capsule and Circle are fine as-is.
+
+Canonical helpers live in `Theme/GlassPill.swift` (`glassCapsule()`, `glassCircle()`, `glassRounded(radius:)`, `GlassIconButton`). Reuse them; do not re-derive the modifier chain by hand. Color and size tokens live in `Theme/DesignTokens.swift` (`Palette`, `AppLayout`, `Typography`); add to those files instead of inlining magic numbers.
+
+Reference for layout, hierarchy and motion: ChatGPT iOS. The chat detail surface (light bubble for user messages, bare text for assistant, floating glass composer, two glass clusters in the top bar) is the visual baseline; copy paddings, radii and weights from there before inventing.
+
+## Icons (iOS)
+
+Same hierarchy as macOS:
+
+1. **Project-custom icons first.** Glyphs that have identity in the product (the brand mark, the mic, the wrench, the family of folder/file/branch icons, etc.) are hand-drawn SwiftUI `Path`/`Shape` views. The macOS app already ships the canonical set (`ClawixLogoIcon`, `MicIcon`, `WrenchIcon`, `FileChipIcon`, `FolderOpenIcon`, ...). Where iOS needs the same concept, port the existing Mac struct into `ios/Sources/Clawix/Theme/` (or move it to `packages/` if it stabilises) rather than redrawing.
+2. **Lucide-sourced icons as fallback.** Same rules as the macOS section "Lucide-sourced icons":
+   - The SPM dep is `lcandy2/LucideIcon`, declared in `ios/project.yml` under `packages` and added to the `Clawix` target's `dependencies`. Re-run `xcodegen generate` after editing `project.yml`.
+   - Call sites use `Image(lucide: .name)` (kebab-to-underscore naming: `chevron-down` → `.chevron_down`).
+   - The bridge is `ios/Sources/Clawix/Theme/LucideBridge.swift`, mirroring the macOS file. Dynamic name strings flow through `Image(lucideOrSystem: name)`.
+   - Files that use Lucide need `import LucideIcon` next to `import SwiftUI`.
+3. **SF Symbols stay forbidden** as a generic fallback. The only legitimate `Image(systemName:)` left is for genuinely OS-level chrome (keyboard shortcut indicators, Liquid Glass system buttons that ship a fixed SF Symbol per Apple's HIG). Anything depicting a domain concept goes through Lucide.
+
+This applies on top of the Liquid Glass design language: a `Image(lucide: .name)` placed inside a `glassCircle()` or `glassCapsule()` button is the canonical iOS chrome icon button, not `Image(systemName:)`.
