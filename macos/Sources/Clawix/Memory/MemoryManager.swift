@@ -26,6 +26,7 @@ final class MemoryManager: ObservableObject {
 
     let client: ClawJSMemoryClient
     private var searchTask: Task<Void, Never>?
+    private var activeSearchQuery: String?
     private var refreshGeneration: UUID?
     private var supervisorObserver: AnyCancellable?
 
@@ -59,6 +60,7 @@ final class MemoryManager: ObservableObject {
             self.stats = await statsTask
             self.state = .ready
             self.refreshGeneration = nil
+            await refreshActiveSearchIfNeeded()
         } catch let error as ClawJSMemoryClient.Error {
             self.state = .error(error.localizedDescription)
             self.refreshGeneration = nil
@@ -83,10 +85,12 @@ final class MemoryManager: ObservableObject {
         searchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
+            activeSearchQuery = nil
             isSearching = false
             lastSearch = nil
             return
         }
+        activeSearchQuery = trimmed
         searchTask = Task { [client] in
             try? await Task.sleep(nanoseconds: 300_000_000)
             if Task.isCancelled { return }
@@ -95,12 +99,14 @@ final class MemoryManager: ObservableObject {
                 let response = try await client.search(query: trimmed)
                 if Task.isCancelled { return }
                 await MainActor.run {
+                    guard self.activeSearchQuery == trimmed else { return }
                     self.lastSearch = response
                     self.isSearching = false
                 }
             } catch {
                 if Task.isCancelled { return }
                 await MainActor.run {
+                    guard self.activeSearchQuery == trimmed else { return }
                     self.lastSearch = nil
                     self.isSearching = false
                 }
@@ -111,7 +117,21 @@ final class MemoryManager: ObservableObject {
     func clearSearch() {
         searchTask?.cancel()
         searchTask = nil
+        activeSearchQuery = nil
         lastSearch = nil
+        isSearching = false
+    }
+
+    private func refreshActiveSearchIfNeeded() async {
+        guard let query = activeSearchQuery else { return }
+        searchTask?.cancel()
+        searchTask = nil
+        isSearching = true
+        do {
+            lastSearch = try await client.search(query: query)
+        } catch {
+            lastSearch = nil
+        }
         isSearching = false
     }
 
