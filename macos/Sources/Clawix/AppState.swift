@@ -2787,7 +2787,7 @@ final class AppState: ObservableObject {
         guard !workspace.isEmpty else {
             appendAssistantSystemMessage(
                 to: chatId,
-                text: "No remote workspace set for \(peer.displayName). Open Settings → Machines and add one before sending."
+                text: "No remote workspace set for \(peer.displayName). Open Settings → Hosts and add one before sending."
             )
             return
         }

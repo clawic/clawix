@@ -192,7 +192,7 @@ struct MeshTargetPopup: View {
             Text("No paired Macs yet")
                 .font(BodyFont.system(size: 11.5, weight: .medium))
                 .foregroundColor(Palette.textPrimary)
-            Text("Open Settings → Machines to link another Mac.")
+            Text("Open Settings → Hosts to link another Mac.")
                 .font(BodyFont.system(size: 11))
                 .foregroundColor(Palette.textSecondary)
         }
