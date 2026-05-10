@@ -619,6 +619,9 @@ final class ClawJSServiceManager: ObservableObject {
         env["CLAWJS_WORKSPACE"] = workspaceURL.path
         env["CLAWJS_PORT"] = String(service.port)
         env["CLAWJS_SERVICE"] = service.rawValue
+        env["CLAWJS_SECRETS_PROXY_PATH"] = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("bin/secrets-proxy", isDirectory: false)
+            .path
         env["PORT"] = String(service.port)
         env["HOST"] = "127.0.0.1"
         env["DATABASE_HOST"] = "127.0.0.1"
