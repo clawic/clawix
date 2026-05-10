@@ -21,10 +21,12 @@ final class BackgroundBridgeService: ObservableObject {
     static let shared = BackgroundBridgeService()
 
     @Published private(set) var status: SMAppService.Status = .notRegistered
+    @Published private(set) var daemonReachable = false
     @Published private(set) var lastError: String?
 
     private let plistName = "clawix.bridge.plist"
     private let agent: SMAppService
+    private var recoveryTimer: Timer?
 
     private init() {
         self.agent = SMAppService.agent(plistName: plistName)
@@ -52,6 +54,10 @@ final class BackgroundBridgeService: ObservableObject {
     /// `isActive` (below) combines both signals so the GUI routes
     /// through the daemon either way.
     var isDaemonReachable: Bool {
+        Self.computeDaemonReachable()
+    }
+
+    private static func computeDaemonReachable() -> Bool {
         let url = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".clawix/state/bridge-status.json")
         guard let data = try? Data(contentsOf: url),
@@ -82,7 +88,7 @@ final class BackgroundBridgeService: ObservableObject {
     /// while launchd is starting it, so `recoverRegisteredDaemonIfNeeded`
     /// makes a best effort to load stale registrations before `AppState`
     /// decides whether to spawn an in-process backend.
-    var isActive: Bool { isEnabled || isDaemonReachable }
+    var isActive: Bool { isEnabled || daemonReachable || isDaemonReachable }
 
     private static let isoParser: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -94,6 +100,8 @@ final class BackgroundBridgeService: ObservableObject {
     /// to surface the new state without polling.
     func refresh() {
         status = agent.status
+        daemonReachable = isDaemonReachable
+        updateRecoveryTimer()
     }
 
     func enable() {
@@ -136,6 +144,30 @@ final class BackgroundBridgeService: ObservableObject {
         refresh()
     }
 
+    private func updateRecoveryTimer() {
+        guard isEnabled else {
+            recoveryTimer?.invalidate()
+            recoveryTimer = nil
+            return
+        }
+        guard recoveryTimer == nil else { return }
+        recoveryTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.recoveryTick()
+            }
+        }
+    }
+
+    private func recoveryTick() {
+        refresh()
+        guard isEnabled else { return }
+        if daemonReachable {
+            lastError = nil
+        } else {
+            recoverRegisteredDaemonIfNeeded()
+        }
+    }
+
     /// Snapshot taken before a Sparkle install swap. We unregister the
     /// LaunchAgent (so launchd lets go of file handles into the .app
     /// bundle Sparkle is about to move) and remember whether to
@@ -173,7 +205,7 @@ final class BackgroundBridgeService: ObservableObject {
         switch status {
         case .notRegistered: return "Not running"
         case .enabled:
-            return isDaemonReachable ? "Running in background" : "Starting background bridge"
+            return daemonReachable || isDaemonReachable ? "Running in background" : "Starting background bridge"
         case .requiresApproval:
             return "Approve in System Settings → General → Login Items"
         case .notFound:
