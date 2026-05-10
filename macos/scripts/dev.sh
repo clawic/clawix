@@ -646,6 +646,21 @@ if [[ "${CLAWIX_DEV_SKIP_TASKS:-0}" != "1" && -n "${BUNDLE_ID_TASKS:-}" ]]; then
         echo "WARN: Tasks icon not found at $TASKS_ICON_SOURCE; mini-app will use the system generic icon" >&2
     fi
 
+    # Sparkle.framework is dynamically linked by the shared binary
+    # (rpath @executable_path/../Frameworks, set in Package.swift). The
+    # mini-app inherits that link, so without the framework dyld halts
+    # the process with "Library not loaded". Copy the already-signed
+    # framework from the Clawix.app staging dir; the outer codesign
+    # below seals it without --deep, keeping Sparkle's own identifier
+    # intact (org.sparkle-project.Sparkle).
+    SPARKLE_FW_SOURCE="$BUNDLE/Contents/Frameworks/Sparkle.framework"
+    if [[ -d "$SPARKLE_FW_SOURCE" ]]; then
+        mkdir -p "$TASKS_STAGING/Contents/Frameworks"
+        cp -R "$SPARKLE_FW_SOURCE" "$TASKS_STAGING/Contents/Frameworks/Sparkle.framework"
+    else
+        echo "WARN: Sparkle.framework not found at $SPARKLE_FW_SOURCE; ${TASKS_APP_NAME}.app will fail at launch" >&2
+    fi
+
     cat > "$TASKS_STAGING/Contents/Info.plist" << TASKSPLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
