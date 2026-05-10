@@ -36,7 +36,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .localModels:      return "Local models"
         case .modelProviders:   return "Model Providers"
         case .mcp:              return "MCP servers"
-        case .machines:         return "Machines"
+        case .machines:         return "Hosts"
         case .git:              return "Git"
         case .browserUsage:     return "Browser usage"
         case .usage:            return "Usage"
@@ -256,7 +256,7 @@ struct SettingsContent: View {
                     case .browserUsage:    BrowserUsagePage()
                     case .usage:           UsagePage()
                     case .mcp:             MCPPage()
-                    case .machines:        MachinesPage()
+                    case .machines:        HostsPage()
                     case .secrets:         SecretsSettingsPage()
                     case .clawjs:          ClawJSSettingsPage()
                     case .telegram:        TelegramSettingsPage()

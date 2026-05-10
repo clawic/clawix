@@ -6,6 +6,40 @@ public enum PeerPermissionProfile: String, Codable, Equatable, Sendable {
     case askPerTask
 }
 
+public enum HostKind: String, Codable, Equatable, Sendable, CaseIterable {
+    case mac
+    case ios
+    case ipad
+    case linuxServer
+    case linuxDesktop
+    case windowsPC
+    case sbc
+
+    public var displayLabel: String {
+        switch self {
+        case .mac:          return "Mac"
+        case .ios:          return "iPhone"
+        case .ipad:         return "iPad"
+        case .linuxServer:  return "Linux server"
+        case .linuxDesktop: return "Linux"
+        case .windowsPC:    return "Windows"
+        case .sbc:          return "Board"
+        }
+    }
+
+    public var pluralLabel: String {
+        switch self {
+        case .mac:          return "Macs"
+        case .ios:          return "iPhones"
+        case .ipad:         return "iPads"
+        case .linuxServer:  return "Servers"
+        case .linuxDesktop: return "Linux"
+        case .windowsPC:    return "PCs"
+        case .sbc:          return "Boards"
+        }
+    }
+}
+
 public struct RemoteEndpoint: Codable, Equatable, Sendable {
     public var kind: String
     public var host: String
@@ -53,6 +87,7 @@ public struct PeerRecord: Codable, Equatable, Sendable {
     public var endpoints: [RemoteEndpoint]
     public var permissionProfile: PeerPermissionProfile
     public var capabilities: [String]
+    public var hostKind: HostKind?
     public var lastSeenAt: Date?
     public var revokedAt: Date?
 
@@ -64,6 +99,7 @@ public struct PeerRecord: Codable, Equatable, Sendable {
         endpoints: [RemoteEndpoint],
         permissionProfile: PeerPermissionProfile = .scoped,
         capabilities: [String],
+        hostKind: HostKind? = nil,
         lastSeenAt: Date? = nil,
         revokedAt: Date? = nil
     ) {
@@ -74,8 +110,20 @@ public struct PeerRecord: Codable, Equatable, Sendable {
         self.endpoints = endpoints
         self.permissionProfile = permissionProfile
         self.capabilities = capabilities
+        self.hostKind = hostKind
         self.lastSeenAt = lastSeenAt
         self.revokedAt = revokedAt
+    }
+
+    public var inferredHostKind: HostKind {
+        if let hostKind { return hostKind }
+        let tokens = capabilities.map { $0.lowercased() }
+        if tokens.contains(where: { $0.contains("ios") || $0.contains("iphone") }) { return .ios }
+        if tokens.contains(where: { $0.contains("ipad") }) { return .ipad }
+        if tokens.contains(where: { $0.contains("linux") && $0.contains("server") }) { return .linuxServer }
+        if tokens.contains(where: { $0.contains("windows") }) { return .windowsPC }
+        if tokens.contains(where: { $0.contains("sbc") || $0.contains("raspberry") }) { return .sbc }
+        return .mac
     }
 }
 
