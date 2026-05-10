@@ -12,6 +12,7 @@ struct AppsHomeView: View {
     @State private var selectedProjectId: UUID? = nil
     @State private var selectedTag: String = ""
     @State private var sortMode: AppsSortMode = .recent
+    @State private var pendingDelete: AppRecord?
 
     enum AppsSortMode: String, CaseIterable, Identifiable {
         case recent
@@ -80,6 +81,8 @@ struct AppsHomeView: View {
                         ForEach(filteredApps) { record in
                             AppCard(record: record) {
                                 appState.currentRoute = .app(record.id)
+                            } onDelete: {
+                                pendingDelete = record
                             }
                         }
                     }
@@ -89,6 +92,16 @@ struct AppsHomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Palette.background)
+        .alert(item: $pendingDelete) { record in
+            Alert(
+                title: Text("Delete \"\(record.name)\"?"),
+                message: Text("The app folder will be removed from disk. This cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    try? appsStore.delete(record)
+                },
+                secondaryButton: .cancel()
+            )
+        }
     }
 
     private var header: some View {
@@ -229,6 +242,7 @@ private struct FilterChipLabel: View {
 private struct AppCard: View {
     let record: AppRecord
     let onOpen: () -> Void
+    let onDelete: () -> Void
 
     @State private var hovered: Bool = false
     @ObservedObject private var appsStore: AppsStore = .shared
@@ -291,9 +305,7 @@ private struct AppCard: View {
                 appsStore.togglePinned(record)
             }
             Divider()
-            Button("Delete app", role: .destructive) {
-                try? appsStore.delete(record)
-            }
+            Button("Delete app", role: .destructive, action: onDelete)
         }
     }
 

@@ -13,6 +13,7 @@ struct AppsSidebarSection: View {
 
     @AppStorage("SidebarAppsExpanded", store: SidebarPrefs.store)
     private var expanded: Bool = true
+    @State private var pendingDelete: AppRecord?
 
     /// Cap visible rows in the sidebar. The header's "All apps" entry
     /// surfaces the full catalog when the user has more than this.
@@ -40,7 +41,7 @@ struct AppsSidebarSection: View {
                                 isSelected: isSelected(record),
                                 onOpen: { appState.currentRoute = .app(record.id) },
                                 onTogglePin: { appsStore.togglePinned(record) },
-                                onDelete: { try? appsStore.delete(record) }
+                                onDelete: { pendingDelete = record }
                             )
                         }
                         if hasOverflow {
@@ -53,6 +54,16 @@ struct AppsSidebarSection: View {
                 }
                 .padding(.leading, 8)
             }
+        }
+        .alert(item: $pendingDelete) { record in
+            Alert(
+                title: Text("Delete \"\(record.name)\"?"),
+                message: Text("The app folder will be removed from disk. This cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    try? appsStore.delete(record)
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
 
@@ -217,4 +228,3 @@ private struct AppsSidebarRow: View {
         return Color(hue: hue, saturation: 0.55, brightness: 0.55)
     }
 }
-
