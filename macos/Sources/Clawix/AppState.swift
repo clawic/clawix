@@ -5,6 +5,61 @@ import ClawixCore
 import ClawixEngine
 
 private let daemonBridgePort: UInt16 = 7778
+private var rolloutPathByThread: [String: URL] = [:]
+private var rolloutPathScanDone = false
+private let rolloutPathLock = NSLock()
+
+private func rolloutChatMessages(from result: RolloutReader.ReadResult) -> [ChatMessage] {
+    result.entries.map { e in
+        ChatMessage(
+            role: e.role == .user ? .user : .assistant,
+            content: e.text,
+            reasoningText: "",
+            streamingFinished: true,
+            timestamp: e.timestamp,
+            workSummary: e.workSummary,
+            timeline: e.timeline,
+            attachments: e.attachments
+        )
+    }
+}
+
+/// One-shot index of `~/.codex/sessions/**/rollout-*.jsonl` keyed
+/// by the trailing UUID in the filename, which matches the runtime's
+/// `clawixThreadId`. Built lazily the first time a chat asks for a
+/// rollout we can't get from `applyThreads`.
+private func rolloutPath(forThreadId tid: String) -> URL? {
+    rolloutPathLock.lock()
+    defer { rolloutPathLock.unlock() }
+    if !rolloutPathScanDone {
+        rolloutPathScanDone = true
+        let root = SessionsIndex.defaultRoot
+        let fm = FileManager.default
+        guard let yearDirs = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else {
+            return nil
+        }
+        for year in yearDirs {
+            guard let months = try? fm.contentsOfDirectory(at: year, includingPropertiesForKeys: nil) else { continue }
+            for month in months {
+                guard let days = try? fm.contentsOfDirectory(at: month, includingPropertiesForKeys: nil) else { continue }
+                for day in days {
+                    guard let files = try? fm.contentsOfDirectory(at: day, includingPropertiesForKeys: nil) else { continue }
+                    for file in files {
+                        let name = file.lastPathComponent
+                        guard name.hasPrefix("rollout-"),
+                              file.pathExtension == "jsonl" else { continue }
+                        // `rollout-YYYY-MM-DDThh-mm-ss-<UUID>.jsonl`
+                        let stem = file.deletingPathExtension().lastPathComponent
+                        guard stem.count >= 36 else { continue }
+                        let uuid = String(stem.suffix(36)).lowercased()
+                        rolloutPathByThread[uuid] = file
+                    }
+                }
+            }
+        }
+    }
+    return rolloutPathByThread[tid.lowercased()]
+}
 
 // MARK: - Route
 
@@ -3223,9 +3278,26 @@ final class AppState: ObservableObject {
         // reader returns).
         var resolvedPath = chat.rolloutPath
         if resolvedPath == nil, let tid = chat.clawixThreadId {
-            resolvedPath = AppState.rolloutPath(forThreadId: tid)
-            if let resolvedPath {
-                mutateChat(id: chatId) { c in c.rolloutPath = resolvedPath }
+            if blocking {
+                resolvedPath = rolloutPath(forThreadId: tid)
+                if let resolvedPath {
+                    mutateChat(id: chatId) { c in c.rolloutPath = resolvedPath }
+                }
+            } else {
+                Task.detached(priority: .userInitiated) { [weak self] in
+                    guard let resolvedPath = rolloutPath(forThreadId: tid) else { return }
+                    let result = RolloutReader.readTailWithStatus(path: resolvedPath)
+                    let messages = rolloutChatMessages(from: result)
+                    await MainActor.run { [weak self] in
+                        guard let self else { return }
+                        self.mutateChat(id: chatId) { c in c.rolloutPath = resolvedPath }
+                        self.applyRolloutMessages(
+                            messages,
+                            lastTurnInterrupted: result.lastTurnInterrupted,
+                            chatId: chatId
+                        )
+                    }
+                }
             }
         }
         if let path = resolvedPath {
@@ -3245,8 +3317,13 @@ final class AppState: ObservableObject {
             } else {
                 Task.detached(priority: .userInitiated) { [weak self] in
                     let result = RolloutReader.readTailWithStatus(path: path)
+                    let messages = rolloutChatMessages(from: result)
                     await MainActor.run { [weak self] in
-                        self?.applyRolloutResult(result, chatId: chatId)
+                        self?.applyRolloutMessages(
+                            messages,
+                            lastTurnInterrupted: result.lastTurnInterrupted,
+                            chatId: chatId
+                        )
                     }
                 }
             }
@@ -3281,67 +3358,25 @@ final class AppState: ObservableObject {
     }
 
     private func applyRolloutResult(_ result: RolloutReader.ReadResult, chatId: UUID) {
-        let messages = result.entries.map { e in
-            ChatMessage(
-                role: e.role == .user ? .user : .assistant,
-                content: e.text,
-                reasoningText: "",
-                streamingFinished: true,
-                timestamp: e.timestamp,
-                workSummary: e.workSummary,
-                timeline: e.timeline,
-                attachments: e.attachments
-            )
-        }
+        applyRolloutMessages(
+            rolloutChatMessages(from: result),
+            lastTurnInterrupted: result.lastTurnInterrupted,
+            chatId: chatId
+        )
+    }
+
+    private func applyRolloutMessages(
+        _ messages: [ChatMessage],
+        lastTurnInterrupted: Bool,
+        chatId: UUID
+    ) {
         mutateChat(id: chatId) { c in
             c.messages = messages
-            c.lastTurnInterrupted = result.lastTurnInterrupted
+            c.lastTurnInterrupted = lastTurnInterrupted
             c.historyHydrated = true
         }
     }
 
-    /// One-shot index of `~/.codex/sessions/**/rollout-*.jsonl` keyed
-    /// by the trailing UUID in the filename, which matches the
-    /// runtime's `clawixThreadId`. Built lazily the first time a chat
-    /// asks for a rollout we can't get from `applyThreads` (typical
-    /// path: iPhone opens a chat from the sidebar snapshot before the
-    /// runtime listing has populated `rolloutPath`).
-    private static var rolloutPathByThread: [String: URL] = [:]
-    private static var rolloutPathScanDone = false
-
-    private static func rolloutPath(forThreadId tid: String) -> URL? {
-        if !rolloutPathScanDone {
-            rolloutPathScanDone = true
-            let root = SessionsIndex.defaultRoot
-            let fm = FileManager.default
-            guard let yearDirs = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else {
-                return nil
-            }
-            for year in yearDirs {
-                guard let months = try? fm.contentsOfDirectory(at: year, includingPropertiesForKeys: nil) else { continue }
-                for month in months {
-                    guard let days = try? fm.contentsOfDirectory(at: month, includingPropertiesForKeys: nil) else { continue }
-                    for day in days {
-                        guard let files = try? fm.contentsOfDirectory(at: day, includingPropertiesForKeys: nil) else { continue }
-                        for file in files {
-                            let name = file.lastPathComponent
-                            guard name.hasPrefix("rollout-"),
-                                  file.pathExtension == "jsonl" else { continue }
-                            // `rollout-YYYY-MM-DDThh-mm-ss-<UUID>.jsonl`
-                            // The trailing 36 chars before `.jsonl` are
-                            // the canonical hyphenated UUID matching the
-                            // runtime's session id.
-                            let stem = file.deletingPathExtension().lastPathComponent
-                            guard stem.count >= 36 else { continue }
-                            let uuid = String(stem.suffix(36)).lowercased()
-                            rolloutPathByThread[uuid] = file
-                        }
-                    }
-                }
-            }
-        }
-        return rolloutPathByThread[tid.lowercased()]
-    }
 
     /// Bridge entry point. Hydrates a chat's history from its rollout
     /// file the first time the iPhone opens it, mirroring what the Mac
