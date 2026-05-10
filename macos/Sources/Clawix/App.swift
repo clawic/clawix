@@ -463,19 +463,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ResourceSampler.start()
         MetricKitObserver.shared.install()
         HangDetector.start()
+        // The Tasks mini-app needs ClawJSServiceManager.shared.start()
+        // because DatabaseManager observes its snapshots and only
+        // bootstraps when the supervisor flips .database to .ready /
+        // .readyFromDaemon. The supervisor is idempotent: if Clawix.app
+        // already spawned the daemons, the second instance discovers
+        // them and publishes .readyFromDaemon without spawning a
+        // duplicate. If Clawix.app is not running at all, the mini-app
+        // will report the database as unavailable, which is the
+        // expected fallback.
+        Task { @MainActor in
+            await ClawJSServiceManager.shared.start()
+        }
+        // Tasks mini-app stops here. The hooks below either touch
+        // shared LaunchAgent state or register a global hotkey, both of
+        // which would clash with the full Clawix.app instance running
+        // in parallel.
+        if ClawixApp.isTasksRole {
+            return
+        }
         // If the previous launch was interrupted by a Sparkle update
         // mid-install, the LaunchAgent was unregistered to release
         // file handles. Restore it now so the user does not have to
         // re-enable "Run bridge in background" after every update.
         BackgroundBridgeService.shared.restoreAfterUpdateIfNeeded()
-        // Boot the ClawJS sidecar supervisor (Phase 2). Today every
-        // service publishes `.blocked` because @clawjs/cli does not
-        // expose a service launcher yet; the supervisor is in place so
-        // the moment ClawJS publishes the surface only one method
-        // (`commandLine(for:)`) needs to change.
-        Task { @MainActor in
-            await ClawJSServiceManager.shared.start()
-        }
         // Suppress the standalone `clawix-menubar` icon while the GUI
         // owns its own MenuBarExtra: two near-identical icons next to
         // each other confuse users. The CLI agent is restored on
@@ -497,6 +508,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         NSApp.windows.forEach(saveFrame)
+        // Tasks mini-app shutdown is just window-frame persistence; the
+        // daemons it talks to belong to the full Clawix.app process.
+        if ClawixApp.isTasksRole {
+            return
+        }
         // Send SIGHUP to every live integrated-terminal shell so the
         // children get a chance to flush before the process exits.
         // macOS reaps any stragglers via SIGKILL once the parent
