@@ -923,6 +923,7 @@ struct SidebarView: View {
 
     var body: some View {
         RenderProbe.tick("SidebarView")
+        let sidebarSnapshot = makeSnapshot()
         return ZStack(alignment: .bottomLeading) {
             VStack(spacing: 0) {
                 // Top nav: new chat, search.
@@ -966,7 +967,7 @@ struct SidebarView: View {
                 // the clipView, so the gutter only needs the small breathing
                 // strip between content and that column.
                 ThinScrollView(trailingGutter: 4) {
-                    sidebarScrollContent(snapshot: makeSnapshot())
+                    sidebarScrollContent(snapshot: sidebarSnapshot)
                         .background(SidebarScrollStateInstaller().allowsHitTesting(false))
                 }
 
@@ -1005,8 +1006,7 @@ struct SidebarView: View {
                 if organizeMenuOpen, let anchor {
                     let buttonFrame = proxy[anchor]
                     let popupWidth: CGFloat = OrganizeMenuPopup.mainColumnWidth
-                    let chronoSnapshotForFilter = makeSnapshot()
-                    let chronoSources = chronoFilterSources(from: chronoSnapshotForFilter.chrono)
+                    let chronoSources = chronoFilterSources(from: sidebarSnapshot.chrono)
                     OrganizeMenuPopup(
                         isPresented: $organizeMenuOpen,
                         viewModeRaw: $viewModeRaw,
