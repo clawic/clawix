@@ -162,8 +162,7 @@ struct ClawixApp: App {
                 }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
                 Button("Quick Upload to Drive…") {
-                    appState.currentRoute = .driveAdmin
-                    NotificationCenter.default.post(name: .driveQuickUploadRequested, object: nil)
+                    appState.requestDriveQuickUpload()
                 }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
                 Button("Open Drive Photos") {

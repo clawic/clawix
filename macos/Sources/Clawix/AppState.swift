@@ -813,10 +813,21 @@ final class AppState: ObservableObject {
             }
         }
     }
+    @Published var driveQuickUploadRequestID: UUID? = nil
 
     func navigate(to route: SidebarRoute) {
         guard currentRoute != route else { return }
         currentRoute = route
+    }
+
+    func requestDriveQuickUpload() {
+        currentRoute = .driveAdmin
+        driveQuickUploadRequestID = UUID()
+    }
+
+    func consumeDriveQuickUploadRequest(_ id: UUID) {
+        guard driveQuickUploadRequestID == id else { return }
+        driveQuickUploadRequestID = nil
     }
 
     @Published var searchQuery: String = ""

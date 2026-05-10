@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 /// the folder is mostly images, list (Finder-style) otherwise. Decision
 /// is per-folder and remembered in `@SceneStorage`.
 struct DriveScreen: View {
+    @EnvironmentObject private var appState: AppState
 
     enum Mode: Equatable {
         case admin
@@ -41,8 +42,15 @@ struct DriveScreen: View {
             applyMode()
             manager.boot()
             DriveTools.bind(manager)
+            presentPendingQuickUploadIfReady()
         }
         .onChange(of: mode) { _, _ in applyMode() }
+        .onChange(of: appState.driveQuickUploadRequestID) { _, _ in
+            presentPendingQuickUploadIfReady()
+        }
+        .onChange(of: manager.state) { _, _ in
+            presentPendingQuickUploadIfReady()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .driveQuickUploadRequested)) { _ in
             if canUpload {
                 isUploadDialogPresented = true
@@ -240,6 +248,12 @@ struct DriveScreen: View {
     private var canUpload: Bool {
         if case .ready = manager.state { return true }
         return false
+    }
+
+    private func presentPendingQuickUploadIfReady() {
+        guard let requestID = appState.driveQuickUploadRequestID, canUpload else { return }
+        isUploadDialogPresented = true
+        appState.consumeDriveQuickUploadRequest(requestID)
     }
 
     private func applyMode() {
