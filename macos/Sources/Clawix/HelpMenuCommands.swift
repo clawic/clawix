@@ -17,12 +17,6 @@ struct HelpMenuCommands: View {
 
         Divider()
 
-        Button("Start Performance Trace") {
-            HelpMenuActions.startPerformanceTrace()
-        }
-
-        Divider()
-
         Button("Keyboard Shortcuts") {
             appState.isCommandPaletteOpen = true
         }
@@ -38,9 +32,5 @@ enum HelpMenuActions {
 
     static func sendFeedbackToApple() {
         open("https://www.apple.com/feedback/macos.html")
-    }
-
-    static func startPerformanceTrace() {
-        NSSound.beep()
     }
 }

@@ -29,9 +29,6 @@ private enum PaletteCatalog {
             PaletteItem(id: "settings", icon: "gearshape",
                         title: "Settings", shortcut: "⌘,",
                         action: { $0.currentRoute = .settings }),
-            PaletteItem(id: "find-files", icon: "magnifyingglass",
-                        title: "Find files", shortcut: "⌘P",
-                        action: { _ in NSSound.beep() }),
         ]),
         PaletteSection(id: "chat", title: "Chat", items: [
             PaletteItem(id: "find-chats", icon: "magnifyingglass",
@@ -40,34 +37,11 @@ private enum PaletteCatalog {
             PaletteItem(id: "quick-chat", icon: "square.and.pencil",
                         title: "New quick chat", shortcut: "⌥⌘N",
                         action: { FileMenuActions.quickChat(appState: $0) }),
-            PaletteItem(id: "mini-window", icon: "macwindow.on.rectangle",
-                        title: "Open in mini window", shortcut: nil,
-                        action: { _ in NSSound.beep() }),
-        ]),
-        PaletteSection(id: "navegacion", title: "Navigation", items: [
-            PaletteItem(id: "prev-chat", icon: "arrow.up",
-                        title: "Previous chat", shortcut: "⇧⌘[",
-                        action: { _ in NSSound.beep() }),
-            PaletteItem(id: "next-chat", icon: "arrow.down",
-                        title: "Next chat", shortcut: "⇧⌘]",
-                        action: { _ in NSSound.beep() }),
-            PaletteItem(id: "find", icon: "magnifyingglass",
-                        title: "Find in chat", shortcut: "⌘F",
-                        action: { $0.openFindBar() }),
-            PaletteItem(id: "back", icon: "arrow.left",
-                        title: "Back", shortcut: "⌘[",
-                        action: { _ in NSSound.beep() }),
-            PaletteItem(id: "forward", icon: "arrow.right",
-                        title: "Forward", shortcut: "⌘]",
-                        action: { _ in NSSound.beep() }),
         ]),
         PaletteSection(id: "paneles", title: "Panels", items: [
             PaletteItem(id: "toggle-sidebar", icon: "sidebar.left",
                         title: "Toggle sidebar", shortcut: "⌘B",
                         action: { $0.isLeftSidebarOpen.toggle() }),
-            PaletteItem(id: "toggle-terminal", icon: "apple.terminal",
-                        title: "Toggle terminal", shortcut: "⌘J",
-                        action: { _ in NSSound.beep() }),
             PaletteItem(id: "browser-tab", icon: "globe",
                         title: "Open browser tab", shortcut: "⌘T",
                         action: { $0.openBrowser() }),
@@ -80,30 +54,14 @@ private enum PaletteCatalog {
                                 state.openBrowser()
                             }
                         }),
-            PaletteItem(id: "diff-panel", icon: "plusminus",
-                        title: "Toggle diff panel", shortcut: "⌥⌘B",
-                        action: { _ in NSSound.beep() }),
-        ]),
-        PaletteSection(id: "habilidades", title: "Skills", items: [
-            PaletteItem(id: "reload-skills", icon: "arrow.triangle.2.circlepath",
-                        title: "Force reload skills", shortcut: nil,
-                        action: { _ in NSSound.beep() }),
-            /*
-            PaletteItem(id: "go-skills", icon: "cube",
-                        title: "Go to skills", shortcut: nil,
-                        action: { $0.currentRoute = .plugins }),
-            */
         ]),
         PaletteSection(id: "configurar", title: "Configure", items: [
-            PaletteItem(id: "light-theme", icon: "sun.max",
-                        title: "Switch to light theme", shortcut: nil,
-                        action: { _ in NSSound.beep() }),
-            PaletteItem(id: "mcp", icon: "paperclip",
-                        title: "MCP", shortcut: nil,
-                        action: { _ in NSSound.beep() }),
             PaletteItem(id: "personality", icon: "person.circle",
                         title: "Personality", shortcut: nil,
-                        action: { _ in NSSound.beep() }),
+                        action: {
+                            $0.settingsCategory = .personalization
+                            $0.currentRoute = .settings
+                        }),
         ]),
         PaletteSection(id: "aplicacion", title: "App", items: [
             // Automations row kept commented out for now.
