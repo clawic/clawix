@@ -3,15 +3,23 @@ import SwiftUI
 struct ViewMenuCommands: View {
     @ObservedObject var appState: AppState
 
+    private var isChatRoute: Bool {
+        if case .chat = appState.currentRoute { return true }
+        return false
+    }
+
     var body: some View {
         Button("Toggle Sidebar") {
             appState.isLeftSidebarOpen.toggle()
         }
         .keyboardShortcut("b", modifiers: .command)
-        Button("Toggle Terminal") {}
+        Button("Toggle Terminal") {
+            let key = "TerminalPanelOpen"
+            let current = SidebarPrefs.store.bool(forKey: key)
+            SidebarPrefs.store.set(!current, forKey: key)
+        }
             .keyboardShortcut("j", modifiers: .command)
-        Button("Toggle File Tree") {}
-            .keyboardShortcut("e", modifiers: [.shift, .command])
+            .disabled(!isChatRoute)
         Button("New Browser Tab") {
             appState.requestBrowserCommand(.newTab)
         }
@@ -31,8 +39,6 @@ struct ViewMenuCommands: View {
         }
         .keyboardShortcut("w", modifiers: .command)
         .disabled(!appState.hasActiveWebTab)
-        Button("Toggle Diff Panel") {}
-            .keyboardShortcut("b", modifiers: [.option, .command])
         Button("Find in Chat") {
             appState.openFindBar()
         }
@@ -42,17 +48,6 @@ struct ViewMenuCommands: View {
             appState.currentRoute = .search
         }
         .keyboardShortcut("g", modifiers: .command)
-
-        Divider()
-
-        Button("Previous Chat") {}
-            .keyboardShortcut("ñ", modifiers: [.shift, .command])
-        Button("Next Chat") {}
-            .keyboardShortcut("'", modifiers: [.shift, .command])
-        Button("Back") {}
-            .keyboardShortcut("ñ", modifiers: .command)
-        Button("Forward") {}
-            .keyboardShortcut("'", modifiers: .command)
 
         Divider()
 
