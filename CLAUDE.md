@@ -2,6 +2,10 @@
 
 Monorepo for the Clawix project. Native clients for the [`codex`](https://github.com/openai/codex) CLI. The repo hosts platform clients at the top level, with shared Swift packages under `packages/`.
 
+## Constitution (read this first)
+
+This project is governed by `CONSTITUTION.md` at the repository root. It defines mission, principles, red lines, and canonical vocabulary for Clawix and the sister ClawJS framework. When this file and the constitution disagree, the constitution wins. Any contributor or agent making non-trivial decisions about architecture, data, agents, UX, or integrations must have read it and apply it. The constitution file is identical to the one in the ClawJS repository; keep them in sync when updating.
+
 ## Repository layout
 
 ```
