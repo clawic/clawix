@@ -1047,25 +1047,40 @@ final class DaemonEngineHost: EngineHost {
         refreshPinnedThreadIds()
         installPinnedStateWatcher()
         do {
-            let response = try await backend.send(
-                method: "thread/list",
-                params: ThreadListParams(
-                    archived: false,
-                    cursor: nil,
-                    cwd: nil,
-                    limit: 160,
-                    modelProviders: nil,
-                    searchTerm: nil,
-                    sortDirection: "desc",
-                    sortKey: "updated_at",
-                    sourceKinds: nil,
-                    useStateDbOnly: true
-                ),
-                expecting: ThreadListResponse.self,
-                timeoutSeconds: threadListTimeoutSeconds
-            )
-            let snapshots = response.data.map(snapshot(from:))
-            BridgedLog.write("thread-list ok count=\(snapshots.count) pinned=\(pinnedThreadIds.count)")
+            let pageSize = 160
+            let maxPages = 10
+            var collected: [AgentThreadSummary] = []
+            var seenIds = Set<String>()
+            var cursor: String? = nil
+            var page = 0
+
+            repeat {
+                let response = try await backend.send(
+                    method: "thread/list",
+                    params: ThreadListParams(
+                        archived: false,
+                        cursor: cursor,
+                        cwd: nil,
+                        limit: pageSize,
+                        modelProviders: nil,
+                        searchTerm: nil,
+                        sortDirection: "desc",
+                        sortKey: "updated_at",
+                        sourceKinds: nil,
+                        useStateDbOnly: true
+                    ),
+                    expecting: ThreadListResponse.self,
+                    timeoutSeconds: threadListTimeoutSeconds
+                )
+                for thread in response.data where seenIds.insert(thread.id).inserted {
+                    collected.append(thread)
+                }
+                cursor = response.nextCursor
+                page += 1
+            } while cursor != nil && page < maxPages
+
+            let snapshots = collected.map(snapshot(from:))
+            BridgedLog.write("thread-list ok count=\(snapshots.count) pages=\(page) pinned=\(pinnedThreadIds.count)")
             chatsSubject.send(snapshots)
             lastChatsPublishedAt = Date()
         } catch {
@@ -1861,6 +1876,25 @@ struct ThreadListParams: Encodable {
 struct ThreadListResponse: Decodable {
     let data: [AgentThreadSummary]
     let nextCursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case data
+        case nextCursor
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        data = (try? c.decode([LossyAgentThreadSummary].self, forKey: .data).compactMap(\.value)) ?? []
+        nextCursor = try c.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
+}
+
+private struct LossyAgentThreadSummary: Decodable {
+    let value: AgentThreadSummary?
+
+    init(from decoder: Decoder) throws {
+        value = try? AgentThreadSummary(from: decoder)
+    }
 }
 
 struct AgentThreadSummary: Decodable {
@@ -1872,6 +1906,46 @@ struct AgentThreadSummary: Decodable {
     let createdAt: Int64?
     let updatedAt: Int64
     let archived: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case cwd
+        case name
+        case preview
+        case path
+        case createdAt
+        case updatedAt
+        case archived
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
+        name = try c.decodeIfPresent(String.self, forKey: .name)
+        preview = (try? c.decode(String.self, forKey: .preview)) ?? ""
+        path = try c.decodeIfPresent(String.self, forKey: .path)
+        createdAt = Self.decodeInt64IfPresent(c, forKey: .createdAt)
+        updatedAt = Self.decodeInt64IfPresent(c, forKey: .updatedAt) ?? createdAt ?? 0
+        archived = try c.decodeIfPresent(Bool.self, forKey: .archived)
+    }
+
+    private static func decodeInt64IfPresent(
+        _ c: KeyedDecodingContainer<CodingKeys>,
+        forKey key: CodingKeys
+    ) -> Int64? {
+        if let value = try? c.decodeIfPresent(Int64.self, forKey: key) {
+            return value
+        }
+        if let value = try? c.decodeIfPresent(Double.self, forKey: key) {
+            return Int64(value)
+        }
+        if let value = try? c.decodeIfPresent(String.self, forKey: key) {
+            if let int = Int64(value) { return int }
+            if let double = Double(value) { return Int64(double) }
+        }
+        return nil
+    }
 
     var updatedDate: Date {
         Date(timeIntervalSince1970: TimeInterval(updatedAt))

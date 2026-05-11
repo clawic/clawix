@@ -366,6 +366,27 @@ struct ThreadListResponse: Decodable {
     let data: [AgentThreadSummary]
     let nextCursor: String?
     let backwardsCursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case data
+        case nextCursor
+        case backwardsCursor
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        data = (try? c.decode([LossyAgentThreadSummary].self, forKey: .data).compactMap(\.value)) ?? []
+        nextCursor = try c.decodeIfPresent(String.self, forKey: .nextCursor)
+        backwardsCursor = try c.decodeIfPresent(String.self, forKey: .backwardsCursor)
+    }
+}
+
+private struct LossyAgentThreadSummary: Decodable {
+    let value: AgentThreadSummary?
+
+    init(from decoder: Decoder) throws {
+        value = try? AgentThreadSummary(from: decoder)
+    }
 }
 
 struct ThreadSetNameParams: Encodable {

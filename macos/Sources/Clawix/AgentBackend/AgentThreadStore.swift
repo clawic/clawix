@@ -41,9 +41,26 @@ struct AgentThreadSummary: Codable, Identifiable, Hashable {
         self.name = try c.decodeIfPresent(String.self, forKey: .name)
         self.preview = try c.decodeIfPresent(String.self, forKey: .preview) ?? ""
         self.path = try c.decodeIfPresent(String.self, forKey: .path)
-        self.createdAt = try c.decodeIfPresent(Int64.self, forKey: .createdAt) ?? 0
-        self.updatedAt = try c.decodeIfPresent(Int64.self, forKey: .updatedAt) ?? self.createdAt
+        self.createdAt = Self.decodeInt64IfPresent(c, forKey: .createdAt) ?? 0
+        self.updatedAt = Self.decodeInt64IfPresent(c, forKey: .updatedAt) ?? self.createdAt
         self.archived = try c.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+    }
+
+    private static func decodeInt64IfPresent(
+        _ c: KeyedDecodingContainer<CodingKeys>,
+        forKey key: CodingKeys
+    ) -> Int64? {
+        if let value = try? c.decodeIfPresent(Int64.self, forKey: key) {
+            return value
+        }
+        if let value = try? c.decodeIfPresent(Double.self, forKey: key) {
+            return Int64(value)
+        }
+        if let value = try? c.decodeIfPresent(String.self, forKey: key) {
+            if let int = Int64(value) { return int }
+            if let double = Double(value) { return Int64(double) }
+        }
+        return nil
     }
 
     var createdDate: Date {
