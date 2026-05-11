@@ -227,6 +227,7 @@ struct ClawixApp: App {
 }
 
 struct ClawixTasksApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
