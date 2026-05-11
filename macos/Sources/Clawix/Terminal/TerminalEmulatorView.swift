@@ -15,6 +15,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
         var sessionId: UUID?
         var onReady: (() -> Void)?
         var shouldFocus = false
+        private var lastUsableBounds: CGRect = .zero
         var emulator: LocalProcessTerminalView? {
             didSet {
                 oldValue?.removeFromSuperview()
@@ -27,7 +28,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
         override func layout() {
             super.layout()
             attachEmulatorIfNeeded()
-            emulator?.frame = bounds
+            syncEmulatorFrameIfUsable()
             startIfReady()
             focusIfNeeded()
         }
@@ -56,11 +57,23 @@ struct TerminalEmulatorView: NSViewRepresentable {
                 emulator.removeFromSuperview()
                 addSubview(emulator)
             }
-            emulator.frame = bounds
             emulator.translatesAutoresizingMaskIntoConstraints = true
-            emulator.autoresizingMask = [.width, .height]
+            emulator.autoresizingMask = []
+            syncEmulatorFrameIfUsable()
             emulator.needsDisplay = true
             startIfReady()
+        }
+
+        private func syncEmulatorFrameIfUsable() {
+            guard let emulator else { return }
+            guard bounds.width > 20, bounds.height > 20 else {
+                if !lastUsableBounds.isEmpty {
+                    emulator.frame = lastUsableBounds
+                }
+                return
+            }
+            lastUsableBounds = bounds
+            emulator.frame = bounds
         }
 
         func focusIfNeeded() {
@@ -85,7 +98,6 @@ struct TerminalEmulatorView: NSViewRepresentable {
             nsView.emulator = session.terminalView
         }
         nsView.attachEmulatorIfNeeded()
-        nsView.emulator?.frame = nsView.bounds
         if nsView.bounds.width > 20, nsView.bounds.height > 20 {
             session.startIfNeeded()
         }

@@ -719,24 +719,28 @@ private struct ContentBodyWithTerminal<Content: View>: View {
         VStack(spacing: 0) {
             content()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            if let chatId, panelOpen {
+            if let chatId {
                 TerminalPanel(chatId: chatId)
-                    .frame(height: clampedPanelHeight)
+                    .frame(height: panelOpen ? clampedPanelHeight : 0)
+                    .opacity(panelOpen ? 1 : 0)
+                    .allowsHitTesting(panelOpen)
+                    .clipped()
                     .overlay(alignment: .top) {
-                        TerminalResizeHandle(
-                            heightRaw: $panelHeightRaw,
-                            hovered: $resizeHovered,
-                            maxHeightOverride: maxPanelHeight,
-                            onClose: {
-                                withAnimation(.easeInOut(duration: 0.18)) {
-                                    panelOpenRaw = false
+                        if panelOpen {
+                            TerminalResizeHandle(
+                                heightRaw: $panelHeightRaw,
+                                hovered: $resizeHovered,
+                                maxHeightOverride: maxPanelHeight,
+                                onClose: {
+                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                        panelOpenRaw = false
+                                    }
                                 }
-                            }
-                        )
-                        .frame(height: 10)
-                        .offset(y: -5)
+                            )
+                            .frame(height: 10)
+                            .offset(y: -5)
+                        }
                     }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeInOut(duration: 0.18), value: panelOpenRaw)
