@@ -121,9 +121,12 @@ struct ContentView: View {
         case .home, .search, .plugins, .project, .chat:
             return true
         case .automations, .settings, .secretsHome, .databaseHome, .databaseCollection, .memoryHome,
+             .indexHome,
              .calendarHome, .contactsHome,
              .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder,
-             .app, .appsHome, .skills, .skillDetail:
+             .app, .appsHome, .skills, .skillDetail,
+             .designStylesHome, .designStyleDetail, .designTemplatesHome,
+             .designTemplateDetail, .designReferencesHome:
             return false
         }
     }
@@ -152,6 +155,11 @@ struct ContentView: View {
         case .appsHome: return "apps-home"
         case .skills: return "skills"
         case .skillDetail(let slug): return "skill-detail-\(slug)"
+        case .designStylesHome: return "design-styles"
+        case .designStyleDetail(let id): return "design-style-\(id)"
+        case .designTemplatesHome: return "design-templates"
+        case .designTemplateDetail(let id): return "design-template-\(id)"
+        case .designReferencesHome: return "design-references"
         }
     }
 
@@ -248,6 +256,11 @@ struct ContentView: View {
                             case .contactsHome:  ContactsScreen()
                             case .skills:        SkillsView()
                             case .skillDetail(let slug): SkillDetailView(slug: slug)
+                            case .designStylesHome:           StylesHomeView()
+                            case .designStyleDetail(let id):  StyleDetailView(styleId: id)
+                            case .designTemplatesHome:        TemplatesHomeView()
+                            case .designTemplateDetail(let id): TemplateDetailView(templateId: id)
+                            case .designReferencesHome:       ReferencesHomeView()
                             }
                         }
                         .id(routeRenderID)

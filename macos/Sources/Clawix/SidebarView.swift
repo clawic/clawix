@@ -389,6 +389,10 @@ struct SidebarView: View {
                 AppsSidebarSection(appsStore: .shared)
             }
 
+            // Design surface: Styles, Templates and References. Same
+            // peer position as Apps; one click drops into each catalog.
+            DesignSidebarSection()
+
             if !snapshot.pinned.isEmpty {
                 let pinnedSources = pinnedFilterSources(from: snapshot.pinned)
                 let visiblePinned = applyPinnedFilter(to: snapshot.pinned)

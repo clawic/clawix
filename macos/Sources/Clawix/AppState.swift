@@ -120,6 +120,18 @@ enum SidebarRoute: Equatable {
     /// Detail panel for a single skill — activation toggles, params
     /// form, sync targets, body editor.
     case skillDetail(slug: String)
+    /// Design surface: Styles landing (grid of moodboards).
+    case designStylesHome
+    /// Design surface: Style detail (tokens, brand, voice, imagery,
+    /// overrides, references, examples).
+    case designStyleDetail(id: String)
+    /// Design surface: Templates gallery grouped by category.
+    case designTemplatesHome
+    /// Design surface: Template detail with rendered preview and slot
+    /// inventory.
+    case designTemplateDetail(id: String)
+    /// Design surface: References inspiration library.
+    case designReferencesHome
 }
 
 // MARK: - Models
