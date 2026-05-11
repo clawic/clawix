@@ -771,10 +771,89 @@ public enum BridgeBody: Equatable, Sendable {
 
     fileprivate static func decode(type: String, from decoder: Decoder) throws -> BridgeBody {
         let c = try decoder.container(keyedBy: FlatKeys.self)
-        // v6 cases handled in a dedicated helper to keep this switch
-        // small enough for the Swift type-checker.
+        // Helpers split by version. Try v7 -> v6 -> legacy.
+        if let body = try decodeV7Audio(type: type, from: c) { return body }
         if let body = try decodeV6(type: type, from: c) { return body }
         return try decodeLegacy(type: type, from: c)
+    }
+
+    private static func decodeV7Audio(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
+        switch type {
+        case "audioRegister":
+            return .audioRegister(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                request: try c.decode(WireAudioRegisterRequest.self, forKey: .request)
+            )
+        case "audioAttachTranscript":
+            return .audioAttachTranscript(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                audioId: try c.decode(String.self, forKey: .audioId),
+                transcript: try c.decode(WireAudioAttachTranscriptInput.self, forKey: .transcript)
+            )
+        case "audioGet":
+            return .audioGet(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                audioId: try c.decode(String.self, forKey: .audioId),
+                appId: try c.decode(String.self, forKey: .appId)
+            )
+        case "audioGetBytes":
+            return .audioGetBytes(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                audioId: try c.decode(String.self, forKey: .audioId),
+                appId: try c.decode(String.self, forKey: .appId)
+            )
+        case "audioList":
+            return .audioList(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                filter: try c.decode(WireAudioListFilter.self, forKey: .filter)
+            )
+        case "audioDelete":
+            return .audioDelete(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                audioId: try c.decode(String.self, forKey: .audioId),
+                appId: try c.decode(String.self, forKey: .appId)
+            )
+        case "audioRegisterResult":
+            return .audioRegisterResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                asset: try c.decodeIfPresent(WireAudioAssetWithTranscripts.self, forKey: .asset),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "audioAttachTranscriptResult":
+            return .audioAttachTranscriptResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                transcript: try c.decodeIfPresent(WireAudioTranscript.self, forKey: .transcript),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "audioGetResult":
+            return .audioGetResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                asset: try c.decodeIfPresent(WireAudioAssetWithTranscripts.self, forKey: .asset),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "audioBytesResult":
+            return .audioBytesResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                audioBase64: try c.decodeIfPresent(String.self, forKey: .audioBase64),
+                mimeType: try c.decodeIfPresent(String.self, forKey: .mimeType),
+                durationMs: try c.decodeIfPresent(Int.self, forKey: .durationMs),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "audioListResult":
+            return .audioListResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                list: try c.decodeIfPresent(WireAudioListResult.self, forKey: .list),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        case "audioDeleteResult":
+            return .audioDeleteResult(
+                requestId: try c.decode(String.self, forKey: .requestId),
+                deleted: try c.decode(Bool.self, forKey: .deleted),
+                errorMessage: try c.decodeIfPresent(String.self, forKey: .errorMessage)
+            )
+        default:
+            return nil
+        }
     }
 
     private static func decodeLegacy(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody {
