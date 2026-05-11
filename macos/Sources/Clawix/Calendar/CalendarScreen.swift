@@ -6,67 +6,52 @@ struct CalendarScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            CardDivider()
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            CalendarToolbar(manager: manager)
+            HStack(spacing: 0) {
+                CalendarSubSidebar(manager: manager)
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-        .task {
-            await manager.bootstrap()
-        }
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text("Calendar")
-                .font(BodyFont.system(size: CalendarTokens.Typography.headerSize, wght: 600))
-                .foregroundColor(Palette.textPrimary)
-            Spacer()
-        }
-        .padding(.horizontal, CalendarTokens.Spacing.screenPadding)
-        .padding(.vertical, 12)
+        .background(CalendarTokens.Surface.window)
+        .task { await manager.bootstrap() }
     }
 
     @ViewBuilder
     private var content: some View {
         switch manager.access {
         case .unknown, .requesting:
-            CenteredMessage(title: "Loading calendar…", subtitle: nil)
+            centered("Loading calendar…")
         case .denied(let reason):
-            CenteredMessage(title: "Calendar access denied", subtitle: reason)
+            centered("Calendar access denied", subtitle: reason)
         case .unavailable:
-            CenteredMessage(title: "Calendar unavailable", subtitle: nil)
+            centered("Calendar unavailable")
         case .granted:
             grantedContent
+                .transition(.opacity)
+                .id(manager.viewMode)
         }
     }
 
+    @ViewBuilder
     private var grantedContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("\(manager.events.count) events · \(manager.sources.count) calendars")
-                .font(BodyFont.system(size: CalendarTokens.Typography.bodySize))
-                .foregroundColor(Palette.textSecondary)
-            Spacer()
+        switch manager.viewMode {
+        case .day:   DayView(manager: manager)
+        case .week:  WeekView(manager: manager)
+        case .month: MonthView(manager: manager)
+        case .year:  YearView(manager: manager)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, CalendarTokens.Spacing.screenPadding)
-        .padding(.vertical, 12)
     }
-}
 
-private struct CenteredMessage: View {
-    let title: String
-    let subtitle: String?
-
-    var body: some View {
+    private func centered(_ title: String, subtitle: String? = nil) -> some View {
         VStack(spacing: 8) {
             Text(title)
-                .font(BodyFont.system(size: 14, wght: 500))
-                .foregroundColor(Palette.textPrimary)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(CalendarTokens.Ink.primary)
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(BodyFont.system(size: 12))
-                    .foregroundColor(Palette.textSecondary)
+                    .font(.system(size: 12))
+                    .foregroundColor(CalendarTokens.Ink.secondary)
                     .multilineTextAlignment(.center)
             }
         }
