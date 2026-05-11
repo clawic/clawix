@@ -91,7 +91,7 @@ fun ChatListScreen(
             modifier = Modifier
                 .fillMaxSize(),
             contentPadding = PaddingValues(
-                top = 80.dp,
+                top = AppLayout.topBarReservedHeight + 64.dp,
                 bottom = 100.dp,
                 start = AppLayout.screenHorizontalPadding,
                 end = AppLayout.screenHorizontalPadding,

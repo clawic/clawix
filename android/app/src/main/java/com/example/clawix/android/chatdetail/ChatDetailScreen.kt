@@ -100,10 +100,11 @@ fun ChatDetailScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .padding(top = AppLayout.topBarReservedHeight + 96.dp)
                 .consumeWindowInsets(WindowInsets.ime),
             contentPadding = PaddingValues(
-                top = AppLayout.composerReservedHeight + 8.dp,
-                bottom = AppLayout.topBarReservedHeight + 24.dp,
+                top = AppLayout.composerReservedHeight + 24.dp,
+                bottom = 16.dp,
                 start = AppLayout.screenHorizontalPadding,
                 end = AppLayout.screenHorizontalPadding,
             ),

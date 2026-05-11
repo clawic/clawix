@@ -61,7 +61,7 @@ fun ProjectDetailScreen(
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = AppLayout.topBarReservedHeight + 16.dp,
+                top = AppLayout.topBarReservedHeight + 64.dp,
                 bottom = 32.dp,
                 start = AppLayout.screenHorizontalPadding,
                 end = AppLayout.screenHorizontalPadding,
