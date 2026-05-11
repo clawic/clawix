@@ -16,6 +16,17 @@ enum CalendarViewMode: String, CaseIterable, Identifiable {
     }
 }
 
+struct CalendarEventDraft: Equatable {
+    var id: String?
+    var title: String
+    var location: String?
+    var notes: String?
+    var startDate: Date
+    var endDate: Date
+    var isAllDay: Bool
+    var calendarID: String
+}
+
 @MainActor
 final class CalendarManager: ObservableObject {
 
@@ -35,15 +46,18 @@ final class CalendarManager: ObservableObject {
     @Published var selectedDate: Date = Date()
     @Published var miniMonthAnchor: Date = Date()
     @Published var searchQuery: String = ""
+    @Published var selectedEventID: String?
+    @Published var editingDraft: CalendarEventDraft?
+    @Published var lastError: String?
 
     private let backend: CalendarBackend
     private let calendar: Foundation.Calendar
+    private let displayLocale: Locale
 
     init(backend: CalendarBackend? = nil, calendar: Foundation.Calendar = .current) {
         self.backend = backend ?? CalendarManager.makeDefaultBackend()
-        var cal = calendar
-        cal.firstWeekday = calendar.firstWeekday
-        self.calendar = cal
+        self.calendar = calendar
+        self.displayLocale = CalendarManager.makeDisplayLocale()
     }
 
     private static func makeDefaultBackend() -> CalendarBackend {
@@ -52,6 +66,13 @@ final class CalendarManager: ObservableObject {
             return DummyCalendarBackend()
         }
         return EventKitCalendarBackend()
+    }
+
+    private static func makeDisplayLocale() -> Locale {
+        if let preferred = Locale.preferredLanguages.first, !preferred.isEmpty {
+            return Locale(identifier: preferred)
+        }
+        return Locale.current
     }
 
     func bootstrap() async {
@@ -142,7 +163,13 @@ final class CalendarManager: ObservableObject {
     func eventsForDay(_ day: Date) -> [CalendarEvent] {
         let start = calendar.startOfDay(for: day)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
-        return visibleEvents.filter { $0.intersects(start: start, end: end) }
+        return visibleEvents.filter { $0.intersects(start: start, end: end) && !$0.isAllDay }
+    }
+
+    func allDayEventsForDay(_ day: Date) -> [CalendarEvent] {
+        let start = calendar.startOfDay(for: day)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
+        return visibleEvents.filter { $0.intersects(start: start, end: end) && $0.isAllDay }
     }
 
     func source(forCalendarID id: String) -> CalendarSource? {
@@ -151,6 +178,84 @@ final class CalendarManager: ObservableObject {
 
     func color(forCalendarID id: String) -> Color {
         source(forCalendarID: id)?.color ?? CalendarTokens.Ink.secondary
+    }
+
+    func event(byID id: String) -> CalendarEvent? {
+        events.first { $0.id == id }
+    }
+
+    // MARK: - CRUD
+
+    func startCreate(at start: Date, duration: TimeInterval = 3600, allDay: Bool = false) {
+        let writable = sources.first { !$0.isReadOnly }?.id ?? sources.first?.id ?? "default"
+        editingDraft = CalendarEventDraft(
+            id: nil,
+            title: "",
+            location: nil,
+            notes: nil,
+            startDate: start,
+            endDate: start.addingTimeInterval(duration),
+            isAllDay: allDay,
+            calendarID: writable
+        )
+    }
+
+    func startEdit(event: CalendarEvent) {
+        editingDraft = CalendarEventDraft(
+            id: event.id,
+            title: event.title,
+            location: event.location,
+            notes: event.notes,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            isAllDay: event.isAllDay,
+            calendarID: event.calendarID
+        )
+    }
+
+    func cancelEdit() {
+        editingDraft = nil
+    }
+
+    func commitDraft() async {
+        guard let draft = editingDraft else { return }
+        let result = await backend.save(draft: draft)
+        switch result {
+        case .success:
+            editingDraft = nil
+            await reload()
+        case .failure(let message):
+            lastError = message
+        }
+    }
+
+    func deleteEvent(_ event: CalendarEvent) async {
+        let result = await backend.delete(eventID: event.id)
+        switch result {
+        case .success:
+            if selectedEventID == event.id { selectedEventID = nil }
+            await reload()
+        case .failure(let message):
+            lastError = message
+        }
+    }
+
+    func updateEventTime(_ event: CalendarEvent, newStart: Date, newEnd: Date) async {
+        let draft = CalendarEventDraft(
+            id: event.id,
+            title: event.title,
+            location: event.location,
+            notes: event.notes,
+            startDate: newStart,
+            endDate: newEnd,
+            isAllDay: event.isAllDay,
+            calendarID: event.calendarID
+        )
+        let result = await backend.save(draft: draft)
+        if case .failure(let message) = result {
+            lastError = message
+        }
+        await reload()
     }
 
     func visibleRange(for mode: CalendarViewMode, anchor: Date) -> (Date, Date) {
@@ -185,12 +290,20 @@ final class CalendarManager: ObservableObject {
     }
 
     var foundationCalendar: Foundation.Calendar { calendar }
+    var localeForDisplay: Locale { displayLocale }
+}
+
+enum CalendarWriteResult: Equatable {
+    case success
+    case failure(String)
 }
 
 protocol CalendarBackend: Sendable {
     func requestAccess() async -> CalendarAccessResult
     func loadSources() async -> [CalendarSource]
     func loadEvents(start: Date, end: Date) async -> [CalendarEvent]
+    func save(draft: CalendarEventDraft) async -> CalendarWriteResult
+    func delete(eventID: String) async -> CalendarWriteResult
 }
 
 enum CalendarAccessResult: Equatable {

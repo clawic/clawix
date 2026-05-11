@@ -68,4 +68,41 @@ final class EventKitCalendarBackend: CalendarBackend, @unchecked Sendable {
             )
         }
     }
+
+    func save(draft: CalendarEventDraft) async -> CalendarWriteResult {
+        guard let cal = store.calendar(withIdentifier: draft.calendarID) ?? store.defaultCalendarForNewEvents else {
+            return .failure("No writable calendar available.")
+        }
+        let event: EKEvent
+        if let id = draft.id, let existing = store.event(withIdentifier: id) {
+            event = existing
+        } else {
+            event = EKEvent(eventStore: store)
+        }
+        event.calendar = cal
+        event.title = draft.title
+        event.location = draft.location
+        event.notes = draft.notes
+        event.startDate = draft.startDate
+        event.endDate = draft.endDate
+        event.isAllDay = draft.isAllDay
+        do {
+            try store.save(event, span: .thisEvent, commit: true)
+            return .success
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
+
+    func delete(eventID: String) async -> CalendarWriteResult {
+        guard let event = store.event(withIdentifier: eventID) else {
+            return .failure("Event not found.")
+        }
+        do {
+            try store.remove(event, span: .thisEvent, commit: true)
+            return .success
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
 }
