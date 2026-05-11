@@ -209,6 +209,22 @@ final class ClawJSServiceManager: ObservableObject {
 
         guard await preparePortForLocalLaunch(service) else { return }
 
+        // IoT runs from the clawjs/iot package, not from @clawjs/cli, so
+        // it bypasses the bundled-runtime guard below. Phase 1 reads the
+        // location from a dev pointer dev.sh writes; production builds
+        // will substitute a bundled copy under Contents/Resources/.
+        if service == .iot {
+            guard let projectDir = iotProjectDirectory() else {
+                update(service) {
+                    $0.state = .blocked(reason:
+                        "IoT runtime pointer is missing. Re-run dev.sh to wire it.")
+                }
+                return
+            }
+            await spawnIot(projectDir: projectDir)
+            return
+        }
+
         // Guard 1: the bundled tree must exist. dev.sh / build_release_app.sh
         // call `bundle_clawjs.sh` to plant Contents/Helpers/clawjs/; if that
         // step was skipped or failed, we cannot spawn anything.
@@ -387,6 +403,10 @@ final class ClawJSServiceManager: ObservableObject {
     /// long-lived HTTP server on `service.port`. Returns `nil` while the
     /// bundled runtime lacks that service's surface.
     private func commandLine(for service: ClawJSService) -> [String]? {
+        // IoT does not flow through @clawjs/cli; the dedicated `spawnIot`
+        // path owns its argv. Returning nil here keeps the existing
+        // `commandLine(for:) != nil` guard a no-op for IoT.
+        if service == .iot { return nil }
         guard Self.bundledLauncherScript(for: service) != nil else { return nil }
 
         var arguments = [
@@ -418,6 +438,9 @@ final class ClawJSServiceManager: ObservableObject {
                     .appendingPathComponent("blobs", isDirectory: true).path,
             ]
             return arguments
+        case .iot:
+            // Unreachable: guarded above. Kept for switch exhaustiveness.
+            return nil
         }
     }
 
@@ -783,5 +806,99 @@ final class ClawJSServiceManager: ObservableObject {
             snap.lastTransitionAt = Date()
         }
         snapshots[service] = snap
+    }
+
+    // MARK: - IoT launch path
+
+    /// Spawns the clawjs-iot daemon. Distinct from `spawnAndSupervise`
+    /// because IoT lives outside @clawjs/cli: its argv, cwd, and the
+    /// node binary all differ from the bundled-runtime services.
+    private func spawnIot(projectDir: URL) async {
+        let serverJs = projectDir.appendingPathComponent("dist/server.js", isDirectory: false)
+        update(.iot) { $0.state = .starting; $0.lastError = nil }
+
+        do {
+            try Self.prepareDirectories(for: .iot)
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["node", serverJs.path]
+            process.currentDirectoryURL = projectDir
+            process.environment = Self.iotEnvironment()
+
+            let logURL = Self.logFileURL(for: .iot)
+            if !FileManager.default.fileExists(atPath: logURL.path) {
+                FileManager.default.createFile(atPath: logURL.path, contents: nil)
+            }
+            let handle = try FileHandle(forWritingTo: logURL)
+            try handle.seekToEnd()
+            process.standardOutput = handle
+            process.standardError = handle
+            logHandles[.iot] = handle
+
+            process.terminationHandler = { [weak self] proc in
+                Task { @MainActor [weak self] in
+                    self?.handleTermination(of: .iot, process: proc)
+                }
+            }
+
+            try process.run()
+            processes[.iot] = process
+
+            healthTasks[.iot]?.cancel()
+            healthTasks[.iot] = Task { [weak self] in
+                await self?.pollHealth(for: .iot, pid: process.processIdentifier)
+            }
+        } catch {
+            update(.iot) {
+                $0.state = .crashed(reason: "spawn failed: \(error.localizedDescription)")
+                $0.lastError = error.localizedDescription
+            }
+            scheduleRestart(.iot)
+        }
+    }
+
+    /// Resolves the on-disk clawjs/iot project directory. Phase 1 reads
+    /// a dev pointer dev.sh writes; production builds substitute a
+    /// bundled copy under Contents/Resources/clawjs-iot/. Returns nil
+    /// when neither location is present or the dist/server.js is
+    /// missing, which keeps the service `.blocked` rather than crashing.
+    private func iotProjectDirectory() -> URL? {
+        let pointerURL = Self.applicationSupportRoot
+            .appendingPathComponent("dev-pointers", isDirectory: true)
+            .appendingPathComponent("iot.dir", isDirectory: false)
+        if let raw = try? String(contentsOf: pointerURL, encoding: .utf8) {
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                let candidate = URL(fileURLWithPath: trimmed, isDirectory: true)
+                if FileManager.default.fileExists(atPath: candidate
+                    .appendingPathComponent("dist/server.js").path) {
+                    return candidate
+                }
+            }
+        }
+        let bundled = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Resources/clawjs-iot", isDirectory: true)
+        if FileManager.default.fileExists(atPath: bundled
+            .appendingPathComponent("dist/server.js").path) {
+            return bundled
+        }
+        return nil
+    }
+
+    /// Environment for the spawned IoT daemon. Pins host+port+data dir
+    /// so the supervisor's health probe and downstream clients agree on
+    /// the same loopback endpoint. Mirrors the per-service env wiring
+    /// `environment(for:adminToken:)` does for the @clawjs/cli surface
+    /// without inheriting workspace-flavoured variables that IoT does
+    /// not consume.
+    private static func iotEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        env["IOT_HOST"] = "127.0.0.1"
+        env["IOT_PORT"] = String(ClawJSService.iot.port)
+        let dataDir = dataDirectoryURL(for: .iot)
+        env["IOT_DATA_DIR"] = dataDir.path
+        env["IOT_DB_PATH"] = dataDir.appendingPathComponent("iot.sqlite", isDirectory: false).path
+        return env
     }
 }

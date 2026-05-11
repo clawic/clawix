@@ -83,6 +83,8 @@ struct ClawixApp: App {
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
     @StateObject private var terminalStore = TerminalSessionStore.shared
+    @StateObject private var iotManager: IoTManager
+    @StateObject private var remoteToolsRegistry: RemoteToolsRegistry
     @Environment(\.openWindow) private var openWindow
 
     /// True when this binary is running as one of the sidebar-tool mini-app
@@ -128,6 +130,15 @@ struct ClawixApp: App {
             )
         }
         _appState = StateObject(wrappedValue: state)
+        // IoT observable surface: the manager observes ClawJSServiceManager
+        // for the .iot service and the registry aggregates the catalog
+        // for Codex. Wired before SwiftUI takes over so the registry
+        // catches the IoTManager's first publish.
+        let iot = IoTManager()
+        let registry = RemoteToolsRegistry()
+        registry.attach(feature: "iot", tools: iot.$availableTools)
+        _iotManager = StateObject(wrappedValue: iot)
+        _remoteToolsRegistry = StateObject(wrappedValue: registry)
         if !Self.isToolRole {
             DictationE2ERunner.runIfRequested()
             // Background refresher for OAuth provider accounts (Anthropic
@@ -157,6 +168,8 @@ struct ClawixApp: App {
                 .environmentObject(databaseManager)
                 .environmentObject(featureFlags)
                 .environmentObject(terminalStore)
+                .environmentObject(iotManager)
+                .environmentObject(remoteToolsRegistry)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until
