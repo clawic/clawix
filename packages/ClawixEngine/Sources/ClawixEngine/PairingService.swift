@@ -124,7 +124,7 @@ public final class PairingService {
             "port": Int(port),
             "token": bearer,
             "shortCode": shortCode,
-            "macName": Host.current().localizedName ?? "Mac"
+            "macName": HostIdentity.localizedName ?? "Mac"
         ]
         if let ts = Self.currentTailscaleIPv4() {
             dict["tailscaleHost"] = ts
@@ -178,7 +178,7 @@ public final class PairingService {
     /// machine so the iPhone could re-discover us by name across IP
     /// changes. We just expose the localized machine name.
     public var bonjourServiceName: String {
-        Host.current().localizedName ?? "Clawix"
+        HostIdentity.localizedName ?? "Clawix"
     }
 
     /// Authoritative compare for the bridge session. Constant-time-ish

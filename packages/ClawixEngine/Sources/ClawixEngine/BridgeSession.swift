@@ -121,7 +121,7 @@ public final class BridgeSession: Identifiable {
         // chats list reads as "syncing" instead of "no chats". The bus
         // also re-emits this frame on every state transition, so a
         // peer that connected during boot sees `syncing → ready`.
-        send(BridgeFrame(.authOk(macName: Host.current().localizedName)))
+        send(BridgeFrame(.authOk(macName: HostIdentity.localizedName)))
         send(bus.currentBridgeStateFrame())
         send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
         BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")

@@ -72,7 +72,7 @@ public final class RemoteMeshStore: @unchecked Sendable {
         if let override = ProcessInfo.processInfo.environment["CLAWIX_MESH_HOME"], !override.isEmpty {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
         }
-        return FileManager.default.homeDirectoryForCurrentUser
+        return URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
             .appendingPathComponent(".clawix/mesh", isDirectory: true)
     }
 
@@ -184,11 +184,11 @@ public final class RemoteMeshIdentity: @unchecked Sendable {
     private let identityURL: URL
     private let displayName: String
 
-    public init(root: URL? = nil, displayName: String = Host.current().localizedName ?? "Mac") {
+    public init(root: URL? = nil, displayName: String? = nil) {
         let base = root ?? RemoteMeshStore.defaultRoot()
         self.root = base
         self.identityURL = base.appendingPathComponent("identity.json")
-        self.displayName = displayName
+        self.displayName = displayName ?? HostIdentity.localizedName ?? "Mac"
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     }
 

@@ -27,7 +27,7 @@ public enum GeneratedImageReader {
     /// host that overrides `$HOME` (tests, sandboxed previews) doesn't
     /// have to re-build the framework.
     public static var sandboxRoot: URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
         return home
             .appendingPathComponent(".codex", isDirectory: true)
             .appendingPathComponent("generated_images", isDirectory: true)
