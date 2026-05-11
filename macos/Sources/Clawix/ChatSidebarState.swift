@@ -8,6 +8,7 @@ enum SidebarItem: Identifiable, Equatable, Codable {
     case file(FilePayload)
     case chat(ChatPayload)
     case iosSimulator(IOSSimulatorPayload)
+    case androidSimulator(AndroidSimulatorPayload)
 
     /// Side-chat tab. The `id` doubles as the underlying `Chat.id` of
     /// the silently-forked conversation so the tab and the chat share
@@ -72,12 +73,25 @@ enum SidebarItem: Identifiable, Equatable, Codable {
         }
     }
 
+    struct AndroidSimulatorPayload: Equatable, Codable {
+        let id: UUID
+        var avdName: String?
+        var deviceName: String
+
+        init(id: UUID, avdName: String? = nil, deviceName: String = "Android Emulator") {
+            self.id = id
+            self.avdName = avdName
+            self.deviceName = deviceName
+        }
+    }
+
     var id: UUID {
         switch self {
         case .web(let p):  return p.id
         case .file(let p): return p.id
         case .chat(let p): return p.id
         case .iosSimulator(let p): return p.id
+        case .androidSimulator(let p): return p.id
         }
     }
 }
