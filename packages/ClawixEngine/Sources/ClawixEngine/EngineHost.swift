@@ -181,6 +181,51 @@ public protocol EngineHost: AnyObject {
         path: String,
         reply: @MainActor @escaping (_ dataBase64: String?, _ mimeType: String?, _ errorMessage: String?) -> Void
     )
+
+    // MARK: - v7 audio catalog hooks
+
+    /// Configured client for the `@clawjs/audio` service. Nil while the
+    /// service is still booting (or when the host has not been wired to
+    /// it). The default audio handlers below dispatch through this
+    /// client if present; otherwise they reply with a structured
+    /// `errorMessage` so clients surface a precise reason rather than
+    /// hanging on a missing response.
+    var audioCatalogClient: ClawJSAudioClient? { get }
+
+    func handleAudioRegister(
+        requestId: String,
+        request: WireAudioRegisterRequest,
+        reply: @MainActor @escaping (WireAudioAssetWithTranscripts?, String?) -> Void
+    )
+    func handleAudioAttachTranscript(
+        requestId: String,
+        audioId: String,
+        input: WireAudioAttachTranscriptInput,
+        reply: @MainActor @escaping (WireAudioTranscript?, String?) -> Void
+    )
+    func handleAudioGet(
+        requestId: String,
+        audioId: String,
+        appId: String,
+        reply: @MainActor @escaping (WireAudioAssetWithTranscripts?, String?) -> Void
+    )
+    func handleAudioGetBytes(
+        requestId: String,
+        audioId: String,
+        appId: String,
+        reply: @MainActor @escaping (_ audioBase64: String?, _ mimeType: String?, _ durationMs: Int?, _ errorMessage: String?) -> Void
+    )
+    func handleAudioList(
+        requestId: String,
+        filter: WireAudioListFilter,
+        reply: @MainActor @escaping (WireAudioListResult?, String?) -> Void
+    )
+    func handleAudioDelete(
+        requestId: String,
+        audioId: String,
+        appId: String,
+        reply: @MainActor @escaping (_ deleted: Bool, _ errorMessage: String?) -> Void
+    )
 }
 
 // MARK: - Default no-op impls for desktop-only hooks
@@ -231,5 +276,212 @@ public extension EngineHost {
     ) {
         let result = GeneratedImageReader.read(path: path)
         reply(result.dataBase64, result.mimeType, result.errorMessage)
+    }
+
+    // MARK: - v7 audio catalog defaults
+
+    var audioCatalogClient: ClawJSAudioClient? { nil }
+
+    func handleAudioRegister(
+        requestId: String,
+        request: WireAudioRegisterRequest,
+        reply: @MainActor @escaping (WireAudioAssetWithTranscripts?, String?) -> Void
+    ) {
+        guard let client = audioCatalogClient else {
+            reply(nil, "Audio catalog service is not configured on this host.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let result = try await client.register(.init(
+                    id: request.id,
+                    kind: request.kind.rawValue,
+                    appId: request.appId,
+                    originActor: request.originActor.rawValue,
+                    mimeType: request.mimeType,
+                    bytesBase64: request.bytesBase64,
+                    durationMs: request.durationMs,
+                    deviceId: request.deviceId,
+                    sessionId: request.sessionId,
+                    threadId: request.threadId,
+                    linkedMessageId: request.linkedMessageId,
+                    metadataJson: request.metadataJson,
+                    transcript: request.transcript.map {
+                        .init(text: $0.text, role: $0.role?.rawValue, provider: $0.provider, language: $0.language)
+                    }
+                ))
+                reply(result.toWire(), nil)
+            } catch {
+                reply(nil, error.localizedDescription)
+            }
+        }
+    }
+
+    func handleAudioAttachTranscript(
+        requestId: String,
+        audioId: String,
+        input: WireAudioAttachTranscriptInput,
+        reply: @MainActor @escaping (WireAudioTranscript?, String?) -> Void
+    ) {
+        guard let client = audioCatalogClient else {
+            reply(nil, "Audio catalog service is not configured on this host.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let result = try await client.attachTranscript(
+                    audioId: audioId,
+                    input: .init(
+                        text: input.text,
+                        role: input.role.rawValue,
+                        provider: input.provider,
+                        language: input.language,
+                        markAsPrimary: input.markAsPrimary
+                    )
+                )
+                reply(result.toWire(), nil)
+            } catch {
+                reply(nil, error.localizedDescription)
+            }
+        }
+    }
+
+    func handleAudioGet(
+        requestId: String,
+        audioId: String,
+        appId: String,
+        reply: @MainActor @escaping (WireAudioAssetWithTranscripts?, String?) -> Void
+    ) {
+        guard let client = audioCatalogClient else {
+            reply(nil, "Audio catalog service is not configured on this host.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let result = try await client.get(audioId: audioId, appId: appId)
+                reply(result.toWire(), nil)
+            } catch ClawJSAudioClient.Error.notFound {
+                reply(nil, "Audio asset not found.")
+            } catch {
+                reply(nil, error.localizedDescription)
+            }
+        }
+    }
+
+    func handleAudioGetBytes(
+        requestId: String,
+        audioId: String,
+        appId: String,
+        reply: @MainActor @escaping (String?, String?, Int?, String?) -> Void
+    ) {
+        guard let client = audioCatalogClient else {
+            reply(nil, nil, nil, "Audio catalog service is not configured on this host.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let result = try await client.getBytes(audioId: audioId, appId: appId)
+                reply(result.base64, result.mimeType, result.durationMs, nil)
+            } catch ClawJSAudioClient.Error.notFound {
+                reply(nil, nil, nil, "Audio asset not found.")
+            } catch {
+                reply(nil, nil, nil, error.localizedDescription)
+            }
+        }
+    }
+
+    func handleAudioList(
+        requestId: String,
+        filter: WireAudioListFilter,
+        reply: @MainActor @escaping (WireAudioListResult?, String?) -> Void
+    ) {
+        guard let client = audioCatalogClient else {
+            reply(nil, "Audio catalog service is not configured on this host.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let result = try await client.list(filter: .init(
+                    appId: filter.appId,
+                    kind: filter.kind?.rawValue,
+                    originActor: filter.originActor?.rawValue,
+                    deviceId: filter.deviceId,
+                    sessionId: filter.sessionId,
+                    threadId: filter.threadId,
+                    linkedMessageId: filter.linkedMessageId,
+                    limit: filter.limit,
+                    offset: filter.offset
+                ))
+                reply(WireAudioListResult(items: result.items.map { $0.toWire() }, total: result.total), nil)
+            } catch {
+                reply(nil, error.localizedDescription)
+            }
+        }
+    }
+
+    func handleAudioDelete(
+        requestId: String,
+        audioId: String,
+        appId: String,
+        reply: @MainActor @escaping (Bool, String?) -> Void
+    ) {
+        guard let client = audioCatalogClient else {
+            reply(false, "Audio catalog service is not configured on this host.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let deleted = try await client.delete(audioId: audioId, appId: appId)
+                reply(deleted, nil)
+            } catch {
+                reply(false, error.localizedDescription)
+            }
+        }
+    }
+}
+
+// MARK: - Wire <-> client type bridging
+
+extension ClawJSAudioClient.Asset {
+    func toWire() -> WireAudioAsset {
+        WireAudioAsset(
+            id: id,
+            kind: WireAudioKind(rawValue: kind) ?? .user_message,
+            appId: appId,
+            originActor: WireAudioOriginActor(rawValue: originActor) ?? .user,
+            mimeType: mimeType,
+            bytesRelPath: bytesRelPath,
+            durationMs: durationMs,
+            createdAt: createdAt,
+            deviceId: deviceId,
+            sessionId: sessionId,
+            threadId: threadId,
+            linkedMessageId: linkedMessageId,
+            metadataJson: metadataJson
+        )
+    }
+}
+
+extension ClawJSAudioClient.Transcript {
+    func toWire() -> WireAudioTranscript {
+        WireAudioTranscript(
+            id: id,
+            audioId: audioId,
+            role: WireAudioTranscriptRole(rawValue: role) ?? .transcription,
+            text: text,
+            provider: provider,
+            language: language,
+            createdAt: createdAt,
+            isPrimary: isPrimary
+        )
+    }
+}
+
+extension ClawJSAudioClient.AssetWithTranscripts {
+    func toWire() -> WireAudioAssetWithTranscripts {
+        WireAudioAssetWithTranscripts(
+            asset: asset.toWire(),
+            transcripts: transcripts.map { $0.toWire() }
+        )
     }
 }

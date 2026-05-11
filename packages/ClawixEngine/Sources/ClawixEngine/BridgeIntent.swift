@@ -165,48 +165,88 @@ public enum BridgeIntent {
             // `rateLimitsUpdated` automatically.
             session.send(bus.currentRateLimitsFrame())
 
-        // v7 audio catalog: wire is connected but the host has not yet
-        // wired its `ClawJSAudioClient` proxy. Reply with a structured
-        // error so client UIs surface a precise reason instead of
-        // hanging on a missing response.
-        case .audioRegister(let requestId, _):
-            session.send(BridgeFrame(.audioRegisterResult(
+        // v7 audio catalog. Routes through the host's `audioCatalogClient`
+        // when configured; otherwise the default impl replies with a
+        // structured error so clients surface a precise reason instead
+        // of hanging on a missing response.
+        case .audioRegister(let requestId, let request):
+            host?.handleAudioRegister(
                 requestId: requestId,
-                asset: nil,
-                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
-            )))
-        case .audioAttachTranscript(let requestId, _, _):
-            session.send(BridgeFrame(.audioAttachTranscriptResult(
+                request: request,
+                reply: { [weak session] asset, errorMessage in
+                    session?.send(BridgeFrame(.audioRegisterResult(
+                        requestId: requestId,
+                        asset: asset,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+        case .audioAttachTranscript(let requestId, let audioId, let input):
+            host?.handleAudioAttachTranscript(
                 requestId: requestId,
-                transcript: nil,
-                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
-            )))
-        case .audioGet(let requestId, _, _):
-            session.send(BridgeFrame(.audioGetResult(
+                audioId: audioId,
+                input: input,
+                reply: { [weak session] transcript, errorMessage in
+                    session?.send(BridgeFrame(.audioAttachTranscriptResult(
+                        requestId: requestId,
+                        transcript: transcript,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+        case .audioGet(let requestId, let audioId, let appId):
+            host?.handleAudioGet(
                 requestId: requestId,
-                asset: nil,
-                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
-            )))
-        case .audioGetBytes(let requestId, _, _):
-            session.send(BridgeFrame(.audioBytesResult(
+                audioId: audioId,
+                appId: appId,
+                reply: { [weak session] asset, errorMessage in
+                    session?.send(BridgeFrame(.audioGetResult(
+                        requestId: requestId,
+                        asset: asset,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+        case .audioGetBytes(let requestId, let audioId, let appId):
+            host?.handleAudioGetBytes(
                 requestId: requestId,
-                audioBase64: nil,
-                mimeType: nil,
-                durationMs: nil,
-                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
-            )))
-        case .audioList(let requestId, _):
-            session.send(BridgeFrame(.audioListResult(
+                audioId: audioId,
+                appId: appId,
+                reply: { [weak session] audioBase64, mimeType, durationMs, errorMessage in
+                    session?.send(BridgeFrame(.audioBytesResult(
+                        requestId: requestId,
+                        audioBase64: audioBase64,
+                        mimeType: mimeType,
+                        durationMs: durationMs,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+        case .audioList(let requestId, let filter):
+            host?.handleAudioList(
                 requestId: requestId,
-                list: nil,
-                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
-            )))
-        case .audioDelete(let requestId, _, _):
-            session.send(BridgeFrame(.audioDeleteResult(
+                filter: filter,
+                reply: { [weak session] list, errorMessage in
+                    session?.send(BridgeFrame(.audioListResult(
+                        requestId: requestId,
+                        list: list,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
+        case .audioDelete(let requestId, let audioId, let appId):
+            host?.handleAudioDelete(
                 requestId: requestId,
-                deleted: false,
-                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
-            )))
+                audioId: audioId,
+                appId: appId,
+                reply: { [weak session] deleted, errorMessage in
+                    session?.send(BridgeFrame(.audioDeleteResult(
+                        requestId: requestId,
+                        deleted: deleted,
+                        errorMessage: errorMessage
+                    )))
+                }
+            )
 
         case .auth, .authOk, .authFailed, .versionMismatch,
              .chatsSnapshot, .chatUpdated, .messagesSnapshot,
