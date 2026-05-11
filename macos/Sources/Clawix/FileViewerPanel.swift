@@ -238,7 +238,12 @@ struct FileViewerPanel: View {
     private func copyContents() {
         let pb = NSPasteboard.general
         pb.clearContents()
-        pb.setString(rawText, forType: .string)
+        if case .image(let url) = loaded,
+           let image = NSImage(contentsOf: url) {
+            pb.writeObjects([image])
+        } else {
+            pb.setString(rawText, forType: .string)
+        }
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
             copied = false
