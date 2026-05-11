@@ -495,8 +495,8 @@ multiples of 4 in iOS tokens. New surfaces follow these values:
 
 ## 9. Sub-apps and surfaces
 
-(Constitution principles 26 and 32 govern these technically; the style
-rules below cover the visual layer.)
+(Constitution principles VII.2 and VII.8 govern these technically; the
+style rules below cover the visual layer.)
 
 - A sub-app inside Clawix is hosted in a container that follows the same
   `cardFill` / `border` recipe. Its content can override paddings and
@@ -527,7 +527,7 @@ they do.
 
 ## 11. Performance and instrumentation
 
-(Connected to constitution principles 14 and 15.)
+(Connected to constitution principles V.4 and V.5.)
 
 `PerfSignpost` taxonomy at `macos/Sources/Clawix/Diagnostics/Signposts.swift`.
 Categories: `ui.chat`, `ui.sidebar`, `state.appstate`, `ipc.client`,
