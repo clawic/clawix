@@ -28,6 +28,11 @@ struct BrowserTabStrip: View {
             }
             .padding(.top, 2)
 
+            SimulatorTabButton {
+                appState.openIOSSimulator()
+            }
+            .padding(.top, 2)
+
             Spacer(minLength: 0)
 
             ChromeMaximizeButton()
@@ -131,6 +136,10 @@ private struct SidebarItemPill: View {
             // is a silent fork at heart.
             BranchArrowsIconView(color: Color(white: 0.78), lineWidth: 1.0)
                 .frame(width: 14, height: 14)
+        case .iosSimulator:
+            LucideIcon(.appWindow, size: 13)
+                .foregroundColor(Color(white: 0.78))
+                .frame(width: 14, height: 14)
         }
     }
 
@@ -152,6 +161,8 @@ private struct SidebarItemPill: View {
                 return chat.title
             }
             return "Side chat"
+        case .iosSimulator(let p):
+            return p.deviceName
         }
     }
 
@@ -212,6 +223,30 @@ private struct NewTabButton: View {
     }
 }
 
+private struct SimulatorTabButton: View {
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text("iOS")
+                .font(BodyFont.system(size: 11, wght: 700))
+                .foregroundColor(Color(white: 0.78))
+                .frame(width: 34, height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(hovered ? Color.white.opacity(0.07) : Color.clear)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .accessibilityLabel("iOS Simulator")
+        .hoverHint("iOS Simulator", placement: .below)
+    }
+}
+
 // MARK: - Navigation bar
 
 struct BrowserNavigationBar: View {
@@ -258,10 +293,10 @@ struct BrowserNavigationBar: View {
             .accessibilityLabel("Take screenshot")
             .hoverHint(L10n.t("Take screenshot"), placement: .below)
             ChromeIconButton(systemName: "plus") {
-                appState.newBrowserTab()
+                appState.openIOSSimulator()
             }
-                .accessibilityLabel("Add")
-                .hoverHint(L10n.t("Add"), placement: .below)
+            .accessibilityLabel("iOS Simulator")
+            .hoverHint("iOS Simulator", placement: .below)
             ChromeIconButton(systemName: "ellipsis", isActive: moreMenuOpen) {
                 moreMenuOpen.toggle()
             }
