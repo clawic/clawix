@@ -25,6 +25,17 @@ struct CalendarToolbar: View {
 
     private var createButton: some View {
         Button {
+            let now = Date()
+            let cal = manager.foundationCalendar
+            let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+            let snapped = cal.date(from: DateComponents(
+                year: comps.year, month: comps.month, day: comps.day,
+                hour: comps.hour, minute: (comps.minute ?? 0) < 30 ? 30 : 0
+            )) ?? now
+            let target = (comps.minute ?? 0) < 30
+                ? snapped
+                : cal.date(byAdding: .hour, value: 1, to: snapped) ?? snapped
+            manager.startCreate(at: target, duration: 3600)
         } label: {
             LucideIcon(.plus, size: 13)
                 .foregroundColor(CalendarTokens.Ink.primary)

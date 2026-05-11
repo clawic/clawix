@@ -140,8 +140,17 @@ private struct MonthCell: View {
         .overlay(selectionStroke)
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
-            manager.goTo(date: date)
-            manager.setViewMode(.day)
+            let cal = manager.foundationCalendar
+            let now = Date()
+            let timeComps = cal.dateComponents([.hour, .minute], from: now)
+            var combine = cal.dateComponents([.year, .month, .day], from: date)
+            combine.hour = timeComps.hour
+            combine.minute = ((timeComps.minute ?? 0) < 30) ? 30 : 0
+            let dayBase = cal.date(from: combine) ?? date
+            let start = ((timeComps.minute ?? 0) < 30)
+                ? dayBase
+                : (cal.date(byAdding: .hour, value: 1, to: dayBase) ?? dayBase)
+            manager.startCreate(at: start, duration: 3600)
         }
         .onTapGesture {
             manager.selectedDate = date

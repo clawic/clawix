@@ -7,14 +7,46 @@ struct CalendarScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             CalendarToolbar(manager: manager)
-            HStack(spacing: 0) {
-                CalendarSubSidebar(manager: manager)
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
+            mainLayout
         }
         .background(CalendarTokens.Surface.window)
         .task { await manager.bootstrap() }
+        .sheet(isPresented: showSheetBinding) {
+            if let draft = manager.editingDraft {
+                EventEditSheet(manager: manager,
+                                draft: draft,
+                                mode: draft.id == nil ? .create : .edit)
+            }
+        }
+    }
+
+    private var mainLayout: some View {
+        HStack(spacing: 0) {
+            CalendarSubSidebar(manager: manager)
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            inspectorIfNeeded
+        }
+        .animation(CalendarTokens.Motion.inspectorShow, value: manager.selectedEventID)
+    }
+
+    @ViewBuilder
+    private var inspectorIfNeeded: some View {
+        if manager.viewMode != .year,
+           let selectedID = manager.selectedEventID,
+           let event = manager.event(byID: selectedID) {
+            EventInspectorPanel(manager: manager, event: event)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+        }
+    }
+
+    private var showSheetBinding: Binding<Bool> {
+        Binding(
+            get: { manager.editingDraft != nil },
+            set: { newValue in
+                if !newValue { manager.cancelEdit() }
+            }
+        )
     }
 
     @ViewBuilder
