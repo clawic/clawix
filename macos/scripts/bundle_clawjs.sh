@@ -266,6 +266,25 @@ PY
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/better-sqlite3"
         copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/@clawjs/core"
     fi
+    # @clawjs/audio: same shape as database (own node_modules with
+    # better-sqlite3 + fastify; the launcher imports buildAudioApp via
+    # `import("@clawjs/audio")`).
+    OVERLAY_AUDIO="$CLAWJS_DEV_OVERLAY/packages/clawjs-audio"
+    if [[ -d "$OVERLAY_AUDIO" ]]; then
+        build_overlay_package "$OVERLAY_AUDIO"
+        echo "==> Dev overlay: copying $OVERLAY_AUDIO → $CLAWJS_DEST/node_modules/@clawjs/audio"
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/audio"
+        mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
+        cp -R "$OVERLAY_AUDIO" "$CLAWJS_DEST/node_modules/@clawjs/audio"
+        (
+            cd "$CLAWJS_DEST/node_modules/@clawjs/audio"
+            npm_config_arch=arm64 \
+            npm_config_target_arch=arm64 \
+            npm_config_target_platform=darwin \
+            run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        )
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/audio/node_modules/better-sqlite3"
+    fi
     # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
     # from @clawjs/cli/bin, i.e. node_modules/vault/dist/server.js.
     OVERLAY_VAULT="$CLAWJS_DEV_OVERLAY/vault"
