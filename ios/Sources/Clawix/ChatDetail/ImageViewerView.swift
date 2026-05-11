@@ -98,7 +98,7 @@ struct ImageViewerView: View {
             Haptics.tap()
         }
         .sheet(item: $shareItem) { item in
-            ShareSheet(items: [item.image])
+            ImageShareSheet(items: [item.image])
         }
     }
 
@@ -138,7 +138,7 @@ private struct ShareItem: Identifiable {
     let image: UIImage
 }
 
-private struct ShareSheet: UIViewControllerRepresentable {
+private struct ImageShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
