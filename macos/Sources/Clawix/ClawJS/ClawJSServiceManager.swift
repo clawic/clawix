@@ -48,10 +48,12 @@ final class ClawJSServiceManager: ObservableObject {
 
     /// Maps each service to the env var name its daemon reads to recognise
     /// the per-session admin token. Services that don't use admin tokens
-    /// (memory, vault, telegram) are simply absent.
+    /// (memory, vault, telegram) are simply absent. The audio service
+    /// re-uses the same mechanism: the shared secret is the admin token.
     private static let adminTokenEnvVar: [ClawJSService: String] = [
         .database: "CLAWJS_DATABASE_ADMIN_TOKEN",
         .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
+        .audio: "AUDIO_SHARED_SECRET",
     ]
 
     private let bridgeService: BackgroundBridgeService
@@ -408,6 +410,13 @@ final class ClawJSServiceManager: ObservableObject {
             return arguments
         case .memory, .drive:
             arguments += ["--data-dir", Self.dataDirectoryURL(for: service).path]
+            return arguments
+        case .audio:
+            arguments += [
+                "--data-dir", Self.dataDirectoryURL(for: service).path,
+                "--blobs-dir", Self.dataDirectoryURL(for: service)
+                    .appendingPathComponent("blobs", isDirectory: true).path,
+            ]
             return arguments
         }
     }

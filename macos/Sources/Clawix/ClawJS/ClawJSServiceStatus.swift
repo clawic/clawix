@@ -1,6 +1,6 @@
 import Foundation
 
-/// The three ClawJS services Phase 2 supervises in-process. Each is a
+/// The ClawJS services Phase 2 supervises in-process. Each is a
 /// long-lived HTTP server bound to loopback. Ports are stable across
 /// launches so Phase 3 (Settings UI) and Phase 4 (feature consumers)
 /// can hardcode endpoints.
@@ -10,6 +10,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case drive
     case vault
     case telegram
+    case audio
 
     var id: String { rawValue }
 
@@ -25,6 +26,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .drive:    return 7792
         case .vault:    return 7793
         case .telegram: return 22011
+        case .audio:    return 7794
         }
     }
 
@@ -35,6 +37,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .drive:    return "Drive"
         case .vault:    return "Vault"
         case .telegram: return "Telegram"
+        case .audio:    return "Audio"
         }
     }
 
