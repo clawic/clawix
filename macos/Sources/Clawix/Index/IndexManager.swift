@@ -85,6 +85,12 @@ final class IndexManager: ObservableObject {
             self.tags = tags
             self.collections = collections
             await loadEntities()
+            for alert in alertsResp.alerts where alert.ackAt == nil {
+                let entityTitle = alert.entityId.flatMap { id in
+                    self.entities.first { $0.id == id }?.title
+                }
+                IndexNotificationsBridge.shared.surface(alert, entityTitle: entityTitle)
+            }
             state = .ready
         } catch {
             state = .error(error.localizedDescription)
