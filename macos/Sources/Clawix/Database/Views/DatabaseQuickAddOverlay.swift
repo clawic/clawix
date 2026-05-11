@@ -70,29 +70,72 @@ struct DatabaseQuickAddOverlay: View {
         saving = true
         error = nil
         defer { saving = false }
-        var data: [String: DBJSON] = [:]
-        data["title"] = .string(title)
-        if !details.isEmpty {
-            // Pick the right field name based on the target collection.
-            switch collectionName {
-            case "notes":   data["body"] = .string(details)
-            case "tasks", "goals", "projects":
-                data["description"] = .string(details)
-            default:
-                data["description"] = .string(details)
+
+        let fallbackDetails = details.isEmpty ? title : details
+        let searchText = details.isEmpty ? title : "\(title)\n\(details)"
+        let now = ISO8601DateFormatter().string(from: Date())
+
+        if collectionName == "inbox_messages" {
+            do {
+                let thread = try await manager.createRecord(collection: "inbox_threads", data: [
+                    "channel": .string("quick_add"),
+                    "status": .string("unread"),
+                    "subject": .string(title),
+                    "preview": .string(fallbackDetails),
+                    "latestMessageAt": .string(now),
+                ])
+                do {
+                    _ = try await manager.createRecord(collection: collectionName, data: [
+                        "threadId": .string(thread.id),
+                        "channel": .string("quick_add"),
+                        "direction": .string("inbound"),
+                        "status": .string("unread"),
+                        "content": .string(fallbackDetails),
+                    ])
+                    isPresented = false
+                } catch {
+                    try? await manager.deleteRecord(collection: "inbox_threads", id: thread.id)
+                    throw error
+                }
+            } catch {
+                self.error = error.localizedDescription
             }
+            return
         }
+
+        var data: [String: DBJSON] = [:]
+        switch collectionName {
+        case "projects":
+            data["name"] = .string(title)
+        default:
+            data["title"] = .string(title)
+        }
+
         // Required fields for known built-ins.
         switch collectionName {
         case "tasks":
             data["status"] = .string("todo")
             data["priority"] = .string("medium")
+            if !details.isEmpty { data["description"] = .string(details) }
         case "goals":
             data["status"] = .string("active")
             data["level"] = .string("personal")
+            if !details.isEmpty { data["description"] = .string(details) }
         case "projects":
             data["status"] = .string("in_progress")
+            if !details.isEmpty { data["description"] = .string(details) }
+        case "notes":
+            data["searchText"] = .string(searchText)
+            if !details.isEmpty { data["summary"] = .string(details) }
+        case "decisions":
+            data["status"] = .string("proposed")
+            if !details.isEmpty { data["summary"] = .string(details) }
+        case "reminders":
+            data["status"] = .string("active")
+            data["triggerAt"] = .string(ISO8601DateFormatter().string(from: Date().addingTimeInterval(3600)))
+            if !details.isEmpty { data["description"] = .string(details) }
         default:
+            if !details.isEmpty { data["description"] = .string(details) }
             break
         }
         do {
