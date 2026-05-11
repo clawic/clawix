@@ -981,9 +981,9 @@ final class AppState: ObservableObject {
     /// Right-sidebar state used on every non-chat route (home / new
     /// conversation, search, plugins, automations, project, settings).
     /// Without this the toggle would no-op outside chats because
-    /// `currentSidebar`'s setter has nowhere to attach the state. Lives
-    /// only in memory: a relaunch resets the global panel, but switching
-    /// between home and a chat preserves whatever tabs were open here.
+    /// `currentSidebar`'s setter has nowhere to attach the state.
+    /// Persisted independently from per-chat sidebars so Home browser tabs
+    /// survive relaunches without leaking into individual conversations.
     @Published var globalSidebar: ChatSidebarState = .empty
     /// Cross-tab favicon memory keyed by the registrable host. A tab freshly
     /// opened to a host visited before therefore renders its real favicon
@@ -5290,6 +5290,7 @@ final class AppState: ObservableObject {
 
     private static let sidebarDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
     private static let chatSidebarsKey = "ChatSidebars"
+    private static let globalSidebarKey = "GlobalSidebar"
     private static let hostFaviconsKey = "HostFavicons"
     private static let legacyBrowserStateKey = "BrowserTabs"
     private static let legacyBrowserActiveKey = "BrowserActiveTabId"
@@ -5315,6 +5316,7 @@ final class AppState: ObservableObject {
         set {
             guard let id = currentChatId else {
                 globalSidebar = newValue
+                persistGlobalSidebar()
                 return
             }
             if newValue == .empty {
@@ -5573,6 +5575,7 @@ final class AppState: ObservableObject {
             if let pageZoom { payload.pageZoom = pageZoom }
             if let mobileMode { payload.mobileMode = mobileMode }
             globalSidebar.items[idx] = .web(payload)
+            persistGlobalSidebar()
         }
     }
 
@@ -5601,6 +5604,15 @@ final class AppState: ObservableObject {
             }
             chatSidebars = rebuilt
         }
+        if let data = defaults.data(forKey: AppState.globalSidebarKey),
+           let saved = try? JSONDecoder().decode(ChatSidebarState.self, from: data) {
+            globalSidebar = saved
+            for item in saved.items {
+                if case .web(let p) = item, let favicon = p.faviconURL {
+                    FaviconCache.shared.prefetch(favicon)
+                }
+            }
+        }
         // Drop legacy global keys from earlier versions where browser tabs
         // were app-wide instead of per-chat. Without an owning chat there
         // is nowhere to migrate them to, so the cleanest path is to wipe
@@ -5620,6 +5632,17 @@ final class AppState: ObservableObject {
         let defaults = AppState.sidebarDefaults
         if let data = try? JSONEncoder().encode(payload) {
             defaults.set(data, forKey: AppState.chatSidebarsKey)
+        }
+    }
+
+    private func persistGlobalSidebar() {
+        let defaults = AppState.sidebarDefaults
+        if globalSidebar == .empty {
+            defaults.removeObject(forKey: AppState.globalSidebarKey)
+            return
+        }
+        if let data = try? JSONEncoder().encode(globalSidebar) {
+            defaults.set(data, forKey: AppState.globalSidebarKey)
         }
     }
 
