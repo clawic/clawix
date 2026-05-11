@@ -104,7 +104,7 @@ struct QuickAskSettingsPage: View {
                         Text("Open the panel now")
                             .font(BodyFont.system(size: 12.5, wght: 500))
                             .foregroundColor(Palette.textPrimary)
-                        Text("Same as pressing the shortcut. Drag the panel anywhere on screen — its position is remembered.")
+                        Text("Same as pressing the shortcut. Empty prompts open bottom-center; active conversations reopen where you parked them.")
                             .font(BodyFont.system(size: 11, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
