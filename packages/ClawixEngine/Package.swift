@@ -57,6 +57,11 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio", condition: .when(platforms: [.linux]))
             ],
             path: "Sources/ClawixEngine"
+        ),
+        .testTarget(
+            name: "ClawixEngineTests",
+            dependencies: ["ClawixEngine"],
+            path: "Tests/ClawixEngineTests"
         )
     ]
 )

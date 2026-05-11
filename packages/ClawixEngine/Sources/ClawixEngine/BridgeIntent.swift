@@ -316,18 +316,27 @@ public enum BridgeFileReader {
 
     public static func load(path: String) -> Result {
         let url = URL(fileURLWithPath: path)
-        let onDisk = FileManager.default.fileExists(atPath: url.path)
+        let fileManager = FileManager.default
+        var isDirectory = ObjCBool(false)
+        let onDisk = fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
         let fixtureDir = ProcessInfo.processInfo.environment["CLAWIX_FILE_FIXTURE_DIR"]
             .flatMap { $0.isEmpty ? nil : $0 }
 
         if onDisk {
+            if isDirectory.boolValue {
+                return directorySnapshot(url: url)
+            }
             return decode(url: url, originalPath: path)
         }
 
         if let dir = fixtureDir {
             let mirrored = URL(fileURLWithPath: dir)
                 .appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-            if FileManager.default.fileExists(atPath: mirrored.path) {
+            var mirroredIsDirectory = ObjCBool(false)
+            if fileManager.fileExists(atPath: mirrored.path, isDirectory: &mirroredIsDirectory) {
+                if mirroredIsDirectory.boolValue {
+                    return directorySnapshot(url: mirrored)
+                }
                 return decode(url: mirrored, originalPath: path)
             }
             let synthesized = FixtureFileSynthesizer.synthesize(for: path)
@@ -336,6 +345,39 @@ public enum BridgeFileReader {
         }
 
         return Result(content: nil, isMarkdown: false, error: "File not found")
+    }
+
+    private static func directorySnapshot(url: URL) -> Result {
+        guard let children = try? FileManager.default.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return Result(content: nil, isMarkdown: false, error: "Couldn't read file")
+        }
+
+        let sorted = children.sorted { lhs, rhs in
+            let lhsIsDir = ((try? lhs.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
+            let rhsIsDir = ((try? rhs.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
+            if lhsIsDir != rhsIsDir {
+                return lhsIsDir && !rhsIsDir
+            }
+            return lhs.lastPathComponent.localizedStandardCompare(rhs.lastPathComponent) == .orderedAscending
+        }
+
+        let limit = 200
+        let visible = sorted.prefix(limit).map { child in
+            let isDir = ((try? child.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false)
+            return child.lastPathComponent + (isDir ? "/" : "")
+        }
+        var body = visible.joined(separator: "\n")
+        if sorted.count > limit {
+            body += "\n... \(sorted.count - limit) more"
+        }
+        if body.isEmpty {
+            body = "(empty folder)"
+        }
+        return Result(content: body, isMarkdown: false, error: nil)
     }
 
     private static func decode(url: URL, originalPath: String) -> Result {
