@@ -100,6 +100,8 @@ enum SidebarRoute: Equatable {
     case databaseCollection(String)
     /// Memory home (3-pane: Topics sidebar + memorias list + detail).
     case memoryHome
+    /// Index home (Catalog / Searches / Monitors / Runs / Alerts tabs).
+    case indexHome
     /// Drive admin (full hierarchical browser).
     case driveAdmin
     /// Drive Photos timeline (curated grid of images).

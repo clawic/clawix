@@ -12,6 +12,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case telegram
     case audio
     case iot
+    case index
 
     var id: String { rawValue }
 
@@ -29,6 +30,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .telegram: return 22011
         case .audio:    return 7794
         case .iot:      return 7795
+        case .index:    return 7796
         }
     }
 
@@ -41,6 +43,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .telegram: return "Telegram"
         case .audio:    return "Audio"
         case .iot:      return "IoT"
+        case .index:    return "Index"
         }
     }
 

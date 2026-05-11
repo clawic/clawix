@@ -154,7 +154,7 @@ struct ClawJSDatabaseClient {
 /// Minimal type-erased JSON value. Lives here (rather than in a shared
 /// utilities module) because Phase 4 is the only consumer today and we
 /// can promote it later if another caller needs the same shape.
-enum AnyJSON: Decodable, Equatable {
+indirect enum AnyJSON: Codable, Hashable, Equatable {
     case null
     case bool(Bool)
     case number(Double)
@@ -181,6 +181,18 @@ enum AnyJSON: Decodable, Equatable {
                 in: container,
                 debugDescription: "Unsupported JSON value"
             )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null: try container.encodeNil()
+        case .bool(let value): try container.encode(value)
+        case .number(let value): try container.encode(value)
+        case .string(let value): try container.encode(value)
+        case .array(let entries): try container.encode(entries)
+        case .object(let entries): try container.encode(entries)
         }
     }
 }

@@ -54,6 +54,7 @@ final class ClawJSServiceManager: ObservableObject {
         .database: "CLAWJS_DATABASE_ADMIN_TOKEN",
         .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
         .audio: "AUDIO_SHARED_SECRET",
+        .index: "CLAWJS_INDEX_ADMIN_TOKEN",
     ]
 
     private let bridgeService: BackgroundBridgeService
@@ -436,6 +437,13 @@ final class ClawJSServiceManager: ObservableObject {
                 "--data-dir", Self.dataDirectoryURL(for: service).path,
                 "--blobs-dir", Self.dataDirectoryURL(for: service)
                     .appendingPathComponent("blobs", isDirectory: true).path,
+            ]
+            return arguments
+        case .index:
+            arguments += [
+                "--data-dir", Self.dataDirectoryURL(for: service).path,
+                "--db-path", Self.dataDirectoryURL(for: service)
+                    .appendingPathComponent("index.sqlite", isDirectory: false).path,
             ]
             return arguments
         case .iot:

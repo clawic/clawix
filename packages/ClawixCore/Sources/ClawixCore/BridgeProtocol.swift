@@ -45,6 +45,17 @@ import Foundation
 /// new types. All additions are additive frames; v4 peers decode v5
 /// frames as `unknownType` and fall through to their default branch.
 ///
+/// v7 (2026-05): Index. New top-level surface that catalogs typed
+/// entities captured from agent-read internet (products, listings,
+/// articles, posts, videos, episodes, papers, profiles, places,
+/// channels, docs, repos, events, jobs, reviews) plus first-class
+/// Searches, Monitors, Runs and Alerts. The macOS GUI and the iOS
+/// companion both talk to a new loopback service `@clawjs/index`
+/// (HTTP/WS on `127.0.0.1:7796`). Cross-device sync is layered on top
+/// later; v7 bumps the schema so v6 peers receiving Index alerts via
+/// push notifications fall through their decode `default` branch and
+/// surface a "needs update" toast.
+///
 /// v6 (2026-05): Skills. Surfaces the unified Skills library
 /// (kind: personality | procedure | snippet | role, agentskills.io
 /// compatible; central source of truth at `~/.clawjs/skills/`). The
@@ -59,7 +70,7 @@ import Foundation
 /// the read frames (`skillsList`, `skillsView`, results); desktop
 /// uses the full surface. v5 peers receiving v6 frames fall through
 /// the decode `default` branch and surface a "needs update" toast.
-public let bridgeSchemaVersion: Int = 6
+public let bridgeSchemaVersion: Int = 7
 
 /// Default count of trailing messages the server returns on
 /// `openChat(limit:)` when the client opts into pagination. 60 covers

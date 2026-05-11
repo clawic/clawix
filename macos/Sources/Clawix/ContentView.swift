@@ -145,6 +145,7 @@ struct ContentView: View {
         case .databaseHome: return "database"
         case .databaseCollection(let name): return "database-\(name)"
         case .memoryHome: return "memory"
+        case .indexHome: return "index"
         case .calendarHome: return "calendar"
         case .contactsHome: return "contacts"
         case .driveAdmin: return "drive-admin"
@@ -250,6 +251,7 @@ struct ContentView: View {
                             case .databaseCollection(let name):
                                 DatabaseScreen(mode: .curated(collectionName: name))
                             case .memoryHome:    MemoryScreen()
+                            case .indexHome:     IndexScreen()
                             case .driveAdmin:    DriveScreen(mode: .admin)
                             case .drivePhotos:   DriveScreen(mode: .photos)
                             case .driveDocuments:DriveScreen(mode: .documents)

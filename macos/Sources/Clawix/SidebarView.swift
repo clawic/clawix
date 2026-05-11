@@ -65,6 +65,8 @@ fileprivate enum SidebarToolsCatalog {
                          icon: .system("brain"),                     route: .memoryHome),
         SidebarToolEntry(id: "database",  title: "Database",  titleString: "Database",
                          icon: .system("cylinder.split.1x2"),        route: .databaseHome),
+        SidebarToolEntry(id: "index",     title: "Index",     titleString: "Index",
+                         icon: .system("books.vertical"),            route: .indexHome),
         SidebarToolEntry(id: "photos",    title: "Photos",    titleString: "Photos",
                          icon: .system("photo.on.rectangle.angled"), route: .drivePhotos),
         SidebarToolEntry(id: "documents", title: "Documents", titleString: "Documents",
