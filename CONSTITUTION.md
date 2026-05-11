@@ -38,6 +38,8 @@ This document states what the project IS and what its non-negotiables ARE.
 It does NOT state:
 
 - The project's business model. That is organizational, not constitutional.
+  See `FUNDING.md` (sibling to this document) for how the project sustains
+  itself in practice, within the red lines below.
 - The project's roadmap or release schedule.
 - Specific data structures, file paths, or implementation details. Those
   evolve; the principles do not.
@@ -61,7 +63,11 @@ sectioned form.
 
 **I.1 The interface is canonical.** We exist to be the native, local-first,
 open interface through which humans collaborate with digital intelligence.
-Not "an" interface. The canonical one.
+Not "an" interface. The canonical one. "Canonical" here means both at once:
+most humans who collaborate with AI do it through Clawix, and the standards
+Clawix defines (III.2) are the ones third parties implement. Either alone is
+not canonicity. Standards without adoption die; adoption without standards
+never consolidates.
 
 **I.2 Human and agent are equal consumers.** Every dataset, every action,
 every piece of state has two consumers: the human and the agent. Neither is
@@ -74,10 +80,15 @@ the app. When a human consumes the framework directly (CLI, scripts), the
 framework provides for that. The app never implements logic an agent might
 want; if we find such a case, we refactor immediately.
 
-**I.4 The target is any human who uses AI.** Not power users, not
-knowledge-workers, not the technical crowd. Any human. Every decision is
+**I.4 The app's target is any human who uses AI.** This principle is about
+Clawix the app, the human-facing surface. Not power users, not
+knowledge-workers, not the technical crowd. Any human. Every app decision is
 tested against "would a non-technical person understand or benefit from
 this?". Power features are welcome, but never at the cost of accessibility.
+The framework (ClawJS) holds itself to a different bar: it must be complete
+and rigorous for technical consumers (developers and agents). The app
+shields the human from that complexity; the framework does not pretend to
+be friendly to non-technical readers at its own level.
 
 ### II. Sovereignty
 
@@ -108,7 +119,12 @@ provider death, agentic reasoning that the source API cannot serve). When
 the framework justifiably mirrors external data locally, it inherits the
 protection guarantees of the source system or stronger: the same granularity
 of access controls, the same audit discipline, no degradation of safeguards.
-Convenience is never a reason to lower the bar.
+Convenience is never a reason to lower the bar. As a corollary, the
+framework keeps an automatic local cache of recently-accessed referenced
+data so the user's recent context stays available offline; the cache
+inherits the same protection guarantees as a justified mirror. The cache
+is not a copy in the constitutional sense (it is bounded, transient,
+warmed by use); it is the offline tail of the reference.
 
 **II.6 Backups and export are a user right.** Beyond migration snapshots,
 the user can export their entire state to a portable archive at any moment,
@@ -145,7 +161,12 @@ environments worth defending. The threat model includes malicious sub-apps,
 compromised runtimes, supply-chain attacks on packages and updates, hostile
 network peers, and exfiltration through agent actions toward external
 services. Defenses are explicit, auditable, and roll back state on failure.
-Security is engineered, not assumed.
+Security is engineered, not assumed. Security data flows pull-only: the
+user's device fetches allowlists, signatures, blocklists, and threat
+advisories, and nothing about the user's behavior or environment is
+reported back. This keeps red line 1 (no telemetry) intact while making
+proactive defense achievable. The shape is the same as Gatekeeper on
+macOS or Certificate Transparency on the web: defense without surveillance.
 
 **IV.2 Service continuity is engineered.** Agent loops, automations, and
 triggers survive process death, network drops, and daemon restarts.
@@ -166,6 +187,11 @@ transparency. Impersonation as a human is never default behavior.
 of the system is reducing the human as a bottleneck over time. Autonomy is
 a vector we grow along. More autonomy means more risk, and that is the
 price. The system grows so that interventions become less needed, not more.
+V.1 is the direction (the trajectory of the system); VII.4 is the present
+mechanism (the user retains authority over catastrophic actions today).
+They are not in tension. Agents earn autonomy as trust accumulates, and
+until they do, VII.4's severity-graded consultation is how the human stays
+sovereign.
 
 **V.2 Configurability is infinite. Defaults are zero-decision.** Both
 extremes, at once. The system supports granularity without limit for users
@@ -233,7 +259,12 @@ humans, across the user's locale and culture, have or do it (universal),
 (b) it has been validated by markets (a dedicated app or SaaS with mass
 adoption already exists), (c) three or more skills or sub-apps would need
 it, or (d) any human, without technical context, recognizes the entity
-instantly.
+instantly. Promotion to canonical status follows a public process: anyone
+proposes a canonical type as an RFC, the proposal demonstrates at least
+one of the criteria above, and the maintainer signs off after community
+review. The detailed process lives in a sibling standards document; the
+constitution declares only that the process is public and signed off, not
+arbitrary.
 
 **VI.4 Structured knowledge is a first-class capability, not a fallback.**
 What does not earn canonical type status lives either as linked notes
@@ -251,7 +282,10 @@ card component renderable in chat with an agent, a list and detail view in
 any sub-app, and user-controlled visibility of fields. The UI gracefully
 handles entities with much data and entities with little. Without this, the
 type is incomplete. Custom databases get an automatic configurable
-renderer.
+renderer. The canonical visual is approved together with the schema: a
+type proposal that lacks its card, list, and detail visuals does not
+become canonical. Schema and visual are versioned together as one
+artifact; they evolve as one.
 
 **VI.6 Every standardizable attribute of the user earns a standard form.**
 Preferences, style, history, professional context, learned defaults: when
@@ -261,7 +295,12 @@ working language), the framework standardizes it as a typed field of a
 canonical user profile. The unstandardizable falls back to free-form
 memory. Standardization is what lets agents act well across surfaces
 without re-asking the same question, and what keeps one user's profile
-portable to a different runtime tomorrow.
+portable to a different runtime tomorrow. Standardized attributes follow
+the same RFC + sign-off process as canonical types (VI.3), plus a
+guardrail: an attribute joins the canonical profile only if it improves
+the agents' ability to serve the user. Attributes designed for market
+segmentation, advertising, or any third-party benefit are out of scope
+by construction, regardless of who proposes them.
 
 **VI.7 Schemas evolve conservatively.** Eighty percent of evolution is
 additive: optional fields, never breaking. Twenty percent is structural
@@ -305,7 +344,26 @@ human trusts.
 own skills, adjust its instructions, install tools it needs, and record
 failures so they do not recur. The framework provides the safety primitives
 (versioning, snapshots, audit) that make self-modification reversible and
-visible. Without self-improvement, agents do not scale.
+visible, anchored on four invariants no act of self-modification may
+violate:
+
+(a) An agent cannot escalate its own permissions. Expanded scope is always
+a transaction the user must approve, never something the agent grants
+itself.
+
+(b) Every self-modification lands in an immutable audit log that the user
+and other agents can inspect.
+
+(c) Every self-modification is revertible to a previous snapshot of the
+agent's state.
+
+(d) Self-modification touches only the agent's own configuration. It
+cannot reach into other agents, into the framework's primitives, or into
+the host shell.
+
+Without self-improvement, agents do not scale; without these invariants,
+self-improvement is a supply-chain attack vector against the user. Both
+must hold.
 
 **VII.7 Agents compose.** The framework supports agents invoking and
 delegating to other agents, chaining loops, passing context, and
@@ -352,7 +410,12 @@ built by the project or by a user or by an agent, a sub-app is a
 discoverable bundle (manifest + assets) installed in a known filesystem
 location. There are no privileged "official" sub-apps technically; there
 are only sub-apps with more or less polish, more or less popularity.
-Agents can create and remove sub-apps without touching the project.
+Agents can create and remove sub-apps without touching the project. The
+Clawix app itself is not a sub-app: it is the host shell that contains the
+sub-app surface (see glossary). VIII.1 governs everything inside the
+shell; the shell is its own technical category and is allowed to be
+distinguished. The shell's job is to host sub-apps fairly, not to compete
+with them.
 
 **VIII.2 Every framework layer is opt-in.** A user who wants only a clean
 runtime (no skills, no memory, no database) can have exactly that. Adding
@@ -393,7 +456,13 @@ framework, opt-in like the rest. Agents deliver value end-to-end for a
 non-technical human without forcing the human to learn what a domain or a
 connection string is. The user's sovereignty extends to the infrastructure
 their agents require; the framework removes the dependency on external
-providers without making the user assemble the parts.
+providers without making the user assemble the parts. The default substrate
+for these layers is the user's own mesh (X.2): a self-hosted host the user
+owns (a home server, a rented VPS, a small box on a shelf) acts as their
+personal cloud. Project-hosted services are an optional complement (opt-in,
+paid, swappable) for users who do not want to operate any host of their
+own. A self-hosted path always exists for every layer; project-hosted is
+never the only option.
 
 **VIII.8 Sub-apps earn trust through verification, not through origin.**
 Openness (VIII.1) is not an unconditional invitation. The framework attaches verifiable
@@ -417,12 +486,19 @@ value.** When a problem has been solved by a successful product with mass
 adoption, we adopt the validated model: the data shapes humans already
 understand, the interaction grammars they already know. We innovate where
 the project has something specific to contribute. We do not invent for the
-sake of difference.
+sake of difference. The rubric for "where we add value": innovate when the
+decision affects (a) the sovereignty promise (any red line, any principle
+in section II) or (b) the first-contact experience with Claw (IX.3). If
+the decision touches neither, copy the validated pattern.
 
 **IX.3 First contact is a conversation with Claw.** A new user opens
 Clawix and is talking to their agent. Sub-apps, settings, integrations:
 all discoverable through the conversation. The app does not greet new
 users with empty dashboards or forms; it greets them with presence.
+"Claw" here is the generic name for the user's first agent, composed
+during onboarding from sensible defaults; it is not a pre-shipped agent
+the project distributes, which would contradict VIII.1. Each user's Claw
+is theirs from the first message.
 
 **IX.4 Style is constitutional and lives in a parallel document.** The
 project keeps a `STYLE.md` (or equivalent) that defines the canonical
@@ -449,7 +525,12 @@ agents from any source (the user's data, external systems the user is
 paired with, the open web), with composable criteria (filter, rank, format,
 refresh). Feeds are not an implementation detail of a sub-app; they are
 first-class infrastructure for how the human reads what their agents and
-the world produced for them.
+the world produced for them. A feed earns canonical status only when it
+is curated by the user's own agents according to the user's priorities.
+Feeds curated by third parties with an attention-extraction incentive
+(advertising, engagement maximization, viral propagation) are not feeds
+in the constitutional sense; the framework does not host them under the
+feed primitive.
 
 **IX.8 Accessibility is non-optional.** Every surface meets baseline
 accessibility: screen reader support, full keyboard navigation, contrast
@@ -476,7 +557,15 @@ through a central server that could read it. Any host can extend the mesh
 onto a new node with one explicit user action; the framework owns the
 bootstrap so growth needs no special tooling and no central provider. The
 mesh is the user's network, sovereign, internal, and growing on the user's
-terms.
+terms. Independent of role (host, client, participant), each member is
+one of three trust levels: fully owned (the user controls the hardware
+and OS, so the member can host a runtime and persist credentials),
+partially trusted (work laptop with MDM, family tablet, browser session
+on a borrowed machine, which can act as a client without persisting the
+user's credentials or running long-lived state), and untrusted (one-off
+sessions, never joins the mesh, gets ephemeral access only at the user's
+explicit invitation). Trust is orthogonal to role and the framework
+exposes both axes to the user.
 
 **X.3 Distribution is native.** Apps ship through the channels their
 platforms expect, signed and notarized where the platform demands it. CLI
@@ -494,6 +583,11 @@ document, an agent, a calendar, a memory) under explicit, revocable
 consent. The framework provides primitives for invitation, scoped sharing,
 joint ownership, and clean unsharing. Collaboration never requires either
 user to leave their mesh; the framework federates, it does not consolidate.
+X.5 declares the primitives only. The semantics of collaboration (conflict
+resolution on jointly-owned state, billing for shared inference,
+separation policy on unsharing, residency rules across jurisdictions)
+live in a sibling standards document published per III.2. The
+constitution stays stable as those semantics evolve.
 
 ## Red lines
 
@@ -515,10 +609,11 @@ we abandon the goal.
    self-host. Any feature that requires one specific provider is forbidden;
    features must work through generic interfaces.
 
-4. **No user data is ever lost.** Updates, migrations, agents, bugs: none
-   may cause irreversible loss. Snapshots, trash, recovery windows are
-   mandatory infrastructure. Pressing "delete" on irreversible material
-   requires explicit human action; agents cannot perform it autonomously.
+4. **No user data is ever lost irreversibly.** Updates, migrations, agents,
+   bugs: none may cause irreversible loss. Snapshots, trash, recovery
+   windows are mandatory infrastructure. Pressing "delete" on irreversible
+   material requires explicit human action; agents cannot perform it
+   autonomously.
 
 ## Tensions we navigate
 
@@ -563,6 +658,31 @@ than improvised.
    does not host them. Principle I.3 is a design heuristic for what the
    framework absorbs, not a metaphysical wall between humans and agents.
 
+## Amendment process
+
+This constitution is a living document, but its weight depends on stability.
+Amendments are tiered, with process proportional to the impact of the
+change.
+
+**Editorial.** Fixing typos, clarifying language without changing meaning,
+repairing broken cross-references, updating examples that became stale.
+The maintainer applies these directly; no public discussion required.
+
+**Expansion.** Adding a new principle, adding a sub-point to an existing
+principle, adding a new entry to the glossary, adding a new tension or red
+line that does not contradict existing ones. Process: anyone proposes via
+public RFC; the maintainer signs off after community review.
+
+**Structural.** Modifying or removing an existing red line, changing or
+deleting a numbered principle, rewriting the preamble, changing this
+Amendment process itself. Process: public RFC, minimum thirty days of
+public discussion, maintainer sign-off after the discussion concludes.
+
+In all tiers, every amendment is recorded in the document's git history
+with a commit message that names the tier and references the RFC (if any).
+The two copies of this constitution (Clawix and ClawJS) are amended
+together; an amendment is incomplete until both repositories carry it.
+
 ## Glossary
 
 - **Activity**: structured records of what an agent did on the user's
@@ -582,9 +702,12 @@ than improvised.
 - **Canonical type**: an entity that has earned a typed schema in the
   framework because it is universal, market-validated, reused, or
   immediately recognizable. Comes with a canonical visual card.
-- **Claw**: the spirit of the project. The metaphor of a "claw" suggests an
-  entity that grasps and acts. When a user talks to "their agent," they
-  talk to a Claw. The framework supports many.
+- **Claw**: the spirit of the project, and the generic name for any agent
+  the user composes. The metaphor of a "claw" suggests an entity that
+  grasps and acts. When a user talks to "their agent," they talk to a
+  Claw. The first Claw is composed during onboarding from sensible
+  defaults; the project does not pre-ship a specific agent. The framework
+  supports many Claws per user.
 - **Clawix**: the family of native applications (macOS, iOS, Android, web,
   CLI wrapper) that humans use directly. The face of the product.
 - **ClawJS**: the framework that gives agents and the apps everything they
@@ -600,6 +723,11 @@ than improvised.
   format, order, and refresh rules. Constructed by agents over any source.
 - **Host**: a device that can run an agent runtime locally (terminal-capable
   OSes). Owns the user's runtime state.
+- **Host shell**: the native application that contains the sub-app surface.
+  Clawix the app is the host shell of the project. Distinct from a sub-app:
+  the shell is the container, sub-apps are the contents. Sub-apps follow
+  VIII.1 (no privileged sub-apps); the shell is its own technical category
+  and is allowed to be distinguished.
 - **Instructions**: durable directives the user gives an agent, distinct
   from skills and memory; they shape behavior persistently.
 - **Knowledge graph**: the navigable structure of concepts, links, and
