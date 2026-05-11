@@ -43,6 +43,34 @@ final class SnapshotRepository: @unchecked Sendable {
         }) ?? []
     }
 
+    func load(chatUuid: String) -> SidebarSnapshotRow? {
+        try? db.read { db in
+            try SidebarSnapshotRow.fetchOne(
+                db,
+                sql: """
+                    SELECT * FROM sidebar_snapshot
+                    WHERE lower(chat_uuid) = lower(?)
+                    LIMIT 1
+                """,
+                arguments: [chatUuid]
+            )
+        }
+    }
+
+    func load(threadId: String) -> SidebarSnapshotRow? {
+        try? db.read { db in
+            try SidebarSnapshotRow.fetchOne(
+                db,
+                sql: """
+                    SELECT * FROM sidebar_snapshot
+                    WHERE lower(thread_id) = lower(?)
+                    LIMIT 1
+                """,
+                arguments: [threadId]
+            )
+        }
+    }
+
     /// Replace the whole snapshot in a single transaction. Called after
     /// every successful applyThreads/mergeThreads with the canonical
     /// in-memory chats list.
