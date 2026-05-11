@@ -458,6 +458,13 @@ cat > "$BUNDLE/Contents/Info.plist" << PLIST
     <key>SUEnableAutomaticChecks</key>   <true/>
     <key>SUScheduledCheckInterval</key>  <integer>86400</integer>
     <key>SUEnableInstallerLauncherService</key><true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>    <string>${BUNDLE_ID}.clawix</string>
+            <key>CFBundleURLSchemes</key> <array><string>clawix</string></array>
+        </dict>
+    </array>
 </dict>
 </plist>
 PLIST

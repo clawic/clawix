@@ -600,6 +600,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard !ClawixApp.isToolRole else { return }
+        for url in urls where url.scheme?.lowercased() == "clawix" {
+            NotificationCenter.default.post(name: .clawixOpenURL, object: url)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first(where: { $0.identifier?.rawValue == FileMenuActions.mainWindowID })?
+            .makeKeyAndOrderFront(nil)
+    }
+
     // Custom inset for the native traffic lights. macOS plants them very
     // close to the top-left corner; we nudge them right and down so they
     // sit comfortably inside the larger titlebar band the app paints.
