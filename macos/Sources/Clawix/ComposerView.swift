@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ImageIO
 import UniformTypeIdentifiers
 
 struct ComposerView: View {
@@ -2404,16 +2405,53 @@ private struct ComposerAttachmentChip: View {
 
     @ViewBuilder
     private var iconView: some View {
-        if attachment.isImage, let nsImage = NSImage(contentsOf: attachment.url) {
-            Image(nsImage: nsImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 18, height: 18)
-                .clipShape(Circle())
+        if attachment.isImage {
+            ComposerAttachmentImageIcon(url: attachment.url)
         } else {
             FileChipIcon(size: 10)
                 .foregroundColor(Color(white: 0.60))
                 .frame(width: 18, height: 18)
         }
+    }
+}
+
+private struct ComposerAttachmentImageIcon: View {
+    let url: URL
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                FileChipIcon(size: 10)
+                    .foregroundColor(Color(white: 0.60))
+            }
+        }
+        .frame(width: 18, height: 18)
+        .clipShape(Circle())
+        .task(id: url.standardizedFileURL.path) {
+            image = await Self.thumbnail(for: url)
+        }
+    }
+
+    private static func thumbnail(for url: URL) async -> NSImage? {
+        await Task.detached(priority: .utility) {
+            let cfURL = url as CFURL
+            guard let source = CGImageSourceCreateWithURL(cfURL, nil) else {
+                return NSImage(contentsOf: url)
+            }
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 64
+            ]
+            guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+                return NSImage(contentsOf: url)
+            }
+            return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        }.value
     }
 }

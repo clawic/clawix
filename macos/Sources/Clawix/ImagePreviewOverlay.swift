@@ -10,6 +10,7 @@ struct ImagePreviewOverlay: View {
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
     @State private var appeared: Bool = false
+    @State private var loadToken = UUID()
 
     private let initialScale: CGFloat = 0.5
     private let minScale: CGFloat = 0.25
@@ -153,18 +154,28 @@ struct ImagePreviewOverlay: View {
     }
 
     private func load(url: URL) {
-        nsImage = NSImage(contentsOf: url)
+        let token = UUID()
+        loadToken = token
+        nsImage = nil
         scale = initialScale
         lastScale = initialScale
         offset = .zero
         lastOffset = .zero
         appeared = false
-        withAnimation(.easeOut(duration: 0.18)) {
-            appeared = true
+        Task {
+            let image = await Task.detached(priority: .userInitiated) {
+                NSImage(contentsOf: url)
+            }.value
+            guard loadToken == token, appState.imagePreviewURL == url else { return }
+            nsImage = image
+            withAnimation(.easeOut(duration: 0.18)) {
+                appeared = true
+            }
         }
     }
 
     private func reset() {
+        loadToken = UUID()
         nsImage = nil
         scale = initialScale
         lastScale = initialScale
