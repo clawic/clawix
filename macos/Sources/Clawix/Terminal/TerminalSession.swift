@@ -74,8 +74,10 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     func runCommand(_ command: String) {
+        startIfNeeded()
         let resolvedCwd = TerminalSession.resolveCwd(initialCwd)
         terminalView.feed(text: "\r\n$ \(command)\r\n")
+        terminalView.needsDisplay = true
         Task.detached { [weak self] in
             let output = Self.runShellCommand(command, cwd: resolvedCwd)
             await self?.appendCommandOutput(output)
@@ -205,6 +207,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         if !output.hasSuffix("\n") {
             terminalView.feed(text: "\r\n")
         }
+        terminalView.needsDisplay = true
     }
 
     fileprivate func handleProcessTerminated(exitCode: Int32?) {
