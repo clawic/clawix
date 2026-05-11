@@ -94,6 +94,8 @@ enum SidebarRoute: Equatable {
     case driveRecent
     /// Drive folder navigation (admin view focused on a specific folder).
     case driveFolder(String)
+    /// Calendar mini-app home.
+    case calendarHome
     /// Skills catalog (⌘⇧K). Top-level destination: a full page with
     /// search, filters, grid of cards. Click a card → `.skillDetail`.
     case skills

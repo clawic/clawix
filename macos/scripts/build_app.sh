@@ -122,6 +122,10 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <string>Clawix transcribes recorded voice notes to insert them as text in the composer.</string>
     <key>NSCameraUsageDescription</key>
     <string>Clawix uses the camera so you can attach a photo straight from the QuickAsk panel.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>Clawix shows your calendar events inside its Calendar workspace.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>Clawix reads and edits your calendar events inside its Calendar workspace.</string>
     <key>SUFeedURL</key>                 <string>${SU_FEED_URL}</string>${SU_ED_KEY_BLOCK}
     <key>SUEnableAutomaticChecks</key>   <true/>
     <key>SUScheduledCheckInterval</key>  <integer>86400</integer>

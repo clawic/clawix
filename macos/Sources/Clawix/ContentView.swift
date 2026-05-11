@@ -121,6 +121,7 @@ struct ContentView: View {
         case .home, .search, .plugins, .project, .chat:
             return true
         case .automations, .settings, .secretsHome, .databaseHome, .databaseCollection, .memoryHome,
+             .calendarHome,
              .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder,
              .app, .appsHome, .skills, .skillDetail:
             return false
@@ -140,6 +141,7 @@ struct ContentView: View {
         case .databaseHome: return "database"
         case .databaseCollection(let name): return "database-\(name)"
         case .memoryHome: return "memory"
+        case .calendarHome: return "calendar"
         case .driveAdmin: return "drive-admin"
         case .drivePhotos: return "drive-photos"
         case .driveDocuments: return "drive-documents"
@@ -241,6 +243,7 @@ struct ContentView: View {
                             case .driveDocuments:DriveScreen(mode: .documents)
                             case .driveRecent:   DriveScreen(mode: .recent)
                             case .driveFolder(let id): DriveScreen(mode: .folder(id))
+                            case .calendarHome:  CalendarScreen()
                             case .skills:        SkillsView()
                             case .skillDetail(let slug): SkillDetailView(slug: slug)
                             }
