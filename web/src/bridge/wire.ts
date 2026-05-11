@@ -91,6 +91,105 @@ export const ZWireAudioRef = z.object({
 });
 export type WireAudioRef = z.infer<typeof ZWireAudioRef>;
 
+export const ZWireAudioKind = z.enum(["user_message", "dictation", "agent_tts"]);
+export type WireAudioKind = z.infer<typeof ZWireAudioKind>;
+
+export const ZWireAudioOriginActor = z.enum(["user", "agent"]);
+export type WireAudioOriginActor = z.infer<typeof ZWireAudioOriginActor>;
+
+export const ZWireAudioTranscriptRole = z.enum(["transcription", "synthesis_source"]);
+export type WireAudioTranscriptRole = z.infer<typeof ZWireAudioTranscriptRole>;
+
+export const ZWireAudioTranscript = z.object({
+  id: z.string(),
+  audioId: z.string(),
+  role: ZWireAudioTranscriptRole,
+  text: z.string(),
+  provider: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+  createdAt: z.number().int(),
+  isPrimary: z.boolean(),
+});
+export type WireAudioTranscript = z.infer<typeof ZWireAudioTranscript>;
+
+export const ZWireAudioAsset = z.object({
+  id: z.string(),
+  kind: ZWireAudioKind,
+  appId: z.string(),
+  originActor: ZWireAudioOriginActor,
+  mimeType: z.string(),
+  bytesRelPath: z.string(),
+  durationMs: z.number().int(),
+  createdAt: z.number().int(),
+  deviceId: z.string().nullable().optional(),
+  sessionId: z.string().nullable().optional(),
+  threadId: z.string().nullable().optional(),
+  linkedMessageId: z.string().nullable().optional(),
+  metadataJson: z.string().nullable().optional(),
+});
+export type WireAudioAsset = z.infer<typeof ZWireAudioAsset>;
+
+export const ZWireAudioAssetWithTranscripts = z.object({
+  asset: ZWireAudioAsset,
+  transcripts: z.array(ZWireAudioTranscript),
+});
+export type WireAudioAssetWithTranscripts = z.infer<typeof ZWireAudioAssetWithTranscripts>;
+
+export const ZWireAudioRegisterTranscript = z.object({
+  text: z.string(),
+  role: ZWireAudioTranscriptRole.nullable().optional(),
+  provider: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+});
+export type WireAudioRegisterTranscript = z.infer<typeof ZWireAudioRegisterTranscript>;
+
+export const ZWireAudioRegisterRequest = z.object({
+  id: z.string().nullable().optional(),
+  kind: ZWireAudioKind,
+  appId: z.string(),
+  originActor: ZWireAudioOriginActor,
+  mimeType: z.string(),
+  bytesBase64: z.string(),
+  durationMs: z.number().int(),
+  deviceId: z.string().nullable().optional(),
+  sessionId: z.string().nullable().optional(),
+  threadId: z.string().nullable().optional(),
+  linkedMessageId: z.string().nullable().optional(),
+  metadataJson: z.string().nullable().optional(),
+  transcript: ZWireAudioRegisterTranscript.nullable().optional(),
+});
+export type WireAudioRegisterRequest = z.infer<typeof ZWireAudioRegisterRequest>;
+
+export const ZWireAudioAttachTranscriptInput = z.object({
+  text: z.string(),
+  role: ZWireAudioTranscriptRole,
+  provider: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
+  markAsPrimary: z.boolean().nullable().optional(),
+});
+export type WireAudioAttachTranscriptInput = z.infer<typeof ZWireAudioAttachTranscriptInput>;
+
+export const ZWireAudioListFilter = z.object({
+  appId: z.string(),
+  kind: ZWireAudioKind.nullable().optional(),
+  originActor: ZWireAudioOriginActor.nullable().optional(),
+  deviceId: z.string().nullable().optional(),
+  sessionId: z.string().nullable().optional(),
+  threadId: z.string().nullable().optional(),
+  linkedMessageId: z.string().nullable().optional(),
+  fromCreatedAt: z.number().int().nullable().optional(),
+  toCreatedAt: z.number().int().nullable().optional(),
+  limit: z.number().int().nullable().optional(),
+  offset: z.number().int().nullable().optional(),
+});
+export type WireAudioListFilter = z.infer<typeof ZWireAudioListFilter>;
+
+export const ZWireAudioListResult = z.object({
+  items: z.array(ZWireAudioAssetWithTranscripts),
+  total: z.number().int(),
+});
+export type WireAudioListResult = z.infer<typeof ZWireAudioListResult>;
+
 export const ZWireMessage = z.object({
   id: z.string(),
   role: ZWireRole,
