@@ -581,7 +581,10 @@ struct BrowserURLField: View {
 
     private func commit() {
         let submitted = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        if submitted == controller.currentURL.absoluteString || submitted == displayString(for: controller.currentURL) {
+        let matchesCurrentURL =
+            submitted == controller.currentURL.absoluteString ||
+            submitted == displayString(for: controller.currentURL)
+        if matchesCurrentURL, controller.lastNavigationError == nil {
             isFocused = false
             return
         }

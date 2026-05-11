@@ -148,7 +148,13 @@ final class BrowserTabController: NSObject, ObservableObject {
 
     func goBack()    { if webView.canGoBack    { webView.goBack() } }
     func goForward() { if webView.canGoForward { webView.goForward() } }
-    func reload()    { webView.reload() }
+    func reload() {
+        if lastNavigationError != nil || Self.isBlankURL(webView.url ?? Self.blankURL) {
+            load(currentURL)
+            return
+        }
+        webView.reload()
+    }
     func hardReload() { webView.reloadFromOrigin() }
 
     /// Capture the current visible region of the web view as a PNG and
