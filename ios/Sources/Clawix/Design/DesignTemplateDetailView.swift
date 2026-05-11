@@ -49,10 +49,10 @@ struct DesignTemplateDetailView: View {
     private func header(_ template: TemplateManifest) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(template.name)
-                .font(BodyFont.system(size: 24, wght: 700))
+                .font(BodyFont.manrope(size: 24, wght: 700))
                 .foregroundColor(Palette.textPrimary)
             Text(template.description ?? "")
-                .font(BodyFont.system(size: 13, wght: 400))
+                .font(BodyFont.manrope(size: 13, wght: 400))
                 .foregroundColor(Color(white: 0.65))
             HStack(spacing: 6) {
                 metaPill(template.category.displayName, icon: "rectangle.grid.2x2")
@@ -71,7 +71,7 @@ struct DesignTemplateDetailView: View {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
             Text(text)
-                .font(BodyFont.system(size: 11, wght: 500))
+                .font(BodyFont.manrope(size: 11, wght: 500))
         }
         .foregroundColor(Color(white: 0.65))
         .padding(.horizontal, 8)
@@ -94,7 +94,7 @@ struct DesignTemplateDetailView: View {
                                 .fill(Color(hex: style.tokens.color.accent) ?? Palette.unreadDot)
                                 .frame(width: 10, height: 10)
                             Text(style.name)
-                                .font(BodyFont.system(size: 12, wght: 500))
+                                .font(BodyFont.manrope(size: 12, wght: 500))
                                 .foregroundColor(selectedStyleId == style.id ? Palette.textPrimary : Color(white: 0.65))
                         }
                         .padding(.horizontal, 10)
@@ -117,7 +117,7 @@ struct DesignTemplateDetailView: View {
                     selectedVariantId = v.id
                 } label: {
                     Text(v.label)
-                        .font(BodyFont.system(size: 12, wght: 500))
+                        .font(BodyFont.manrope(size: 12, wght: 500))
                         .foregroundColor(selectedVariantId == v.id ? Palette.textPrimary : Color(white: 0.65))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -185,7 +185,7 @@ struct DesignTemplateDetailView: View {
     private func slotsBlock(_ template: TemplateManifest) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("SLOTS")
-                .font(BodyFont.system(size: 11, wght: 700))
+                .font(BodyFont.manrope(size: 11, wght: 700))
                 .foregroundColor(Color(white: 0.55))
                 .tracking(0.5)
             ForEach(template.slots) { slot in
@@ -196,7 +196,7 @@ struct DesignTemplateDetailView: View {
                         .frame(width: 24)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(slot.label)
-                            .font(BodyFont.system(size: 13, wght: 500))
+                            .font(BodyFont.manrope(size: 13, wght: 500))
                             .foregroundColor(Palette.textPrimary)
                         Text("\(slot.id) · \(slot.kind.rawValue)")
                             .font(.system(size: 11, design: .monospaced))
@@ -221,7 +221,7 @@ struct DesignTemplateDetailView: View {
     private func outputsBlock(_ template: TemplateManifest) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("OUTPUTS")
-                .font(BodyFont.system(size: 11, wght: 700))
+                .font(BodyFont.manrope(size: 11, wght: 700))
                 .foregroundColor(Color(white: 0.55))
                 .tracking(0.5)
             HStack(spacing: 6) {
@@ -253,7 +253,7 @@ struct DesignTemplateDetailView: View {
                 Image(systemName: "wand.and.rays")
                     .font(.system(size: 14, weight: .semibold))
                 Text("Open in editor")
-                    .font(BodyFont.system(size: 15, wght: 700))
+                    .font(BodyFont.manrope(size: 15, wght: 700))
             }
             .foregroundColor(Palette.background)
             .frame(maxWidth: .infinity)
@@ -309,7 +309,7 @@ struct DesignTemplateDetailView: View {
                 .font(.system(size: 26, weight: .light))
                 .foregroundColor(Color(white: 0.45))
             Text("Template not found")
-                .font(BodyFont.system(size: 14, wght: 500))
+                .font(BodyFont.manrope(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.70))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

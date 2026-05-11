@@ -137,16 +137,16 @@ struct EditorView: View {
                         if let slot = template.slots.first(where: { $0.id == selectedSlotId }) {
                             VStack(spacing: 1) {
                                 Text(slot.label)
-                                    .font(BodyFont.system(size: 14, wght: 600))
+                                    .font(BodyFont.manrope(size: 14, wght: 600))
                                     .foregroundColor(Palette.textPrimary)
                                 Text(slot.kind.rawValue.uppercased())
-                                    .font(BodyFont.system(size: 9.5, wght: 700))
+                                    .font(BodyFont.manrope(size: 9.5, wght: 700))
                                     .foregroundColor(Color(white: 0.55))
                                     .tracking(0.4)
                             }
                         } else {
                             Text("Inspector")
-                                .font(BodyFont.system(size: 14, wght: 600))
+                                .font(BodyFont.manrope(size: 14, wght: 600))
                                 .foregroundColor(Palette.textPrimary)
                         }
                     }
@@ -190,7 +190,7 @@ struct EditorView: View {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
                 Text(label)
-                    .font(BodyFont.system(size: 12.5, wght: 600))
+                    .font(BodyFont.manrope(size: 12.5, wght: 600))
             }
             .foregroundColor(active ? Palette.textPrimary : Color(white: 0.78))
             .padding(.horizontal, 14)
@@ -249,7 +249,7 @@ struct EditorView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 12, weight: .bold))
                     Text("Done")
-                        .font(BodyFont.system(size: 13, wght: 600))
+                        .font(BodyFont.manrope(size: 13, wght: 600))
                 }
                 .foregroundColor(Color(white: 0.92))
                 .padding(.horizontal, 12)
@@ -259,11 +259,11 @@ struct EditorView: View {
             .buttonStyle(.plain)
             VStack(alignment: .leading, spacing: 1) {
                 Text(document.name)
-                    .font(BodyFont.system(size: 15, wght: 600))
+                    .font(BodyFont.manrope(size: 15, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                 Text("\(template.name) · \(template.aspect.displayLabel)")
-                    .font(BodyFont.system(size: 11.5, wght: 500))
+                    .font(BodyFont.manrope(size: 11.5, wght: 500))
                     .foregroundColor(Color(white: 0.55))
                     .lineLimit(1)
             }
@@ -312,7 +312,7 @@ struct EditorView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(tint)
             Text(text)
-                .font(BodyFont.system(size: 12.5, wght: 500))
+                .font(BodyFont.manrope(size: 12.5, wght: 500))
                 .foregroundColor(Palette.textPrimary)
                 .lineLimit(2)
             Spacer()
@@ -360,7 +360,7 @@ struct EditorView: View {
         switch message {
         case .click(let id, _):
             selectedSlotId = id
-            if hSize != .regular { compactPane = .inspector }
+            if hSize != .regular { inspectorSheetOpen = true }
         case .hover:
             break
         case .edit(let id, let text):
@@ -475,7 +475,7 @@ struct EditorView: View {
                 .font(.system(size: 28, weight: .light))
                 .foregroundColor(Color(white: 0.45))
             Text("Editor document not found")
-                .font(BodyFont.system(size: 15, wght: 500))
+                .font(BodyFont.manrope(size: 15, wght: 500))
                 .foregroundColor(Color(white: 0.70))
             Button("Close", action: onClose)
                 .buttonStyle(.plain)

@@ -67,10 +67,10 @@ struct DesignHubView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Design")
-                .font(BodyFont.system(size: 30, wght: 700))
+                .font(BodyFont.manrope(size: 30, wght: 700))
                 .foregroundColor(Palette.textPrimary)
             Text("Styles, templates and references shared with the desktop.")
-                .font(BodyFont.system(size: 14, wght: 400))
+                .font(BodyFont.manrope(size: 14, wght: 400))
                 .foregroundColor(Color(white: 0.65))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,9 +94,9 @@ struct DesignHubView: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Text(entry.label)
-                                    .font(BodyFont.system(size: 13.5, wght: 600))
+                                    .font(BodyFont.manrope(size: 13.5, wght: 600))
                                 Text("\(count)")
-                                    .font(BodyFont.system(size: 11.5, wght: 600))
+                                    .font(BodyFont.manrope(size: 11.5, wght: 600))
                                     .foregroundColor(Color(white: 0.50))
                             }
                             .foregroundColor(tab == entry ? Palette.textPrimary : Color(white: 0.75))
@@ -146,7 +146,7 @@ struct DesignHubView: View {
             ForEach(groups, id: \.0) { category, list in
                 VStack(alignment: .leading, spacing: 10) {
                     Text("\(category.displayName) · \(list.count)")
-                        .font(BodyFont.system(size: 13, wght: 700))
+                        .font(BodyFont.manrope(size: 13, wght: 700))
                         .foregroundColor(Color(white: 0.65))
                         .tracking(0.3)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 12, alignment: .top)], spacing: 12) {
@@ -212,10 +212,10 @@ struct DesignHubView: View {
                 .font(.system(size: 28, weight: .light))
                 .foregroundColor(Color(white: 0.45))
             Text(title)
-                .font(BodyFont.system(size: 15, wght: 600))
+                .font(BodyFont.manrope(size: 15, wght: 600))
                 .foregroundColor(Palette.textPrimary)
             Text(detail)
-                .font(BodyFont.system(size: 13, wght: 400))
+                .font(BodyFont.manrope(size: 13, wght: 400))
                 .foregroundColor(Color(white: 0.55))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
@@ -252,11 +252,11 @@ struct StyleSummaryCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(style.name)
-                        .font(BodyFont.system(size: 15, wght: 600))
+                        .font(BodyFont.manrope(size: 15, wght: 600))
                         .foregroundColor(Palette.textPrimary)
                     if style.builtin == true {
                         Text("BUILTIN")
-                            .font(BodyFont.system(size: 9, wght: 700))
+                            .font(BodyFont.manrope(size: 9, wght: 700))
                             .foregroundColor(Color(white: 0.55))
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
@@ -269,7 +269,7 @@ struct StyleSummaryCard: View {
                 }
                 if let desc = style.description {
                     Text(desc)
-                        .font(BodyFont.system(size: 12, wght: 400))
+                        .font(BodyFont.manrope(size: 12, wght: 400))
                         .foregroundColor(Color(white: 0.60))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -322,7 +322,7 @@ struct TemplateSummaryCard: View {
                     .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
             )
             Text(template.name)
-                .font(BodyFont.system(size: 12.5, wght: 600))
+                .font(BodyFont.manrope(size: 12.5, wght: 600))
                 .foregroundColor(Palette.textPrimary)
                 .lineLimit(1)
             Text(template.aspect.displayLabel)
@@ -361,11 +361,11 @@ struct ReferenceSummaryCard: View {
             )
             VStack(alignment: .leading, spacing: 2) {
                 Text(reference.name)
-                    .font(BodyFont.system(size: 12.5, wght: 600))
+                    .font(BodyFont.manrope(size: 12.5, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
                 Text(reference.type.displayName)
-                    .font(BodyFont.system(size: 10.5, wght: 600))
+                    .font(BodyFont.manrope(size: 10.5, wght: 600))
                     .foregroundColor(Color(white: 0.55))
             }
         }
@@ -411,11 +411,11 @@ struct DraftRow: View {
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(document.name)
-                    .font(BodyFont.system(size: 14, wght: 600))
+                    .font(BodyFont.manrope(size: 14, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 if let template = template {
                     Text("\(template.name) · \(style?.name ?? document.styleId)")
-                        .font(BodyFont.system(size: 11.5, wght: 500))
+                        .font(BodyFont.manrope(size: 11.5, wght: 500))
                         .foregroundColor(Color(white: 0.60))
                 }
             }

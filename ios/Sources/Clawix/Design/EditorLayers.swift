@@ -16,12 +16,12 @@ struct EditorLayers: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Color(white: 0.55))
                 Text("Layers")
-                    .font(BodyFont.system(size: 11, wght: 700))
+                    .font(BodyFont.manrope(size: 11, wght: 700))
                     .foregroundColor(Color(white: 0.65))
                     .tracking(0.4)
                 Spacer()
                 Text("\(template.slots.count)")
-                    .font(BodyFont.system(size: 11, wght: 600))
+                    .font(BodyFont.manrope(size: 11, wght: 600))
                     .foregroundColor(Color(white: 0.50))
             }
             .padding(.horizontal, 14)
@@ -36,7 +36,6 @@ struct EditorLayers: View {
                 .padding(.horizontal, 6)
                 .padding(.vertical, 6)
             }
-            .thinScrollers()
         }
     }
 
@@ -48,11 +47,11 @@ struct EditorLayers: View {
             HStack(spacing: 8) {
                 Image(systemName: slotIcon(slot.kind))
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(selected ? Palette.pastelBlue : Color(white: 0.75))
+                    .foregroundColor(selected ? Palette.unreadDot : Color(white: 0.75))
                     .frame(width: 18, alignment: .center)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(slot.label)
-                        .font(BodyFont.system(size: 12.5, wght: selected ? 600 : 500))
+                        .font(BodyFont.manrope(size: 12.5, wght: selected ? 600 : 500))
                         .foregroundColor(selected ? Palette.textPrimary : Color(white: 0.85))
                         .lineLimit(1)
                     Text(summary(slot))

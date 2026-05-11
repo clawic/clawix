@@ -41,11 +41,11 @@ struct EditorInspector: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Palette.unreadDot)
                 Text(slot.label)
-                    .font(BodyFont.system(size: 15, wght: 600))
+                    .font(BodyFont.manrope(size: 15, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 Text(slot.kind.rawValue.uppercased())
-                    .font(BodyFont.system(size: 9, wght: 700))
+                    .font(BodyFont.manrope(size: 9, wght: 700))
                     .foregroundColor(Color(white: 0.55))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
@@ -89,7 +89,7 @@ struct EditorInspector: View {
             if multiline {
                 TextEditor(text: binding)
                     .scrollContentBackground(.hidden)
-                    .font(BodyFont.system(size: 14, wght: 400))
+                    .font(BodyFont.manrope(size: 14, wght: 400))
                     .foregroundColor(Color(white: 0.92))
                     .frame(minHeight: 140)
                     .padding(10)
@@ -97,7 +97,7 @@ struct EditorInspector: View {
             } else {
                 TextField(slot.placeholder ?? "", text: binding)
                     .textFieldStyle(.plain)
-                    .font(BodyFont.system(size: 14, wght: 500))
+                    .font(BodyFont.manrope(size: 14, wght: 500))
                     .foregroundColor(Color(white: 0.92))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 10)
@@ -117,7 +117,7 @@ struct EditorInspector: View {
                         .foregroundColor(Color(white: 0.55))
                     TextField("Item \(index + 1)", text: itemBinding(slot.id, index: index))
                         .textFieldStyle(.plain)
-                        .font(BodyFont.system(size: 14, wght: 500))
+                        .font(BodyFont.manrope(size: 14, wght: 500))
                         .foregroundColor(Color(white: 0.92))
                     Button {
                         removeItem(slot.id, at: index)
@@ -139,7 +139,7 @@ struct EditorInspector: View {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 13, weight: .semibold))
                     Text("Add item")
-                        .font(BodyFont.system(size: 13, wght: 600))
+                        .font(BodyFont.manrope(size: 13, wght: 600))
                 }
                 .foregroundColor(Palette.unreadDot)
                 .padding(.horizontal, 12)
@@ -174,7 +174,7 @@ struct EditorInspector: View {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.system(size: 13, weight: .semibold))
                     Text(document.data[slot.id]?.asAsset == nil ? "Choose image…" : "Replace image…")
-                        .font(BodyFont.system(size: 13, wght: 600))
+                        .font(BodyFont.manrope(size: 13, wght: 600))
                 }
                 .foregroundColor(Palette.unreadDot)
                 .padding(.horizontal, 14)
@@ -195,7 +195,7 @@ struct EditorInspector: View {
                 fieldLabel("NAME")
                 TextField("Untitled", text: documentNameBinding())
                     .textFieldStyle(.plain)
-                    .font(BodyFont.system(size: 14, wght: 500))
+                    .font(BodyFont.manrope(size: 14, wght: 500))
                     .foregroundColor(Color(white: 0.92))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 10)
@@ -227,7 +227,7 @@ struct EditorInspector: View {
             VStack(alignment: .leading, spacing: 4) {
                 fieldLabel("TEMPLATE")
                 Text(template.name)
-                    .font(BodyFont.system(size: 13, wght: 500))
+                    .font(BodyFont.manrope(size: 13, wght: 500))
                     .foregroundColor(Color(white: 0.85))
                 Text("\(template.category.displayName) · \(template.aspect.displayLabel)")
                     .font(.system(size: 11, design: .monospaced))
@@ -303,14 +303,14 @@ struct EditorInspector: View {
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text.uppercased())
-            .font(BodyFont.system(size: 10, wght: 700))
+            .font(BodyFont.manrope(size: 10, wght: 700))
             .foregroundColor(Color(white: 0.55))
             .tracking(0.5)
     }
 
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
-            .font(BodyFont.system(size: 9.5, wght: 700))
+            .font(BodyFont.manrope(size: 9.5, wght: 700))
             .foregroundColor(Color(white: 0.50))
             .tracking(0.5)
     }
@@ -326,7 +326,7 @@ struct EditorInspector: View {
 
     private func emptyHint(_ text: String) -> some View {
         Text(text)
-            .font(BodyFont.system(size: 12, wght: 400))
+            .font(BodyFont.manrope(size: 12, wght: 400))
             .foregroundColor(Color(white: 0.50))
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -339,7 +339,7 @@ struct EditorInspector: View {
     private func captionRow(_ label: String, _ value: String) -> some View {
         HStack {
             Text(label)
-                .font(BodyFont.system(size: 11, wght: 600))
+                .font(BodyFont.manrope(size: 11, wght: 600))
                 .foregroundColor(Color(white: 0.50))
             Spacer()
             Text(value)
@@ -423,7 +423,7 @@ private struct AssetPreviewCard: View {
                     .lineLimit(1)
                 if let w = asset.width, let h = asset.height {
                     Text("·  \(Int(w))×\(Int(h))")
-                        .font(BodyFont.system(size: 10.5, wght: 500))
+                        .font(BodyFont.manrope(size: 10.5, wght: 500))
                         .foregroundColor(Color(white: 0.45))
                 }
                 Spacer()

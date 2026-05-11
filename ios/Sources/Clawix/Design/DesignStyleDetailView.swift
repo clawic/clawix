@@ -57,11 +57,11 @@ struct DesignStyleDetailView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(style.name)
-                    .font(BodyFont.system(size: 26, wght: 700))
+                    .font(BodyFont.manrope(size: 26, wght: 700))
                     .foregroundColor(Palette.textPrimary)
                 if style.builtin == true {
                     Text("BUILTIN")
-                        .font(BodyFont.system(size: 9, wght: 700))
+                        .font(BodyFont.manrope(size: 9, wght: 700))
                         .foregroundColor(Color(white: 0.55))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -74,7 +74,7 @@ struct DesignStyleDetailView: View {
             }
             if let desc = style.description {
                 Text(desc)
-                    .font(BodyFont.system(size: 13, wght: 400))
+                    .font(BodyFont.manrope(size: 13, wght: 400))
                     .foregroundColor(Color(white: 0.65))
             }
         }
@@ -92,7 +92,7 @@ struct DesignStyleDetailView: View {
                         tab = entry
                     } label: {
                         Text(entry.label)
-                            .font(BodyFont.system(size: 13, wght: 500))
+                            .font(BodyFont.manrope(size: 13, wght: 500))
                             .foregroundColor(tab == entry ? Palette.textPrimary : Color(white: 0.65))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -125,7 +125,7 @@ struct DesignStyleDetailView: View {
                                         .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
                                 )
                             Text(name)
-                                .font(BodyFont.system(size: 11, wght: 600))
+                                .font(BodyFont.manrope(size: 11, wght: 600))
                                 .foregroundColor(Palette.textPrimary)
                             Text(hex.uppercased())
                                 .font(.system(size: 10, design: .monospaced))
@@ -150,7 +150,7 @@ struct DesignStyleDetailView: View {
                 section("Taglines") {
                     ForEach(taglines, id: \.self) { line in
                         Text(line)
-                            .font(BodyFont.system(size: 14, wght: 400))
+                            .font(BodyFont.manrope(size: 14, wght: 400))
                             .foregroundColor(Color(white: 0.85))
                     }
                 }
@@ -159,7 +159,7 @@ struct DesignStyleDetailView: View {
                 section("Claims") {
                     ForEach(claims, id: \.self) { line in
                         Text(line)
-                            .font(BodyFont.system(size: 14, wght: 400))
+                            .font(BodyFont.manrope(size: 14, wght: 400))
                             .foregroundColor(Color(white: 0.85))
                     }
                 }
@@ -221,7 +221,7 @@ struct DesignStyleDetailView: View {
                             .frame(width: 22)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(ref.name)
-                                .font(BodyFont.system(size: 13, wght: 500))
+                                .font(BodyFont.manrope(size: 13, wght: 500))
                                 .foregroundColor(Palette.textPrimary)
                             if let source = ref.source {
                                 Text(source)
@@ -232,7 +232,7 @@ struct DesignStyleDetailView: View {
                         }
                         Spacer()
                         Text(ref.type.displayName)
-                            .font(BodyFont.system(size: 10, wght: 600))
+                            .font(BodyFont.manrope(size: 10, wght: 600))
                             .foregroundColor(Color(white: 0.55))
                     }
                     .padding(.horizontal, 12)
@@ -258,7 +258,7 @@ struct DesignStyleDetailView: View {
             } else {
                 ForEach(examples, id: \.self) { id in
                     Text(id)
-                        .font(BodyFont.system(size: 13, wght: 500))
+                        .font(BodyFont.manrope(size: 13, wght: 500))
                         .foregroundColor(Color(white: 0.70))
                 }
             }
@@ -270,7 +270,7 @@ struct DesignStyleDetailView: View {
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
-                .font(BodyFont.system(size: 11, wght: 700))
+                .font(BodyFont.manrope(size: 11, wght: 700))
                 .foregroundColor(Color(white: 0.55))
                 .tracking(0.5)
             content()
@@ -281,7 +281,7 @@ struct DesignStyleDetailView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(label.uppercased())
-                    .font(BodyFont.system(size: 10, wght: 700))
+                    .font(BodyFont.manrope(size: 10, wght: 700))
                     .foregroundColor(Color(white: 0.55))
                 Spacer()
                 Text(stack.family)
@@ -307,7 +307,7 @@ struct DesignStyleDetailView: View {
 
     private func multilineBlock(_ body: String, mono: Bool = false) -> some View {
         Text(body)
-            .font(mono ? .system(size: 12, design: .monospaced) : BodyFont.system(size: 13.5, wght: 400))
+            .font(mono ? .system(size: 12, design: .monospaced) : BodyFont.manrope(size: 13.5, wght: 400))
             .foregroundColor(Color(white: 0.85))
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(14)
@@ -323,7 +323,7 @@ struct DesignStyleDetailView: View {
 
     private func emptyHint(_ text: String) -> some View {
         Text(text)
-            .font(BodyFont.system(size: 13, wght: 400))
+            .font(BodyFont.manrope(size: 13, wght: 400))
             .foregroundColor(Color(white: 0.55))
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -355,7 +355,7 @@ struct DesignStyleDetailView: View {
                 .font(.system(size: 26, weight: .light))
                 .foregroundColor(Color(white: 0.45))
             Text("Style not found")
-                .font(BodyFont.system(size: 14, wght: 500))
+                .font(BodyFont.manrope(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.70))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
