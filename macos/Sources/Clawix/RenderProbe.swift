@@ -25,11 +25,14 @@ enum RenderProbe {
     nonisolated(unsafe) private static var maxMs: [String: Double] = [:]
     nonisolated(unsafe) private static var didStart = false
     nonisolated(unsafe) private static var windowStart = CFAbsoluteTimeGetCurrent()
+    nonisolated(unsafe) private static var lastActivityAt: CFAbsoluteTime?
     private static let path = "/tmp/clawix-renders.log"
     private static let flushInterval: TimeInterval = 0.5
+    private static let hitchActivityWindow: TimeInterval = 3.0
 
     static func tick(_ name: String) {
         queue.async {
+            recordActivityIfNeeded(name)
             counts[name, default: 0] += 1
             startIfNeeded()
         }
@@ -42,12 +45,28 @@ enum RenderProbe {
         let result = block()
         let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000.0
         queue.async {
+            lastActivityAt = CFAbsoluteTimeGetCurrent()
             counts[name, default: 0] += 1
             totalMs[name, default: 0] += elapsed
             if elapsed > (maxMs[name] ?? 0) { maxMs[name] = elapsed }
             startIfNeeded()
         }
         return result
+    }
+
+    static func recordHitch(_ name: String, at now: CFAbsoluteTime) {
+        queue.async {
+            guard let lastActivityAt,
+                  now - lastActivityAt <= hitchActivityWindow
+            else { return }
+            counts[name, default: 0] += 1
+            startIfNeeded()
+        }
+    }
+
+    private static func recordActivityIfNeeded(_ name: String) {
+        guard !name.hasPrefix("hitch>") else { return }
+        lastActivityAt = CFAbsoluteTimeGetCurrent()
     }
 
     private static func startIfNeeded() {
@@ -118,10 +137,10 @@ enum HitchProbe {
             let now = CFAbsoluteTimeGetCurrent()
             let deltaMs = (now - lastTick) * 1000.0
             lastTick = now
-            if deltaMs > 33 { RenderProbe.tick("hitch>33ms") }
-            if deltaMs > 100 { RenderProbe.tick("hitch>100ms") }
-            if deltaMs > 250 { RenderProbe.tick("hitch>250ms") }
-            if deltaMs > 1000 { RenderProbe.tick("hitch>1000ms") }
+            if deltaMs > 33 { RenderProbe.recordHitch("hitch>33ms", at: now) }
+            if deltaMs > 100 { RenderProbe.recordHitch("hitch>100ms", at: now) }
+            if deltaMs > 250 { RenderProbe.recordHitch("hitch>250ms", at: now) }
+            if deltaMs > 1000 { RenderProbe.recordHitch("hitch>1000ms", at: now) }
         }
         RunLoop.main.add(timer, forMode: .common)
     }
