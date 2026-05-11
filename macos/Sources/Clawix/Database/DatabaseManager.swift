@@ -43,6 +43,7 @@ final class DatabaseManager: ObservableObject {
     /// In-flight tasks per collection so we can cancel a stale fetch when
     /// the user changes filter quickly.
     private var inFlight: [String: Task<Void, Never>] = [:]
+    private var realtimeRefreshTasks: [String: Task<Void, Never>] = [:]
 
     private(set) var client = DatabaseClient()
     let realtime = DatabaseRealtimeClient()
@@ -277,9 +278,22 @@ final class DatabaseManager: ObservableObject {
             }
         case .deleted:
             current.removeAll { $0.id == event.recordId }
+            scheduleRealtimeRefresh(collection: name)
         }
         recordsByCollection[name] = current
         lastEventAt = Date()
+    }
+
+    private func scheduleRealtimeRefresh(collection name: String) {
+        realtimeRefreshTasks[name]?.cancel()
+        realtimeRefreshTasks[name] = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.refreshRecords(collection: name)
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.refreshRecords(collection: name)
+        }
     }
 
     private func upsertRecordInCache(_ record: DBRecord, collection name: String) {
