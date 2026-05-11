@@ -1,19 +1,23 @@
 package com.example.clawix.android
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.example.clawix.android.bridge.BridgeClient
 import com.example.clawix.android.bridge.BridgeStore
 import com.example.clawix.android.bridge.BonjourDiscovery
+import com.example.clawix.android.bridge.Credentials
 import com.example.clawix.android.bridge.CredentialStore
 import com.example.clawix.android.bridge.ProjectLabelsCache
 import com.example.clawix.android.bridge.UnreadChatsCache
+import com.example.clawix.android.core.PairingPayload
 import com.example.clawix.android.core.SnapshotCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.io.File
 
 /**
  * Process-wide DI container + lifecycle observer. Hooks into
@@ -31,6 +35,7 @@ class ClawixApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        consumeDebugPairingPayload()
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
                 val creds = container.credentialStore.load()
@@ -46,6 +51,18 @@ class ClawixApplication : Application() {
                 }
             }
         })
+    }
+
+    private fun consumeDebugPairingPayload() {
+        if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) == 0) return
+        val file = File(filesDir, "debug-pairing.json")
+        if (!file.isFile) return
+        try {
+            val payload = PairingPayload.parse(file.readText()) ?: return
+            container.credentialStore.save(Credentials.fromPairingPayload(payload))
+        } finally {
+            file.delete()
+        }
     }
 }
 
