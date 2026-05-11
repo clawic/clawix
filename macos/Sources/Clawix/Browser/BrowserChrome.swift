@@ -577,18 +577,25 @@ struct BrowserURLField: View {
     }
 
     private func commit() {
-        controller.loadString(draft)
+        let submitted = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if submitted == controller.currentURL.absoluteString || submitted == displayString(for: controller.currentURL) {
+            isFocused = false
+            return
+        }
+        controller.loadString(submitted)
         isFocused = false
     }
 
     private func syncFromController() {
-        let url = controller.currentURL
+        draft = displayString(for: controller.currentURL)
+    }
+
+    private func displayString(for url: URL) -> String {
         if let host = url.host {
             // Match the look of Safari's URL field: hostname only.
-            draft = host.replacingOccurrences(of: "www.", with: "")
-        } else {
-            draft = url.absoluteString
+            return host.replacingOccurrences(of: "www.", with: "")
         }
+        return url.absoluteString
     }
 }
 
