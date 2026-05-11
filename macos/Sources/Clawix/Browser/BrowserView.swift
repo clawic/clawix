@@ -20,6 +20,11 @@ struct BrowserView: View {
         return nil
     }
 
+    private var activeSimulator: SidebarItem.IOSSimulatorPayload? {
+        if case .iosSimulator(let p) = appState.activeSidebarItem { return p }
+        return nil
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
@@ -47,6 +52,10 @@ struct BrowserView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let payload = activeChat {
                     ChatView(chatId: payload.id, isSideChat: true)
+                        .id(payload.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let payload = activeSimulator {
+                    IOSSimulatorPanel(payload: payload)
                         .id(payload.id)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -141,6 +150,21 @@ struct BrowserView: View {
                 appState.newBrowserTab()
             } label: {
                 Text("New tab")
+                    .font(BodyFont.system(size: 12, wght: 600))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color(white: 0.20))
+                    )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                appState.openIOSSimulator()
+            } label: {
+                Text("iOS Simulator")
                     .font(BodyFont.system(size: 12, wght: 600))
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
