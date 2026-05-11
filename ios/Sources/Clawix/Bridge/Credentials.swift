@@ -10,6 +10,14 @@ struct Credentials: Codable, Equatable {
     /// reachable (iPhone on cellular, on a different WiFi, traveling).
     /// Optional so old pairings without this field keep working.
     var tailscaleHost: String?
+    /// Coordinator base URL the Mac advertised in its pairing payload.
+    /// When present, the iPhone can fall back to a P2P/Iroh path via
+    /// the coordinator when LAN and Tailscale both fail. Old pairings
+    /// without a coordinator stay LAN-only.
+    var coordinatorUrl: String?
+    /// Iroh node id of the Mac at pairing time. Used as the target of
+    /// the P2P stream the iPhone will open through MeshKit.
+    var irohNodeId: String?
 
     var websocketURL: URL? {
         URL(string: "ws://\(host):\(port)")
@@ -74,6 +82,15 @@ struct PairingPayload: Codable {
     /// the long bearer is enough to authenticate, but parsing it
     /// keeps the payload future-compatible.
     var shortCode: String?
+    /// Optional coordinator URL the iPhone should hit to register a
+    /// device, request peers and exchange Iroh signaling envelopes.
+    var coordinatorUrl: String?
+    /// Optional Iroh node id of the Mac that emitted the QR. When
+    /// the LAN candidates time out, the iPhone connects to this node
+    /// id through `MeshKit`, falling back to relay if hole punching
+    /// fails. Pairings emitted by daemons without coordinator support
+    /// omit this and the iPhone keeps working LAN-only.
+    var irohNodeId: String?
 
     static func parse(_ raw: String) -> PairingPayload? {
         guard let data = raw.data(using: .utf8) else { return nil }
@@ -86,7 +103,9 @@ struct PairingPayload: Codable {
             port: port,
             token: token,
             macName: macName,
-            tailscaleHost: tailscaleHost
+            tailscaleHost: tailscaleHost,
+            coordinatorUrl: coordinatorUrl,
+            irohNodeId: irohNodeId
         )
     }
 }

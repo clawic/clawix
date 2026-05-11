@@ -26,6 +26,7 @@ final class BridgeStore {
     enum Route: String, Equatable {
         case lan
         case tailscale
+        case iroh
     }
 
     enum ConnectionState: Equatable {
