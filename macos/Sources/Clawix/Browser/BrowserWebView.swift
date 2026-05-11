@@ -138,11 +138,25 @@ final class BrowserTabController: NSObject, ObservableObject {
         title = ""
         lastNavigationError = nil
         appState?.updateBrowserTab(id, url: url, title: "")
+        if url.isFileURL {
+            let readAccessURL = Self.fileReadAccessURL(for: url)
+            webView.loadFileURL(url, allowingReadAccessTo: readAccessURL)
+            return
+        }
         webView.load(URLRequest(url: url))
     }
 
     private static func isBlankURL(_ url: URL) -> Bool {
         url.absoluteString == blankURL.absoluteString
+    }
+
+    private static func fileReadAccessURL(for url: URL) -> URL {
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+           isDirectory.boolValue {
+            return url
+        }
+        return url.deletingLastPathComponent()
     }
 
     func loadString(_ raw: String) {
@@ -550,17 +564,28 @@ final class BrowserTabController: NSObject, ObservableObject {
         return (200..<300).contains(http.statusCode)
     }
 
-    /// Best-effort URL parser: accepts "google.com", "https://...", or a search
-    /// query (falls back to a Google search).
+    /// Best-effort URL parser: accepts "google.com", "https://...",
+    /// `file://...`, absolute file paths, or a search query.
     static func normalize(_ raw: String) -> URL? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
         if let url = URL(string: trimmed),
-           let scheme = url.scheme?.lowercased(),
-           scheme == "http" || scheme == "https",
-           url.host != nil {
-            return url
+           let scheme = url.scheme?.lowercased() {
+            if scheme == "file" {
+                return url
+            }
+            if (scheme == "http" || scheme == "https"),
+               url.host != nil {
+                return url
+            }
+            if trimmed.contains("://") {
+                return nil
+            }
+        }
+
+        if trimmed.hasPrefix("/") {
+            return URL(fileURLWithPath: trimmed)
         }
 
         let looksLikeHost = trimmed.contains(".") && !trimmed.contains(" ")
