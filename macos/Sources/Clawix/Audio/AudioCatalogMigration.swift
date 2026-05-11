@@ -1,6 +1,7 @@
 #if canImport(AVFoundation)
 import Foundation
 import AVFoundation
+import ClawixEngine
 
 /// One-shot migration from the legacy on-disk `AudioMessageStore`
 /// (`~/Library/Application Support/Clawix/audio-meta.json` + per-chat
