@@ -18,6 +18,8 @@ public final class PairingService {
     public let port: UInt16
     private let bearerKey = "ClawixBridge.Bearer.v1"
     private let shortCodeKey = "ClawixBridge.ShortCode.v1"
+    private let coordinatorURLKey = "ClawixBridge.Coordinator.URL.v1"
+    private let irohNodeIDKey = "ClawixBridge.Iroh.NodeID.v1"
     private let defaults: UserDefaults
 
     /// Alphabet for the human-typeable short code: 32 unambiguous
@@ -127,8 +129,49 @@ public final class PairingService {
         if let ts = Self.currentTailscaleIPv4() {
             dict["tailscaleHost"] = ts
         }
+        if let coordinator = coordinatorURL?.absoluteString, !coordinator.isEmpty {
+            dict["coordinatorUrl"] = coordinator
+        }
+        if let nodeID = irohNodeID, !nodeID.isEmpty {
+            dict["irohNodeId"] = nodeID
+        }
         let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys])) ?? Data()
         return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    /// Coordinator URL the host has configured via Settings → Remote
+    /// access. When set, it is embedded in the QR payload so a freshly
+    /// paired iPhone can dial the coordinator without the user typing
+    /// the URL by hand. nil keeps the payload coordinator-free and the
+    /// iPhone falls back to LAN-only as before.
+    public var coordinatorURL: URL? {
+        get {
+            guard let raw = defaults.string(forKey: coordinatorURLKey),
+                  let url = URL(string: raw) else { return nil }
+            return url
+        }
+        set {
+            if let value = newValue {
+                defaults.set(value.absoluteString, forKey: coordinatorURLKey)
+            } else {
+                defaults.removeObject(forKey: coordinatorURLKey)
+            }
+        }
+    }
+
+    /// Iroh node id of this host, advertised through the QR so the
+    /// remote peer can target the same node in MeshKit. Persisted so
+    /// reboots reuse the same identifier whenever the iroh-ffi node
+    /// builds on top of the same long-lived secret key.
+    public var irohNodeID: String? {
+        get { defaults.string(forKey: irohNodeIDKey) }
+        set {
+            if let value = newValue, !value.isEmpty {
+                defaults.set(value, forKey: irohNodeIDKey)
+            } else {
+                defaults.removeObject(forKey: irohNodeIDKey)
+            }
+        }
     }
 
     /// Bonjour instance name for the bridge service. Stable per
