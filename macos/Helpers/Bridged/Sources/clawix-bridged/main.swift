@@ -770,12 +770,61 @@ final class DaemonEngineHost: EngineHost {
         // reply send so the session.send path stays single-actor like
         // the other handlers.
         Task { @MainActor in
+            if let client = self.audioCatalogClient {
+                do {
+                    let result = try await client.getBytes(audioId: audioId, appId: "clawix")
+                    reply(result.base64, result.mimeType, nil)
+                    return
+                } catch ClawJSAudioClient.Error.notFound {
+                    // Fall through to legacy lookup.
+                } catch {
+                    // Transport / decoding error: fall through.
+                }
+            }
             if let payload = await AudioMessageStore.shared.data(forAudioId: audioId) {
                 reply(payload.data.base64EncodedString(), payload.mimeType, nil)
             } else {
                 reply(nil, nil, "Audio no longer available")
             }
         }
+    }
+
+    /// Lazy view of the audio catalog client. Resolves to non-nil when
+    /// the supervisor (whichever process spawned it: GUI or, in the
+    /// future, the daemon itself) has written its per-session bearer
+    /// token to the canonical data-dir path. Cached after first hit so
+    /// the hot path doesn't re-read the file on every replay.
+    private var cachedAudioCatalogClient: ClawJSAudioClient?
+    private var didProbeAudioCatalog = false
+    var audioCatalogClient: ClawJSAudioClient? {
+        if didProbeAudioCatalog { return cachedAudioCatalogClient }
+        didProbeAudioCatalog = true
+        let tokenDir = Self.audioCatalogTokenDir
+        guard let token = ClawJSAudioClient.tokenFromDataDir(tokenDir) else {
+            return nil
+        }
+        cachedAudioCatalogClient = ClawJSAudioClient(bearerToken: token)
+        return cachedAudioCatalogClient
+    }
+
+    /// Mirrors `ClawJSServiceManager.dataDirectoryURL(for: .audio)`
+    /// path resolution. The supervisor (GUI) writes the per-session
+    /// bearer token to `<root>/.admin-token` here on every spawn; the
+    /// daemon helper reads it lazily because the manager lives in a
+    /// different process.
+    private static var audioCatalogTokenDir: URL {
+        let env = ProcessInfo.processInfo.environment
+        let root: URL
+        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAWJS_ROOT"], !custom.isEmpty {
+            root = URL(fileURLWithPath: custom, isDirectory: true)
+        } else {
+            root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Clawix/clawjs", isDirectory: true)
+        }
+        return root
+            .appendingPathComponent("workspace", isDirectory: true)
+            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent("audio", isDirectory: true)
     }
 
     func handleTranscribeAudio(
