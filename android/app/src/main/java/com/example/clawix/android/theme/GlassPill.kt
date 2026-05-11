@@ -1,8 +1,5 @@
 package com.example.clawix.android.theme
 
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,17 +9,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
  * Modifiers that produce the iOS 26 "Liquid Glass" pills used across the
- * app (top bar pill, settings buttons, search bar). On API 31+ uses
- * `RenderEffect.createBlurEffect`; on API 29-30 falls back to a
- * translucent layer with a subtle dim. Documented as a known visual
- * delta vs iOS in the README.
+ * app (top bar pill, settings buttons, search bar). Android uses the same
+ * translucent fallback on all supported API levels because Compose
+ * RenderEffect blurs the foreground layer rather than a true backdrop.
  */
 
 private val GlassFill = Color(0x14FFFFFF)        // white.opacity(0.08) — slightly more than cardFill so the pill reads
@@ -66,18 +60,10 @@ fun Modifier.glassPill(
     border = border,
 )
 
-private fun canBlur(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+private fun canBlur(): Boolean = false
 
 /**
- * Applies a blur RenderEffect on API 31+. On older versions returns the
- * receiver untouched (fallback handled by extra dim layer).
+ * Keep the modifier hook so call sites can stay aligned with the shared glass
+ * shape helpers. The fallback dim layer above provides the Android rendering.
  */
-private fun Modifier.applyBlurIfAvailable(blurRadius: Dp): Modifier {
-    if (!canBlur()) return this
-    val px = blurRadius.value
-    return this.graphicsLayer {
-        renderEffect = RenderEffect
-            .createBlurEffect(px, px, Shader.TileMode.CLAMP)
-            .asComposeRenderEffect()
-    }
-}
+private fun Modifier.applyBlurIfAvailable(@Suppress("UNUSED_PARAMETER") blurRadius: Dp): Modifier = this
