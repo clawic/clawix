@@ -35,6 +35,7 @@ final class BrowserTabController: NSObject, ObservableObject {
     private var observers: [NSKeyValueObservation] = []
     private var bgSampleTimer: Timer?
     private var lastSampledBgRaw: String?
+    private var requestedURL: URL?
     private static let blankURL = URL(string: "about:blank")!
     private static let blankPageHTML = """
         <!doctype html>
@@ -115,6 +116,7 @@ final class BrowserTabController: NSObject, ObservableObject {
 
     private func loadApproved(_ url: URL) {
         if Self.isBlankURL(url) {
+            requestedURL = nil
             currentURL = Self.blankURL
             title = ""
             lastNavigationError = nil
@@ -124,6 +126,11 @@ final class BrowserTabController: NSObject, ObservableObject {
             webView.loadHTMLString(Self.blankPageHTML, baseURL: Self.blankURL)
             return
         }
+        requestedURL = url
+        currentURL = url
+        title = ""
+        lastNavigationError = nil
+        appState?.updateBrowserTab(id, url: url, title: "")
         webView.load(URLRequest(url: url))
     }
 
@@ -310,6 +317,11 @@ final class BrowserTabController: NSObject, ObservableObject {
             guard let url = wv.url else { return }
             Task { @MainActor in
                 guard let self else { return }
+                if Self.isBlankURL(url),
+                   let requestedURL = self.requestedURL,
+                   !Self.isBlankURL(requestedURL) {
+                    return
+                }
                 self.currentURL = url
                 self.appState?.updateBrowserTab(self.id, url: url)
             }
@@ -569,6 +581,7 @@ extension BrowserTabController: WKNavigationDelegate {
         Task { @MainActor in
             self.fetchFavicon()
             self.sampleBottomLeftBackground()
+            self.requestedURL = nil
             self.lastNavigationError = nil
         }
     }
@@ -588,6 +601,11 @@ extension BrowserTabController: WKNavigationDelegate {
             if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                 return
             }
+            self.requestedURL = nil
+            if let failingURL {
+                self.currentURL = failingURL
+                self.appState?.updateBrowserTab(self.id, url: failingURL)
+            }
             self.lastNavigationError = NavigationError(
                 message: message,
                 failedURL: failingURL
@@ -605,6 +623,11 @@ extension BrowserTabController: WKNavigationDelegate {
         Task { @MainActor in
             if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                 return
+            }
+            self.requestedURL = nil
+            if let url = webView.url {
+                self.currentURL = url
+                self.appState?.updateBrowserTab(self.id, url: url)
             }
             self.lastNavigationError = NavigationError(
                 message: message,
