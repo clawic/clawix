@@ -751,6 +751,32 @@ private struct RightSidebarColumn: View {
             .frame(maxHeight: .infinity)
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Right sidebar")
+            .overlay(alignment: .topLeading) {
+                if !isSimulatorActive {
+                    Button {
+                        appState.openIOSSimulator()
+                    } label: {
+                        Text("iOS")
+                            .font(BodyFont.system(size: 11, wght: 700))
+                            .foregroundColor(Color(white: 0.86))
+                            .padding(.horizontal, 9)
+                            .frame(height: 26)
+                            .background(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .fill(Color.white.opacity(0.08))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("iOS Simulator")
+                    .padding(.leading, 42)
+                    .padding(.top, 7)
+                }
+            }
+    }
+
+    private var isSimulatorActive: Bool {
+        if case .iosSimulator = appState.activeSidebarItem { return true }
+        return false
     }
 }
 
@@ -869,6 +895,7 @@ private struct RightSidebarAddMenu: View {
             MenuStandardDivider()
                 .padding(.vertical, 4)
             row(id: "browser", icon: "globe", title: "Browser", shortcut: "⌘T")
+            row(id: "simulator", icon: "app.window", title: "iOS Simulator", shortcut: "")
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: 232)
@@ -881,6 +908,8 @@ private struct RightSidebarAddMenu: View {
             switch id {
             case "browser":
                 appState.openBrowser()
+            case "simulator":
+                appState.openIOSSimulator()
             default:
                 break
             }
