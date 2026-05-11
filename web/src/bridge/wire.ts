@@ -47,6 +47,7 @@ export const ZWireChat = z.object({
   cwd: z.string().optional(),
   lastTurnInterrupted: z.boolean().default(false),
   threadId: z.string().optional(),
+  agent: z.string().default("codex"),
 });
 export type WireChat = z.infer<typeof ZWireChat>;
 
