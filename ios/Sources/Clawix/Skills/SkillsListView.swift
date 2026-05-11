@@ -93,7 +93,7 @@ private struct SkillRowView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 32, height: 32)
                 .background(
-                    RoundedRectangle(cornerRadius: 7).fill(Color.gray.opacity(0.14))
+                    RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.gray.opacity(0.14))
                 )
             VStack(alignment: .leading, spacing: 2) {
                 Text(skill.name).font(.system(size: 14, weight: .semibold))
@@ -120,7 +120,7 @@ private struct SkillDetailReadOnlyView: View {
                         .font(.system(size: 18))
                         .frame(width: 36, height: 36)
                         .background(
-                            RoundedRectangle(cornerRadius: 8).fill(Color.gray.opacity(0.14))
+                            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.gray.opacity(0.14))
                         )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(skill.name).font(.system(size: 18, weight: .semibold))
@@ -165,7 +165,7 @@ private struct SkillDetailReadOnlyView: View {
                 .textSelection(.enabled)
                 .padding(12)
                 .background(
-                    RoundedRectangle(cornerRadius: 9).fill(Color.gray.opacity(0.06))
+                    RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.gray.opacity(0.06))
                 )
         }
     }
