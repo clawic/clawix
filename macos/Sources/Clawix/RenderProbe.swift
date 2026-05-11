@@ -26,7 +26,15 @@ enum RenderProbe {
     nonisolated(unsafe) private static var didStart = false
     nonisolated(unsafe) private static var windowStart = CFAbsoluteTimeGetCurrent()
     nonisolated(unsafe) private static var lastActivityAt: CFAbsoluteTime?
-    private static let path = "/tmp/clawix-renders.log"
+    private static let path: String = {
+        guard let role = Bundle.main.infoDictionary?["CLXAppRole"] as? String,
+              !role.isEmpty
+        else { return "/tmp/clawix-renders.log" }
+        let suffix = role
+            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            .replacingOccurrences(of: ".", with: "-")
+        return "/tmp/clawix-renders-\(suffix.isEmpty ? "aux" : suffix).log"
+    }()
     private static let flushInterval: TimeInterval = 0.5
     private static let hitchActivityWindow: TimeInterval = 3.0
 
