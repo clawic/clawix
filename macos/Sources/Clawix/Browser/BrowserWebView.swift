@@ -93,10 +93,6 @@ final class BrowserTabController: NSObject, ObservableObject {
         load(initialURL)
     }
 
-    deinit {
-        teardown()
-    }
-
     func teardown() {
         webView.stopLoading()
         webView.navigationDelegate = nil
@@ -713,12 +709,6 @@ struct BrowserFocusURLBarRequest: Equatable {
 @MainActor
 final class BrowserControllerStore {
     private var controllers: [UUID: BrowserTabController] = [:]
-
-    deinit {
-        for controller in controllers.values {
-            controller.teardown()
-        }
-    }
 
     func controller(for tab: SidebarItem.WebPayload, appState: AppState) -> BrowserTabController {
         if let existing = controllers[tab.id] { return existing }
