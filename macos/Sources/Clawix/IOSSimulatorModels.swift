@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 enum IOSSimulatorPointerPhase {
     case began
@@ -9,9 +10,10 @@ enum IOSSimulatorPointerPhase {
 struct IOSSimulatorNativeDisplayDescriptor: Equatable {
     let deviceUDID: String
     let deviceName: String
+    let aspectRatio: CGFloat
 }
 
-struct ToolResult {
+struct ToolResult: Sendable {
     let status: Int32
     let stdout: String
     let stderr: String
@@ -22,6 +24,29 @@ struct SimDevice: Equatable {
     let name: String
     let udid: String
     let state: String
+
+    var isPhone: Bool { name.localizedCaseInsensitiveContains("iPhone") }
+}
+
+struct IOSSimulatorDeviceChoice: Identifiable, Equatable {
+    let id: String
+    let udid: String
+    let name: String
+    let runtime: String
+    let isBooted: Bool
+
+    init(device: SimDevice) {
+        self.id = device.udid
+        self.udid = device.udid
+        self.name = device.name
+        self.runtime = device.runtime
+        self.isBooted = device.state == "Booted"
+    }
+
+    var menuTitle: String {
+        let suffix = isBooted ? " · booted" : ""
+        return "\(name)\(suffix)"
+    }
 }
 
 struct SimctlDeviceList: Decodable {

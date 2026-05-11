@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IOSSimulatorPanel: View {
     let payload: SidebarItem.IOSSimulatorPayload
+    var onPayloadChange: (SidebarItem.IOSSimulatorPayload) -> Void = { _ in }
     @StateObject private var controller = IOSSimulatorFramebufferController()
 
     var body: some View {
@@ -21,7 +22,7 @@ struct IOSSimulatorPanel: View {
         }
         .background(Color.black)
         .onAppear {
-            controller.configure(payload: payload)
+            controller.configure(payload: payload, onPayloadChange: onPayloadChange)
             controller.start()
         }
         .onDisappear {
@@ -55,6 +56,32 @@ struct IOSSimulatorPanel: View {
                 controller.setAppearance(.dark)
             }
             .accessibilityLabel("Dark appearance")
+
+            Menu {
+                ForEach(controller.availableDevices) { device in
+                    Button(device.menuTitle) {
+                        controller.selectDevice(device)
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(controller.selectedDeviceName)
+                        .font(BodyFont.system(size: 11.5, wght: 600))
+                        .foregroundColor(Color(white: 0.82))
+                        .lineLimit(1)
+                    LucideIcon(.chevronDown, size: 10)
+                        .foregroundColor(Color(white: 0.55))
+                }
+                .padding(.horizontal, 9)
+                .frame(height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(0.07))
+                )
+            }
+            .menuStyle(.borderlessButton)
+            .disabled(controller.availableDevices.isEmpty)
+            .accessibilityLabel("Select iOS simulator device")
 
             Spacer(minLength: 0)
 

@@ -20,6 +20,7 @@ struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
         private typealias ObjCInitFrameFn = @convention(c) (AnyObject, Selector, CGRect) -> AnyObject?
 
         private var configuredUDID: String?
+        private var configuredAspectRatio: CGFloat = 1206.0 / 2622.0
         private var displayView: NSView?
         private var retainedScreen: AnyObject?
         private var retainedDisplay: AnyObject?
@@ -45,7 +46,11 @@ struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
         }
 
         func configure(display: IOSSimulatorNativeDisplayDescriptor) {
-            guard configuredUDID != display.deviceUDID else { return }
+            configuredAspectRatio = display.aspectRatio
+            if configuredUDID == display.deviceUDID {
+                needsLayout = true
+                return
+            }
             configuredUDID = display.deviceUDID
             displayView?.removeFromSuperview()
             displayView = nil
@@ -82,7 +87,7 @@ struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
             super.layout()
             guard let displayView else { return }
             let maxRect = bounds.insetBy(dx: 2, dy: 2)
-            let aspect: CGFloat = 1206.0 / 2622.0
+            let aspect = max(0.1, configuredAspectRatio)
             var width = maxRect.width
             var height = width / aspect
             if height > maxRect.height {
