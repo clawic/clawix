@@ -269,11 +269,13 @@ final class DatabaseManager: ObservableObject {
         case .created:
             if let record = event.record {
                 upsertRecordInCache(record, collection: name)
+                scheduleRealtimeRefresh(collection: name)
                 return
             }
         case .updated:
             if let record = event.record {
                 upsertRecordInCache(record, collection: name)
+                scheduleRealtimeRefresh(collection: name)
                 return
             }
         case .deleted:
