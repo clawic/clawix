@@ -90,12 +90,22 @@ final class VaultManager: ObservableObject {
     init() {
         self.client = ClawJSVaultClient.local()
         self.lifecycle = VaultLifecycle(attaching: self)
+        if Self.isDisabledForLaunch {
+            self.state = .openFailed("Vault service disabled for this launch.")
+            self.lastError = "Vault service disabled for this launch."
+            return
+        }
         Task { await load() }
     }
 
     init(client: ClawJSVaultClient) {
         self.client = client
         self.lifecycle = VaultLifecycle(attaching: self)
+        if Self.isDisabledForLaunch {
+            self.state = .openFailed("Vault service disabled for this launch.")
+            self.lastError = "Vault service disabled for this launch."
+            return
+        }
         Task { await load() }
     }
 
@@ -420,6 +430,10 @@ final class VaultManager: ObservableObject {
             return "\(version) (\(build))"
         }
         return version.isEmpty ? build : version
+    }
+
+    private static var isDisabledForLaunch: Bool {
+        ProcessInfo.processInfo.environment["CLAWIX_VAULT_DISABLE"] == "1"
     }
 }
 
