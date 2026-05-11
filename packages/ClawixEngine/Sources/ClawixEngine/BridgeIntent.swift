@@ -180,7 +180,13 @@ public enum BridgeIntent {
              .skillsDeactivate, .skillsSync,
              .skillsSyncProgress, .skillsImport,
              .skillsListResult, .skillsViewResult,
-             .skillsActiveChanged:
+             .skillsActiveChanged,
+             .audioRegister, .audioAttachTranscript,
+             .audioGet, .audioGetBytes,
+             .audioList, .audioDelete,
+             .audioRegisterResult, .audioAttachTranscriptResult,
+             .audioGetResult, .audioBytesResult,
+             .audioListResult, .audioDeleteResult:
             // Either already handled (auth) or server-only.
             break
         }
