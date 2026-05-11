@@ -29,6 +29,10 @@ struct ChatListView: View {
     /// parent NavigationStack. `nil` means the host doesn't expose a
     /// Skills page (older builds); the entry button hides itself.
     var onOpenSkills: (() -> Void)? = nil
+    /// Optional callback that pushes the Design hub (Styles / Templates
+    /// / References / Drafts). Surfaced as a paint-palette button next
+    /// to "Skills" in the top bar.
+    var onOpenDesign: (() -> Void)? = nil
 
     @State private var searchActive: Bool = false
     @State private var searchText: String = ""
@@ -232,6 +236,21 @@ struct ChatListView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Skills")
+            }
+
+            if let onOpenDesign {
+                Button(action: {
+                    Haptics.tap()
+                    onOpenDesign()
+                }) {
+                    Image(systemName: "paintpalette")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(Palette.textPrimary)
+                        .frame(width: 48, height: 46)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Design")
             }
 
             Button(action: {

@@ -166,6 +166,17 @@ enum RootNav: Hashable {
     /// NavigationStack for skill detail so we just present it as a
     /// destination here.
     case skills
+    /// Design surface: the hub view (tabs across Styles, Templates,
+    /// References and Drafts). Reached from the chat-list overflow
+    /// menu; pushes design-leaf destinations from within itself.
+    case designHub
+    /// Style detail (read-only on iOS).
+    case designStyle(String)
+    /// Template detail with style+variant pickers and an "Open in
+    /// editor" CTA that creates an EditorDocument.
+    case designTemplate(String)
+    /// Visual editor canvas open on a previously created EditorDocument.
+    case designEditor(String)
 }
 
 private struct PresentedFile: Identifiable, Equatable {
@@ -212,6 +223,9 @@ private struct RootView: View {
                         },
                         onOpenSkills: {
                             path.append(RootNav.skills)
+                        },
+                        onOpenDesign: {
+                            path.append(RootNav.designHub)
                         }
                     )
                     .toolbar(.hidden, for: .navigationBar)
@@ -302,6 +316,29 @@ private struct RootView: View {
                             }
                         case .skills:
                             SkillsListView()
+                        case .designHub:
+                            DesignHubView(onOpenEditor: { documentId in
+                                path.append(RootNav.designEditor(documentId))
+                            })
+                            .navigationDestination(for: DesignNavValue.self) { nav in
+                                switch nav {
+                                case .styleDetail(let id):
+                                    DesignStyleDetailView(styleId: id)
+                                case .templateDetail(let id):
+                                    DesignTemplateDetailView(templateId: id) { documentId in
+                                        path.append(RootNav.designEditor(documentId))
+                                    }
+                                }
+                            }
+                        case .designStyle(let id):
+                            DesignStyleDetailView(styleId: id)
+                        case .designTemplate(let id):
+                            DesignTemplateDetailView(templateId: id) { documentId in
+                                if !path.isEmpty { path.removeLast() }
+                                path.append(RootNav.designEditor(documentId))
+                            }
+                        case .designEditor(let documentId):
+                            EditorView(documentId: documentId, onClose: popLast)
                         }
                     }
                 }
