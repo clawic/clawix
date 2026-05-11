@@ -132,6 +132,23 @@ private struct AddChipPopover: View {
     @State private var stringValue: String = ""
     @State private var selectValue: String = ""
 
+    private var selectedField: DBFieldDefinition? {
+        collection.fields.first(where: { $0.name == fieldName })
+    }
+
+    private var parsedValue: DBJSON? {
+        if op == .isNull || op == .notNull { return .null }
+        guard let field = selectedField else { return nil }
+        if field.type == .select {
+            return selectValue.isEmpty ? nil : .string(selectValue)
+        }
+        return Self.parseValue(stringValue, for: field.type)
+    }
+
+    private var canAdd: Bool {
+        !fieldName.isEmpty && parsedValue != nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Add filter")
@@ -152,8 +169,7 @@ private struct AddChipPopover: View {
             }
             .pickerStyle(.menu)
             if op == .eq || op == .neq {
-                if let field = collection.fields.first(where: { $0.name == fieldName }),
-                   field.type == .select {
+                if let field = selectedField, field.type == .select {
                     Picker("Value", selection: $selectValue) {
                         Text("…").tag("")
                         ForEach(field.options ?? [], id: \.self) { Text($0).tag($0) }
@@ -165,16 +181,38 @@ private struct AddChipPopover: View {
                 }
             }
             Button("Add") {
-                guard !fieldName.isEmpty else { return }
-                let value: DBJSON = {
-                    if op == .isNull || op == .notNull { return .null }
-                    if !selectValue.isEmpty { return .string(selectValue) }
-                    return .string(stringValue)
-                }()
+                guard let value = parsedValue else { return }
                 onAdd(DBFilterState.Chip(field: fieldName, op: op, value: value))
             }
             .keyboardShortcut(.defaultAction)
-            .disabled(fieldName.isEmpty)
+            .disabled(!canAdd)
+        }
+    }
+
+    private static func parseValue(_ rawValue: String, for type: DBFieldType) -> DBJSON? {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        switch type {
+        case .number, .money, .rating, .duration, .percent:
+            if let integer = Int64(trimmed), String(integer) == trimmed {
+                return .integer(integer)
+            }
+            return Double(trimmed).map(DBJSON.number)
+        case .boolean:
+            switch trimmed.lowercased() {
+            case "true", "yes", "1", "on": return .bool(true)
+            case "false", "no", "0", "off": return .bool(false)
+            default: return nil
+            }
+        case .json, .geoPoint:
+            guard let data = trimmed.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) else {
+                return nil
+            }
+            return DBJSON.wrap(object)
+        default:
+            return .string(trimmed)
         }
     }
 }
