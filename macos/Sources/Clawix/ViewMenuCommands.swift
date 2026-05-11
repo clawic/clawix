@@ -21,7 +21,7 @@ struct ViewMenuCommands: View {
             .keyboardShortcut("j", modifiers: .command)
             .disabled(!isChatRoute)
         Button("New Browser Tab") {
-            appState.requestBrowserCommand(.newTab)
+            appState.openBrowser()
         }
         .keyboardShortcut("t", modifiers: .command)
         Button("Reload Browser Page") {
