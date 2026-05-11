@@ -165,6 +165,49 @@ public enum BridgeIntent {
             // `rateLimitsUpdated` automatically.
             session.send(bus.currentRateLimitsFrame())
 
+        // v7 audio catalog: wire is connected but the host has not yet
+        // wired its `ClawJSAudioClient` proxy. Reply with a structured
+        // error so client UIs surface a precise reason instead of
+        // hanging on a missing response.
+        case .audioRegister(let requestId, _):
+            session.send(BridgeFrame(.audioRegisterResult(
+                requestId: requestId,
+                asset: nil,
+                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
+            )))
+        case .audioAttachTranscript(let requestId, _, _):
+            session.send(BridgeFrame(.audioAttachTranscriptResult(
+                requestId: requestId,
+                transcript: nil,
+                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
+            )))
+        case .audioGet(let requestId, _, _):
+            session.send(BridgeFrame(.audioGetResult(
+                requestId: requestId,
+                asset: nil,
+                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
+            )))
+        case .audioGetBytes(let requestId, _, _):
+            session.send(BridgeFrame(.audioBytesResult(
+                requestId: requestId,
+                audioBase64: nil,
+                mimeType: nil,
+                durationMs: nil,
+                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
+            )))
+        case .audioList(let requestId, _):
+            session.send(BridgeFrame(.audioListResult(
+                requestId: requestId,
+                list: nil,
+                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
+            )))
+        case .audioDelete(let requestId, _, _):
+            session.send(BridgeFrame(.audioDeleteResult(
+                requestId: requestId,
+                deleted: false,
+                errorMessage: "audio catalog handler is not wired to the @clawjs/audio service yet"
+            )))
+
         case .auth, .authOk, .authFailed, .versionMismatch,
              .chatsSnapshot, .chatUpdated, .messagesSnapshot,
              .messagesPage,
@@ -181,9 +224,6 @@ public enum BridgeIntent {
              .skillsSyncProgress, .skillsImport,
              .skillsListResult, .skillsViewResult,
              .skillsActiveChanged,
-             .audioRegister, .audioAttachTranscript,
-             .audioGet, .audioGetBytes,
-             .audioList, .audioDelete,
              .audioRegisterResult, .audioAttachTranscriptResult,
              .audioGetResult, .audioBytesResult,
              .audioListResult, .audioDeleteResult:
