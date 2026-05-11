@@ -15,7 +15,7 @@ enum DatabaseKeychain {
     static let service = "com.clawix.app.clawjs-database-admin"
     static let account = "clawix@local"
 
-    struct Credential: Equatable {
+    struct Credential: Equatable, Sendable {
         let email: String
         let password: String
     }

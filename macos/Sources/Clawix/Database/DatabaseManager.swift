@@ -119,7 +119,9 @@ final class DatabaseManager: ObservableObject {
             }
         }
         do {
-            let credential = try DatabaseKeychain.loadOrCreateCredential()
+            let credential = try await Task.detached(priority: .utility) {
+                try DatabaseKeychain.loadOrCreateCredential()
+            }.value
             let response = try await client.bootstrapAdmin(
                 email: credential.email,
                 password: credential.password

@@ -4883,9 +4883,7 @@ final class AppState: ObservableObject {
         return nil
     }
 
-    /// Open the real Apple Simulator.app as a first-class right-sidebar
-    /// item. The view layer owns the AppKit/Accessibility window anchoring;
-    /// this state only gives it a persistent tab identity.
+    /// Open the embedded iOS Simulator as a first-class right-sidebar item.
     func openIOSSimulator(deviceUDID: String? = nil, deviceName: String = "iOS Simulator") {
         var s = currentSidebar
         if let existing = s.items.first(where: {
@@ -4904,6 +4902,47 @@ final class AppState: ObservableObject {
         ))
         s.items.append(item)
         s.activeItemId = item.id
+        s.isOpen = true
+        currentSidebar = s
+    }
+
+    func updateIOSSimulator(_ payload: SidebarItem.IOSSimulatorPayload) {
+        var s = currentSidebar
+        guard let index = s.items.firstIndex(where: { $0.id == payload.id }) else { return }
+        s.items[index] = .iosSimulator(payload)
+        s.activeItemId = payload.id
+        s.isOpen = true
+        currentSidebar = s
+    }
+
+    /// Open the embedded Android emulator as a first-class right-sidebar item.
+    func openAndroidSimulator(avdName: String? = nil, deviceName: String = "Android Emulator") {
+        var s = currentSidebar
+        if let existing = s.items.first(where: {
+            if case .androidSimulator = $0 { return true }
+            return false
+        }) {
+            s.activeItemId = existing.id
+            s.isOpen = true
+            currentSidebar = s
+            return
+        }
+        let item = SidebarItem.androidSimulator(.init(
+            id: UUID(),
+            avdName: avdName,
+            deviceName: deviceName
+        ))
+        s.items.append(item)
+        s.activeItemId = item.id
+        s.isOpen = true
+        currentSidebar = s
+    }
+
+    func updateAndroidSimulator(_ payload: SidebarItem.AndroidSimulatorPayload) {
+        var s = currentSidebar
+        guard let index = s.items.firstIndex(where: { $0.id == payload.id }) else { return }
+        s.items[index] = .androidSimulator(payload)
+        s.activeItemId = payload.id
         s.isOpen = true
         currentSidebar = s
     }

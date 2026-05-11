@@ -11,6 +11,7 @@ import ClawixSimulatorKitShim
 /// resized.
 struct IOSSimulatorPanel: View {
     let payload: SidebarItem.IOSSimulatorPayload
+    var onPayloadChange: (SidebarItem.IOSSimulatorPayload) -> Void = { _ in }
     @StateObject private var controller = IOSSimulatorFramebufferController()
 
     var body: some View {
@@ -30,7 +31,7 @@ struct IOSSimulatorPanel: View {
         }
         .background(Color.black)
         .onAppear {
-            controller.configure(payload: payload)
+            controller.configure(payload: payload, onPayloadChange: onPayloadChange)
             controller.start()
         }
         .onDisappear {
@@ -64,6 +65,32 @@ struct IOSSimulatorPanel: View {
                 controller.setAppearance(.dark)
             }
             .accessibilityLabel("Dark appearance")
+
+            Menu {
+                ForEach(controller.availableDevices) { device in
+                    Button(device.menuTitle) {
+                        controller.selectDevice(device)
+                    }
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(controller.selectedDeviceName)
+                        .font(BodyFont.system(size: 11.5, wght: 600))
+                        .foregroundColor(Color(white: 0.82))
+                        .lineLimit(1)
+                    LucideIcon(.chevronDown, size: 10)
+                        .foregroundColor(Color(white: 0.55))
+                }
+                .padding(.horizontal, 9)
+                .frame(height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(0.07))
+                )
+            }
+            .menuStyle(.borderlessButton)
+            .disabled(controller.availableDevices.isEmpty)
+            .accessibilityLabel("Select iOS simulator device")
 
             Spacer(minLength: 0)
 
@@ -302,6 +329,7 @@ private enum IOSSimulatorPointerPhase {
 struct IOSSimulatorNativeDisplayDescriptor: Equatable {
     let deviceUDID: String
     let deviceName: String
+    let aspectRatio: CGFloat
 }
 
 private struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
@@ -322,6 +350,7 @@ private struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
         private typealias ObjCInitFrameFn = @convention(c) (AnyObject, Selector, CGRect) -> AnyObject?
 
         private var configuredUDID: String?
+        private var configuredAspectRatio: CGFloat = 1206.0 / 2622.0
         private var displayView: NSView?
         private var retainedScreen: AnyObject?
         private var retainedDisplay: AnyObject?
@@ -347,7 +376,11 @@ private struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
         }
 
         func configure(display: IOSSimulatorNativeDisplayDescriptor) {
-            guard configuredUDID != display.deviceUDID else { return }
+            configuredAspectRatio = display.aspectRatio
+            if configuredUDID == display.deviceUDID {
+                needsLayout = true
+                return
+            }
             configuredUDID = display.deviceUDID
             displayView?.removeFromSuperview()
             displayView = nil
@@ -384,8 +417,8 @@ private struct IOSSimulatorNativeDisplayView: NSViewRepresentable {
             super.layout()
             guard let displayView else { return }
             let maxRect = bounds.insetBy(dx: 2, dy: 2)
-            let aspect: CGFloat = 1206.0 / 2622.0
-            var width = maxRect.width
+            let aspect = max(0.1, configuredAspectRatio)
+            var width = min(maxRect.width, maxRect.height * aspect)
             var height = width / aspect
             if height > maxRect.height {
                 height = maxRect.height
@@ -515,7 +548,7 @@ private struct IOSSimulatorPanelButtonStyle: ButtonStyle {
 }
 
 @MainActor
-final class IOSSimulatorFramebufferController: ObservableObject {
+private final class IOSSimulatorFramebufferController: ObservableObject {
     enum State: Equatable {
         case idle
         case locatingDevice
@@ -555,6 +588,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
     @Published private(set) var frameImage: NSImage?
     @Published private(set) var nativeDisplay: IOSSimulatorNativeDisplayDescriptor?
     @Published private(set) var statusLine = ""
+    @Published private(set) var availableDevices: [IOSSimulatorDeviceChoice] = []
 
     var showsOverlay: Bool {
         switch state {
@@ -567,17 +601,35 @@ final class IOSSimulatorFramebufferController: ObservableObject {
 
     var canRefresh: Bool { selectedDevice != nil }
     var canControl: Bool { selectedDevice != nil && (frameImage != nil || nativeDisplay != nil) }
+    var selectedDeviceName: String { selectedDevice?.name ?? payload?.deviceName ?? "iOS Simulator" }
 
     private var payload: SidebarItem.IOSSimulatorPayload?
+    private var onPayloadChange: (SidebarItem.IOSSimulatorPayload) -> Void = { _ in }
     private var selectedDevice: SimDevice?
     private var startTask: Task<Void, Never>?
     private var captureTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var hidBridge: IOSSimulatorHIDBridge?
+    private var pointerIsActive = false
     private var lastPointerPoint: CGPoint?
 
-    func configure(payload: SidebarItem.IOSSimulatorPayload) {
+    func configure(
+        payload: SidebarItem.IOSSimulatorPayload,
+        onPayloadChange: @escaping (SidebarItem.IOSSimulatorPayload) -> Void
+    ) {
         self.payload = payload
+        self.onPayloadChange = onPayloadChange
+    }
+
+    func selectDevice(_ device: IOSSimulatorDeviceChoice) {
+        let updatedPayload = SidebarItem.IOSSimulatorPayload(
+            id: payload?.id ?? UUID(),
+            deviceUDID: device.udid,
+            deviceName: device.name
+        )
+        payload = updatedPayload
+        onPayloadChange(updatedPayload)
+        restart()
     }
 
     func start() {
@@ -604,6 +656,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
         captureTask = nil
         refreshTask = nil
         hidBridge = nil
+        pointerIsActive = false
         lastPointerPoint = nil
         nativeDisplay = nil
     }
@@ -622,7 +675,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
             _ = try? await Self.runTool("/usr/bin/xcrun", [
                 "simctl", "spawn", device.udid,
                 "notifyutil", "-p", "com.apple.springboard.homebutton"
-            ])
+            ], timeout: 5)
             try? await Task.sleep(nanoseconds: 350_000_000)
             await self?.captureOnce(device: device, markRunning: true)
         }
@@ -631,7 +684,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
     func openURL(_ url: String) {
         guard let device = selectedDevice else { return }
         Task { [weak self] in
-            _ = try? await Self.runTool("/usr/bin/xcrun", ["simctl", "openurl", device.udid, url])
+            _ = try? await Self.runTool("/usr/bin/xcrun", ["simctl", "openurl", device.udid, url], timeout: 8)
             try? await Task.sleep(nanoseconds: 900_000_000)
             await self?.captureOnce(device: device, markRunning: true)
         }
@@ -642,7 +695,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
         Task { [weak self] in
             _ = try? await Self.runTool("/usr/bin/xcrun", [
                 "simctl", "ui", device.udid, "appearance", appearance.rawValue
-            ])
+            ], timeout: 5)
             try? await Task.sleep(nanoseconds: 300_000_000)
             await self?.captureOnce(device: device, markRunning: true)
         }
@@ -654,6 +707,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
         let screenSize = frameImage?.size ?? bridge.screenSize
         switch phase {
         case .began:
+            pointerIsActive = true
             bridge.sendTouchEvent(phase: .began, point: devicePoint, screenSize: screenSize)
             bridge.sendMouseEvent(type: .leftMouseDown, point: devicePoint, previousPoint: previous, screenSize: screenSize)
             lastPointerPoint = devicePoint
@@ -665,6 +719,7 @@ final class IOSSimulatorFramebufferController: ObservableObject {
             bridge.sendTouchEvent(phase: .ended, point: devicePoint, screenSize: screenSize)
             bridge.sendMouseEvent(type: .leftMouseUp, point: devicePoint, previousPoint: previous, screenSize: screenSize)
             lastPointerPoint = nil
+            pointerIsActive = false
             refreshAfterPointerInput(device: bridge.device)
         }
     }
@@ -672,7 +727,9 @@ final class IOSSimulatorFramebufferController: ObservableObject {
     private func runStartup() async {
         state = .locatingDevice
         do {
-            let device = try await Self.selectDevice(preferredUDID: payload?.deviceUDID)
+            let devices = try await Self.loadAvailableDevices()
+            availableDevices = devices.map(IOSSimulatorDeviceChoice.init(device:))
+            let device = try Self.selectDevice(from: devices, preferredUDID: payload?.deviceUDID)
             if Task.isCancelled { return }
             selectedDevice = device
             state = .booting(device.name)
@@ -680,8 +737,19 @@ final class IOSSimulatorFramebufferController: ObservableObject {
             if Task.isCancelled { return }
             Self.terminateSimulatorAppIfOpen()
             hidBridge = IOSSimulatorHIDBridge(device: device)
-            nativeDisplay = IOSSimulatorNativeDisplayDescriptor(deviceUDID: device.udid, deviceName: device.name)
-            statusLine = "\(device.name) · embedded · interactive"
+            if device.isPhone {
+                let aspectRatio = await nativeDisplayAspectRatio(for: device)
+                nativeDisplay = IOSSimulatorNativeDisplayDescriptor(
+                    deviceUDID: device.udid,
+                    deviceName: device.name,
+                    aspectRatio: aspectRatio
+                )
+                statusLine = "\(device.name) · embedded · interactive"
+            } else {
+                nativeDisplay = nil
+                await captureOnce(device: device, markRunning: false)
+                startCaptureLoop(device: device)
+            }
             state = .running(device.name)
         } catch {
             if !Task.isCancelled {
@@ -702,8 +770,12 @@ final class IOSSimulatorFramebufferController: ObservableObject {
         captureTask?.cancel()
         captureTask = Task { [weak self] in
             while !Task.isCancelled {
+                if self?.pointerIsActive == true {
+                    try? await Task.sleep(nanoseconds: 150_000_000)
+                    continue
+                }
                 await self?.captureOnce(device: device, markRunning: true)
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
         }
     }
@@ -728,6 +800,20 @@ final class IOSSimulatorFramebufferController: ObservableObject {
         }
     }
 
+    private func nativeDisplayAspectRatio(for device: SimDevice) async -> CGFloat {
+        do {
+            let png = try await Self.screenshot(device: device)
+            if let image = NSImage(data: png), image.size.height > 0 {
+                return image.size.width / image.size.height
+            }
+        } catch {
+            // Keep native SimulatorKit rendering available even if the
+            // one-off aspect probe fails; the fallback ratio matches modern
+            // full-screen iPhones closely enough to boot visibly.
+        }
+        return 1206.0 / 2622.0
+    }
+
     private static func terminateSimulatorAppIfOpen() {
         NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.iphonesimulator")
@@ -738,27 +824,33 @@ final class IOSSimulatorFramebufferController: ObservableObject {
             }
     }
 
-    private static func selectDevice(preferredUDID: String?) async throws -> SimDevice {
+    private static func loadAvailableDevices() async throws -> [SimDevice] {
         let result = try await runTool("/usr/bin/xcrun", ["simctl", "list", "devices", "available", "--json"])
         guard result.status == 0 else {
             throw SimulatorError.commandFailed(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines))
         }
         let data = Data(result.stdout.utf8)
         let list = try JSONDecoder().decode(SimctlDeviceList.self, from: data)
-        let all = list.devices
+        return list.devices
             .flatMap { runtime, devices in
                 devices.map { device in
                     SimDevice(runtime: runtime, name: device.name, udid: device.udid, state: device.state)
                 }
             }
-            .filter { $0.name.localizedCaseInsensitiveContains("iPhone") }
+            .filter {
+                $0.name.localizedCaseInsensitiveContains("iPhone") ||
+                $0.name.localizedCaseInsensitiveContains("iPad")
+            }
             .sorted { lhs, rhs in
                 if lhs.state == "Booted", rhs.state != "Booted" { return true }
                 if rhs.state == "Booted", lhs.state != "Booted" { return false }
+                if lhs.isPhone != rhs.isPhone { return lhs.isPhone && !rhs.isPhone }
                 if lhs.runtime != rhs.runtime { return lhs.runtime > rhs.runtime }
                 return lhs.name < rhs.name
             }
+    }
 
+    private static func selectDevice(from all: [SimDevice], preferredUDID: String?) throws -> SimDevice {
         if let preferredUDID, let preferred = all.first(where: { $0.udid == preferredUDID }) {
             return preferred
         }
@@ -794,28 +886,75 @@ final class IOSSimulatorFramebufferController: ObservableObject {
         return try Data(contentsOf: path)
     }
 
-    private static func runTool(_ executable: String, _ arguments: [String]) async throws -> ToolResult {
+    nonisolated private static func runTool(
+        _ executable: String,
+        _ arguments: [String],
+        timeout: TimeInterval = 20
+    ) async throws -> ToolResult {
         try await Task.detached(priority: .userInitiated) {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: executable)
-            process.arguments = arguments
-
-            let stdout = Pipe()
-            let stderr = Pipe()
-            process.standardOutput = stdout
-            process.standardError = stderr
-
-            try process.run()
-            process.waitUntilExit()
-
-            let out = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let err = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            return ToolResult(status: process.terminationStatus, stdout: out, stderr: err)
+            try Self.runToolSync(executable, arguments, timeout: timeout)
         }.value
+    }
+
+    nonisolated private static func runToolSync(
+        _ executable: String,
+        _ arguments: [String],
+        timeout: TimeInterval = 20
+    ) throws -> ToolResult {
+        let tempDirectory = FileManager.default.temporaryDirectory
+        let stdoutURL = tempDirectory.appendingPathComponent("clawix-ios-tool-\(UUID().uuidString).out")
+        let stderrURL = tempDirectory.appendingPathComponent("clawix-ios-tool-\(UUID().uuidString).err")
+        FileManager.default.createFile(atPath: stdoutURL.path, contents: nil)
+        FileManager.default.createFile(atPath: stderrURL.path, contents: nil)
+        defer {
+            try? FileManager.default.removeItem(at: stdoutURL)
+            try? FileManager.default.removeItem(at: stderrURL)
+        }
+
+        let stdoutHandle = try FileHandle(forWritingTo: stdoutURL)
+        let stderrHandle = try FileHandle(forWritingTo: stderrURL)
+        defer {
+            try? stdoutHandle.close()
+            try? stderrHandle.close()
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = stdoutHandle
+        process.standardError = stderrHandle
+
+        try process.run()
+        let deadline = Date().addingTimeInterval(timeout)
+        while process.isRunning && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+
+        if process.isRunning {
+            process.terminate()
+            let terminateDeadline = Date().addingTimeInterval(1)
+            while process.isRunning && Date() < terminateDeadline {
+                Thread.sleep(forTimeInterval: 0.02)
+            }
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+                let killDeadline = Date().addingTimeInterval(1)
+                while process.isRunning && Date() < killDeadline {
+                    Thread.sleep(forTimeInterval: 0.02)
+                }
+            }
+            throw SimulatorError.commandFailed("simctl command timed out: \(arguments.joined(separator: " "))")
+        }
+
+        try? stdoutHandle.synchronize()
+        try? stderrHandle.synchronize()
+        let out = String(data: (try? Data(contentsOf: stdoutURL)) ?? Data(), encoding: .utf8) ?? ""
+        let err = String(data: (try? Data(contentsOf: stderrURL)) ?? Data(), encoding: .utf8) ?? ""
+        return ToolResult(status: process.terminationStatus, stdout: out, stderr: err)
     }
 }
 
-private struct ToolResult {
+private struct ToolResult: Sendable {
     let status: Int32
     let stdout: String
     let stderr: String
@@ -826,6 +965,29 @@ private struct SimDevice: Equatable {
     let name: String
     let udid: String
     let state: String
+
+    var isPhone: Bool { name.localizedCaseInsensitiveContains("iPhone") }
+}
+
+private struct IOSSimulatorDeviceChoice: Identifiable, Equatable {
+    let id: String
+    let udid: String
+    let name: String
+    let runtime: String
+    let isBooted: Bool
+
+    init(device: SimDevice) {
+        self.id = device.udid
+        self.udid = device.udid
+        self.name = device.name
+        self.runtime = device.runtime
+        self.isBooted = device.state == "Booted"
+    }
+
+    var menuTitle: String {
+        let suffix = isBooted ? " · booted" : ""
+        return "\(name)\(suffix)"
+    }
 }
 
 private struct SimctlDeviceList: Decodable {

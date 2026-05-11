@@ -61,7 +61,15 @@ enum BodyFont {
     // Register at process start instead. Idempotent: CTFontManager
     // returns `alreadyRegistered` on subsequent calls and we ignore it.
     private static let registerOnce: Void = {
-        let urls = Bundle.module.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
+        let resourceRoots = [
+            Bundle.main.resourceURL?.appendingPathComponent("Clawix_Clawix.bundle"),
+            Bundle.main.resourceURL
+        ].compactMap { $0 }
+        let urls = ["Manrope", "lucide"].compactMap {
+            fontName in resourceRoots
+                .map { $0.appendingPathComponent("\(fontName).ttf") }
+                .first { FileManager.default.fileExists(atPath: $0.path) }
+        }
         for url in urls {
             var error: Unmanaged<CFError>?
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)

@@ -15,8 +15,13 @@ struct BrowserView: View {
         return nil
     }
 
-    private var activeSimulator: SidebarItem.IOSSimulatorPayload? {
+    private var activeIOSSimulator: SidebarItem.IOSSimulatorPayload? {
         if case .iosSimulator(let p) = appState.activeSidebarItem { return p }
+        return nil
+    }
+
+    private var activeAndroidSimulator: SidebarItem.AndroidSimulatorPayload? {
+        if case .androidSimulator(let p) = appState.activeSidebarItem { return p }
         return nil
     }
 
@@ -45,8 +50,16 @@ struct BrowserView: View {
                     FileViewerPanel(path: payload.path)
                         .id(payload.id)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let payload = activeSimulator {
-                    IOSSimulatorPanel(payload: payload)
+                } else if let payload = activeIOSSimulator {
+                    IOSSimulatorPanel(payload: payload) { updated in
+                        appState.updateIOSSimulator(updated)
+                    }
+                        .id(payload.id)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let payload = activeAndroidSimulator {
+                    AndroidSimulatorPanel(payload: payload) { updated in
+                        appState.updateAndroidSimulator(updated)
+                    }
                         .id(payload.id)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -156,6 +169,21 @@ struct BrowserView: View {
                 appState.openIOSSimulator()
             } label: {
                 Text("iOS Simulator")
+                    .font(BodyFont.system(size: 12, wght: 600))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color(white: 0.20))
+                    )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                appState.openAndroidSimulator()
+            } label: {
+                Text("Android Emulator")
                     .font(BodyFont.system(size: 12, wght: 600))
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)

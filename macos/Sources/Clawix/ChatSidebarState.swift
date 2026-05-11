@@ -7,6 +7,7 @@ enum SidebarItem: Identifiable, Equatable, Codable {
     case web(WebPayload)
     case file(FilePayload)
     case iosSimulator(IOSSimulatorPayload)
+    case androidSimulator(AndroidSimulatorPayload)
 
     struct WebPayload: Equatable, Codable {
         let id: UUID
@@ -63,11 +64,24 @@ enum SidebarItem: Identifiable, Equatable, Codable {
         }
     }
 
+    struct AndroidSimulatorPayload: Equatable, Codable {
+        let id: UUID
+        var avdName: String?
+        var deviceName: String
+
+        init(id: UUID, avdName: String? = nil, deviceName: String = "Android Emulator") {
+            self.id = id
+            self.avdName = avdName
+            self.deviceName = deviceName
+        }
+    }
+
     var id: UUID {
         switch self {
         case .web(let p):  return p.id
         case .file(let p): return p.id
         case .iosSimulator(let p): return p.id
+        case .androidSimulator(let p): return p.id
         }
     }
 }
