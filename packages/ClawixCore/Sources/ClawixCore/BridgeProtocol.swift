@@ -364,12 +364,46 @@ public enum BridgeBody: Equatable, Sendable {
     /// and on filesystem-watch events from `~/.clawjs/skills/`.
     case skillsActiveChanged(scopeTag: String)
 
+    // MARK: - v7 audio catalog (outbound: client -> daemon)
+    /// Register a new audio asset in the framework's audio catalog and
+    /// optionally attach a primary transcript in the same round trip.
+    /// Reply is `audioRegisterResult` carrying the inserted asset and
+    /// any transcripts the framework wrote.
+    case audioRegister(requestId: String, request: WireAudioRegisterRequest)
+    /// Attach a transcript to an existing audio asset. Used to back the
+    /// re-transcription flow (e.g. retry with a larger Whisper model)
+    /// without losing the prior transcripts. `markAsPrimary` flips the
+    /// primary atomically.
+    case audioAttachTranscript(requestId: String, audioId: String, transcript: WireAudioAttachTranscriptInput)
+    /// Pull an asset record plus all its transcripts. Bytes are NOT
+    /// included; use `audioGetBytes` for the base64 payload.
+    case audioGet(requestId: String, audioId: String, appId: String)
+    /// Pull the raw bytes of an asset. Carried inline as base64 in the
+    /// reply (`audioBytesResult`). v1 only; v2 may add a path+token
+    /// handoff for same-machine clients.
+    case audioGetBytes(requestId: String, audioId: String, appId: String)
+    /// List assets matching the filter. `appId` is required so apps
+    /// don't accidentally see each other's audio.
+    case audioList(requestId: String, filter: WireAudioListFilter)
+    /// Delete an asset by id, scoped by `appId`. Cascades transcripts
+    /// and unlinks the blob from disk.
+    case audioDelete(requestId: String, audioId: String, appId: String)
+
+    // MARK: - v7 audio catalog (inbound: daemon -> client)
+    case audioRegisterResult(requestId: String, asset: WireAudioAssetWithTranscripts?, errorMessage: String?)
+    case audioAttachTranscriptResult(requestId: String, transcript: WireAudioTranscript?, errorMessage: String?)
+    case audioGetResult(requestId: String, asset: WireAudioAssetWithTranscripts?, errorMessage: String?)
+    case audioBytesResult(requestId: String, audioBase64: String?, mimeType: String?, durationMs: Int?, errorMessage: String?)
+    case audioListResult(requestId: String, list: WireAudioListResult?, errorMessage: String?)
+    case audioDeleteResult(requestId: String, deleted: Bool, errorMessage: String?)
+
     fileprivate var typeTag: String {
-        // Split into legacy (v1-v5) and v6 helpers so the Swift type-checker
-        // doesn't time out on a single ~56-case switch ("compiler is unable
-        // to type-check this expression in reasonable time"). Each helper
-        // covers a disjoint set of cases; the dispatcher tries v6 first
-        // and falls through.
+        // Split into legacy (v1-v5), v6 (skills) and v7 (audio) helpers
+        // so the Swift type-checker doesn't time out on a single
+        // ~70-case switch ("compiler is unable to type-check this
+        // expression in reasonable time"). Each helper covers a
+        // disjoint set; the dispatcher tries v7 -> v6 -> legacy.
+        if let tag = v7AudioTypeTag { return tag }
         if let tag = v6TypeTag { return tag }
         return legacyTypeTag
     }
@@ -424,6 +458,25 @@ public enum BridgeBody: Equatable, Sendable {
         }
     }
 
+    private var v7AudioTypeTag: String? {
+        switch self {
+        case .audioRegister:               return "audioRegister"
+        case .audioAttachTranscript:       return "audioAttachTranscript"
+        case .audioGet:                    return "audioGet"
+        case .audioGetBytes:               return "audioGetBytes"
+        case .audioList:                   return "audioList"
+        case .audioDelete:                 return "audioDelete"
+        case .audioRegisterResult:         return "audioRegisterResult"
+        case .audioAttachTranscriptResult: return "audioAttachTranscriptResult"
+        case .audioGetResult:              return "audioGetResult"
+        case .audioBytesResult:            return "audioBytesResult"
+        case .audioListResult:             return "audioListResult"
+        case .audioDeleteResult:           return "audioDeleteResult"
+        default:
+            return nil
+        }
+    }
+
     private var v6TypeTag: String? {
         switch self {
         case .skillsList:           return "skillsList"
@@ -469,12 +522,15 @@ public enum BridgeBody: Equatable, Sendable {
         case filter, skills, spec, input, patch
         case dirs, targets, target, processed, total
         case paramsJSON
+        // v7 (Audio catalog)
+        case appId, request, transcript, asset, list, durationMs, deleted
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: FlatKeys.self)
-        // v6 cases handled in a dedicated helper to keep this switch
-        // small enough for the Swift type-checker.
+        // Helpers split by version so the Swift type-checker doesn't
+        // time out on a single ~70-case switch. Try v7 -> v6 -> legacy.
+        if try encodeV7AudioPayload(into: &c) { return }
         if try encodeV6Payload(into: &c) { return }
         try encodeLegacyPayload(into: &c)
     }
@@ -604,6 +660,62 @@ public enum BridgeBody: Equatable, Sendable {
             // round-trip tests.
             break
         }
+    }
+
+    private func encodeV7AudioPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {
+        switch self {
+        case .audioRegister(let requestId, let request):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(request, forKey: .request)
+        case .audioAttachTranscript(let requestId, let audioId, let transcript):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(audioId, forKey: .audioId)
+            try c.encode(transcript, forKey: .transcript)
+        case .audioGet(let requestId, let audioId, let appId):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(audioId, forKey: .audioId)
+            try c.encode(appId, forKey: .appId)
+        case .audioGetBytes(let requestId, let audioId, let appId):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(audioId, forKey: .audioId)
+            try c.encode(appId, forKey: .appId)
+        case .audioList(let requestId, let filter):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(filter, forKey: .filter)
+        case .audioDelete(let requestId, let audioId, let appId):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(audioId, forKey: .audioId)
+            try c.encode(appId, forKey: .appId)
+        case .audioRegisterResult(let requestId, let asset, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encodeIfPresent(asset, forKey: .asset)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .audioAttachTranscriptResult(let requestId, let transcript, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encodeIfPresent(transcript, forKey: .transcript)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .audioGetResult(let requestId, let asset, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encodeIfPresent(asset, forKey: .asset)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .audioBytesResult(let requestId, let audioBase64, let mimeType, let durationMs, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encodeIfPresent(audioBase64, forKey: .audioBase64)
+            try c.encodeIfPresent(mimeType, forKey: .mimeType)
+            try c.encodeIfPresent(durationMs, forKey: .durationMs)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .audioListResult(let requestId, let list, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encodeIfPresent(list, forKey: .list)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        case .audioDeleteResult(let requestId, let deleted, let errorMessage):
+            try c.encode(requestId, forKey: .requestId)
+            try c.encode(deleted, forKey: .deleted)
+            try c.encodeIfPresent(errorMessage, forKey: .errorMessage)
+        default:
+            return false
+        }
+        return true
     }
 
     private func encodeV6Payload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {

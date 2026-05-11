@@ -414,3 +414,281 @@ public struct WireAudioRef: Codable, Equatable, Sendable {
         self.durationMs = durationMs
     }
 }
+
+// MARK: - Audio catalog (clawjs-audio service)
+
+/// Category of an audio asset stored in the framework's audio catalog.
+/// Mirrors `AudioKind` in `@clawjs/audio`. Closed v1 enum: adding a new
+/// kind requires a schema migration on the framework side.
+public enum WireAudioKind: String, Codable, Equatable, Sendable {
+    case user_message
+    case dictation
+    case agent_tts
+}
+
+/// Who produced the audio: the user (microphone capture) or the agent
+/// (TTS synthesis). Mirrors `AudioOriginActor` in `@clawjs/audio`.
+public enum WireAudioOriginActor: String, Codable, Equatable, Sendable {
+    case user
+    case agent
+}
+
+/// Direction of an audio↔text relation. `transcription` for derived
+/// text from audio (user_message, dictation). `synthesis_source` for
+/// the source text that produced the audio (agent_tts).
+public enum WireAudioTranscriptRole: String, Codable, Equatable, Sendable {
+    case transcription
+    case synthesis_source
+}
+
+/// One transcript row associated with an audio asset. 1:N from
+/// `WireAudioAsset`. `isPrimary` marks the canonical transcript when
+/// an audio has been re-transcribed with different providers.
+public struct WireAudioTranscript: Codable, Equatable, Sendable {
+    public let id: String
+    public let audioId: String
+    public let role: WireAudioTranscriptRole
+    public let text: String
+    public let provider: String?
+    public let language: String?
+    public let createdAt: Int64
+    public let isPrimary: Bool
+
+    public init(
+        id: String,
+        audioId: String,
+        role: WireAudioTranscriptRole,
+        text: String,
+        provider: String?,
+        language: String?,
+        createdAt: Int64,
+        isPrimary: Bool
+    ) {
+        self.id = id
+        self.audioId = audioId
+        self.role = role
+        self.text = text
+        self.provider = provider
+        self.language = language
+        self.createdAt = createdAt
+        self.isPrimary = isPrimary
+    }
+}
+
+/// One audio asset row from the framework's audio catalog. Mirrors
+/// `AudioAsset` in `@clawjs/audio`. Bytes are NOT inline; clients call
+/// `audioGetBytes` separately when they need the base64 payload.
+/// `metadataJson` carries app-specific extras as a serialized JSON
+/// string so the wire schema stays stable as apps add new fields.
+public struct WireAudioAsset: Codable, Equatable, Sendable {
+    public let id: String
+    public let kind: WireAudioKind
+    public let appId: String
+    public let originActor: WireAudioOriginActor
+    public let mimeType: String
+    public let bytesRelPath: String
+    public let durationMs: Int
+    public let createdAt: Int64
+    public let deviceId: String?
+    public let sessionId: String?
+    public let threadId: String?
+    public let linkedMessageId: String?
+    public let metadataJson: String?
+
+    public init(
+        id: String,
+        kind: WireAudioKind,
+        appId: String,
+        originActor: WireAudioOriginActor,
+        mimeType: String,
+        bytesRelPath: String,
+        durationMs: Int,
+        createdAt: Int64,
+        deviceId: String?,
+        sessionId: String?,
+        threadId: String?,
+        linkedMessageId: String?,
+        metadataJson: String?
+    ) {
+        self.id = id
+        self.kind = kind
+        self.appId = appId
+        self.originActor = originActor
+        self.mimeType = mimeType
+        self.bytesRelPath = bytesRelPath
+        self.durationMs = durationMs
+        self.createdAt = createdAt
+        self.deviceId = deviceId
+        self.sessionId = sessionId
+        self.threadId = threadId
+        self.linkedMessageId = linkedMessageId
+        self.metadataJson = metadataJson
+    }
+}
+
+/// Bundle of an audio asset with all its transcripts. The natural unit
+/// returned by `audioGet` and `audioRegister`. Transcripts are sorted
+/// `is_primary DESC, created_at DESC` by the framework.
+public struct WireAudioAssetWithTranscripts: Codable, Equatable, Sendable {
+    public let asset: WireAudioAsset
+    public let transcripts: [WireAudioTranscript]
+
+    public init(asset: WireAudioAsset, transcripts: [WireAudioTranscript]) {
+        self.asset = asset
+        self.transcripts = transcripts
+    }
+}
+
+/// Inline transcript inside an `audioRegister` request: lets the caller
+/// register the audio and attach its primary transcript in a single
+/// round trip. Role defaults to `transcription` on the framework side
+/// when nil, except for `agent_tts` audios where it defaults to
+/// `synthesis_source`.
+public struct WireAudioRegisterTranscript: Codable, Equatable, Sendable {
+    public let text: String
+    public let role: WireAudioTranscriptRole?
+    public let provider: String?
+    public let language: String?
+
+    public init(
+        text: String,
+        role: WireAudioTranscriptRole? = nil,
+        provider: String? = nil,
+        language: String? = nil
+    ) {
+        self.text = text
+        self.role = role
+        self.provider = provider
+        self.language = language
+    }
+}
+
+/// Payload of an `audioRegister` request. `id` is optional: when nil
+/// the framework mints a UUID. `metadataJson` is the same JSON string
+/// stored on the row. Bytes ride inline as base64 (same shape as
+/// `WireAttachment.dataBase64`).
+public struct WireAudioRegisterRequest: Codable, Equatable, Sendable {
+    public let id: String?
+    public let kind: WireAudioKind
+    public let appId: String
+    public let originActor: WireAudioOriginActor
+    public let mimeType: String
+    public let bytesBase64: String
+    public let durationMs: Int
+    public let deviceId: String?
+    public let sessionId: String?
+    public let threadId: String?
+    public let linkedMessageId: String?
+    public let metadataJson: String?
+    public let transcript: WireAudioRegisterTranscript?
+
+    public init(
+        id: String? = nil,
+        kind: WireAudioKind,
+        appId: String,
+        originActor: WireAudioOriginActor,
+        mimeType: String,
+        bytesBase64: String,
+        durationMs: Int,
+        deviceId: String? = nil,
+        sessionId: String? = nil,
+        threadId: String? = nil,
+        linkedMessageId: String? = nil,
+        metadataJson: String? = nil,
+        transcript: WireAudioRegisterTranscript? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.appId = appId
+        self.originActor = originActor
+        self.mimeType = mimeType
+        self.bytesBase64 = bytesBase64
+        self.durationMs = durationMs
+        self.deviceId = deviceId
+        self.sessionId = sessionId
+        self.threadId = threadId
+        self.linkedMessageId = linkedMessageId
+        self.metadataJson = metadataJson
+        self.transcript = transcript
+    }
+}
+
+/// Payload of an `audioAttachTranscript` request. `markAsPrimary` flips
+/// `is_primary` across the row's transcripts atomically; default is
+/// false (the inserted transcript joins as a secondary version).
+public struct WireAudioAttachTranscriptInput: Codable, Equatable, Sendable {
+    public let text: String
+    public let role: WireAudioTranscriptRole
+    public let provider: String?
+    public let language: String?
+    public let markAsPrimary: Bool?
+
+    public init(
+        text: String,
+        role: WireAudioTranscriptRole = .transcription,
+        provider: String? = nil,
+        language: String? = nil,
+        markAsPrimary: Bool? = nil
+    ) {
+        self.text = text
+        self.role = role
+        self.provider = provider
+        self.language = language
+        self.markAsPrimary = markAsPrimary
+    }
+}
+
+/// Filter shape for `audioList`. `appId` is required: lists are
+/// per-app by default. The framework also exposes a privileged
+/// `listGlobal` query but the bridge doesn't expose it in v1.
+public struct WireAudioListFilter: Codable, Equatable, Sendable {
+    public let appId: String
+    public let kind: WireAudioKind?
+    public let originActor: WireAudioOriginActor?
+    public let deviceId: String?
+    public let sessionId: String?
+    public let threadId: String?
+    public let linkedMessageId: String?
+    public let fromCreatedAt: Int64?
+    public let toCreatedAt: Int64?
+    public let limit: Int?
+    public let offset: Int?
+
+    public init(
+        appId: String,
+        kind: WireAudioKind? = nil,
+        originActor: WireAudioOriginActor? = nil,
+        deviceId: String? = nil,
+        sessionId: String? = nil,
+        threadId: String? = nil,
+        linkedMessageId: String? = nil,
+        fromCreatedAt: Int64? = nil,
+        toCreatedAt: Int64? = nil,
+        limit: Int? = nil,
+        offset: Int? = nil
+    ) {
+        self.appId = appId
+        self.kind = kind
+        self.originActor = originActor
+        self.deviceId = deviceId
+        self.sessionId = sessionId
+        self.threadId = threadId
+        self.linkedMessageId = linkedMessageId
+        self.fromCreatedAt = fromCreatedAt
+        self.toCreatedAt = toCreatedAt
+        self.limit = limit
+        self.offset = offset
+    }
+}
+
+/// Payload of `audioListResult`. Carries the page slice plus the total
+/// row count for pagination affordances.
+public struct WireAudioListResult: Codable, Equatable, Sendable {
+    public let items: [WireAudioAssetWithTranscripts]
+    public let total: Int
+
+    public init(items: [WireAudioAssetWithTranscripts], total: Int) {
+        self.items = items
+        self.total = total
+    }
+}
