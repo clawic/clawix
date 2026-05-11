@@ -18,13 +18,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
         var emulator: LocalProcessTerminalView? {
             didSet {
                 oldValue?.removeFromSuperview()
-                if let emulator {
-                    emulator.frame = bounds
-                    emulator.translatesAutoresizingMaskIntoConstraints = true
-                    emulator.autoresizingMask = [.width, .height]
-                    addSubview(emulator)
-                    startIfReady()
-                }
+                attachEmulatorIfNeeded()
             }
         }
 
@@ -32,6 +26,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
 
         override func layout() {
             super.layout()
+            attachEmulatorIfNeeded()
             emulator?.frame = bounds
             startIfReady()
             focusIfNeeded()
@@ -55,6 +50,19 @@ struct TerminalEmulatorView: NSViewRepresentable {
             onReady?()
         }
 
+        func attachEmulatorIfNeeded() {
+            guard let emulator else { return }
+            if emulator.superview !== self {
+                emulator.removeFromSuperview()
+                addSubview(emulator)
+            }
+            emulator.frame = bounds
+            emulator.translatesAutoresizingMaskIntoConstraints = true
+            emulator.autoresizingMask = [.width, .height]
+            emulator.needsDisplay = true
+            startIfReady()
+        }
+
         func focusIfNeeded() {
             guard shouldFocus, let window, window.firstResponder !== self else { return }
             window.makeFirstResponder(self)
@@ -76,6 +84,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
             nsView.sessionId = session.id
             nsView.emulator = session.terminalView
         }
+        nsView.attachEmulatorIfNeeded()
         nsView.emulator?.frame = nsView.bounds
         if nsView.bounds.width > 20, nsView.bounds.height > 20 {
             session.startIfNeeded()
@@ -83,5 +92,10 @@ struct TerminalEmulatorView: NSViewRepresentable {
         if isFocused {
             DispatchQueue.main.async { nsView.focusIfNeeded() }
         }
+    }
+
+    static func dismantleNSView(_ nsView: Container, coordinator: ()) {
+        nsView.emulator?.removeFromSuperview()
+        nsView.emulator = nil
     }
 }
