@@ -33,6 +33,11 @@ struct BrowserTabStrip: View {
             }
             .padding(.top, 2)
 
+            AndroidSimulatorTabButton {
+                appState.openAndroidSimulator()
+            }
+            .padding(.top, 2)
+
             Spacer(minLength: 0)
 
             ChromeMaximizeButton()
@@ -140,6 +145,10 @@ private struct SidebarItemPill: View {
             LucideIcon(.appWindow, size: 13)
                 .foregroundColor(Color(white: 0.78))
                 .frame(width: 14, height: 14)
+        case .androidSimulator:
+            LucideIcon.auto("smartphone", size: 13)
+                .foregroundColor(Color(white: 0.78))
+                .frame(width: 14, height: 14)
         }
     }
 
@@ -162,6 +171,8 @@ private struct SidebarItemPill: View {
             }
             return "Side chat"
         case .iosSimulator(let p):
+            return p.deviceName
+        case .androidSimulator(let p):
             return p.deviceName
         }
     }
@@ -247,6 +258,30 @@ private struct SimulatorTabButton: View {
     }
 }
 
+private struct AndroidSimulatorTabButton: View {
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Text("Android")
+                .font(BodyFont.system(size: 11, wght: 700))
+                .foregroundColor(Color(white: 0.78))
+                .frame(width: 58, height: 26)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(hovered ? Color.white.opacity(0.07) : Color.clear)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .accessibilityLabel("Android Emulator")
+        .hoverHint("Android Emulator", placement: .below)
+    }
+}
+
 // MARK: - Navigation bar
 
 struct BrowserNavigationBar: View {
@@ -297,6 +332,11 @@ struct BrowserNavigationBar: View {
             }
             .accessibilityLabel("iOS Simulator")
             .hoverHint("iOS Simulator", placement: .below)
+            ChromeIconButton(systemName: "smartphone") {
+                appState.openAndroidSimulator()
+            }
+            .accessibilityLabel("Android Emulator")
+            .hoverHint("Android Emulator", placement: .below)
             ChromeIconButton(systemName: "ellipsis", isActive: moreMenuOpen) {
                 moreMenuOpen.toggle()
             }
