@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import PDFKit
 import ClawixEngine
 
 /// Right-sidebar file preview that mirrors the Codex Desktop reference:
@@ -31,6 +32,7 @@ struct FileViewerPanel: View {
     private enum LoadedBody: Equatable {
         case loading
         case image(URL)
+        case pdf(URL)
         case markdown([MarkdownBlock])
         case plain(String)
         case unavailable(String)
@@ -169,6 +171,9 @@ struct FileViewerPanel: View {
         case .image(let url):
             FileImagePreview(url: url)
 
+        case .pdf(let url):
+            FilePDFPreview(url: url)
+
         case .markdown(let blocks):
             if richViewDisabled {
                 RawTextView(raw: rawText, syntax: .markdown, wordWrap: wordWrapEnabled)
@@ -241,6 +246,9 @@ struct FileViewerPanel: View {
         if case .image(let url) = loaded,
            let image = NSImage(contentsOf: url) {
             pb.writeObjects([image])
+        } else if case .pdf(let url) = loaded,
+                  let data = try? Data(contentsOf: url) {
+            pb.setData(data, forType: NSPasteboard.PasteboardType("com.adobe.pdf"))
         } else {
             pb.setString(rawText, forType: .string)
         }
@@ -290,6 +298,10 @@ struct FileViewerPanel: View {
         if isImageExtension(url.pathExtension),
            FileManager.default.fileExists(atPath: url.path) {
             return (.image(url), "")
+        }
+        if isPDFExtension(url.pathExtension),
+           FileManager.default.fileExists(atPath: url.path) {
+            return (.pdf(url), "")
         }
 
         // Delegate to the shared resolver so dummy / fixture mode (which
@@ -342,6 +354,10 @@ struct FileViewerPanel: View {
             return false
         }
     }
+
+    private nonisolated static func isPDFExtension(_ ext: String) -> Bool {
+        ext.lowercased() == "pdf"
+    }
 }
 
 private struct FileImagePreview: View {
@@ -370,6 +386,26 @@ private struct FileImagePreview: View {
                 NSImage(contentsOf: url)
             }.value
         }
+    }
+}
+
+private struct FilePDFPreview: NSViewRepresentable {
+    let url: URL
+
+    func makeNSView(context: Context) -> PDFView {
+        let view = PDFView()
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = NSColor.windowBackgroundColor
+        return view
+    }
+
+    func updateNSView(_ view: PDFView, context: Context) {
+        if view.document?.documentURL != url {
+            view.document = PDFDocument(url: url)
+        }
+        view.autoScales = true
     }
 }
 
