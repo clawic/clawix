@@ -219,6 +219,38 @@ final class IoTManager: NSObject, ObservableObject {
         try await client.stopDiscovery()
     }
 
+    // MARK: - Phase 4 protocol helpers
+
+    func commissionMatter(pairingCode: String, label: String?) async throws -> [String: Any] {
+        var args: [String: Any] = ["pairingCode": pairingCode]
+        if let label, !label.isEmpty { args["label"] = label }
+        let result = try await client.invokeTool(id: "iot.matter.commission", arguments: args)
+        try result.throwIfFailed()
+        return (result.value?.asDictionary) ?? [:]
+    }
+
+    func startHomeKitBridge(label: String?) async throws -> [String: Any] {
+        var args: [String: Any] = [:]
+        if let label, !label.isEmpty { args["label"] = label }
+        let result = try await client.invokeTool(id: "iot.homekit.startBridge", arguments: args)
+        try result.throwIfFailed()
+        return (result.value?.asDictionary) ?? [:]
+    }
+
+    func connectMqtt(url: String, username: String?, password: String?) async throws -> [String: Any] {
+        var args: [String: Any] = ["url": url]
+        if let username, !username.isEmpty { args["username"] = username }
+        if let password, !password.isEmpty { args["password"] = password }
+        let result = try await client.invokeTool(id: "iot.mqtt.connect", arguments: args)
+        try result.throwIfFailed()
+        return (result.value?.asDictionary) ?? [:]
+    }
+
+    func disconnectMqtt() async throws {
+        let result = try await client.invokeTool(id: "iot.mqtt.disconnect", arguments: [:])
+        try result.throwIfFailed()
+    }
+
     // MARK: - Lookups
 
     func areaLabel(forId id: String?) -> String? {

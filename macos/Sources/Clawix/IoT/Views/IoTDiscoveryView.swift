@@ -54,6 +54,9 @@ struct IoTDiscoveryView: View {
                             .foregroundColor(Palette.textSecondary)
                     }
                     .padding(.top, 12)
+
+                    IoTProtocolPaths()
+                        .padding(.top, 12)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 14)
