@@ -179,6 +179,45 @@ else
     echo "==> Skipping web SPA build (pnpm/node missing or web/ absent)"
 fi
 
+# 1.45) Wire the clawjs/iot dev pointer so ClawJSServiceManager can spawn
+#       the IoT daemon (Phase 1 IoT integration). The daemon lives in the
+#       sibling clawjs repo, not inside this tree, so a pointer file at
+#       ~/Library/Application Support/Clawix/clawjs/dev-pointers/iot.dir
+#       tells the supervisor where to find it. Production builds will
+#       substitute a bundled copy under Contents/Resources/clawjs-iot/.
+CLAWJS_IOT_DIR="${CLAWJS_IOT_DIR:-}"
+if [[ -z "$CLAWJS_IOT_DIR" ]]; then
+    for iot_candidate in \
+        "${CLAWJS_DEV_OVERLAY:-}/iot" \
+        "$PROJECT_DIR/../../../../clawjs/iot" \
+        "$PROJECT_DIR/../../../clawjs/iot" \
+        "$HOME/Desktop/clawjs/iot"
+    do
+        [[ -n "$iot_candidate" && -d "$iot_candidate" ]] || continue
+        if [[ -f "$iot_candidate/package.json" ]]; then
+            CLAWJS_IOT_DIR="$(cd "$iot_candidate" && pwd)"
+            break
+        fi
+    done
+fi
+
+if [[ -n "$CLAWJS_IOT_DIR" ]] && command -v npm >/dev/null 2>&1; then
+    echo "==> Building clawjs/iot for dev pointer ($CLAWJS_IOT_DIR)…"
+    if [[ ! -d "$CLAWJS_IOT_DIR/node_modules" ]]; then
+        (cd "$CLAWJS_IOT_DIR" && npm install --silent) || \
+            echo "WARN: npm install failed in $CLAWJS_IOT_DIR" >&2
+    fi
+    (cd "$CLAWJS_IOT_DIR" && npm run --silent build:server) || \
+        echo "WARN: iot build:server failed; .iot service will be blocked" >&2
+
+    POINTER_DIR="$HOME/Library/Application Support/Clawix/clawjs/dev-pointers"
+    mkdir -p "$POINTER_DIR"
+    printf "%s\n" "$CLAWJS_IOT_DIR" > "$POINTER_DIR/iot.dir"
+    echo "==> Wired iot dev pointer at $POINTER_DIR/iot.dir"
+else
+    echo "==> Skipping iot dev pointer (clawjs/iot not found or npm missing)"
+fi
+
 # 1.5) Build the bridge daemon (clawix-bridged). Lives in a sibling SPM
 #      package under Helpers/Bridged/. The daemon shares ClawixEngine
 #      with the GUI but is its own executable target so it can be
