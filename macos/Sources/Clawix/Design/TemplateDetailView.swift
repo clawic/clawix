@@ -76,6 +76,47 @@ struct TemplateDetailView: View {
                 }
             }
             Spacer(minLength: 0)
+            Button {
+                openInEditor(template)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "wand.and.rays")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Open in editor")
+                        .font(BodyFont.system(size: 12.5, wght: 600))
+                }
+                .foregroundColor(Palette.textPrimary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Palette.pastelBlue.opacity(0.16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .stroke(Palette.pastelBlue.opacity(0.40), lineWidth: 0.5)
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func openInEditor(_ template: TemplateManifest) {
+        let styleId = store.style(id: selectedStyleId) != nil ? selectedStyleId : (store.styles.first?.id ?? "claw")
+        let name = "\(template.name)"
+        do {
+            let document = try EditorStore.shared.create(
+                name: name,
+                template: template,
+                styleId: styleId,
+                variantId: selectedVariantId
+            )
+            appState.currentRoute = .designEditor(documentId: document.id)
+        } catch {
+            // Editor creation failure is rare (filesystem); fall back to
+            // staying on the template detail view. A future iteration
+            // surfaces the error inline.
+            NSLog("Editor document creation failed: \(error)")
         }
     }
 

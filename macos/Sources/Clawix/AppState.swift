@@ -139,6 +139,10 @@ enum SidebarRoute: Equatable {
     case designTemplateDetail(id: String)
     /// Design surface: References inspiration library.
     case designReferencesHome
+    /// Design surface: Editor canvas open on a specific EditorDocument
+    /// (a Template instance + Style). Reached from TemplateDetailView's
+    /// "Open in editor" CTA or from a previously created document.
+    case designEditor(documentId: String)
 }
 
 // MARK: - Models

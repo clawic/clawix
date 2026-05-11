@@ -127,7 +127,7 @@ struct ContentView: View {
              .app, .appsHome, .skills, .skillDetail,
              .iotHome, .iotThingDetail,
              .designStylesHome, .designStyleDetail, .designTemplatesHome,
-             .designTemplateDetail, .designReferencesHome:
+             .designTemplateDetail, .designReferencesHome, .designEditor:
             return false
         }
     }
@@ -164,6 +164,7 @@ struct ContentView: View {
         case .designTemplatesHome: return "design-templates"
         case .designTemplateDetail(let id): return "design-template-\(id)"
         case .designReferencesHome: return "design-references"
+        case .designEditor(let id): return "design-editor-\(id)"
         }
     }
 
@@ -268,6 +269,7 @@ struct ContentView: View {
                             case .designTemplatesHome:        TemplatesHomeView()
                             case .designTemplateDetail(let id): TemplateDetailView(templateId: id)
                             case .designReferencesHome:       ReferencesHomeView()
+                            case .designEditor(let id):       EditorView(documentId: id)
                             }
                         }
                         .id(routeRenderID)
