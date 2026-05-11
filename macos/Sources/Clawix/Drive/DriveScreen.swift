@@ -489,8 +489,7 @@ struct DriveItemTile: View {
                     Image(nsImage: img).resizable().scaledToFill()
                         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                 } else {
-                    Image(systemName: item.kind == "folder" ? "folder.fill" : "photo")
-                        .font(.system(size: 36))
+                    LucideIcon.auto(placeholderIconName, size: 36)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -505,6 +504,30 @@ struct DriveItemTile: View {
                 }
             }
         }
+    }
+
+    private var placeholderIconName: String {
+        if item.kind == "folder" {
+            return "folder.fill"
+        }
+
+        let mimeType = item.mimeType?.lowercased() ?? ""
+        if mimeType.starts(with: "image/") {
+            return "photo"
+        }
+        if mimeType == "application/pdf" {
+            return "doc.text"
+        }
+        if mimeType.starts(with: "text/") || mimeType == "application/json" {
+            return "doc.text"
+        }
+        if mimeType.starts(with: "audio/") {
+            return "waveform"
+        }
+        if mimeType.starts(with: "video/") {
+            return "play"
+        }
+        return "doc.text"
     }
 }
 
