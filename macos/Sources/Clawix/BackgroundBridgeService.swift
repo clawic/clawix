@@ -64,7 +64,7 @@ final class BackgroundBridgeService: ObservableObject {
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let pid = obj["pid"] as? Int,
               let state = obj["state"] as? String,
-              state == "ready" || state == "syncing"
+              ["booting", "syncing", "ready", "error"].contains(state)
         else { return false }
         // Heartbeat freshness: the daemon writes every 2s but the
         // write happens on a utility queue and the file's mtime can
