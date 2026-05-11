@@ -30,6 +30,7 @@ struct FileViewerPanel: View {
 
     private enum LoadedBody: Equatable {
         case loading
+        case image(URL)
         case markdown([MarkdownBlock])
         case plain(String)
         case unavailable(String)
@@ -165,6 +166,9 @@ struct FileViewerPanel: View {
                 .controlSize(.small)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
+        case .image(let url):
+            FileImagePreview(url: url)
+
         case .markdown(let blocks):
             if richViewDisabled {
                 RawTextView(raw: rawText, syntax: .markdown, wordWrap: wordWrapEnabled)
@@ -277,7 +281,12 @@ struct FileViewerPanel: View {
         }
     }
 
-    private static func load(url: URL) -> (LoadedBody, String) {
+    private nonisolated static func load(url: URL) -> (LoadedBody, String) {
+        if isImageExtension(url.pathExtension),
+           FileManager.default.fileExists(atPath: url.path) {
+            return (.image(url), "")
+        }
+
         // Delegate to the shared resolver so dummy / fixture mode (which
         // sets `CLAWIX_FILE_FIXTURE_DIR`) returns the same synthesized
         // content the iPhone gets over the bridge.
@@ -297,7 +306,7 @@ struct FileViewerPanel: View {
     /// The shared reader returns canonical English reasons; map them
     /// back to the bundle-localized strings so the macOS UI stays
     /// translated.
-    private static func localizedReason(_ english: String) -> String {
+    private nonisolated static func localizedReason(_ english: String) -> String {
         switch english {
         case "File not found":
             return String(localized: "File not found",
@@ -317,6 +326,44 @@ struct FileViewerPanel: View {
                           locale: AppLocale.current)
         default:
             return english
+        }
+    }
+
+    private nonisolated static func isImageExtension(_ ext: String) -> Bool {
+        switch ext.lowercased() {
+        case "png", "jpg", "jpeg", "gif", "heic", "heif", "tif", "tiff", "bmp", "webp":
+            return true
+        default:
+            return false
+        }
+    }
+}
+
+private struct FileImagePreview: View {
+    let url: URL
+    @State private var image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                ScrollView([.horizontal, .vertical]) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(18)
+                }
+                .thinScrollers()
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task(id: url.path) {
+            image = await Task.detached(priority: .userInitiated) {
+                NSImage(contentsOf: url)
+            }.value
         }
     }
 }
