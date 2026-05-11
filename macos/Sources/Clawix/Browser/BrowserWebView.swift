@@ -87,6 +87,7 @@ final class BrowserTabController: NSObject, ObservableObject {
         super.init()
 
         webView.navigationDelegate = self
+        webView.uiDelegate = self
         attachObservers()
         startBackgroundSampling()
         load(initialURL)
@@ -640,6 +641,23 @@ extension BrowserTabController: WKNavigationDelegate {
                 failedURL: webView.url
             )
         }
+    }
+}
+
+extension BrowserTabController: WKUIDelegate {
+    func webView(
+        _ webView: WKWebView,
+        createWebViewWith configuration: WKWebViewConfiguration,
+        for navigationAction: WKNavigationAction,
+        windowFeatures: WKWindowFeatures
+    ) -> WKWebView? {
+        guard navigationAction.targetFrame == nil,
+              let url = navigationAction.request.url
+        else { return nil }
+        Task { @MainActor in
+            self.appState?.newBrowserTab(url: url)
+        }
+        return nil
     }
 }
 
