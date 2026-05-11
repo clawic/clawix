@@ -26,6 +26,24 @@ struct IoTProtocolPaths: View {
     @State private var mqttPassword: String = ""
     @State private var mqttStatus: String?
 
+    @State private var tuyaAppKey: String = ""
+    @State private var tuyaAppSecret: String = ""
+    @State private var tuyaBaseUrl: String = ""
+    @State private var tuyaStatus: String?
+
+    @State private var googleUrl: String = ""
+    @State private var googleClientId: String = ""
+    @State private var googleClientSecret: String = ""
+    @State private var googleAgentUserId: String = ""
+    @State private var googleHomeGraphToken: String = ""
+    @State private var googleStatus: String?
+
+    @State private var alexaUrl: String = ""
+    @State private var alexaClientSecret: String = ""
+    @State private var alexaGatewayToken: String = ""
+    @State private var alexaGatewayUrl: String = ""
+    @State private var alexaStatus: String?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(verbatim: "Protocol-specific paths")
@@ -34,6 +52,154 @@ struct IoTProtocolPaths: View {
             matterCard
             homekitCard
             mqttCard
+            tuyaCard
+            googleCard
+            alexaCard
+        }
+    }
+
+    @ViewBuilder
+    private var tuyaCard: some View {
+        protocolCard(title: "Tuya / Smart Life", subtitle: "Cloud OpenAPI bridge for Wi-Fi devices sold under Smart Life and many white-label brands.") {
+            VStack(alignment: .leading, spacing: 6) {
+                formRow(label: "Client id", binding: $tuyaAppKey, placeholder: "Project Access ID")
+                secureRow(label: "Client secret", binding: $tuyaAppSecret, placeholder: "Project Access Secret")
+                formRow(label: "Region URL", binding: $tuyaBaseUrl, placeholder: "https://openapi.tuyaeu.com (optional)")
+                if let tuyaStatus {
+                    Text(verbatim: tuyaStatus)
+                        .font(BodyFont.system(size: 10))
+                        .foregroundColor(tuyaStatus.hasPrefix("Error") ? .red.opacity(0.8) : Palette.textTertiary)
+                }
+                HStack {
+                    Spacer()
+                    Button {
+                        Task { await syncTuya() }
+                    } label: {
+                        Text(verbatim: "Sync devices")
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Palette.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        Task { await disconnectTuya() }
+                    } label: {
+                        Text(verbatim: "Disconnect")
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Palette.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        Task { await connectTuya() }
+                    } label: {
+                        Text(verbatim: "Connect")
+                            .font(BodyFont.system(size: 11, weight: .medium))
+                            .foregroundColor(Palette.textPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.accentColor.opacity(0.40))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(tuyaAppKey.isEmpty || tuyaAppSecret.isEmpty)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var googleCard: some View {
+        protocolCard(title: "Google Home", subtitle: "Bridge to Google Assistant + Google Home app via Smart Home Actions. Requires your own public fulfillment URL.") {
+            VStack(alignment: .leading, spacing: 6) {
+                formRow(label: "Fulfillment", binding: $googleUrl, placeholder: "https://your-tunnel.example/iot")
+                formRow(label: "Client id", binding: $googleClientId, placeholder: "OAuth client id")
+                secureRow(label: "Client secret", binding: $googleClientSecret, placeholder: "OAuth client secret")
+                formRow(label: "Agent user id", binding: $googleAgentUserId, placeholder: "stable per-user id")
+                secureRow(label: "HomeGraph", binding: $googleHomeGraphToken, placeholder: "Service-account token (optional)")
+                if let googleStatus {
+                    Text(verbatim: googleStatus)
+                        .font(BodyFont.system(size: 10))
+                        .foregroundColor(googleStatus.hasPrefix("Error") ? .red.opacity(0.8) : Palette.textTertiary)
+                }
+                HStack {
+                    Spacer()
+                    Button {
+                        Task { await disconnectGoogle() }
+                    } label: {
+                        Text(verbatim: "Disconnect")
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Palette.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        Task { await connectGoogle() }
+                    } label: {
+                        Text(verbatim: "Connect")
+                            .font(BodyFont.system(size: 11, weight: .medium))
+                            .foregroundColor(Palette.textPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.accentColor.opacity(0.40))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(googleUrl.isEmpty || googleClientId.isEmpty || googleClientSecret.isEmpty || googleAgentUserId.isEmpty)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var alexaCard: some View {
+        protocolCard(title: "Amazon Alexa", subtitle: "Bridge to Alexa voice + the Alexa app via Smart Home Skills. Requires your own public fulfillment URL.") {
+            VStack(alignment: .leading, spacing: 6) {
+                formRow(label: "Fulfillment", binding: $alexaUrl, placeholder: "https://your-tunnel.example/iot")
+                secureRow(label: "Client secret", binding: $alexaClientSecret, placeholder: "OAuth client secret")
+                secureRow(label: "Gateway token", binding: $alexaGatewayToken, placeholder: "Skill Messaging token (optional)")
+                formRow(label: "Gateway URL", binding: $alexaGatewayUrl, placeholder: "https://api.amazonalexa.com/v3/events (optional)")
+                if let alexaStatus {
+                    Text(verbatim: alexaStatus)
+                        .font(BodyFont.system(size: 10))
+                        .foregroundColor(alexaStatus.hasPrefix("Error") ? .red.opacity(0.8) : Palette.textTertiary)
+                }
+                HStack {
+                    Spacer()
+                    Button {
+                        Task { await disconnectAlexa() }
+                    } label: {
+                        Text(verbatim: "Disconnect")
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Palette.textSecondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.plain)
+                    Button {
+                        Task { await connectAlexa() }
+                    } label: {
+                        Text(verbatim: "Connect")
+                            .font(BodyFont.system(size: 11, weight: .medium))
+                            .foregroundColor(Palette.textPrimary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.accentColor.opacity(0.40))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(alexaUrl.isEmpty || alexaClientSecret.isEmpty)
+                }
+            }
         }
     }
 
@@ -272,6 +438,102 @@ struct IoTProtocolPaths: View {
             mqttStatus = "Disconnected."
         } catch {
             mqttStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func connectTuya() async {
+        do {
+            let response = try await manager.connectTuya(
+                appKey: tuyaAppKey,
+                appSecret: tuyaAppSecret,
+                baseUrl: tuyaBaseUrl.isEmpty ? nil : tuyaBaseUrl,
+            )
+            if (response["connected"] as? Bool) == true {
+                tuyaStatus = "Connected. Use Sync devices to import your Tuya fleet."
+            } else if let reason = response["reason"] as? String {
+                tuyaStatus = "Error: \(reason)"
+            } else {
+                tuyaStatus = "Connect attempt sent."
+            }
+        } catch {
+            tuyaStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func syncTuya() async {
+        do {
+            let response = try await manager.syncTuya()
+            if let error = response["error"] as? String {
+                tuyaStatus = "Error: \(error)"
+            } else if let devices = response["devices"] as? [Any] {
+                tuyaStatus = "Synced \(devices.count) Tuya device\(devices.count == 1 ? "" : "s")."
+            }
+        } catch {
+            tuyaStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func disconnectTuya() async {
+        do {
+            try await manager.disconnectTuya()
+            tuyaStatus = "Disconnected."
+        } catch {
+            tuyaStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func connectGoogle() async {
+        do {
+            let response = try await manager.connectGoogleHome(
+                publicFulfillmentUrl: googleUrl,
+                oauthClientId: googleClientId,
+                oauthClientSecret: googleClientSecret,
+                agentUserId: googleAgentUserId,
+                homeGraphToken: googleHomeGraphToken.isEmpty ? nil : googleHomeGraphToken,
+            )
+            if (response["connected"] as? Bool) == true {
+                googleStatus = "Connected. Fulfillment endpoint authenticates against the secret."
+            } else if let reason = response["reason"] as? String {
+                googleStatus = "Error: \(reason)"
+            }
+        } catch {
+            googleStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func disconnectGoogle() async {
+        do {
+            try await manager.disconnectGoogleHome()
+            googleStatus = "Disconnected."
+        } catch {
+            googleStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func connectAlexa() async {
+        do {
+            let response = try await manager.connectAlexa(
+                publicFulfillmentUrl: alexaUrl,
+                oauthClientSecret: alexaClientSecret,
+                eventGatewayToken: alexaGatewayToken.isEmpty ? nil : alexaGatewayToken,
+                eventGatewayUrl: alexaGatewayUrl.isEmpty ? nil : alexaGatewayUrl,
+            )
+            if (response["connected"] as? Bool) == true {
+                alexaStatus = "Connected. Fulfillment endpoint authenticates against the secret."
+            } else if let reason = response["reason"] as? String {
+                alexaStatus = "Error: \(reason)"
+            }
+        } catch {
+            alexaStatus = "Error: \(error.localizedDescription)"
+        }
+    }
+
+    private func disconnectAlexa() async {
+        do {
+            try await manager.disconnectAlexa()
+            alexaStatus = "Disconnected."
+        } catch {
+            alexaStatus = "Error: \(error.localizedDescription)"
         }
     }
 }

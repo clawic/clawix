@@ -251,6 +251,73 @@ final class IoTManager: NSObject, ObservableObject {
         try result.throwIfFailed()
     }
 
+    // MARK: - Phase 5 cloud helpers
+
+    func connectTuya(appKey: String, appSecret: String, baseUrl: String?) async throws -> [String: Any] {
+        var args: [String: Any] = ["appKey": appKey, "appSecret": appSecret]
+        if let baseUrl, !baseUrl.isEmpty { args["baseUrl"] = baseUrl }
+        let result = try await client.invokeTool(id: "iot.tuya.connect", arguments: args)
+        try result.throwIfFailed()
+        return result.value?.asDictionary ?? [:]
+    }
+
+    func syncTuya() async throws -> [String: Any] {
+        let result = try await client.invokeTool(id: "iot.tuya.sync", arguments: [:])
+        try result.throwIfFailed()
+        return result.value?.asDictionary ?? [:]
+    }
+
+    func disconnectTuya() async throws {
+        let result = try await client.invokeTool(id: "iot.tuya.disconnect", arguments: [:])
+        try result.throwIfFailed()
+    }
+
+    func connectGoogleHome(
+        publicFulfillmentUrl: String,
+        oauthClientId: String,
+        oauthClientSecret: String,
+        agentUserId: String,
+        homeGraphToken: String?,
+    ) async throws -> [String: Any] {
+        var args: [String: Any] = [
+            "publicFulfillmentUrl": publicFulfillmentUrl,
+            "oauthClientId": oauthClientId,
+            "oauthClientSecret": oauthClientSecret,
+            "agentUserId": agentUserId,
+        ]
+        if let homeGraphToken, !homeGraphToken.isEmpty { args["homeGraphToken"] = homeGraphToken }
+        let result = try await client.invokeTool(id: "iot.googleHome.connect", arguments: args)
+        try result.throwIfFailed()
+        return result.value?.asDictionary ?? [:]
+    }
+
+    func disconnectGoogleHome() async throws {
+        let result = try await client.invokeTool(id: "iot.googleHome.disconnect", arguments: [:])
+        try result.throwIfFailed()
+    }
+
+    func connectAlexa(
+        publicFulfillmentUrl: String,
+        oauthClientSecret: String,
+        eventGatewayToken: String?,
+        eventGatewayUrl: String?,
+    ) async throws -> [String: Any] {
+        var args: [String: Any] = [
+            "publicFulfillmentUrl": publicFulfillmentUrl,
+            "oauthClientSecret": oauthClientSecret,
+        ]
+        if let eventGatewayToken, !eventGatewayToken.isEmpty { args["eventGatewayToken"] = eventGatewayToken }
+        if let eventGatewayUrl, !eventGatewayUrl.isEmpty { args["eventGatewayUrl"] = eventGatewayUrl }
+        let result = try await client.invokeTool(id: "iot.alexa.connect", arguments: args)
+        try result.throwIfFailed()
+        return result.value?.asDictionary ?? [:]
+    }
+
+    func disconnectAlexa() async throws {
+        let result = try await client.invokeTool(id: "iot.alexa.disconnect", arguments: [:])
+        try result.throwIfFailed()
+    }
+
     // MARK: - Lookups
 
     func areaLabel(forId id: String?) -> String? {
