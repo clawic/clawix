@@ -23,7 +23,7 @@ struct MemoryCapturesView: View {
                             .padding(.horizontal, 12)
                     }
                     ForEach(pendingCaptures) { capture in
-                        captureCard(capture: capture)
+                        captureCard(capture: capture, isPromoted: false)
                     }
                     if !promotedCaptures.isEmpty {
                         Text("Promoted")
@@ -32,7 +32,7 @@ struct MemoryCapturesView: View {
                             .textCase(.uppercase)
                             .padding(.top, 10)
                         ForEach(promotedCaptures) { capture in
-                            captureCard(capture: capture, dimmed: true)
+                            captureCard(capture: capture, isPromoted: true, dimmed: true)
                         }
                     }
                 }
@@ -76,7 +76,7 @@ struct MemoryCapturesView: View {
         manager.captures.filter { $0.promotedAt != nil }
     }
 
-    private func captureCard(capture: ClawJSMemoryClient.Capture, dimmed: Bool = false) -> some View {
+    private func captureCard(capture: ClawJSMemoryClient.Capture, isPromoted: Bool, dimmed: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text(capture.sessionId ?? "session")
@@ -90,7 +90,7 @@ struct MemoryCapturesView: View {
                         .foregroundColor(.white.opacity(0.5))
                 }
                 Spacer()
-                if capture.promotedAt == nil {
+                if !isPromoted {
                     Button(action: { promote(capture) }) {
                         Text(promotingId == capture.id ? "Promoting…" : "Promote")
                             .font(BodyFont.system(size: 11.5, wght: 600))
@@ -124,6 +124,7 @@ struct MemoryCapturesView: View {
                 .fill(Color.white.opacity(dimmed ? 0.02 : 0.05))
         )
         .opacity(dimmed ? 0.7 : 1)
+        .id("\(capture.id)-\(capture.promotedAt ?? "pending")")
     }
 
     private func excerpt(label: String, text: String) -> some View {
@@ -143,13 +144,17 @@ struct MemoryCapturesView: View {
         promotingId = capture.id
         errorText = nil
         Task {
-            defer { Task { @MainActor in promotingId = nil } }
             do {
                 _ = try await manager.promote(captureId: capture.id)
+                await MainActor.run {
+                    promotingId = nil
+                }
             } catch {
-                await MainActor.run { errorText = error.localizedDescription }
+                await MainActor.run {
+                    promotingId = nil
+                    errorText = error.localizedDescription
+                }
             }
         }
     }
 }
-
