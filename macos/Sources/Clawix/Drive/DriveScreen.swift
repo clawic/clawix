@@ -603,6 +603,7 @@ struct DriveItemDetailPane: View {
             .padding(16)
         }
         .task(id: item.id) {
+            await manager.markViewed(item.id)
             self.exif = try? await manager.client.getExif(item.id)
             self.shares = try? await manager.client.listAllShares(item.id)
         }

@@ -249,6 +249,11 @@ final class ClawJSDriveClient {
         try await get("/v1/items/\(id)")
     }
 
+    func markViewed(_ id: String) async throws {
+        struct R: Decodable { let ok: Bool }
+        let _: R = try await post("/v1/items/\(id)/view", body: nil)
+    }
+
     func createFolder(name: String, parentId: String?) async throws -> DriveItemDetail {
         try await post("/v1/items", body: ["kind": "folder", "name": name, "parentId": parentId as Any])
     }

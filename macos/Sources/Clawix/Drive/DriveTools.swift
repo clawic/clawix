@@ -59,6 +59,7 @@ enum DriveTools {
         let manager = try require()
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent("\(itemId)-\(UUID().uuidString)")
         try await manager.client.downloadItem(itemId, to: temp)
+        try await manager.client.markViewed(itemId)
         defer { try? FileManager.default.removeItem(at: temp) }
         return try Data(contentsOf: temp)
     }

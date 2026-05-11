@@ -220,6 +220,15 @@ final class DriveManager: ObservableObject {
         }
     }
 
+    func markViewed(_ itemId: String) async {
+        do {
+            try await client.markViewed(itemId)
+            await refresh()
+        } catch {
+            self.lastError = error.localizedDescription
+        }
+    }
+
     // MARK: - Thumbnails
 
     func thumbnail(for itemId: String, size: Int = 256) async -> Data? {
