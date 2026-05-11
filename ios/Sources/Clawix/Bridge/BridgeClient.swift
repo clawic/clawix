@@ -344,6 +344,8 @@ final class BridgeClient: NSObject {
             return "unix:\(path)"
         case .url(let url):
             return "url:\(url.absoluteString)"
+        case .opaque(let value):
+            return "opaque:\(value.debugDescription)"
         @unknown default:
             return "unknown:\(endpoint.debugDescription)"
         }
@@ -635,6 +637,10 @@ final class BridgeClient: NSObject {
              .requestRateLimits, .rateLimitsSnapshot, .rateLimitsUpdated:
             // Outbound-from-desktop or server-to-desktop frames the
             // iPhone client neither emits nor consumes. Ignore.
+            break
+        default:
+            // Future bridge capabilities are ignored until iOS wires
+            // matching UI/state handling for them.
             break
         }
     }
