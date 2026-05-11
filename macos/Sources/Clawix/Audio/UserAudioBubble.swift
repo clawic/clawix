@@ -125,7 +125,7 @@ struct UserAudioBubble: View {
         guard !isLoadingBytes else { return }
         isLoadingBytes = true
         Task {
-            let payload = await AudioMessageStore.shared.data(forAudioId: audioRef.id)
+            let payload = await Self.loadBytes(for: audioRef.id)
             await MainActor.run {
                 self.isLoadingBytes = false
                 guard let payload else {
@@ -146,6 +146,26 @@ struct UserAudioBubble: View {
                 }
             }
         }
+    }
+
+    /// Resolution order: framework audio catalog (covers every migrated
+    /// and freshly registered asset) first, on-disk `AudioMessageStore`
+    /// second. The fallback keeps replay working before the supervisor
+    /// finishes bringing the audio service up.
+    private static func loadBytes(for audioId: String) async -> (data: Data, mimeType: String)? {
+        if let client = await MainActor.run(body: { AudioCatalogBootstrap.shared.currentClient }) {
+            do {
+                let response = try await client.getBytes(audioId: audioId, appId: "clawix")
+                if let bytes = Data(base64Encoded: response.base64) {
+                    return (bytes, response.mimeType)
+                }
+            } catch ClawJSAudioClient.Error.notFound {
+                // Fall through to legacy.
+            } catch {
+                // Transport / decoding error: fall through.
+            }
+        }
+        return await AudioMessageStore.shared.data(forAudioId: audioId)
     }
 
     private func startProgressTimer() {

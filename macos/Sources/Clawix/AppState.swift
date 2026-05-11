@@ -3085,6 +3085,28 @@ final class AppState: ObservableObject {
                     else { return }
                     self.chats[cIdx].messages[mIdx].audioRef = entry.wireRef
                 }
+                // Dual-write into the framework audio catalog so new
+                // ingests stay queryable via `audioGetBytes / audioList`
+                // alongside the legacy on-disk store. Best effort: the
+                // legacy store is still the source of truth this release.
+                if let client = await MainActor.run(body: { AudioCatalogBootstrap.shared.currentClient }) {
+                    _ = try? await client.register(.init(
+                        id: entry.id,
+                        kind: "user_message",
+                        appId: "clawix",
+                        originActor: "user",
+                        mimeType: entry.mimeType,
+                        bytesBase64: data.base64EncodedString(),
+                        durationMs: entry.durationMs,
+                        threadId: entry.threadId,
+                        linkedMessageId: entry.messageId,
+                        transcript: transcript.isEmpty ? nil : .init(
+                            text: transcript,
+                            role: "transcription",
+                            provider: "transcribeAudio"
+                        )
+                    ))
+                }
             } catch {
                 // Soft fail: the user message is still in the chat;
                 // the bubble simply won't have a play button.
@@ -5853,12 +5875,32 @@ extension AppState: EngineHost {
         reply: @MainActor @escaping (String?, String?, String?) -> Void
     ) {
         Task { @MainActor in
+            // Prefer the framework's audio catalog (covers migrated
+            // legacy data and every new ingest). Fall back to the
+            // on-disk `AudioMessageStore` while the supervisor is still
+            // bringing the service up.
+            if let client = audioCatalogClient {
+                do {
+                    let result = try await client.getBytes(audioId: audioId, appId: "clawix")
+                    reply(result.base64, result.mimeType, nil)
+                    return
+                } catch ClawJSAudioClient.Error.notFound {
+                    // Fall through to legacy lookup.
+                } catch {
+                    // Transport / decoding error: also fall through so
+                    // unmigrated audios still play during a hot reload.
+                }
+            }
             if let payload = await AudioMessageStore.shared.data(forAudioId: audioId) {
                 reply(payload.data.base64EncodedString(), payload.mimeType, nil)
             } else {
                 reply(nil, nil, "Audio no longer available")
             }
         }
+    }
+
+    public var audioCatalogClient: ClawJSAudioClient? {
+        AudioCatalogBootstrap.shared.currentClient
     }
 
     /// In-process Whisper handler for the iPhone's `transcribeAudio`
