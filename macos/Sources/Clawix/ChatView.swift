@@ -17,6 +17,16 @@ struct ChatView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var meshStore: MeshStore
     @EnvironmentObject private var flags: FeatureFlags
+    @EnvironmentObject private var badgerManager: BadgerManager
+
+    /// True when the badger helper is alive. Drives whether the "Push to
+    /// badger" action surfaces on each assistant bubble (we hide the
+    /// affordance when the service is dead so the user doesn't get a
+    /// useless icon).
+    private var badgerReady: Bool {
+        if case .ready = badgerManager.state { return true }
+        return false
+    }
     /// View-owned composer used only when `isSideChat == true`.
     /// Created once per ChatView identity (the right-sidebar tab keys
     /// the view by `chatId`, so each side chat keeps its draft across
@@ -147,7 +157,11 @@ struct ChatView: View {
                                         },
                                         onOpenImage: { url in
                                             appState.imagePreviewURL = url
-                                        }
+                                        },
+                                        onPushToBadger: { body in
+                                            appState.navigate(to: .badgerComposer(prefillBody: body))
+                                        },
+                                        badgerReady: badgerReady
                                 )
                                 .equatable()
                                 .id(msg.id)
@@ -907,6 +921,8 @@ private struct MessageRow: View, Equatable {
     var onEditUserMessage: (String) -> Void = { _ in }
     var onForkConversation: () -> Void = {}
     var onOpenImage: (URL) -> Void = { _ in }
+    var onPushToBadger: (String) -> Void = { _ in }
+    var badgerReady: Bool = false
     @State private var rowHovered = false
     @State private var justCopied = false
     @State private var copyResetTask: Task<Void, Never>? = nil
@@ -933,6 +949,7 @@ private struct MessageRow: View, Equatable {
             && lhs.isLastAssistantMessage == rhs.isLastAssistantMessage
             && lhs.responseStreaming == rhs.responseStreaming
             && lhs.findQuery == rhs.findQuery
+            && lhs.badgerReady == rhs.badgerReady
     }
 
     var body: some View {
@@ -1318,6 +1335,16 @@ private struct MessageRow: View, Equatable {
                 MessageActionIcon(kind: .branchArrows,
                                   label: forkLabel) {
                     onForkConversation()
+                }
+                if badgerReady {
+                    MessageActionIcon(
+                        kind: .system("megaphone"),
+                        label: String(localized: "Push to badger",
+                                      bundle: AppLocale.bundle,
+                                      locale: AppLocale.current)
+                    ) {
+                        onPushToBadger(message.content)
+                    }
                 }
                 timestampLabel
                     .opacity(isLastAssistantMessage ? (rowHovered ? 1 : 0) : 1)

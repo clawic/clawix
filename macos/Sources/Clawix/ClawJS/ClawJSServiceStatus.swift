@@ -13,6 +13,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case audio
     case iot
     case index
+    case badger
 
     var id: String { rawValue }
 
@@ -31,6 +32,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .audio:    return 7794
         case .iot:      return 7795
         case .index:    return 7796
+        case .badger:   return 7797
         }
     }
 
@@ -44,16 +46,21 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .audio:    return "Audio"
         case .iot:      return "IoT"
         case .index:    return "Index"
+        case .badger:   return "Badger"
         }
     }
 
     /// Path the supervisor probes to confirm liveness. Database and Drive
     /// both expose `/v1/health`; Memory does not yet expose a health
     /// route in the source, so we fall back to the same path on the
-    /// expectation that ClawJS will normalize. If a service starts and
-    /// the probe is wrong, the supervisor's "did not become ready"
-    /// timeout flips it to `.crashed` quickly and the log explains.
-    var healthPath: String { "/v1/health" }
+    /// expectation that ClawJS will normalize. Badger publishes `/healthz`
+    /// directly (it does not yet share the `/v1/health` convention).
+    var healthPath: String {
+        switch self {
+        case .badger: return "/healthz"
+        default:      return "/v1/health"
+        }
+    }
 }
 
 /// Lifecycle state Phase 3's UI binds to. Keep this enum small and the

@@ -30,6 +30,7 @@ enum AppFeature {
     case browserUsage
     case git
     case remoteMesh
+    case badger
 
     var tier: FeatureTier {
         switch self {
@@ -41,6 +42,7 @@ enum AppFeature {
         case .browserUsage: return .experimental
         case .git:          return .experimental
         case .remoteMesh:   return .experimental
+        case .badger:       return .beta
         }
     }
 }

@@ -1255,6 +1255,9 @@ private struct ModelMenuPopup: View {
     let otherModels: [String]
     let localModels: [String]
 
+    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var agentStore: AgentStore
+
     static let mainColumnWidth: CGFloat = 232
     private static let modelColumnWidth: CGFloat = 220
     private static let otherModelsColumnWidth: CGFloat = 200
@@ -1330,6 +1333,9 @@ private struct ModelMenuPopup: View {
 
     private var mainColumn: some View {
         VStack(alignment: .leading, spacing: 0) {
+            agentSection
+            MenuStandardDivider()
+                .padding(.vertical, 5)
             ModelMenuHeader(L10n.t("Runtime"))
 
             ForEach(AgentRuntimeChoice.allCases) { choice in
@@ -1545,6 +1551,36 @@ private struct ModelMenuPopup: View {
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: Self.speedColumnWidth, alignment: .leading)
         .menuStandardBackground()
+    }
+
+    /// Top section of the model menu: lets the user pick which Agent
+    /// the next composer send routes to. Selecting an agent also writes
+    /// the resolved runtime + model so existing code paths that read
+    /// `selectedAgentRuntime` / `selectedModel` keep working without a
+    /// migration. The built-in Codex agent sits at the top of the list.
+    private var agentSection: some View {
+        let agents = agentStore.agents
+        return VStack(alignment: .leading, spacing: 0) {
+            ModelMenuHeader(L10n.t("Agent"))
+            ForEach(agents) { agent in
+                ModelMenuCheckRow(
+                    label: agent.name,
+                    isSelected: appState.selectedAgentId == agent.id
+                ) {
+                    appState.selectedAgentId = agent.id
+                    if let mappedRuntime = AgentRuntimeChoice(rawValue: agent.runtime == .codex ? "codex" : "opencode") {
+                        appState.selectedAgentRuntime = mappedRuntime
+                    }
+                    if !agent.model.isEmpty {
+                        appState.selectedModel = agent.model
+                    }
+                    isPresented = false
+                }
+                .onHover { hovering in
+                    if hovering { openSubmenu = .none }
+                }
+            }
+        }
     }
 }
 

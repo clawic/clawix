@@ -85,6 +85,8 @@ struct ClawixApp: App {
     @StateObject private var terminalStore = TerminalSessionStore.shared
     @StateObject private var iotManager: IoTManager
     @StateObject private var remoteToolsRegistry: RemoteToolsRegistry
+    @StateObject private var agentStore = AgentStore.shared
+    @StateObject private var badgerManager = BadgerManager()
     @Environment(\.openWindow) private var openWindow
 
     /// True when this binary is running as one of the sidebar-tool mini-app
@@ -170,6 +172,8 @@ struct ClawixApp: App {
                 .environmentObject(terminalStore)
                 .environmentObject(iotManager)
                 .environmentObject(remoteToolsRegistry)
+                .environmentObject(agentStore)
+                .environmentObject(badgerManager)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 // Re-mount the view tree on language change. Some
                 // SwiftUI Text nodes cache their resolved string until
@@ -252,6 +256,7 @@ struct ClawixToolApp: App {
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
     @StateObject private var terminalStore = TerminalSessionStore.shared
+    @StateObject private var agentStore = AgentStore.shared
 
     private let role: ClawixToolRole
 
@@ -275,6 +280,7 @@ struct ClawixToolApp: App {
                 .environmentObject(databaseManager)
                 .environmentObject(featureFlags)
                 .environmentObject(terminalStore)
+                .environmentObject(agentStore)
                 .environment(\.locale, appState.preferredLanguage.locale)
                 .id(appState.preferredLanguage.rawValue)
                 .preferredColorScheme(.dark)

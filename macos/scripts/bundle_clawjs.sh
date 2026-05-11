@@ -329,6 +329,25 @@ PY
             rm -rf "$CLAWJS_DEST/node_modules/drive/node_modules/better-sqlite3"
         fi
     fi
+    # Badger surface: bundled as a plain dependency under
+    # node_modules/badger/, mirroring the drive/vault/memory layout. The
+    # supervisor spawns `node node_modules/badger/dist/server.js` directly.
+    OVERLAY_BADGER="$CLAWJS_DEV_OVERLAY/badger"
+    if [[ -d "$OVERLAY_BADGER" ]]; then
+        build_overlay_package "$OVERLAY_BADGER"
+        echo "==> Dev overlay: copying $OVERLAY_BADGER/dist → $CLAWJS_DEST/node_modules/badger/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/badger/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/badger"
+        cp -R "$OVERLAY_BADGER/dist" "$CLAWJS_DEST/node_modules/badger/dist"
+        if [[ -f "$OVERLAY_BADGER/package.json" ]]; then
+            cp "$OVERLAY_BADGER/package.json" "$CLAWJS_DEST/node_modules/badger/package.json"
+        fi
+        if [[ -d "$OVERLAY_BADGER/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/node_modules/badger/node_modules"
+            cp -R "$OVERLAY_BADGER/node_modules" "$CLAWJS_DEST/node_modules/badger/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/badger/node_modules/better-sqlite3"
+        fi
+    fi
     # Telegram surface: launcher tries
     # `<HERE>/../../../telegram/dist/server.js` next to the cli bin/.
     OVERLAY_TELEGRAM="$CLAWJS_DEV_OVERLAY/telegram"

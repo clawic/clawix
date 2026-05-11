@@ -420,8 +420,49 @@ final class SkillsStore: ObservableObject {
                 mode: .symlink,
                 lastSyncedAt: nil,
                 lastError: nil
+            ),
+            SkillSyncTarget(
+                id: "openclaude",
+                label: "OpenClaude",
+                home: NSString("~/.openclaude/skills").expandingTildeInPath,
+                mode: .symlink,
+                lastSyncedAt: nil,
+                lastError: nil
+            ),
+            SkillSyncTarget(
+                id: "cursor",
+                label: "Cursor",
+                home: NSString("~/.cursor/skills").expandingTildeInPath,
+                mode: .symlink,
+                lastSyncedAt: nil,
+                lastError: nil
             )
         ]
+    }
+
+    // MARK: - Skill Collections bridge
+
+    /// Resolve a list of skill collection IDs (the ones an agent
+    /// subscribed to) into the concrete skills they unfold to. A skill
+    /// matches a collection when any of its `tags` overlaps the
+    /// collection's `includedTags`. Today the agent record stores only
+    /// the collection IDs; the daemon resolves them at thread-start
+    /// time, but the macOS UI uses this helper to render previews on
+    /// the agent detail surface.
+    func skills(forCollectionIds collectionIds: [String]) -> [SkillSpec] {
+        let store = AgentStore.shared
+        let tags: Set<String> = collectionIds.reduce(into: []) { acc, id in
+            if let collection = store.collection(id: id) {
+                for t in collection.includedTags {
+                    acc.insert(t.lowercased())
+                }
+            }
+        }
+        guard !tags.isEmpty else { return [] }
+        return catalog.filter { spec in
+            let lowered = Set(spec.tags.map { $0.lowercased() })
+            return !tags.isDisjoint(with: lowered)
+        }
     }
 }
 

@@ -26,6 +26,7 @@ private let clawixToolURLScheme = "clawix-tool"
 fileprivate enum SidebarToolIcon: Equatable {
     case system(String)
     case secrets
+    case clawixLogo
 }
 
 fileprivate struct SidebarToolEntry: Identifiable, Equatable {
@@ -75,6 +76,16 @@ fileprivate enum SidebarToolsCatalog {
                          icon: .system("clock.arrow.circlepath"),    route: .driveRecent),
         SidebarToolEntry(id: "drive",     title: "Drive",     titleString: "Drive",
                          icon: .system("internaldrive"),             route: .driveAdmin),
+        SidebarToolEntry(id: "agents",    title: "Agents",    titleString: "Agents",
+                         icon: .clawixLogo,                          route: .agentsHome),
+        SidebarToolEntry(id: "personalities", title: "Personalities", titleString: "Personalities",
+                         icon: .system("theatermasks"),              route: .personalitiesHome),
+        SidebarToolEntry(id: "skillCollections", title: "Skill Collections", titleString: "Skill Collections",
+                         icon: .system("square.stack"),              route: .skillCollectionsHome),
+        SidebarToolEntry(id: "connections", title: "Connections", titleString: "Connections",
+                         icon: .system("link.circle"),               route: .connectionsHome),
+        SidebarToolEntry(id: "badger",    title: "Badger",    titleString: "Badger",
+                         icon: .system("megaphone"),                 route: .badgerHome),
     ]
 
     static func entry(byId id: String) -> SidebarToolEntry? {
@@ -5153,6 +5164,9 @@ private struct ToolsFilterRow: View {
                 color: isActive ? MenuStyle.rowIcon : MenuStyle.rowSubtle,
                 isLocked: vault.state == .locked || vault.state == .unlocking
             )
+        case .clawixLogo:
+            ClawixLogoIcon(size: 12)
+                .foregroundColor(isActive ? MenuStyle.rowIcon : MenuStyle.rowSubtle)
         }
     }
 }
@@ -5508,7 +5522,66 @@ private struct ToolDisplayRow: View {
                 isSelected: isSelected,
                 onTap: onTap
             )
+        case .clawixLogo:
+            AgentsToolRow(
+                title: entry.titleString,
+                route: entry.route,
+                isSelected: isSelected,
+                onTap: onTap
+            )
         }
+    }
+}
+
+/// Mirror of `DatabaseToolRow` that renders the brand mark as the
+/// row icon. Used by the `Agents` sidebar entry so the entrance point
+/// for the agent-roster surface carries the Clawix identity.
+struct AgentsToolRow: View {
+    let title: String
+    let route: SidebarRoute
+    let isSelected: Bool
+    let onTap: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 11) {
+                ClawixLogoIcon(size: 13)
+                    .frame(width: 15, height: 15)
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(BodyFont.system(size: 13.5, wght: 500))
+                    .foregroundColor(labelColor)
+                Spacer(minLength: 6)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(backgroundFill)
+            )
+            .animation(.easeOut(duration: 0.12), value: hovered)
+        }
+        .buttonStyle(.plain)
+        .sidebarHover { hovered = $0 }
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var iconColor: Color {
+        if isSelected { return .white }
+        return Color(white: hovered ? 0.92 : 0.78)
+    }
+
+    private var labelColor: Color {
+        isSelected ? .white : Color(white: 0.92)
+    }
+
+    private var backgroundFill: Color {
+        if isSelected { return Color.white.opacity(0.06) }
+        if hovered    { return Color.white.opacity(0.035) }
+        return .clear
     }
 }
 
@@ -5562,6 +5635,9 @@ private struct ToolDragChipView: View {
                 color: Color(white: 0.82),
                 isLocked: vault.state == .locked || vault.state == .unlocking
             )
+        case .clawixLogo:
+            ClawixLogoIcon(size: 13.5)
+                .foregroundColor(Color(white: 0.82))
         }
     }
 }

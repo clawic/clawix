@@ -143,6 +143,35 @@ enum SidebarRoute: Equatable {
     /// (a Template instance + Style). Reached from TemplateDetailView's
     /// "Open in editor" CTA or from a previously created document.
     case designEditor(documentId: String)
+    /// Agents catalog (grid of agents with avatar + name + role).
+    case agentsHome
+    /// Detail view for a single agent. Tabs: Chats / Skills /
+    /// Secrets / Projects / Integrations / Settings.
+    case agentDetail(id: String)
+    /// Personalities catalog (reusable system-prompt fragments that
+    /// can be plugged into an agent).
+    case personalitiesHome
+    /// Detail view for a single personality.
+    case personalityDetail(id: String)
+    /// Skill Collections catalog (tagged bundles of skills that an
+    /// agent can subscribe to).
+    case skillCollectionsHome
+    /// Detail view for a single Skill Collection.
+    case skillCollectionDetail(id: String)
+    /// Connections catalog (Telegram, Slack, ... — auth/token lives
+    /// per Connection, individual agents bind to specific channels).
+    case connectionsHome
+    /// Detail view for a single Connection.
+    case connectionDetail(id: String)
+    /// Badger home (Calendar landing inside Tools section). Routes the
+    /// month/week calendar of scheduled posts.
+    case badgerHome
+    /// Badger composer panel. `prefillBody` is non-nil when the user
+    /// pushed an assistant message into the composer.
+    case badgerComposer(prefillBody: String?)
+    /// Badger channels list. Shows every family with its connect / coming
+    /// soon state.
+    case badgerChannels
 }
 
 // MARK: - Models
@@ -457,6 +486,15 @@ struct Chat: Identifiable, Equatable {
     /// chronological view; the parent's `ChatSidebarState` keeps the
     /// reference via a `SidebarItem.chat` entry.
     var isSideChat: Bool = false
+    /// Owning `Agent.id`. Default = built-in Codex agent
+    /// (`Agent.defaultCodexId`), which preserves the legacy "every chat
+    /// is a Codex chat" semantics. Surfaced on the new Agents tabs and
+    /// in the composer dropdown so the user knows which agent will pick
+    /// up the next turn.
+    var agentId: String = Agent.defaultCodexId
+    /// Last activity timestamp; used by `AgentDetailView.chatsTab` to
+    /// sort chats and by the surfaces that show the agent roster.
+    var lastMessageAt: Date? = nil
 
     init(
         id: UUID = UUID(),
@@ -481,7 +519,9 @@ struct Chat: Identifiable, Equatable {
         forkBannerAfterMessageId: UUID? = nil,
         lastTurnInterrupted: Bool = false,
         isQuickAskTemporary: Bool = false,
-        isSideChat: Bool = false
+        isSideChat: Bool = false,
+        agentId: String = Agent.defaultCodexId,
+        lastMessageAt: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -506,6 +546,8 @@ struct Chat: Identifiable, Equatable {
         self.lastTurnInterrupted = lastTurnInterrupted
         self.isQuickAskTemporary = isQuickAskTemporary
         self.isSideChat = isSideChat
+        self.agentId = agentId
+        self.lastMessageAt = lastMessageAt
     }
 }
 
@@ -920,6 +962,15 @@ final class AppState: ObservableObject {
     /// IDs not present here fall back to natural order from `projects`.
     /// Persisted via `ProjectOrdersRepository`.
     @Published var manualProjectOrder: [UUID] = []
+    /// Currently selected agent for the next composer send. Defaults
+    /// to the built-in Codex agent so legacy flows behave exactly like
+    /// before. The composer dropdown writes this; `ChatView` reads it
+    /// when minting a new chat. `AgentRuntimeChoice` below stays as
+    /// the internal-resolved-runtime representation: the dropdown still
+    /// derives runtime + model from the chosen agent so existing call
+    /// sites that read `selectedAgentRuntime` keep working.
+    @Published var selectedAgentId: String = Agent.defaultCodexId
+
     @Published var selectedAgentRuntime: AgentRuntimeChoice = .codex {
         didSet {
             guard oldValue != selectedAgentRuntime else { return }
@@ -2825,6 +2876,7 @@ final class AppState: ObservableObject {
         if case .chat(let id) = currentRoute,
            let idx = chats.firstIndex(where: { $0.id == id }) {
             chats[idx].messages.append(userMsg)
+            chats[idx].lastMessageAt = userMsg.timestamp
             chatId = id
         } else {
             // Create a new chat from home screen — inherits the project
@@ -2835,7 +2887,9 @@ final class AppState: ObservableObject {
                 title: String(titleSeed.prefix(40)),
                 messages: [userMsg],
                 createdAt: Date(),
-                projectId: selectedProject?.id
+                projectId: selectedProject?.id,
+                agentId: selectedAgentId,
+                lastMessageAt: userMsg.timestamp
             )
             chats.insert(newChat, at: 0)
             currentRoute = .chat(newChat.id)
@@ -3053,6 +3107,7 @@ final class AppState: ObservableObject {
         if let id = chatId, let idx = chats.firstIndex(where: { $0.id == id }) {
             chats[idx].messages.append(userMsg)
             chats[idx].lastTurnInterrupted = false
+            chats[idx].lastMessageAt = userMsg.timestamp
             resolvedId = id
         } else {
             let titleSeed = trimmed.isEmpty
@@ -3064,7 +3119,9 @@ final class AppState: ObservableObject {
                 messages: [userMsg],
                 createdAt: Date(),
                 projectId: selectedProject?.id,
-                isQuickAskTemporary: temporary
+                isQuickAskTemporary: temporary,
+                agentId: selectedAgentId,
+                lastMessageAt: userMsg.timestamp
             )
             chats.insert(newChat, at: 0)
             resolvedId = newChat.id

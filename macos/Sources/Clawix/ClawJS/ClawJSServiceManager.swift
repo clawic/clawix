@@ -408,6 +408,16 @@ final class ClawJSServiceManager: ObservableObject {
         // path owns its argv. Returning nil here keeps the existing
         // `commandLine(for:) != nil` guard a no-op for IoT.
         if service == .iot { return nil }
+        // Badger lives at `node_modules/badger/dist/server.js`; it has no
+        // launcher under `@clawjs/cli/bin/`. Spawn the server entry directly
+        // with the bundled node binary so the rest of the supervisor (env,
+        // logs, healthz) keeps working as-is.
+        if service == .badger {
+            let serverJs = ClawJSRuntime.bundleRootURL
+                .appendingPathComponent("node_modules/badger/dist/server.js", isDirectory: false)
+            guard FileManager.default.fileExists(atPath: serverJs.path) else { return nil }
+            return [serverJs.path]
+        }
         guard Self.bundledLauncherScript(for: service) != nil else { return nil }
 
         var arguments = [
@@ -446,8 +456,9 @@ final class ClawJSServiceManager: ObservableObject {
                     .appendingPathComponent("index.sqlite", isDirectory: false).path,
             ]
             return arguments
-        case .iot:
-            // Unreachable: guarded above. Kept for switch exhaustiveness.
+        case .iot, .badger:
+            // Unreachable: both are guarded above with dedicated launch
+            // paths. Kept for switch exhaustiveness.
             return nil
         }
     }
@@ -682,6 +693,19 @@ final class ClawJSServiceManager: ObservableObject {
         if service == .telegram {
             env["CLAWJS_TELEGRAM_PORT"] = String(service.port)
             env["CLAWJS_TELEGRAM_WORKSPACE"] = workspaceURL.path
+        }
+        // Badger reads its own BADGER_* env vars; its admin token lives
+        // alongside the data dir in `.admin-token` so the Swift client can
+        // read it via `adminTokenFromDataDir(for: .badger)`. The dataDir
+        // doubles as the SQLite location (badger creates `badger.sqlite`
+        // inside it on first boot).
+        if service == .badger {
+            let badgerData = dataDirectoryURL(for: .badger).path
+            env["BADGER_HOST"] = "127.0.0.1"
+            env["BADGER_PORT"] = String(service.port)
+            env["BADGER_DATA_DIR"] = badgerData
+            env["BADGER_TOKEN_STORE"] = (badgerData as NSString)
+                .appendingPathComponent(".admin-token")
         }
         if let adminToken, let envVar = adminTokenEnvVar[service] {
             env[envVar] = adminToken

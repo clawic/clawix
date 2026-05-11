@@ -127,7 +127,11 @@ struct ContentView: View {
              .app, .appsHome, .skills, .skillDetail,
              .iotHome, .iotThingDetail,
              .designStylesHome, .designStyleDetail, .designTemplatesHome,
-             .designTemplateDetail, .designReferencesHome, .designEditor:
+             .designTemplateDetail, .designReferencesHome, .designEditor,
+             .agentsHome, .agentDetail, .personalitiesHome, .personalityDetail,
+             .skillCollectionsHome, .skillCollectionDetail,
+             .connectionsHome, .connectionDetail,
+             .badgerHome, .badgerComposer, .badgerChannels:
             return false
         }
     }
@@ -165,6 +169,18 @@ struct ContentView: View {
         case .designTemplateDetail(let id): return "design-template-\(id)"
         case .designReferencesHome: return "design-references"
         case .designEditor(let id): return "design-editor-\(id)"
+        case .agentsHome: return "agents-home"
+        case .agentDetail(let id): return "agent-detail-\(id)"
+        case .personalitiesHome: return "personalities-home"
+        case .personalityDetail(let id): return "personality-detail-\(id)"
+        case .skillCollectionsHome: return "skill-collections-home"
+        case .skillCollectionDetail(let id): return "skill-collection-detail-\(id)"
+        case .connectionsHome: return "connections-home"
+        case .connectionDetail(let id): return "connection-detail-\(id)"
+        case .badgerHome: return "badger-home"
+        case .badgerComposer(let prefill):
+            return "badger-composer-\(prefill?.hashValue ?? 0)"
+        case .badgerChannels: return "badger-channels"
         }
     }
 
@@ -270,6 +286,17 @@ struct ContentView: View {
                             case .designTemplateDetail(let id): TemplateDetailView(templateId: id)
                             case .designReferencesHome:       ReferencesHomeView()
                             case .designEditor(let id):       EditorView(documentId: id)
+                            case .agentsHome:                 AgentsHomeView()
+                            case .agentDetail(let id):        AgentDetailView(agentId: id)
+                            case .personalitiesHome:          PersonalitiesHomeView()
+                            case .personalityDetail(let id):  PersonalityDetailView(personalityId: id)
+                            case .skillCollectionsHome:       SkillCollectionsHomeView()
+                            case .skillCollectionDetail(let id): SkillCollectionDetailView(collectionId: id)
+                            case .connectionsHome:            ConnectionsHomeView()
+                            case .connectionDetail(let id):   ConnectionDetailView(connectionId: id)
+                            case .badgerHome:                 BadgerHomeView()
+                            case .badgerComposer(let prefill): BadgerComposerView(prefillBody: prefill)
+                            case .badgerChannels:             BadgerChannelsView()
                             }
                         }
                         .id(routeRenderID)
