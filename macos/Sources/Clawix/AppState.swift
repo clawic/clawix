@@ -958,7 +958,7 @@ final class AppState: ObservableObject {
     /// routes through `/mesh/remote-jobs` instead.
     @Published var selectedMeshTarget: MeshTarget = .local
     @Published var pinnedItems: [PinnedItem] = []
-    @Published var isLeftSidebarOpen: Bool = true
+    @Published var isLeftSidebarOpen: Bool = AppState.sidebarDefaults.object(forKey: AppState.leftSidebarOpenKey) as? Bool ?? true
     @Published var isCommandPaletteOpen: Bool = false
     /// When non-nil, the global search popup is currently scoped to
     /// this project. The sidebar's per-project "View all" footer sets
@@ -1362,7 +1362,10 @@ final class AppState: ObservableObject {
             $pendingReloadTabId.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingReloadTabId") },
             $richViewDisabledPaths.dropFirst().sink { _ in RenderProbe.tick("AppState.richViewDisabledPaths") },
             $wordWrapEnabledPaths.dropFirst().sink { _ in RenderProbe.tick("AppState.wordWrapEnabledPaths") },
-            $isLeftSidebarOpen.dropFirst().sink { _ in RenderProbe.tick("AppState.isLeftSidebarOpen") },
+            $isLeftSidebarOpen.dropFirst().sink { open in
+                AppState.sidebarDefaults.set(open, forKey: AppState.leftSidebarOpenKey)
+                RenderProbe.tick("AppState.isLeftSidebarOpen")
+            },
             $isRightSidebarMaximized.dropFirst().sink { _ in RenderProbe.tick("AppState.isRightSidebarMaximized") },
             $isCommandPaletteOpen.dropFirst().sink { _ in RenderProbe.tick("AppState.isCommandPaletteOpen") },
             $imagePreviewURL.dropFirst().sink { _ in RenderProbe.tick("AppState.imagePreviewURL") },
@@ -5289,6 +5292,7 @@ final class AppState: ObservableObject {
     // MARK: - Sidebar (per-chat web tabs and file previews)
 
     private static let sidebarDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
+    private static let leftSidebarOpenKey = "LeftSidebarOpen"
     private static let chatSidebarsKey = "ChatSidebars"
     private static let globalSidebarKey = "GlobalSidebar"
     private static let hostFaviconsKey = "HostFavicons"
