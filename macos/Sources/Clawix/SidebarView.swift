@@ -45,6 +45,8 @@ fileprivate struct SidebarToolEntry: Identifiable, Equatable {
 
 fileprivate enum SidebarToolsCatalog {
     static let entries: [SidebarToolEntry] = [
+        SidebarToolEntry(id: "home",      title: "Home",      titleString: "Home",
+                         icon: .system("house"),                     route: .iotHome),
         SidebarToolEntry(id: "tasks",     title: "Tasks",     titleString: "Tasks",
                          icon: .system("checkmark.circle"),          route: .databaseCollection("tasks")),
         SidebarToolEntry(id: "goals",     title: "Goals",     titleString: "Goals",

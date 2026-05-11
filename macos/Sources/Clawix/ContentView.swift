@@ -125,6 +125,7 @@ struct ContentView: View {
              .calendarHome, .contactsHome,
              .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder,
              .app, .appsHome, .skills, .skillDetail,
+             .iotHome, .iotThingDetail,
              .designStylesHome, .designStyleDetail, .designTemplatesHome,
              .designTemplateDetail, .designReferencesHome:
             return false
@@ -155,6 +156,8 @@ struct ContentView: View {
         case .appsHome: return "apps-home"
         case .skills: return "skills"
         case .skillDetail(let slug): return "skill-detail-\(slug)"
+        case .iotHome: return "iot-home"
+        case .iotThingDetail(let id): return "iot-thing-\(id)"
         case .designStylesHome: return "design-styles"
         case .designStyleDetail(let id): return "design-style-\(id)"
         case .designTemplatesHome: return "design-templates"
@@ -256,6 +259,8 @@ struct ContentView: View {
                             case .contactsHome:  ContactsScreen()
                             case .skills:        SkillsView()
                             case .skillDetail(let slug): SkillDetailView(slug: slug)
+                            case .iotHome:       IoTScreen()
+                            case .iotThingDetail(let id): IoTThingDetailView(thingId: id)
                             case .designStylesHome:           StylesHomeView()
                             case .designStyleDetail(let id):  StyleDetailView(styleId: id)
                             case .designTemplatesHome:        TemplatesHomeView()

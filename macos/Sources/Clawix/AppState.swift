@@ -120,6 +120,11 @@ enum SidebarRoute: Equatable {
     /// Detail panel for a single skill — activation toggles, params
     /// form, sync targets, body editor.
     case skillDetail(slug: String)
+    /// IoT home — sidebar entry "Home". Renders the Home Assistant–
+    /// style screen (Devices / Scenes / Automations / Approvals / Add).
+    case iotHome
+    /// Detail panel for a single IoT thing. Reached from a card tap.
+    case iotThingDetail(id: String)
     /// Design surface: Styles landing (grid of moodboards).
     case designStylesHome
     /// Design surface: Style detail (tokens, brand, voice, imagery,
