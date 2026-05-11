@@ -104,6 +104,10 @@ struct BrowserView: View {
             handleBrowserCommand(request.action)
             appState.pendingBrowserCommand = nil
         }
+        .onDisappear {
+            store.teardownAll()
+            moreMenuOpen = false
+        }
     }
 
     private func handleBrowserCommand(_ action: BrowserCommandRequest.Action) {

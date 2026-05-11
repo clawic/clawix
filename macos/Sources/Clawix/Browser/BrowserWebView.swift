@@ -94,8 +94,18 @@ final class BrowserTabController: NSObject, ObservableObject {
     }
 
     deinit {
+        teardown()
+    }
+
+    func teardown() {
+        webView.stopLoading()
+        webView.navigationDelegate = nil
+        webView.uiDelegate = nil
         observers.forEach { $0.invalidate() }
+        observers.removeAll()
         bgSampleTimer?.invalidate()
+        bgSampleTimer = nil
+        webView.loadHTMLString(Self.blankPageHTML, baseURL: Self.blankURL)
     }
 
     func load(_ url: URL) {
@@ -704,6 +714,12 @@ struct BrowserFocusURLBarRequest: Equatable {
 final class BrowserControllerStore {
     private var controllers: [UUID: BrowserTabController] = [:]
 
+    deinit {
+        for controller in controllers.values {
+            controller.teardown()
+        }
+    }
+
     func controller(for tab: SidebarItem.WebPayload, appState: AppState) -> BrowserTabController {
         if let existing = controllers[tab.id] { return existing }
         let new = BrowserTabController(
@@ -721,6 +737,15 @@ final class BrowserControllerStore {
 
     func discardOrphans(currentTabIds: Set<UUID>) {
         let stale = controllers.keys.filter { !currentTabIds.contains($0) }
-        for id in stale { controllers.removeValue(forKey: id) }
+        for id in stale {
+            controllers.removeValue(forKey: id)?.teardown()
+        }
+    }
+
+    func teardownAll() {
+        for controller in controllers.values {
+            controller.teardown()
+        }
+        controllers.removeAll()
     }
 }
