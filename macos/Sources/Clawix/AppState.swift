@@ -881,6 +881,7 @@ final class AppState: ObservableObject {
             if case let .chat(id) = currentRoute {
                 daemonBridgeClient?.openChat(id)
             }
+            persistLaunchRoute()
             // Scope only outlives the search popup itself; once the user
             // navigates anywhere else the chip gets cleared so the next
             // open lands on the unscoped pinned-chats view.
@@ -1192,6 +1193,9 @@ final class AppState: ObservableObject {
     /// before the runtime bootstraps and paginates the real thread list.
     /// Rewritten at the end of every applyThreads / mergeThreads.
     private let snapshotRepo = SnapshotRepository()
+    private static let launchRouteKindKey = "LaunchRouteKind"
+    private static let launchRouteChatUuidKey = "LaunchRouteChatUuid"
+    private static let launchRouteThreadIdKey = "LaunchRouteThreadId"
     private let dummyModeActive: Bool = ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] == "1"
     /// True when the snapshot cache is active. Disabled while fixtures
     /// are driving the threads list (CLAWIX_THREAD_FIXTURE) so tests
@@ -2393,6 +2397,15 @@ final class AppState: ObservableObject {
         })
 
         let sorted = threads.sorted { $0.updatedAt > $1.updatedAt }
+        let selectedSnapshotChat: Chat?
+        if case let .chat(id) = currentRoute,
+           let selected = chat(byId: id),
+           let threadId = selected.clawixThreadId,
+           !sorted.contains(where: { $0.id.caseInsensitiveCompare(threadId) == .orderedSame }) {
+            selectedSnapshotChat = selected
+        } else {
+            selectedSnapshotChat = nil
+        }
         var nextChats: [Chat] = []
         var nextArchived: [Chat] = []
         nextChats.reserveCapacity(sorted.count)
@@ -2406,6 +2419,15 @@ final class AppState: ObservableObject {
                 nextArchived.append(chat)
             } else {
                 nextChats.append(chat)
+            }
+        }
+        if let selectedSnapshotChat {
+            if selectedSnapshotChat.isArchived {
+                if !nextArchived.contains(where: { $0.id == selectedSnapshotChat.id || $0.clawixThreadId == selectedSnapshotChat.clawixThreadId }) {
+                    nextArchived.insert(selectedSnapshotChat, at: 0)
+                }
+            } else if !nextChats.contains(where: { $0.id == selectedSnapshotChat.id || $0.clawixThreadId == selectedSnapshotChat.clawixThreadId }) {
+                nextChats.insert(selectedSnapshotChat, at: 0)
             }
         }
         chats = nextChats
@@ -2675,10 +2697,51 @@ final class AppState: ObservableObject {
             currentRoute = .home
             openBrowser()
         default:
-            currentRoute = .home
+            if !restorePersistedLaunchRoute() {
+                currentRoute = .home
+            }
         }
         if currentRoute == .secretsHome, !FeatureFlags.shared.isVisible(.secrets) {
             currentRoute = .home
+        }
+    }
+
+    private func restorePersistedLaunchRoute() -> Bool {
+        let defaults = Self.sidebarDefaults
+        guard defaults.string(forKey: Self.launchRouteKindKey) == "chat" else {
+            return false
+        }
+
+        let tokens = [
+            defaults.string(forKey: Self.launchRouteThreadIdKey),
+            defaults.string(forKey: Self.launchRouteChatUuidKey)
+        ]
+        for token in tokens.compactMap({ $0 }) {
+            if openChatDeepLink(token) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func persistLaunchRoute() {
+        let defaults = Self.sidebarDefaults
+        switch currentRoute {
+        case .chat(let id):
+            guard let chat = chat(byId: id) else { return }
+            defaults.set("chat", forKey: Self.launchRouteKindKey)
+            defaults.set(chat.id.uuidString, forKey: Self.launchRouteChatUuidKey)
+            if let threadId = chat.clawixThreadId {
+                defaults.set(threadId, forKey: Self.launchRouteThreadIdKey)
+            } else {
+                defaults.removeObject(forKey: Self.launchRouteThreadIdKey)
+            }
+        case .home:
+            defaults.set("home", forKey: Self.launchRouteKindKey)
+            defaults.removeObject(forKey: Self.launchRouteChatUuidKey)
+            defaults.removeObject(forKey: Self.launchRouteThreadIdKey)
+        default:
+            break
         }
     }
 
@@ -3718,13 +3781,25 @@ final class AppState: ObservableObject {
             }
             return nil
         }
-        let nextChats: [Chat] = wireChats.compactMap { wire in
+        var nextChats: [Chat] = wireChats.compactMap { wire in
             guard !wire.isArchived else { return nil }
             return chat(from: wire, old: resolveOld(for: wire))
         }
-        let nextArchived: [Chat] = wireChats.compactMap { wire in
+        var nextArchived: [Chat] = wireChats.compactMap { wire in
             guard wire.isArchived else { return nil }
             return chat(from: wire, old: resolveOld(for: wire))
+        }
+        if case let .chat(id) = currentRoute,
+           let selected = chat(byId: id),
+           let threadId = selected.clawixThreadId,
+           !wireChats.contains(where: { $0.threadId?.caseInsensitiveCompare(threadId) == .orderedSame }) {
+            if selected.isArchived {
+                if !nextArchived.contains(where: { $0.id == selected.id || $0.clawixThreadId == selected.clawixThreadId }) {
+                    nextArchived.insert(selected, at: 0)
+                }
+            } else if !nextChats.contains(where: { $0.id == selected.id || $0.clawixThreadId == selected.clawixThreadId }) {
+                nextChats.insert(selected, at: 0)
+            }
         }
         // Fast path: the daemon resends the same chat snapshot on every
         // streaming delta. When nothing actually changed, skip the
@@ -4124,7 +4199,7 @@ final class AppState: ObservableObject {
         )
         let resolvedProjectId: UUID? = resolvedRoot.flatMap { projectByPath[$0]?.id } ?? old?.projectId
         return Chat(
-            id: UUID(uuidString: wire.id) ?? old?.id ?? UUID(),
+            id: old?.id ?? UUID(uuidString: wire.id) ?? UUID(),
             title: wire.title,
             messages: old?.messages ?? [],
             createdAt: wire.lastMessageAt ?? wire.createdAt,
