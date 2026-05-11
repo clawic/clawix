@@ -70,7 +70,22 @@ import Foundation
 /// the read frames (`skillsList`, `skillsView`, results); desktop
 /// uses the full surface. v5 peers receiving v6 frames fall through
 /// the decode `default` branch and surface a "needs update" toast.
-public let bridgeSchemaVersion: Int = 7
+/// v8 (2026-05): Agents become first-class. `WireChat` carries an
+/// optional `agentId` pointing at an `Agent.id` (e.g.
+/// `agent.default.codex`); the daemon resolves the runtime + model
+/// from the on-disk agent record when minting a thread. New Wire
+/// payloads — `WireAgent`, `WirePersonality`, `WireSkillCollection`,
+/// `WireConnection`, `WireAgentApprovalRequest`,
+/// `WireAgentAuditEntry` — surface the four new top-level entities
+/// the macOS app manages locally at `~/.clawjs/`. The frame surface
+/// for CRUD is filesystem-backed on the client side; cross-device
+/// sync of agent records happens via filesystem-level mechanisms
+/// (iCloud Drive / Syncthing / git on the `~/.clawjs/` tree), so the
+/// v8 bump is for the additive Wire model rather than for a new
+/// daemon RPC. Old peers receiving a frame whose `WireChat` carries
+/// an unknown `agentId` keep parsing because the field decodes via
+/// `decodeIfPresent`.
+public let bridgeSchemaVersion: Int = 8
 
 /// Default count of trailing messages the server returns on
 /// `openChat(limit:)` when the client opts into pagination. 60 covers

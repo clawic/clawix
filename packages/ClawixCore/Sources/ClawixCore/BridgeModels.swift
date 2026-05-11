@@ -129,6 +129,15 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
     /// payloads. Other values include "openclaw", "hermes" and
     /// any future runtime registered with the bridge daemon.
     public var agent: String
+    /// v8 reference to the owning `Agent.id` (e.g.
+    /// `agent.default.codex`). Optional + decodeIfPresent so v7
+    /// peers keep parsing; when missing, the daemon falls back to
+    /// `Agent.defaultCodexId` so existing chats keep routing to the
+    /// built-in Codex agent. Distinct from `agent` (which still
+    /// carries the runtime tag for legacy badging) because we want
+    /// to be able to migrate agent identity over time without
+    /// breaking the schema for older clients.
+    public var agentId: String?
 
     public init(
         id: String,
@@ -143,7 +152,8 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         cwd: String? = nil,
         lastTurnInterrupted: Bool = false,
         threadId: String? = nil,
-        agent: String = "codex"
+        agent: String = "codex",
+        agentId: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -158,6 +168,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         self.lastTurnInterrupted = lastTurnInterrupted
         self.threadId = threadId
         self.agent = agent
+        self.agentId = agentId
     }
 
     /// Decode tolerant of legacy payloads (without `lastTurnInterrupted`).
@@ -168,7 +179,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case id, title, createdAt, isPinned, isArchived, hasActiveTurn
         case lastMessageAt, lastMessagePreview, branch, cwd, lastTurnInterrupted
-        case threadId, agent
+        case threadId, agent, agentId
     }
 
     public init(from decoder: Decoder) throws {
@@ -186,6 +197,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         self.lastTurnInterrupted = try c.decodeIfPresent(Bool.self, forKey: .lastTurnInterrupted) ?? false
         self.threadId = try c.decodeIfPresent(String.self, forKey: .threadId)
         self.agent = try c.decodeIfPresent(String.self, forKey: .agent) ?? "codex"
+        self.agentId = try c.decodeIfPresent(String.self, forKey: .agentId)
     }
 }
 
@@ -702,5 +714,238 @@ public struct WireAudioListResult: Codable, Equatable, Sendable {
     public init(items: [WireAudioAssetWithTranscripts], total: Int) {
         self.items = items
         self.total = total
+    }
+}
+
+// MARK: - v8 agents · personalities · skill collections · connections
+//
+// Wire shape of the four new entities described in
+// the v8 agents implementation plan.
+// macOS keeps the filesystem (`~/.clawjs/`) as the source of truth; the
+// daemon serializes records into these structs on `agentList` / push
+// frames so cross-device clients see the same roster. Every field is
+// either non-optional or carries an explicit default so v7 peers
+// decode v8 payloads cleanly via `decodeIfPresent`.
+
+public struct WireAgentIntegrationBinding: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let connectionId: String
+    public let channelRef: String
+    public let direction: String
+    public let label: String?
+
+    public init(id: String, connectionId: String, channelRef: String,
+                direction: String = "both", label: String? = nil) {
+        self.id = id
+        self.connectionId = connectionId
+        self.channelRef = channelRef
+        self.direction = direction
+        self.label = label
+    }
+}
+
+public struct WireAgentAutonomyOverride: Codable, Equatable, Sendable {
+    public let action: String
+    public let level: String
+
+    public init(action: String, level: String) {
+        self.action = action
+        self.level = level
+    }
+}
+
+public struct WireAgentDelegation: Codable, Equatable, Sendable {
+    public let reportsTo: String?
+    public let allowedSubagents: [String]
+    public let scopeInherits: Bool
+
+    public init(reportsTo: String? = nil,
+                allowedSubagents: [String] = [],
+                scopeInherits: Bool = false) {
+        self.reportsTo = reportsTo
+        self.allowedSubagents = allowedSubagents
+        self.scopeInherits = scopeInherits
+    }
+}
+
+public struct WireAgent: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let role: String
+    public let runtime: String
+    public let model: String
+    public let avatarKind: String
+    public let avatarTintHex: String
+    public let avatarImagePath: String?
+
+    public let instructionsFreeText: String
+    public let personalityIds: [String]
+    public let skillAllowlist: [String]
+    public let skillCollectionIds: [String]
+    public let secretAllowlist: [String]
+    public let secretTags: [String]
+    public let projectIds: [String]
+    public let integrationBindings: [WireAgentIntegrationBinding]
+    public let autonomyLevel: String
+    public let autonomyOverrides: [WireAgentAutonomyOverride]
+    public let delegation: WireAgentDelegation
+
+    public let createdAt: Date
+    public let updatedAt: Date
+    public let isBuiltin: Bool
+
+    public init(id: String,
+                name: String,
+                role: String = "",
+                runtime: String,
+                model: String,
+                avatarKind: String = "logoTint",
+                avatarTintHex: String = "#7C9CFF",
+                avatarImagePath: String? = nil,
+                instructionsFreeText: String = "",
+                personalityIds: [String] = [],
+                skillAllowlist: [String] = [],
+                skillCollectionIds: [String] = [],
+                secretAllowlist: [String] = [],
+                secretTags: [String] = [],
+                projectIds: [String] = [],
+                integrationBindings: [WireAgentIntegrationBinding] = [],
+                autonomyLevel: String = "act_limited",
+                autonomyOverrides: [WireAgentAutonomyOverride] = [],
+                delegation: WireAgentDelegation = WireAgentDelegation(),
+                createdAt: Date,
+                updatedAt: Date,
+                isBuiltin: Bool = false) {
+        self.id = id
+        self.name = name
+        self.role = role
+        self.runtime = runtime
+        self.model = model
+        self.avatarKind = avatarKind
+        self.avatarTintHex = avatarTintHex
+        self.avatarImagePath = avatarImagePath
+        self.instructionsFreeText = instructionsFreeText
+        self.personalityIds = personalityIds
+        self.skillAllowlist = skillAllowlist
+        self.skillCollectionIds = skillCollectionIds
+        self.secretAllowlist = secretAllowlist
+        self.secretTags = secretTags
+        self.projectIds = projectIds
+        self.integrationBindings = integrationBindings
+        self.autonomyLevel = autonomyLevel
+        self.autonomyOverrides = autonomyOverrides
+        self.delegation = delegation
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.isBuiltin = isBuiltin
+    }
+}
+
+public struct WirePersonality: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let description: String
+    public let promptMarkdown: String
+    public let version: Int
+    public let createdAt: Date
+    public let updatedAt: Date
+
+    public init(id: String, name: String, description: String = "",
+                promptMarkdown: String = "", version: Int = 1,
+                createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.promptMarkdown = promptMarkdown
+        self.version = version
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct WireSkillCollection: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let name: String
+    public let description: String
+    public let includedTags: [String]
+    public let createdAt: Date
+    public let updatedAt: Date
+
+    public init(id: String, name: String, description: String = "",
+                includedTags: [String] = [],
+                createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.includedTags = includedTags
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct WireConnection: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let service: String
+    public let label: String
+    public let scopes: [String]
+    public let lastSyncAt: Date?
+    public let createdAt: Date
+    public let updatedAt: Date
+
+    public init(id: String, service: String, label: String,
+                scopes: [String] = [], lastSyncAt: Date? = nil,
+                createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.service = service
+        self.label = label
+        self.scopes = scopes
+        self.lastSyncAt = lastSyncAt
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+/// Audit log row surfaced when one agent delegates to another or when
+/// an approval gate is evaluated. Clients render these inside the
+/// agent detail surface; the daemon owns the persistent storage at
+/// `~/.clawjs/agents/<id>/audit.log` (one JSON-encoded entry per line).
+public struct WireAgentAuditEntry: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let timestamp: Date
+    public let actorAgentId: String
+    public let subjectAgentId: String?
+    public let action: String
+    public let result: String
+    public let note: String?
+
+    public init(id: String, timestamp: Date, actorAgentId: String,
+                subjectAgentId: String? = nil, action: String,
+                result: String, note: String? = nil) {
+        self.id = id
+        self.timestamp = timestamp
+        self.actorAgentId = actorAgentId
+        self.subjectAgentId = subjectAgentId
+        self.action = action
+        self.result = result
+        self.note = note
+    }
+}
+
+/// Outstanding approval request surfaced to the user when an agent
+/// tries to run a gated action. `requestId` round-trips back in the
+/// `agentApprovalResponse` frame so the daemon correlates the
+/// decision; `detail` carries the command/text the agent wanted to
+/// execute so the user can inspect before approving.
+public struct WireAgentApprovalRequest: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let agentId: String
+    public let action: String
+    public let detail: String
+
+    public init(id: String, agentId: String, action: String, detail: String) {
+        self.id = id
+        self.agentId = agentId
+        self.action = action
+        self.detail = detail
     }
 }
