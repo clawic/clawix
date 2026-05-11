@@ -5388,6 +5388,31 @@ final class AppState: ObservableObject {
         return nil
     }
 
+    /// Open the real Apple Simulator.app as a first-class right-sidebar
+    /// item. The view layer owns the AppKit/Accessibility window anchoring;
+    /// this state only gives it a persistent tab identity.
+    func openIOSSimulator(deviceUDID: String? = nil, deviceName: String = "iOS Simulator") {
+        var s = currentSidebar
+        if let existing = s.items.first(where: {
+            if case .iosSimulator = $0 { return true }
+            return false
+        }) {
+            s.activeItemId = existing.id
+            s.isOpen = true
+            currentSidebar = s
+            return
+        }
+        let item = SidebarItem.iosSimulator(.init(
+            id: UUID(),
+            deviceUDID: deviceUDID,
+            deviceName: deviceName
+        ))
+        s.items.append(item)
+        s.activeItemId = item.id
+        s.isOpen = true
+        currentSidebar = s
+    }
+
     /// Entry point for "open the browser" actions (toolbar `+ → Browser`,
     /// Cmd+T, deep links). When the panel is already open with web tabs we
     /// always create a fresh tab so the user gets the new-tab behaviour they
