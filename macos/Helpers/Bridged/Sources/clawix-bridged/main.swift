@@ -501,9 +501,11 @@ final class DaemonEngineHost: EngineHost {
             // iPhone's onboard arrival both consume that snapshot).
             refreshPinnedThreadIds()
             installPinnedStateWatcher()
-            await reloadThreads()
+            let didLoadThreads = await reloadThreads()
             await refreshRateLimits()
-            stateSubject.send(.ready)
+            if didLoadThreads {
+                stateSubject.send(.ready)
+            }
         } catch {
             BridgedLog.write("bootstrap failed \(error)")
             stateSubject.send(.error(shortReason(error)))
@@ -1037,7 +1039,7 @@ final class DaemonEngineHost: EngineHost {
         meshStore.append(event: RemoteJobEvent(jobId: jobId, type: "cancelled", message: "Remote job cancelled"))
     }
 
-    private func reloadThreads() async {
+    private func reloadThreads() async -> Bool {
         // Re-read pins right before the publish: even with the
         // file-watcher in place, this catches the case where the
         // watcher hasn't been installed yet (state file didn't exist
@@ -1083,6 +1085,7 @@ final class DaemonEngineHost: EngineHost {
             BridgedLog.write("thread-list ok count=\(snapshots.count) pages=\(page) pinned=\(pinnedThreadIds.count)")
             chatsSubject.send(snapshots)
             lastChatsPublishedAt = Date()
+            return true
         } catch {
             BridgedLog.write("thread-list failed \(error)")
             // Surface to peers as an error state rather than silently
@@ -1091,6 +1094,7 @@ final class DaemonEngineHost: EngineHost {
             // the iPhone sees an actionable message instead of a
             // perpetual spinner.
             stateSubject.send(.error("Couldn't load chats: \(shortReason(error))"))
+            return false
         }
     }
 

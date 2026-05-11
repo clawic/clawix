@@ -117,13 +117,13 @@ public final class BridgeSession: Identifiable {
         // Absent kind = legacy v1 client = treat as iOS so existing
         // iPhones keep working unchanged.
         self.clientKind = clientKind ?? .ios
-        send(BridgeFrame(.authOk(macName: Host.current().localizedName)))
-        send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
         // Tell the peer where the host is in its bootstrap so an empty
         // chats list reads as "syncing" instead of "no chats". The bus
         // also re-emits this frame on every state transition, so a
         // peer that connected during boot sees `syncing → ready`.
+        send(BridgeFrame(.authOk(macName: Host.current().localizedName)))
         send(bus.currentBridgeStateFrame())
+        send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
         BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")
     }
 

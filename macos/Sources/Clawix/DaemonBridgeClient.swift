@@ -10,6 +10,7 @@ final class DaemonBridgeClient {
     private var connection: NWConnection?
     private var isAuthenticated = false
     private var reconnectWork: DispatchWorkItem?
+    private var bridgeState = "booting"
 
     init(appState: AppState, pairing: PairingService) {
         self.appState = appState
@@ -139,6 +140,12 @@ final class DaemonBridgeClient {
             // changes flow back as `rateLimitsUpdated` pushes.
             send(.requestRateLimits)
         case .chatsSnapshot(let chats):
+            if chats.isEmpty,
+               bridgeState != "ready",
+               let appState,
+               !appState.chats.isEmpty || !appState.archivedChats.isEmpty {
+                break
+            }
             appState?.applyDaemonChats(chats)
             appState?.persistSnapshotDebounced()
         case .chatUpdated(let chat):
@@ -162,6 +169,8 @@ final class DaemonBridgeClient {
         case .rateLimitsSnapshot(let snapshot, let byLimitId),
              .rateLimitsUpdated(let snapshot, let byLimitId):
             appState?.applyDaemonRateLimits(snapshot: snapshot, byLimitId: byLimitId)
+        case .bridgeState(let state, _, _):
+            bridgeState = state
         case .authFailed, .versionMismatch:
             connection?.cancel()
         default:
