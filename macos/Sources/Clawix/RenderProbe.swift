@@ -57,7 +57,8 @@ enum RenderProbe {
     static func recordHitch(_ name: String, at now: CFAbsoluteTime) {
         queue.async {
             guard let lastActivityAt,
-                  now - lastActivityAt <= hitchActivityWindow
+                  now - lastActivityAt <= hitchActivityWindow,
+                  counts.keys.contains(where: { !$0.hasPrefix("hitch>") })
             else { return }
             counts[name, default: 0] += 1
             startIfNeeded()
@@ -90,8 +91,15 @@ enum RenderProbe {
         let window = max(0.001, now - windowStart)
         windowStart = now
 
-        let stamp = String(format: "%.3f", Date().timeIntervalSince1970)
         let keys = Set(counts.keys).union(totalMs.keys).sorted()
+        guard keys.contains(where: { !$0.hasPrefix("hitch>") }) else {
+            counts.removeAll(keepingCapacity: true)
+            totalMs.removeAll(keepingCapacity: true)
+            maxMs.removeAll(keepingCapacity: true)
+            return
+        }
+
+        let stamp = String(format: "%.3f", Date().timeIntervalSince1970)
         let entries: [String] = keys.map { key in
             let c = counts[key] ?? 0
             if let total = totalMs[key] {
