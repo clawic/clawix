@@ -17,6 +17,9 @@ import {
   type BridgeFrame,
 } from "./frames";
 import type {
+  WireAudioAttachTranscriptInput,
+  WireAudioListFilter,
+  WireAudioRegisterRequest,
   WireChat,
   WireMessage,
   WireProject,
@@ -70,6 +73,16 @@ export interface BridgeStoreState {
   requestGeneratedImage(path: string): void;
   requestRateLimits(): void;
   transcribeAudio(audioBase64: string, mimeType: string, language?: string): string;
+
+  /** v7 audio catalog. Each method returns the `requestId` consumers should
+   *  use with `client.onFrame("audioXxxResult")` to await the response.
+   */
+  audioRegister(request: WireAudioRegisterRequest): string;
+  audioAttachTranscript(audioId: string, input: WireAudioAttachTranscriptInput): string;
+  audioGet(audioId: string, appId: string): string;
+  audioGetBytes(audioId: string, appId: string): string;
+  audioList(filter: WireAudioListFilter): string;
+  audioDelete(audioId: string, appId: string): string;
 }
 
 export const useBridgeStore = create<BridgeStoreState>()(
@@ -184,6 +197,37 @@ export const useBridgeStore = create<BridgeStoreState>()(
         mimeType,
         ...(language ? { language } : {}),
       });
+      return requestId;
+    },
+
+    audioRegister(request) {
+      const requestId = uuidv4();
+      get().client?.send({ type: "audioRegister", requestId, request });
+      return requestId;
+    },
+    audioAttachTranscript(audioId, input) {
+      const requestId = uuidv4();
+      get().client?.send({ type: "audioAttachTranscript", requestId, audioId, transcript: input });
+      return requestId;
+    },
+    audioGet(audioId, appId) {
+      const requestId = uuidv4();
+      get().client?.send({ type: "audioGet", requestId, audioId, appId });
+      return requestId;
+    },
+    audioGetBytes(audioId, appId) {
+      const requestId = uuidv4();
+      get().client?.send({ type: "audioGetBytes", requestId, audioId, appId });
+      return requestId;
+    },
+    audioList(filter) {
+      const requestId = uuidv4();
+      get().client?.send({ type: "audioList", requestId, filter });
+      return requestId;
+    },
+    audioDelete(audioId, appId) {
+      const requestId = uuidv4();
+      get().client?.send({ type: "audioDelete", requestId, audioId, appId });
       return requestId;
     },
   })),
