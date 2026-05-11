@@ -564,6 +564,8 @@ private struct ContentTopChrome: View {
                 Text(chatTitle)
                     .font(BodyFont.system(size: 13.5, wght: 500))
                     .foregroundColor(Palette.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
