@@ -1088,6 +1088,13 @@ final class DaemonEngineHost: EngineHost {
             return true
         } catch {
             BridgedLog.write("thread-list failed \(error)")
+            let fallback = loadRolloutFallbackSnapshots(limit: 1_200)
+            if !fallback.isEmpty {
+                BridgedLog.write("thread-list fallback from rollouts count=\(fallback.count)")
+                chatsSubject.send(fallback)
+                lastChatsPublishedAt = Date()
+                return true
+            }
             // Surface to peers as an error state rather than silently
             // leaving them on `syncing` forever. The bootstrap caller
             // will move us to `.ready` only on success, so on failure
@@ -1096,6 +1103,58 @@ final class DaemonEngineHost: EngineHost {
             stateSubject.send(.error("Couldn't load chats: \(shortReason(error))"))
             return false
         }
+    }
+
+    private func loadRolloutFallbackSnapshots(limit: Int) -> [BridgeChatSnapshot] {
+        refreshPinnedThreadIds()
+        let files = RolloutHistory.localRolloutFiles(limit: max(limit * 2, limit))
+        guard !files.isEmpty else { return [] }
+        var snapshots: [BridgeChatSnapshot] = []
+        var seen = Set<String>()
+        for file in files {
+            guard snapshots.count < limit,
+                  let threadId = RolloutHistory.threadId(from: file),
+                  seen.insert(threadId).inserted else { continue }
+            let meta = RolloutHistory.metadata(path: file)
+            let chatId = chatByThread[threadId] ?? UUID().uuidString
+            chatByThread[threadId] = chatId
+            threadByChat[chatId] = threadId
+            rolloutPathByThread[threadId] = file.path
+
+            let fileDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
+            let tail: (messages: [WireMessage], lastTurnInterrupted: Bool) = ([], false)
+            let createdAt = meta.startedAt ?? tail.messages.first?.timestamp ?? fileDate
+            let last = tail.messages.last
+            let title = title(fromFirstUserMessage: meta.firstUserMessage, fallback: file.deletingPathExtension().lastPathComponent)
+            snapshots.append(BridgeChatSnapshot(
+                chat: WireChat(
+                    id: chatId,
+                    title: title,
+                    createdAt: createdAt,
+                    isPinned: pinnedThreadIds.contains(threadId),
+                    isArchived: false,
+                    hasActiveTurn: false,
+                    lastMessageAt: last?.timestamp ?? createdAt,
+                    lastMessagePreview: last.map { String($0.content.prefix(140)) },
+                    cwd: meta.cwd,
+                    lastTurnInterrupted: tail.lastTurnInterrupted,
+                    threadId: threadId
+                ),
+                messages: tail.messages
+            ))
+        }
+        return snapshots.sorted {
+            ($0.chat.lastMessageAt ?? $0.chat.createdAt) > ($1.chat.lastMessageAt ?? $1.chat.createdAt)
+        }
+    }
+
+    private func title(fromFirstUserMessage message: String?, fallback: String) -> String {
+        let trimmed = (message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            let firstLine = trimmed.split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true).first
+            return String((firstLine.map(String.init) ?? trimmed).prefix(80))
+        }
+        return fallback
     }
 
     private func snapshot(from thread: AgentThreadSummary) -> BridgeChatSnapshot {
@@ -1195,7 +1254,7 @@ final class DaemonEngineHost: EngineHost {
               let path = rolloutPathByThread[threadId]
         else { return }
         let existing = existingMessages(chatId: chatId)
-        let result = RolloutHistory.read(path: URL(fileURLWithPath: path))
+        let result = RolloutHistory.readTail(path: URL(fileURLWithPath: path))
         guard !result.messages.isEmpty || result.lastTurnInterrupted else { return }
         // Apply the canonical messages synchronously before returning so
         // the imminent `bus.subscribe(chatId)` call in
@@ -2096,6 +2155,11 @@ indirect enum JSONValue: Codable, Equatable {
 }
 
 enum RolloutHistory {
+    struct Metadata {
+        var startedAt: Date?
+        var cwd: String?
+        var firstUserMessage: String?
+    }
 
     /// Mutable accumulator for one assistant turn. Mirrors the Mac
     /// `RolloutReader.PendingAssistant` pattern: every `agent_message`
@@ -2167,15 +2231,107 @@ enum RolloutHistory {
         guard let text = try? String(contentsOf: path, encoding: .utf8) else {
             return ([], false)
         }
+        return parse(text: text, now: now)
+    }
+
+    static func readTail(path: URL, maxBytes: UInt64 = 1_048_576, now: Date = Date()) -> (messages: [WireMessage], lastTurnInterrupted: Bool) {
+        guard let handle = try? FileHandle(forReadingFrom: path) else {
+            return ([], false)
+        }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        let offset = size > maxBytes ? size - maxBytes : 0
+        do {
+            try handle.seek(toOffset: offset)
+            let data = try handle.readToEnd() ?? Data()
+            guard let text = String(data: data, encoding: .utf8) else { return ([], false) }
+            let normalized = offset > 0
+                ? text.split(separator: "\n", omittingEmptySubsequences: false).dropFirst().joined(separator: "\n")
+                : text
+            return parse(text: normalized, now: now)
+        } catch {
+            return ([], false)
+        }
+    }
+
+    static func metadata(path: URL, maxBytes: Int = 262_144) -> Metadata {
+        guard let handle = try? FileHandle(forReadingFrom: path) else { return Metadata() }
+        defer { try? handle.close() }
+        let data = (try? handle.read(upToCount: maxBytes)) ?? Data()
+        guard let text = String(data: data, encoding: .utf8) else { return Metadata() }
+        var meta = Metadata()
+        let iso = fractionalFormatter()
+        let isoFallback = plainFormatter()
+        for line in text.split(separator: "\n") {
+            guard let data = line.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { continue }
+            if meta.startedAt == nil, let timestamp = obj["timestamp"] as? String {
+                meta.startedAt = iso.date(from: timestamp) ?? isoFallback.date(from: timestamp)
+            }
+            if obj["type"] as? String == "session_meta",
+               let payload = obj["payload"] as? [String: Any] {
+                meta.cwd = payload["cwd"] as? String
+                if meta.startedAt == nil, let timestamp = payload["timestamp"] as? String {
+                    meta.startedAt = iso.date(from: timestamp) ?? isoFallback.date(from: timestamp)
+                }
+            }
+            if obj["type"] as? String == "event_msg",
+               let payload = obj["payload"] as? [String: Any],
+               payload["type"] as? String == "user_message",
+               let message = payload["message"] as? String,
+               !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                meta.firstUserMessage = message
+                break
+            }
+        }
+        return meta
+    }
+
+    static func localRolloutFiles(limit: Int) -> [URL] {
+        let fm = FileManager.default
+        var urls: [URL] = []
+        let roots = [
+            fm.homeDirectoryForCurrentUser.appendingPathComponent(".codex/sessions"),
+            fm.homeDirectoryForCurrentUser.appendingPathComponent(".codex/archived_sessions")
+        ]
+        for root in roots where fm.fileExists(atPath: root.path) {
+            guard let enumerator = fm.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            for case let file as URL in enumerator {
+                guard file.lastPathComponent.hasPrefix("rollout-"),
+                      file.pathExtension == "jsonl",
+                      (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+                else { continue }
+                urls.append(file)
+            }
+        }
+        urls.sort {
+            let lhs = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            let rhs = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            return lhs > rhs
+        }
+        return Array(urls.prefix(limit))
+    }
+
+    static func threadId(from url: URL) -> String? {
+        let stem = url.deletingPathExtension().lastPathComponent
+        guard stem.hasPrefix("rollout-"), stem.count >= 36 else { return nil }
+        let suffix = String(stem.suffix(36)).lowercased()
+        return UUID(uuidString: suffix)?.uuidString.lowercased()
+    }
+
+    private static func parse(text: String, now: Date) -> (messages: [WireMessage], lastTurnInterrupted: Bool) {
         var messages: [WireMessage] = []
         var pending: PendingAssistant? = nil
         var lastEventAt: Date?
         var sawAgentWork = false
         var sawClose = true
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let isoFallback = ISO8601DateFormatter()
-        isoFallback.formatOptions = [.withInternetDateTime]
+        let iso = fractionalFormatter()
+        let isoFallback = plainFormatter()
 
         func flushPending() {
             if let p = pending {
@@ -2241,6 +2397,18 @@ enum RolloutHistory {
             && !sawClose
             && lastEventAt.map { now.timeIntervalSince($0) > 30 } == true
         return (messages, interrupted)
+    }
+
+    private static func fractionalFormatter() -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }
+
+    private static func plainFormatter() -> ISO8601DateFormatter {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
     }
 }
 
