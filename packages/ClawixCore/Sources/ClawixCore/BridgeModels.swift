@@ -123,6 +123,13 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
     /// Optional + decodeIfPresent so older clients keep parsing.
     public var threadId: String?
 
+    /// Originating agent runtime for this chat. Identifies which
+    /// agent owns the conversation so sidebars and routing can
+    /// filter / badge by origin. Defaults to "codex" for legacy
+    /// payloads. Other values include "openclaw", "hermes" and
+    /// any future runtime registered with the bridge daemon.
+    public var agent: String
+
     public init(
         id: String,
         title: String,
@@ -135,7 +142,8 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         branch: String? = nil,
         cwd: String? = nil,
         lastTurnInterrupted: Bool = false,
-        threadId: String? = nil
+        threadId: String? = nil,
+        agent: String = "codex"
     ) {
         self.id = id
         self.title = title
@@ -149,15 +157,18 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         self.cwd = cwd
         self.lastTurnInterrupted = lastTurnInterrupted
         self.threadId = threadId
+        self.agent = agent
     }
 
     /// Decode tolerant of legacy payloads (without `lastTurnInterrupted`).
     /// Old Macs talking to a new iPhone (or vice versa during a phased
-    /// rollout) still parse cleanly — the field defaults to false.
+    /// rollout) still parse cleanly. Same applies to `agent`, which
+    /// defaults to "codex" when missing so pre-multi-runtime payloads
+    /// keep their semantics.
     private enum CodingKeys: String, CodingKey {
         case id, title, createdAt, isPinned, isArchived, hasActiveTurn
         case lastMessageAt, lastMessagePreview, branch, cwd, lastTurnInterrupted
-        case threadId
+        case threadId, agent
     }
 
     public init(from decoder: Decoder) throws {
@@ -174,6 +185,7 @@ public struct WireChat: Codable, Equatable, Sendable, Identifiable {
         self.cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
         self.lastTurnInterrupted = try c.decodeIfPresent(Bool.self, forKey: .lastTurnInterrupted) ?? false
         self.threadId = try c.decodeIfPresent(String.self, forKey: .threadId)
+        self.agent = try c.decodeIfPresent(String.self, forKey: .agent) ?? "codex"
     }
 }
 
