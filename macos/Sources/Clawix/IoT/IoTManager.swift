@@ -4,19 +4,20 @@ import Combine
 
 /// Observable manager for the clawjs-iot daemon.
 ///
-/// Mirrors `DatabaseManager` in shape: a state machine that observes
-/// `ClawJSServiceManager.shared.snapshots[.iot]` and bootstraps once
-/// the supervisor flips the service to `.ready` / `.readyFromDaemon`.
-/// On bootstrap it loads the tool catalog so downstream consumers
-/// (`RemoteToolsRegistry`, the future `.iotHome` screen) can read it
-/// synchronously without re-fetching.
+/// Owns:
+///   - The HTTP client (`IoTClient`).
+///   - The realtime SSE event stream (`/v1/events/stream`).
+///   - The cached snapshots the UI binds against: homes, areas, things,
+///     scenes, automations, approvals.
+///   - The downloaded tool catalog (`availableTools`).
 ///
-/// Phase 1 surface is intentionally minimal — only the catalog and the
-/// service state. Phase 2 adds typed accessors for homes / things /
-/// scenes / automations / approvals plus an SSE realtime consumer for
-/// the `device.*` event stream.
+/// The supervisor (`ClawJSServiceManager.shared.snapshots[.iot]`)
+/// drives the state machine: any time the service flips to `.ready` /
+/// `.readyFromDaemon` we bootstrap; any other state suspends consumers
+/// and clears the snapshots so the UI shows the right empty/error
+/// surface. The SSE stream keeps the snapshots fresh between fetches.
 @MainActor
-final class IoTManager: ObservableObject {
+final class IoTManager: NSObject, ObservableObject {
 
     enum State: Equatable {
         case loading
@@ -27,23 +28,42 @@ final class IoTManager: ObservableObject {
 
     @Published private(set) var state: State = .loading
     @Published private(set) var lastError: String?
+
+    /// Tool catalog (Phase 1).
     @Published private(set) var availableTools: [RemoteToolDescriptor] = []
     @Published private(set) var catalogGeneratedAt: Date?
+
+    /// Phase 3 cached collections. The supervisor refresh path replaces
+    /// each one wholesale; SSE deltas trigger targeted re-fetches.
+    @Published private(set) var homes: [HomeRecord] = []
+    @Published private(set) var currentHomeId: String?
+    @Published private(set) var areas: [AreaRecord] = []
+    @Published private(set) var things: [ThingRecord] = []
+    @Published private(set) var scenes: [SceneRecord] = []
+    @Published private(set) var automations: [AutomationRecord] = []
+    @Published private(set) var approvals: [ApprovalRecord] = []
+    @Published private(set) var pendingApprovalsCount: Int = 0
+    @Published private(set) var lastAdapterFailure: String?
 
     private(set) var client = IoTClient()
 
     private var supervisorObserver: AnyCancellable?
     private var bootstrapGeneration: UUID?
+    private var sseTask: URLSessionDataTask?
+    private var sseSession: URLSession!
+    private var sseBuffer = Data()
 
-    init() {
+    override init() {
+        super.init()
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = .infinity
+        config.waitsForConnectivity = true
+        self.sseSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
         attachSupervisorObserver()
     }
 
-    /// Watches `ClawJSServiceManager.shared.snapshots[.iot]` and kicks
-    /// off `bootstrap()` whenever the supervisor flips IoT to `.ready`.
-    /// If the daemon crashes and gets restarted we re-issue bootstrap
-    /// so the catalog refresh picks up any new tools added by adapter
-    /// hot-reload paths.
+    // MARK: - Supervisor wiring
+
     private func attachSupervisorObserver() {
         let supervisor = ClawJSServiceManager.shared
         supervisorObserver = supervisor.$snapshots.sink { [weak self] snapshots in
@@ -57,19 +77,22 @@ final class IoTManager: ObservableObject {
                     await self.bootstrap()
                 }
             case .crashed, .blocked, .idle, .daemonUnavailable:
-                self.availableTools = []
-                self.catalogGeneratedAt = nil
+                self.disconnectSSE()
+                self.things = []
+                self.areas = []
+                self.scenes = []
+                self.automations = []
+                self.approvals = []
+                self.pendingApprovalsCount = 0
                 self.state = .failed(snap.state.unavailableReason ?? "IoT service is unavailable.")
             case .starting:
-                if case .ready = self.state { /* drain catalog on next ready */ }
                 self.state = .bootstrapping
             }
         }
     }
 
-    /// Loads the tool catalog and (if Phase 1 grows mutating verbs in a
-    /// later iteration) authenticates the HTTP client with a fresh
-    /// bearer token. Idempotent.
+    // MARK: - Bootstrap
+
     func bootstrap() async {
         if case .ready = state { return }
         state = .bootstrapping
@@ -84,9 +107,16 @@ final class IoTManager: ObservableObject {
         }
         client.bearerToken = IoTAdminToken.currentAdminToken()
         do {
-            let catalog = try await client.listTools()
-            availableTools = catalog.tools
-            catalogGeneratedAt = ISO8601DateFormatter().date(from: catalog.generatedAt)
+            async let toolsTask = client.listTools()
+            async let homesTask = client.listHomes()
+            let catalog = try await toolsTask
+            let homes = try await homesTask
+            self.availableTools = catalog.tools
+            self.catalogGeneratedAt = ISO8601DateFormatter().date(from: catalog.generatedAt)
+            self.homes = homes
+            self.currentHomeId = homes.first(where: { $0.isDefault })?.id ?? homes.first?.id
+            try await refreshAll()
+            connectSSE()
             state = .ready
             lastError = nil
             bootstrapGeneration = nil
@@ -97,9 +127,22 @@ final class IoTManager: ObservableObject {
         }
     }
 
-    /// Refreshes the tool catalog without going through the full
-    /// bootstrap dance. Useful when an adapter (Phase 2) reports it
-    /// added a new device kind whose tools should appear immediately.
+    func refreshAll() async throws {
+        let homeId = currentHomeId
+        async let thingsTask = client.listThings(homeId: homeId)
+        async let areasTask = client.listAreas(homeId: homeId)
+        async let scenesTask = client.listScenes(homeId: homeId)
+        async let automationsTask = client.listAutomations(homeId: homeId)
+        async let approvalsTask = client.listApprovals(homeId: homeId)
+        self.things = try await thingsTask
+        self.areas = try await areasTask
+        self.scenes = try await scenesTask
+        self.automations = try await automationsTask
+        let approvals = try await approvalsTask
+        self.approvals = approvals
+        self.pendingApprovalsCount = approvals.filter { $0.status == "pending" }.count
+    }
+
     func refreshCatalog() async {
         guard case .ready = state else { return }
         do {
@@ -112,11 +155,166 @@ final class IoTManager: ObservableObject {
         }
     }
 
-    /// Pass-through invocation. Phase 1 does not gate by riskLevel; the
-    /// daemon already enforces the policy table. Phase 2 introduces the
-    /// approval flow which intercepts `sensitive` and `catastrophic`
-    /// invocations on this side before they leave the app.
-    func invokeTool(id: String, arguments: [String: Any]) async throws -> RemoteToolInvocationResult {
-        try await client.invokeTool(id: id, arguments: arguments)
+    // MARK: - UI-facing actions
+
+    @discardableResult
+    func runAction(_ request: IoTActionRequest) async throws -> IoTActionResult {
+        let result = try await client.runAction(request, homeId: currentHomeId)
+        // After a successful action the SSE event will re-trigger our
+        // snapshot refresh; we kick a manual refresh too so the UI
+        // does not wait on the event round-trip when the user just
+        // tapped a card.
+        Task { try? await refreshAll() }
+        return result
+    }
+
+    func activateScene(_ scene: SceneRecord) async throws {
+        _ = try await client.activateScene(sceneId: scene.id, homeId: currentHomeId)
+        Task { try? await refreshAll() }
+    }
+
+    func setAutomationEnabled(_ automation: AutomationRecord, enabled: Bool) async throws {
+        _ = try await client.setAutomationEnabled(
+            automationId: automation.id,
+            enabled: enabled,
+            homeId: currentHomeId,
+        )
+        Task { try? await refreshAll() }
+    }
+
+    func runAutomation(_ automation: AutomationRecord) async throws {
+        _ = try await client.runAutomation(automationId: automation.id, homeId: currentHomeId)
+        Task { try? await refreshAll() }
+    }
+
+    func approveApproval(_ approval: ApprovalRecord) async throws -> IoTActionResult {
+        let result = try await client.approveApproval(approvalId: approval.id, homeId: currentHomeId)
+        Task { try? await refreshAll() }
+        return result
+    }
+
+    func denyApproval(_ approval: ApprovalRecord) async throws {
+        _ = try await client.denyApproval(approvalId: approval.id, homeId: currentHomeId)
+        Task { try? await refreshAll() }
+    }
+
+    func addThing(input: IoTClient.AddThingInput) async throws -> ThingRecord {
+        var input = input
+        if input.homeId == nil { input.homeId = currentHomeId }
+        let thing = try await client.addThing(input: input)
+        Task { try? await refreshAll() }
+        return thing
+    }
+
+    func removeThing(_ thing: ThingRecord) async throws {
+        try await client.removeThing(thingId: thing.id, homeId: currentHomeId)
+        Task { try? await refreshAll() }
+    }
+
+    func startDiscovery(timeoutMs: Int? = nil) async throws {
+        try await client.startDiscovery(timeoutMs: timeoutMs)
+    }
+
+    func stopDiscovery() async throws {
+        try await client.stopDiscovery()
+    }
+
+    // MARK: - Lookups
+
+    func areaLabel(forId id: String?) -> String? {
+        guard let id else { return nil }
+        return areas.first(where: { $0.id == id })?.label
+    }
+
+    func thing(byId id: String) -> ThingRecord? {
+        things.first(where: { $0.id == id })
+    }
+
+    func capability(thing: ThingRecord, key: String) -> CapabilityRecord? {
+        thing.capabilities.first(where: { $0.key == key })
+    }
+
+    // MARK: - Realtime SSE
+
+    private func connectSSE() {
+        guard sseTask == nil else { return }
+        guard let url = URL(string: "/v1/events/stream", relativeTo: client.origin) else { return }
+        var request = URLRequest(url: url)
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = TimeInterval.infinity
+        sseBuffer.removeAll()
+        sseTask = sseSession.dataTask(with: request)
+        sseTask?.resume()
+    }
+
+    private func disconnectSSE() {
+        sseTask?.cancel()
+        sseTask = nil
+    }
+
+    fileprivate func handleSSEEvent(type: String, payload: [String: Any]?) {
+        switch type {
+        case "iot.action.executed":
+            Task { try? await refreshAll() }
+        case "iot.approval.created":
+            Task { try? await refreshAll() }
+        case "iot.thing.added", "iot.thing.removed":
+            Task { try? await refreshAll() }
+        case "iot.adapter.failed":
+            if let payload, let note = payload["note"] as? String {
+                lastAdapterFailure = note
+            }
+        default:
+            break
+        }
+    }
+}
+
+// MARK: - URLSessionDataDelegate (SSE)
+
+extension IoTManager: URLSessionDataDelegate {
+    nonisolated func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        Task { @MainActor [weak self] in
+            self?.ingestSSEChunk(data)
+        }
+    }
+
+    nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        Task { @MainActor [weak self] in
+            self?.sseTask = nil
+            // Reconnection is handled implicitly by the supervisor:
+            // if the daemon drops, snapshot flips out of .ready and we
+            // bootstrap again next time it returns.
+        }
+    }
+
+    private func ingestSSEChunk(_ chunk: Data) {
+        sseBuffer.append(chunk)
+        while let range = sseBuffer.range(of: Data("\n\n".utf8)) {
+            let raw = sseBuffer.subdata(in: 0..<range.lowerBound)
+            sseBuffer.removeSubrange(0..<range.upperBound)
+            guard let text = String(data: raw, encoding: .utf8) else { continue }
+            var type: String?
+            var dataLine = ""
+            for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+                if line.hasPrefix("event:") {
+                    type = line.dropFirst("event:".count).trimmingCharacters(in: .whitespaces)
+                } else if line.hasPrefix("data:") {
+                    if !dataLine.isEmpty { dataLine.append("\n") }
+                    dataLine.append(line.dropFirst("data:".count).trimmingCharacters(in: .whitespaces))
+                }
+            }
+            guard let type else { continue }
+            let payload: [String: Any]?
+            if dataLine.isEmpty {
+                payload = nil
+            } else if let bytes = dataLine.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any] {
+                payload = json
+            } else {
+                payload = nil
+            }
+            handleSSEEvent(type: type, payload: payload)
+        }
     }
 }

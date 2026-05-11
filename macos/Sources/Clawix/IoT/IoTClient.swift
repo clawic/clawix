@@ -76,6 +76,137 @@ struct IoTClient {
         )
     }
 
+    // MARK: - Typed REST accessors
+
+    func listHomes() async throws -> [HomeRecord] {
+        try await getJSON(path: "/v1/homes", as: HomesResponse.self).homes
+    }
+
+    func listThings(homeId: String? = nil) async throws -> [ThingRecord] {
+        let path = homeId.map { "/v1/homes/\($0)/things" } ?? "/v1/things"
+        return try await getJSON(path: path, as: ThingsResponse.self).things
+    }
+
+    func listAreas(homeId: String? = nil) async throws -> [AreaRecord] {
+        let path = homeId.map { "/v1/homes/\($0)/areas" } ?? "/v1/areas"
+        return try await getJSON(path: path, as: AreasResponse.self).areas
+    }
+
+    func listScenes(homeId: String? = nil) async throws -> [SceneRecord] {
+        let path = homeId.map { "/v1/homes/\($0)/scenes" } ?? "/v1/scenes"
+        return try await getJSON(path: path, as: ScenesResponse.self).scenes
+    }
+
+    func listAutomations(homeId: String? = nil) async throws -> [AutomationRecord] {
+        let path = homeId.map { "/v1/homes/\($0)/automations" } ?? "/v1/automations"
+        return try await getJSON(path: path, as: AutomationsResponse.self).automations
+    }
+
+    func listApprovals(homeId: String? = nil) async throws -> [ApprovalRecord] {
+        let path = homeId.map { "/v1/homes/\($0)/approvals" } ?? "/v1/approvals"
+        return try await getJSON(path: path, as: ApprovalsResponse.self).approvals
+    }
+
+    func runAction(_ request: IoTActionRequest, homeId: String? = nil) async throws -> IoTActionResult {
+        let path = homeId.map { "/v1/homes/\($0)/actions" } ?? "/v1/actions"
+        let body = try encode(request)
+        return try await postJSON(path: path, body: body, as: ActionResponse.self).result
+    }
+
+    func activateScene(sceneId: String, homeId: String? = nil) async throws -> IoTActionResult {
+        let path = homeId
+            .map { "/v1/homes/\($0)/scenes/\(sceneId)/activate" }
+            ?? "/v1/scenes/\(sceneId)/activate"
+        return try await postJSON(path: path, body: [:], as: ActionResponse.self).result
+    }
+
+    func setAutomationEnabled(automationId: String, enabled: Bool, homeId: String? = nil) async throws -> AutomationRecord {
+        let suffix = enabled ? "enable" : "disable"
+        let path = homeId
+            .map { "/v1/homes/\($0)/automations/\(automationId)/\(suffix)" }
+            ?? "/v1/automations/\(automationId)/\(suffix)"
+        return try await postJSON(path: path, body: [:], as: AutomationResponse.self).automation
+    }
+
+    func runAutomation(automationId: String, homeId: String? = nil) async throws -> IoTActionResult {
+        let path = homeId
+            .map { "/v1/homes/\($0)/automations/\(automationId)/run" }
+            ?? "/v1/automations/\(automationId)/run"
+        return try await postJSON(path: path, body: [:], as: ActionResponse.self).result
+    }
+
+    func approveApproval(approvalId: String, homeId: String? = nil) async throws -> IoTActionResult {
+        let path = homeId
+            .map { "/v1/homes/\($0)/approvals/\(approvalId)/approve" }
+            ?? "/v1/approvals/\(approvalId)/approve"
+        return try await postJSON(path: path, body: [:], as: ActionResponse.self).result
+    }
+
+    func denyApproval(approvalId: String, homeId: String? = nil) async throws -> ApprovalRecord {
+        let path = homeId
+            .map { "/v1/homes/\($0)/approvals/\(approvalId)/deny" }
+            ?? "/v1/approvals/\(approvalId)/deny"
+        return try await postJSON(path: path, body: [:], as: ApprovalDenyResponse.self).approval
+    }
+
+    // MARK: - Tool-backed actions
+
+    /// Phase 2 connector adapters surface adding/removing things and
+    /// driving discovery as tool invocations rather than REST routes;
+    /// using the tool endpoint keeps a single audit trail in
+    /// command_log for both UI and agent paths.
+    func addThing(input: AddThingInput) async throws -> ThingRecord {
+        let result = try await invokeTool(id: "iot.things.add", arguments: input.toToolArguments())
+        try result.throwIfFailed()
+        let envelope = try Self.decode(result.value, as: ThingEnvelope.self)
+        return envelope.thing
+    }
+
+    func removeThing(thingId: String, homeId: String? = nil) async throws {
+        var args: [String: Any] = ["thingId": thingId]
+        if let homeId { args["homeId"] = homeId }
+        let result = try await invokeTool(id: "iot.things.remove", arguments: args)
+        try result.throwIfFailed()
+    }
+
+    func startDiscovery(timeoutMs: Int? = nil) async throws {
+        var args: [String: Any] = [:]
+        if let timeoutMs { args["timeoutMs"] = timeoutMs }
+        let result = try await invokeTool(id: "iot.discovery.start", arguments: args)
+        try result.throwIfFailed()
+    }
+
+    func stopDiscovery() async throws {
+        let result = try await invokeTool(id: "iot.discovery.stop", arguments: [:])
+        try result.throwIfFailed()
+    }
+
+    struct AddThingInput {
+        var fingerprint: String?
+        var label: String?
+        var kind: IoTThingKind?
+        var connectorId: String?
+        var targetRef: String?
+        var areaId: String?
+        var aliases: [String]?
+        var metadata: [String: Any]?
+        var homeId: String?
+
+        func toToolArguments() -> [String: Any] {
+            var args: [String: Any] = [:]
+            if let fingerprint { args["fingerprint"] = fingerprint }
+            if let label { args["label"] = label }
+            if let kind { args["kind"] = kind.rawValue }
+            if let connectorId { args["connectorId"] = connectorId }
+            if let targetRef { args["targetRef"] = targetRef }
+            if let areaId { args["areaId"] = areaId }
+            if let aliases { args["aliases"] = aliases }
+            if let metadata { args["metadata"] = metadata }
+            if let homeId { args["homeId"] = homeId }
+            return args
+        }
+    }
+
     // MARK: - HTTP helpers
 
     private func getJSON<T: Decodable>(path: String, as: T.Type) async throws -> T {
@@ -120,6 +251,45 @@ struct IoTClient {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
             throw Error.decoding(error)
+        }
+    }
+
+    /// Encodes a Codable model to the dictionary shape `postJSON`
+    /// expects. Used by callers that want to send a typed action
+    /// request without hand-translating fields into a Dictionary.
+    private func encode<T: Encodable>(_ value: T) throws -> [String: Any] {
+        let data = try JSONEncoder().encode(value)
+        let any = try JSONSerialization.jsonObject(with: data, options: [])
+        return (any as? [String: Any]) ?? [:]
+    }
+
+    fileprivate static func decode<T: Decodable>(_ value: Any?, as: T.Type) throws -> T {
+        guard let value else {
+            throw Error.decoding(NSError(domain: "IoTClient", code: 1, userInfo: [NSLocalizedDescriptionKey: "missing value"]))
+        }
+        let data = try JSONSerialization.data(withJSONObject: value, options: [])
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+}
+
+// MARK: - Response envelopes
+
+private struct HomesResponse: Codable { let homes: [HomeRecord] }
+private struct ThingsResponse: Codable { let things: [ThingRecord] }
+private struct AreasResponse: Codable { let areas: [AreaRecord] }
+private struct ScenesResponse: Codable { let scenes: [SceneRecord] }
+private struct AutomationsResponse: Codable { let automations: [AutomationRecord] }
+private struct ApprovalsResponse: Codable { let approvals: [ApprovalRecord] }
+private struct ActionResponse: Codable { let result: IoTActionResult }
+private struct AutomationResponse: Codable { let automation: AutomationRecord }
+private struct ApprovalDenyResponse: Codable { let approval: ApprovalRecord }
+private struct ThingEnvelope: Codable { let thing: ThingRecord }
+
+extension RemoteToolInvocationResult {
+    /// Convenience helper to bubble daemon-side errors as Swift throws.
+    func throwIfFailed() throws {
+        if !ok, let error {
+            throw IoTClient.Error.http(status: 0, body: "\(error.code): \(error.message)")
         }
     }
 }
