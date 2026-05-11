@@ -1010,6 +1010,7 @@ private struct SettingsSheet: View {
             return "Reaching your Mac…"
         case .connected(_, let route):
             switch route {
+            case .iroh: return "Connected via Iroh"
             case .tailscale: return "Connected via Tailscale"
             case .lan, .none: return "Connected over the local network"
             }

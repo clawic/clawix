@@ -21,6 +21,8 @@ configFiles:
 packages:
   ClawixCore:
     path: ../packages/ClawixCore
+  ClawixEngine:
+    path: ../packages/ClawixEngine
 
 targets:
   Clawix:
@@ -67,6 +69,7 @@ targets:
         ENABLE_PREVIEWS: YES
     dependencies:
       - package: ClawixCore
+      - package: ClawixEngine
 
   ClawixUITests:
     type: bundle.ui-testing
