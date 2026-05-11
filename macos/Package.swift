@@ -67,6 +67,7 @@ let package = Package(
         .executableTarget(
             name: "Clawix",
             dependencies: [
+                "ClawixSimulatorKitShim",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "ClawixCore", package: "ClawixCore"),
@@ -91,6 +92,11 @@ let package = Package(
                 // the executable needs this rpath to resolve it at launch.
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
+        ),
+        .target(
+            name: "ClawixSimulatorKitShim",
+            path: "Sources/ClawixSimulatorKitShim",
+            publicHeadersPath: "include"
         )
     ]
 )
