@@ -35,6 +35,23 @@ final class BrowserTabController: NSObject, ObservableObject {
     private var observers: [NSKeyValueObservation] = []
     private var bgSampleTimer: Timer?
     private var lastSampledBgRaw: String?
+    private static let blankURL = URL(string: "about:blank")!
+    private static let blankPageHTML = """
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              html, body {
+                margin: 0;
+                min-height: 100%;
+                background: #000;
+              }
+            </style>
+          </head>
+          <body></body>
+        </html>
+        """
 
     init(
         id: UUID,
@@ -97,7 +114,21 @@ final class BrowserTabController: NSObject, ObservableObject {
     }
 
     private func loadApproved(_ url: URL) {
+        if Self.isBlankURL(url) {
+            currentURL = Self.blankURL
+            title = ""
+            lastNavigationError = nil
+            appState?.updateBrowserTab(id, url: Self.blankURL, title: "")
+            appState?.browserTabsLoading.remove(id)
+            appState?.browserPageBackgroundColors[id] = .black
+            webView.loadHTMLString(Self.blankPageHTML, baseURL: Self.blankURL)
+            return
+        }
         webView.load(URLRequest(url: url))
+    }
+
+    private static func isBlankURL(_ url: URL) -> Bool {
+        url.absoluteString == blankURL.absoluteString
     }
 
     func loadString(_ raw: String) {

@@ -86,23 +86,25 @@ private struct SidebarItemPill: View {
                     .fill(background)
             )
             .overlay(alignment: .trailing) {
-                if isHovered {
-                    Button(action: onClose) {
-                        LucideIcon(.x, size: 10)
-                            .foregroundColor(Color(white: 0.95))
-                            .frame(width: 14, height: 14)
-                            .background(
-                                Circle().fill(Color.white.opacity(0.18))
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close tab")
-                    .padding(.trailing, 6)
+                Button(action: onClose) {
+                    LucideIcon(.x, size: 10)
+                        .foregroundColor(Color(white: 0.95))
+                        .frame(width: 14, height: 14)
+                        .background(
+                            Circle().fill(Color.white.opacity(0.18))
+                        )
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .opacity(isHovered || isActive ? 1 : 0)
+                .allowsHitTesting(isHovered || isActive)
+                .accessibilityHidden(!(isHovered || isActive))
+                .accessibilityLabel(L10n.t("Close tab"))
+                .padding(.trailing, 6)
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Select tab \(displayTitle)")
     }
 
     @ViewBuilder
@@ -136,6 +138,7 @@ private struct SidebarItemPill: View {
         switch item {
         case .web(let p):
             if !p.title.isEmpty { return p.title }
+            if p.url.absoluteString == "about:blank" { return L10n.t("New tab") }
             if let host = p.url.host { return host.replacingOccurrences(of: "www.", with: "") }
             return p.url.absoluteString
         case .file(let p):
