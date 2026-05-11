@@ -108,32 +108,45 @@ friction, without lock-in, and without surrendering ownership of their data.
     nonstandard cannot be reviewed; therefore the framework standardizes
     what gets logged.
 
+15. **Async-first by construction.** The default operating model is
+    asynchronous: humans direct, agents execute over time, humans return and
+    consume results. Inboxes, notifications, summary reports, and
+    "while you were away" surfaces are first-class infrastructure.
+    Synchronous conversation is a special case, not the norm. Decisions
+    of UX, framework, and platform follow this default.
+
+16. **Multi-modal on both ends.** Voice, image, and text are equal-class
+    inputs at every surface where a human addresses an agent. Speech, cards,
+    images, and text are equal-class outputs. No modality is "primary"; the
+    framework processes all with equivalent care. Each surface picks its
+    emphasis without demoting the others.
+
 ### IV. Data
 
-15. **No catch-all buckets.** If something can be represented as a typed
+17. **No catch-all buckets.** If something can be represented as a typed
     entity with structure (a recipe has ingredients with quantities, steps, a
     title), we prefer that. We do not solve precision problems with vector
     databases and unstructured blobs unless we have first asked whether a
     typed entity exists.
 
-16. **Words carry borders.** When a concept has a name (memory, skill, note,
+18. **Words carry borders.** When a concept has a name (memory, skill, note,
     instruction, contact, event), that name draws a frontier. We do not
     smuggle other kinds of data inside it. Naming sloppiness destroys
     interoperability and reasoning.
 
-17. **A type earns canonical status when it meets any of these:** (a) most
+19. **A type earns canonical status when it meets any of these:** (a) most
     humans have or do it (universal), (b) it has been validated by markets
     (a dedicated app or SaaS with mass adoption already exists), (c) three
     or more skills or sub-apps would need it, or (d) any human, without
     technical context, recognizes the entity instantly.
 
-18. **Below the threshold, two fallbacks.** What does not earn canonical
+20. **Below the threshold, two fallbacks.** What does not earn canonical
     status lives either as linked notes (Obsidian-like: free-form markdown
     with tree and links) or as a custom database (Notion-like: the user
     defines a schema for niche needs). The framework supports both as
     first-class; specialized types are preferred when they earn their place.
 
-19. **Every canonical type has a canonical visual representation.** Every
+21. **Every canonical type has a canonical visual representation.** Every
     typed entity (contact, event, recipe, task, message, etc.) ships with a
     card component renderable in chat with an agent, a list and detail view
     in any sub-app, and user-controlled visibility of fields. The UI gracefully
@@ -141,7 +154,7 @@ friction, without lock-in, and without surrendering ownership of their data.
     the type is incomplete. Custom databases get an automatic configurable
     renderer.
 
-20. **Schemas evolve conservatively.** Eighty percent of evolution is
+22. **Schemas evolve conservatively.** Eighty percent of evolution is
     additive: optional fields, never breaking. Twenty percent is structural
     (rename, restructure) and requires automatic migration with a
     pre-migration snapshot in a known location. No framework update may ever
@@ -149,58 +162,85 @@ friction, without lock-in, and without surrendering ownership of their data.
 
 ### V. Agents
 
-21. **The user composes their agents.** An agent is a composition of skills,
+23. **The user composes their agents.** An agent is a composition of skills,
     secrets, connections, and instructions. The user creates as many agents
     as they want, the way they would hire employees with specialties. There
     is no structural "main" agent, no "secondary" agent. Each is sovereign
     within the permissions the user grants it.
 
-22. **The framework integrates runtimes; it is not married to one.** Any
+24. **The framework integrates runtimes; it is not married to one.** Any
     runtime that can execute agentic loops is integratable. The framework
     provides the modular surface; runtimes plug in. The user chooses,
     switches, or runs several. We never lock users to one provider.
 
-23. **Permissions are granular and revocable.** Per agent, per domain, per
+25. **Permissions are granular and revocable.** Per agent, per domain, per
     secret, per project. Default sensible. The human is always the owner.
     Agents act autonomously within what was granted; they ask only when
     truly stuck, and even then through asynchronous channels that do not
     block other work.
 
-24. **Destruction has standardized severity.** The framework declares what is
+26. **Destruction has standardized severity.** The framework declares what is
     safe (creating, reading), what is reversible (editing, soft-deleting),
     what is sensitive (deleting human-authored content), and what is
     catastrophic (destroying credentials, irreversible external actions). The
     user picks the severity above which they want to be consulted. Defaults
     protect catastrophic actions.
 
-25. **The trash is the metaphor.** Most "deletion" is moving to a trash that
+27. **The trash is the metaphor.** Most "deletion" is moving to a trash that
     auto-clears with time. Irreversible loss is prohibited; the user always
     has a window to recover. Agents prefer to delete what they created and
     are conservative with content created by humans or by other agents the
     human trusts.
 
+28. **Agents improve themselves.** A first-class agent can rewrite its own
+    skills, adjust its instructions, install tools it needs, and record
+    failures so they do not recur. The framework provides the safety
+    primitives (versioning, snapshots, audit) that make self-modification
+    reversible and visible. Without self-improvement, agents do not scale.
+
+29. **Agents compose.** The framework supports agents invoking and
+    delegating to other agents, chaining loops, passing context, and
+    aggregating results. Composition is potential, not default behavior.
+    The user decides which agents compose with which, and how. Some
+    deployments will compose deeply; others will keep agents isolated. The
+    system supports both ends.
+
+30. **Autonomy is a continuous axis.** Each agent lives somewhere between
+    fully constrained and fully autonomous, defined positively (what the
+    agent may do, not what it may not). The user picks the position per
+    agent, with sensible defaults that demand no decision. Autonomy is
+    expected to evolve: the user grows an agent over time as trust
+    accumulates, without rebuilding it.
+
+31. **Agents operate the interface as the human does.** Everything the
+    human can touch in the UI (toggles, settings, sub-app navigation, view
+    filters, form fields) the agent can invoke through conversation.
+    Configuration is part of the action surface available to both
+    consumers, not a separate kingdom. The human feels the agent has the
+    same hands they do.
+
 ### VI. Sub-apps and modularity
 
-26. **Sub-apps are the same species, regardless of origin.** Whether built
+32. **Sub-apps are the same species, regardless of origin.** Whether built
     by the project or by a user or by an agent, a sub-app is a discoverable
     bundle (manifest + assets) installed in a known filesystem location.
     There are no privileged "official" sub-apps technically; there are only
     sub-apps with more or less polish, more or less popularity. Agents can
     create and remove sub-apps without touching the project.
 
-27. **Every framework layer is opt-in.** A user who wants only a clean
+33. **Every framework layer is opt-in.** A user who wants only a clean
     runtime (no skills, no memory, no database) can have exactly that.
     Adding layers (memory, skills, database, time, drive, vault, etc.) is
     progressive. The framework never forces a layer to function. Each layer
     must work in isolation and combine cleanly with the others.
 
-28. **Modularity is the heart of openness.** Building blocks are independent,
+34. **Modularity is the heart of openness.** Building blocks are independent,
     interchangeable, overridable. Anything connects to anything. A user
     using one runtime can add a skill from elsewhere, replace a sub-app, and
     swap a provider, without touching others. The framework's value is the
     integration surface, not the bundled features.
 
-29. **Generic interfaces per domain; adapters per provider; standards
+35. **Generic interfaces per domain; adapters per provider; standards
     published.** Each external domain (chat platforms, payments, calendars,
     mail, drives) has one generic interface in the framework and N adapters
     for concrete providers. The apps and agents speak only to the interface.
@@ -208,58 +248,71 @@ friction, without lock-in, and without surrendering ownership of their data.
     implement them. MCP and similar transports are used opportunistically;
     they are transport, not contract.
 
-30. **What the user trains stays portable.** Skills, instructions, memories,
+36. **What the user trains stays portable.** Skills, instructions, memories,
     decisions, secrets, connections: each lives in a documented, structured,
     fetchable format. None gets trapped inside a provider-specific blob.
     The framework's job is to keep the user's accumulated state portable
     forever.
 
+37. **Clawix is where the human already is.** The user's existing messaging
+    apps are first-class surfaces, not external integrations. Conversations
+    with one's agents happen wherever the human already converses. The
+    dedicated Clawix app is one surface among several; the framework
+    provides adapter coverage for the major channels.
+
 ### VII. UX, presence, and form
 
-31. **Inside the app means anti-lock-in plus sovereignty.** We host a
+38. **Inside the app means anti-lock-in plus sovereignty.** We host a
     capability inside Clawix when doing so increases the user's sovereignty
     or reduces their dependence on closed services. We do not host things
     just because we can. A browser inside the app makes sense because it
     enables agentic capture and reduces context-switching; a music player
     inside the app does not, because the catalog stays elsewhere.
 
-32. **We borrow validated form.** When a problem has been solved by a
+39. **We borrow validated form.** When a problem has been solved by a
     successful product with mass adoption, we adopt the validated model: not
     just the data shape, but the UX patterns, the sidebar structure, the
     visual conventions, the interaction grammar. We innovate where we add
     value; we follow where the world has already converged.
 
-33. **First contact is a conversation with Claw.** A new user opens Clawix
+40. **First contact is a conversation with Claw.** A new user opens Clawix
     and is talking to their agent. Sub-apps, settings, integrations: all
     discoverable through the conversation. The app does not greet new users
     with empty dashboards or forms; it greets them with presence.
 
-34. **Style is constitutional and lives in a parallel document.** The
+41. **Style is constitutional and lives in a parallel document.** The
     project keeps a `STYLE.md` (or equivalent) that defines the canonical
     design language: components, icons, materials, spacing, motion. The
     style guide evolves; the requirement that all UI conforms to it is
     constitutional. Reinventing visual primitives outside the system is
     prohibited.
 
-35. **The product speaks the user's language.** Code, comments, commit
+42. **The product speaks the user's language.** Code, comments, commit
     messages, catalog keys, and internal identifiers are in English. UI
     surfaces are localized into multiple languages from day one. Agent
     responses follow the human's language automatically.
 
+43. **The human consumes what their agents did.** The framework records
+    agent activity structurally and exposes it through consumable surfaces
+    (inbox, daily summary, activity feeds, per-agent attribution). The
+    human returns and reads what happened without asking. Aggregating value,
+    not generating it, is the human's primary mode; the framework makes
+    that effortless.
+
 ### VIII. Platforms and distribution
 
-36. **We are where humans and agents are.** Where a human uses AI seriously
+44. **We are where humans and agents are.** Where a human uses AI seriously
     we ship native applications with full polish. Where the agent needs to
     live (any host that can run a terminal), the framework runs portable,
     headless, complete. The list of platforms grows with the reality of how
     humans use AI, not with theoretical completeness.
 
-37. **Two device classes.** Some devices can run an agent runtime (hosts).
+45. **Two device classes.** Some devices can run an agent runtime (hosts).
     Some cannot, because their OS sandboxes preclude it (mobile clients).
     Mobile clients connect to a host the user trusts via pairing. We do not
     pretend mobile is peer; we make pairing seamless instead.
 
-38. **Distribution is native.** Apps ship through the channels their
+46. **Distribution is native.** Apps ship through the channels their
     platforms expect, signed and notarized where the platform demands it.
     CLI ships through standard package managers. We do not invent
     distribution.
@@ -291,49 +344,56 @@ we abandon the goal.
 
 ## Glossary
 
+- **Activity**: structured records of what an agent did on the user's
+  behalf. Records support recall, audit, and the daily aggregation
+  surfaces the human consumes when they return.
+- **Adapter**: an implementation of a generic interface for a specific
+  provider. Swappable. The framework prefers adapters over hardcoded
+  provider integrations.
+- **Agent**: a composition of skills, secrets, connections, and
+  instructions, executed by a runtime, acting on the user's behalf within
+  granted permissions.
+- **Canonical type**: an entity that has earned a typed schema in the
+  framework because it is universal, market-validated, reused, or
+  immediately recognizable. Comes with a canonical visual card.
+- **Claw**: the spirit of the project. The metaphor of a "claw" suggests an
+  entity that grasps and acts. When a user talks to "their agent," they
+  talk to a Claw. The framework supports many.
 - **Clawix**: the family of native applications (macOS, iOS, Android, web,
   CLI wrapper) that humans use directly. The face of the product.
 - **ClawJS**: the framework that gives agents and the apps everything they
   need: schemas, data, building blocks, programmable actions, open APIs.
-- **Claw**: the spirit of the project. The metaphor of a "claw" suggests an
-  entity that grasps and acts. When a user talks to "their agent," they
-  talk to a Claw. The framework supports many.
-- **Agent**: a composition of skills, secrets, connections, and
-  instructions, executed by a runtime, acting on the user's behalf within
-  granted permissions.
-- **Runtime**: the engine that executes agentic loops. Pluggable, swappable,
-  multiple supported simultaneously.
-- **Sub-app**: a discoverable bundle (manifest + assets) installed in a
-  known filesystem location, surfaced as an app inside Clawix. All sub-apps
-  share the same technical species regardless of origin.
-- **Host**: a device that can run an agent runtime locally (terminal-capable
-  OSes). Owns the user's runtime state.
 - **Client**: a device that cannot run an agent runtime locally (typically
   mobile OSes with strict sandboxes). Connects to a host via pairing.
+- **Custom database**: a user-defined typed collection for niche entities
+  that do not earn canonical status. First-class in the framework.
+- **Host**: a device that can run an agent runtime locally (terminal-capable
+  OSes). Owns the user's runtime state.
+- **Instructions**: durable directives the user gives an agent, distinct
+  from skills and memory; they shape behavior persistently.
 - **Layer**: an optional module of the framework (memory, skills, database,
   time, drive, vault, etc.). Each is opt-in; none is required for the
   others.
-- **Canonical type**: an entity that has earned a typed schema in the
-  framework because it is universal, market-validated, reused, or
-  immediately recognizable. Comes with a canonical visual card.
-- **Custom database**: a user-defined typed collection for niche entities
-  that do not earn canonical status. First-class in the framework.
-- **Notes**: free-form markdown with links and tree structure for content
-  that does not warrant a typed entity. Obsidian-like fallback.
-- **Skill**: a reusable unit of agent direction (a prompt, procedure,
-  personality, snippet, role) that the agent can invoke or absorb.
-- **Instructions**: durable directives the user gives an agent, distinct
-  from skills and memory; they shape behavior persistently.
 - **Memory**: structured knowledge the agent retains about the user, the
   project, the world. Not a catch-all; specific kinds with defined borders.
-- **Adapter**: an implementation of a generic interface for a specific
-  provider. Swappable. The framework prefers adapters over hardcoded
-  provider integrations.
+- **Notes**: free-form markdown with links and tree structure for content
+  that does not warrant a typed entity. Obsidian-like fallback.
+- **Pairing**: the act of trusting a client device to talk to a host. The
+  basis of multi-device today.
+- **Runtime**: the engine that executes agentic loops. Pluggable, swappable,
+  multiple supported simultaneously.
+- **Skill**: a reusable unit of agent direction (a prompt, procedure,
+  personality, snippet, role) that the agent can invoke or absorb.
 - **Standard**: an open, documented specification of a domain interface
   (data shapes plus operations) that any third party can implement. The
   framework publishes standards; adapters realize them.
-- **Pairing**: the act of trusting a client device to talk to a host. The
-  basis of multi-device today.
+- **Sub-app**: a discoverable bundle (manifest + assets) installed in a
+  known filesystem location, surfaced as an app inside Clawix. All sub-apps
+  share the same technical species regardless of origin.
+- **Surface**: a place where a human addresses an agent or consumes its
+  output. The dedicated Clawix app is one surface; external messaging
+  apps, voice assistants, sub-apps, and the CLI are others. All surfaces
+  are first-class.
 - **Trash**: the unified destination of deleted-but-recoverable items.
   Auto-clears with time. Required infrastructure for the no-data-loss red
   line.
