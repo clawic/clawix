@@ -620,105 +620,167 @@ if [[ -n "$INSTALL_BUNDLE" ]]; then
     echo "==> Installed canonical app: $LAUNCH_BUNDLE"
 fi
 
-# 4.5) Optional: assemble and install the Tasks mini-app bundle. The
-#      mini-app reuses the SAME compiled binary as Clawix.app but ships in
-#      its own .app bundle with a distinct bundle id, name and icon. The
+# 4.5) Optional: assemble and install one .app bundle per sidebar tool.
+#      Each mini-app reuses the SAME compiled binary as Clawix.app but
+#      ships in its own .app with a distinct bundle id and name. The
 #      binary detects the role at launch via the CLXAppRole Info.plist
-#      key (read by ClawixApp.isTasksRole) and renders only the curated
-#      Tasks scene. Skippable via CLAWIX_DEV_SKIP_TASKS=1; requires
-#      BUNDLE_ID_TASKS in .signing.env. No Sparkle / Helpers / ClawJS
-#      bundling here, the mini-app is a thin reskin sharing daemons with
-#      Clawix.app.
-if [[ "${CLAWIX_DEV_SKIP_TASKS:-0}" != "1" && -n "${BUNDLE_ID_TASKS:-}" ]]; then
-    TASKS_APP_NAME="${APP_NAME_TASKS:-Tasks}"
-    TASKS_STAGING="${CLAWIX_DEV_TASKS_STAGING_BUNDLE:-$DEV_DIR/${TASKS_APP_NAME}.app}"
-    TASKS_BIN="$TASKS_STAGING/Contents/MacOS/${TASKS_APP_NAME}"
-    TASKS_ICON_SOURCE="$PROJECT_DIR/Resources/AppIcons/Tasks.icns"
+#      key (read by ClawixToolRole.fromBundle) and renders only that
+#      tool's view. The full set can be skipped via
+#      CLAWIX_DEV_SKIP_TOOLS=1 (legacy CLAWIX_DEV_SKIP_TASKS also
+#      accepted); a comma-separated subset can be selected via
+#      CLAWIX_DEV_TOOLS_ONLY="tasks,notes". Bundle ids default to
+#      ${BUNDLE_ID}.tools.<slug>; a per-tool override
+#      BUNDLE_ID_<UPPER_SLUG> takes precedence so the existing Tasks.app
+#      codesign / TCC state stays stable across the migration.
 
-    echo "==> Assembling $TASKS_STAGING"
-    rm -rf "$TASKS_STAGING"
-    mkdir -p "$TASKS_STAGING/Contents/MacOS" "$TASKS_STAGING/Contents/Resources"
-    cp "$PROJECT_DIR/.build/debug/${APP_NAME}" "$TASKS_BIN"
-    chmod +x "$TASKS_BIN"
-    if [[ -f "$TASKS_ICON_SOURCE" ]]; then
-        cp "$TASKS_ICON_SOURCE" "$TASKS_STAGING/Contents/Resources/${TASKS_APP_NAME}.icns"
-    else
-        echo "WARN: Tasks icon not found at $TASKS_ICON_SOURCE; mini-app will use the system generic icon" >&2
+assemble_tool_app() {
+    local slug="$1"      # "tasks", "goals", ...
+    local display="$2"   # "Tasks", "Goals", ...
+    local bid="$3"       # bundle id (override or derived)
+    local role="$4"      # CLXAppRole literal ("tasks" or "tool:<slug>")
+    local upper staging staging_var staging_default bin icon_src sparkle_src
+    upper="$(echo "$slug" | tr '[:lower:]' '[:upper:]')"
+    staging_default="$DEV_DIR/${display}.app"
+    staging_var="CLAWIX_DEV_${upper}_STAGING_BUNDLE"
+    staging="${!staging_var:-$staging_default}"
+    bin="$staging/Contents/MacOS/${display}"
+    icon_src="$PROJECT_DIR/Resources/AppIcons/${display}.icns"
+
+    echo "==> Assembling $staging"
+    rm -rf "$staging"
+    mkdir -p "$staging/Contents/MacOS" "$staging/Contents/Resources"
+    cp "$PROJECT_DIR/.build/debug/${APP_NAME}" "$bin"
+    chmod +x "$bin"
+    if [[ -f "$icon_src" ]]; then
+        cp "$icon_src" "$staging/Contents/Resources/${display}.icns"
     fi
 
     # Sparkle.framework is dynamically linked by the shared binary
-    # (rpath @executable_path/../Frameworks, set in Package.swift). The
+    # (rpath @executable_path/../Frameworks, set in Package.swift); the
     # mini-app inherits that link, so without the framework dyld halts
-    # the process with "Library not loaded". Copy the already-signed
-    # framework from the Clawix.app staging dir; the outer codesign
-    # below seals it without --deep, keeping Sparkle's own identifier
-    # intact (org.sparkle-project.Sparkle).
-    SPARKLE_FW_SOURCE="$BUNDLE/Contents/Frameworks/Sparkle.framework"
-    if [[ -d "$SPARKLE_FW_SOURCE" ]]; then
-        mkdir -p "$TASKS_STAGING/Contents/Frameworks"
-        cp -R "$SPARKLE_FW_SOURCE" "$TASKS_STAGING/Contents/Frameworks/Sparkle.framework"
+    # the process at launch with "Library not loaded". Copy the
+    # already-signed framework from the Clawix.app staging dir and let
+    # the outer codesign below seal it without --deep.
+    sparkle_src="$BUNDLE/Contents/Frameworks/Sparkle.framework"
+    if [[ -d "$sparkle_src" ]]; then
+        mkdir -p "$staging/Contents/Frameworks"
+        cp -R "$sparkle_src" "$staging/Contents/Frameworks/Sparkle.framework"
     else
-        echo "WARN: Sparkle.framework not found at $SPARKLE_FW_SOURCE; ${TASKS_APP_NAME}.app will fail at launch" >&2
+        echo "WARN: Sparkle.framework not found at $sparkle_src; ${display}.app will fail at launch" >&2
     fi
 
-    cat > "$TASKS_STAGING/Contents/Info.plist" << TASKSPLIST
+    cat > "$staging/Contents/Info.plist" << TOOLPLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleExecutable</key>        <string>${TASKS_APP_NAME}</string>
-    <key>CFBundleIdentifier</key>        <string>${BUNDLE_ID_TASKS}</string>
-    <key>CFBundleName</key>              <string>${TASKS_APP_NAME}</string>
-    <key>CFBundleDisplayName</key>       <string>${TASKS_APP_NAME}</string>
-    <key>CFBundleIconFile</key>          <string>${TASKS_APP_NAME}</string>
+    <key>CFBundleExecutable</key>        <string>${display}</string>
+    <key>CFBundleIdentifier</key>        <string>${bid}</string>
+    <key>CFBundleName</key>              <string>${display}</string>
+    <key>CFBundleDisplayName</key>       <string>${display}</string>
+    <key>CFBundleIconFile</key>          <string>${display}</string>
     <key>CFBundleVersion</key>           <string>${BUILD_NUMBER}</string>
     <key>CFBundleShortVersionString</key><string>${MARKETING_VERSION}</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>NSHighResolutionCapable</key>   <true/>
     <key>NSPrincipalClass</key>          <string>NSApplication</string>
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
-    <key>CLXAppRole</key>                <string>tasks</string>
+    <key>CLXAppRole</key>                <string>${role}</string>
 </dict>
 </plist>
-TASKSPLIST
-    printf "APPL????" > "$TASKS_STAGING/Contents/PkgInfo"
+TOOLPLIST
+    printf "APPL????" > "$staging/Contents/PkgInfo"
 
-    echo "==> Signing $TASKS_STAGING"
+    echo "==> Signing $staging"
     if ! codesign --force --sign "$SIGN_IDENTITY" \
-                  --identifier "$BUNDLE_ID_TASKS" \
+                  --identifier "$bid" \
                   --timestamp=none \
-                  "$TASKS_STAGING" 2>/tmp/clawix-tasks-codesign.err; then
+                  "$staging" 2>"/tmp/clawix-${slug}-codesign.err"; then
         if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
-            echo "ERROR: codesign for $TASKS_STAGING failed:" >&2
-            cat /tmp/clawix-tasks-codesign.err >&2
+            echo "ERROR: codesign for $staging failed:" >&2
+            cat "/tmp/clawix-${slug}-codesign.err" >&2
             exit 1
         fi
-        echo "WARN: codesign with $SIGN_IDENTITY failed for ${TASKS_APP_NAME}.app, falling back to ad-hoc:" >&2
-        cat /tmp/clawix-tasks-codesign.err >&2
-        codesign --force --sign - --identifier "$BUNDLE_ID_TASKS" "$TASKS_STAGING"
+        echo "WARN: codesign with $SIGN_IDENTITY failed for ${display}.app, falling back to ad-hoc:" >&2
+        cat "/tmp/clawix-${slug}-codesign.err" >&2
+        codesign --force --sign - --identifier "$bid" "$staging"
     fi
 
     if [[ -n "${INSTALL_BUNDLE:-}" ]]; then
-        TASKS_INSTALL="$(dirname "$INSTALL_BUNDLE")/${TASKS_APP_NAME}.app"
-        echo "==> Installing $TASKS_INSTALL"
-        TASKS_INSTALL_TMP="$(dirname "$TASKS_INSTALL")/.${TASKS_APP_NAME}.app.installing.$$"
-        rm -rf "$TASKS_INSTALL_TMP"
-        if ! /usr/bin/ditto "$TASKS_STAGING" "$TASKS_INSTALL_TMP"; then
-            echo "ERROR: failed to stage Tasks install at $TASKS_INSTALL_TMP" >&2
-            rm -rf "$TASKS_INSTALL_TMP"
+        local install_target install_tmp
+        install_target="$(dirname "$INSTALL_BUNDLE")/${display}.app"
+        echo "==> Installing $install_target"
+        install_tmp="$(dirname "$install_target")/.${display}.app.installing.$$"
+        rm -rf "$install_tmp"
+        if ! /usr/bin/ditto "$staging" "$install_tmp"; then
+            echo "ERROR: failed to stage ${display} install at $install_tmp" >&2
+            rm -rf "$install_tmp"
             exit 1
         fi
-        rm -rf "$TASKS_INSTALL"
-        if ! mv "$TASKS_INSTALL_TMP" "$TASKS_INSTALL"; then
-            echo "ERROR: failed to install $TASKS_INSTALL. Check write permissions for $(dirname "$TASKS_INSTALL")." >&2
-            rm -rf "$TASKS_INSTALL_TMP"
+        rm -rf "$install_target"
+        if ! mv "$install_tmp" "$install_target"; then
+            echo "ERROR: failed to install $install_target. Check write permissions for $(dirname "$install_target")." >&2
+            rm -rf "$install_tmp"
             exit 1
         fi
-        echo "==> Installed Tasks mini-app: $TASKS_INSTALL"
+        echo "==> Installed ${display} mini-app: $install_target"
     else
-        echo "==> Tasks staging only at $TASKS_STAGING (no INSTALL_BUNDLE set)"
+        echo "==> ${display} staging only at $staging (no INSTALL_BUNDLE set)"
     fi
+}
+
+# Mirrors SidebarToolsCatalog.entries in macos/Sources/Clawix/SidebarView.swift.
+# Format: "slug:Display".
+TOOLS_CATALOG=(
+    "tasks:Tasks"
+    "goals:Goals"
+    "notes:Notes"
+    "projects:Projects"
+    "secrets:Secrets"
+    "memory:Memory"
+    "database:Database"
+    "photos:Photos"
+    "documents:Documents"
+    "recent:Recent"
+    "drive:Drive"
+)
+
+if [[ "${CLAWIX_DEV_SKIP_TOOLS:-${CLAWIX_DEV_SKIP_TASKS:-0}}" != "1" ]]; then
+    declare -a TOOLS_ONLY=()
+    if [[ -n "${CLAWIX_DEV_TOOLS_ONLY:-}" ]]; then
+        IFS=',' read -ra TOOLS_ONLY <<< "${CLAWIX_DEV_TOOLS_ONLY}"
+    fi
+
+    for entry in "${TOOLS_CATALOG[@]}"; do
+        slug="${entry%%:*}"
+        display="${entry##*:}"
+
+        if [[ ${#TOOLS_ONLY[@]} -gt 0 ]]; then
+            found=0
+            for s in "${TOOLS_ONLY[@]}"; do
+                [[ "$s" == "$slug" ]] && { found=1; break; }
+            done
+            [[ $found -eq 1 ]] || continue
+        fi
+
+        upper="$(echo "$slug" | tr '[:lower:]' '[:upper:]')"
+        override_var="BUNDLE_ID_${upper}"
+        bid="${!override_var:-${BUNDLE_ID}.tools.${slug}}"
+        [[ -n "$bid" ]] || continue
+
+        # Tasks keeps the unprefixed legacy role literal so a freshly
+        # rebuilt Tasks.app stays drop-in compatible with installs from
+        # before the tool registry refactor. All other slugs use the
+        # tool:<slug> form, which ClawixToolRole.fromBundle parses too.
+        if [[ "$slug" == "tasks" ]]; then
+            role_value="tasks"
+        else
+            role_value="tool:$slug"
+        fi
+
+        assemble_tool_app "$slug" "$display" "$bid" "$role_value"
+    done
 fi
 
 # 5) Launch the app bundle. Window position is restored from the autosave

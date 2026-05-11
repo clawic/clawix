@@ -23,19 +23,22 @@ private let frameKey = "ClawixMainWindowFrame"
 
 private let mainWindowMinSize = NSSize(width: 1100, height: 720)
 
-private enum ClawixAppRole {
-    static var isTasks: Bool {
-        (Bundle.main.infoDictionary?["CLXAppRole"] as? String) == "tasks"
+enum ClawixAppRole {
+    case main
+    case tool(ClawixToolRole)
+
+    static var current: ClawixAppRole {
+        if let tool = ClawixToolRole.fromBundle() { return .tool(tool) }
+        return .main
     }
 }
 
 @main
 enum ClawixAppEntry {
     static func main() {
-        if ClawixAppRole.isTasks {
-            ClawixTasksApp.main()
-        } else {
-            ClawixApp.main()
+        switch ClawixAppRole.current {
+        case .main:    ClawixApp.main()
+        case .tool:    ClawixToolApp.main()
         }
     }
 }
@@ -82,11 +85,12 @@ struct ClawixApp: App {
     @StateObject private var terminalStore = TerminalSessionStore.shared
     @Environment(\.openWindow) private var openWindow
 
-    /// True when this binary is running as the embedded "Tasks" mini-app
-    /// bundle (separate `.app` in the Dock, same executable). Resolved
-    /// from a custom Info.plist key the build script injects.
-    static var isTasksRole: Bool {
-        ClawixAppRole.isTasks
+    /// True when this binary is running as one of the sidebar-tool mini-app
+    /// bundles (a separate `.app` in the Dock, same executable). Resolved
+    /// from the `CLXAppRole` Info.plist key the build script injects.
+    static var isToolRole: Bool {
+        if case .tool = ClawixAppRole.current { return true }
+        return false
     }
 
     init() {
@@ -103,7 +107,7 @@ struct ClawixApp: App {
         // install or after the legacy key has been cleared.
         SidebarPrefs.migrateLegacySidebarPrefs()
         let state = AppState()
-        if !Self.isTasksRole {
+        if !Self.isToolRole {
             // Hand the QuickAsk HUD a back-reference into the live AppState
             // so it can submit prompts into the real chat list and surface
             // streaming replies inline. Done here (instead of from a view's
@@ -124,7 +128,7 @@ struct ClawixApp: App {
             )
         }
         _appState = StateObject(wrappedValue: state)
-        if !Self.isTasksRole {
+        if !Self.isToolRole {
             DictationE2ERunner.runIfRequested()
             // Background refresher for OAuth provider accounts (Anthropic
             // Claude.ai, GitHub Copilot). Pauses while the vault is locked;
@@ -226,29 +230,44 @@ struct ClawixApp: App {
     }
 }
 
-struct ClawixTasksApp: App {
+struct ClawixToolApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState: AppState
+    @StateObject private var windowState = WindowState()
+    @StateObject private var dictation = DictationCoordinator.shared
+    @StateObject private var vaultManager = VaultManager.shared
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
+    @StateObject private var terminalStore = TerminalSessionStore.shared
+
+    private let role: ClawixToolRole
 
     init() {
         AppLanguage.bootstrap()
         BodyFont.register()
         SidebarPrefs.migrateLegacySidebarPrefs()
         _appState = StateObject(wrappedValue: AppState())
+        self.role = ClawixToolRole.fromBundle() ?? .tasks
     }
 
     var body: some Scene {
-        WindowGroup("Tasks") {
-            DatabaseScreen(mode: .curated(collectionName: "tasks"))
+        WindowGroup(role.windowTitle) {
+            role.makeView()
                 .environmentObject(appState)
+                .environmentObject(appState.composer)
+                .environmentObject(appState.meshStore)
+                .environmentObject(windowState)
+                .environmentObject(dictation)
+                .environmentObject(vaultManager)
                 .environmentObject(databaseManager)
                 .environmentObject(featureFlags)
+                .environmentObject(terminalStore)
+                .environment(\.locale, appState.preferredLanguage.locale)
+                .id(appState.preferredLanguage.rawValue)
                 .preferredColorScheme(.dark)
                 .frame(minWidth: 720, minHeight: 480)
         }
-        .defaultSize(width: 960, height: 640)
+        .defaultSize(width: 1100, height: 720)
     }
 }
 
@@ -480,7 +499,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // shared LaunchAgent state or register a global hotkey, both of
         // which would clash with the full Clawix.app instance running
         // in parallel.
-        if ClawixApp.isTasksRole {
+        if ClawixApp.isToolRole {
             return
         }
         // If the previous launch was interrupted by a Sparkle update
@@ -511,7 +530,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.windows.forEach(saveFrame)
         // Tasks mini-app shutdown is just window-frame persistence; the
         // daemons it talks to belong to the full Clawix.app process.
-        if ClawixApp.isTasksRole {
+        if ClawixApp.isToolRole {
             return
         }
         // Send SIGHUP to every live integrated-terminal shell so the
