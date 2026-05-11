@@ -240,6 +240,22 @@ final class CalendarManager: ObservableObject {
         }
     }
 
+    func moveEvent(_ event: CalendarEvent, by minutes: Int) async {
+        let cal = calendar
+        guard minutes != 0,
+              let newStart = cal.date(byAdding: .minute, value: minutes, to: event.startDate),
+              let newEnd = cal.date(byAdding: .minute, value: minutes, to: event.endDate) else { return }
+        await updateEventTime(event, newStart: newStart, newEnd: newEnd)
+    }
+
+    func resizeEvent(_ event: CalendarEvent, deltaEndMinutes: Int) async {
+        let cal = calendar
+        guard deltaEndMinutes != 0,
+              let newEnd = cal.date(byAdding: .minute, value: deltaEndMinutes, to: event.endDate) else { return }
+        let clampedEnd = max(event.startDate.addingTimeInterval(900), newEnd)
+        await updateEventTime(event, newStart: event.startDate, newEnd: clampedEnd)
+    }
+
     func updateEventTime(_ event: CalendarEvent, newStart: Date, newEnd: Date) async {
         let draft = CalendarEventDraft(
             id: event.id,

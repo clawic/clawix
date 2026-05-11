@@ -111,12 +111,11 @@ struct DayView: View {
                 ForEach(manager.eventsForDay(manager.selectedDate)) { event in
                     let offset = eventOffset(event: event)
                     let height = max(24, eventHeight(event))
-                    Button { manager.selectedEventID = event.id } label: {
-                        EventChip(event: event,
-                                   color: manager.color(forCalendarID: event.calendarID),
-                                   style: .timedBar)
-                    }
-                    .buttonStyle(.plain)
+                    DraggableTimedChip(
+                        manager: manager,
+                        event: event,
+                        rowHeight: CalendarTokens.Geometry.hourRowHeight
+                    )
                     .frame(width: contentWidth, height: height, alignment: .topLeading)
                     .offset(x: CalendarTokens.Geometry.hourGutterWidth + 8, y: offset)
                 }

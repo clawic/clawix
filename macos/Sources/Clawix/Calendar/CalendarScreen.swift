@@ -23,19 +23,23 @@ struct CalendarScreen: View {
     private var mainLayout: some View {
         HStack(spacing: 0) {
             CalendarSubSidebar(manager: manager)
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            inspectorIfNeeded
+            ZStack(alignment: .topTrailing) {
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                inspectorOverlay
+            }
         }
         .animation(CalendarTokens.Motion.inspectorShow, value: manager.selectedEventID)
     }
 
     @ViewBuilder
-    private var inspectorIfNeeded: some View {
+    private var inspectorOverlay: some View {
         if manager.viewMode != .year,
            let selectedID = manager.selectedEventID,
            let event = manager.event(byID: selectedID) {
             EventInspectorPanel(manager: manager, event: event)
+                .frame(maxHeight: .infinity)
+                .shadow(color: .black.opacity(0.40), radius: 18, x: -6, y: 0)
                 .transition(.move(edge: .trailing).combined(with: .opacity))
         }
     }

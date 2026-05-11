@@ -160,12 +160,11 @@ struct WeekView: View {
                     ForEach(manager.eventsForDay(date)) { event in
                         let offset = eventOffset(event: event, day: date)
                         let height = max(20, eventHeight(event))
-                        Button { manager.selectedEventID = event.id } label: {
-                            EventChip(event: event,
-                                       color: manager.color(forCalendarID: event.calendarID),
-                                       style: .timedBar)
-                        }
-                        .buttonStyle(.plain)
+                        DraggableTimedChip(
+                            manager: manager,
+                            event: event,
+                            rowHeight: CalendarTokens.Geometry.hourRowHeight
+                        )
                         .frame(width: dayWidth - 4, height: height, alignment: .topLeading)
                         .offset(x: CalendarTokens.Geometry.hourGutterWidth + CGFloat(idx) * dayWidth + 2,
                                  y: offset)
