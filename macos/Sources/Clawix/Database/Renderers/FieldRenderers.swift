@@ -156,7 +156,7 @@ private struct DateCell: View {
     }
 
     private func formatRelative(_ iso: String?) -> String {
-        guard let iso, let date = ISO8601DateFormatter().date(from: iso) else { return "—" }
+        guard let date = DatabaseDateParser.date(from: iso) else { return "—" }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
@@ -416,8 +416,37 @@ private struct DateForm: View {
     }
 
     private var parsed: Date? {
-        guard let s = value.stringValue else { return nil }
-        return ISO8601DateFormatter().date(from: s)
+        DatabaseDateParser.date(from: value.stringValue)
+    }
+}
+
+private enum DatabaseDateParser {
+    private static let isoWithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let isoWithoutFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private static let dateOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static func date(from value: String?) -> Date? {
+        guard let value, !value.isEmpty else { return nil }
+        return isoWithFractionalSeconds.date(from: value)
+            ?? isoWithoutFractionalSeconds.date(from: value)
+            ?? dateOnly.date(from: value)
     }
 }
 
