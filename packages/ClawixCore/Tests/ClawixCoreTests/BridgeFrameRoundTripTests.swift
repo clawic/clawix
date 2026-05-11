@@ -259,14 +259,14 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             filename: "voice.m4a",
             dataBase64: "AAAAAA=="
         )
-        try roundTrip(.sendPrompt(chatId: "uuid-1", text: "hola", attachments: [audio]))
+        try roundTrip(.sendPrompt(chatId: "uuid-1", text: "hello", attachments: [audio]))
     }
 
     func testWireMessageCarriesAudioRef() throws {
         let msg = WireMessage(
             id: "m-voice",
             role: .user,
-            content: "hola transcripto",
+            content: "hello transcript",
             timestamp: .init(timeIntervalSince1970: 1_700_000_400),
             audioRef: WireAudioRef(id: "audio-abc", mimeType: "audio/m4a", durationMs: 3200)
         )
@@ -374,5 +374,151 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             limitName: nil
         )
         try roundTrip(.rateLimitsUpdated(snapshot: snap, byLimitId: [:]))
+    }
+
+    // MARK: - v7 audio catalog
+
+    private func sampleAudioAssetWithTranscripts() -> WireAudioAssetWithTranscripts {
+        let asset = WireAudioAsset(
+            id: "audio-1",
+            kind: .user_message,
+            appId: "clawix",
+            originActor: .user,
+            mimeType: "audio/mp4",
+            bytesRelPath: "clawix/audio-1.m4a",
+            durationMs: 2_400,
+            createdAt: 1_750_000_000_000,
+            deviceId: "dev-A",
+            sessionId: "sess-1",
+            threadId: "thread-1",
+            linkedMessageId: "msg-1",
+            metadataJson: nil
+        )
+        let transcript = WireAudioTranscript(
+            id: "t-1",
+            audioId: "audio-1",
+            role: .transcription,
+            text: "hello audio",
+            provider: "whisper",
+            language: "en",
+            createdAt: 1_750_000_000_000,
+            isPrimary: true
+        )
+        return WireAudioAssetWithTranscripts(asset: asset, transcripts: [transcript])
+    }
+
+    func testAudioRegisterRoundTrip() throws {
+        try roundTrip(.audioRegister(
+            requestId: "req-1",
+            request: WireAudioRegisterRequest(
+                id: nil,
+                kind: .user_message,
+                appId: "clawix",
+                originActor: .user,
+                mimeType: "audio/mp4",
+                bytesBase64: "ZmFrZQ==",
+                durationMs: 2_400,
+                deviceId: "dev-A",
+                sessionId: "sess-1",
+                threadId: "thread-1",
+                linkedMessageId: "msg-1",
+                metadataJson: nil,
+                transcript: WireAudioRegisterTranscript(text: "hello", role: .transcription, provider: "whisper", language: "en")
+            )
+        ))
+    }
+
+    func testAudioRegisterResultRoundTrip() throws {
+        try roundTrip(.audioRegisterResult(
+            requestId: "req-1",
+            asset: sampleAudioAssetWithTranscripts(),
+            errorMessage: nil
+        ))
+        try roundTrip(.audioRegisterResult(requestId: "req-2", asset: nil, errorMessage: "blob too large"))
+    }
+
+    func testAudioAttachTranscriptRoundTrip() throws {
+        try roundTrip(.audioAttachTranscript(
+            requestId: "req-1",
+            audioId: "audio-1",
+            transcript: WireAudioAttachTranscriptInput(
+                text: "v2 better",
+                role: .transcription,
+                provider: "whisper-large",
+                language: "en",
+                markAsPrimary: true
+            )
+        ))
+    }
+
+    func testAudioAttachTranscriptResultRoundTrip() throws {
+        let transcript = WireAudioTranscript(
+            id: "t-2",
+            audioId: "audio-1",
+            role: .transcription,
+            text: "v2",
+            provider: "whisper-large",
+            language: "en",
+            createdAt: 1_750_000_001_000,
+            isPrimary: true
+        )
+        try roundTrip(.audioAttachTranscriptResult(requestId: "req-1", transcript: transcript, errorMessage: nil))
+        try roundTrip(.audioAttachTranscriptResult(requestId: "req-2", transcript: nil, errorMessage: "audio not found"))
+    }
+
+    func testAudioGetRoundTrip() throws {
+        try roundTrip(.audioGet(requestId: "req-1", audioId: "audio-1", appId: "clawix"))
+    }
+
+    func testAudioGetResultRoundTrip() throws {
+        try roundTrip(.audioGetResult(requestId: "req-1", asset: sampleAudioAssetWithTranscripts(), errorMessage: nil))
+        try roundTrip(.audioGetResult(requestId: "req-2", asset: nil, errorMessage: "not found"))
+    }
+
+    func testAudioGetBytesRoundTrip() throws {
+        try roundTrip(.audioGetBytes(requestId: "req-1", audioId: "audio-1", appId: "clawix"))
+    }
+
+    func testAudioBytesResultRoundTrip() throws {
+        try roundTrip(.audioBytesResult(
+            requestId: "req-1",
+            audioBase64: "ZmFrZQ==",
+            mimeType: "audio/mp4",
+            durationMs: 2_400,
+            errorMessage: nil
+        ))
+        try roundTrip(.audioBytesResult(requestId: "req-2", audioBase64: nil, mimeType: nil, durationMs: nil, errorMessage: "missing blob"))
+    }
+
+    func testAudioListRoundTrip() throws {
+        let filter = WireAudioListFilter(
+            appId: "clawix",
+            kind: .user_message,
+            originActor: nil,
+            deviceId: nil,
+            sessionId: nil,
+            threadId: "thread-1",
+            linkedMessageId: nil,
+            fromCreatedAt: nil,
+            toCreatedAt: nil,
+            limit: 50,
+            offset: 0
+        )
+        try roundTrip(.audioList(requestId: "req-1", filter: filter))
+    }
+
+    func testAudioListResultRoundTrip() throws {
+        let result = WireAudioListResult(items: [sampleAudioAssetWithTranscripts()], total: 1)
+        try roundTrip(.audioListResult(requestId: "req-1", list: result, errorMessage: nil))
+        try roundTrip(.audioListResult(requestId: "req-2", list: nil, errorMessage: "filter rejected"))
+    }
+
+    func testAudioDeleteRoundTrip() throws {
+        try roundTrip(.audioDelete(requestId: "req-1", audioId: "audio-1", appId: "clawix"))
+    }
+
+    func testAudioDeleteResultRoundTrip() throws {
+        try roundTrip(.audioDeleteResult(requestId: "req-1", deleted: true, errorMessage: nil))
+        try roundTrip(.audioDeleteResult(requestId: "req-2", deleted: false, errorMessage: "no row"))
     }
 }
