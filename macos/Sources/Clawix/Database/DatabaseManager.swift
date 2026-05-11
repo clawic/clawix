@@ -50,17 +50,23 @@ final class DatabaseManager: ObservableObject {
 
     private let userDefaults: UserDefaults
     private let filterStateKey = "clawix.database.filterStates.v1"
+    private let isDisabled: Bool
 
     private var supervisorObserver: AnyCancellable?
     private var bootstrapGeneration: UUID?
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
+        self.isDisabled = ProcessInfo.processInfo.environment["CLAWIX_DATABASE_DISABLE"] == "1"
         loadFilterStates()
         realtime.onEvent = { [weak self] event in
             Task { @MainActor [weak self] in
                 self?.applyEvent(event)
             }
+        }
+        guard !isDisabled else {
+            state = .failed("Database service is disabled for this launch.")
+            return
         }
         attachSupervisorObserver()
     }
@@ -101,6 +107,7 @@ final class DatabaseManager: ObservableObject {
     /// exists. Idempotent. Called automatically when the supervisor
     /// flips `database` to `.ready` and on app foregrounding.
     func bootstrap(force: Bool = false) async {
+        guard !isDisabled else { return }
         if case .ready = state, !force { return }
         state = .bootstrapping
         let generation = UUID()
