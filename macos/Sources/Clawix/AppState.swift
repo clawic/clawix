@@ -96,6 +96,8 @@ enum SidebarRoute: Equatable {
     case driveFolder(String)
     /// Calendar mini-app home.
     case calendarHome
+    /// Contacts mini-app home.
+    case contactsHome
     /// Skills catalog (⌘⇧K). Top-level destination: a full page with
     /// search, filters, grid of cards. Click a card → `.skillDetail`.
     case skills

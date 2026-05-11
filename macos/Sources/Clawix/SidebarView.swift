@@ -53,6 +53,8 @@ fileprivate enum SidebarToolsCatalog {
                          icon: .system("note.text"),                 route: .databaseCollection("notes")),
         SidebarToolEntry(id: "calendar",  title: "Calendar",  titleString: "Calendar",
                          icon: .system("calendar"),                  route: .calendarHome),
+        SidebarToolEntry(id: "contacts",  title: "Contacts",  titleString: "Contacts",
+                         icon: .system("person.crop.circle"),        route: .contactsHome),
         SidebarToolEntry(id: "projects",  title: "Projects",  titleString: "Projects",
                          icon: .system("square.stack.3d.up"),        route: .databaseCollection("projects")),
         SidebarToolEntry(id: "secrets",   title: "Secrets",   titleString: "Secrets",

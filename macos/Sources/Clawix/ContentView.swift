@@ -121,7 +121,7 @@ struct ContentView: View {
         case .home, .search, .plugins, .project, .chat:
             return true
         case .automations, .settings, .secretsHome, .databaseHome, .databaseCollection, .memoryHome,
-             .calendarHome,
+             .calendarHome, .contactsHome,
              .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder,
              .app, .appsHome, .skills, .skillDetail:
             return false
@@ -142,6 +142,7 @@ struct ContentView: View {
         case .databaseCollection(let name): return "database-\(name)"
         case .memoryHome: return "memory"
         case .calendarHome: return "calendar"
+        case .contactsHome: return "contacts"
         case .driveAdmin: return "drive-admin"
         case .drivePhotos: return "drive-photos"
         case .driveDocuments: return "drive-documents"
@@ -244,6 +245,7 @@ struct ContentView: View {
                             case .driveRecent:   DriveScreen(mode: .recent)
                             case .driveFolder(let id): DriveScreen(mode: .folder(id))
                             case .calendarHome:  CalendarScreen()
+                            case .contactsHome:  ContactsScreen()
                             case .skills:        SkillsView()
                             case .skillDetail(let slug): SkillDetailView(slug: slug)
                             }
@@ -1216,7 +1218,12 @@ private struct SearchPopoverOverlay: View {
                     x: 0, y: MenuStyle.shadowOffsetY)
         )
         .background(MenuOutsideClickWatcher(isPresented: searchOpenBinding))
-        .background(SearchKeyMonitor(query: $appState.searchQuery, onEscape: { closePopover() }))
+        .background(SearchKeyMonitor(
+            query: $appState.searchQuery,
+            onEscape: { closePopover() },
+            onSelectIndex: { index in selectResult(at: index) },
+            onSubmitFirst: { selectResult(at: 0) }
+        ))
         .task {
             // Re-arming the focus in a Task keeps the textfield reliably
             // first responder even when the popup is reopened from the
@@ -1237,6 +1244,18 @@ private struct SearchPopoverOverlay: View {
         }
     }
 
+    private func selectResult(at index: Int) {
+        guard index >= 0 else { return }
+        let chats: [Chat]
+        if let project = scopedProject {
+            chats = filteredScopedChats(for: project)
+        } else {
+            chats = filteredPinnedChats
+        }
+        guard index < min(chats.count, 9) else { return }
+        appState.navigate(to: .chat(chats[index].id))
+    }
+
     private var searchField: some View {
         HStack(spacing: 10) {
             SearchIcon(size: 14)
@@ -1252,7 +1271,10 @@ private struct SearchPopoverOverlay: View {
                     ? "Search chats"
                     : "Search in \(scopedProject!.name)",
                 text: $appState.searchQuery,
-                wantsFocus: queryFocused
+                wantsFocus: queryFocused,
+                onEscape: { closePopover() },
+                onSelectIndex: { index in selectResult(at: index) },
+                onSubmitFirst: { selectResult(at: 0) }
             )
             .frame(height: 20)
             if scopedProject == nil, !sortedProjects.isEmpty {
@@ -1418,6 +1440,8 @@ private struct SearchPopoverOverlay: View {
 private struct SearchKeyMonitor: NSViewRepresentable {
     @Binding var query: String
     var onEscape: () -> Void
+    var onSelectIndex: (Int) -> Void
+    var onSubmitFirst: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(query: $query)
@@ -1427,6 +1451,8 @@ private struct SearchKeyMonitor: NSViewRepresentable {
         let view = MonitorView()
         view.query = $query
         view.onEscape = onEscape
+        view.onSelectIndex = onSelectIndex
+        view.onSubmitFirst = onSubmitFirst
         return view
     }
 
@@ -1434,6 +1460,8 @@ private struct SearchKeyMonitor: NSViewRepresentable {
         guard let view = nsView as? MonitorView else { return }
         view.query = $query
         view.onEscape = onEscape
+        view.onSelectIndex = onSelectIndex
+        view.onSubmitFirst = onSubmitFirst
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
@@ -1451,7 +1479,16 @@ private struct SearchKeyMonitor: NSViewRepresentable {
     final class MonitorView: NSView {
         var query: Binding<String>?
         var onEscape: (() -> Void)?
+        var onSelectIndex: ((Int) -> Void)?
+        var onSubmitFirst: (() -> Void)?
         private var monitor: Any?
+        private let shortcutKeyCodes: [UInt16: Int] = [
+            18: 0, 19: 1, 20: 2, 21: 3, 23: 4,
+            22: 5, 26: 6, 28: 7, 25: 8
+        ]
+        private let navigationKeyCodes: Set<UInt16> = [
+            36, 48, 76, 115, 116, 119, 121, 123, 124, 125, 126
+        ]
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
@@ -1466,6 +1503,16 @@ private struct SearchKeyMonitor: NSViewRepresentable {
                     self.onEscape?()
                     return nil
                 }
+                let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                if flags.contains(.command),
+                   let index = self.shortcutKeyCodes[event.keyCode] {
+                    self.onSelectIndex?(index)
+                    return nil
+                }
+                if event.keyCode == 36 || event.keyCode == 76 {
+                    self.onSubmitFirst?()
+                    return nil
+                }
                 if self.handleTextInput(event) {
                     return nil
                 }
@@ -1475,6 +1522,9 @@ private struct SearchKeyMonitor: NSViewRepresentable {
 
         private func handleTextInput(_ event: NSEvent) -> Bool {
             guard let query else { return false }
+            if navigationKeyCodes.contains(event.keyCode) {
+                return false
+            }
             let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if flags.contains(.command) || flags.contains(.control) || flags.contains(.option) {
                 return false
@@ -1507,6 +1557,9 @@ private struct SearchQueryTextField: NSViewRepresentable {
     let placeholder: String
     @Binding var text: String
     let wantsFocus: Bool
+    var onEscape: () -> Void
+    var onSelectIndex: (Int) -> Void
+    var onSubmitFirst: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
@@ -1522,6 +1575,9 @@ private struct SearchQueryTextField: NSViewRepresentable {
         field.textColor = NSColor(white: 0.94, alpha: 1)
         field.placeholderString = placeholder
         field.delegate = context.coordinator
+        field.onEscape = onEscape
+        field.onSelectIndex = onSelectIndex
+        field.onSubmitFirst = onSubmitFirst
         field.lineBreakMode = .byTruncatingTail
         field.usesSingleLineMode = true
         field.cell?.wraps = false
@@ -1542,6 +1598,11 @@ private struct SearchQueryTextField: NSViewRepresentable {
         }
         context.coordinator.text = $text
         context.coordinator.wantsFocus = wantsFocus
+        if let field = nsView as? FocusableSearchTextField {
+            field.onEscape = onEscape
+            field.onSelectIndex = onSelectIndex
+            field.onSubmitFirst = onSubmitFirst
+        }
         if wantsFocus {
             context.coordinator.focus(nsView)
         }
@@ -1579,12 +1640,44 @@ private struct SearchQueryTextField: NSViewRepresentable {
 
 private final class FocusableSearchTextField: NSTextField {
     var onWindowReady: (() -> Void)?
+    var onEscape: (() -> Void)?
+    var onSelectIndex: ((Int) -> Void)?
+    var onSubmitFirst: (() -> Void)?
+
+    private let shortcutKeyCodes: [UInt16: Int] = [
+        18: 0, 19: 1, 20: 2, 21: 3, 23: 4,
+        22: 5, 26: 6, 28: 7, 25: 8
+    ]
+    private let navigationKeyCodes: Set<UInt16> = [
+        48, 115, 116, 119, 121, 123, 124, 125, 126
+    ]
 
     override var acceptsFirstResponder: Bool { true }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil { onWindowReady?() }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            onEscape?()
+            return
+        }
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags.contains(.command),
+           let index = shortcutKeyCodes[event.keyCode] {
+            onSelectIndex?(index)
+            return
+        }
+        if event.keyCode == 36 || event.keyCode == 76 {
+            onSubmitFirst?()
+            return
+        }
+        if navigationKeyCodes.contains(event.keyCode) {
+            return
+        }
+        super.keyDown(with: event)
     }
 }
 

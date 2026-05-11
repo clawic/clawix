@@ -166,6 +166,8 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <string>Clawix shows your calendar events inside its Calendar workspace.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>Clawix reads and edits your calendar events inside its Calendar workspace.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>Clawix shows your contacts inside its Contacts workspace.</string>
     <key>SUFeedURL</key>                 <string>${SU_FEED_URL}</string>${SU_ED_KEY_BLOCK}
     <key>SUEnableAutomaticChecks</key>   <true/>
     <key>SUScheduledCheckInterval</key>  <integer>86400</integer>
