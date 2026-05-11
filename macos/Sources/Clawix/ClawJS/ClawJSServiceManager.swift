@@ -424,6 +424,9 @@ final class ClawJSServiceManager: ObservableObject {
             try Self.prepareDirectories(for: service)
 
             let adminToken = ensureAdminToken(for: service)
+            if let adminToken {
+                try Self.writeAdminToken(adminToken, for: service)
+            }
 
             let process = Process()
             process.executableURL = ClawJSRuntime.nodeBinaryURL
@@ -679,6 +682,16 @@ final class ClawJSServiceManager: ObservableObject {
         ])
         }
         return raw
+    }
+
+    /// Persists the per-session admin token for sibling processes such as
+    /// the Tasks mini-app. The token stays under the private Clawix app
+    /// support data dir and is overwritten every time this process owns a
+    /// fresh sidecar launch.
+    private static func writeAdminToken(_ token: String, for service: ClawJSService) throws {
+        let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
+        try Data(token.utf8).write(to: url, options: [.atomic])
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
     private static func canAdoptExistingService(_ service: ClawJSService) -> Bool {
