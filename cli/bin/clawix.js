@@ -8,6 +8,7 @@ const COMMANDS = [
     'up', 'start', 'stop', 'status', 'pair', 'unpair', 'logs', 'doctor',
     'install-app', 'restart', 'uninstall', 'mesh',
     'devices', 'scenes', 'automations', 'homes', 'areas', 'approvals',
+    'mp',
 ];
 
 // Honour --no-color BEFORE require()ing ui.js: ui.js samples
@@ -46,6 +47,14 @@ ${ui.bold('commands')}
   homes            list homes
   areas            list rooms and zones
   approvals        triage the IoT approval queue
+
+  ${ui.bold('Marketplace (mp/1.0.0)')}
+  mp status        daemon + identity snapshot
+  mp identity      list root keys, devices and roles
+  mp intents       list local intents (offers and wants)
+  mp inbox         list pending inbound messages
+  mp receipts      list match receipts
+  mp brokers       list known brokers
 
 ${ui.bold('flags')}
   --json           machine-readable output (status, pair, doctor)
@@ -204,6 +213,12 @@ async function main(argv) {
             const lib = require(`../lib/${cmd}`);
             const restNoJSON = rest.filter((a) => a !== '--json');
             await lib.run(restNoJSON, { json: flag('--json') });
+            return;
+        }
+        case 'mp': {
+            const mp = require('../lib/mp');
+            const restNoJSON = rest.filter((a) => a !== '--json');
+            await mp.run(restNoJSON, { json: flag('--json') });
             return;
         }
     }
