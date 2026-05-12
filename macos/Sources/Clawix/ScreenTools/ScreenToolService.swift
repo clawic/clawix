@@ -56,6 +56,18 @@ final class ScreenToolService: ObservableObject {
         var title: String { rawValue.uppercased() }
     }
 
+    enum BackgroundPreset: String, CaseIterable, Identifiable {
+        case none
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .none: return "None"
+            }
+        }
+    }
+
     enum CrosshairMode: String, CaseIterable, Identifiable {
         case always
         case command
@@ -1200,6 +1212,7 @@ enum ScreenToolSettings {
     static let convertScreenshotsToSRGBKey = "clawix.screenTools.convertScreenshotsToSRGB"
     static let addOnePixelBorderKey = "clawix.screenTools.addOnePixelBorder"
     static let freezeScreenOnCaptureKey = "clawix.screenTools.freezeScreenOnCapture"
+    static let backgroundPresetKey = "clawix.screenTools.backgroundPreset"
     static let crosshairModeKey = "clawix.screenTools.crosshairMode"
     static let showCrosshairMagnifierKey = "clawix.screenTools.showCrosshairMagnifier"
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
@@ -1257,6 +1270,11 @@ enum ScreenToolSettings {
 
     static var freezeScreenOnCapture: Bool {
         defaults.bool(forKey: freezeScreenOnCaptureKey)
+    }
+
+    static var backgroundPreset: ScreenToolService.BackgroundPreset {
+        let raw = defaults.string(forKey: backgroundPresetKey) ?? ScreenToolService.BackgroundPreset.none.rawValue
+        return ScreenToolService.BackgroundPreset(rawValue: raw) ?? .none
     }
 
     static var crosshairMode: ScreenToolService.CrosshairMode {

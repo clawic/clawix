@@ -300,7 +300,16 @@ private struct MenuBarContent: View {
     @ObservedObject private var screenTools = ScreenToolService.shared
     @ObservedObject private var macUtilities = MacUtilitiesController.shared
     @ObservedObject private var bridge = BackgroundBridgeService.shared
+    @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
     @Environment(\.openWindow) private var openWindow
+
+    private var backgroundPresetBinding: Binding<ScreenToolService.BackgroundPreset> {
+        Binding {
+            ScreenToolService.BackgroundPreset(rawValue: backgroundPreset) ?? .none
+        } set: {
+            backgroundPreset = $0.rawValue
+        }
+    }
 
     // Status bar dropdown is organized into thematic sections, in fixed order:
     //
@@ -368,6 +377,13 @@ private struct MenuBarContent: View {
                     screenTools.captureSelfTimer()
                 } label: {
                     Label("Self-Timer", systemImage: "timer")
+                }
+                Picker(selection: backgroundPresetBinding) {
+                    ForEach(ScreenToolService.BackgroundPreset.allCases) { preset in
+                        Text(preset.title).tag(preset)
+                    }
+                } label: {
+                    Label("Background Preset", systemImage: "rectangle.on.rectangle")
                 }
                 Divider()
                 Button {

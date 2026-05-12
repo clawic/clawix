@@ -16,6 +16,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.convertScreenshotsToSRGBKey) private var convertScreenshotsToSRGB = false
     @AppStorage(ScreenToolSettings.addOnePixelBorderKey) private var addOnePixelBorder = false
     @AppStorage(ScreenToolSettings.freezeScreenOnCaptureKey) private var freezeScreenOnCapture = false
+    @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
     @AppStorage(ScreenToolSettings.crosshairModeKey) private var crosshairMode = ScreenToolService.CrosshairMode.disabled.rawValue
     @AppStorage(ScreenToolSettings.showCrosshairMagnifierKey) private var showCrosshairMagnifier = true
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
@@ -45,6 +46,14 @@ struct ScreenToolsSettingsPage: View {
             ScreenToolService.CrosshairMode(rawValue: crosshairMode) ?? .disabled
         } set: {
             crosshairMode = $0.rawValue
+        }
+    }
+
+    private var backgroundPresetBinding: Binding<ScreenToolService.BackgroundPreset> {
+        Binding {
+            ScreenToolService.BackgroundPreset(rawValue: backgroundPreset) ?? .none
+        } set: {
+            backgroundPreset = $0.rawValue
         }
     }
 
@@ -191,6 +200,14 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Add 1px border", detail: "Add a one-pixel border around saved screenshots.", isOn: $addOnePixelBorder)
                 CardDivider()
                 ToggleRow(title: "Freeze screen", detail: "Freeze visible content while selecting a screenshot area.", isOn: $freezeScreenOnCapture)
+                CardDivider()
+                DropdownRow(
+                    title: "Background preset",
+                    detail: "Apply a saved background preset to screenshots.",
+                    options: ScreenToolService.BackgroundPreset.allCases.map { ($0, $0.title) },
+                    selection: backgroundPresetBinding,
+                    minWidth: 120
+                )
                 CardDivider()
                 DropdownRow(
                     title: "Crosshair mode",
