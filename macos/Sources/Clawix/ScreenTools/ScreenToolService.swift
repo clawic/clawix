@@ -239,9 +239,10 @@ final class ScreenToolService: ObservableObject {
                     ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Recording cancelled"), icon: .warning)
                     return
                 }
-                self?.lastCaptureURL = url
+                let finalURL = await Self.applyRecordingPostProcessing(to: url)
+                self?.lastCaptureURL = finalURL
                 if ScreenToolSettings.openRecordingEditorAfterRecording {
-                    NSWorkspace.shared.open(url)
+                    NSWorkspace.shared.open(finalURL)
                     ToastCenter.shared.show("Recording opened")
                 } else {
                     ToastCenter.shared.show("Recording saved")
@@ -676,6 +677,67 @@ final class ScreenToolService: ObservableObject {
         return args
     }
 
+    static func retinaVideoScaleArguments(input: URL, output: URL) -> [String] {
+        [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "18",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            output.path
+        ]
+    }
+
+    private static func applyRecordingPostProcessing(to url: URL) async -> URL {
+        guard ScreenToolSettings.scaleRetinaRecordingsTo1x else {
+            return url
+        }
+
+        do {
+            try await scaleRetinaRecordingTo1x(url)
+        } catch {
+            ToastCenter.shared.show("Could not scale recording", icon: .warning)
+        }
+        return url
+    }
+
+    private static func scaleRetinaRecordingTo1x(_ url: URL) async throws {
+        guard let ffmpeg = ffmpegExecutableURL() else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+
+        let temporaryURL = url.deletingLastPathComponent()
+            .appendingPathComponent(".\(url.deletingPathExtension().lastPathComponent)-1x-\(UUID().uuidString).mov")
+        defer {
+            try? FileManager.default.removeItem(at: temporaryURL)
+        }
+
+        let result = await runProcess(
+            executableURL: ffmpeg,
+            arguments: retinaVideoScaleArguments(input: url, output: temporaryURL)
+        )
+        guard result.succeeded, FileManager.default.fileExists(atPath: temporaryURL.path) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+
+        _ = try FileManager.default.replaceItemAt(url, withItemAt: temporaryURL)
+    }
+
+    private static func ffmpegExecutableURL(fileManager: FileManager = .default) -> URL? {
+        [
+            "/opt/homebrew/bin/ffmpeg",
+            "/usr/local/bin/ffmpeg",
+            "/usr/bin/ffmpeg"
+        ]
+        .map { URL(fileURLWithPath: $0) }
+        .first { fileManager.isExecutableFile(atPath: $0.path) }
+    }
+
     static func applyScreenshotPostProcessing(to url: URL) throws {
         if ScreenToolSettings.scaleRetinaScreenshotsTo1x {
             _ = try scaleRetinaImageTo1xIfNeeded(url)
@@ -1090,6 +1152,28 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
+    private static func runProcess(executableURL: URL, arguments: [String]) async -> ProcessResult {
+        await withCheckedContinuation { continuation in
+            let task = Process()
+            let stderr = Pipe()
+            task.executableURL = executableURL
+            task.arguments = arguments
+            task.standardError = stderr
+            task.standardOutput = Pipe()
+            task.terminationHandler = { task in
+                let data = stderr.fileHandleForReading.readDataToEndOfFile()
+                let message = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                continuation.resume(returning: ProcessResult(exitStatus: task.terminationStatus, stderr: message))
+            }
+            do {
+                try task.run()
+            } catch {
+                continuation.resume(returning: ProcessResult(exitStatus: -1, stderr: error.localizedDescription))
+            }
+        }
+    }
+
     private static func scrollDown(rect: ScreenToolCaptureRect) {
         let amount = max(120, Int32(Double(rect.height) * 0.85))
         CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: -amount, wheel2: 0, wheel3: 0)?
@@ -1256,6 +1340,7 @@ enum ScreenToolSettings {
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
     static let showRecordingCountdownKey = "clawix.screenTools.showRecordingCountdown"
+    static let scaleRetinaRecordingsTo1xKey = "clawix.screenTools.scaleRetinaRecordingsTo1x"
     static let openRecordingEditorAfterRecordingKey = "clawix.screenTools.openRecordingEditorAfterRecording"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
@@ -1343,6 +1428,10 @@ enum ScreenToolSettings {
 
     static var showRecordingCountdown: Bool {
         defaults.bool(forKey: showRecordingCountdownKey)
+    }
+
+    static var scaleRetinaRecordingsTo1x: Bool {
+        defaults.bool(forKey: scaleRetinaRecordingsTo1xKey)
     }
 
     static var openRecordingEditorAfterRecording: Bool {

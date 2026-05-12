@@ -49,4 +49,26 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
 
         XCTAssertEqual(args, ["-v", "-J", "video", "-U", "-k", output.path])
     }
+
+    @MainActor
+    func testRetinaVideoScaleArgumentsDownscaleToEvenHalfDimensions() {
+        let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
+        let output = URL(fileURLWithPath: "/tmp/clawix-recording-1x.mov")
+
+        let args = ScreenToolService.retinaVideoScaleArguments(input: input, output: output)
+
+        XCTAssertEqual(args, [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "18",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            output.path
+        ])
+    }
 }

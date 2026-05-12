@@ -33,4 +33,20 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
 
         XCTAssertFalse(ScreenToolSettings.showRecordingCountdown)
     }
+
+    @MainActor
+    func testScaleRetinaRecordingsTo1xDefaultsOff() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.scaleRetinaRecordingsTo1xKey)
+        defaults.removeObject(forKey: ScreenToolSettings.scaleRetinaRecordingsTo1xKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.scaleRetinaRecordingsTo1xKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.scaleRetinaRecordingsTo1xKey)
+            }
+        }
+
+        XCTAssertFalse(ScreenToolSettings.scaleRetinaRecordingsTo1x)
+    }
 }

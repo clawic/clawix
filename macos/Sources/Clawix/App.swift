@@ -303,6 +303,7 @@ private struct MenuBarContent: View {
     @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
     @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
+    @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.openRecordingEditorAfterRecordingKey) private var openRecordingEditorAfterRecording = false
     @Environment(\.openWindow) private var openWindow
 
@@ -399,6 +400,9 @@ private struct MenuBarContent: View {
                 }
                 Toggle(isOn: $showRecordingCountdown) {
                     Label("Show Recording Countdown", systemImage: "timer")
+                }
+                Toggle(isOn: $scaleRetinaRecordingsTo1x) {
+                    Label("Scale Retina Videos to 1x", systemImage: "rectangle.compress.vertical")
                 }
                 Toggle(isOn: $openRecordingEditorAfterRecording) {
                     Label("Open Editor After Recording", systemImage: "rectangle.and.pencil.and.ellipsis")
