@@ -54,7 +54,11 @@ struct EntityDetailPane: View {
     @ViewBuilder
     private func content(for entityId: String) -> some View {
         if let error = loadError {
-            ContentUnavailableView("Could not load entity", systemImage: "exclamationmark.circle", description: Text(error))
+            IndexEmptyState(
+                title: "Could not load entity",
+                systemImage: "exclamationmark.circle",
+                description: error
+            )
         } else if let detail = detail {
             VStack(spacing: 0) {
                 DetailHeader(detail: detail)

@@ -38,6 +38,7 @@ struct CatalogTabView: View {
                 .frame(width: 400)
                 .background(Color.black.opacity(0.14))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             if let restored = DisplayMode(rawValue: storedDisplayMode) {
                 displayMode = restored
@@ -288,12 +289,11 @@ private struct EntityListGrid: View {
 
     var body: some View {
         if filteredEntities.isEmpty {
-            ContentUnavailableView(
-                "No entities yet",
+            IndexEmptyState(
+                title: "No entities yet",
                 systemImage: "magnifyingglass",
-                description: Text("Create a Search and run it. The agent's MCP tools will upsert entities here.")
+                description: "Create a Search and run it. The agent's MCP tools will upsert entities here."
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             ScrollView {
                 Group {

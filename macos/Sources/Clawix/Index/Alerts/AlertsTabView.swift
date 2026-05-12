@@ -13,12 +13,11 @@ struct AlertsTabView: View {
     var body: some View {
         Group {
             if manager.alerts.isEmpty {
-                ContentUnavailableView(
-                    "No alerts yet",
+                IndexEmptyState(
+                    title: "No alerts yet",
                     systemImage: "bell.slash",
-                    description: Text("Monitors with alert rules will push here.")
+                    description: "Monitors with alert rules will push here."
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
@@ -42,6 +41,7 @@ struct AlertsTabView: View {
                 .thinScrollers()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func entityFor(_ alert: ClawJSIndexClient.Alert) -> ClawJSIndexClient.Entity? {

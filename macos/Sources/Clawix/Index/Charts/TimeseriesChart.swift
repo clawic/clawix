@@ -40,10 +40,10 @@ struct TimeseriesChart: View {
     }
 
     private var emptyChart: some View {
-        ContentUnavailableView(
-            "Need 2+ observations",
+        IndexEmptyState(
+            title: "Need 2+ observations",
             systemImage: "chart.line.uptrend.xyaxis",
-            description: Text("Fire the Monitor or Search again to add another data point.")
+            description: "Fire the Monitor or Search again to add another data point."
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(

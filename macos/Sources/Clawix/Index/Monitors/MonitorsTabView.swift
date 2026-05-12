@@ -18,6 +18,7 @@ struct MonitorsTabView: View {
                 .frame(width: 380)
                 .background(Color.black.opacity(0.14))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showCreateSheet) {
             MonitorEditorSheet(manager: manager, onDismiss: { showCreateSheet = false })
         }
@@ -47,12 +48,11 @@ struct MonitorsTabView: View {
     private var list: some View {
         Group {
             if manager.monitors.isEmpty {
-                ContentUnavailableView(
-                    "No monitors yet",
+                IndexEmptyState(
+                    title: "No monitors yet",
                     systemImage: "clock.arrow.2.circlepath",
-                    description: Text("Promote any saved Search into a recurring Monitor with cron + alert rules.")
+                    description: "Promote any saved Search into a recurring Monitor with cron + alert rules."
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {

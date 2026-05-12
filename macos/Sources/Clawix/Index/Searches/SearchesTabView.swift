@@ -21,6 +21,7 @@ struct SearchesTabView: View {
             .frame(width: 360)
             .background(Color.black.opacity(0.14))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var searchListHeader: some View {
@@ -47,12 +48,11 @@ struct SearchesTabView: View {
     private var searchList: some View {
         Group {
             if manager.searches.isEmpty {
-                ContentUnavailableView(
-                    "No saved searches",
+                IndexEmptyState(
+                    title: "No saved searches",
                     systemImage: "magnifyingglass",
-                    description: Text("Create one with a target type, criteria and a prompt template. Then run it.")
+                    description: "Create one with a target type, criteria and a prompt template. Then run it."
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {

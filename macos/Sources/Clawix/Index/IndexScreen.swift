@@ -38,10 +38,10 @@ struct IndexScreen: View {
                 case .idle, .loading:
                     IndexLoadingView()
                 case .error(let message):
-                    ContentUnavailableView(
-                        "Index unavailable",
+                    IndexEmptyState(
+                        title: "Index unavailable",
                         systemImage: "exclamationmark.triangle",
-                        description: Text(message)
+                        description: message
                     )
                 case .ready:
                     contentForActiveTab
@@ -74,6 +74,32 @@ struct IndexScreen: View {
         case .alerts:
             AlertsTabView(manager: manager)
         }
+    }
+}
+
+struct IndexEmptyState: View {
+    let title: String
+    let systemImage: String
+    let description: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            LucideIcon.auto(systemImage, size: 28)
+                .foregroundColor(.white.opacity(0.30))
+                .frame(width: 36, height: 36)
+            Text(title)
+                .font(BodyFont.system(size: 13, wght: 600))
+                .foregroundColor(.white.opacity(0.68))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(description)
+                .font(BodyFont.system(size: 11, wght: 400))
+                .foregroundColor(.white.opacity(0.42))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: 320)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 }
 

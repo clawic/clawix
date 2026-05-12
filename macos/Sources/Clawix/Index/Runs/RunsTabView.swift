@@ -17,6 +17,7 @@ struct RunsTabView: View {
                 .frame(width: 380)
                 .background(Color.black.opacity(0.14))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var header: some View {
@@ -32,12 +33,11 @@ struct RunsTabView: View {
     private var list: some View {
         Group {
             if manager.runs.isEmpty {
-                ContentUnavailableView(
-                    "No runs yet",
+                IndexEmptyState(
+                    title: "No runs yet",
                     systemImage: "play.circle",
-                    description: Text("Each Search Run or Monitor fire creates a row here.")
+                    description: "Each Search Run or Monitor fire creates a row here."
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -184,7 +184,11 @@ private struct RunDetailPane: View {
                 }
                 .thinScrollers()
             } else if let loadError {
-                ContentUnavailableView("Could not load run", systemImage: "exclamationmark.triangle", description: Text(loadError))
+                IndexEmptyState(
+                    title: "Could not load run",
+                    systemImage: "exclamationmark.triangle",
+                    description: loadError
+                )
             } else if runId != nil {
                 ProgressView().controlSize(.small).tint(.white)
             } else {
