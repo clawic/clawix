@@ -15,6 +15,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
         var sessionId: UUID?
         var onReady: (() -> Void)?
         var shouldFocus = false
+        private var isKeyboardResponder = false
         private var lastUsableBounds: CGRect = .zero
         var emulator: LocalProcessTerminalView? {
             didSet {
@@ -46,6 +47,32 @@ struct TerminalEmulatorView: NSViewRepresentable {
             }
         }
 
+        override func becomeFirstResponder() -> Bool {
+            let ok = super.becomeFirstResponder()
+            if ok {
+                isKeyboardResponder = true
+                TerminalSessionStore.shared.setKeyboardFocused(true)
+            }
+            return ok
+        }
+
+        override func resignFirstResponder() -> Bool {
+            let ok = super.resignFirstResponder()
+            if ok {
+                isKeyboardResponder = false
+                TerminalSessionStore.shared.setKeyboardFocused(false)
+            }
+            return ok
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window == nil, isKeyboardResponder {
+                isKeyboardResponder = false
+                TerminalSessionStore.shared.setKeyboardFocused(false)
+            }
+        }
+
         private func startIfReady() {
             guard bounds.width > 20, bounds.height > 20 else { return }
             onReady?()
@@ -60,8 +87,18 @@ struct TerminalEmulatorView: NSViewRepresentable {
             emulator.translatesAutoresizingMaskIntoConstraints = true
             emulator.autoresizingMask = []
             syncEmulatorFrameIfUsable()
+            hideEmbeddedScroller()
             emulator.needsDisplay = true
             startIfReady()
+        }
+
+        private func hideEmbeddedScroller() {
+            guard let emulator else { return }
+            for sub in emulator.subviews {
+                if let scroller = sub as? NSScroller {
+                    scroller.isHidden = true
+                }
+            }
         }
 
         private func syncEmulatorFrameIfUsable() {
@@ -73,8 +110,19 @@ struct TerminalEmulatorView: NSViewRepresentable {
                 return
             }
             lastUsableBounds = bounds
-            emulator.frame = bounds
+            let frame = CGRect(
+                x: 0,
+                y: 0,
+                width: bounds.width + Container.swiftTermScrollerWidth,
+                height: bounds.height
+            )
+            emulator.frame = frame
         }
+
+        static let swiftTermScrollerWidth: CGFloat = NSScroller.scrollerWidth(
+            for: .regular,
+            scrollerStyle: .legacy
+        )
 
         func focusIfNeeded() {
             guard shouldFocus, let window, window.firstResponder !== self else { return }
@@ -84,6 +132,8 @@ struct TerminalEmulatorView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> Container {
         let container = Container()
+        container.wantsLayer = true
+        container.layer?.masksToBounds = true
         container.sessionId = session.id
         container.onReady = { session.startIfNeeded() }
         container.emulator = session.terminalView

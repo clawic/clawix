@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Horizontal strip of terminal tabs. Mirrors VS Code / OpenCode shape:
-/// chip per tab with its label and a close `×`, plus a `+` button at
-/// the trailing edge to spawn a fresh shell. Double-click on a chip
-/// renames the tab inline.
+/// Horizontal strip of terminal tabs.
 struct TerminalTabBar: View {
     @EnvironmentObject var store: TerminalSessionStore
     @EnvironmentObject var appState: AppState
@@ -13,96 +10,134 @@ struct TerminalTabBar: View {
     @State private var renameDraft: String = ""
 
     var body: some View {
-        HStack(spacing: 4) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(Array(store.tabs(for: chatId).enumerated()), id: \.element.id) { idx, tab in
-                        chip(for: tab, ordinal: idx + 1)
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(Array(store.tabs(for: chatId).enumerated()), id: \.element.id) { idx, tab in
+                    chip(for: tab, ordinal: idx + 1)
                 }
-                .padding(.horizontal, 8)
+                Button {
+                    let cwd = preferredCwd()
+                    store.createTab(chatId: chatId, cwd: cwd)
+                } label: {
+                    LucideIcon(.plus, size: 11)
+                        .foregroundColor(Color(white: 0.55))
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("New terminal (Cmd-T)")
+                .accessibilityLabel("New terminal")
+                Spacer(minLength: 0)
             }
-            Button {
-                let cwd = appState.chat(byId: chatId)?.cwd ?? NSHomeDirectory()
-                store.createTab(chatId: chatId, cwd: cwd)
-            } label: {
-                LucideIcon(.plus, size: 11)
-                    .foregroundColor(Color(white: 0.65))
-                    .frame(width: 22, height: 22)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color.white.opacity(0.001))
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.trailing, 8)
-            .help("New terminal (⇧⌘T)")
-            .accessibilityLabel("New terminal")
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
         }
-        .frame(height: 30)
-        .background(Color(white: 0.07))
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Palette.popupStroke)
-                .frame(height: 0.5)
-        }
+        .scrollDisabled(false)
+    }
+
+    private func preferredCwd() -> String {
+        store.activeTab(for: chatId)?.initialCwd
+            ?? appState.chat(byId: chatId)?.cwd
+            ?? NSHomeDirectory()
     }
 
     @ViewBuilder
     private func chip(for tab: TerminalTab, ordinal: Int) -> some View {
         let isActive = store.activeTabId(for: chatId) == tab.id
-        let tabLabel = tab.label.isEmpty ? "shell" : tab.label
+        let tabLabel = displayLabel(for: tab)
+        TerminalTabChip(
+            label: tabLabel,
+            ordinal: ordinal,
+            isActive: isActive,
+            isRenaming: renamingTabId == tab.id,
+            renameDraft: $renameDraft,
+            onSelect: { store.selectTab(chatId: chatId, tabId: tab.id) },
+            onClose: { store.closeTab(chatId: chatId, tabId: tab.id) },
+            onBeginRename: {
+                renameDraft = tab.label
+                renamingTabId = tab.id
+            },
+            onCommitRename: {
+                store.renameTab(chatId: chatId, tabId: tab.id, label: renameDraft)
+                renamingTabId = nil
+            },
+            onCancelRename: { renamingTabId = nil }
+        )
+    }
+
+    private func displayLabel(for tab: TerminalTab) -> String {
+        if !tab.label.isEmpty { return tab.label }
+        return TerminalTab.deriveLabel(from: tab.initialCwd)
+    }
+}
+
+private struct TerminalTabChip: View {
+    let label: String
+    let ordinal: Int
+    let isActive: Bool
+    let isRenaming: Bool
+    @Binding var renameDraft: String
+    let onSelect: () -> Void
+    let onClose: () -> Void
+    let onBeginRename: () -> Void
+    let onCommitRename: () -> Void
+    let onCancelRename: () -> Void
+
+    @State private var hovered = false
+
+    var body: some View {
         HStack(spacing: 6) {
-            if renamingTabId == tab.id {
-                TextField("", text: $renameDraft, onCommit: {
-                    store.renameTab(chatId: chatId, tabId: tab.id, label: renameDraft)
-                    renamingTabId = nil
-                })
-                .textFieldStyle(.plain)
-                .font(.system(size: 11, weight: .medium, design: .default))
-                .foregroundColor(Palette.textPrimary)
-                .frame(minWidth: 60, maxWidth: 140)
-                .onExitCommand { renamingTabId = nil }
+            leadingGlyph
+            if isRenaming {
+                TextField("", text: $renameDraft, onCommit: onCommitRename)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11.5, weight: .regular))
+                    .foregroundColor(Palette.textPrimary)
+                    .frame(minWidth: 50, maxWidth: 160)
+                    .onExitCommand(perform: onCancelRename)
             } else {
-                Text(tabLabel)
-                    .font(.system(size: 11, weight: .medium, design: .default))
-                    .foregroundColor(isActive ? Palette.textPrimary : Color(white: 0.65))
+                Text(label)
+                    .font(.system(size: 11.5, weight: .regular))
+                    .foregroundColor(Palette.textPrimary)
                     .lineLimit(1)
-                    .onTapGesture(count: 2) {
-                        renameDraft = tab.label
-                        renamingTabId = tab.id
-                    }
+                    .onTapGesture(count: 2, perform: onBeginRename)
             }
-            Button {
-                store.closeTab(chatId: chatId, tabId: tab.id)
-            } label: {
-                LucideIcon(.x, size: 9)
-                    .foregroundColor(Color(white: 0.55))
-                    .frame(width: 14, height: 14)
-            }
-            .buttonStyle(.plain)
-            .help("Close tab")
-            .accessibilityLabel(Text(verbatim: "Close terminal tab \(ordinal): \(tabLabel)"))
         }
-        .padding(.horizontal, 8)
+        .padding(.leading, 7)
+        .padding(.trailing, 9)
         .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(isActive ? Color(white: 0.16) : Color.clear)
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(chipFill)
         )
-        .overlay(alignment: .top) {
-            if isActive {
-                Rectangle()
-                    .fill(Palette.pastelBlue.opacity(0.85))
-                    .frame(height: 1.2)
-                    .clipShape(RoundedRectangle(cornerRadius: 1, style: .continuous))
-                    .padding(.horizontal, 6)
-            }
-        }
         .contentShape(Rectangle())
-        .onTapGesture {
-            store.selectTab(chatId: chatId, tabId: tab.id)
+        .onTapGesture(perform: onSelect)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+    }
+
+    private var chipFill: Color {
+        if isActive { return Color.white.opacity(0.08) }
+        if hovered { return Color.white.opacity(0.05) }
+        return Color.white.opacity(0.04)
+    }
+
+    @ViewBuilder
+    private var leadingGlyph: some View {
+        if hovered {
+            Button(action: onClose) {
+                LucideIcon(.circleX, size: 13)
+                    .foregroundColor(Color(white: 0.85))
+                    .frame(width: 14, height: 14)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Close terminal")
+            .accessibilityLabel(Text(verbatim: "Close terminal tab \(ordinal): \(label)"))
+        } else {
+            TerminalIcon(size: 13)
+                .foregroundColor(Color(white: 0.85))
+                .frame(width: 14, height: 14)
         }
     }
 }

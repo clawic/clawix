@@ -45,11 +45,15 @@ struct ViewMenuCommands: View {
 
         Divider()
 
-        Button("New Browser Tab") {
-            appState.openBrowser()
+        Button(newTabLabel) {
+            if terminalStore.keyboardFocused {
+                createTerminalTab()
+            } else {
+                appState.openBrowser()
+            }
         }
         .keyboardShortcut("t", modifiers: .command)
-        .disabled(!flags.isVisible(.browserUsage))
+        .disabled(newTabDisabled)
         Button("Reload Browser Page") {
             appState.requestBrowserCommand(.reload)
         }
@@ -60,11 +64,15 @@ struct ViewMenuCommands: View {
         }
         .keyboardShortcut("l", modifiers: .command)
         .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
-        Button("Close Browser Tab") {
-            appState.requestBrowserCommand(.closeActiveTab)
+        Button(closeTabLabel) {
+            if terminalStore.keyboardFocused {
+                closeActiveTerminalTab()
+            } else {
+                appState.requestBrowserCommand(.closeActiveTab)
+            }
         }
         .keyboardShortcut("w", modifiers: .command)
-        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
+        .disabled(closeTabDisabled)
         Button("Find in Chat") {
             appState.openFindBar()
         }
@@ -107,5 +115,27 @@ struct ViewMenuCommands: View {
         guard let currentChatId,
               let active = terminalStore.activeTabId(for: currentChatId) else { return }
         terminalStore.closeTab(chatId: currentChatId, tabId: active)
+    }
+
+    private var newTabLabel: String {
+        terminalStore.keyboardFocused ? "New Terminal" : "New Browser Tab"
+    }
+
+    private var closeTabLabel: String {
+        terminalStore.keyboardFocused ? "Close Terminal" : "Close Browser Tab"
+    }
+
+    private var newTabDisabled: Bool {
+        if terminalStore.keyboardFocused {
+            return !isChatRoute
+        }
+        return !flags.isVisible(.browserUsage)
+    }
+
+    private var closeTabDisabled: Bool {
+        if terminalStore.keyboardFocused {
+            return !hasActiveTerminalTab
+        }
+        return !flags.isVisible(.browserUsage) || !appState.hasActiveWebTab
     }
 }

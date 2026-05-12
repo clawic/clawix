@@ -26,6 +26,14 @@ final class TerminalSessionStore: ObservableObject {
     /// Currently active tab id per chat. Persisted only in memory: at
     /// next launch we default to the first tab in tree order.
     @Published private(set) var activeTabIdByChat: [UUID: UUID] = [:]
+    /// True when one of the live terminal emulator NSViews is window
+    /// first responder.
+    @Published private(set) var keyboardFocused: Bool = false
+
+    func setKeyboardFocused(_ focused: Bool) {
+        guard keyboardFocused != focused else { return }
+        keyboardFocused = focused
+    }
 
     /// Live sessions keyed by leaf id.
     private var sessions: [UUID: TerminalSession] = [:]

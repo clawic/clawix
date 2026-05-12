@@ -791,9 +791,12 @@ private struct ContentBodyWithTerminal<Content: View>: View {
             content()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             if let chatId {
-                TerminalPanel(chatId: chatId)
+                TerminalPanel(chatId: chatId, onLastTabClosed: {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        panelOpenRaw = false
+                    }
+                })
                     .frame(height: panelOpen ? clampedPanelHeight : 0)
-                    .opacity(panelOpen ? 1 : 0)
                     .allowsHitTesting(panelOpen)
                     .clipped()
                     .overlay(alignment: .top) {
@@ -803,7 +806,7 @@ private struct ContentBodyWithTerminal<Content: View>: View {
                                 hovered: $resizeHovered,
                                 maxHeightOverride: maxPanelHeight,
                                 onClose: {
-                                    withAnimation(.easeInOut(duration: 0.18)) {
+                                    withAnimation(.easeInOut(duration: 0.22)) {
                                         panelOpenRaw = false
                                     }
                                 }
@@ -814,7 +817,7 @@ private struct ContentBodyWithTerminal<Content: View>: View {
                     }
             }
         }
-        .animation(.easeInOut(duration: 0.18), value: panelOpenRaw)
+        .animation(.easeInOut(duration: 0.22), value: panelOpenRaw)
     }
 }
 
