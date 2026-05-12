@@ -2,6 +2,7 @@ import SwiftUI
 
 struct BrowserView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
     @State private var store = BrowserControllerStore()
     @State private var moreMenuOpen = false
 
@@ -178,35 +179,37 @@ struct BrowserView: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                appState.openIOSSimulator()
-            } label: {
-                Text("iOS Simulator")
-                    .font(BodyFont.system(size: 12, wght: 600))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(Color(white: 0.20))
-                    )
-            }
-            .buttonStyle(.plain)
+            if flags.isVisible(.simulators) {
+                Button {
+                    appState.openIOSSimulator()
+                } label: {
+                    Text("iOS Simulator")
+                        .font(BodyFont.system(size: 12, wght: 600))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color(white: 0.20))
+                        )
+                }
+                .buttonStyle(.plain)
 
-            Button {
-                appState.openAndroidSimulator()
-            } label: {
-                Text("Android Emulator")
-                    .font(BodyFont.system(size: 12, wght: 600))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(Color(white: 0.20))
-                    )
+                Button {
+                    appState.openAndroidSimulator()
+                } label: {
+                    Text("Android Emulator")
+                        .font(BodyFont.system(size: 12, wght: 600))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color(white: 0.20))
+                        )
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.background)

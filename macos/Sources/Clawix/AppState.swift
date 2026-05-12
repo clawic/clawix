@@ -5788,7 +5788,16 @@ final class AppState: ObservableObject {
         }
     }
 
-    var sidebarItems: [SidebarItem] { currentSidebar.items }
+    var sidebarItems: [SidebarItem] {
+        let items = currentSidebar.items
+        if FeatureFlags.shared.isVisible(.simulators) { return items }
+        return items.filter { item in
+            switch item {
+            case .iosSimulator, .androidSimulator: return false
+            default: return true
+            }
+        }
+    }
 
     var activeSidebarItemId: UUID? {
         get { currentSidebar.activeItemId }
@@ -5799,7 +5808,14 @@ final class AppState: ObservableObject {
         }
     }
 
-    var activeSidebarItem: SidebarItem? { currentSidebar.activeItem }
+    var activeSidebarItem: SidebarItem? {
+        let item = currentSidebar.activeItem
+        if FeatureFlags.shared.isVisible(.simulators) { return item }
+        switch item {
+        case .iosSimulator, .androidSimulator: return nil
+        default: return item
+        }
+    }
 
     private func removeWebTabsFromCurrentSidebar() {
         var s = currentSidebar
@@ -5858,6 +5874,7 @@ final class AppState: ObservableObject {
 
     /// Open the embedded iOS Simulator as a first-class right-sidebar item.
     func openIOSSimulator(deviceUDID: String? = nil, deviceName: String = "iOS Simulator") {
+        guard FeatureFlags.shared.isVisible(.simulators) else { return }
         var s = currentSidebar
         if let existing = s.items.first(where: {
             if case .iosSimulator = $0 { return true }
@@ -5890,6 +5907,7 @@ final class AppState: ObservableObject {
 
     /// Open the embedded Android emulator as a first-class right-sidebar item.
     func openAndroidSimulator(avdName: String? = nil, deviceName: String = "Android Emulator") {
+        guard FeatureFlags.shared.isVisible(.simulators) else { return }
         var s = currentSidebar
         if let existing = s.items.first(where: {
             if case .androidSimulator = $0 { return true }

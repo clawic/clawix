@@ -4,6 +4,7 @@ import SwiftUI
 
 struct BrowserTabStrip: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
     @State private var hoveredItemId: UUID?
 
     var body: some View {
@@ -28,15 +29,17 @@ struct BrowserTabStrip: View {
             }
             .padding(.top, 2)
 
-            SimulatorTabButton {
-                appState.openIOSSimulator()
-            }
-            .padding(.top, 2)
+            if flags.isVisible(.simulators) {
+                SimulatorTabButton {
+                    appState.openIOSSimulator()
+                }
+                .padding(.top, 2)
 
-            AndroidSimulatorTabButton {
-                appState.openAndroidSimulator()
+                AndroidSimulatorTabButton {
+                    appState.openAndroidSimulator()
+                }
+                .padding(.top, 2)
             }
-            .padding(.top, 2)
 
             Spacer(minLength: 0)
 
@@ -286,6 +289,7 @@ private struct AndroidSimulatorTabButton: View {
 
 struct BrowserNavigationBar: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
     @ObservedObject var controller: BrowserTabController
     @Binding var moreMenuOpen: Bool
 
@@ -327,16 +331,18 @@ struct BrowserNavigationBar: View {
             }
             .accessibilityLabel("Take screenshot")
             .hoverHint(L10n.t("Take screenshot"), placement: .below)
-            ChromeIconButton(systemName: "plus") {
-                appState.openIOSSimulator()
+            if flags.isVisible(.simulators) {
+                ChromeIconButton(systemName: "plus") {
+                    appState.openIOSSimulator()
+                }
+                .accessibilityLabel("iOS Simulator")
+                .hoverHint("iOS Simulator", placement: .below)
+                ChromeIconButton(systemName: "smartphone") {
+                    appState.openAndroidSimulator()
+                }
+                .accessibilityLabel("Android Emulator")
+                .hoverHint("Android Emulator", placement: .below)
             }
-            .accessibilityLabel("iOS Simulator")
-            .hoverHint("iOS Simulator", placement: .below)
-            ChromeIconButton(systemName: "smartphone") {
-                appState.openAndroidSimulator()
-            }
-            .accessibilityLabel("Android Emulator")
-            .hoverHint("Android Emulator", placement: .below)
             ChromeIconButton(systemName: "ellipsis", isActive: moreMenuOpen) {
                 moreMenuOpen.toggle()
             }

@@ -50,6 +50,7 @@ enum AppFeature: Equatable {
     case iotHome
     case agents
     case openCode
+    case simulators
 
     var tier: FeatureTier {
         switch self {
@@ -81,6 +82,7 @@ enum AppFeature: Equatable {
         case .iotHome:            return .experimental
         case .agents:             return .experimental
         case .openCode:           return .experimental
+        case .simulators:         return .experimental
         }
     }
 }

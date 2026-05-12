@@ -838,6 +838,7 @@ private struct ContentBodyWithTerminal<Content: View>: View {
 
 private struct RightSidebarColumn: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
 
     var body: some View {
         BrowserView()
@@ -845,7 +846,7 @@ private struct RightSidebarColumn: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Right sidebar")
             .overlay(alignment: .topLeading) {
-                if !isSimulatorActive {
+                if flags.isVisible(.simulators), !isSimulatorActive {
                     HStack(spacing: 6) {
                         Button {
                             appState.openIOSSimulator()
@@ -1010,8 +1011,10 @@ private struct RightSidebarAddMenu: View {
             if flags.isVisible(.browserUsage) {
                 row(id: "browser", icon: "globe", title: "Browser", shortcut: "⌘T")
             }
-            row(id: "iosSimulator", icon: "app.window", title: "iOS Simulator", shortcut: "")
-            row(id: "androidSimulator", icon: "smartphone", title: "Android Emulator", shortcut: "")
+            if flags.isVisible(.simulators) {
+                row(id: "iosSimulator", icon: "app.window", title: "iOS Simulator", shortcut: "")
+                row(id: "androidSimulator", icon: "smartphone", title: "Android Emulator", shortcut: "")
+            }
         }
         .padding(.vertical, MenuStyle.menuVerticalPadding)
         .frame(width: 232)
