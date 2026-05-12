@@ -3,6 +3,7 @@ import SwiftUI
 struct DatabaseWorkbenchCommands: View {
     @ObservedObject var appState: AppState
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
+    @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
 
     var body: some View {
         Button("Open Database Workbench") {
@@ -14,6 +15,27 @@ struct DatabaseWorkbenchCommands: View {
             openSettings()
         }
         .keyboardShortcut(",", modifiers: [.command, .shift])
+
+        Divider()
+
+        Button("Create Connection Profile") {
+            let profile = DatabaseConnectionProfile.draft()
+            profiles.upsert(profile)
+            openSettings()
+            ToastCenter.shared.show("Connection profile created")
+        }
+
+        Menu("Connection Profiles") {
+            if profiles.profiles.isEmpty {
+                Text("No profiles")
+            } else {
+                ForEach(profiles.profiles) { profile in
+                    Button("Dry Run \(profile.displayName)") {
+                        dryRun(profile)
+                    }
+                }
+            }
+        }
 
         Divider()
 
@@ -68,11 +90,24 @@ struct DatabaseWorkbenchCommands: View {
         appState.currentRoute = .settings
         ToastCenter.shared.show("Database workbench settings opened")
     }
+
+    private func dryRun(_ profile: DatabaseConnectionProfile) {
+        let result = profiles.dryRun(profile)
+        switch result.status {
+        case .passed:
+            ToastCenter.shared.show(result.message)
+        case .externalPending:
+            ToastCenter.shared.show("EXTERNAL PENDING: \(result.message)", icon: .warning)
+        case .failed:
+            ToastCenter.shared.show(result.message, icon: .error)
+        }
+    }
 }
 
 struct DatabaseWorkbenchMenuBarSection: View {
     @ObservedObject var appState: AppState
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
+    @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
     let openMainWindow: () -> Void
 
     var body: some View {
@@ -90,6 +125,26 @@ struct DatabaseWorkbenchMenuBarSection: View {
                     openMainWindow()
                 } label: {
                     Label("Settings…", systemImage: "gearshape")
+                }
+                Button {
+                    profiles.upsert(.draft())
+                    appState.settingsCategory = .databaseWorkbench
+                    appState.currentRoute = .settings
+                    openMainWindow()
+                } label: {
+                    Label("Create Connection Profile", systemImage: "plus")
+                }
+
+                Menu("Connection Profiles") {
+                    if profiles.profiles.isEmpty {
+                        Text("No profiles")
+                    } else {
+                        ForEach(profiles.profiles) { profile in
+                            Button("Dry Run \(profile.displayName)") {
+                                dryRun(profile)
+                            }
+                        }
+                    }
                 }
 
                 Divider()
@@ -127,6 +182,18 @@ struct DatabaseWorkbenchMenuBarSection: View {
             }
         } header: {
             Text("Database")
+        }
+    }
+
+    private func dryRun(_ profile: DatabaseConnectionProfile) {
+        let result = profiles.dryRun(profile)
+        switch result.status {
+        case .passed:
+            ToastCenter.shared.show(result.message)
+        case .externalPending:
+            ToastCenter.shared.show("EXTERNAL PENDING: \(result.message)", icon: .warning)
+        case .failed:
+            ToastCenter.shared.show(result.message, icon: .error)
         }
     }
 }

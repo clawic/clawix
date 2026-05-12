@@ -2,6 +2,8 @@ import SwiftUI
 
 struct DatabaseWorkbenchSettingsPage: View {
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
+    @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
+    @State private var editedProfile: DatabaseConnectionProfile?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -9,6 +11,45 @@ struct DatabaseWorkbenchSettingsPage: View {
                 title: "Database Workbench",
                 subtitle: "Connection, query editor, table browser, import/export, and safety defaults."
             )
+
+            SectionLabel(title: "Connection profiles")
+            SettingsCard {
+                if profiles.profiles.isEmpty {
+                    SettingsRow {
+                        RowLabel(
+                            title: "No profiles yet",
+                            detail: "Create local connection profiles for engines, SSH, SSL, bootstrap commands, and options."
+                        )
+                    } trailing: {
+                        Button("Add profile") {
+                            editedProfile = .draft()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                } else {
+                    ForEach(Array(profiles.profiles.enumerated()), id: \.element.id) { index, profile in
+                        ConnectionProfileRow(
+                            profile: profile,
+                            onEdit: { editedProfile = profile },
+                            onDuplicate: { profiles.duplicate(id: profile.id) },
+                            onTest: { dryRun(profile) },
+                            onDelete: { profiles.delete(id: profile.id) }
+                        )
+                        if index < profiles.profiles.count - 1 {
+                            CardDivider()
+                        }
+                    }
+                    CardDivider()
+                    SettingsRow {
+                        RowLabel(title: "Add another profile", detail: "Profiles store connection metadata only.")
+                    } trailing: {
+                        Button("Add profile") {
+                            editedProfile = .draft()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
 
             SectionLabel(title: "Workspace")
             SettingsCard {
@@ -198,6 +239,303 @@ struct DatabaseWorkbenchSettingsPage: View {
                 }
             }
         }
+        .sheet(item: $editedProfile) { profile in
+            DatabaseConnectionProfileEditorSheet(
+                profile: profile,
+                onCancel: { editedProfile = nil },
+                onSave: { saved in
+                    profiles.upsert(saved)
+                    editedProfile = nil
+                    ToastCenter.shared.show("Connection profile saved")
+                },
+                onTest: { draft in
+                    dryRun(draft)
+                }
+            )
+            .frame(width: 620, height: 760)
+        }
+    }
+
+    private func dryRun(_ profile: DatabaseConnectionProfile) {
+        let result = profiles.dryRun(profile)
+        switch result.status {
+        case .passed:
+            ToastCenter.shared.show(result.message)
+        case .externalPending:
+            ToastCenter.shared.show("EXTERNAL PENDING: \(result.message)", icon: .warning)
+        case .failed:
+            ToastCenter.shared.show(result.message, icon: .error)
+        }
+    }
+}
+
+private struct ConnectionProfileRow: View {
+    let profile: DatabaseConnectionProfile
+    let onEdit: () -> Void
+    let onDuplicate: () -> Void
+    let onTest: () -> Void
+    let onDelete: () -> Void
+
+    @State private var confirmingDelete = false
+
+    var body: some View {
+        SettingsRow {
+            RowLabel(title: LocalizedStringKey(profile.displayName), detail: LocalizedStringKey(detail))
+        } trailing: {
+            HStack(spacing: 8) {
+                Button("Test", action: onTest)
+                    .buttonStyle(.bordered)
+                Button("Duplicate", action: onDuplicate)
+                    .buttonStyle(.bordered)
+                Button("Edit", action: onEdit)
+                    .buttonStyle(.bordered)
+                Button("Remove") {
+                    confirmingDelete = true
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .confirmationDialog(
+            "Remove connection profile?",
+            isPresented: $confirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive, action: onDelete)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the local profile metadata from this Mac.")
+        }
+    }
+
+    private var detail: String {
+        let engine = profile.engine?.label ?? profile.engineId
+        let target = profile.hostOrPath.isEmpty ? "No target" : profile.hostOrPath
+        let port = profile.port.map { ":\($0)" } ?? ""
+        let tunnel = profile.sshEnabled ? " · SSH" : ""
+        return "\(engine) · \(target)\(port) · \(profile.tag)\(tunnel)"
+    }
+}
+
+private struct DatabaseConnectionProfileEditorSheet: View {
+    @State private var draft: DatabaseConnectionProfile
+
+    let onCancel: () -> Void
+    let onSave: (DatabaseConnectionProfile) -> Void
+    let onTest: (DatabaseConnectionProfile) -> Void
+
+    init(
+        profile: DatabaseConnectionProfile,
+        onCancel: @escaping () -> Void,
+        onSave: @escaping (DatabaseConnectionProfile) -> Void,
+        onTest: @escaping (DatabaseConnectionProfile) -> Void
+    ) {
+        _draft = State(initialValue: profile)
+        self.onCancel = onCancel
+        self.onSave = onSave
+        self.onTest = onTest
+    }
+
+    private var engine: DatabaseWorkbenchEngine? {
+        DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == draft.engineId }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Connection profile")
+                        .font(BodyFont.system(size: 18, wght: 700))
+                        .foregroundColor(Palette.textPrimary)
+                    Text("Save metadata for a database workspace. Secrets stay outside this profile.")
+                        .font(BodyFont.system(size: 12))
+                        .foregroundColor(Palette.textSecondary)
+                }
+                Spacer()
+            }
+            .padding(20)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    SettingsCard {
+                        DropdownRow(
+                            title: "Engine",
+                            detail: "Connection type for this profile.",
+                            options: DatabaseWorkbenchPreferences.supportedEngines.map { ($0.id, $0.label) },
+                            selection: engineBinding,
+                            minWidth: 220
+                        )
+                        CardDivider()
+                        TextFieldRow(title: "Name", detail: "Local label shown in Clawix.", text: $draft.name)
+                        CardDivider()
+                        TextFieldRow(title: "Group", detail: "Optional grouping label.", text: $draft.groupName)
+                        CardDivider()
+                        TextFieldRow(title: "Tag", detail: "Short environment label.", text: $draft.tag)
+                    }
+
+                    SettingsCard {
+                        TextFieldRow(
+                            title: engine?.supportsFileOpen == true ? "File path" : "Host or socket",
+                            detail: engine?.supportsFileOpen == true ? "Local database file path." : "Server host, IP, or socket.",
+                            text: $draft.hostOrPath
+                        )
+                        if engine?.supportsFileOpen != true {
+                            CardDivider()
+                            NumberRow(title: "Port", detail: "Server port.", value: portBinding, range: 1...65_535, suffix: "")
+                        }
+                        CardDivider()
+                        TextFieldRow(title: "User", detail: "Username for the connection.", text: $draft.username)
+                        CardDivider()
+                        TextFieldRow(title: "Database", detail: "Database, schema, or catalog name.", text: $draft.databaseName)
+                        CardDivider()
+                        DropdownRow(
+                            title: "Password",
+                            detail: "How Clawix should request or resolve secret material.",
+                            options: DatabaseConnectionAuthStorage.allCases.map { ($0, $0.label) },
+                            selection: $draft.authStorage,
+                            minWidth: 180
+                        )
+                    }
+
+                    SettingsCard {
+                        DropdownRow(
+                            title: "SSL mode",
+                            detail: "TLS behavior for engines that support it.",
+                            options: DatabaseConnectionSSLMode.allCases.map { ($0, $0.label) },
+                            selection: $draft.sslMode,
+                            minWidth: 170
+                        )
+                        CardDivider()
+                        DropdownRow(
+                            title: "Negotiation",
+                            detail: "Protocol negotiation mode.",
+                            options: DatabaseConnectionNegotiation.allCases.map { ($0, $0.label) },
+                            selection: $draft.negotiation,
+                            minWidth: 170
+                        )
+                        CardDivider()
+                        TextFieldRow(title: "SSL key", detail: "Optional local key file path.", text: $draft.sslKeyPath)
+                        CardDivider()
+                        TextFieldRow(title: "SSL certificate", detail: "Optional client certificate path.", text: $draft.sslCertificatePath)
+                        CardDivider()
+                        TextFieldRow(title: "CA certificate", detail: "Optional CA certificate path.", text: $draft.sslCAPath)
+                    }
+
+                    SettingsCard {
+                        ToggleRow(title: "Over SSH", detail: "Tunnel the database connection through SSH.", isOn: $draft.sshEnabled)
+                        CardDivider()
+                        DropdownRow(
+                            title: "SSH version",
+                            detail: "SSH client compatibility mode.",
+                            options: DatabaseConnectionSSHVersion.allCases.map { ($0, $0.label) },
+                            selection: $draft.sshVersion,
+                            minWidth: 170
+                        )
+                        CardDivider()
+                        TextFieldRow(title: "SSH host", detail: "Jump host for the tunnel.", text: $draft.sshHost)
+                        CardDivider()
+                        NumberRow(title: "SSH port", detail: "Jump host port.", value: $draft.sshPort, range: 1...65_535, suffix: "")
+                        CardDivider()
+                        TextFieldRow(title: "SSH user", detail: "SSH username.", text: $draft.sshUsername)
+                        CardDivider()
+                        DropdownRow(
+                            title: "SSH password",
+                            detail: "How Clawix should request or resolve SSH secret material.",
+                            options: DatabaseConnectionAuthStorage.allCases.map { ($0, $0.label) },
+                            selection: $draft.sshAuthStorage,
+                            minWidth: 180
+                        )
+                        CardDivider()
+                        ToggleRow(title: "Use private key", detail: "Resolve SSH authentication through a private key file.", isOn: $draft.sshUsesPrivateKey)
+                        CardDivider()
+                        TextFieldRow(title: "Private key", detail: "Optional local private key path.", text: $draft.sshPrivateKeyPath)
+                    }
+
+                    SettingsCard {
+                        ToggleRow(title: "Load system schemas", detail: "Include system schemas when browsing metadata.", isOn: $draft.loadSystemSchemas)
+                        CardDivider()
+                        ToggleRow(title: "Disable channel binding", detail: "Compatibility option for older servers and proxies.", isOn: $draft.disableChannelBinding)
+                        CardDivider()
+                        MultilineTextRow(title: "Bootstrap commands", detail: "SQL run after a future approved connection opens.", text: $draft.bootstrapSQL)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+
+            Divider().background(Color.white.opacity(0.07))
+            HStack {
+                Button("Cancel", action: onCancel)
+                Spacer()
+                Button("Dry run") { onTest(draft) }
+                Button("Save") { onSave(draft) }
+                    .buttonStyle(.borderedProminent)
+            }
+            .padding(20)
+        }
+        .background(Palette.background)
+    }
+
+    private var engineBinding: Binding<String> {
+        Binding(
+            get: { draft.engineId },
+            set: { id in
+                draft.engineId = id
+                guard let engine = DatabaseWorkbenchPreferences.supportedEngines.first(where: { $0.id == id }) else { return }
+                draft.port = engine.defaultPort
+                draft.sslMode = engine.supportsSSL ? .preferred : .disabled
+                if engine.supportsFileOpen {
+                    draft.sshEnabled = false
+                    draft.hostOrPath = ""
+                } else if draft.hostOrPath.isEmpty {
+                    draft.hostOrPath = "127.0.0.1"
+                }
+            }
+        )
+    }
+
+    private var portBinding: Binding<Int> {
+        Binding(
+            get: { draft.port ?? engine?.defaultPort ?? 1 },
+            set: { draft.port = $0 }
+        )
+    }
+}
+
+private struct TextFieldRow: View {
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey?
+    @Binding var text: String
+
+    var body: some View {
+        SettingsRow {
+            RowLabel(title: title, detail: detail)
+        } trailing: {
+            TextField("", text: $text)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 260)
+        }
+    }
+}
+
+private struct MultilineTextRow: View {
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey?
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            RowLabel(title: title, detail: detail)
+            TextEditor(text: $text)
+                .font(.system(.body, design: .monospaced))
+                .frame(minHeight: 96)
+                .scrollContentBackground(.hidden)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.white.opacity(0.045))
+                )
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
     }
 }
 
