@@ -610,9 +610,11 @@ function TasksPanel({ state, dispatch }: { state: PomodoroState; dispatch: React
             <PrimaryButton icon={<PlusIcon size={14} />} label="Add" onClick={() => { dispatch({ type: "task-add", title }); setTitle(""); }} />
           </div>
           <textarea value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="- Paste plain text tasks&#10;- One per line" className="field mt-3 min-h-[160px] w-full p-3" />
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <ActionButton icon={<ListChecksIcon size={14} />} label="Import plain text" onClick={() => { dispatch({ type: "tasks-import", text: bulk }); setBulk(""); }} />
             <ActionButton icon={<ZapIcon size={14} />} label="Simulate Reminders sync" onClick={() => dispatch({ type: "task-add", title: "Reminder: review focus plan", source: "reminders" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Things import" onClick={() => dispatch({ type: "task-add", title: "Things: prepare focus list", source: "things" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Linear import" onClick={() => dispatch({ type: "task-add", title: "Linear: ship Pomodoro parity", source: "linear" })} />
           </div>
         </Card>
         <Card title="Today" action={`${state.tasks.filter((task) => !task.done).length} open`}>
