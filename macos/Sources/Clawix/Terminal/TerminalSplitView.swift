@@ -49,8 +49,6 @@ struct TerminalSplitView: View {
                     .font(.system(size: 11, weight: .regular, design: .monospaced))
                     .foregroundColor(Palette.textSecondary)
             }
-            // Click-to-focus on the leaf area without consuming the
-            // click (SwiftTerm needs the event for selection).
             if !isActive {
                 Color.clear
                     .contentShape(Rectangle())
@@ -59,16 +57,6 @@ struct TerminalSplitView: View {
                     }
             }
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(
-                    isActive ? Palette.pastelBlue.opacity(0.35) : Color.clear,
-                    lineWidth: 1.2
-                )
-                .padding(1)
-                .allowsHitTesting(false)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     @ViewBuilder

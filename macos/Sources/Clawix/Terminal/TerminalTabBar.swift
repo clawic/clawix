@@ -15,18 +15,10 @@ struct TerminalTabBar: View {
                 ForEach(Array(store.tabs(for: chatId).enumerated()), id: \.element.id) { idx, tab in
                     chip(for: tab, ordinal: idx + 1)
                 }
-                Button {
+                NewTerminalButton {
                     let cwd = preferredCwd()
                     store.createTab(chatId: chatId, cwd: cwd)
-                } label: {
-                    LucideIcon(.plus, size: 11)
-                        .foregroundColor(Color(white: 0.55))
-                        .frame(width: 20, height: 20)
-                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .help("New terminal (Cmd-T)")
-                .accessibilityLabel("New terminal")
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 8)
@@ -126,10 +118,14 @@ private struct TerminalTabChip: View {
     private var leadingGlyph: some View {
         if hovered {
             Button(action: onClose) {
-                LucideIcon(.circleX, size: 13)
-                    .foregroundColor(Color(white: 0.85))
-                    .frame(width: 14, height: 14)
-                    .contentShape(Rectangle())
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.18))
+                    LucideIcon(.x, size: 7.5)
+                        .foregroundColor(Color.white.opacity(0.92))
+                }
+                .frame(width: 14, height: 14)
+                .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .help("Close terminal")
@@ -139,5 +135,28 @@ private struct TerminalTabChip: View {
                 .foregroundColor(Color(white: 0.85))
                 .frame(width: 14, height: 14)
         }
+    }
+}
+
+private struct NewTerminalButton: View {
+    let action: () -> Void
+    @State private var hovered = false
+
+    var body: some View {
+        Button(action: action) {
+            LucideIcon(.plus, size: 13)
+                .foregroundColor(Color(white: hovered ? 0.95 : 0.65))
+                .frame(width: 24, height: 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(hovered ? 0.08 : 0.0))
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered = $0 }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .help("New terminal (Cmd-T)")
+        .accessibilityLabel("New terminal")
     }
 }

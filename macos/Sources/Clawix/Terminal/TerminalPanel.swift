@@ -13,6 +13,9 @@ struct TerminalPanel: View {
             TerminalTabBar(chatId: chatId)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 10)
+                .padding(.top, 2)
+                .padding(.bottom, 10)
                 .background(Color.black)
         }
         .background(Color.black)

@@ -802,6 +802,18 @@ private struct ContentBodyWithTerminal<Content: View>: View {
                     .clipped()
                     .overlay(alignment: .top) {
                         if panelOpen {
+                            ZStack {
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.10))
+                                    .frame(height: 0.7)
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.30))
+                                    .frame(height: 0.7)
+                                    .opacity(resizeHovered ? 1 : 0)
+                                    .animation(.easeOut(duration: 0.14), value: resizeHovered)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .top)
+                            .allowsHitTesting(false)
                             TerminalResizeHandle(
                                 heightRaw: $panelHeightRaw,
                                 hovered: $resizeHovered,

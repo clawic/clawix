@@ -42,6 +42,8 @@ final class TerminalSession: ObservableObject, Identifiable {
 
         let view = LocalProcessTerminalView(frame: .zero)
         view.font = font ?? TerminalSession.defaultFont
+        view.nativeForegroundColor = NSColor(calibratedWhite: 0.97, alpha: 1.0)
+        view.nativeBackgroundColor = .black
         view.translatesAutoresizingMaskIntoConstraints = false
         self.terminalView = view
 
@@ -55,7 +57,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     /// (SF Mono) keeps consistent letter-spacing across weight changes
     /// which keeps the cursor aligned in vim/htop.
     static var defaultFont: NSFont {
-        NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
     }
 
     /// Send `signal` to the child shell (and, by virtue of the controlling
