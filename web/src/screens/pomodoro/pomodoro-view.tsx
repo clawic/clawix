@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   abandonTimer,
+  addWindowTrackerRule,
   adjustTimerMinutes,
   currentBlockers,
   dateKey,
@@ -12,11 +13,13 @@ import {
   parsePlainTasks,
   pauseTimer,
   resumeTimer,
+  removeWindowTrackerRule,
   runPomodoroShortcut,
   runPomodoroUrlCommand,
   sameDay,
   startBreak,
   startFocus,
+  testWindowTracker,
   tickPomodoro,
   totalBreakSeconds,
   totalFocusSeconds,
@@ -97,7 +100,10 @@ type Action =
   | { type: "mini"; value: boolean }
   | { type: "notice"; now: number; title: string; detail: string }
   | { type: "shortcut"; shortcut: PomodoroShortcut; now: number; intention?: string }
-  | { type: "url-command"; command: PomodoroUrlCommand; now: number; intention?: string; categoryId?: string };
+  | { type: "url-command"; command: PomodoroUrlCommand; now: number; intention?: string; categoryId?: string }
+  | { type: "tracker-add"; now: number; appName: string; windowTitle: string; categoryId: string; intention: string }
+  | { type: "tracker-delete"; now: number; id: string }
+  | { type: "tracker-test"; now: number; appName: string; windowTitle: string };
 
 const STORE_KEY = "pomodoro.sessionParity.v1";
 const COLORS = ["#ef5b5b", "#73a6ff", "#f1b85b", "#8bd196", "#c89cff", "#e98fb1", "#7ed7d1"];
@@ -198,6 +204,12 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return runPomodoroShortcut(state, action.shortcut, action.now, action.intention);
     case "url-command":
       return runPomodoroUrlCommand(state, action.command, action.now, action.intention, action.categoryId);
+    case "tracker-add":
+      return addWindowTrackerRule(state, action.now, action.appName, action.windowTitle, action.categoryId, action.intention);
+    case "tracker-delete":
+      return removeWindowTrackerRule(state, action.now, action.id);
+    case "tracker-test":
+      return testWindowTracker(state, action.now, action.appName, action.windowTitle);
     default:
       return state;
   }
@@ -732,6 +744,10 @@ function CalendarPanel({ state, dispatch }: { state: PomodoroState; dispatch: Re
 }
 
 function AutomationPanel({ state, dispatch }: { state: PomodoroState; dispatch: React.Dispatch<Action> }) {
+  const [trackerApp, setTrackerApp] = useState("Safari");
+  const [trackerWindow, setTrackerWindow] = useState("Reading");
+  const [trackerIntention, setTrackerIntention] = useState(state.intentionDraft || "Read reference");
+  const [trackerCategory, setTrackerCategory] = useState(state.categoryId);
   const shortcuts: PomodoroShortcut[] = ["Start recent focus", "Start focus", "Pause / unpause", "Take a break", "Finish Session", "Abandon Session", "Update intention", "Current status"];
   const localUrlBase = `${window.location.origin}${window.location.pathname}?example=pomodoro`;
   const shortcutJson = JSON.stringify({
@@ -773,10 +789,38 @@ function AutomationPanel({ state, dispatch }: { state: PomodoroState; dispatch: 
         </Card>
         <Card title="Window tracker" action={state.settings.windowTrackerEnabled ? "Enabled" : "Off"}>
           <Toggle label="Enable window tracker" checked={state.settings.windowTrackerEnabled} onChange={(v) => dispatch({ type: "settings", patch: { windowTrackerEnabled: v } })} />
-          <div className="mt-3 rounded-[8px] bg-[rgba(255,255,255,0.035)] p-3 text-[12px] text-[var(--color-fg-secondary)]">
-            This local tracker records app/window rules and surfaces reminders in-app instead of reading macOS window titles.
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <input value={trackerApp} onChange={(e) => setTrackerApp(e.target.value)} className="field" placeholder="App name" />
+            <input value={trackerWindow} onChange={(e) => setTrackerWindow(e.target.value)} className="field" placeholder="Window keyword" />
+            <input value={trackerIntention} onChange={(e) => setTrackerIntention(e.target.value)} className="field" placeholder="Suggested intention" />
+            <select value={trackerCategory} onChange={(e) => setTrackerCategory(e.target.value)} className="field">
+              {state.categories.filter((cat) => !cat.archived).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+            </select>
           </div>
-          <ActionButton className="mt-3" icon={<ZapIcon size={14} />} label="Test tracker reminder" onClick={() => dispatch({ type: "notice", now: Date.now(), title: "Window tracker", detail: "Keyword matched: start a focus Session." })} />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ActionButton
+              icon={<PlusIcon size={14} />}
+              label="Add tracker rule"
+              onClick={() => dispatch({ type: "tracker-add", now: Date.now(), appName: trackerApp, windowTitle: trackerWindow, categoryId: trackerCategory, intention: trackerIntention })}
+            />
+            <ActionButton
+              icon={<ZapIcon size={14} />}
+              label="Test tracker match"
+              onClick={() => dispatch({ type: "tracker-test", now: Date.now(), appName: trackerApp, windowTitle: trackerWindow })}
+            />
+          </div>
+          <div className="mt-3 space-y-2">
+            {state.settings.windowTrackers.map((rule) => (
+              <div key={rule.id} className="flex items-center gap-3 rounded-[8px] bg-[rgba(255,255,255,0.035)] p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[12.5px]">{rule.appName} / {rule.windowTitle}</div>
+                  <div className="text-[11.5px] text-[var(--color-fg-secondary)]">{rule.intention}</div>
+                </div>
+                <button className="icon-btn" onClick={() => dispatch({ type: "tracker-delete", now: Date.now(), id: rule.id })} aria-label="Delete tracker rule"><TrashIcon size={14} /></button>
+              </div>
+            ))}
+            {state.settings.windowTrackers.length === 0 && <EmptyText>No tracker rules yet.</EmptyText>}
+          </div>
         </Card>
       </div>
     </section>

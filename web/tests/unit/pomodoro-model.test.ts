@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   abandonTimer,
+  addWindowTrackerRule,
   currentBlockers,
   adjustTimerMinutes,
   defaultPomodoroState,
@@ -12,6 +13,7 @@ import {
   runPomodoroShortcut,
   runPomodoroUrlCommand,
   startFocus,
+  testWindowTracker,
   tickPomodoro,
   totalFocusSeconds,
   undoAbandon,
@@ -124,5 +126,18 @@ describe("pomodoro model", () => {
     state = runPomodoroUrlCommand(state, "finish", now + 60_000);
     expect(state.active).toBeNull();
     expect(state.logs.at(-1)?.intention).toBe("URL focus");
+  });
+
+  it("adds and tests local window tracker rules", () => {
+    const now = Date.UTC(2026, 4, 12, 15, 0, 0);
+    let state = defaultPomodoroState(now);
+
+    state = addWindowTrackerRule(state, now, "Safari", "Reading", "general", "Read docs");
+    expect(state.settings.windowTrackerEnabled).toBe(true);
+    expect(state.settings.windowTrackers).toHaveLength(1);
+
+    state = testWindowTracker(state, now + 1_000, "Safari", "Reading reference");
+    expect(state.active?.mode).toBe("focus");
+    expect(state.active?.intention).toBe("Read docs");
   });
 });

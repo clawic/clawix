@@ -535,6 +535,88 @@ export function currentBlockers(state: PomodoroState): string[] {
   return [...webEntries.map((entry) => `Web: ${entry}`), ...appEntries.map((entry) => `App: ${entry}`), ...slackEntries];
 }
 
+export function addWindowTrackerRule(
+  state: PomodoroState,
+  now: number,
+  appName: string,
+  windowTitle: string,
+  categoryId = state.categoryId,
+  intention = state.intentionDraft,
+): PomodoroState {
+  const cleanApp = appName.trim();
+  const cleanWindow = windowTitle.trim();
+  const cleanIntention = intention.trim();
+  if (!cleanApp || !cleanWindow || !cleanIntention) {
+    return {
+      ...state,
+      notices: pushNotice(state, now, "Window tracker", "App, window keyword and intention are required."),
+    };
+  }
+  const rule: WindowTrackerRule = {
+    id: makeId("tracker", now),
+    appName: cleanApp,
+    windowTitle: cleanWindow,
+    categoryId,
+    intention: cleanIntention,
+  };
+  return {
+    ...state,
+    settings: {
+      ...state.settings,
+      windowTrackerEnabled: true,
+      windowTrackers: [...state.settings.windowTrackers, rule],
+    },
+    notices: pushNotice(state, now, "Window tracker", `Rule added for ${cleanApp}.`),
+  };
+}
+
+export function removeWindowTrackerRule(state: PomodoroState, now: number, id: string): PomodoroState {
+  return {
+    ...state,
+    settings: {
+      ...state.settings,
+      windowTrackers: state.settings.windowTrackers.filter((rule) => rule.id !== id),
+    },
+    notices: pushNotice(state, now, "Window tracker", "Rule removed."),
+  };
+}
+
+export function testWindowTracker(
+  state: PomodoroState,
+  now: number,
+  appName: string,
+  windowTitle: string,
+): PomodoroState {
+  if (!state.settings.windowTrackerEnabled) {
+    return {
+      ...state,
+      notices: pushNotice(state, now, "Window tracker", "Window tracker is disabled."),
+    };
+  }
+  const match = state.settings.windowTrackers.find((rule) => {
+    return includesFolded(appName, rule.appName) && includesFolded(windowTitle, rule.windowTitle);
+  });
+  if (!match) {
+    return {
+      ...state,
+      notices: pushNotice(state, now, "Window tracker", "No local rule matched the supplied app/window."),
+    };
+  }
+  if (state.settings.autoStartSuggestion) {
+    const started = startFocus(state, now, match.intention, match.categoryId, state.settings.sessionMinutes);
+    return {
+      ...started,
+      notices: pushNotice(started, now + 1, "Window tracker", `Matched ${match.appName}: ${match.intention}`),
+    };
+  }
+  return {
+    ...state,
+    intentionDraft: match.intention,
+    categoryId: match.categoryId,
+    notices: pushNotice(state, now, "Window tracker", `Matched ${match.appName}: ${match.intention}`),
+  };
+}
+
 export function runPomodoroShortcut(
   state: PomodoroState,
   shortcut: PomodoroShortcut,
