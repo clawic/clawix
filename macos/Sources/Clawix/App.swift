@@ -537,7 +537,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // applicationWillTerminate if the bridge daemon is still alive.
         BridgeAgentControl.bootoutMenubarAgent()
         // Register the system-wide QuickAsk hotkey. The default combo
-        // (⌃⌥⌘K) is set in `QuickAskHotkey.defaultValue`; the user
+        // (⌃Space) is set in `QuickAskHotkey.defaultValue`; the user
         // can change it from Settings → QuickAsk.
         QuickAskController.shared.install()
         // Wire the dictation overlay (cheap: only creates an offscreen
