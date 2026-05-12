@@ -819,6 +819,7 @@ private final class ScreenToolAreaSelectionView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        guard startPoint != nil else { return }
         currentPoint = event.locationInWindow
         guard let rect = currentSelectionRect,
               let captureRect = ScreenToolCaptureRect(selectionRect: rect, in: screen)
