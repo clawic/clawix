@@ -436,6 +436,41 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         XCTAssertEqual(plan.message, "SQLite search found no matches.")
     }
 
+    func test_sqliteProcessListReportsLocalDiagnostics() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+
+        let plan = store.perform(
+            .processList,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertTrue(plan.message.contains("local file mode has no server sessions"), plan.message)
+        XCTAssertTrue(plan.message.contains("main="), plan.message)
+        XCTAssertTrue(plan.message.contains("fixture.sqlite"), plan.message)
+        XCTAssertTrue(plan.message.contains("page size"), plan.message)
+    }
+
+    func test_sqliteProcessListReportsMissingLocalFile() throws {
+        let paths = try makeSQLiteFixture()
+        try? FileManager.default.removeItem(at: paths.directory)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+
+        let plan = store.perform(
+            .processList,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertEqual(plan.message, "SQLite process diagnostics failed: database file does not exist.")
+    }
+
     func test_sqliteQueryExportBlocksWriteSQL() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }

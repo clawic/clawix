@@ -260,6 +260,11 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
                 profile: profile,
                 fileManager: fileManager
             )
+        case .processList:
+            return inspectSQLiteProcessList(
+                profile,
+                fileManager: fileManager
+            )
         default:
             return prepared
         }
@@ -588,6 +593,43 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         }
 
         return matches
+    }
+
+    private static func inspectSQLiteProcessList(
+        _ profile: DatabaseConnectionProfile,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        let databasePath = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+        guard fileManager.fileExists(atPath: databasePath) else {
+            return .init(kind: .processList, status: .blocked, message: "SQLite process diagnostics failed: database file does not exist.")
+        }
+
+        var configuration = Configuration()
+        configuration.readonly = true
+        do {
+            let queue = try DatabaseQueue(path: databasePath, configuration: configuration)
+            let diagnostics = try queue.read { db -> String in
+                let databaseRows = try Row.fetchAll(db, sql: "PRAGMA database_list")
+                let attached = databaseRows.compactMap { row -> String? in
+                    let name: String = row["name"]
+                    let file: String = row["file"]
+                    guard !name.isEmpty else { return nil }
+                    return file.isEmpty ? name : "\(name)=\(file)"
+                }
+                let journalMode = try String.fetchOne(db, sql: "PRAGMA journal_mode") ?? "unknown"
+                let pageCount = try Int.fetchOne(db, sql: "PRAGMA page_count") ?? 0
+                let pageSize = try Int.fetchOne(db, sql: "PRAGMA page_size") ?? 0
+                let attachedSummary = attached.isEmpty ? "no attached databases" : attached.joined(separator: ", ")
+                return "attached \(attachedSummary); journal \(journalMode); pages \(pageCount); page size \(pageSize)"
+            }
+            return .init(
+                kind: .processList,
+                status: .localReady,
+                message: "SQLite process diagnostics: local file mode has no server sessions; \(diagnostics)."
+            )
+        } catch {
+            return .init(kind: .processList, status: .blocked, message: "SQLite process diagnostics failed: \(error.localizedDescription)")
+        }
     }
 
     private static func writeCSV(
