@@ -14,6 +14,7 @@ import {
   runPomodoroUrlCommand,
   startFocus,
   testNotificationProfile,
+  testSoundProfile,
   testWindowTracker,
   tickPomodoro,
   totalFocusSeconds,
@@ -174,5 +175,20 @@ describe("pomodoro model", () => {
       "Presence reminder",
       "Ending soon",
     ]);
+  });
+
+  it("describes sound profile previews and timer end sounds", () => {
+    const now = Date.UTC(2026, 4, 12, 18, 0, 0);
+    let state = defaultPomodoroState(now);
+    state.settings.sessionEndSound = "Gong";
+    state.settings.sessionEndVolume = 0.25;
+
+    state = testSoundProfile(state, now, "session-end");
+    expect(state.notices[0]?.detail).toBe("Session end sound: Gong at 25%.");
+
+    state = startFocus(state, now, "Sound check", "general", 1);
+    state = tickPomodoro(state, now + 60_000);
+    expect(state.active?.mode).toBe("ended");
+    expect(state.notices[0]?.detail).toContain("End sound: Gong at 25%.");
   });
 });

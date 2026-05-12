@@ -20,6 +20,7 @@ import {
   startBreak,
   startFocus,
   testNotificationProfile,
+  testSoundProfile,
   testWindowTracker,
   tickPomodoro,
   totalBreakSeconds,
@@ -31,6 +32,7 @@ import {
   type PomodoroLog,
   type PomodoroSettings,
   type PomodoroShortcut,
+  type PomodoroSoundSlot,
   type PomodoroState,
   type PomodoroTask,
   type PomodoroUrlCommand,
@@ -105,10 +107,46 @@ type Action =
   | { type: "tracker-add"; now: number; appName: string; windowTitle: string; categoryId: string; intention: string }
   | { type: "tracker-delete"; now: number; id: string }
   | { type: "tracker-test"; now: number; appName: string; windowTitle: string }
-  | { type: "notification-test"; now: number; kind: "ending-soon" | "presence" | "overflow" };
+  | { type: "notification-test"; now: number; kind: "ending-soon" | "presence" | "overflow" }
+  | { type: "sound-test"; now: number; slot: PomodoroSoundSlot };
 
 const STORE_KEY = "pomodoro.sessionParity.v1";
 const COLORS = ["#ef5b5b", "#73a6ff", "#f1b85b", "#8bd196", "#c89cff", "#e98fb1", "#7ed7d1"];
+const SOUND_OPTIONS = ["Clock Ticking", "Ocean Waves", "Rain", "Brown Noise", "Kitchen Timer", "Gong", "None"];
+
+function soundFrequency(name: string): number {
+  switch (name) {
+    case "Ocean Waves":
+      return 180;
+    case "Rain":
+      return 320;
+    case "Brown Noise":
+      return 90;
+    case "Kitchen Timer":
+      return 1040;
+    case "Gong":
+      return 220;
+    case "Clock Ticking":
+    default:
+      return 880;
+  }
+}
+
+function soundWaveType(name: string): OscillatorType {
+  switch (name) {
+    case "Ocean Waves":
+    case "Gong":
+      return "sine";
+    case "Brown Noise":
+      return "sawtooth";
+    case "Rain":
+      return "square";
+    case "Clock Ticking":
+    case "Kitchen Timer":
+    default:
+      return "triangle";
+  }
+}
 
 function reducer(state: PomodoroState, action: Action): PomodoroState {
   switch (action.type) {
@@ -214,6 +252,8 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return testWindowTracker(state, action.now, action.appName, action.windowTitle);
     case "notification-test":
       return testNotificationProfile(state, action.now, action.kind);
+    case "sound-test":
+      return testSoundProfile(state, action.now, action.slot);
     default:
       return state;
   }
@@ -274,8 +314,13 @@ export function PomodoroView() {
     const ctx = new AudioContext();
     const gain = ctx.createGain();
     const osc = ctx.createOscillator();
-    osc.type = state.active.mode === "break" ? "sine" : "triangle";
-    osc.frequency.value = state.active.mode === "break" ? 180 : 880;
+    const soundName = state.active.mode === "break" ? state.settings.breakSound : state.settings.sessionSound;
+    if (soundName === "None") {
+      ctx.close().catch(() => undefined);
+      return;
+    }
+    osc.type = soundWaveType(soundName);
+    osc.frequency.value = soundFrequency(soundName);
     gain.gain.value = state.active.mode === "break" ? state.settings.breakVolume * 0.04 : state.settings.sessionVolume * 0.04;
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -286,7 +331,14 @@ export function PomodoroView() {
       ctx.close().catch(() => undefined);
       audioRef.current = null;
     };
-  }, [state.active?.mode, state.settings.backgroundSoundEnabled, state.settings.breakVolume, state.settings.sessionVolume]);
+  }, [
+    state.active?.mode,
+    state.settings.backgroundSoundEnabled,
+    state.settings.breakSound,
+    state.settings.breakVolume,
+    state.settings.sessionSound,
+    state.settings.sessionVolume,
+  ]);
 
   const activeCategory = state.categories.find((cat) => cat.id === state.categoryId) ?? state.categories[0]!;
   const visibleLogs = useMemo(() => filterLogs(state.logs, state), [state.logs, state.selectedDate, state.notesOnly, state.reportFilter]);
@@ -852,10 +904,20 @@ function SettingsPanel({ state, dispatch }: { state: PomodoroState; dispatch: Re
         </Card>
         <Card title="Background sound" action={state.settings.backgroundSoundEnabled ? "On" : "Off"}>
           <Toggle label="Play background sound" checked={state.settings.backgroundSoundEnabled} onChange={(v) => dispatch({ type: "settings", patch: { backgroundSoundEnabled: v } })} />
+          <SelectRow label="Session sound" value={state.settings.sessionSound} options={SOUND_OPTIONS} onChange={(v) => dispatch({ type: "settings", patch: { sessionSound: v } })} />
           <RangeRow label="Session volume" value={state.settings.sessionVolume} onChange={(v) => dispatch({ type: "settings", patch: { sessionVolume: v } })} />
+          <SelectRow label="Session end sound" value={state.settings.sessionEndSound} options={SOUND_OPTIONS} onChange={(v) => dispatch({ type: "settings", patch: { sessionEndSound: v } })} />
           <RangeRow label="Session end volume" value={state.settings.sessionEndVolume} onChange={(v) => dispatch({ type: "settings", patch: { sessionEndVolume: v } })} />
+          <SelectRow label="Break sound" value={state.settings.breakSound} options={SOUND_OPTIONS} onChange={(v) => dispatch({ type: "settings", patch: { breakSound: v } })} />
           <RangeRow label="Break volume" value={state.settings.breakVolume} onChange={(v) => dispatch({ type: "settings", patch: { breakVolume: v } })} />
+          <SelectRow label="Break end sound" value={state.settings.breakEndSound} options={SOUND_OPTIONS} onChange={(v) => dispatch({ type: "settings", patch: { breakEndSound: v } })} />
           <RangeRow label="Break end volume" value={state.settings.breakEndVolume} onChange={(v) => dispatch({ type: "settings", patch: { breakEndVolume: v } })} />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ActionButton icon={<ZapIcon size={14} />} label="Preview session" onClick={() => dispatch({ type: "sound-test", now: Date.now(), slot: "session" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Preview session end" onClick={() => dispatch({ type: "sound-test", now: Date.now(), slot: "session-end" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Preview break" onClick={() => dispatch({ type: "sound-test", now: Date.now(), slot: "break" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Preview break end" onClick={() => dispatch({ type: "sound-test", now: Date.now(), slot: "break-end" })} />
+          </div>
         </Card>
         <Card title="Menubar and Dock" action="Chrome">
           <Toggle label="Show duration on menubar" checked={state.settings.menuShowDuration} onChange={(v) => dispatch({ type: "settings", patch: { menuShowDuration: v } })} />
