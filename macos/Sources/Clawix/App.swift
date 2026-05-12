@@ -298,6 +298,7 @@ private struct MenuBarContent: View {
     @EnvironmentObject private var flags: FeatureFlags
     @ObservedObject private var micPrefs = MicrophonePreferences.shared
     @ObservedObject private var screenTools = ScreenToolService.shared
+    @ObservedObject private var macUtilities = MacUtilitiesController.shared
     @ObservedObject private var bridge = BackgroundBridgeService.shared
     @Environment(\.openWindow) private var openWindow
 
@@ -367,6 +368,11 @@ private struct MenuBarContent: View {
                     screenTools.captureText()
                 } label: {
                     Label("Capture Text", systemImage: "text.viewfinder")
+                }
+                Button {
+                    macUtilities.perform(.toggleDesktopIcons)
+                } label: {
+                    Label("Hide Desktop Icons", systemImage: "square.grid.3x3")
                 }
                 Divider()
                 Button {

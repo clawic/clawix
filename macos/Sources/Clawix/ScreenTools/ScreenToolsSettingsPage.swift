@@ -3,6 +3,7 @@ import AppKit
 
 struct ScreenToolsSettingsPage: View {
     @ObservedObject private var service = ScreenToolService.shared
+    @ObservedObject private var macUtilities = MacUtilitiesController.shared
 
     @AppStorage(ScreenToolSettings.exportDirectoryKey) private var exportDirectory = ""
     @AppStorage(ScreenToolSettings.afterCaptureActionKey) private var afterCaptureAction = ScreenToolService.CaptureAction.quickOverlay.rawValue
@@ -94,6 +95,13 @@ struct ScreenToolsSettingsPage: View {
                     detail: "Select an area, recognize text on device, and copy it to the clipboard.",
                     symbol: "text.viewfinder",
                     action: { service.captureText(keepLineBreaks: keepTextLineBreaks) }
+                )
+                CardDivider()
+                actionRow(
+                    title: "Hide desktop icons",
+                    detail: "Toggle Finder desktop items for cleaner captures.",
+                    symbol: "square.grid.3x3",
+                    action: { macUtilities.perform(.toggleDesktopIcons) }
                 )
             }
 
