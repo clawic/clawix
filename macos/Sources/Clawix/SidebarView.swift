@@ -483,7 +483,10 @@ struct SidebarView: View {
                     .sidebarHover { projectsHeaderHovered = $0 }
                 let visibleChrono = applyChronoFilter(to: snapshot.chrono)
                 let chronoCount = min(visibleChrono.count, chronoLimit)
-                let chronoFilterActive = !chronoFilterDisabled.isEmpty
+                let chronoFilterActive = !effectiveDisabledTokens(
+                    chronoFilterDisabled,
+                    sources: chronoFilterSources(from: snapshot.chrono)
+                ).isEmpty
                 let showEmptyState = visibleChrono.isEmpty
                 SidebarAccordion(
                     expanded: chronoExpanded,
@@ -714,7 +717,10 @@ struct SidebarView: View {
     /// short-circuits to the original list so the renderer's hot path
     /// stays cheap when no filter is active.
     private func applyPinnedFilter(to pinned: [Chat]) -> [Chat] {
-        let disabled = pinnedFilterDisabled
+        let disabled = effectiveDisabledTokens(
+            pinnedFilterDisabled,
+            sources: pinnedFilterSources(from: pinned)
+        )
         guard !disabled.isEmpty else { return pinned }
         return pinned.filter { chat in
             if let pid = chat.projectId {
@@ -861,7 +867,10 @@ struct SidebarView: View {
     }
 
     private func applyChronoFilter(to chrono: [Chat]) -> [Chat] {
-        let disabled = chronoFilterDisabled
+        let disabled = effectiveDisabledTokens(
+            chronoFilterDisabled,
+            sources: chronoFilterSources(from: chrono)
+        )
         guard !disabled.isEmpty else { return chrono }
         return chrono.filter { chat in
             if let pid = chat.projectId {
@@ -869,6 +878,12 @@ struct SidebarView: View {
             }
             return !disabled.contains(Self.pinnedFilterNoProjectToken)
         }
+    }
+
+    private func effectiveDisabledTokens(_ disabled: Set<String>, sources: [PinnedFilterSource]) -> Set<String> {
+        guard !disabled.isEmpty, !sources.isEmpty else { return disabled }
+        let available = Set(sources.map(\.token))
+        return available.isSubset(of: disabled) ? [] : disabled
     }
 
     /// Always-visible section so users learn that archived chats land
@@ -1063,12 +1078,13 @@ struct SidebarView: View {
                     let buttonFrame = proxy[anchor]
                     let popupWidth: CGFloat = OrganizeMenuPopup.mainColumnWidth
                     let chronoSources = chronoFilterSources(from: sidebarSnapshot.chrono)
+                    let chronoDisabled = effectiveDisabledTokens(chronoFilterDisabled, sources: chronoSources)
                     OrganizeMenuPopup(
                         isPresented: $organizeMenuOpen,
                         viewModeRaw: $viewModeRaw,
                         projectSortModeRaw: $projectSortModeRaw,
                         chronoFilterSources: chronoSources,
-                        chronoFilterDisabled: chronoFilterDisabled,
+                        chronoFilterDisabled: chronoDisabled,
                         toggleChronoFilter: { token in
                             var next = chronoFilterDisabled
                             if next.contains(token) {
@@ -1180,10 +1196,11 @@ struct SidebarView: View {
                     let buttonFrame = proxy[anchor]
                     let popupWidth: CGFloat = 244
                     let sources = pinnedFilterSources(from: sidebarSnapshot.pinned)
+                    let disabled = effectiveDisabledTokens(pinnedFilterDisabled, sources: sources)
                     PinnedFilterPopup(
                         isPresented: $pinnedFilterMenuOpen,
                         sources: sources,
-                        disabled: pinnedFilterDisabled,
+                        disabled: disabled,
                         toggle: { token in
                             var next = pinnedFilterDisabled
                             if next.contains(token) {
