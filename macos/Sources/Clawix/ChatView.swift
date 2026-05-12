@@ -138,6 +138,11 @@ struct ChatView: View {
                                                 proxy.scrollTo(expandedId, anchor: .bottom)
                                             }
                                         },
+                                        onUserBubbleExpanded: { expandedId in
+                                            DispatchQueue.main.async {
+                                                proxy.scrollTo(expandedId, anchor: .bottom)
+                                            }
+                                        },
                                         onEditUserMessage: { newContent in
                                             appState.editUserMessage(
                                                 chatId: chat.id,
@@ -796,6 +801,140 @@ private struct UserFileMentionChip: View {
     }
 }
 
+private struct UserMessageTextBubble: View {
+    let paragraphs: [String]
+    let findQuery: String
+    let exposeAccessibility: Bool
+    let accessibilityText: String
+    let onExpand: () -> Void
+
+    @State private var isExpanded = false
+    @State private var measuredHeight: CGFloat = 0
+    @State private var collapsedHovered = false
+
+    private static let maxCollapsedContentHeight: CGFloat = 575
+    private static let verticalPadding: CGFloat = 11
+    private static let bubbleSolid = Color(white: 0.12)
+
+    var body: some View {
+        let exceedsCap = measuredHeight > Self.maxCollapsedContentHeight + 1
+        let collapsed = exceedsCap && !isExpanded
+        let cappedContentHeight = min(measuredHeight, Self.maxCollapsedContentHeight)
+        let displayHeight: CGFloat? = {
+            guard measuredHeight > 0 else { return nil }
+            return collapsed
+                ? cappedContentHeight + 2 * Self.verticalPadding
+                : measuredHeight + 2 * Self.verticalPadding
+        }()
+
+        ZStack(alignment: .bottom) {
+            textContent
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: UserBubbleContentHeightKey.self,
+                            value: proxy.size.height
+                        )
+                    }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, Self.verticalPadding)
+                .frame(height: displayHeight, alignment: .top)
+                .clipped()
+
+            if collapsed {
+                showMoreOverlay
+                    .transition(.opacity)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .onPreferenceChange(UserBubbleContentHeightKey.self) { newValue in
+            guard abs(newValue - measuredHeight) > 0.5 else { return }
+            measuredHeight = newValue
+        }
+        .onChange(of: paragraphs) { _, _ in
+            isExpanded = false
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityHidden(!exposeAccessibility)
+        .accessibilityLabel(Text(verbatim: accessibilityText))
+    }
+
+    private var textContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
+                Group {
+                    if substringMatches(p, query: findQuery) {
+                        Text(highlightedAttributed(p, query: findQuery))
+                    } else {
+                        Text(verbatim: p)
+                    }
+                }
+                .font(BodyFont.system(size: 13.5, wght: 500))
+                .foregroundColor(Palette.textPrimary)
+                .lineSpacing(5)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var showMoreOverlay: some View {
+        Button(action: expand) {
+            HStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Text(verbatim: String(
+                        localized: "Show more",
+                        bundle: AppLocale.bundle,
+                        locale: AppLocale.current
+                    ))
+                    .font(BodyFont.system(size: 12, wght: 600))
+                    LucideIcon(.chevronDown, size: 11)
+                }
+                .foregroundColor(Color(white: collapsedHovered ? 0.95 : 0.78))
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, Self.verticalPadding)
+            .padding(.top, 56)
+            .contentShape(Rectangle())
+            .background(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: Self.bubbleSolid.opacity(0), location: 0),
+                        .init(color: Self.bubbleSolid.opacity(0.85), location: 0.55),
+                        .init(color: Self.bubbleSolid, location: 1)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) { collapsedHovered = hovering }
+        }
+    }
+
+    private func expand() {
+        withAnimation(.easeOut(duration: 0.28)) {
+            isExpanded = true
+        }
+        onExpand()
+    }
+}
+
+private struct UserBubbleContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 /// Per-process cache for the three `DateFormatter`s `MessageRow` uses to
 /// render its timestamp. Allocating + configuring a `DateFormatter` is
 /// surprisingly expensive (it lazily walks `cf-locale`/ICU on first use)
@@ -808,9 +947,15 @@ private enum TimestampFormatters {
     private static var lastLocaleId: String = ""
     private static let time = DateFormatter()
     private static let weekday = DateFormatter()
-    private static let date = DateFormatter()
+    private static let dateSameYear = DateFormatter()
+    private static let dateOtherYear = DateFormatter()
 
-    static func resolved() -> (time: DateFormatter, weekday: DateFormatter, date: DateFormatter) {
+    static func resolved() -> (
+        time: DateFormatter,
+        weekday: DateFormatter,
+        dateSameYear: DateFormatter,
+        dateOtherYear: DateFormatter
+    ) {
         lock.lock(); defer { lock.unlock() }
         let locale = AppLocale.current
         let id = locale.identifier
@@ -822,13 +967,15 @@ private enum TimestampFormatters {
             weekday.locale = locale
             weekday.dateFormat = "EEEE"
 
-            date.locale = locale
-            date.dateStyle = .short
-            date.timeStyle = .none
+            dateSameYear.locale = locale
+            dateSameYear.setLocalizedDateFormatFromTemplate("MMMdjmm")
+
+            dateOtherYear.locale = locale
+            dateOtherYear.setLocalizedDateFormatFromTemplate("MMMdyjmm")
 
             lastLocaleId = id
         }
-        return (time, weekday, date)
+        return (time, weekday, dateSameYear, dateOtherYear)
     }
 }
 
@@ -913,6 +1060,7 @@ private struct MessageRow: View, Equatable {
     /// a delta on a single message only re-renders that one row.
     var findQuery: String = ""
     var onTimelineExpanded: ((UUID) -> Void)? = nil
+    var onUserBubbleExpanded: ((UUID) -> Void)? = nil
     /// Closures bridge back to the `AppState` mutation surface from the
     /// row's parent (`ChatView`). They are intentionally NOT compared by
     /// `Equatable` so swapping them across rebuilds doesn't force a
@@ -981,29 +1129,13 @@ private struct MessageRow: View, Equatable {
                             .components(separatedBy: "\n\n")
                             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                             .filter { !$0.isEmpty }
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, p in
-                                Group {
-                                    if substringMatches(p, query: findQuery) {
-                                        Text(highlightedAttributed(p, query: findQuery))
-                                    } else {
-                                        Text(verbatim: p)
-                                    }
-                                }
-                                .font(BodyFont.system(size: 13.5, wght: 500))
-                                .foregroundColor(Palette.textPrimary)
-                                .lineSpacing(5)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 11)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .fill(Color.white.opacity(0.08))
+                        UserMessageTextBubble(
+                            paragraphs: paragraphs,
+                            findQuery: findQuery,
+                            exposeAccessibility: exposeMessageAccessibility,
+                            accessibilityText: AccessibilityText.clipped(parsed.text),
+                            onExpand: { onUserBubbleExpanded?(message.id) }
                         )
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityHidden(!exposeMessageAccessibility)
-                        .accessibilityLabel(Text(verbatim: AccessibilityText.clipped(parsed.text)))
                     }
                 }
             } else {
@@ -1369,12 +1501,15 @@ private struct MessageRow: View, Equatable {
             return fmts.time.string(from: message.timestamp)
         }
         let startOfMsg = cal.startOfDay(for: message.timestamp)
-        let startOfToday = cal.startOfDay(for: Date())
+        let now = Date()
+        let startOfToday = cal.startOfDay(for: now)
         let dayDiff = cal.dateComponents([.day], from: startOfMsg, to: startOfToday).day ?? 0
         if dayDiff >= 1 && dayDiff <= 6 {
             return "\(fmts.weekday.string(from: message.timestamp)), \(fmts.time.string(from: message.timestamp))"
         }
-        return fmts.date.string(from: message.timestamp)
+        let sameYear = cal.component(.year, from: message.timestamp) == cal.component(.year, from: now)
+        let formatter = sameYear ? fmts.dateSameYear : fmts.dateOtherYear
+        return formatter.string(from: message.timestamp)
     }
 
     private func handleCopy() {
@@ -1434,22 +1569,22 @@ private struct MessageActionIcon: View {
         switch kind {
         case .copy(let showCheck):
             if showCheck {
-                CheckIcon(size: 13)
+                CheckIcon(size: 14.3)
                     .foregroundColor(Color(white: hovered ? 0.94 : 0.78))
                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
             } else {
                 CopyIconViewSquircle(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                    .frame(width: 13, height: 13)
+                    .frame(width: 14.3, height: 14.3)
                     .transition(.opacity)
             }
         case .pencil:
             PencilIconView(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                .frame(width: 15, height: 15)
+                .frame(width: 16.5, height: 16.5)
         case .branchArrows:
             BranchArrowsIconView(color: Color(white: hovered ? 0.88 : 0.55), lineWidth: 0.85)
-                .frame(width: 13, height: 13)
+                .frame(width: 14.3, height: 14.3)
         case .system(let name):
-            IconImage(name, size: 13)
+            IconImage(name, size: 14.3)
                 .foregroundColor(Color(white: hovered ? 0.82 : 0.45))
         }
     }
