@@ -2,6 +2,18 @@ export type TimerMode = "idle" | "focus" | "paused" | "break" | "ended";
 
 export type Mood = "focused" | "neutral" | "distracted";
 
+export type PomodoroShortcut =
+  | "Start recent focus"
+  | "Start focus"
+  | "Pause / unpause"
+  | "Take a break"
+  | "Finish Session"
+  | "Abandon Session"
+  | "Update intention"
+  | "Current status";
+
+export type PomodoroUrlCommand = "start" | "pause" | "finish" | "break" | "abandon" | "status";
+
 export interface PomodoroCategory {
   id: string;
   name: string;
@@ -512,6 +524,87 @@ export function currentBlockers(state: PomodoroState): string[] {
   const appEntries = appRule.enabled ? appRule.apps : [];
   const slackEntries = state.settings.slackBlockerEnabled ? state.settings.slackTeams.map((team) => `Slack: ${team}`) : [];
   return [...webEntries.map((entry) => `Web: ${entry}`), ...appEntries.map((entry) => `App: ${entry}`), ...slackEntries];
+}
+
+export function runPomodoroShortcut(
+  state: PomodoroState,
+  shortcut: PomodoroShortcut,
+  now: number,
+  intention = state.intentionDraft,
+): PomodoroState {
+  switch (shortcut) {
+    case "Start recent focus": {
+      const recent = [...state.logs].reverse().find((log) => log.kind === "focus" && !log.abandoned);
+      return startFocus(
+        state,
+        now,
+        recent?.intention || intention || state.intentionDraft,
+        recent?.categoryId || state.categoryId,
+        recent ? Math.max(1, Math.round(recent.durationSec / 60)) : state.settings.sessionMinutes,
+      );
+    }
+    case "Start focus":
+      return startFocus(state, now, intention || state.intentionDraft, state.categoryId, state.settings.sessionMinutes);
+    case "Pause / unpause":
+      if (state.active?.mode === "paused") return resumeTimer(state, now);
+      return pauseTimer(state, now);
+    case "Take a break": {
+      const saved = state.active?.mode === "focus" ? finishTimer(state, now) : state;
+      return saved.active?.mode === "break" ? saved : startBreak(saved, now + 1);
+    }
+    case "Finish Session":
+      return finishTimer(state, now);
+    case "Abandon Session":
+      return abandonTimer(state, now);
+    case "Update intention": {
+      const nextIntention = intention.trim();
+      if (!nextIntention) {
+        return {
+          ...state,
+          notices: pushNotice(state, now, "Shortcut action", "No intention supplied."),
+        };
+      }
+      return {
+        ...state,
+        intentionDraft: nextIntention,
+        active: state.active ? { ...state.active, intention: nextIntention } : state.active,
+        notices: pushNotice(state, now, "Shortcut action", `Intention updated to ${nextIntention}.`),
+      };
+    }
+    case "Current status":
+      return {
+        ...state,
+        notices: pushNotice(
+          state,
+          now,
+          "Shortcut action",
+          `${state.active?.mode ?? "idle"} / ${state.active?.intention || state.intentionDraft || "No active timer"}`,
+        ),
+      };
+  }
+}
+
+export function runPomodoroUrlCommand(
+  state: PomodoroState,
+  command: PomodoroUrlCommand,
+  now: number,
+  intention = state.intentionDraft,
+  categoryId = state.categoryId,
+): PomodoroState {
+  switch (command) {
+    case "start":
+      return startFocus(state, now, intention || state.intentionDraft, categoryId || state.categoryId, state.settings.sessionMinutes);
+    case "pause":
+      return runPomodoroShortcut(state, "Pause / unpause", now, intention);
+    case "finish":
+      return finishTimer(state, now);
+    case "break":
+      return runPomodoroShortcut(state, "Take a break", now, intention);
+    case "abandon":
+      return abandonTimer(state, now);
+    case "status":
+      return runPomodoroShortcut(state, "Current status", now, intention);
+  }
 }
 
 function remainingSeconds(active: PomodoroActiveTimer, now: number): number {

@@ -12,6 +12,8 @@ import {
   parsePlainTasks,
   pauseTimer,
   resumeTimer,
+  runPomodoroShortcut,
+  runPomodoroUrlCommand,
   sameDay,
   startBreak,
   startFocus,
@@ -24,8 +26,10 @@ import {
   type PomodoroCategory,
   type PomodoroLog,
   type PomodoroSettings,
+  type PomodoroShortcut,
   type PomodoroState,
   type PomodoroTask,
+  type PomodoroUrlCommand,
 } from "./pomodoro-model";
 import { storage } from "../../lib/storage";
 import cx from "../../lib/cx";
@@ -91,7 +95,9 @@ type Action =
   | { type: "notes-only"; value: boolean }
   | { type: "report-filter"; value: PomodoroState["reportFilter"] }
   | { type: "mini"; value: boolean }
-  | { type: "notice"; now: number; title: string; detail: string };
+  | { type: "notice"; now: number; title: string; detail: string }
+  | { type: "shortcut"; shortcut: PomodoroShortcut; now: number; intention?: string }
+  | { type: "url-command"; command: PomodoroUrlCommand; now: number; intention?: string; categoryId?: string };
 
 const STORE_KEY = "pomodoro.sessionParity.v1";
 const COLORS = ["#ef5b5b", "#73a6ff", "#f1b85b", "#8bd196", "#c89cff", "#e98fb1", "#7ed7d1"];
@@ -188,6 +194,10 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
         ...state,
         notices: [{ id: `notice-${action.now}`, at: action.now, title: action.title, detail: action.detail }, ...state.notices].slice(0, 8),
       };
+    case "shortcut":
+      return runPomodoroShortcut(state, action.shortcut, action.now, action.intention);
+    case "url-command":
+      return runPomodoroUrlCommand(state, action.command, action.now, action.intention, action.categoryId);
     default:
       return state;
   }
@@ -202,6 +212,7 @@ export function PomodoroView() {
   const [mood, setMood] = useState<Mood>(state.settings.defaultMood);
   const [reflection, setReflection] = useState("");
   const audioRef = useRef<AudioContext | null>(null);
+  const urlCommandApplied = useRef(false);
 
   useEffect(() => {
     storage.set(STORE_KEY, state);
@@ -210,6 +221,13 @@ export function PomodoroView() {
   useEffect(() => {
     const id = window.setInterval(() => dispatch({ type: "tick", now: Date.now() }), 1000);
     return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (urlCommandApplied.current) return;
+    urlCommandApplied.current = true;
+    const parsed = parseUrlCommand(window.location);
+    if (parsed) dispatch({ type: "url-command", now: Date.now(), ...parsed });
   }, []);
 
   useEffect(() => {
@@ -714,6 +732,8 @@ function CalendarPanel({ state, dispatch }: { state: PomodoroState; dispatch: Re
 }
 
 function AutomationPanel({ state, dispatch }: { state: PomodoroState; dispatch: React.Dispatch<Action> }) {
+  const shortcuts: PomodoroShortcut[] = ["Start recent focus", "Start focus", "Pause / unpause", "Take a break", "Finish Session", "Abandon Session", "Update intention", "Current status"];
+  const localUrlBase = `${window.location.origin}${window.location.pathname}?example=pomodoro`;
   const shortcutJson = JSON.stringify({
     state: state.active?.mode ?? "idle",
     title: state.active?.intention ?? state.intentionDraft,
@@ -726,8 +746,14 @@ function AutomationPanel({ state, dispatch }: { state: PomodoroState; dispatch: 
       <Header title="Automation" subtitle="Shortcuts, URL scheme, AppleScript and window tracker equivalents for this Pomodoro example." />
       <div className="mt-5 grid grid-cols-[1fr_1fr] gap-4">
         <Card title="Shortcuts" action="Actions">
-          {["Start recent focus", "Start focus", "Pause / unpause", "Take a break", "Finish Session", "Abandon Session", "Update intention", "Current status"].map((label) => (
-            <button key={label} className="row-btn" onClick={() => dispatch({ type: "notice", now: Date.now(), title: "Shortcut action", detail: label })}>{label}</button>
+          {shortcuts.map((shortcut) => (
+            <button
+              key={shortcut}
+              className="row-btn"
+              onClick={() => dispatch({ type: "shortcut", shortcut, now: Date.now(), intention: state.intentionDraft })}
+            >
+              {shortcut}
+            </button>
           ))}
         </Card>
         <Card title="Current Session JSON" action="Copy source">
@@ -738,6 +764,12 @@ function AutomationPanel({ state, dispatch }: { state: PomodoroState; dispatch: 
           <CodeLine value="session://pause" />
           <CodeLine value="session://finish" />
           <CodeLine value="session://break" />
+          <div className="mt-3 text-[11.5px] text-[var(--color-fg-secondary)]">Local command URLs</div>
+          <CodeLine value={`${localUrlBase}&session=start&intention=${encodeURIComponent(state.intentionDraft || "Focus")}&category=${state.categoryId}`} />
+          <CodeLine value={`${localUrlBase}&session=pause`} />
+          <CodeLine value={`${localUrlBase}&session=finish`} />
+          <CodeLine value={`${localUrlBase}&session=break`} />
+          <CodeLine value={`${localUrlBase}&session=status`} />
         </Card>
         <Card title="Window tracker" action={state.settings.windowTrackerEnabled ? "Enabled" : "Off"}>
           <Toggle label="Enable window tracker" checked={state.settings.windowTrackerEnabled} onChange={(v) => dispatch({ type: "settings", patch: { windowTrackerEnabled: v } })} />

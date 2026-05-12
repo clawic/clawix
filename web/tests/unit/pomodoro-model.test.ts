@@ -9,6 +9,7 @@ import {
   parsePlainTasks,
   pauseTimer,
   resumeTimer,
+  runPomodoroShortcut,
   startFocus,
   tickPomodoro,
   totalFocusSeconds,
@@ -71,5 +72,27 @@ describe("pomodoro model", () => {
 
     state = pauseTimer(state, now + 60_000);
     expect(currentBlockers(state)).toEqual([]);
+  });
+
+  it("runs shortcut actions against the timer state", () => {
+    const now = Date.UTC(2026, 4, 12, 13, 0, 0);
+    let state = defaultPomodoroState(now);
+
+    state = runPomodoroShortcut(state, "Start focus", now, "Shortcut focus");
+    expect(state.active?.mode).toBe("focus");
+    expect(state.active?.intention).toBe("Shortcut focus");
+
+    state = runPomodoroShortcut(state, "Pause / unpause", now + 60_000);
+    expect(state.active?.mode).toBe("paused");
+
+    state = runPomodoroShortcut(state, "Pause / unpause", now + 120_000);
+    expect(state.active?.mode).toBe("focus");
+
+    state = runPomodoroShortcut(state, "Update intention", now + 121_000, "Updated shortcut");
+    expect(state.active?.intention).toBe("Updated shortcut");
+
+    state = runPomodoroShortcut(state, "Take a break", now + 180_000);
+    expect(state.logs.at(-1)?.intention).toBe("Updated shortcut");
+    expect(state.active?.mode).toBe("break");
   });
 });
