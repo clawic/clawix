@@ -794,6 +794,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // `Keychain Access.app` search for "clawix". The app no longer
         // touches the Keychain at all; this is a one-shot cleanup.
         LegacyKeychainPurge.runOnce()
+        ClawixHostBootstrap.runOnce()
 
         NSApp.appearance = NSAppearance(named: .darkAqua)
         NSApp.windows.forEach(configure)
