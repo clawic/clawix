@@ -7,6 +7,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     // case appearance  // hidden temporarily
     case configuration
     case personalization
+    case shortcuts
     case skills
     case dictation
     case screenTools
@@ -34,6 +35,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         // case .appearance:       return "Appearance"
         case .configuration:    return "Settings"
         case .personalization:  return "Personalization"
+        case .shortcuts:        return "Keyboard Shortcuts"
         case .skills:           return "Skills"
         case .dictation:        return "Voice to Text"
         case .screenTools:      return "Screen Tools"
@@ -61,6 +63,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         // case .appearance:       return "circle.lefthalf.filled"
         case .configuration:    return "slider.horizontal.3"
         case .personalization:  return "person.crop.circle"
+        case .shortcuts:        return "keyboard"
         case .skills:           return "wand.and.stars"
         case .dictation:        return "mic.fill"
         case .screenTools:      return "camera.viewfinder"
@@ -233,7 +236,7 @@ private struct SettingsSidebarRow: View {
         case .secrets:
             // Match the padlock used in the main sidebar's SecretsToolRow so
             // both navs share the same glyph. `isLocked` is true here because
-            // this row is nav chrome — the actual vault state is reflected on
+            // this row is nav chrome — the actual secrets state is reflected on
             // the Secrets page itself.
             SecretsIcon(size: 15, lineWidth: 1.28, isLocked: true)
         case .mcp:
@@ -267,6 +270,7 @@ struct SettingsContent: View {
                     // case .appearance:      AppearancePage()
                     case .configuration:   ConfigurationPage()
                     case .personalization: PersonalizationPage()
+                    case .shortcuts:       ShortcutsSettingsPage()
                     case .skills:          SkillsSettingsPage()
                     case .dictation:       DictationSettingsPage()
                     case .screenTools:     ScreenToolsSettingsPage()
