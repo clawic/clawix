@@ -75,5 +75,62 @@ struct ClawixAppShortcuts: AppShortcutsProvider {
             shortTitle: "Restore last capture",
             systemImageName: "arrow.counterclockwise"
         )
+        AppShortcut(
+            intent: ShowLastCaptureIntent(),
+            phrases: [
+                "Show last \(.applicationName) capture"
+            ],
+            shortTitle: "Show last capture",
+            systemImageName: "rectangle.on.rectangle"
+        )
+        AppShortcut(
+            intent: PinLastCaptureIntent(),
+            phrases: [
+                "Pin last \(.applicationName) capture"
+            ],
+            shortTitle: "Pin last capture",
+            systemImageName: "pin.fill"
+        )
+        AppShortcut(
+            intent: CopyLastCaptureIntent(),
+            phrases: [
+                "Copy last \(.applicationName) capture"
+            ],
+            shortTitle: "Copy last capture",
+            systemImageName: "doc.on.doc"
+        )
+        AppShortcut(
+            intent: OpenLastCaptureIntent(),
+            phrases: [
+                "Open last \(.applicationName) capture"
+            ],
+            shortTitle: "Open last capture",
+            systemImageName: "arrow.up.right.square"
+        )
+        AppShortcut(
+            intent: RevealLastCaptureIntent(),
+            phrases: [
+                "Reveal last \(.applicationName) capture"
+            ],
+            shortTitle: "Reveal last capture",
+            systemImageName: "folder"
+        )
+        AppShortcut(
+            intent: RecognizeLastCaptureTextIntent(),
+            phrases: [
+                "Recognize last \(.applicationName) capture text",
+                "Copy text from last \(.applicationName) capture"
+            ],
+            shortTitle: "Recognize capture text",
+            systemImageName: "doc.text.viewfinder"
+        )
+        AppShortcut(
+            intent: RevealCaptureFolderIntent(),
+            phrases: [
+                "Reveal \(.applicationName) capture folder"
+            ],
+            shortTitle: "Reveal capture folder",
+            systemImageName: "folder"
+        )
     }
 }
