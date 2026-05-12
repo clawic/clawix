@@ -472,7 +472,10 @@ private struct ReferenceCard: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Extract palette from \(reference.name)")
+                .accessibilityIdentifier("design-reference-extract-\(reference.id)")
             }
+            referenceActions
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -485,12 +488,62 @@ private struct ReferenceCard: View {
                 .stroke(Palette.border, lineWidth: 0.5)
         )
         .onHover { hovered = $0 }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(reference.name) reference")
+        .accessibilityValue(reference.type.displayName)
+        .accessibilityIdentifier("design-reference-card-\(reference.id)")
         .contextMenu {
             if reference.type == .image {
                 Button("Extract palette", action: onExtract)
                 Divider()
             }
             Button("Delete reference", role: .destructive, action: onDelete)
+        }
+    }
+
+    private var referenceActions: some View {
+        HStack(spacing: 8) {
+            if canOpenSource {
+                Button {
+                    openSource()
+                } label: {
+                    HStack(spacing: 5) {
+                        LucideIcon(.squareArrowOutUpRight, size: 10)
+                        Text("Open source")
+                            .font(BodyFont.system(size: 11, wght: 600))
+                    }
+                    .foregroundColor(Color(white: 0.72))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.white.opacity(0.06))
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Open source for \(reference.name)")
+                .accessibilityIdentifier("design-reference-open-source-\(reference.id)")
+            }
+
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                HStack(spacing: 5) {
+                    LucideIcon(.trash, size: 10)
+                    Text("Delete")
+                        .font(BodyFont.system(size: 11, wght: 600))
+                }
+                .foregroundColor(Color(red: 0.95, green: 0.45, blue: 0.45))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.red.opacity(0.10))
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Delete \(reference.name)")
+            .accessibilityIdentifier("design-reference-delete-\(reference.id)")
         }
     }
 
@@ -532,6 +585,26 @@ private struct ReferenceCard: View {
         case .screenshot: return "camera.viewfinder"
         case .snippet:    return "chevron.left.forwardslash.chevron.right"
         }
+    }
+
+    private var canOpenSource: Bool {
+        sourceURL != nil
+    }
+
+    private var sourceURL: URL? {
+        guard let source = reference.source?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !source.isEmpty else {
+            return nil
+        }
+        if let url = URL(string: source), url.scheme != nil {
+            return url
+        }
+        return URL(fileURLWithPath: NSString(string: source).expandingTildeInPath)
+    }
+
+    private func openSource() {
+        guard let url = sourceURL else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private func loadAssetImage() -> NSImage? {
