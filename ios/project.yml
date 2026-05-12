@@ -52,6 +52,9 @@ targets:
         NSPhotoLibraryAddUsageDescription: "Used to save images from your conversations to your photo library."
         NSMicrophoneUsageDescription: "Used to record voice prompts and dictate messages to Codex."
         NSSpeechRecognitionUsageDescription: "Used to transcribe your voice messages on-device into editable text."
+        NSHealthShareUsageDescription: "Reads samples (heart rate, steps, sleep, workouts, etc.) from Apple Health into your private Life tracking database. Reads only; nothing is written back."
+        NSHealthUpdateUsageDescription: "Required by Apple for HealthKit access. Clawix does not write to Apple Health."
+        NSLocationWhenInUseUsageDescription: "Optional GPS log vertical: when explicitly enabled, samples your location into your private Life tracking database. You can disable it at any time."
         NSLocalNetworkUsageDescription: "Used to talk to Clawix running on your Mac over the local network."
         NSBonjourServices:
           - _clawix-bridge._tcp
@@ -64,6 +67,8 @@ targets:
           - PlusJakartaSans-Bold.ttf
           - Manrope.ttf
           - lucide.ttf
+    entitlements:
+      path: Clawix.entitlements
     settings:
       base:
         ENABLE_PREVIEWS: YES
