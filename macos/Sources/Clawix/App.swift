@@ -375,9 +375,34 @@ private struct MenuBarContent: View {
                     Label("Pin Last Capture", systemImage: "pin.fill")
                 }
                 Button {
+                    screenTools.showLastCaptureOverlay()
+                } label: {
+                    Label("Show Last Capture", systemImage: "rectangle.on.rectangle")
+                }
+                Button {
+                    screenTools.copyLastCapture()
+                } label: {
+                    Label("Copy Last Capture", systemImage: "doc.on.doc")
+                }
+                Button {
+                    screenTools.openLastCapture()
+                } label: {
+                    Label("Open Last Capture", systemImage: "arrow.up.right.square")
+                }
+                Button {
+                    screenTools.revealLastCapture()
+                } label: {
+                    Label("Reveal Last Capture", systemImage: "folder")
+                }
+                Button {
                     screenTools.openCaptureHistory()
                 } label: {
                     Label("Capture History…", systemImage: "clock")
+                }
+                Button {
+                    screenTools.revealCaptureFolder()
+                } label: {
+                    Label("Reveal Capture Folder", systemImage: "folder")
                 }
                 if !screenTools.overlays.isEmpty {
                     Button {

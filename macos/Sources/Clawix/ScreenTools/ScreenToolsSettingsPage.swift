@@ -162,10 +162,45 @@ struct ScreenToolsSettingsPage: View {
                 )
                 CardDivider()
                 actionRow(
+                    title: "Show last capture",
+                    detail: "Reopen the most recent local capture in a Quick Access overlay.",
+                    symbol: "rectangle.on.rectangle",
+                    action: service.showLastCaptureOverlay
+                )
+                CardDivider()
+                actionRow(
+                    title: "Copy last capture",
+                    detail: "Copy the most recent local capture to the clipboard.",
+                    symbol: "doc.on.doc",
+                    action: service.copyLastCapture
+                )
+                CardDivider()
+                actionRow(
+                    title: "Open last capture",
+                    detail: "Open the most recent local capture in its default app.",
+                    symbol: "arrow.up.right.square",
+                    action: service.openLastCapture
+                )
+                CardDivider()
+                actionRow(
+                    title: "Reveal last capture",
+                    detail: "Show the most recent local capture in Finder.",
+                    symbol: "folder",
+                    action: service.revealLastCapture
+                )
+                CardDivider()
+                actionRow(
                     title: "Open capture history",
-                    detail: "Reveal the local export folder.",
+                    detail: "Open a local list of recent captures with actions.",
                     symbol: "clock",
                     action: service.openCaptureHistory
+                )
+                CardDivider()
+                actionRow(
+                    title: "Reveal capture folder",
+                    detail: "Show the local export folder in Finder.",
+                    symbol: "folder",
+                    action: service.revealCaptureFolder
                 )
                 CardDivider()
                 SettingsRow {
