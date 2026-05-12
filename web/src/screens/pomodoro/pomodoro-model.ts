@@ -16,6 +16,8 @@ export type PomodoroUrlCommand = "start" | "pause" | "finish" | "break" | "aband
 
 export type PomodoroSoundSlot = "session" | "session-end" | "break" | "break-end";
 
+export type PomodoroReportRange = "day" | "week" | "month";
+
 export interface PomodoroCategory {
   id: string;
   name: string;
@@ -172,6 +174,7 @@ export interface PomodoroState {
   selectedDate: string;
   notesOnly: boolean;
   reportFilter: "all" | "focus" | "break" | "notes";
+  reportRange: PomodoroReportRange;
   miniPlayerOpen: boolean;
   notices: PomodoroNotice[];
   lastAbandoned?: PomodoroLog;
@@ -257,6 +260,7 @@ export function defaultPomodoroState(now = Date.now()): PomodoroState {
     selectedDate: today,
     notesOnly: false,
     reportFilter: "all",
+    reportRange: "day",
     miniPlayerOpen: false,
     notices: [],
   };
@@ -522,6 +526,27 @@ export function totalBreakSeconds(state: PomodoroState, key: string): number {
   return state.logs
     .filter((log) => !log.abandoned && log.kind === "break" && sameDay(log.startAt, key))
     .reduce((sum, log) => sum + log.durationSec, 0);
+}
+
+export function logInReportRange(log: PomodoroLog, state: PomodoroState): boolean {
+  const range = reportRangeBounds(state.selectedDate, state.reportRange ?? "day");
+  return log.startAt >= range.start && log.startAt < range.end;
+}
+
+export function reportRangeLabel(state: PomodoroState): string {
+  const selected = new Date(`${state.selectedDate}T12:00:00`);
+  switch (state.reportRange ?? "day") {
+    case "day":
+      return selected.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    case "week": {
+      const range = reportRangeBounds(state.selectedDate, "week");
+      const start = new Date(range.start);
+      const end = new Date(range.end - 1);
+      return `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} - ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+    }
+    case "month":
+      return selected.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  }
 }
 
 export function formatClock(sec: number): string {
@@ -942,6 +967,27 @@ function parseScheduleTime(value: string): number | null {
     return null;
   }
   return hours * 60 + minutes;
+}
+
+function reportRangeBounds(selectedDate: string, range: PomodoroReportRange): { start: number; end: number } {
+  const selected = new Date(`${selectedDate}T00:00:00`);
+  if (range === "month") {
+    const start = new Date(selected.getFullYear(), selected.getMonth(), 1);
+    const end = new Date(selected.getFullYear(), selected.getMonth() + 1, 1);
+    return { start: start.getTime(), end: end.getTime() };
+  }
+  if (range === "week") {
+    const start = new Date(selected);
+    const day = start.getDay();
+    const offset = day === 0 ? -6 : 1 - day;
+    start.setDate(start.getDate() + offset);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    return { start: start.getTime(), end: end.getTime() };
+  }
+  const end = new Date(selected);
+  end.setDate(selected.getDate() + 1);
+  return { start: selected.getTime(), end: end.getTime() };
 }
 
 function includesFolded(value: string, expected: string): boolean {

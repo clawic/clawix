@@ -12,8 +12,10 @@ import {
   formatClock,
   formatDuration,
   formatScheduleTime,
+  logInReportRange,
   parsePlainTasks,
   pauseTimer,
+  reportRangeLabel,
   resumeTimer,
   removeScheduleItem,
   removeWindowTrackerRule,
@@ -35,6 +37,7 @@ import {
   type Mood,
   type PomodoroCategory,
   type PomodoroLog,
+  type PomodoroReportRange,
   type PomodoroScheduleItem,
   type PomodoroSettings,
   type PomodoroShortcut,
@@ -109,6 +112,7 @@ type Action =
   | { type: "selected-date"; value: string }
   | { type: "notes-only"; value: boolean }
   | { type: "report-filter"; value: PomodoroState["reportFilter"] }
+  | { type: "report-range"; value: PomodoroReportRange }
   | { type: "mini"; value: boolean }
   | { type: "notice"; now: number; title: string; detail: string }
   | { type: "shortcut"; shortcut: PomodoroShortcut; now: number; intention?: string }
@@ -248,6 +252,8 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return { ...state, notesOnly: action.value };
     case "report-filter":
       return { ...state, reportFilter: action.value };
+    case "report-range":
+      return { ...state, reportRange: action.value };
     case "mini":
       return { ...state, miniPlayerOpen: action.value };
     case "notice":
@@ -356,7 +362,8 @@ export function PomodoroView() {
   ]);
 
   const activeCategory = state.categories.find((cat) => cat.id === state.categoryId) ?? state.categories[0]!;
-  const visibleLogs = useMemo(() => filterLogs(state.logs, state), [state.logs, state.selectedDate, state.notesOnly, state.reportFilter]);
+  const visibleLogs = useMemo(() => filterLogs(state.logs, state), [state.logs, state.selectedDate, state.notesOnly, state.reportFilter, state.reportRange]);
+  const analyticsLogs = useMemo(() => state.logs.filter((log) => !log.abandoned && logInReportRange(log, state)), [state.logs, state.selectedDate, state.reportRange]);
   const activeBlockers = currentBlockers(state);
 
   return (
@@ -397,7 +404,7 @@ export function PomodoroView() {
               activeBlockers={activeBlockers}
             />
           )}
-          {panel === "analytics" && <AnalyticsPanel state={state} dispatch={dispatch} visibleLogs={visibleLogs} />}
+          {panel === "analytics" && <AnalyticsPanel state={state} dispatch={dispatch} visibleLogs={visibleLogs} analyticsLogs={analyticsLogs} />}
           {panel === "tasks" && <TasksPanel state={state} dispatch={dispatch} />}
           {panel === "categories" && <CategoriesPanel state={state} dispatch={dispatch} />}
           {panel === "profiles" && <ProfilesPanel state={state} dispatch={dispatch} />}
@@ -614,14 +621,25 @@ function TimerPanel({
   );
 }
 
-function AnalyticsPanel({ state, dispatch, visibleLogs }: { state: PomodoroState; dispatch: React.Dispatch<Action>; visibleLogs: PomodoroLog[] }) {
+function AnalyticsPanel({
+  state,
+  dispatch,
+  visibleLogs,
+  analyticsLogs,
+}: {
+  state: PomodoroState;
+  dispatch: React.Dispatch<Action>;
+  visibleLogs: PomodoroLog[];
+  analyticsLogs: PomodoroLog[];
+}) {
   const csv = exportLogsCsv(state);
+  const rangeLabel = reportRangeLabel(state);
   return (
     <section className="h-full overflow-auto thin-scroll p-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[18px] font-bold">Analytics</div>
-          <div className="text-[12px] text-[var(--color-fg-secondary)]">Daily, weekly-style totals, category distribution, mood split, notes and exports.</div>
+          <div className="text-[12px] text-[var(--color-fg-secondary)]">Daily, weekly and monthly totals, category distribution, mood split, notes and exports.</div>
         </div>
         <div className="flex gap-2">
           <DownloadButton filename="session-export.csv" data={csv} label="CSV" mime="text/csv" />
@@ -631,16 +649,25 @@ function AnalyticsPanel({ state, dispatch, visibleLogs }: { state: PomodoroState
       <div className="mt-5 grid grid-cols-[1fr_1fr] gap-4">
         <div className="space-y-4">
           <DayHeader state={state} dispatch={dispatch} />
-          <StatsGrid state={state} />
-          <Card title="Category distribution" action="Focus">
-            <Distribution state={state} />
+          <StatsGrid state={state} logs={analyticsLogs} />
+          <Card title="Category distribution" action={rangeLabel}>
+            <Distribution state={state} logs={analyticsLogs} />
           </Card>
-          <Card title="Mood" action="Reflection">
+          <Card title="Mood" action={rangeLabel}>
             <MoodDistribution logs={visibleLogs} />
           </Card>
         </div>
         <div className="space-y-4">
           <div className="flex items-center gap-2">
+            <select
+              value={state.reportRange ?? "day"}
+              onChange={(event) => dispatch({ type: "report-range", value: event.target.value as PomodoroReportRange })}
+              className="h-8 rounded-[8px] border border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[12px]"
+            >
+              <option value="day">Day</option>
+              <option value="week">Week</option>
+              <option value="month">Month</option>
+            </select>
             <label className="flex items-center gap-2 text-[12px] text-[var(--color-fg-secondary)]">
               <input type="checkbox" checked={state.notesOnly} onChange={(event) => dispatch({ type: "notes-only", value: event.target.checked })} />
               Show notes only
@@ -656,10 +683,10 @@ function AnalyticsPanel({ state, dispatch, visibleLogs }: { state: PomodoroState
               <option value="notes">Notes</option>
             </select>
           </div>
-          <Card title="Timeline" action={`${visibleLogs.length} rows`}>
+          <Card title="Timeline" action={`${rangeLabel} / ${visibleLogs.length} rows`}>
             <div className="space-y-2">
               {visibleLogs.map((log) => <LogRow key={log.id} log={log} state={state} />)}
-              {visibleLogs.length === 0 && <EmptyText>No sessions match this day/filter.</EmptyText>}
+              {visibleLogs.length === 0 && <EmptyText>No sessions match this range/filter.</EmptyText>}
             </div>
           </Card>
         </div>
@@ -1063,13 +1090,13 @@ function DayHeader({ state, dispatch }: { state: PomodoroState; dispatch: React.
   );
 }
 
-function StatsGrid({ state }: { state: PomodoroState }) {
-  const focus = totalFocusSeconds(state, state.selectedDate);
-  const breaks = totalBreakSeconds(state, state.selectedDate);
-  const dayLogs = state.logs.filter((log) => sameDay(log.startAt, state.selectedDate) && !log.abandoned);
-  const focused = dayLogs.filter((log) => log.mood === "focused").length;
-  const neutral = dayLogs.filter((log) => log.mood === "neutral").length;
-  const distracted = dayLogs.filter((log) => log.mood === "distracted").length;
+function StatsGrid({ state, logs }: { state: PomodoroState; logs?: PomodoroLog[] }) {
+  const rangeLogs = logs ?? state.logs.filter((log) => sameDay(log.startAt, state.selectedDate) && !log.abandoned);
+  const focus = logs ? rangeLogs.filter((log) => log.kind === "focus").reduce((sum, log) => sum + log.durationSec, 0) : totalFocusSeconds(state, state.selectedDate);
+  const breaks = logs ? rangeLogs.filter((log) => log.kind === "break").reduce((sum, log) => sum + log.durationSec, 0) : totalBreakSeconds(state, state.selectedDate);
+  const focused = rangeLogs.filter((log) => log.mood === "focused").length;
+  const neutral = rangeLogs.filter((log) => log.mood === "neutral").length;
+  const distracted = rangeLogs.filter((log) => log.mood === "distracted").length;
   return (
     <div className="grid grid-cols-3 gap-3">
       <Stat label="Total focus" value={formatDuration(focus)} />
@@ -1138,8 +1165,8 @@ function TimelineBlock({ log, state }: { log: PomodoroLog; state: PomodoroState 
   );
 }
 
-function Distribution({ state }: { state: PomodoroState }) {
-  const focusLogs = state.logs.filter((log) => log.kind === "focus" && sameDay(log.startAt, state.selectedDate) && !log.abandoned);
+function Distribution({ state, logs }: { state: PomodoroState; logs?: PomodoroLog[] }) {
+  const focusLogs = (logs ?? state.logs.filter((log) => sameDay(log.startAt, state.selectedDate) && !log.abandoned)).filter((log) => log.kind === "focus");
   const total = focusLogs.reduce((sum, log) => sum + log.durationSec, 0);
   return (
     <div className="space-y-2">
@@ -1276,7 +1303,7 @@ function EmptyText({ children }: { children: React.ReactNode }) {
 
 function filterLogs(logs: PomodoroLog[], state: PomodoroState): PomodoroLog[] {
   return logs
-    .filter((log) => sameDay(log.startAt, state.selectedDate))
+    .filter((log) => !log.abandoned && logInReportRange(log, state))
     .filter((log) => !state.notesOnly || !!log.notes)
     .filter((log) => {
       if (state.reportFilter === "all") return true;
