@@ -321,6 +321,70 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         XCTAssertTrue(overwrite.message.contains("Output file already exists"))
     }
 
+    func test_sqliteRestoreReplacesLocalDatabase() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let restoreSource = paths.directory.appendingPathComponent("restore.sqlite")
+        let sourceQueue = try DatabaseQueue(path: restoreSource.path)
+        try sourceQueue.write { db in
+            try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+            try db.execute(sql: "INSERT INTO users (name) VALUES ('Grace')")
+        }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = restoreSource.path
+
+        let plan = store.perform(
+            .restoreDatabase,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertTrue(plan.message.contains("SQLite restore replaced"))
+        let restoredQueue = try DatabaseQueue(path: paths.database.path)
+        let names = try restoredQueue.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM users ORDER BY id")
+        }
+        XCTAssertEqual(names, ["Grace"])
+    }
+
+    func test_sqliteRestoreBlocksSameSourceAndDestination() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = paths.database.path
+
+        let plan = store.perform(
+            .restoreDatabase,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertEqual(plan.message, "Restore input must be different from the destination database.")
+    }
+
+    func test_sqliteRestoreReportsInvalidSource() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let restoreSource = paths.directory.appendingPathComponent("not-sqlite.txt")
+        try "not sqlite".write(to: restoreSource, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = restoreSource.path
+
+        let plan = store.perform(
+            .restoreDatabase,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertTrue(plan.message.contains("SQLite restore failed"), plan.message)
+    }
+
     func test_sqliteQueryExportBlocksWriteSQL() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }

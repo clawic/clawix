@@ -248,6 +248,12 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
                 outputPath: outputPath,
                 fileManager: fileManager
             )
+        case .restoreDatabase:
+            return restoreSQLiteDatabase(
+                profile,
+                inputPath: inputPath,
+                fileManager: fileManager
+            )
         default:
             return prepared
         }
@@ -466,6 +472,39 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
             return .init(kind: .backupDatabase, status: .localReady, message: "SQLite backup wrote \(target).")
         } catch {
             return .init(kind: .backupDatabase, status: .blocked, message: "SQLite backup failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func restoreSQLiteDatabase(
+        _ profile: DatabaseConnectionProfile,
+        inputPath: String,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        let source = DatabaseConnectionProfileStore.expanded(inputPath)
+        let target = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+        do {
+            guard fileManager.fileExists(atPath: target) else {
+                return .init(kind: .restoreDatabase, status: .blocked, message: "SQLite restore failed: destination database file does not exist.")
+            }
+            guard source != target else {
+                return .init(kind: .restoreDatabase, status: .blocked, message: "Restore input must be different from the destination database.")
+            }
+
+            let sourceQueue = try DatabaseQueue(path: source)
+            try sourceQueue.read { db in
+                _ = try String.fetchOne(db, sql: "PRAGMA quick_check")
+            }
+
+            let targetURL = URL(fileURLWithPath: target)
+            let temporaryURL = targetURL
+                .deletingLastPathComponent()
+                .appendingPathComponent("\(targetURL.lastPathComponent).restore-\(UUID().uuidString).tmp")
+            defer { try? fileManager.removeItem(at: temporaryURL) }
+            try fileManager.copyItem(atPath: source, toPath: temporaryURL.path)
+            _ = try fileManager.replaceItemAt(targetURL, withItemAt: temporaryURL)
+            return .init(kind: .restoreDatabase, status: .localReady, message: "SQLite restore replaced \(target).")
+        } catch {
+            return .init(kind: .restoreDatabase, status: .blocked, message: "SQLite restore failed: \(error.localizedDescription)")
         }
     }
 
