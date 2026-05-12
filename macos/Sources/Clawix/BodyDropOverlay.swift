@@ -32,7 +32,7 @@ private struct BodyDropTarget: ViewModifier {
             .overlay(
                 // Sits ABOVE the composer's NSTextView so AppKit's drag
                 // dispatch picks the body acceptor as destination instead
-                // of the text view. Otherwise CleanShot-style drags (which
+                // of the text view. Otherwise capture-tool drags (which
                 // put both `.fileURL` and `.string` on the pasteboard) get
                 // caught by the text view via its `.string` registration
                 // and the file path is inserted as literal text. The
