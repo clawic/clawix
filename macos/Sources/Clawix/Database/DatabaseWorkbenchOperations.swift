@@ -220,6 +220,12 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
                 preferences: preferences,
                 fileManager: fileManager
             )
+        case .importSQLDump:
+            return importSQLiteSQLDump(
+                inputPath: inputPath,
+                profile: profile,
+                fileManager: fileManager
+            )
         case .exportQuery:
             return exportSQLiteQuery(
                 activeSQL,
@@ -365,6 +371,32 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
             return .init(kind: .importCSV, status: .localReady, message: "SQLite CSV import wrote \(dataRows.count) row\(dataRows.count == 1 ? "" : "s").")
         } catch {
             return .init(kind: .importCSV, status: .blocked, message: "SQLite CSV import failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func importSQLiteSQLDump(
+        inputPath: String,
+        profile: DatabaseConnectionProfile,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        let source = DatabaseConnectionProfileStore.expanded(inputPath)
+        let databasePath = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+        guard fileManager.fileExists(atPath: databasePath) else {
+            return .init(kind: .importSQLDump, status: .blocked, message: "SQLite SQL dump import failed: database file does not exist.")
+        }
+
+        do {
+            let sql = try String(contentsOfFile: source, encoding: .utf8)
+            guard !sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return .init(kind: .importSQLDump, status: .blocked, message: "SQL dump import failed: SQL file is empty.")
+            }
+            let queue = try DatabaseQueue(path: databasePath)
+            try queue.write { db in
+                try db.execute(sql: sql)
+            }
+            return .init(kind: .importSQLDump, status: .localReady, message: "SQLite SQL dump import finished.")
+        } catch {
+            return .init(kind: .importSQLDump, status: .blocked, message: "SQLite SQL dump import failed: \(error.localizedDescription)")
         }
     }
 

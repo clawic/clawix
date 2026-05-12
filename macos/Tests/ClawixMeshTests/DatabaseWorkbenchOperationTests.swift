@@ -181,6 +181,71 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         XCTAssertTrue(plan.message.contains("unclosed quoted field"), plan.message)
     }
 
+    func test_sqliteSQLDumpImportExecutesLocalDump() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("users.sql")
+        try """
+        INSERT INTO users (id, name) VALUES (1, 'Ada');
+        INSERT INTO users (id, name) VALUES (2, 'Linus, Torvalds');
+        """.write(to: input, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+
+        let plan = store.perform(
+            .importSQLDump,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertEqual(plan.message, "SQLite SQL dump import finished.")
+        let queue = try DatabaseQueue(path: paths.database.path)
+        let names = try queue.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM users ORDER BY id")
+        }
+        XCTAssertEqual(names, ["Ada", "Linus, Torvalds"])
+    }
+
+    func test_sqliteSQLDumpImportBlocksEmptyInput() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("empty.sql")
+        try "\n  \n".write(to: input, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+
+        let plan = store.perform(
+            .importSQLDump,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertEqual(plan.message, "SQL dump import failed: SQL file is empty.")
+    }
+
+    func test_sqliteSQLDumpImportReportsMalformedSQL() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("bad.sql")
+        try "INSERT INTO missing_table (id) VALUES (1);".write(to: input, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+
+        let plan = store.perform(
+            .importSQLDump,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertTrue(plan.message.contains("SQLite SQL dump import failed"), plan.message)
+    }
+
     func test_sqliteQueryExportWritesCSV() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }
