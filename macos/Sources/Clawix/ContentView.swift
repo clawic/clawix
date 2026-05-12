@@ -796,6 +796,24 @@ private struct ContentBodyWithTerminal<Content: View>: View {
             min(maxPanelHeight, CGFloat(panelHeightRaw)))
     }
 
+    private var terminalSeparatorMask: some View {
+        HStack(spacing: 0) {
+            LinearGradient(
+                colors: [.clear, .white],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: 80)
+            Rectangle()
+            LinearGradient(
+                colors: [.white, .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(width: 80)
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             content()
@@ -813,11 +831,13 @@ private struct ContentBodyWithTerminal<Content: View>: View {
                         if panelOpen {
                             ZStack {
                                 Rectangle()
-                                    .fill(Color.white.opacity(0.10))
+                                    .fill(Color.white.opacity(0.18))
                                     .frame(height: 0.7)
+                                    .mask(terminalSeparatorMask)
                                 Rectangle()
-                                    .fill(Color.white.opacity(0.30))
+                                    .fill(Color.white.opacity(0.38))
                                     .frame(height: 0.7)
+                                    .mask(terminalSeparatorMask)
                                     .opacity(resizeHovered ? 1 : 0)
                                     .animation(.easeOut(duration: 0.14), value: resizeHovered)
                             }

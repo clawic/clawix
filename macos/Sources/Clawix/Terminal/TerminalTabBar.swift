@@ -21,8 +21,9 @@ struct TerminalTabBar: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 14)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
         }
         .scrollDisabled(false)
     }
@@ -95,9 +96,9 @@ private struct TerminalTabChip: View {
                     .onTapGesture(count: 2, perform: onBeginRename)
             }
         }
-        .padding(.leading, 7)
-        .padding(.trailing, 9)
-        .padding(.vertical, 4)
+        .padding(.leading, 10)
+        .padding(.trailing, 12)
+        .padding(.vertical, 6)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(chipFill)
