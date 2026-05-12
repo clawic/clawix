@@ -262,7 +262,7 @@ struct SettingsContent: View {
                     case .git:             GitPage()
                     case .browserUsage:    BrowserUsagePage()
                     case .usage:           UsagePage()
-                    case .macUtilities:    PlaceholderPage(category: .macUtilities)
+                    case .macUtilities:    MacUtilitiesSettingsPage()
                     case .mcp:             MCPPage()
                     case .machines:        HostsPage()
                     case .secrets:         SecretsSettingsPage()
