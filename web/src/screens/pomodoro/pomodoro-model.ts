@@ -113,6 +113,17 @@ export interface PomodoroTask {
   done: boolean;
 }
 
+export interface PomodoroScheduleItem {
+  id: string;
+  title: string;
+  categoryId: string;
+  dateKey: string;
+  startMinutes: number;
+  durationMinutes: number;
+  source: "manual" | "calendar" | "task";
+  started?: boolean;
+}
+
 export interface PomodoroLog {
   id: string;
   kind: "focus" | "break";
@@ -152,6 +163,7 @@ export interface PomodoroNotice {
 export interface PomodoroState {
   categories: PomodoroCategory[];
   tasks: PomodoroTask[];
+  schedules: PomodoroScheduleItem[];
   logs: PomodoroLog[];
   settings: PomodoroSettings;
   active: PomodoroActiveTimer | null;
@@ -176,6 +188,7 @@ export function defaultPomodoroState(now = Date.now()): PomodoroState {
   return {
     categories,
     tasks: [],
+    schedules: [],
     logs: [],
     settings: {
       dailyGoalMinutes: 120,
@@ -545,6 +558,81 @@ export function parsePlainTasks(text: string, categoryId: string): PomodoroTask[
     }));
 }
 
+export function scheduledItemsForDate(state: PomodoroState, key: string): PomodoroScheduleItem[] {
+  return [...(state.schedules ?? [])]
+    .filter((item) => item.dateKey === key)
+    .sort((a, b) => a.startMinutes - b.startMinutes);
+}
+
+export function formatScheduleTime(startMinutes: number): string {
+  const safe = Math.max(0, Math.min(23 * 60 + 59, Math.round(startMinutes)));
+  const hours = Math.floor(safe / 60);
+  const minutes = safe % 60;
+  return `${`${hours}`.padStart(2, "0")}:${`${minutes}`.padStart(2, "0")}`;
+}
+
+export function addScheduleItem(
+  state: PomodoroState,
+  now: number,
+  title: string,
+  categoryId = state.categoryId,
+  startTime = "09:00",
+  durationMinutes = state.settings.sessionMinutes,
+  source: PomodoroScheduleItem["source"] = "manual",
+): PomodoroState {
+  const cleanTitle = title.trim();
+  const startMinutes = parseScheduleTime(startTime);
+  if (!cleanTitle || startMinutes === null) {
+    return {
+      ...state,
+      schedules: state.schedules ?? [],
+      notices: pushNotice(state, now, "Calendar plan", "Title and valid start time are required."),
+    };
+  }
+  const item: PomodoroScheduleItem = {
+    id: makeId("schedule", now),
+    title: cleanTitle,
+    categoryId: categoryId || state.categoryId,
+    dateKey: state.selectedDate,
+    startMinutes,
+    durationMinutes: Math.max(1, Math.round(durationMinutes)),
+    source,
+  };
+  return {
+    ...state,
+    schedules: [...(state.schedules ?? []), item],
+    notices: pushNotice(state, now, "Calendar plan", `${cleanTitle} scheduled at ${formatScheduleTime(startMinutes)}.`),
+  };
+}
+
+export function removeScheduleItem(state: PomodoroState, now: number, id: string): PomodoroState {
+  return {
+    ...state,
+    schedules: (state.schedules ?? []).filter((item) => item.id !== id),
+    notices: pushNotice(state, now, "Calendar plan", "Scheduled block removed."),
+  };
+}
+
+export function startScheduleItem(state: PomodoroState, now: number, id: string): PomodoroState {
+  const item = (state.schedules ?? []).find((schedule) => schedule.id === id);
+  if (!item) {
+    return {
+      ...state,
+      schedules: state.schedules ?? [],
+      notices: pushNotice(state, now, "Calendar plan", "Scheduled block was not found."),
+    };
+  }
+  const withStarted = {
+    ...state,
+    schedules: (state.schedules ?? []).map((schedule) => (schedule.id === id ? { ...schedule, started: true } : schedule)),
+  };
+  const started = startFocus(withStarted, now, item.title, item.categoryId, item.durationMinutes);
+  return {
+    ...started,
+    notices: pushNotice(started, now + 1, "Calendar plan", `Started scheduled block at ${formatScheduleTime(item.startMinutes)}.`),
+  };
+}
+
 export function exportLogsCsv(state: PomodoroState): string {
   const rows = [
     ["type", "intention", "category", "start", "end", "duration_seconds", "pause_seconds", "mood", "notes"],
@@ -843,6 +931,17 @@ function soundProfile(state: PomodoroState, slot: PomodoroSoundSlot): { label: s
 
 function intentionHas(intention: string, needle: string): boolean {
   return intention.toLowerCase().includes(needle.toLowerCase());
+}
+
+function parseScheduleTime(value: string): number | null {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return null;
+  }
+  return hours * 60 + minutes;
 }
 
 function includesFolded(value: string, expected: string): boolean {

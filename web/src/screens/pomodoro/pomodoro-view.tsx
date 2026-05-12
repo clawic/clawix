@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   abandonTimer,
+  addScheduleItem,
   addWindowTrackerRule,
   adjustTimerMinutes,
   currentBlockers,
@@ -10,15 +11,19 @@ import {
   finishTimer,
   formatClock,
   formatDuration,
+  formatScheduleTime,
   parsePlainTasks,
   pauseTimer,
   resumeTimer,
+  removeScheduleItem,
   removeWindowTrackerRule,
   runPomodoroShortcut,
   runPomodoroUrlCommand,
   sameDay,
+  scheduledItemsForDate,
   startBreak,
   startFocus,
+  startScheduleItem,
   testNotificationProfile,
   testSoundProfile,
   testWindowTracker,
@@ -30,6 +35,7 @@ import {
   type Mood,
   type PomodoroCategory,
   type PomodoroLog,
+  type PomodoroScheduleItem,
   type PomodoroSettings,
   type PomodoroShortcut,
   type PomodoroSoundSlot,
@@ -96,6 +102,9 @@ type Action =
   | { type: "task-toggle"; id: string }
   | { type: "task-delete"; id: string }
   | { type: "task-start"; task: PomodoroTask; now: number }
+  | { type: "schedule-add"; now: number; title: string; categoryId: string; startTime: string; durationMinutes: number }
+  | { type: "schedule-start"; now: number; id: string }
+  | { type: "schedule-delete"; now: number; id: string }
   | { type: "note"; value: string }
   | { type: "selected-date"; value: string }
   | { type: "notes-only"; value: boolean }
@@ -225,6 +234,12 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return { ...state, tasks: state.tasks.filter((task) => task.id !== action.id) };
     case "task-start":
       return startFocus(state, action.now, action.task.title, action.task.categoryId, action.task.estimateMinutes);
+    case "schedule-add":
+      return addScheduleItem(state, action.now, action.title, action.categoryId, action.startTime, action.durationMinutes);
+    case "schedule-start":
+      return startScheduleItem(state, action.now, action.id);
+    case "schedule-delete":
+      return removeScheduleItem(state, action.now, action.id);
     case "note":
       return state.active ? { ...state, active: { ...state.active, notes: action.value } } : state;
     case "selected-date":
@@ -787,18 +802,49 @@ function BlockersPanel({ state, dispatch, activeBlockers }: { state: PomodoroSta
 }
 
 function CalendarPanel({ state, dispatch }: { state: PomodoroState; dispatch: React.Dispatch<Action> }) {
+  const [title, setTitle] = useState(state.intentionDraft || "Planned focus");
+  const [startTime, setStartTime] = useState("09:00");
+  const [duration, setDuration] = useState(state.settings.sessionMinutes);
+  const [categoryId, setCategoryId] = useState(state.categoryId);
+  const scheduleItems = scheduledItemsForDate(state, state.selectedDate);
   return (
     <section className="h-full overflow-auto thin-scroll p-6">
       <Header title="Calendar" subtitle="Daily planning surface with scheduled tasks, logged Sessions, breaks and projected timer block." />
       <div className="mt-5 grid grid-cols-[380px_1fr] gap-4">
-        <Card title="Calendar integration" action="Local">
-          <Toggle label="Show calendar on Session" checked={true} onChange={() => undefined} />
-          <Toggle label="Show Sessions on Apple calendar" checked={false} onChange={() => dispatch({ type: "notice", now: Date.now(), title: "Apple Calendar sync", detail: "External calendar write is disabled in this local example." })} />
-          <Toggle label="Apple Reminder integration" checked={state.settings.developerTodoPreview} onChange={(v) => dispatch({ type: "settings", patch: { developerTodoPreview: v } })} />
-          <NumberRow label="Default calendar duration (min)" value={state.settings.sessionMinutes} onChange={(v) => dispatch({ type: "settings", patch: { sessionMinutes: v } })} />
-        </Card>
+        <div className="space-y-4">
+          <Card title="Schedule Session" action="Local">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Focus title" className="field w-full" />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="field" />
+              <input type="number" min={1} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="field" />
+              <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="field col-span-2">
+                {state.categories.filter((cat) => !cat.archived).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </select>
+            </div>
+            <PrimaryButton
+              className="mt-3"
+              icon={<PlusIcon size={14} />}
+              label="Add scheduled Session"
+              onClick={() => dispatch({ type: "schedule-add", now: Date.now(), title, categoryId, startTime, durationMinutes: duration })}
+            />
+          </Card>
+          <Card title="Calendar integration" action="Local">
+            <Toggle label="Show calendar on Session" checked={true} onChange={() => undefined} />
+            <Toggle label="Show Sessions on Apple calendar" checked={false} onChange={() => dispatch({ type: "notice", now: Date.now(), title: "Apple Calendar sync", detail: "External calendar write is disabled in this local example." })} />
+            <Toggle label="Apple Reminder integration" checked={state.settings.developerTodoPreview} onChange={(v) => dispatch({ type: "settings", patch: { developerTodoPreview: v } })} />
+            <NumberRow label="Default calendar duration (min)" value={state.settings.sessionMinutes} onChange={(v) => dispatch({ type: "settings", patch: { sessionMinutes: v } })} />
+          </Card>
+        </div>
         <div className="space-y-4">
           <DayHeader state={state} dispatch={dispatch} />
+          <Card title="Planned Sessions" action={`${scheduleItems.length} scheduled`}>
+            <div className="space-y-2">
+              {scheduleItems.map((item) => (
+                <ScheduleRow key={item.id} item={item} state={state} dispatch={dispatch} />
+              ))}
+              {scheduleItems.length === 0 && <EmptyText>No scheduled Sessions for this day.</EmptyText>}
+            </div>
+          </Card>
           <Timeline state={state} large />
         </div>
       </div>
@@ -887,6 +933,24 @@ function AutomationPanel({ state, dispatch }: { state: PomodoroState; dispatch: 
         </Card>
       </div>
     </section>
+  );
+}
+
+function ScheduleRow({ item, state, dispatch }: { item: PomodoroScheduleItem; state: PomodoroState; dispatch: React.Dispatch<Action> }) {
+  const category = state.categories.find((cat) => cat.id === item.categoryId);
+  return (
+    <div className="flex items-center gap-3 rounded-[8px] bg-[rgba(255,255,255,0.035)] p-3">
+      <span className="h-2 w-2 rounded-full" style={{ background: category?.color ?? "#666" }} />
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[13px]">{item.title}</div>
+        <div className="text-[11.5px] text-[var(--color-fg-secondary)]">
+          {formatScheduleTime(item.startMinutes)} / {item.durationMinutes} min / {category?.name ?? item.categoryId}
+        </div>
+      </div>
+      {item.started && <span className="chip">started</span>}
+      <ActionButton icon={<PlayIcon size={14} />} label="Start" onClick={() => dispatch({ type: "schedule-start", now: Date.now(), id: item.id })} />
+      <button className="icon-btn" onClick={() => dispatch({ type: "schedule-delete", now: Date.now(), id: item.id })} aria-label="Delete scheduled Session"><TrashIcon size={14} /></button>
+    </div>
   );
 }
 
@@ -1029,6 +1093,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Timeline({ state, large }: { state: PomodoroState; large?: boolean }) {
   const logs = state.logs.filter((log) => sameDay(log.startAt, state.selectedDate) && !log.abandoned);
+  const scheduleItems = scheduledItemsForDate(state, state.selectedDate);
   const projected = state.active && sameDay(state.active.startAt, state.selectedDate) ? state.active : null;
   return (
     <Card title="Timeline" action={large ? "Day view" : "Current day"}>
@@ -1038,12 +1103,29 @@ function Timeline({ state, large }: { state: PomodoroState; large?: boolean }) {
             <span className="ml-2 text-[10px] text-[var(--color-fg-tertiary)]">{hour}:00</span>
           </div>
         ))}
+        {scheduleItems.map((item) => <TimelineScheduleBlock key={item.id} item={item} state={state} />)}
         {logs.map((log) => <TimelineBlock key={log.id} log={log} state={state} />)}
         {projected && (
           <div className="absolute left-[58%] w-[32%] rounded-[6px] border border-[rgba(239,91,91,0.55)] bg-[rgba(239,91,91,0.22)]" style={{ top: `${timeTop(projected.startAt)}%`, height: `${Math.max(6, projected.totalSec / 324)}%` }} />
         )}
       </div>
     </Card>
+  );
+}
+
+function TimelineScheduleBlock({ item, state }: { item: PomodoroScheduleItem; state: PomodoroState }) {
+  const category = state.categories.find((cat) => cat.id === item.categoryId);
+  return (
+    <div
+      className="absolute left-[58%] w-[32%] rounded-[6px] border border-[rgba(255,255,255,0.28)] px-2 py-1 text-[10px] text-white"
+      style={{
+        top: `${scheduleTop(item.startMinutes)}%`,
+        height: `${Math.max(6, item.durationMinutes / 5.4)}%`,
+        background: category?.color ? `${category.color}55` : "rgba(255,255,255,0.12)",
+      }}
+    >
+      <div className="truncate">{item.title}</div>
+    </div>
   );
 }
 
@@ -1223,6 +1305,10 @@ function isUrlCommand(value: string): value is PomodoroUrlCommand {
 function timeTop(timestamp: number): number {
   const date = new Date(timestamp);
   const minutes = date.getHours() * 60 + date.getMinutes();
+  return scheduleTop(minutes);
+}
+
+function scheduleTop(minutes: number): number {
   const start = 9 * 60;
   const end = 18 * 60;
   return Math.max(0, Math.min(100, ((minutes - start) / (end - start)) * 100));

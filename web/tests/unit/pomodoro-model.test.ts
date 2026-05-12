@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   abandonTimer,
+  addScheduleItem,
   addWindowTrackerRule,
   currentBlockers,
   adjustTimerMinutes,
@@ -10,6 +11,8 @@ import {
   parsePlainTasks,
   pauseTimer,
   resumeTimer,
+  scheduledItemsForDate,
+  startScheduleItem,
   runPomodoroShortcut,
   runPomodoroUrlCommand,
   startFocus,
@@ -190,5 +193,22 @@ describe("pomodoro model", () => {
     state = tickPomodoro(state, now + 60_000);
     expect(state.active?.mode).toBe("ended");
     expect(state.notices[0]?.detail).toContain("End sound: Gong at 25%.");
+  });
+
+  it("plans and starts scheduled calendar sessions locally", () => {
+    const now = Date.UTC(2026, 4, 12, 19, 0, 0);
+    let state = defaultPomodoroState(now);
+
+    state = addScheduleItem(state, now, "Calendar focus", "deep-work", "09:30", 45);
+    const planned = scheduledItemsForDate(state, "2026-05-12");
+    expect(planned).toHaveLength(1);
+    expect(planned[0]?.startMinutes).toBe(9 * 60 + 30);
+    expect(state.notices[0]?.detail).toBe("Calendar focus scheduled at 09:30.");
+
+    state = startScheduleItem(state, now + 1_000, planned[0]!.id);
+    expect(state.active?.mode).toBe("focus");
+    expect(state.active?.intention).toBe("Calendar focus");
+    expect(state.active?.totalSec).toBe(45 * 60);
+    expect(state.schedules[0]?.started).toBe(true);
   });
 });
