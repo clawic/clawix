@@ -211,7 +211,12 @@ final class ScreenToolService: ObservableObject {
                     return
                 }
                 self?.lastCaptureURL = url
-                ToastCenter.shared.show("Recording saved")
+                if ScreenToolSettings.openRecordingEditorAfterRecording {
+                    NSWorkspace.shared.open(url)
+                    ToastCenter.shared.show("Recording opened")
+                } else {
+                    ToastCenter.shared.show("Recording saved")
+                }
             }
         }
     }
@@ -1221,6 +1226,7 @@ enum ScreenToolSettings {
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
+    static let openRecordingEditorAfterRecordingKey = "clawix.screenTools.openRecordingEditorAfterRecording"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
     static let previousAreaRectKey = "clawix.screenTools.previousAreaRect"
@@ -1303,6 +1309,10 @@ enum ScreenToolSettings {
 
     static var recordRecordingAudio: Bool {
         defaults.bool(forKey: recordRecordingAudioKey)
+    }
+
+    static var openRecordingEditorAfterRecording: Bool {
+        defaults.bool(forKey: openRecordingEditorAfterRecordingKey)
     }
 
     static var keepTextLineBreaks: Bool {
