@@ -13,6 +13,7 @@ import {
   runPomodoroShortcut,
   runPomodoroUrlCommand,
   startFocus,
+  testNotificationProfile,
   testWindowTracker,
   tickPomodoro,
   totalFocusSeconds,
@@ -139,5 +140,39 @@ describe("pomodoro model", () => {
     state = testWindowTracker(state, now + 1_000, "Safari", "Reading reference");
     expect(state.active?.mode).toBe("focus");
     expect(state.active?.intention).toBe("Read docs");
+  });
+
+  it("emits local notification profile notices once per threshold", () => {
+    const now = Date.UTC(2026, 4, 12, 16, 0, 0);
+    let state = defaultPomodoroState(now);
+    state.settings.endingSoonMinutes = 2;
+    state.settings.presenceEnabled = true;
+    state.settings.pauseOverflowEnabled = true;
+    state.settings.overflowMinutes = 1;
+
+    state = startFocus(state, now, "Notification check", "general", 4);
+    state = tickPomodoro(state, now + 2 * 60 * 1000);
+    expect(state.notices[0]?.title).toBe("Ending soon");
+    state = tickPomodoro(state, now + 2 * 60 * 1000 + 1_000);
+    expect(state.notices[0]?.title).toBe("Presence reminder");
+    state = tickPomodoro(state, now + 2 * 60 * 1000 + 2_000);
+    expect(state.notices.filter((notice) => notice.title === "Ending soon")).toHaveLength(1);
+
+    state = pauseTimer(state, now + 2 * 60 * 1000 + 3_000);
+    state = tickPomodoro(state, now + 3 * 60 * 1000 + 4_000);
+    expect(state.notices[0]?.title).toBe("Pause overflow");
+  });
+
+  it("can test notification profile actions locally", () => {
+    const now = Date.UTC(2026, 4, 12, 17, 0, 0);
+    let state = defaultPomodoroState(now);
+    state = testNotificationProfile(state, now, "ending-soon");
+    state = testNotificationProfile(state, now + 1_000, "presence");
+    state = testNotificationProfile(state, now + 2_000, "overflow");
+    expect(state.notices.map((notice) => notice.title).slice(0, 3)).toEqual([
+      "Overflow reminder",
+      "Presence reminder",
+      "Ending soon",
+    ]);
   });
 });

@@ -19,6 +19,7 @@ import {
   sameDay,
   startBreak,
   startFocus,
+  testNotificationProfile,
   testWindowTracker,
   tickPomodoro,
   totalBreakSeconds,
@@ -103,7 +104,8 @@ type Action =
   | { type: "url-command"; command: PomodoroUrlCommand; now: number; intention?: string; categoryId?: string }
   | { type: "tracker-add"; now: number; appName: string; windowTitle: string; categoryId: string; intention: string }
   | { type: "tracker-delete"; now: number; id: string }
-  | { type: "tracker-test"; now: number; appName: string; windowTitle: string };
+  | { type: "tracker-test"; now: number; appName: string; windowTitle: string }
+  | { type: "notification-test"; now: number; kind: "ending-soon" | "presence" | "overflow" };
 
 const STORE_KEY = "pomodoro.sessionParity.v1";
 const COLORS = ["#ef5b5b", "#73a6ff", "#f1b85b", "#8bd196", "#c89cff", "#e98fb1", "#7ed7d1"];
@@ -210,6 +212,8 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return removeWindowTrackerRule(state, action.now, action.id);
     case "tracker-test":
       return testWindowTracker(state, action.now, action.appName, action.windowTitle);
+    case "notification-test":
+      return testNotificationProfile(state, action.now, action.kind);
     default:
       return state;
   }
@@ -688,6 +692,11 @@ function ProfilesPanel({ state, dispatch }: { state: PomodoroState; dispatch: Re
           <Toggle label="Session overflow" checked={settings.sessionOverflowEnabled} onChange={(v) => dispatch({ type: "settings", patch: { sessionOverflowEnabled: v } })} />
           <Toggle label="Pause overflow" checked={settings.pauseOverflowEnabled} onChange={(v) => dispatch({ type: "settings", patch: { pauseOverflowEnabled: v } })} />
           <Toggle label="Break overflow" checked={settings.breakOverflowEnabled} onChange={(v) => dispatch({ type: "settings", patch: { breakOverflowEnabled: v } })} />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <ActionButton icon={<ZapIcon size={14} />} label="Test ending soon" onClick={() => dispatch({ type: "notification-test", now: Date.now(), kind: "ending-soon" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Test presence" onClick={() => dispatch({ type: "notification-test", now: Date.now(), kind: "presence" })} />
+            <ActionButton icon={<ZapIcon size={14} />} label="Test overflow" onClick={() => dispatch({ type: "notification-test", now: Date.now(), kind: "overflow" })} />
+          </div>
         </Card>
       </div>
       <div className="mt-4">

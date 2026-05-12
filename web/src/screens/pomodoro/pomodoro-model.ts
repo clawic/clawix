@@ -127,6 +127,7 @@ export interface PomodoroLog {
 
 export interface PomodoroActiveTimer {
   mode: TimerMode;
+  kind?: "focus" | "break";
   intention: string;
   categoryId: string;
   startAt: number;
@@ -135,6 +136,7 @@ export interface PomodoroActiveTimer {
   remainingSec: number;
   pausesSec: number;
   pausedAt?: number;
+  noticesSent?: string[];
   notes: string;
 }
 
@@ -272,6 +274,7 @@ export function startFocus(
     ...state,
     active: {
       mode: "focus",
+      kind: "focus",
       intention: cleanIntention,
       categoryId: resolvedCategoryId,
       startAt: now,
@@ -279,6 +282,7 @@ export function startFocus(
       totalSec,
       remainingSec: totalSec,
       pausesSec: 0,
+      noticesSent: [],
       notes: "",
     },
     intentionDraft: cleanIntention,
@@ -302,6 +306,7 @@ export function startBreak(
     ...state,
     active: {
       mode: "break",
+      kind: "break",
       intention: "Break",
       categoryId: state.categoryId,
       startAt: now,
@@ -309,6 +314,7 @@ export function startBreak(
       totalSec,
       remainingSec: totalSec,
       pausesSec: 0,
+      noticesSent: [],
       notes: "",
     },
     notices: pushNotice(state, now, "Break started", `${minutes} min break timer started.`),
@@ -351,7 +357,7 @@ export function finishTimer(
 ): PomodoroState {
   const active = state.active;
   if (!active) return state;
-  const kind = active.mode === "break" ? "break" : "focus";
+  const kind = activeKind(active);
   const durationSec =
     active.mode === "ended" ? active.totalSec : Math.max(0, active.totalSec - remainingSeconds(active, now));
   const log: PomodoroLog = {
@@ -379,7 +385,7 @@ export function abandonTimer(state: PomodoroState, now: number): PomodoroState {
   if (!active) return state;
   const log: PomodoroLog = {
     id: makeId("abandoned", now),
-    kind: active.mode === "break" ? "break" : "focus",
+    kind: activeKind(active),
     intention: active.intention,
     categoryId: active.categoryId,
     startAt: active.startAt,
@@ -431,7 +437,10 @@ export function adjustTimerMinutes(state: PomodoroState, now: number, deltaMinut
 
 export function tickPomodoro(state: PomodoroState, now: number): PomodoroState {
   const active = state.active;
-  if (!active || active.mode === "paused" || active.mode === "ended") return state;
+  if (!active) return state;
+  const notificationState = applyTimerNotificationRules(state, now);
+  if (notificationState !== state) return notificationState;
+  if (active.mode === "paused" || active.mode === "ended") return state;
   const remainingSec = remainingSeconds(active, now);
   if (remainingSec > 0) {
     return { ...state, active: { ...active, remainingSec } };
@@ -446,6 +455,30 @@ export function tickPomodoro(state: PomodoroState, now: number): PomodoroState {
       active.mode === "break" ? "Log the break or start a new focus." : "Write notes, save, or take a break.",
     ),
   };
+}
+
+export function testNotificationProfile(
+  state: PomodoroState,
+  now: number,
+  kind: "ending-soon" | "presence" | "overflow",
+): PomodoroState {
+  switch (kind) {
+    case "ending-soon":
+      return {
+        ...state,
+        notices: pushNotice(state, now, "Ending soon", `${state.settings.endingSoonMinutes} min remaining warning tested locally.`),
+      };
+    case "presence":
+      return {
+        ...state,
+        notices: pushNotice(state, now, "Presence reminder", "Local reminder to confirm you are still focused."),
+      };
+    case "overflow":
+      return {
+        ...state,
+        notices: pushNotice(state, now, "Overflow reminder", `${state.settings.overflowMinutes} min overflow threshold tested locally.`),
+      };
+  }
 }
 
 export function nextBreakMinutes(state: PomodoroState): number {
@@ -701,6 +734,67 @@ export function runPomodoroUrlCommand(
 function remainingSeconds(active: PomodoroActiveTimer, now: number): number {
   if (active.mode === "paused") return active.remainingSec;
   return Math.max(0, Math.ceil((active.endAt - now) / 1000));
+}
+
+function applyTimerNotificationRules(state: PomodoroState, now: number): PomodoroState {
+  const active = state.active;
+  if (!active) return state;
+  const kind = activeKind(active);
+  const sent = active.noticesSent ?? [];
+
+  if (active.mode === "focus" && state.settings.endingSoonEnabled) {
+    const remainingSec = remainingSeconds(active, now);
+    const threshold = Math.max(1, state.settings.endingSoonMinutes) * 60;
+    if (remainingSec > 0 && remainingSec <= threshold && !sent.includes("ending-soon")) {
+      return markTimerNotice(state, active, now, "ending-soon", "Ending soon", `${formatDuration(remainingSec)} remaining.`);
+    }
+  }
+
+  if (active.mode === "focus" && state.settings.presenceEnabled) {
+    const elapsedSec = Math.max(0, Math.round((now - active.startAt) / 1000));
+    const threshold = Math.max(60, Math.round(active.totalSec / 2));
+    if (elapsedSec >= threshold && !sent.includes("presence")) {
+      return markTimerNotice(state, active, now, "presence", "Presence reminder", active.intention || "Still focused?");
+    }
+  }
+
+  if (active.mode === "paused" && state.settings.pauseOverflowEnabled && active.pausedAt) {
+    const pausedSec = Math.max(0, Math.round((now - active.pausedAt) / 1000));
+    const threshold = Math.max(1, state.settings.overflowMinutes) * 60;
+    if (pausedSec >= threshold && !sent.includes("pause-overflow")) {
+      return markTimerNotice(state, active, now, "pause-overflow", "Pause overflow", `${formatDuration(pausedSec)} paused.`);
+    }
+  }
+
+  if (active.mode === "ended") {
+    const threshold = Math.max(1, state.settings.overflowMinutes) * 60;
+    const endedSec = Math.max(0, Math.round((now - active.endAt) / 1000));
+    const enabled = kind === "break" ? state.settings.breakOverflowEnabled : state.settings.sessionOverflowEnabled;
+    if (enabled && endedSec >= threshold && !sent.includes(`${kind}-overflow`)) {
+      return markTimerNotice(state, active, now, `${kind}-overflow`, kind === "break" ? "Break overflow" : "Session overflow", `${formatDuration(endedSec)} past timer end.`);
+    }
+  }
+
+  return state;
+}
+
+function markTimerNotice(
+  state: PomodoroState,
+  active: PomodoroActiveTimer,
+  now: number,
+  key: string,
+  title: string,
+  detail: string,
+): PomodoroState {
+  return {
+    ...state,
+    active: { ...active, noticesSent: [...(active.noticesSent ?? []), key] },
+    notices: pushNotice(state, now, title, detail),
+  };
+}
+
+function activeKind(active: PomodoroActiveTimer): "focus" | "break" {
+  return active.kind ?? (active.mode === "break" ? "break" : "focus");
 }
 
 function focusMinutesForProfile(intention: string, minutes: number): number {
