@@ -10,6 +10,7 @@ import {
   pauseTimer,
   resumeTimer,
   runPomodoroShortcut,
+  runPomodoroUrlCommand,
   startFocus,
   tickPomodoro,
   totalFocusSeconds,
@@ -94,5 +95,21 @@ describe("pomodoro model", () => {
     state = runPomodoroShortcut(state, "Take a break", now + 180_000);
     expect(state.logs.at(-1)?.intention).toBe("Updated shortcut");
     expect(state.active?.mode).toBe("break");
+  });
+
+  it("runs local URL scheme commands against the timer state", () => {
+    const now = Date.UTC(2026, 4, 12, 14, 0, 0);
+    let state = defaultPomodoroState(now);
+
+    state = runPomodoroUrlCommand(state, "start", now, "URL focus", "general");
+    expect(state.active?.mode).toBe("focus");
+    expect(state.active?.intention).toBe("URL focus");
+
+    state = runPomodoroUrlCommand(state, "pause", now + 30_000);
+    expect(state.active?.mode).toBe("paused");
+
+    state = runPomodoroUrlCommand(state, "finish", now + 60_000);
+    expect(state.active).toBeNull();
+    expect(state.logs.at(-1)?.intention).toBe("URL focus");
   });
 });

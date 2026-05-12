@@ -1087,6 +1087,22 @@ function filterLogs(logs: PomodoroLog[], state: PomodoroState): PomodoroLog[] {
     .sort((a, b) => b.startAt - a.startAt);
 }
 
+function parseUrlCommand(location: Location): { command: PomodoroUrlCommand; intention?: string; categoryId?: string } | null {
+  const params = new URLSearchParams(location.search);
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const raw = params.get("session") ?? params.get("sessionAction") ?? hash.get("session") ?? hash.get("sessionAction");
+  if (!raw || !isUrlCommand(raw)) return null;
+  return {
+    command: raw,
+    intention: params.get("intention") ?? hash.get("intention") ?? undefined,
+    categoryId: params.get("category") ?? hash.get("category") ?? undefined,
+  };
+}
+
+function isUrlCommand(value: string): value is PomodoroUrlCommand {
+  return value === "start" || value === "pause" || value === "finish" || value === "break" || value === "abandon" || value === "status";
+}
+
 function timeTop(timestamp: number): number {
   const date = new Date(timestamp);
   const minutes = date.getHours() * 60 + date.getMinutes();
