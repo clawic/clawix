@@ -338,6 +338,11 @@ private struct MenuBarContent: View {
                     Label("Capture Area", systemImage: "crop")
                 }
                 Button {
+                    screenTools.capturePreviousArea()
+                } label: {
+                    Label("Capture Previous Area", systemImage: "rectangle.dashed")
+                }
+                Button {
                     screenTools.captureFullscreen()
                 } label: {
                     Label("Capture Fullscreen", systemImage: "rectangle.inset.filled")

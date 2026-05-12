@@ -55,6 +55,13 @@ struct ScreenToolsSettingsPage: View {
                 )
                 CardDivider()
                 actionRow(
+                    title: "Capture previous area",
+                    detail: "Repeat the last selected area without selecting again.",
+                    symbol: "rectangle.dashed",
+                    action: service.capturePreviousArea
+                )
+                CardDivider()
+                actionRow(
                     title: "Capture fullscreen",
                     detail: "Capture the active display directly.",
                     symbol: "rectangle.inset.filled",
