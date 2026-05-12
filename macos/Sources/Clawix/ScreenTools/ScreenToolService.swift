@@ -56,6 +56,30 @@ final class ScreenToolService: ObservableObject {
         var title: String { rawValue.uppercased() }
     }
 
+    enum CrosshairMode: String, CaseIterable, Identifiable {
+        case always
+        case command
+        case disabled
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .always:   return "Always enabled"
+            case .command:  return "When Command is pressed"
+            case .disabled: return "Disabled"
+            }
+        }
+
+        func isVisible(modifierFlags: NSEvent.ModifierFlags) -> Bool {
+            switch self {
+            case .always: return true
+            case .command: return modifierFlags.contains(.command)
+            case .disabled: return false
+            }
+        }
+    }
+
     func showAllInOneMenu() {
         let menu = NSMenu()
         let target = ScreenToolMenuActionTarget { [weak self] action in
@@ -1098,6 +1122,8 @@ enum ScreenToolSettings {
     static let scaleRetinaScreenshotsTo1xKey = "clawix.screenTools.scaleRetinaScreenshotsTo1x"
     static let convertScreenshotsToSRGBKey = "clawix.screenTools.convertScreenshotsToSRGB"
     static let addOnePixelBorderKey = "clawix.screenTools.addOnePixelBorder"
+    static let crosshairModeKey = "clawix.screenTools.crosshairMode"
+    static let showCrosshairMagnifierKey = "clawix.screenTools.showCrosshairMagnifier"
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
@@ -1149,6 +1175,15 @@ enum ScreenToolSettings {
 
     static var addOnePixelBorder: Bool {
         defaults.bool(forKey: addOnePixelBorderKey)
+    }
+
+    static var crosshairMode: ScreenToolService.CrosshairMode {
+        let raw = defaults.string(forKey: crosshairModeKey) ?? ScreenToolService.CrosshairMode.disabled.rawValue
+        return ScreenToolService.CrosshairMode(rawValue: raw) ?? .disabled
+    }
+
+    static var showCrosshairMagnifier: Bool {
+        defaults.object(forKey: showCrosshairMagnifierKey) == nil ? true : defaults.bool(forKey: showCrosshairMagnifierKey)
     }
 
     static var showRecordingControls: Bool {
@@ -1237,13 +1272,22 @@ private final class ScreenToolAreaSelectionView: NSView {
     private let screen: NSScreen
     private let cancel: () -> Void
     private let complete: (ScreenToolCaptureRect) -> Void
+    private let crosshairMode: ScreenToolService.CrosshairMode
+    private let showMagnifier: Bool
+    private let screenSnapshot: NSImage?
     private var startPoint: NSPoint?
     private var currentPoint: NSPoint?
+    private var mousePoint: NSPoint?
+    private var activeModifierFlags: NSEvent.ModifierFlags = []
+    private var trackingArea: NSTrackingArea?
 
     init(screen: NSScreen, cancel: @escaping () -> Void, complete: @escaping (ScreenToolCaptureRect) -> Void) {
         self.screen = screen
         self.cancel = cancel
         self.complete = complete
+        self.crosshairMode = ScreenToolSettings.crosshairMode
+        self.showMagnifier = ScreenToolSettings.showCrosshairMagnifier
+        self.screenSnapshot = Self.captureSnapshot(for: screen)
         super.init(frame: NSRect(origin: .zero, size: screen.frame.size))
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.withAlphaComponent(0.16).cgColor
@@ -1255,15 +1299,46 @@ private final class ScreenToolAreaSelectionView: NSView {
 
     override var acceptsFirstResponder: Bool { true }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.acceptsMouseMovedEvents = true
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.mouseMoved, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
     override func mouseDown(with event: NSEvent) {
         let point = clampedEventPoint(event)
         startPoint = point
         currentPoint = point
+        mousePoint = point
+        activeModifierFlags = event.modifierFlags
+        needsDisplay = true
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        mousePoint = clampedEventPoint(event)
+        activeModifierFlags = event.modifierFlags
         needsDisplay = true
     }
 
     override func mouseDragged(with event: NSEvent) {
-        currentPoint = clampedEventPoint(event)
+        let point = clampedEventPoint(event)
+        currentPoint = point
+        mousePoint = point
+        activeModifierFlags = event.modifierFlags
         needsDisplay = true
     }
 
@@ -1287,15 +1362,28 @@ private final class ScreenToolAreaSelectionView: NSView {
         }
     }
 
+    override func flagsChanged(with event: NSEvent) {
+        activeModifierFlags = event.modifierFlags
+        needsDisplay = true
+        super.flagsChanged(with: event)
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        guard let rect = currentSelectionRect else { return }
-        NSColor.clear.setFill()
-        rect.fill(using: .copy)
-        NSColor.controlAccentColor.withAlphaComponent(0.95).setStroke()
-        let path = NSBezierPath(rect: rect)
-        path.lineWidth = 2
-        path.stroke()
+        if let rect = currentSelectionRect {
+            NSColor.clear.setFill()
+            rect.fill(using: .copy)
+            NSColor.controlAccentColor.withAlphaComponent(0.95).setStroke()
+            let path = NSBezierPath(rect: rect)
+            path.lineWidth = 2
+            path.stroke()
+        }
+        if shouldDrawCrosshair, let point = mousePoint {
+            drawCrosshair(at: point)
+            if showMagnifier {
+                drawMagnifier(at: point)
+            }
+        }
     }
 
     private var currentSelectionRect: NSRect? {
@@ -1314,6 +1402,72 @@ private final class ScreenToolAreaSelectionView: NSView {
             x: min(max(point.x, bounds.minX), bounds.maxX),
             y: min(max(point.y, bounds.minY), bounds.maxY)
         )
+    }
+
+    private var shouldDrawCrosshair: Bool {
+        crosshairMode.isVisible(modifierFlags: activeModifierFlags)
+    }
+
+    private func drawCrosshair(at point: NSPoint) {
+        NSColor.controlAccentColor.withAlphaComponent(0.9).setStroke()
+        let path = NSBezierPath()
+        path.move(to: NSPoint(x: bounds.minX, y: point.y))
+        path.line(to: NSPoint(x: bounds.maxX, y: point.y))
+        path.move(to: NSPoint(x: point.x, y: bounds.minY))
+        path.line(to: NSPoint(x: point.x, y: bounds.maxY))
+        path.lineWidth = 1
+        path.stroke()
+    }
+
+    private func drawMagnifier(at point: NSPoint) {
+        guard let screenSnapshot else { return }
+        let sampleSize = NSSize(width: 44, height: 44)
+        let targetSize = NSSize(width: 112, height: 112)
+        let inset: CGFloat = 18
+        let targetOrigin = NSPoint(
+            x: min(max(point.x + inset, bounds.minX + inset), bounds.maxX - targetSize.width - inset),
+            y: min(max(point.y + inset, bounds.minY + inset), bounds.maxY - targetSize.height - inset)
+        )
+        let targetRect = NSRect(origin: targetOrigin, size: targetSize)
+        let sourceRect = NSRect(
+            x: min(max(point.x - sampleSize.width / 2, bounds.minX), bounds.maxX - sampleSize.width),
+            y: min(max(point.y - sampleSize.height / 2, bounds.minY), bounds.maxY - sampleSize.height),
+            width: sampleSize.width,
+            height: sampleSize.height
+        )
+
+        let magnifierRadius = min(targetRect.width, targetRect.height) * 0.42
+
+        NSGraphicsContext.saveGraphicsState()
+        let clipPath = NSBezierPath(roundedRect: targetRect, xRadius: magnifierRadius, yRadius: magnifierRadius)
+        clipPath.addClip()
+        screenSnapshot.draw(in: targetRect, from: sourceRect, operation: .copy, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+
+        NSColor.black.withAlphaComponent(0.72).setStroke()
+        let border = NSBezierPath(roundedRect: targetRect, xRadius: magnifierRadius, yRadius: magnifierRadius)
+        border.lineWidth = 2
+        border.stroke()
+
+        NSColor.controlAccentColor.withAlphaComponent(0.9).setStroke()
+        let center = NSPoint(x: targetRect.midX, y: targetRect.midY)
+        let guides = NSBezierPath()
+        guides.move(to: NSPoint(x: targetRect.minX, y: center.y))
+        guides.line(to: NSPoint(x: targetRect.maxX, y: center.y))
+        guides.move(to: NSPoint(x: center.x, y: targetRect.minY))
+        guides.line(to: NSPoint(x: center.x, y: targetRect.maxY))
+        guides.lineWidth = 1
+        guides.stroke()
+    }
+
+    private static func captureSnapshot(for screen: NSScreen) -> NSImage? {
+        guard
+            let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID,
+            let image = CGDisplayCreateImage(displayID)
+        else {
+            return nil
+        }
+        return NSImage(cgImage: image, size: screen.frame.size)
     }
 }
 

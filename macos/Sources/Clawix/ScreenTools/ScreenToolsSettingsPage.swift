@@ -15,6 +15,8 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.scaleRetinaScreenshotsTo1xKey) private var scaleRetinaScreenshotsTo1x = false
     @AppStorage(ScreenToolSettings.convertScreenshotsToSRGBKey) private var convertScreenshotsToSRGB = false
     @AppStorage(ScreenToolSettings.addOnePixelBorderKey) private var addOnePixelBorder = false
+    @AppStorage(ScreenToolSettings.crosshairModeKey) private var crosshairMode = ScreenToolService.CrosshairMode.disabled.rawValue
+    @AppStorage(ScreenToolSettings.showCrosshairMagnifierKey) private var showCrosshairMagnifier = true
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
     @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
@@ -34,6 +36,14 @@ struct ScreenToolsSettingsPage: View {
             ScreenToolService.ImageFormat(rawValue: imageFormat) ?? .png
         } set: {
             imageFormat = $0.rawValue
+        }
+    }
+
+    private var crosshairBinding: Binding<ScreenToolService.CrosshairMode> {
+        Binding {
+            ScreenToolService.CrosshairMode(rawValue: crosshairMode) ?? .disabled
+        } set: {
+            crosshairMode = $0.rawValue
         }
     }
 
@@ -178,6 +188,17 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Convert to sRGB profile", detail: "Write screenshots with the standard sRGB color profile.", isOn: $convertScreenshotsToSRGB)
                 CardDivider()
                 ToggleRow(title: "Add 1px border", detail: "Add a one-pixel border around saved screenshots.", isOn: $addOnePixelBorder)
+                CardDivider()
+                DropdownRow(
+                    title: "Crosshair mode",
+                    detail: "Show precision guides while selecting screenshot areas.",
+                    options: ScreenToolService.CrosshairMode.allCases.map { ($0, $0.title) },
+                    selection: crosshairBinding,
+                    minWidth: 210
+                )
+                CardDivider()
+                ToggleRow(title: "Show magnifier", detail: "Show a zoomed preview next to the crosshair.", isOn: $showCrosshairMagnifier)
+                    .disabled(crosshairBinding.wrappedValue == .disabled)
             }
 
             SectionLabel(title: "Recording")
