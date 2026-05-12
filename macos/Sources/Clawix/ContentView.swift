@@ -643,7 +643,7 @@ private struct ContentTopChrome: View {
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
-                    LucideIcon(.ellipsis, size: 16)
+                    LucideIcon(.ellipsis, size: 18)
                         .foregroundColor(Color(white: hoverEllipsis ? 0.78 : 0.55))
                         .frame(width: 24, height: 24)
                         .background(
