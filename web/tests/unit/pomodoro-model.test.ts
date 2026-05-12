@@ -14,6 +14,7 @@ import {
   resumeTimer,
   reportRangeLabel,
   scheduledItemsForDate,
+  startBreak,
   startScheduleItem,
   runPomodoroShortcut,
   runPomodoroUrlCommand,
@@ -54,6 +55,38 @@ describe("pomodoro model", () => {
     state = tickPomodoro(state, now + 15 * 60 * 1000);
     expect(state.active?.mode).toBe("ended");
     expect(state.active?.remainingSec).toBe(0);
+  });
+
+  it("auto-starts a break after focus when enabled", () => {
+    const now = Date.UTC(2026, 4, 12, 10, 30, 0);
+    let state = defaultPomodoroState(now);
+    state.settings.autoStartBreak = true;
+    state.settings.shortBreakMinutes = 3;
+
+    state = startFocus(state, now, "Auto break", "general", 1);
+    state = tickPomodoro(state, now + 60_000);
+
+    expect(state.logs.at(-1)?.kind).toBe("focus");
+    expect(state.logs.at(-1)?.durationSec).toBe(60);
+    expect(state.active?.mode).toBe("break");
+    expect(state.active?.totalSec).toBe(3 * 60);
+  });
+
+  it("auto-starts focus after break when enabled", () => {
+    const now = Date.UTC(2026, 4, 12, 10, 45, 0);
+    let state = defaultPomodoroState(now);
+    state.settings.autoStartFocus = true;
+    state.settings.sessionMinutes = 4;
+    state.intentionDraft = "Next automatic focus";
+
+    state = startBreak(state, now, 1);
+    state = tickPomodoro(state, now + 60_000);
+
+    expect(state.logs.at(-1)?.kind).toBe("break");
+    expect(state.logs.at(-1)?.durationSec).toBe(60);
+    expect(state.active?.mode).toBe("focus");
+    expect(state.active?.intention).toBe("Next automatic focus");
+    expect(state.active?.totalSec).toBe(4 * 60);
   });
 
   it("can undo an abandoned timer", () => {

@@ -464,6 +464,14 @@ export function tickPomodoro(state: PomodoroState, now: number): PomodoroState {
   if (remainingSec > 0) {
     return { ...state, active: { ...active, remainingSec } };
   }
+  if (activeKind(active) === "focus" && state.settings.autoStartBreak) {
+    const saved = finishTimer(state, active.endAt, state.settings.defaultMood, active.notes);
+    return startBreak(saved, active.endAt + 1);
+  }
+  if (activeKind(active) === "break" && state.settings.autoStartFocus) {
+    const saved = finishTimer(state, active.endAt);
+    return startFocus(saved, active.endAt + 1, saved.intentionDraft, saved.categoryId, saved.settings.sessionMinutes);
+  }
   return {
     ...state,
     active: { ...active, mode: "ended", remainingSec: 0 },

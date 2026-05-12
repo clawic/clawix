@@ -790,6 +790,8 @@ function ProfilesPanel({ state, dispatch }: { state: PomodoroState; dispatch: Re
           <NumberRow label="Long break (min)" value={settings.longBreakMinutes} onChange={(v) => dispatch({ type: "settings", patch: { longBreakMinutes: v } })} />
           <NumberRow label="Long break after focus (min)" value={settings.longBreakAfterFocusMinutes} onChange={(v) => dispatch({ type: "settings", patch: { longBreakAfterFocusMinutes: v } })} />
           <NumberRow label="Breaths before focus" value={settings.breathCount} onChange={(v) => dispatch({ type: "settings", patch: { breathCount: v } })} />
+          <Toggle label="Auto-start break after Session ends" checked={settings.autoStartBreak} onChange={(v) => dispatch({ type: "settings", patch: { autoStartBreak: v } })} />
+          <Toggle label="Auto-start Session after break ends" checked={settings.autoStartFocus} onChange={(v) => dispatch({ type: "settings", patch: { autoStartFocus: v } })} />
         </Card>
         <Card title="Notification profile" action="Overflow">
           <Toggle label="Ending soon notification" checked={settings.endingSoonEnabled} onChange={(v) => dispatch({ type: "settings", patch: { endingSoonEnabled: v } })} />
