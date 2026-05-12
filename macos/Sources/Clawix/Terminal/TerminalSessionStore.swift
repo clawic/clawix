@@ -260,6 +260,44 @@ final class TerminalSessionStore: ObservableObject {
         return true
     }
 
+    /// Move a whole tab into another tab as a new split next to
+    /// `destLeafId`. Used for VS Code-style drag-out: the user grabs a
+    /// tab chip and drops it on a pane area inside a different tab; the
+    /// source tab's entire layout (including any nested splits) is
+    /// grafted into the destination tab on the chosen side and the
+    /// source tab disappears. Shells keep running — only the layout
+    /// edges change.
+    func moveTabAsSplit(chatId: UUID,
+                        sourceTabId: UUID,
+                        destTabId: UUID,
+                        destLeafId: UUID,
+                        direction: TerminalSplitNode.SplitDirection,
+                        insertBefore: Bool) {
+        guard sourceTabId != destTabId,
+              var list = tabsByChat[chatId],
+              let sourceIdx = list.firstIndex(where: { $0.id == sourceTabId }),
+              let destIdx = list.firstIndex(where: { $0.id == destTabId }) else { return }
+        let sourceLayout = list[sourceIdx].layout
+        // Insert the source subtree first so indices stay valid after we
+        // remove the source tab.
+        list[destIdx].layout = list[destIdx].layout.splitting(
+            beside: destLeafId,
+            direction: direction,
+            newSubtree: sourceLayout,
+            insertBefore: insertBefore
+        )
+        // Focus moves to the first leaf of the dropped subtree so the
+        // user keeps interacting with the shell they dragged.
+        list[destIdx].focusedLeafId = sourceLayout.firstLeafId
+        let sourceTabIdSnapshot = list[sourceIdx].id
+        list.remove(at: sourceIdx)
+        for i in list.indices { list[i].position = i }
+        tabsByChat[chatId] = list
+        activeTabIdByChat[chatId] = destTabId
+        repository.delete(tabId: sourceTabIdSnapshot)
+        for tab in list { repository.upsert(tab) }
+    }
+
     func adjustWeights(chatId: UUID,
                        tabId: UUID,
                        splitPath: [Int],

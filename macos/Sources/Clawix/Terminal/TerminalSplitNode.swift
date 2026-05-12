@@ -83,6 +83,47 @@ indirect enum TerminalSplitNode: Equatable, Codable {
         return false
     }
 
+    /// Variant of `splitting(beside:direction:newLeaf:)` that grafts an
+    /// arbitrary `newSubtree` next to the leaf with `besideId`. When
+    /// `insertBefore` is true the subtree lands on the leading side
+    /// (top/left) of the destination; otherwise on the trailing side
+    /// (bottom/right). Used when the user drags a whole tab into a pane
+    /// to dock it as a split: the source tab's layout (which may itself
+    /// be nested splits) is preserved as a subtree on the destination
+    /// side.
+    func splitting(beside besideId: UUID,
+                   direction: SplitDirection,
+                   newSubtree: TerminalSplitNode,
+                   insertBefore: Bool) -> TerminalSplitNode {
+        switch self {
+        case .leaf(let leaf) where leaf.id == besideId:
+            let pair: [TerminalSplitNode] = insertBefore
+                ? [newSubtree, .leaf(leaf)]
+                : [.leaf(leaf), newSubtree]
+            return .split(direction: direction,
+                          children: pair,
+                          weights: [0.5, 0.5])
+        case .leaf:
+            return self
+        case .split(let dir, let children, let weights):
+            if dir == direction,
+               let idx = children.firstIndex(where: { childContainsLeafDirectly(child: $0, leafId: besideId) }) {
+                var newChildren = children
+                let insertionIndex = insertBefore ? idx : idx + 1
+                newChildren.insert(newSubtree, at: insertionIndex)
+                let even = 1.0 / Double(newChildren.count)
+                return .split(direction: dir,
+                              children: newChildren,
+                              weights: Array(repeating: even, count: newChildren.count))
+            }
+            let updated = children.map { $0.splitting(beside: besideId,
+                                                      direction: direction,
+                                                      newSubtree: newSubtree,
+                                                      insertBefore: insertBefore) }
+            return .split(direction: dir, children: updated, weights: weights)
+        }
+    }
+
     /// Removes the leaf with `id`. Collapses any `.split` left with a
     /// single child into that child (so closing one half of a 2-pane
     /// split returns to a plain leaf). Returns `nil` if the entire tree

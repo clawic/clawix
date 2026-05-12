@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Recursive renderer for the split tree of a single tab. Each leaf
 /// hosts a `TerminalEmulatorView`; each `.split` lays its children out
@@ -13,6 +14,13 @@ struct TerminalSplitView: View {
     /// Path of child indices from the tab root down to `node`. The root
     /// renderer passes `[]`; recursive call sites append the index.
     let path: [Int]
+
+    /// Quadrant of a leaf where a dragged tab will dock if dropped now.
+    /// Drives the translucent overlay that previews the resulting split
+    /// before the user releases the mouse.
+    enum DockZone: Equatable {
+        case left, right, top, bottom
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -35,56 +43,12 @@ struct TerminalSplitView: View {
 
     @ViewBuilder
     private func leafView(_ leaf: TerminalSplitNode.LeafID) -> some View {
-        let isActive = focusedLeafId == leaf.id
-        ZStack(alignment: .topTrailing) {
-            if let session = store.session(for: leaf.id) {
-                TerminalEmulatorView(
-                    session: session,
-                    isFocused: isActive,
-                    onFocus: { store.setFocusedLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id) }
-                )
-            } else {
-                Color.black
-                Text("Shell unavailable")
-                    .font(.system(size: 11, weight: .regular, design: .monospaced))
-                    .foregroundColor(Palette.textSecondary)
-            }
-            if !isActive {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        store.setFocusedLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id)
-                    }
-            }
-            if isActive {
-                TerminalPaneControls(
-                    onSplitRight: {
-                        store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .horizontal)
-                    },
-                    onSplitDown: {
-                        store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .vertical)
-                    },
-                    onClose: {
-                        store.closeLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id)
-                    }
-                )
-                .padding(.top, 6)
-                .padding(.trailing, 8)
-                .allowsHitTesting(true)
-            }
-        }
-        .contextMenu {
-            Button("Split Right") {
-                store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .horizontal)
-            }
-            Button("Split Down") {
-                store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .vertical)
-            }
-            Divider()
-            Button("Close Pane") {
-                store.closeLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id)
-            }
-        }
+        TerminalLeafHost(
+            chatId: chatId,
+            tabId: tabId,
+            leaf: leaf,
+            isActive: focusedLeafId == leaf.id
+        )
     }
 
     @ViewBuilder

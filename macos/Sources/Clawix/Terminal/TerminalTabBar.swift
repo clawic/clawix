@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Horizontal strip of terminal tabs.
 struct TerminalTabBar: View {
@@ -8,13 +9,34 @@ struct TerminalTabBar: View {
 
     @State private var renamingTabId: UUID?
     @State private var renameDraft: String = ""
+    /// Index of the gap that should show the drop-insertion indicator
+    /// while a tab is being dragged. Indices are between chips: 0 = before
+    /// the first chip, N = after the last chip.
+    @State private var dropIndicatorIndex: Int?
+
+    private var tabs: [TerminalTab] { store.tabs(for: chatId) }
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let currentTabs = tabs
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                ForEach(Array(store.tabs(for: chatId).enumerated()), id: \.element.id) { idx, tab in
-                    chip(for: tab, ordinal: idx + 1)
+                ForEach(Array(currentTabs.enumerated()), id: \.element.id) { idx, tab in
+                    HStack(spacing: 4) {
+                        dropIndicator(at: idx)
+                        chip(for: tab, ordinal: idx + 1)
+                    }
+                    .onDrop(
+                        of: [TerminalTabPayload.utType],
+                        delegate: TabReorderDropDelegate(
+                            chatId: chatId,
+                            targetTabId: tab.id,
+                            tabs: currentTabs,
+                            store: store,
+                            indicatorIndex: $dropIndicatorIndex
+                        )
+                    )
                 }
+                dropIndicator(at: currentTabs.count)
                 NewTerminalButton {
                     let cwd = preferredCwd()
                     store.createTab(chatId: chatId, cwd: cwd)
@@ -24,8 +46,31 @@ struct TerminalTabBar: View {
             .padding(.horizontal, 14)
             .padding(.top, 10)
             .padding(.bottom, 8)
+            // Trailing drop zone: dropping past the last chip moves the
+            // tab to the end of the list.
+            .onDrop(
+                of: [TerminalTabPayload.utType],
+                delegate: TabReorderDropDelegate(
+                    chatId: chatId,
+                    targetTabId: nil,
+                    tabs: currentTabs,
+                    store: store,
+                    indicatorIndex: $dropIndicatorIndex
+                )
+            )
         }
         .scrollDisabled(false)
+    }
+
+    @ViewBuilder
+    private func dropIndicator(at index: Int) -> some View {
+        // Thin vertical capsule that appears between chips while a drag
+        // hovers, telegraphing the drop landing position.
+        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+            .fill(Color.white.opacity(0.55))
+            .frame(width: dropIndicatorIndex == index ? 2 : 0, height: 22)
+            .opacity(dropIndicatorIndex == index ? 1 : 0)
+            .animation(.easeOut(duration: 0.10), value: dropIndicatorIndex)
     }
 
     private func preferredCwd() -> String {
@@ -56,11 +101,63 @@ struct TerminalTabBar: View {
             },
             onCancelRename: { renamingTabId = nil }
         )
+        .onDrag {
+            NSItemProvider(
+                object: TerminalTabPayload(tabId: tab.id).providerString as NSString
+            )
+        }
     }
 
     private func displayLabel(for tab: TerminalTab) -> String {
         if !tab.label.isEmpty { return tab.label }
         return TerminalTab.deriveLabel(from: tab.initialCwd)
+    }
+}
+
+/// Drop delegate that reorders the tab list when a chip is dropped on
+/// another chip (or past the last chip when `targetTabId` is nil).
+private struct TabReorderDropDelegate: DropDelegate {
+    let chatId: UUID
+    let targetTabId: UUID?
+    let tabs: [TerminalTab]
+    let store: TerminalSessionStore
+    @Binding var indicatorIndex: Int?
+
+    func dropEntered(info: DropInfo) {
+        indicatorIndex = targetIndex()
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        indicatorIndex = targetIndex()
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        indicatorIndex = nil
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { indicatorIndex = nil }
+        guard let payload = TerminalTabPayload.decode(from: info) else { return false }
+        guard let sourceIndex = tabs.firstIndex(where: { $0.id == payload.tabId }) else {
+            return false
+        }
+        let insertion = targetIndex()
+        var ordering = tabs.map { $0.id }
+        let removed = ordering.remove(at: sourceIndex)
+        let adjusted = insertion > sourceIndex ? insertion - 1 : insertion
+        let clamped = max(0, min(adjusted, ordering.count))
+        ordering.insert(removed, at: clamped)
+        store.reorderTabs(chatId: chatId, ordering: ordering)
+        return true
+    }
+
+    private func targetIndex() -> Int {
+        guard let targetTabId,
+              let idx = tabs.firstIndex(where: { $0.id == targetTabId }) else {
+            return tabs.count
+        }
+        return idx
     }
 }
 
