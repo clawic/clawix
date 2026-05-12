@@ -76,7 +76,7 @@ enum MacUtilityActionID: String, CaseIterable, Identifiable {
         case .toggleMuteSound: return "Toggle the default output mute state."
         case .toggleKeepAwake: return "Prevent idle sleep until disabled or Clawix quits."
         case .toggleDesktopIcons: return "Show or hide Finder desktop items."
-        case .openVPNSettings: return "Open Network VPN settings."
+        case .openVPNSettings: return "Open Network settings."
         case .openPrivateRelaySettings: return "Open iCloud Private Relay settings."
         case .openHideMyEmailSettings: return "Open iCloud Hide My Email settings."
         }
@@ -176,7 +176,7 @@ final class MacUtilitiesController: ObservableObject {
             case .toggleDesktopIcons:
                 try toggleDesktopIcons()
             case .openVPNSettings:
-                openSystemSettings("x-apple.systempreferences:com.apple.Network-Settings.extension?VPN")
+                openSystemSettings("x-apple.systempreferences:com.apple.Network-Settings.extension")
             case .openPrivateRelaySettings:
                 openSystemSettings("x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane?PRIVATERELAY")
             case .openHideMyEmailSettings:
