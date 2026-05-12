@@ -17,11 +17,26 @@ struct TerminalEmulatorView: NSViewRepresentable {
         var shouldFocus = false
         private var isKeyboardResponder = false
         private var lastUsableBounds: CGRect = .zero
+        private let scrollIndicator = TerminalScrollIndicator()
         var emulator: LocalProcessTerminalView? {
             didSet {
                 oldValue?.removeFromSuperview()
                 attachEmulatorIfNeeded()
             }
+        }
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            scrollIndicator.translatesAutoresizingMaskIntoConstraints = true
+            scrollIndicator.autoresizingMask = [.minXMargin, .height]
+            addSubview(scrollIndicator)
+        }
+
+        required init?(coder: NSCoder) {
+            super.init(coder: coder)
+            scrollIndicator.translatesAutoresizingMaskIntoConstraints = true
+            scrollIndicator.autoresizingMask = [.minXMargin, .height]
+            addSubview(scrollIndicator)
         }
 
         override var acceptsFirstResponder: Bool { true }
@@ -30,8 +45,28 @@ struct TerminalEmulatorView: NSViewRepresentable {
             super.layout()
             attachEmulatorIfNeeded()
             syncEmulatorFrameIfUsable()
+            positionScrollIndicator()
             startIfReady()
             focusIfNeeded()
+        }
+
+        private func positionScrollIndicator() {
+            // Live above the emulator on the trailing edge so it paints
+            // over the area where SwiftTerm's hidden native scroller
+            // would be. 11pt-wide column gives the thumb room without
+            // eating terminal columns visually.
+            let width: CGFloat = 11
+            scrollIndicator.frame = NSRect(
+                x: bounds.width - width,
+                y: 0,
+                width: width,
+                height: bounds.height
+            )
+            if scrollIndicator.superview === self,
+               let above = subviews.last,
+               above !== scrollIndicator {
+                addSubview(scrollIndicator, positioned: .above, relativeTo: nil)
+            }
         }
 
         override func mouseDown(with event: NSEvent) {
@@ -97,6 +132,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
             for sub in emulator.subviews {
                 if let scroller = sub as? NSScroller {
                     scroller.isHidden = true
+                    scrollIndicator.attach(to: scroller)
                 }
             }
         }
