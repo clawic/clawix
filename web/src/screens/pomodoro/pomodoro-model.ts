@@ -14,6 +14,8 @@ export type PomodoroShortcut =
 
 export type PomodoroUrlCommand = "start" | "pause" | "finish" | "break" | "abandon" | "status";
 
+export type PomodoroSoundSlot = "session" | "session-end" | "break" | "break-end";
+
 export interface PomodoroCategory {
   id: string;
   name: string;
@@ -452,7 +454,7 @@ export function tickPomodoro(state: PomodoroState, now: number): PomodoroState {
       state,
       now,
       active.mode === "break" ? "Break ended" : "Session ended",
-      active.mode === "break" ? "Log the break or start a new focus." : "Write notes, save, or take a break.",
+      timerEndedDetail(state, activeKind(active)),
     ),
   };
 }
@@ -479,6 +481,14 @@ export function testNotificationProfile(
         notices: pushNotice(state, now, "Overflow reminder", `${state.settings.overflowMinutes} min overflow threshold tested locally.`),
       };
   }
+}
+
+export function testSoundProfile(state: PomodoroState, now: number, slot: PomodoroSoundSlot): PomodoroState {
+  const profile = soundProfile(state, slot);
+  return {
+    ...state,
+    notices: pushNotice(state, now, "Sound preview", `${profile.label}: ${profile.name} at ${Math.round(profile.volume * 100)}%.`),
+  };
 }
 
 export function nextBreakMinutes(state: PomodoroState): number {
@@ -810,6 +820,25 @@ function profileStartDetail(state: PomodoroState, intention: string, categoryId:
   if (category?.name.toLowerCase() === "meeting") details.push("Profile rule: Meeting silences ending notifications.");
   if (minutes !== state.settings.sessionMinutes) details.push(`${minutes} min`);
   return details.join(" ");
+}
+
+function timerEndedDetail(state: PomodoroState, kind: "focus" | "break"): string {
+  const base = kind === "break" ? "Log the break or start a new focus." : "Write notes, save, or take a break.";
+  const profile = soundProfile(state, kind === "break" ? "break-end" : "session-end");
+  return `${base} End sound: ${profile.name} at ${Math.round(profile.volume * 100)}%.`;
+}
+
+function soundProfile(state: PomodoroState, slot: PomodoroSoundSlot): { label: string; name: string; volume: number } {
+  switch (slot) {
+    case "session":
+      return { label: "Session sound", name: state.settings.sessionSound, volume: state.settings.sessionVolume };
+    case "session-end":
+      return { label: "Session end sound", name: state.settings.sessionEndSound, volume: state.settings.sessionEndVolume };
+    case "break":
+      return { label: "Break sound", name: state.settings.breakSound, volume: state.settings.breakVolume };
+    case "break-end":
+      return { label: "Break end sound", name: state.settings.breakEndSound, volume: state.settings.breakEndVolume };
+  }
 }
 
 function intentionHas(intention: string, needle: string): boolean {
