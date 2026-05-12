@@ -1100,6 +1100,10 @@ private struct PermissionsMenuRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(mode.label)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
