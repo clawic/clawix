@@ -84,15 +84,23 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
 
     var gatedFeature: AppFeature? {
         switch self {
-        case .dictation:    return .voiceToText
-        case .quickAsk:     return .quickAsk
-        case .secrets:      return .secrets
-        case .mcp:          return .mcp
-        case .localModels:  return .localModels
-        case .browserUsage: return .browserUsage
-        case .git:          return .git
-        case .machines:     return .remoteMesh
-        default:            return nil
+        case .dictation:        return .voiceToText
+        case .quickAsk:         return .quickAsk
+        case .secrets:          return .secrets
+        case .mcp:              return .mcp
+        case .localModels:      return .localModels
+        case .browserUsage:     return .browserUsage
+        case .git:              return .git
+        case .machines:         return .remoteMesh
+        case .skills:           return .skills
+        case .screenTools:      return .screenTools
+        case .macUtilities:     return .macUtilities
+        case .databaseWorkbench: return .databaseWorkbench
+        case .identity:         return .identity
+        case .clawjs:           return .clawjs
+        case .telegram:         return .telegram
+        case .apps:             return .apps
+        default:                return nil
         }
     }
 

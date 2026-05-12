@@ -31,18 +31,54 @@ enum AppFeature {
     case git
     case remoteMesh
     case badger
+    case apps
+    case design
+    case life
+    case skills
+    case skillCollections
+    case clawjs
+    case identity
+    case telegram
+    case screenTools
+    case macUtilities
+    case databaseWorkbench
+    case marketplace
+    case calendar
+    case contacts
+    case database
+    case index
+    case iotHome
+    case agents
 
     var tier: FeatureTier {
         switch self {
-        case .voiceToText:  return .beta
-        case .quickAsk:     return .experimental
-        case .secrets:      return .experimental
-        case .mcp:          return .experimental
-        case .localModels:  return .experimental
-        case .browserUsage: return .experimental
-        case .git:          return .experimental
-        case .remoteMesh:   return .experimental
-        case .badger:       return .beta
+        case .voiceToText:        return .beta
+        case .quickAsk:           return .experimental
+        case .secrets:            return .experimental
+        case .mcp:                return .experimental
+        case .localModels:        return .experimental
+        case .browserUsage:       return .experimental
+        case .git:                return .experimental
+        case .remoteMesh:         return .experimental
+        case .badger:             return .experimental
+        case .apps:               return .experimental
+        case .design:             return .experimental
+        case .life:               return .experimental
+        case .skills:             return .experimental
+        case .skillCollections:   return .experimental
+        case .clawjs:             return .experimental
+        case .identity:           return .experimental
+        case .telegram:           return .experimental
+        case .screenTools:        return .experimental
+        case .macUtilities:       return .experimental
+        case .databaseWorkbench:  return .experimental
+        case .marketplace:        return .experimental
+        case .calendar:           return .experimental
+        case .contacts:           return .experimental
+        case .database:           return .experimental
+        case .index:              return .experimental
+        case .iotHome:            return .experimental
+        case .agents:             return .experimental
         }
     }
 }
