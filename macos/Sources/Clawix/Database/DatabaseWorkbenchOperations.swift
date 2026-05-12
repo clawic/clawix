@@ -254,6 +254,12 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
                 inputPath: inputPath,
                 fileManager: fileManager
             )
+        case .databaseSearch:
+            return searchSQLiteDatabase(
+                searchTerm,
+                profile: profile,
+                fileManager: fileManager
+            )
         default:
             return prepared
         }
@@ -508,6 +514,82 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         }
     }
 
+    private static func searchSQLiteDatabase(
+        _ searchTerm: String,
+        profile: DatabaseConnectionProfile,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        let term = searchTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+        let databasePath = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+        guard fileManager.fileExists(atPath: databasePath) else {
+            return .init(kind: .databaseSearch, status: .blocked, message: "SQLite search failed: database file does not exist.")
+        }
+
+        var configuration = Configuration()
+        configuration.readonly = true
+        do {
+            let queue = try DatabaseQueue(path: databasePath, configuration: configuration)
+            let matches = try queue.read { db in
+                try searchSQLiteObjects(term, db: db)
+            }
+            guard !matches.isEmpty else {
+                return .init(kind: .databaseSearch, status: .localReady, message: "SQLite search found no matches.")
+            }
+            let preview = matches.prefix(8).joined(separator: ", ")
+            let suffix = matches.count > 8 ? ", and \(matches.count - 8) more" : ""
+            return .init(kind: .databaseSearch, status: .localReady, message: "SQLite search found \(matches.count) match location\(matches.count == 1 ? "" : "s"): \(preview)\(suffix).")
+        } catch {
+            return .init(kind: .databaseSearch, status: .blocked, message: "SQLite search failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func searchSQLiteObjects(_ term: String, db: GRDB.Database) throws -> [String] {
+        let lowercasedTerm = term.lowercased()
+        let likePattern = "%\(escapedSQLiteLike(term))%"
+        let objects = try Row.fetchAll(
+            db,
+            sql: """
+            SELECT name, type
+            FROM sqlite_master
+            WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+            """
+        )
+        var matches: [String] = []
+
+        for object in objects {
+            let name: String = object["name"]
+            let type: String = object["type"]
+            if name.lowercased().contains(lowercasedTerm) {
+                matches.append("\(type) \(name)")
+            }
+
+            let columns = try Row.fetchAll(db, sql: "PRAGMA table_info(\(quotedSQLiteDiscoveredIdentifier(name)))")
+                .compactMap { row -> String? in
+                    let value: DatabaseValue = row["name"]
+                    guard case .string(let column) = value.storage else { return nil }
+                    return column
+                }
+
+            for column in columns {
+                if column.lowercased().contains(lowercasedTerm) {
+                    matches.append("\(name).\(column) column")
+                }
+                let sql = """
+                SELECT COUNT(*)
+                FROM \(quotedSQLiteDiscoveredIdentifier(name))
+                WHERE CAST(\(quotedSQLiteDiscoveredIdentifier(column)) AS TEXT) LIKE ? ESCAPE '\\'
+                """
+                let count = try Int.fetchOne(db, sql: sql, arguments: [likePattern]) ?? 0
+                if count > 0 {
+                    matches.append("\(name).\(column) \(count) row\(count == 1 ? "" : "s")")
+                }
+            }
+        }
+
+        return matches
+    }
+
     private static func writeCSV(
         _ result: DatabaseWorkbenchResultSet,
         outputPath: String,
@@ -554,6 +636,17 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         }
         guard quoted.count == parts.count else { return nil }
         return quoted.joined(separator: ".")
+    }
+
+    private static func quotedSQLiteDiscoveredIdentifier(_ raw: String) -> String {
+        "\"\(raw.replacingOccurrences(of: "\"", with: "\"\""))\""
+    }
+
+    private static func escapedSQLiteLike(_ raw: String) -> String {
+        raw
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "%", with: "\\%")
+            .replacingOccurrences(of: "_", with: "\\_")
     }
 
     private static func csvCell(_ value: String, delimiter: String) -> String {

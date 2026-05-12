@@ -385,6 +385,57 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         XCTAssertTrue(plan.message.contains("SQLite restore failed"), plan.message)
     }
 
+    func test_sqliteDatabaseSearchFindsRowData() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.searchTerm = "Linus"
+
+        let plan = store.perform(
+            .databaseSearch,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertTrue(plan.message.contains("users.name 1 row"), plan.message)
+    }
+
+    func test_sqliteDatabaseSearchFindsMetadata() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.searchTerm = "users"
+
+        let plan = store.perform(
+            .databaseSearch,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertTrue(plan.message.contains("table users"), plan.message)
+    }
+
+    func test_sqliteDatabaseSearchReportsNoMatches() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.searchTerm = "not-present"
+
+        let plan = store.perform(
+            .databaseSearch,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertEqual(plan.message, "SQLite search found no matches.")
+    }
+
     func test_sqliteQueryExportBlocksWriteSQL() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }
