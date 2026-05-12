@@ -46,7 +46,7 @@ struct RecoveryPhraseSheet: View {
                 Spacer()
                 closeButton
             }
-            Text("Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas.")
+            Text("Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -642,14 +642,14 @@ enum SkillsSeedCatalog {
         SkillSpec(
             slug: "cloudflare-ops",
             name: "Cloudflare ops · my account",
-            description: "How to operate my Cloudflare account: which zones, which API token in the Vault, what's safe to mutate.",
+            description: "How to operate my Cloudflare account: which zones, which API token in Secrets, what's safe to mutate.",
             version: "0.1.0",
             kind: .snippet,
             body: """
             When I ask about Cloudflare:
 
             - The active zones are landed-on under my main account.
-            - Use the API token stored under Vault key `cloudflare_api`.
+            - Use the API token stored under Secrets key `cloudflare_api`.
             - Safe to mutate: DNS records, WAF rules, page rules.
             - NEVER touch: payment method, account roles, R2 lifecycle \
               policies (those need explicit confirmation each time).
@@ -662,7 +662,7 @@ enum SkillsSeedCatalog {
             params: nil,
             instance: nil,
             capsule: SkillCapsule(
-                text: "Cloudflare: token under Vault key cloudflare_api; safe to mutate DNS/WAF/page rules; never touch payment/roles/R2 lifecycle without confirmation.",
+                text: "Cloudflare: token under Secrets key cloudflare_api; safe to mutate DNS/WAF/page rules; never touch payment/roles/R2 lifecycle without confirmation.",
                 priority: 50,
                 readWhen: ["DNS", "Cloudflare", "WAF", "API token"]
             ),

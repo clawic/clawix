@@ -8,7 +8,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case database
     case memory
     case drive
-    case vault
+    case secrets
     case telegram
     case audio
     case iot
@@ -28,7 +28,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .database: return 7790
         case .memory:   return 7791
         case .drive:    return 7792
-        case .vault:    return 7793
+        case .secrets:    return 7793
         case .telegram: return 22011
         case .audio:    return 7794
         case .iot:      return 7795
@@ -43,7 +43,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .database: return "Database"
         case .memory:   return "Memory"
         case .drive:    return "Drive"
-        case .vault:    return "Vault"
+        case .secrets:    return "Secrets"
         case .telegram: return "Telegram"
         case .audio:    return "Audio"
         case .iot:      return "IoT"

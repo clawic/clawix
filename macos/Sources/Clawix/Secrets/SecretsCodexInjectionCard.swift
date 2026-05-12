@@ -15,7 +15,7 @@ struct SecretsCodexInjectionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Secrets vault → Codex")
+            Text("Secrets → Codex")
                 .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Palette.textPrimary)
             Text("Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.")

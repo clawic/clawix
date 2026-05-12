@@ -39,10 +39,10 @@ struct SecretsOnboardingView: View {
     private var passwordStep: some View {
         SecretsIcon(size: 36, lineWidth: 1.5, color: Palette.textPrimary, isLocked: true)
         VStack(spacing: 4) {
-            Text("Set up your secrets vault")
+            Text("Set up your Secrets")
                 .font(BodyFont.system(size: 17, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Text("Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step.")
+            Text("Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step.")
                 .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textSecondary)
                 .multilineTextAlignment(.center)
@@ -103,7 +103,7 @@ struct SecretsOnboardingView: View {
                 step = .showPhrase(phrase: phrase)
             } catch {
                 isWorking = false
-                self.error = "Could not set up the vault: \(error)"
+                self.error = "Could not set up Secrets: \(error)"
             }
         }
     }
@@ -116,7 +116,7 @@ struct SecretsOnboardingView: View {
             Text("Save your recovery phrase")
                 .font(BodyFont.system(size: 17, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Text("Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again.")
+            Text("Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again.")
                 .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textSecondary)
                 .multilineTextAlignment(.center)
@@ -187,10 +187,10 @@ struct SecretsOnboardingView: View {
     private var doneStep: some View {
         SecretsIcon(size: 36, lineWidth: 1.5, color: Color.green.opacity(0.85), isLocked: false)
         VStack(spacing: 4) {
-            Text("Vault ready")
+            Text("Secrets ready")
                 .font(BodyFont.system(size: 17, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Text("Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value.")
+            Text("Your Secrets is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value.")
                 .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textSecondary)
                 .multilineTextAlignment(.center)

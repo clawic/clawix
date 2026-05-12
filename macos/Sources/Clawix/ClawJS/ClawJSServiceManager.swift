@@ -48,11 +48,12 @@ final class ClawJSServiceManager: ObservableObject {
 
     /// Maps each service to the env var name its daemon reads to recognise
     /// the per-session admin token. Services that don't use admin tokens
-    /// (memory, vault, telegram) are simply absent. The audio service
+    /// (memory, telegram) are simply absent. The audio service
     /// re-uses the same mechanism: the shared secret is the admin token.
     private static let adminTokenEnvVar: [ClawJSService: String] = [
         .database: "CLAWJS_DATABASE_ADMIN_TOKEN",
         .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
+        .secrets: "SECRETS_ADMIN_TOKEN",
         .audio: "AUDIO_SHARED_SECRET",
         .index: "CLAWJS_INDEX_ADMIN_TOKEN",
         .sessions: "SESSIONS_SHARED_SECRET",
@@ -438,7 +439,7 @@ final class ClawJSServiceManager: ObservableObject {
                 "--files-dir", Self.mainFilesDirectoryURL.path,
             ]
             return arguments
-        case .vault, .telegram:
+        case .secrets, .telegram:
             return arguments
         case .memory, .drive, .sessions:
             arguments += ["--data-dir", Self.dataDirectoryURL(for: service).path]
@@ -718,9 +719,13 @@ final class ClawJSServiceManager: ObservableObject {
         env["SESSIONS_DATA_DIR"] = dataDirectoryURL(for: .sessions).path
         env["SESSIONS_DB_PATH"] = dataDirectoryURL(for: .sessions)
             .appendingPathComponent("sessions.sqlite", isDirectory: false).path
-        env["VAULT_HOST"] = "127.0.0.1"
-        env["VAULT_PORT"] = String(ClawJSService.vault.port)
-        env["VAULT_DATA_DIR"] = dataDirectoryURL(for: .vault).path
+        env["SECRETS_HOST"] = "127.0.0.1"
+        env["SECRETS_PORT"] = String(ClawJSService.secrets.port)
+        env["SECRETS_DATA_DIR"] = dataDirectoryURL(for: .secrets).path
+        env["SECRETS_DB_PATH"] = dataDirectoryURL(for: .secrets)
+            .appendingPathComponent("secrets.sqlite", isDirectory: false).path
+        env["SECRETS_BASE_URL"] = "http://127.0.0.1:\(ClawJSService.secrets.port)"
+        env["SECRETS_TENANT_ID"] = ClawJSSecretsClient.defaultTenantId
         // The Telegram surface reads its own variables (the CLI normally
         // sets these, but pin them here too so a hand-launched `npm start`
         // lines up with what the Swift client expects).
@@ -743,6 +748,9 @@ final class ClawJSServiceManager: ObservableObject {
         }
         if let adminToken, let envVar = adminTokenEnvVar[service] {
             env[envVar] = adminToken
+            if service == .secrets {
+                env["SECRETS_TOKEN"] = adminToken
+            }
         }
         return env
     }

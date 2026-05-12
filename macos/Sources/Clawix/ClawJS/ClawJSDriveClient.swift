@@ -3,7 +3,7 @@ import Foundation
 /// HTTP client for the bundled `@clawjs/drive` service. Mirrors the wire
 /// shape of `clawjs/drive/src/server/app.ts` and the types declared in
 /// `clawjs/drive/src/shared/types.ts`. Replicates the pattern of
-/// `ClawJSVaultClient`: synchronous URLSession wrapper with admin JWT
+/// `ClawJSSecretsClient`: synchronous URLSession wrapper with admin JWT
 /// renewal, multipart uploads, share polymorphism, and audit query.
 final class ClawJSDriveClient {
 

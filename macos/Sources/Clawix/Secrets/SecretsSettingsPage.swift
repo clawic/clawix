@@ -7,7 +7,7 @@ import SecretsVault
 /// Settings page that aggregates all the power-user surfaces of the secrets
 /// vault: CLI install, import / export, audit jump, integrity check,
 /// danger-zone reset. Lives in the main Settings sidebar under the
-/// "Secrets" entry; the Secrets vault data lives in the dedicated
+/// "Secrets" entry; the Secrets data lives in the dedicated
 /// `secretsHome` route, this is just the operations panel.
 struct SecretsSettingsPage: View {
     @EnvironmentObject private var vault: VaultManager
@@ -29,7 +29,7 @@ struct SecretsSettingsPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 PageHeader(
-                    title: "Secrets vault",
+                    title: "Secrets",
                     subtitle: "Store API keys and passwords for Codex. Import what you have, keep it backed up, keep it private."
                 )
 
@@ -86,7 +86,7 @@ struct SecretsSettingsPage: View {
                     title: "Codex shell access",
                     detail: symlinkInstalled
                         ? "Installed at ~/bin/clawix-secrets-proxy."
-                        : "Not installed. Codex can’t read your vault from the shell yet."
+                        : "Not installed. Codex can’t read Secrets from the shell yet."
                 )
             } trailing: {
                 IconChipButton(
@@ -113,7 +113,7 @@ struct SecretsSettingsPage: View {
             SettingsRow {
                 RowLabel(
                     title: "Open the activity log",
-                    detail: "Browse every event the vault has logged."
+                    detail: "Browse every event Secrets has logged."
                 )
             } trailing: {
                 IconChipButton(
@@ -172,7 +172,7 @@ struct SecretsSettingsPage: View {
         SettingsCard {
             SettingsRow {
                 RowLabel(
-                    title: "Export vault to file",
+                    title: "Export Secrets to file",
                     detail: "Pack everything into one encrypted file you can keep on a USB drive or another Mac."
                 )
             } trailing: {
@@ -187,7 +187,7 @@ struct SecretsSettingsPage: View {
             SettingsRow {
                 RowLabel(
                     title: "Restore from a backup file",
-                    detail: "Pick a .clawixvault. Existing secrets keep their newest version."
+                    detail: "Pick a .clawixsecrets backup. Existing secrets keep their newest version."
                 )
             } trailing: {
                 IconChipButton(
@@ -205,7 +205,7 @@ struct SecretsSettingsPage: View {
             setupBannerCard(
                 icon: "exclamationmark.shield.fill",
                 tint: Color.orange,
-                title: "Codex can’t read your vault yet",
+                title: "Codex can’t read Secrets yet",
                 detail: "Install the helper so the Codex shell command can use the secrets you store here."
             ) {
                 IconChipButton(
@@ -219,7 +219,7 @@ struct SecretsSettingsPage: View {
             setupBannerCard(
                 icon: "info.circle.fill",
                 tint: Color.blue.opacity(0.85),
-                title: "Your vault is empty",
+                title: "Secrets is empty",
                 detail: "Bring your existing passwords from 1Password, Bitwarden, or a .env file."
             ) {
                 importMenu(label: "Import…")
@@ -339,7 +339,7 @@ struct SecretsSettingsPage: View {
     private func runIntegrity() {
         integrityResult = vault.runIntegrityCheck()
         if integrityResult == nil {
-            integrityMessage = vault.lastError ?? "Unlock the vault before verifying the audit log."
+            integrityMessage = vault.lastError ?? "Unlock Secrets before verifying the audit log."
         } else {
             integrityMessage = nil
         }
@@ -369,12 +369,12 @@ struct SecretsSettingsPage: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.data]
         panel.allowsMultipleSelection = false
-        panel.title = "Choose a .clawixvault backup"
+        panel.title = "Choose a .clawixsecrets backup"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let data = try Data(contentsOf: url)
             guard BackupCodec.verifyMagic(data: data) else {
-                importErrorBanner = "Not a valid .clawixvault file (magic header mismatch)."
+                importErrorBanner = "Not a valid .clawixsecrets file (magic header mismatch)."
                 return
             }
             pendingBackupData = data
@@ -410,7 +410,7 @@ private struct BackupExportSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-            Text("Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore.")
+            Text("Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
             VaultCard {
@@ -447,8 +447,8 @@ private struct BackupExportSheet: View {
             do {
                 let data = try vault.exportEncryptedBackup(passphrase: passphrase)
                 let panel = NSSavePanel()
-                panel.title = "Save vault backup"
-                panel.nameFieldStringValue = "clawix.clawixvault"
+                panel.title = "Save Secrets backup"
+                panel.nameFieldStringValue = "clawix.clawixsecrets"
                 panel.allowedContentTypes = [.data]
                 if panel.runModal() == .OK, let url = panel.url {
                     try data.write(to: url, options: .atomic)

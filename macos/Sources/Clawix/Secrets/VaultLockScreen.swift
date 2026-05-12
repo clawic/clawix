@@ -28,12 +28,12 @@ struct VaultLockScreen: View {
                 SecretsIcon(size: 44, lineWidth: 1.6, color: Palette.textPrimary, isLocked: true)
                     .padding(.bottom, 22)
 
-                Text("Vault locked")
+                Text("Secrets locked")
                     .font(BodyFont.system(size: 20, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                     .padding(.bottom, 6)
 
-                Text("Enter your master password to unlock the secrets vault.")
+                Text("Enter your master password to unlock the Secrets.")
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
                     .multilineTextAlignment(.center)
@@ -187,7 +187,7 @@ private struct VaultUnlockPasswordField: View {
     }
 }
 
-/// Local CTA style for the vault unlock screen. The disabled state is
+/// Local CTA style for Secrets unlock screen. The disabled state is
 /// rendered as a subtle dark capsule (matching the field) instead of a
 /// 45%-opacity white pill, which read as washed-out gray. The button only
 /// "lights up" once there is a password to submit.

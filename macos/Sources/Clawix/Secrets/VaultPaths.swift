@@ -1,11 +1,11 @@
 import Foundation
 
 enum VaultPaths {
-    /// Vault directory. Honors `CLAWIX_VAULT_DIR` so dummy mode (and tests)
-    /// can sandbox the vault away from the user's real Application Support
+    /// Secrets directory. Honors `CLAWIX_SECRETS_DIR` so dummy mode (and tests)
+    /// can sandbox Secrets away from the user's real Application Support
     /// folder. Without it the real production location is used.
     static var directory: URL {
-        if let override = ProcessInfo.processInfo.environment["CLAWIX_VAULT_DIR"],
+        if let override = ProcessInfo.processInfo.environment["CLAWIX_SECRETS_DIR"],
            !override.isEmpty {
             let expanded = (override as NSString).expandingTildeInPath
             return URL(fileURLWithPath: expanded, isDirectory: true)
@@ -18,7 +18,7 @@ enum VaultPaths {
     }
 
     static var databaseFile: URL {
-        directory.appendingPathComponent("vault.sqlite")
+        directory.appendingPathComponent("secrets.sqlite")
     }
 
     static var proxySocketFile: URL {

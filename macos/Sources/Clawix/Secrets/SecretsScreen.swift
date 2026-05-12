@@ -76,7 +76,7 @@ private struct SecretsOpenFailedView: View {
     var body: some View {
         VStack(spacing: 14) {
             SecretsIcon(size: 38, lineWidth: 1.5, color: Color.red.opacity(0.85))
-            Text("Could not open the vault")
+            Text("Could not open Secrets")
                 .font(BodyFont.system(size: 17, wght: 600))
                 .foregroundColor(Palette.textPrimary)
             Text(message)

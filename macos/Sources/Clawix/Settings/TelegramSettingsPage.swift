@@ -680,7 +680,7 @@ private struct AddBotSheet: View {
             Text("Connect a Telegram bot")
                 .font(BodyFont.system(size: 16, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
-            Text("Save the bot token in your Secrets vault first, then reference it here by name.")
+            Text("Save the bot token in your Secrets first, then reference it here by name.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

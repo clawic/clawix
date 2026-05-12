@@ -147,8 +147,8 @@ struct ClawixApp: App {
         if !Self.isToolRole {
             DictationE2ERunner.runIfRequested()
             // Background refresher for OAuth provider accounts (Anthropic
-            // Claude.ai, GitHub Copilot). Pauses while the vault is locked;
-            // resumes implicitly because each tick checks the vault state
+            // Claude.ai, GitHub Copilot). Pauses while the Secrets is locked;
+            // resumes implicitly because each tick checks the secrets state
             // before calling refresh.
             TokenRefreshService.shared.start()
         }
@@ -340,7 +340,7 @@ private struct MenuBarContent: View {
     //                    daemon (port, LAN/Tailscale IPs, Open Logs, Restart).
     //   5. VOICE TO TEXT audio capture sources and dictation settings
     //                    (Audio Input device picker, future: dictation toggles).
-    //   6. SECRETS       vault state and access (Show vault, Lock now, Unlock…).
+    //   6. SECRETS       secrets state and access (Show Secrets, Lock now, Unlock…).
     //
     // Open Clawix sits above the sections; Quit Clawix sits below. They are
     // app-level meta-actions and stay outside any Section.
@@ -635,7 +635,7 @@ private struct MenuBarContent: View {
                         appState.currentRoute = .secretsHome
                         openMainWindow()
                     } label: {
-                        Label("Show vault", systemImage: "tray.full")
+                        Label("Show Secrets", systemImage: "tray.full")
                     }
                     switch vault.state {
                     case .unlocked:
@@ -667,7 +667,7 @@ private struct MenuBarContent: View {
                             appState.currentRoute = .secretsHome
                             openMainWindow()
                         } label: {
-                            Label("Set up vault…", systemImage: "key.fill")
+                            Label("Set up Secrets…", systemImage: "key.fill")
                         }
                     default:
                         EmptyView()

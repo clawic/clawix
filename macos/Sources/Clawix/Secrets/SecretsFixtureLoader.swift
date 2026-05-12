@@ -2,14 +2,14 @@ import Foundation
 import SecretsModels
 import SecretsVault
 
-/// Seeds the vault from a JSON fixture when `CLAWIX_SECRETS_FIXTURE` is
+/// Seeds Secrets from a JSON fixture when `CLAWIX_SECRETS_FIXTURE` is
 /// set. Used by dummy mode to populate hundreds of plausible fake
 /// secrets through the same `store.createSecret` path the UI uses, so
 /// values get encrypted with the live master key.
 ///
 /// Idempotent: any entry whose `internalName` already exists in the
 /// target vault is skipped, so re-launching dummy mode (which wipes
-/// the vault dir but not the fixture file) reseeds cleanly.
+/// Secrets dir but not the fixture file) reseeds cleanly.
 ///
 /// Fixture root accepts two shapes (auto-detected):
 /// - **Legacy**: a plain array of secret entries.

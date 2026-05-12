@@ -4,7 +4,7 @@ import SecretsVault
 
 /// HTTP-backed shims for `SecretsStore`, `AuditStore`, `AgentGrantStore`.
 /// Same method names + signatures the SwiftUI Secrets views consume,
-/// implementations talk to the bundled ClawJS Vault over loopback HTTP.
+/// implementations talk to the bundled ClawJS Secrets over loopback HTTP.
 ///
 /// Sync surface intentional: existing views call these inside `try`
 /// blocks without `await`. `runSync` blocks the calling thread on a
@@ -21,9 +21,9 @@ enum ClawJSBackendError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notUnlocked: return "Vault is locked"
+        case .notUnlocked: return "Secrets is locked"
         case .notFound: return "Item not found"
-        case .invalidResponse(let detail): return "Invalid vault response: \(detail)"
+        case .invalidResponse(let detail): return "Invalid secrets response: \(detail)"
         case .server(let message): return message
         }
     }
@@ -50,7 +50,7 @@ fileprivate func runSync<T>(_ operation: @escaping @Sendable () async throws -> 
         semaphore.signal()
     }
     if semaphore.wait(timeout: .now() + 5) == .timedOut {
-        throw ClawJSBackendError.server("Vault service did not respond within 5 seconds.")
+        throw ClawJSBackendError.server("Secrets service did not respond within 5 seconds.")
     }
     lock.lock()
     defer { lock.unlock() }
@@ -60,7 +60,7 @@ fileprivate func runSync<T>(_ operation: @escaping @Sendable () async throws -> 
 // MARK: - Mappers (HTTP DTO → SecretsModels DTO)
 
 enum ClawJSMapper {
-    static func mapVaultContainer(_ row: ClawJSVaultClient.VaultContainer) -> VaultRecord {
+    static func mapFolder(_ row: ClawJSSecretsClient.Folder) -> VaultRecord {
         VaultRecord(
             id: parseId(row.id),
             accountId: 0,
@@ -74,14 +74,14 @@ enum ClawJSMapper {
         )
     }
 
-    static func mapDescribedSecret(_ s: ClawJSVaultClient.DescribedSecret) -> SecretRecord {
+    static func mapDescribedSecret(_ s: ClawJSSecretsClient.DescribedSecret) -> SecretRecord {
         let id = parseId(s.id)
-        let vaultId = s.vaultId.flatMap { parseId($0) } ?? UUID()
+        let folderId = s.folderId.flatMap { parseId($0) } ?? UUID()
         let kind: SecretKind = SecretKind(rawValue: s.typeId ?? "generic") ?? .apiKey
         var record = SecretRecord(
             id: id,
             accountId: 0,
-            vaultId: vaultId,
+            vaultId: folderId,
             kind: kind,
             brandPreset: s.typeId,
             internalName: s.internalName,
@@ -117,7 +117,7 @@ enum ClawJSMapper {
         return record
     }
 
-    static func mapField(_ f: ClawJSVaultClient.DescribedField, secretId: EntityID, versionId: EntityID) -> SecretFieldRecord {
+    static func mapField(_ f: ClawJSSecretsClient.DescribedField, secretId: EntityID, versionId: EntityID) -> SecretFieldRecord {
         SecretFieldRecord(
             id: UUID(),
             secretId: secretId,
@@ -136,7 +136,7 @@ enum ClawJSMapper {
         )
     }
 
-    static func mapAuditEvent(_ e: ClawJSVaultClient.AuditEvent) -> DecryptedAuditEvent {
+    static func mapAuditEvent(_ e: ClawJSSecretsClient.AuditEvent) -> DecryptedAuditEvent {
         let payload = AuditEventPayload(notes: stringify(e.payload))
         return DecryptedAuditEvent(
             id: parseId(e.id),
@@ -153,7 +153,7 @@ enum ClawJSMapper {
         )
     }
 
-    static func mapGrantSummary(_ g: ClawJSVaultClient.AgentGrantSummary) -> AgentGrantRecord {
+    static func mapGrantSummary(_ g: ClawJSSecretsClient.AgentGrantSummary) -> AgentGrantRecord {
         let capabilityKind = (g.capability["kind"]?.value as? String) ?? "custom"
         let capability = AgentCapability(rawValue: capabilityKind) ?? .githubGitPush
         let scopeJson: String? = {
@@ -211,28 +211,28 @@ enum ClawJSMapper {
 // MARK: - SecretsStore shim
 
 final class ClawJSSecretsStore {
-    private let client: ClawJSVaultClient
+    private let client: ClawJSSecretsClient
 
-    init(client: ClawJSVaultClient) {
+    init(client: ClawJSSecretsClient) {
         self.client = client
     }
 
     func listVaults(includeTrashed: Bool = false) throws -> [VaultRecord] {
         let containers = try runSync { try await self.client.listContainers(includeTrashed: includeTrashed) }
-        return containers.map(ClawJSMapper.mapVaultContainer)
+        return containers.map(ClawJSMapper.mapFolder)
     }
 
     @discardableResult
     func createVault(name: String, icon: String? = nil, color: String? = nil) throws -> VaultRecord {
         let row = try runSync { try await self.client.createContainer(name: name, icon: icon, color: color) }
-        return ClawJSMapper.mapVaultContainer(row)
+        return ClawJSMapper.mapFolder(row)
     }
 
     func listSecrets(includeTrashed: Bool = false) throws -> [SecretRecord] {
         let described = try runSync {
             try await self.client.listSecrets(
                 search: nil,
-                vaultId: nil,
+                folderId: nil,
                 includeTrashed: includeTrashed,
                 includeArchived: false
             )
@@ -242,7 +242,7 @@ final class ClawJSSecretsStore {
 
     @discardableResult
     func createSecret(in vault: VaultRecord, draft: DraftSecret) throws -> SecretRecord {
-        let payload = ClawJSDraftEncoder.encode(draft, vaultId: vault.id.uuidString)
+        let payload = ClawJSDraftEncoder.encode(draft, folderId: vault.id.uuidString)
         let described = try runSync { try await self.client.createSecret(draft: payload) }
         return ClawJSMapper.mapDescribedSecret(described)
     }
@@ -318,12 +318,12 @@ final class ClawJSSecretsStore {
     }
 
     func snapshotForBackup() throws -> BackupContents {
-        throw ClawJSBackendError.server("Backup export not yet wired to ClawJS Vault HTTP backend")
+        throw ClawJSBackendError.server("Backup export not yet wired to ClawJS Secrets HTTP backend")
     }
 
     func restoreBackup(_ contents: BackupContents) throws -> (created: Int, skipped: Int) {
         _ = contents
-        throw ClawJSBackendError.server("Backup import not yet wired to ClawJS Vault HTTP backend")
+        throw ClawJSBackendError.server("Backup import not yet wired to ClawJS Secrets HTTP backend")
     }
 
     private func fetchSecretById(_ id: EntityID) throws -> SecretRecord? {
@@ -335,9 +335,9 @@ final class ClawJSSecretsStore {
 // MARK: - AuditStore shim
 
 final class ClawJSAuditStore {
-    private let client: ClawJSVaultClient
+    private let client: ClawJSSecretsClient
 
-    init(client: ClawJSVaultClient) {
+    init(client: ClawJSSecretsClient) {
         self.client = client
     }
 
@@ -384,9 +384,9 @@ final class ClawJSAuditStore {
 // MARK: - Grants shim
 
 final class ClawJSGrantStore {
-    private let client: ClawJSVaultClient
+    private let client: ClawJSSecretsClient
 
-    init(client: ClawJSVaultClient) {
+    init(client: ClawJSSecretsClient) {
         self.client = client
     }
 
@@ -414,7 +414,7 @@ final class ClawJSGrantStore {
 // MARK: - Encoders for outgoing payloads
 
 enum ClawJSDraftEncoder {
-    static func encode(_ draft: DraftSecret, vaultId: String) -> [String: Any] {
+    static func encode(_ draft: DraftSecret, folderId: String) -> [String: Any] {
         var fields: [[String: Any]] = []
         for (idx, field) in draft.fields.enumerated() {
             var f: [String: Any] = [
@@ -433,7 +433,7 @@ enum ClawJSDraftEncoder {
             fields.append(f)
         }
         var payload: [String: Any] = [
-            "vaultId": vaultId,
+            "folderId": folderId,
             "internalName": draft.internalName,
             "title": draft.title,
             "fields": fields,

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Sidebar entry for the Secrets vault. Visually matches the top-level
+/// Sidebar entry for the Secrets. Visually matches the top-level
 /// `SidebarButton` rows (`New chat`, `Search`) so the row height,
 /// padding, font, hover/selected colors and corner radius are identical
 /// across the whole sidebar nav.

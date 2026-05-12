@@ -6,8 +6,8 @@ import SecretsVault
 /// identity rail where the chosen `SecretKindIcon` is the visual hero
 /// (the same hand-drawn line-art used in the secrets list, scaled up),
 /// and a right column with the editable fields. Type and destination
-/// vault live as inline menus under the icon, so the form column never
-/// has to spell out "Vault" / "Type" rows: the rail already says it.
+/// folder live as inline menus under the icon, so the form column never
+/// has to spell out "Folder" / "Type" rows: the rail already says it.
 struct AddSecretSheet: View {
     @EnvironmentObject private var vault: VaultManager
     @Binding var isPresented: Bool
@@ -314,7 +314,7 @@ struct AddSecretSheet: View {
               let vaultId = selectedVaultId,
               let chosenVault = vault.vaults.first(where: { $0.id == vaultId })
         else {
-            withAnimation(.easeOut(duration: 0.18)) { error = "Pick a vault." }
+            withAnimation(.easeOut(duration: 0.18)) { error = "Pick a folder." }
             return
         }
         let trimmedName = internalName.trimmingCharacters(in: .whitespaces)

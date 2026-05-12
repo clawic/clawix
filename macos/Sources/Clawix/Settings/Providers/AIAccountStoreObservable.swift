@@ -110,7 +110,7 @@ final class AIAccountStoreObservable: ObservableObject {
     private func humanize(_ error: Error) -> String {
         if let storeError = error as? AIAccountStoreError {
             switch storeError {
-            case .vaultLocked: return "Vault is locked. Unlock it in Settings → Secrets."
+            case .vaultLocked: return "Secrets is locked. Unlock it in Settings → Secrets."
             case .accountNotFound: return "This account no longer exists."
             case .providerUnknown: return "Unknown provider."
             case .credentialMissing: return "No credentials stored for this account."

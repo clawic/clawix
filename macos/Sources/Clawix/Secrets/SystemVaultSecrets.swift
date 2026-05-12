@@ -6,11 +6,11 @@ import SecretsVault
 /// user's hand-curated vault entries): API keys for cloud LLM providers
 /// (Enhancement) and cloud transcription endpoints (Groq / Deepgram /
 /// Custom). These live in a dedicated container called "Clawix System"
-/// inside the same encrypted vault the user already has, so the app
+/// inside the same encrypted Secrets the user already has, so the app
 /// never has to touch the macOS Keychain to persist a secret.
 ///
 /// The container is created lazily on the first write. Reads return nil
-/// if the vault is not unlocked (callers treat that as "provider not
+/// if Secrets is not unlocked (callers treat that as "provider not
 /// configured" and surface an unlock prompt at the call site).
 @MainActor
 enum SystemVaultSecrets {
@@ -21,7 +21,7 @@ enum SystemVaultSecrets {
     // MARK: - Public API
 
     /// Replaces (or removes, if `value` is empty) the secret stored under
-    /// `internalName` inside the system container. Throws when the vault
+    /// `internalName` inside the system container. Throws when Secrets
     /// is not unlocked.
     static func set(internalName: String, title: String, value: String) async throws {
         guard let store = VaultManager.shared.store else {
@@ -53,7 +53,7 @@ enum SystemVaultSecrets {
     }
 
     /// Reads the cleartext secret stored under `internalName`. Returns
-    /// nil when the vault is locked or the secret does not exist.
+    /// nil when Secrets is locked or the secret does not exist.
     static func read(internalName: String) async -> String? {
         guard let store = VaultManager.shared.store else { return nil }
         do {
@@ -70,7 +70,7 @@ enum SystemVaultSecrets {
         }
     }
 
-    /// True iff the vault is unlocked AND a non-trashed secret exists at
+    /// True iff Secrets is unlocked AND a non-trashed secret exists at
     /// `internalName`. Does not reveal the value.
     static func has(internalName: String) async -> Bool {
         guard let store = VaultManager.shared.store else { return false }

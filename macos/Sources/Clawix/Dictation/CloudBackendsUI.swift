@@ -3,7 +3,7 @@ import SwiftUI
 /// Settings sheet that exposes API keys + base URLs for the cloud
 /// transcription backends (#22 cloud variants). Reachable from
 /// `DictationSettingsPage` Avanzado section when a cloud backend is
-/// selected. Persists keys in the user's encrypted vault under the
+/// selected. Persists keys in the user's encrypted Secrets under the
 /// "Clawix System" container; never touches the system Keychain.
 struct CloudBackendsSheet: View {
     @Binding var isPresented: Bool
@@ -37,13 +37,13 @@ struct CloudBackendsSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Cloud Whisper variants take the same audio you'd send to local Whisper and run it on a remote model. Add a key once and switch backends from the Engine picker. Keys live in your encrypted vault, never in plaintext on disk.")
+                    Text("Cloud Whisper variants take the same audio you'd send to local Whisper and run it on a remote model. Add a key once and switch backends from the Engine picker. Keys live in your encrypted Secrets, never in plaintext on disk.")
                         .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if vault.state != .unlocked {
-                        Text("Vault is locked. Unlock it from Settings → Secrets to manage cloud transcription keys.")
+                        Text("Secrets is locked. Unlock it from Settings → Secrets to manage cloud transcription keys.")
                             .font(BodyFont.system(size: 11.5, wght: 600))
                             .foregroundColor(Color(red: 0.95, green: 0.65, blue: 0.30))
                             .fixedSize(horizontal: false, vertical: true)

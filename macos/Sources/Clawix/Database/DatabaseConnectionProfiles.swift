@@ -11,7 +11,7 @@ enum DatabaseConnectionAuthStorage: String, Codable, CaseIterable, Identifiable 
     var label: String {
         switch self {
         case .askEveryTime: return "Ask every time"
-        case .secretVault:  return "Secrets vault"
+        case .secretVault:  return "Secrets"
         case .notRequired:  return "Not required"
         }
     }

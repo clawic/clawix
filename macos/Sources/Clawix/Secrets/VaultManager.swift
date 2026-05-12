@@ -76,9 +76,9 @@ final class VaultManager: ObservableObject {
         if nsError.domain == NSURLErrorDomain {
             switch URLError.Code(rawValue: nsError.code) {
             case .cannotConnectToHost, .networkConnectionLost, .timedOut, .notConnectedToInternet:
-                return "Vault service is not reachable on 127.0.0.1:\(ClawJSService.vault.port)."
+                return "Secrets service is not reachable on 127.0.0.1:\(ClawJSService.secrets.port)."
             default:
-                return "Vault service request failed: \(nsError.localizedDescription)"
+                return "Secrets service request failed: \(nsError.localizedDescription)"
             }
         }
         return error.localizedDescription
@@ -91,25 +91,25 @@ final class VaultManager: ObservableObject {
     private var lifecycle: VaultLifecycle?
     private var loadGeneration: UUID?
 
-    private let client: ClawJSVaultClient
+    private let client: ClawJSSecretsClient
 
     init() {
-        self.client = ClawJSVaultClient.local()
+        self.client = ClawJSSecretsClient.local()
         self.lifecycle = VaultLifecycle(attaching: self)
         if Self.isDisabledForLaunch {
-            self.state = .openFailed("Vault service disabled for this launch.")
-            self.lastError = "Vault service disabled for this launch."
+            self.state = .openFailed("Secrets service disabled for this launch.")
+            self.lastError = "Secrets service disabled for this launch."
             return
         }
         Task { await load() }
     }
 
-    init(client: ClawJSVaultClient) {
+    init(client: ClawJSSecretsClient) {
         self.client = client
         self.lifecycle = VaultLifecycle(attaching: self)
         if Self.isDisabledForLaunch {
-            self.state = .openFailed("Vault service disabled for this launch.")
-            self.lastError = "Vault service disabled for this launch."
+            self.state = .openFailed("Secrets service disabled for this launch.")
+            self.lastError = "Secrets service disabled for this launch."
             return
         }
         Task { await load() }
@@ -125,7 +125,7 @@ final class VaultManager: ObservableObject {
             try? await Task.sleep(nanoseconds: 8_000_000_000)
             guard let self, self.loadGeneration == generation else { return }
             if case .loading = self.state {
-                let message = "Vault service did not become ready within 8 seconds."
+                let message = "Secrets service did not become ready within 8 seconds."
                 self.state = .openFailed(message)
                 self.lastError = message
             }
@@ -235,7 +235,7 @@ final class VaultManager: ObservableObject {
         openAnomalies = []
         seenAnomalyIDs = []
         for pending in pendingApprovals {
-            pending.deny(reason: "vault locked while waiting for approval")
+            pending.deny(reason: "Secrets locked while waiting for approval")
         }
         pendingApprovals = []
         if state == .unlocked || state == .unlocking {
@@ -300,14 +300,14 @@ final class VaultManager: ObservableObject {
         // The HTTP backend does not yet expose backup; surface a clear
         // error rather than masquerade with empty data.
         _ = passphrase
-        throw ClawJSBackendError.server("Encrypted backup not yet supported on the ClawJS Vault HTTP backend")
+        throw ClawJSBackendError.server("Encrypted backup not yet supported on the ClawJS Secrets HTTP backend")
     }
 
     @discardableResult
     func importEncryptedBackup(_ data: Data, passphrase: String) throws -> (created: Int, skipped: Int) {
         _ = data
         _ = passphrase
-        throw ClawJSBackendError.server("Encrypted backup import not yet supported on the ClawJS Vault HTTP backend")
+        throw ClawJSBackendError.server("Encrypted backup import not yet supported on the ClawJS Secrets HTTP backend")
     }
 
     func staleSecrets(olderThanDays days: Int) -> [SecretRecord] {
@@ -455,7 +455,7 @@ final class VaultManager: ObservableObject {
     }
 
     private static var isDisabledForLaunch: Bool {
-        ProcessInfo.processInfo.environment["CLAWIX_VAULT_DISABLE"] == "1"
+        ProcessInfo.processInfo.environment["CLAWIX_SECRETS_DISABLE"] == "1"
     }
 }
 
@@ -467,9 +467,9 @@ extension VaultManager {
 
         var description: String {
             switch self {
-            case .invalidState: return "VaultManager: invalid state for this operation"
-            case .notSetUp: return "VaultManager: vault has not been set up"
-            case .notUnlocked: return "VaultManager: vault is not unlocked"
+            case .invalidState: return "Secrets manager: invalid state for this operation"
+            case .notSetUp: return "SecretsManager: Secrets has not been set up"
+            case .notUnlocked: return "SecretsManager: Secrets is not unlocked"
             }
         }
     }

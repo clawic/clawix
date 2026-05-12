@@ -1,15 +1,15 @@
 import Foundation
 
-/// HTTP client for the bundled ClawJS Vault server. Mirrors the surface
+/// HTTP client for the bundled ClawJS Secrets server. Mirrors the surface
 /// described in `~/.claude/plans/clawjs-en-mi-desktop-tranquil-swing.md`
-/// Phase 8.B.2: vault lifecycle (setup/unlock/lock/recover/change pw),
+/// Phase 8.B.2: secrets lifecycle (setup/unlock/lock/recover/change pw),
 /// secret CRUD, reveal, brokered execution, audit query+integrity.
 ///
 /// Stateless: every method opens a new URLSession request. The session
 /// state (locked/unlocked) lives inside the Node server; this client
 /// only proxies calls.
 @MainActor
-final class ClawJSVaultClient {
+final class ClawJSSecretsClient {
 
     /// Default tenant the Mac app uses. The server seeds it automatically
     /// on first boot. Multitenancy stays on the server side for future
@@ -21,7 +21,7 @@ final class ClawJSVaultClient {
     private var bearerToken: String?
     private let session: URLSession
 
-    init(baseURL: URL, tenantId: String = ClawJSVaultClient.defaultTenantId, bearerToken: String? = nil) {
+    init(baseURL: URL, tenantId: String = ClawJSSecretsClient.defaultTenantId, bearerToken: String? = nil) {
         self.baseURL = baseURL
         self.tenantId = tenantId
         self.bearerToken = bearerToken
@@ -31,12 +31,15 @@ final class ClawJSVaultClient {
         self.session = URLSession(configuration: config)
     }
 
-    /// Convenience: connects to the local Vault service supervised by
+    /// Convenience: connects to the local Secrets service supervised by
     /// `ClawJSServiceManager` (port `7793`).
-    static func local(bearerToken: String? = nil) -> ClawJSVaultClient {
-        ClawJSVaultClient(
-            baseURL: URL(string: "http://127.0.0.1:\(ClawJSService.vault.port)")!,
-            bearerToken: bearerToken
+    static func local(bearerToken: String? = nil) -> ClawJSSecretsClient {
+        let token = bearerToken
+            ?? ClawJSServiceManager.shared.adminTokenIfSpawned(for: .secrets)
+            ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .secrets))
+        return ClawJSSecretsClient(
+            baseURL: URL(string: "http://127.0.0.1:\(ClawJSService.secrets.port)")!,
+            bearerToken: token
         )
     }
 
@@ -44,21 +47,21 @@ final class ClawJSVaultClient {
         self.bearerToken = token
     }
 
-    // MARK: - Vault lifecycle
+    // MARK: - Secrets lifecycle
 
     func health() async throws -> [String: AnyCodable] {
         try await get("/v1/health")
     }
 
-    struct VaultStateInfo: Codable {
+    struct SecretsStateInfo: Codable {
         let tenantId: String
         let initialized: Bool
         let unlocked: Bool
         let autoLockMinutes: Int
     }
 
-    func state() async throws -> VaultStateInfo {
-        try await get("/v1/vault/state")
+    func state() async throws -> SecretsStateInfo {
+        try await get("/v1/secrets/state")
     }
 
     struct SetupResult: Codable {
@@ -68,19 +71,19 @@ final class ClawJSVaultClient {
     }
 
     func setup(password: String, appVersion: String? = nil) async throws -> SetupResult {
-        try await post("/v1/vault/setup", body: ["password": password, "appVersion": appVersion as Any])
+        try await post("/v1/secrets/setup", body: ["password": password, "appVersion": appVersion as Any])
     }
 
     func unlock(password: String) async throws {
-        let _: [String: AnyCodable] = try await post("/v1/vault/unlock", body: ["password": password])
+        let _: [String: AnyCodable] = try await post("/v1/secrets/unlock", body: ["password": password])
     }
 
     func lock() async throws {
-        let _: [String: AnyCodable] = try await post("/v1/vault/lock", body: [String: Any]())
+        let _: [String: AnyCodable] = try await post("/v1/secrets/lock", body: [String: Any]())
     }
 
     func recover(phrase: String) async throws {
-        let _: [String: AnyCodable] = try await post("/v1/vault/recover", body: ["phrase": phrase])
+        let _: [String: AnyCodable] = try await post("/v1/secrets/recover", body: ["phrase": phrase])
     }
 
     struct ChangePasswordResult: Codable {
@@ -89,13 +92,13 @@ final class ClawJSVaultClient {
     }
 
     func changePassword(old: String, new: String) async throws -> ChangePasswordResult {
-        try await post("/v1/vault/change-password", body: ["oldPassword": old, "newPassword": new])
+        try await post("/v1/secrets/change-password", body: ["oldPassword": old, "newPassword": new])
     }
 
     // MARK: - Doctor + plugins
 
     func doctor() async throws -> [String: AnyCodable] {
-        try await get("/v1/vault/doctor")
+        try await get("/v1/secrets/doctor")
     }
 
     func plugins() async throws -> [String: AnyCodable] {
@@ -107,9 +110,9 @@ final class ClawJSVaultClient {
         return envelope["types"] ?? []
     }
 
-    // MARK: - Vault containers
+    // MARK: - Secrets containers
 
-    struct VaultContainer: Codable, Identifiable {
+    struct Folder: Codable, Identifiable {
         let id: String
         let tenantId: String
         let name: String
@@ -121,29 +124,29 @@ final class ClawJSVaultClient {
         let updatedAt: String
     }
 
-    func listContainers(includeTrashed: Bool = false) async throws -> [VaultContainer] {
-        let envelope: [String: [VaultContainer]] = try await get(
-            "/v1/tenants/\(tenantId)/vaults?includeTrashed=\(includeTrashed)"
+    func listContainers(includeTrashed: Bool = false) async throws -> [Folder] {
+        let envelope: [String: [Folder]] = try await get(
+            "/v1/tenants/\(tenantId)/folders?includeTrashed=\(includeTrashed)"
         )
-        return envelope["vaults"] ?? []
+        return envelope["folders"] ?? []
     }
 
-    func createContainer(name: String, icon: String? = nil, color: String? = nil, sortOrder: Int? = nil) async throws -> VaultContainer {
+    func createContainer(name: String, icon: String? = nil, color: String? = nil, sortOrder: Int? = nil) async throws -> Folder {
         var body: [String: Any] = ["name": name]
         if let icon { body["icon"] = icon }
         if let color { body["color"] = color }
         if let sortOrder { body["sortOrder"] = sortOrder }
-        let envelope: [String: VaultContainer] = try await post("/v1/tenants/\(tenantId)/vaults", body: body)
-        return envelope["vault"]!
+        let envelope: [String: Folder] = try await post("/v1/tenants/\(tenantId)/folders", body: body)
+        return envelope["folder"]!
     }
 
-    func renameContainer(id: String, to name: String) async throws -> VaultContainer? {
-        let envelope: [String: VaultContainer?] = try await patch("/v1/tenants/\(tenantId)/vaults/\(id)", body: ["name": name])
-        return envelope["vault"] ?? nil
+    func renameContainer(id: String, to name: String) async throws -> Folder? {
+        let envelope: [String: Folder?] = try await patch("/v1/tenants/\(tenantId)/folders/\(id)", body: ["name": name])
+        return envelope["folder"] ?? nil
     }
 
     func trashContainer(id: String) async throws {
-        let _: [String: AnyCodable] = try await delete("/v1/tenants/\(tenantId)/vaults/\(id)")
+        let _: [String: AnyCodable] = try await delete("/v1/tenants/\(tenantId)/folders/\(id)")
     }
 
     // MARK: - Secrets
@@ -151,7 +154,7 @@ final class ClawJSVaultClient {
     struct DescribedSecret: Codable, Identifiable {
         let id: String
         let tenantId: String
-        let vaultId: String?
+        let folderId: String?
         let typeId: String?
         let internalName: String
         let title: String
@@ -256,11 +259,11 @@ final class ClawJSVaultClient {
         }
     }
 
-    func listSecrets(search: String? = nil, vaultId: String? = nil, includeTrashed: Bool = false, includeArchived: Bool = false) async throws -> [DescribedSecret] {
+    func listSecrets(search: String? = nil, folderId: String? = nil, includeTrashed: Bool = false, includeArchived: Bool = false) async throws -> [DescribedSecret] {
         var components = URLComponents()
         components.queryItems = []
         if let search { components.queryItems?.append(URLQueryItem(name: "search", value: search)) }
-        if let vaultId { components.queryItems?.append(URLQueryItem(name: "vaultId", value: vaultId)) }
+        if let folderId { components.queryItems?.append(URLQueryItem(name: "folderId", value: folderId)) }
         if includeTrashed { components.queryItems?.append(URLQueryItem(name: "includeTrashed", value: "true")) }
         if includeArchived { components.queryItems?.append(URLQueryItem(name: "includeArchived", value: "true")) }
         let qs = components.percentEncodedQuery ?? ""
@@ -364,7 +367,7 @@ final class ClawJSVaultClient {
         let agent: String
         let secretId: String
         let capability: [String: AnyCodable]
-        let vaultCapabilities: [String]
+        let secretsCapabilities: [String]
         let reason: String
         let createdAt: String
         let expiresAt: String
@@ -383,7 +386,7 @@ final class ClawJSVaultClient {
         secretName: String,
         capabilityKind: String,
         scope: [String: Any] = [:],
-        vaultCapabilities: [String] = [],
+        secretsCapabilities: [String] = [],
         reason: String,
         durationMinutes: Int = 10
     ) async throws -> IssuedGrant {
@@ -393,7 +396,7 @@ final class ClawJSVaultClient {
             "agent": agent,
             "secretName": secretName,
             "capability": capability,
-            "vaultCapabilities": vaultCapabilities,
+            "secretsCapabilities": secretsCapabilities,
             "reason": reason,
             "durationMinutes": durationMinutes,
         ]
@@ -527,17 +530,17 @@ final class ClawJSVaultClient {
         }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
-            throw ClawJSVaultError.invalidResponse
+            throw ClawJSSecretsError.invalidResponse
         }
         if !(200..<300 ~= http.statusCode) {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let error = json["error"] as? String {
-                throw ClawJSVaultError.server(status: http.statusCode, message: error)
+                throw ClawJSSecretsError.server(status: http.statusCode, message: error)
             }
-            throw ClawJSVaultError.server(status: http.statusCode, message: "HTTP \(http.statusCode)")
+            throw ClawJSSecretsError.server(status: http.statusCode, message: "HTTP \(http.statusCode)")
         }
         if data.isEmpty {
-            throw ClawJSVaultError.emptyResponse
+            throw ClawJSSecretsError.emptyResponse
         }
         let decoder = JSONDecoder()
         return try decoder.decode(T.self, from: data)
@@ -548,16 +551,16 @@ final class ClawJSVaultClient {
     }
 }
 
-enum ClawJSVaultError: Error, LocalizedError {
+enum ClawJSSecretsError: Error, LocalizedError {
     case invalidResponse
     case emptyResponse
     case server(status: Int, message: String)
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: return "Vault server returned an invalid response."
-        case .emptyResponse: return "Vault server returned an empty response."
-        case .server(let status, let message): return "Vault server error \(status): \(message)"
+        case .invalidResponse: return "Secrets server returned an invalid response."
+        case .emptyResponse: return "Secrets server returned an empty response."
+        case .server(let status, let message): return "Secrets server error \(status): \(message)"
         }
     }
 }

@@ -350,7 +350,7 @@ struct EnhancementSettingsSheet: View {
 
     private var connectionLabel: LocalizedStringKey {
         if vault.state != .unlocked && provider.requiresAPIKey {
-            return "Vault locked"
+            return "Secrets locked"
         }
         return isConnected ? "Connected" : "Not configured"
     }

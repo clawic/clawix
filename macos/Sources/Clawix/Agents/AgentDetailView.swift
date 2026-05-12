@@ -280,7 +280,7 @@ struct AgentDetailView: View {
                 .font(BodyFont.system(size: 11.5, wght: 600))
                 .foregroundColor(Palette.textSecondary)
             if agent.secretTags.isEmpty {
-                Text("None. Tag-based subscriptions auto-grant matching vault entries.")
+                Text("None. Tag-based subscriptions auto-grant matching secrets.")
                     .font(BodyFont.system(size: 12, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             } else {

@@ -1350,7 +1350,7 @@ private struct CloudBackendsRow: View {
 
     private var detail: LocalizedStringKey {
         if vault.state != .unlocked {
-            return "Vault locked. Unlock to manage cloud backend keys."
+            return "Secrets locked. Unlock to manage cloud backend keys."
         }
         if configuredCount == 0 {
             return "Add Groq / Deepgram / Custom Whisper keys to use the cloud backends."

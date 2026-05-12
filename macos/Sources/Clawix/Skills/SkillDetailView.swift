@@ -264,7 +264,7 @@ struct SkillDetailView: View {
             .toggleStyle(.switch)
             .labelsHidden()
         case .secretRef:
-            Text("Secret picker (TODO: wire to Secrets Vault)")
+            Text("Secret picker (TODO: wire to Secrets)")
                 .font(.system(size: 11)).foregroundColor(.secondary)
         }
     }

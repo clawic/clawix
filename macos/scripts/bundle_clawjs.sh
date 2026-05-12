@@ -185,7 +185,7 @@ fi
 # (e.g. /Users/.../clawjs), copy the launcher bin/ scripts and the
 # @clawjs/database source over the bundled ones. Lets a developer iterate
 # on launcher .mjs files (database-server-launcher.mjs,
-# vault-server-launcher.mjs, …) and on the database package without
+# secrets-server-launcher.mjs, …) and on the database package without
 # republishing npm. No-op in CI / release builds.
 if [[ -n "${CLAWJS_DEV_OVERLAY:-}" ]]; then
     OVERLAY_DEPS_READY=0
@@ -360,22 +360,22 @@ PY
         )
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/sessions/node_modules/better-sqlite3"
     fi
-    # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
-    # from @clawjs/cli/bin, i.e. node_modules/vault/dist/server.js.
-    OVERLAY_VAULT="$CLAWJS_DEV_OVERLAY/vault"
-    if [[ -d "$OVERLAY_VAULT" ]]; then
-        build_overlay_package "$OVERLAY_VAULT"
-        echo "==> Dev overlay: copying $OVERLAY_VAULT/dist → $CLAWJS_DEST/node_modules/vault/dist"
-        rm -rf "$CLAWJS_DEST/node_modules/vault/dist"
-        mkdir -p "$CLAWJS_DEST/node_modules/vault"
-        cp -R "$OVERLAY_VAULT/dist" "$CLAWJS_DEST/node_modules/vault/dist"
-        if [[ -d "$OVERLAY_VAULT/node_modules" ]]; then
-            rm -rf "$CLAWJS_DEST/node_modules/vault/node_modules"
-            cp -R "$OVERLAY_VAULT/node_modules" "$CLAWJS_DEST/node_modules/vault/node_modules"
-            rm -rf "$CLAWJS_DEST/node_modules/vault/node_modules/better-sqlite3"
+    # Secrets server: launchers resolve `<HERE>/../../../secrets/dist/server.js`
+    # from @clawjs/cli/bin, i.e. node_modules/secrets/dist/server.js.
+    OVERLAY_SECRETS="$CLAWJS_DEV_OVERLAY/secrets"
+    if [[ -d "$OVERLAY_SECRETS" ]]; then
+        build_overlay_package "$OVERLAY_SECRETS"
+        echo "==> Dev overlay: copying $OVERLAY_SECRETS/dist → $CLAWJS_DEST/node_modules/secrets/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/secrets/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/secrets"
+        cp -R "$OVERLAY_SECRETS/dist" "$CLAWJS_DEST/node_modules/secrets/dist"
+        if [[ -d "$OVERLAY_SECRETS/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/node_modules/secrets/node_modules"
+            cp -R "$OVERLAY_SECRETS/node_modules" "$CLAWJS_DEST/node_modules/secrets/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/secrets/node_modules/better-sqlite3"
         fi
     fi
-    # Memory server: same layout as vault.
+    # Memory server: same layout as secrets.
     OVERLAY_MEMORY="$CLAWJS_DEV_OVERLAY/memory"
     if [[ -d "$OVERLAY_MEMORY" ]]; then
         build_overlay_package "$OVERLAY_MEMORY"

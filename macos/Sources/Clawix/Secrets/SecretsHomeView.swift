@@ -54,7 +54,7 @@ struct SecretsHomeView: View {
                     Circle()
                         .fill(Color(red: 0.34, green: 0.78, blue: 0.55))
                         .frame(width: 6, height: 6)
-                    Text(verbatim: "\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s") · vault unlocked")
+                    Text(verbatim: "\(vault.secrets.count) secret\(vault.secrets.count == 1 ? "" : "s") · Secrets unlocked")
                         .font(BodyFont.system(size: 11, wght: 500))
                         .foregroundColor(Palette.textSecondary)
                 }
