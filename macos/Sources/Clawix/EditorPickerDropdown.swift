@@ -85,7 +85,7 @@ struct EditorPickerDropdown: View {
                     }
                     .frame(width: 22, height: 22)
 
-                    LucideIcon(.chevronDown, size: 11)
+                    LucideIcon(.chevronDown, size: 13)
                         .foregroundColor(Color(white: 0.60))
                 }
                 .padding(.horizontal, 6)

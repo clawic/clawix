@@ -88,6 +88,8 @@ struct ToolGroupView: View {
                         .offset(y: 2)
                 case "magnifyingglass":
                     SearchIcon(size: 11.5)
+                case "eye":
+                    EyeIcon(size: 16)
                 case "clawix.folderStack":
                     FolderStackIcon(size: 17)
                         .offset(y: 3.5)
