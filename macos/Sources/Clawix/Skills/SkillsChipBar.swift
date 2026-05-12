@@ -12,8 +12,10 @@ import SwiftUI
 struct SkillsChipBar: View {
     let chatId: UUID?
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var flags: FeatureFlags
 
     private var states: [ActiveSkillState] {
+        guard flags.isVisible(.skills) else { return [] }
         guard let store = appState.skillsStore else { return [] }
         let projectId: String? = {
             if let chatId,

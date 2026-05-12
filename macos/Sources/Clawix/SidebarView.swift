@@ -93,6 +93,22 @@ fileprivate enum SidebarToolsCatalog {
     static func entry(byId id: String) -> SidebarToolEntry? {
         entries.first { $0.id == id }
     }
+
+    static func gatedFeature(for id: String) -> AppFeature? {
+        switch id {
+        case "home":             return .iotHome
+        case "calendar":         return .calendar
+        case "contacts":         return .contacts
+        case "secrets":          return .secrets
+        case "database":         return .database
+        case "index":            return .index
+        case "marketplace":      return .marketplace
+        case "agents":           return .agents
+        case "skillCollections": return .skillCollections
+        case "badger":           return .badger
+        default:                 return nil
+        }
+    }
 }
 
 /// Top-level layout of the chat list. Either group chats under their
@@ -398,22 +414,17 @@ struct SidebarView: View {
                 toolsSection
             }
 
-            // Apps is its own peer of Tools: the user explicitly asked
-            // for it OUT of Tools, even though both are top-level
-            // entry points to non-chat surfaces. Gated by the
-            // `AppsFeatureEnabled` toggle in Settings → Apps.
-            if appsFeatureEnabled {
+            if appsFeatureEnabled && flags.isVisible(.apps) {
                 AppsSidebarSection(appsStore: .shared)
             }
 
-            // Design surface: Styles, Templates and References. Same
-            // peer position as Apps; one click drops into each catalog.
-            DesignSidebarSection()
+            if flags.isVisible(.design) {
+                DesignSidebarSection()
+            }
 
-            // Life surface: 80 user-data tracking verticals (health,
-            // habits, emotions, finance, etc.). The sidebar shows only
-            // the verticals the user has enabled in LifeSettingsView.
-            LifeSidebarSection()
+            if flags.isVisible(.life) {
+                LifeSidebarSection()
+            }
 
             if !snapshot.pinned.isEmpty {
                 let pinnedSources = pinnedFilterSources(from: snapshot.pinned)
@@ -746,7 +757,14 @@ struct SidebarView: View {
 
     private var visibleTools: [SidebarToolEntry] {
         let hidden = toolsHidden
-        return orderedTools.filter { !hidden.contains($0.id) }
+        return orderedTools.filter { entry in
+            if hidden.contains(entry.id) { return false }
+            if let feature = SidebarToolsCatalog.gatedFeature(for: entry.id),
+               !flags.isVisible(feature) {
+                return false
+            }
+            return true
+        }
     }
 
     /// Persists a reorder of the tools list. `beforeId == nil` drops the
@@ -978,10 +996,12 @@ struct SidebarView: View {
                                   customShapeStroke: 1.65,
                                   route: .search,
                                   shortcut: "⌘G")
-                    SidebarButton(title: "Skills",
-                                  icon: "wand.and.stars",
-                                  route: .skills,
-                                  shortcut: "⌘⇧K")
+                    if flags.isVisible(.skills) {
+                        SidebarButton(title: "Skills",
+                                      icon: "wand.and.stars",
+                                      route: .skills,
+                                      shortcut: "⌘⇧K")
+                    }
                     /*
                     SidebarButton(title: "Plugins",
                                   icon: "circle.grid.2x2",
