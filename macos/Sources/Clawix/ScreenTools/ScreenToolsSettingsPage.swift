@@ -13,6 +13,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.includeCursorKey) private var includeCursor = false
     @AppStorage(ScreenToolSettings.captureWindowShadowKey) private var captureWindowShadow = true
     @AppStorage(ScreenToolSettings.scaleRetinaScreenshotsTo1xKey) private var scaleRetinaScreenshotsTo1x = false
+    @AppStorage(ScreenToolSettings.convertScreenshotsToSRGBKey) private var convertScreenshotsToSRGB = false
     @AppStorage(ScreenToolSettings.addOnePixelBorderKey) private var addOnePixelBorder = false
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
     @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
@@ -173,6 +174,8 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Capture window shadow", detail: "Keep the standard window shadow when capturing windows.", isOn: $captureWindowShadow)
                 CardDivider()
                 ToggleRow(title: "Scale Retina screenshots to 1x", detail: "Downscale Retina screenshots to logical point size after capture.", isOn: $scaleRetinaScreenshotsTo1x)
+                CardDivider()
+                ToggleRow(title: "Convert to sRGB profile", detail: "Write screenshots with the standard sRGB color profile.", isOn: $convertScreenshotsToSRGB)
                 CardDivider()
                 ToggleRow(title: "Add 1px border", detail: "Add a one-pixel border around saved screenshots.", isOn: $addOnePixelBorder)
             }

@@ -590,6 +590,9 @@ final class ScreenToolService: ObservableObject {
         if ScreenToolSettings.addOnePixelBorder {
             _ = try addOnePixelBorderIfNeeded(to: url)
         }
+        if ScreenToolSettings.convertScreenshotsToSRGB {
+            _ = try convertImageToSRGB(url)
+        }
     }
 
     @discardableResult
@@ -696,6 +699,44 @@ final class ScreenToolService: ObservableObject {
         )
         NSGraphicsContext.restoreGraphicsState()
 
+        guard let data = bitmapData(for: targetRep, url: url) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: url, options: .atomic)
+        return true
+    }
+
+    @discardableResult
+    static func convertImageToSRGB(_ url: URL) throws -> Bool {
+        guard
+            let image = NSImage(contentsOf: url),
+            let sourceRep = image.representations.compactMap({ $0 as? NSBitmapImageRep }).first,
+            let cgImage = sourceRep.cgImage,
+            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)
+        else {
+            return false
+        }
+
+        guard let context = CGContext(
+            data: nil,
+            width: sourceRep.pixelsWide,
+            height: sourceRep.pixelsHigh,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return false
+        }
+
+        context.interpolationQuality = .high
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: sourceRep.pixelsWide, height: sourceRep.pixelsHigh))
+        guard let outputImage = context.makeImage() else {
+            return false
+        }
+
+        let targetRep = NSBitmapImageRep(cgImage: outputImage)
+        targetRep.size = image.size
         guard let data = bitmapData(for: targetRep, url: url) else {
             throw CocoaError(.fileWriteUnknown)
         }
@@ -1055,6 +1096,7 @@ enum ScreenToolSettings {
     static let includeCursorKey = "clawix.screenTools.includeCursor"
     static let captureWindowShadowKey = "clawix.screenTools.captureWindowShadow"
     static let scaleRetinaScreenshotsTo1xKey = "clawix.screenTools.scaleRetinaScreenshotsTo1x"
+    static let convertScreenshotsToSRGBKey = "clawix.screenTools.convertScreenshotsToSRGB"
     static let addOnePixelBorderKey = "clawix.screenTools.addOnePixelBorder"
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
@@ -1099,6 +1141,10 @@ enum ScreenToolSettings {
 
     static var scaleRetinaScreenshotsTo1x: Bool {
         defaults.bool(forKey: scaleRetinaScreenshotsTo1xKey)
+    }
+
+    static var convertScreenshotsToSRGB: Bool {
+        defaults.bool(forKey: convertScreenshotsToSRGBKey)
     }
 
     static var addOnePixelBorder: Bool {
