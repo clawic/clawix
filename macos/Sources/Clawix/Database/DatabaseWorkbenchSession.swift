@@ -166,6 +166,10 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
         console.removeAll()
     }
 
+    func appendOperationMessage(_ line: String) {
+        appendConsole(line)
+    }
+
     static func runPlan(
         sql: String,
         profile: DatabaseConnectionProfile?,

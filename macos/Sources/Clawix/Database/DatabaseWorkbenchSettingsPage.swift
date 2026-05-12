@@ -3,6 +3,7 @@ import SwiftUI
 struct DatabaseWorkbenchSettingsPage: View {
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
+    @ObservedObject private var operations = DatabaseWorkbenchOperationStore.shared
     @State private var editedProfile: DatabaseConnectionProfile?
 
     var body: some View {
@@ -47,6 +48,32 @@ struct DatabaseWorkbenchSettingsPage: View {
                             editedProfile = .draft()
                         }
                         .buttonStyle(.bordered)
+                    }
+                }
+            }
+
+            SectionLabel(title: "Operations")
+            SettingsCard {
+                TextFieldRow(title: "Input file", detail: "CSV, SQL dump, or restore source path.", text: $operations.inputPath)
+                CardDivider()
+                TextFieldRow(title: "Output path", detail: "Export or backup destination path.", text: $operations.outputPath)
+                CardDivider()
+                TextFieldRow(title: "Table or view", detail: "Object name used by table export.", text: $operations.objectName)
+                CardDivider()
+                TextFieldRow(title: "Search term", detail: "Term used by database search.", text: $operations.searchTerm)
+                CardDivider()
+                MultilineTextRow(title: "Plugin script", detail: "Local script staged for a future approved run.", text: $operations.pluginScript)
+            }
+
+            SectionLabel(title: "Operation actions")
+            SettingsCard {
+                ForEach(Array(DatabaseWorkbenchOperationKind.allCases.enumerated()), id: \.element.id) { index, kind in
+                    OperationActionRow(
+                        kind: kind,
+                        onPrepare: { prepareOperation(kind) }
+                    )
+                    if index < DatabaseWorkbenchOperationKind.allCases.count - 1 {
+                        CardDivider()
                     }
                 }
             }
@@ -265,6 +292,33 @@ struct DatabaseWorkbenchSettingsPage: View {
             ToastCenter.shared.show("EXTERNAL PENDING: \(result.message)", icon: .warning)
         case .failed:
             ToastCenter.shared.show(result.message, icon: .error)
+        }
+    }
+
+    private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
+        let profile = profiles.profiles.first { $0.id == DatabaseWorkbenchSessionStore.shared.selectedProfileID } ?? profiles.profiles.first
+        let plan = operations.plan(kind, profile: profile)
+        switch plan.status {
+        case .localReady:
+            ToastCenter.shared.show(plan.message)
+        case .externalPending:
+            ToastCenter.shared.show(plan.message, icon: .warning)
+        case .blocked:
+            ToastCenter.shared.show(plan.message, icon: .error)
+        }
+    }
+}
+
+private struct OperationActionRow: View {
+    let kind: DatabaseWorkbenchOperationKind
+    let onPrepare: () -> Void
+
+    var body: some View {
+        SettingsRow {
+            RowLabel(title: LocalizedStringKey(kind.label), detail: LocalizedStringKey(kind.detail))
+        } trailing: {
+            Button("Prepare", action: onPrepare)
+                .buttonStyle(.bordered)
         }
     }
 }

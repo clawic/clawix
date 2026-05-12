@@ -5,6 +5,7 @@ struct DatabaseWorkbenchView: View {
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
     @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
+    @ObservedObject private var operations = DatabaseWorkbenchOperationStore.shared
 
     private var selectedProfile: DatabaseConnectionProfile? {
         profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
@@ -111,6 +112,24 @@ struct DatabaseWorkbenchView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+
+            Divider().background(Color.white.opacity(0.07))
+
+            Text("Operations")
+                .font(BodyFont.system(size: 12, wght: 700))
+                .foregroundColor(Palette.textPrimary)
+            ForEach(DatabaseWorkbenchOperationKind.allCases.prefix(6)) { kind in
+                Button {
+                    prepareOperation(kind)
+                } label: {
+                    Text(kind.label)
+                        .font(BodyFont.system(size: 12))
+                        .foregroundColor(Palette.textPrimary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain)
             }
 
             Divider().background(Color.white.opacity(0.07))
@@ -249,6 +268,23 @@ struct DatabaseWorkbenchView: View {
                         .lineLimit(2)
                 }
             }
+            if !operations.records.isEmpty {
+                Divider().background(Color.white.opacity(0.07))
+                Text("Operations")
+                    .font(BodyFont.system(size: 12, wght: 700))
+                    .foregroundColor(Palette.textPrimary)
+                ForEach(operations.records.prefix(6)) { record in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(record.kind.label)
+                            .font(BodyFont.system(size: 11, wght: 600))
+                            .foregroundColor(Palette.textPrimary)
+                        Text(record.message)
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Palette.textSecondary)
+                            .lineLimit(2)
+                    }
+                }
+            }
             Spacer()
         }
         .padding(14)
@@ -266,6 +302,19 @@ struct DatabaseWorkbenchView: View {
         let plan = session.dryRun(profile: selectedProfile, preferences: prefs)
         switch plan.status {
         case .readyForFileProfile:
+            ToastCenter.shared.show(plan.message)
+        case .externalPending:
+            ToastCenter.shared.show(plan.message, icon: .warning)
+        case .blocked:
+            ToastCenter.shared.show(plan.message, icon: .error)
+        }
+    }
+
+    private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
+        let plan = operations.plan(kind, profile: selectedProfile)
+        session.appendOperationMessage(plan.message)
+        switch plan.status {
+        case .localReady:
             ToastCenter.shared.show(plan.message)
         case .externalPending:
             ToastCenter.shared.show(plan.message, icon: .warning)

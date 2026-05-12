@@ -5,6 +5,7 @@ struct DatabaseWorkbenchCommands: View {
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
     @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
+    @ObservedObject private var operations = DatabaseWorkbenchOperationStore.shared
 
     var body: some View {
         Button("Open Database Workbench") {
@@ -62,6 +63,14 @@ struct DatabaseWorkbenchCommands: View {
             dryRunCurrentQuery()
         }
         .keyboardShortcut(.return, modifiers: [.command])
+
+        Menu("Operations") {
+            ForEach(DatabaseWorkbenchOperationKind.allCases) { kind in
+                Button("Prepare \(kind.label)") {
+                    prepareOperation(kind)
+                }
+            }
+        }
 
         Divider()
 
@@ -141,6 +150,20 @@ struct DatabaseWorkbenchCommands: View {
             ToastCenter.shared.show(plan.message, icon: .error)
         }
     }
+
+    private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
+        let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
+        let plan = operations.plan(kind, profile: profile)
+        session.appendOperationMessage(plan.message)
+        switch plan.status {
+        case .localReady:
+            ToastCenter.shared.show(plan.message)
+        case .externalPending:
+            ToastCenter.shared.show(plan.message, icon: .warning)
+        case .blocked:
+            ToastCenter.shared.show(plan.message, icon: .error)
+        }
+    }
 }
 
 struct DatabaseWorkbenchMenuBarSection: View {
@@ -148,6 +171,7 @@ struct DatabaseWorkbenchMenuBarSection: View {
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
     @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
+    @ObservedObject private var operations = DatabaseWorkbenchOperationStore.shared
     let openMainWindow: () -> Void
 
     var body: some View {
@@ -212,6 +236,14 @@ struct DatabaseWorkbenchMenuBarSection: View {
                     Label("Dry Run Current Query", systemImage: "play")
                 }
 
+                Menu("Operations") {
+                    ForEach(DatabaseWorkbenchOperationKind.allCases) { kind in
+                        Button("Prepare \(kind.label)") {
+                            prepareOperation(kind)
+                        }
+                    }
+                }
+
                 Divider()
 
                 Button {
@@ -267,6 +299,20 @@ struct DatabaseWorkbenchMenuBarSection: View {
         let plan = session.dryRun(profile: profile, preferences: prefs)
         switch plan.status {
         case .readyForFileProfile:
+            ToastCenter.shared.show(plan.message)
+        case .externalPending:
+            ToastCenter.shared.show(plan.message, icon: .warning)
+        case .blocked:
+            ToastCenter.shared.show(plan.message, icon: .error)
+        }
+    }
+
+    private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
+        let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
+        let plan = operations.plan(kind, profile: profile)
+        session.appendOperationMessage(plan.message)
+        switch plan.status {
+        case .localReady:
             ToastCenter.shared.show(plan.message)
         case .externalPending:
             ToastCenter.shared.show(plan.message, icon: .warning)
