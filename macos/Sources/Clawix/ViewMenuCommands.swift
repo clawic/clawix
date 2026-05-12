@@ -5,14 +5,19 @@ struct ViewMenuCommands: View {
     @ObservedObject private var flags = FeatureFlags.shared
     @ObservedObject private var terminalStore = TerminalSessionStore.shared
 
-    private var isChatRoute: Bool {
-        if case .chat = appState.currentRoute { return true }
-        return false
+    private var canShowTerminal: Bool {
+        switch appState.currentRoute {
+        case .chat, .home: return true
+        default:           return false
+        }
     }
 
     private var currentChatId: UUID? {
-        if case let .chat(id) = appState.currentRoute { return id }
-        return nil
+        switch appState.currentRoute {
+        case .chat(let id): return id
+        case .home:         return TerminalSessionStore.homeChatId
+        default:            return nil
+        }
     }
 
     private var hasActiveTerminalTab: Bool {
@@ -31,12 +36,12 @@ struct ViewMenuCommands: View {
             SidebarPrefs.store.set(!current, forKey: key)
         }
             .keyboardShortcut("j", modifiers: .command)
-            .disabled(!isChatRoute)
+            .disabled(!canShowTerminal)
         Button("New Terminal") {
             createTerminalTab()
         }
         .keyboardShortcut("t", modifiers: [.command, .shift])
-        .disabled(!isChatRoute)
+        .disabled(!canShowTerminal)
         Button("Close Terminal Tab") {
             closeActiveTerminalTab()
         }
@@ -127,7 +132,7 @@ struct ViewMenuCommands: View {
 
     private var newTabDisabled: Bool {
         if terminalStore.keyboardFocused {
-            return !isChatRoute
+            return !canShowTerminal
         }
         return !flags.isVisible(.browserUsage)
     }

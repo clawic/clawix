@@ -126,8 +126,11 @@ struct ClawixApp: App {
             TerminalShortcutsInstaller.installIfNeeded(
                 store: TerminalSessionStore.shared,
                 resolveChatId: { [weak state] in
-                    guard case let .chat(id) = state?.currentRoute else { return nil }
-                    return id
+                    switch state?.currentRoute {
+                    case .chat(let id): return id
+                    case .home:         return TerminalSessionStore.homeChatId
+                    default:            return nil
+                    }
                 }
             )
         }

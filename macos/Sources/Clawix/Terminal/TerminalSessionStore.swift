@@ -20,6 +20,9 @@ final class TerminalSessionStore: ObservableObject {
     /// SIGHUP to every shell before the process exits.
     static let shared = TerminalSessionStore()
 
+    /// Sentinel chat id for terminal tabs on the home screen.
+    static let homeChatId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
     /// Tabs keyed by chat id. `@Published` so the panel rebinds when a
     /// tab is added/removed/reordered.
     @Published private(set) var tabsByChat: [UUID: [TerminalTab]] = [:]

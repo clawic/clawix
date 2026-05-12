@@ -603,6 +603,13 @@ private struct ContentTopChrome: View {
 
     private var chatTitle: String? { currentChat?.title }
 
+    private var showsTerminalToggle: Bool {
+        switch appState.currentRoute {
+        case .chat, .home: return true
+        default:           return false
+        }
+    }
+
     /// Folder path that the right-side "Open with" dropdown should target.
     /// Returns nil when the user has no real folder context (e.g. "Work on
     /// a Project" home), so the dropdown stays hidden.
@@ -660,7 +667,7 @@ private struct ContentTopChrome: View {
                 .anchorPreference(key: ChatActionsAnchorKey.self, value: .bounds) { $0 }
             }
             Spacer()
-            if case .chat = appState.currentRoute {
+            if showsTerminalToggle {
                 TerminalToggleButton()
                     .padding(.top, 6)
                     .padding(.trailing, 2)
@@ -746,11 +753,10 @@ private struct ChatActionsAnchorKey: PreferenceKey {
 
 // MARK: - Integrated terminal panel mount
 
-/// Wraps the route switch and, when the user is on a chat route AND the
-/// terminal panel is toggled open, hangs the panel below it. The panel
+/// Wraps the route switch and, when the current route can host terminal
+/// shells and the panel is toggled open, hangs the panel below it. The panel
 /// height is persisted via `@AppStorage` and the top edge of the panel
-/// straddles a `TerminalResizeHandle` for drag-to-resize. Routes other
-/// than `.chat` always render content full-bleed (panel hidden).
+/// straddles a `TerminalResizeHandle` for drag-to-resize.
 private struct ContentBodyWithTerminal<Content: View>: View {
     @EnvironmentObject var appState: AppState
     let windowHeight: CGFloat
@@ -768,8 +774,11 @@ private struct ContentBodyWithTerminal<Content: View>: View {
     }
 
     private var chatId: UUID? {
-        if case .chat(let id) = appState.currentRoute { return id }
-        return nil
+        switch appState.currentRoute {
+        case .chat(let id): return id
+        case .home:         return TerminalSessionStore.homeChatId
+        default:            return nil
+        }
     }
 
     private var panelOpen: Bool { chatId != nil && panelOpenRaw }
