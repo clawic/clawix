@@ -14,6 +14,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case iot
     case index
     case badger
+    case sessions
 
     var id: String { rawValue }
 
@@ -33,6 +34,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .iot:      return 7795
         case .index:    return 7796
         case .badger:   return 7797
+        case .sessions: return 7798
         }
     }
 
@@ -47,6 +49,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .iot:      return "IoT"
         case .index:    return "Index"
         case .badger:   return "Badger"
+        case .sessions: return "Sessions"
         }
     }
 

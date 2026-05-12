@@ -1292,6 +1292,7 @@ final class AppState: ObservableObject {
     private let metaRepo = MetaRepository()
     private let archivesRepo = ArchivesRepository()
     private let hiddenRootsRepo = HiddenRootsRepository()
+    private var clawJSSessionsCanonicalActive = false
     /// Persistent cache of the sidebar's last applied state. Used to
     /// paint Pinned + chat list instantly at launch from local SQLite,
     /// before the runtime bootstraps and paginates the real thread list.
@@ -1870,7 +1871,9 @@ final class AppState: ObservableObject {
                        isEnabled: false, trigger: "On file save")
         ]
 
-        projects = mergedProjects()
+        if !clawJSSessionsCanonicalActive {
+            projects = mergedProjects()
+        }
         selectedProject = nil
 
         pinnedItems = []
@@ -1898,13 +1901,16 @@ final class AppState: ObservableObject {
     }
 
     func loadThreadsFromRuntime() async {
-        guard let clawix, case .ready = clawix.status else { return }
         // When a thread fixture drives the sidebar (showcase / E2E /
         // demo recordings), the runtime is intentionally empty and a
         // runtime sweep here would call `applyThreads([])`, wiping the
         // curated dataset. The fixture is the source of truth for the
         // whole session.
         if AgentThreadStore.fixtureThreads() != nil { return }
+        if await loadThreadsFromClawJSSessions() {
+            return
+        }
+        guard let clawix, case .ready = clawix.status else { return }
         do {
             let pageSize = 160
             var collected: [AgentThreadSummary] = []
@@ -1965,6 +1971,60 @@ final class AppState: ObservableObject {
                 return
             }
             appendRuntimeStatusError(L10n.runtimeIndexReadFailed("\(error)"))
+        }
+    }
+
+    private func loadThreadsFromClawJSSessions() async -> Bool {
+        let client = ClawJSSessionsClient.local()
+        do {
+            _ = try await client.probeHealth()
+            let canonicalProjects = try await client.listProjects(hidden: false, archived: false)
+            let nextProjects = canonicalProjects.map { project in
+                Project(
+                    id: StableProjectID.uuid(for: project.path),
+                    name: project.displayName,
+                    path: project.path
+                )
+            }
+            let sessions = try await client.listSessions(archived: false, sidebarVisible: true)
+            clawJSSessionsCanonicalActive = true
+            projects = nextProjects
+            let threads = sessions.map { session in
+                AgentThreadSummary(
+                    id: session.id,
+                    cwd: session.cwd ?? session.projectPath,
+                    name: session.title,
+                    preview: "",
+                    path: nil,
+                    createdAt: session.createdAt / 1000,
+                    updatedAt: (session.lastMessageAt ?? session.createdAt) / 1000,
+                    archived: session.archived
+                )
+            }
+            applyThreads(threads)
+            let archivedSessions = try await client.listSessions(archived: true)
+            archivedChats = archivedSessions.map { session in
+                chatFromThread(
+                    AgentThreadSummary(
+                        id: session.id,
+                        cwd: session.cwd ?? session.projectPath,
+                        name: session.title,
+                        preview: "",
+                        path: nil,
+                        createdAt: session.createdAt / 1000,
+                        updatedAt: (session.lastMessageAt ?? session.createdAt) / 1000,
+                        archived: true
+                    ),
+                    old: archivedChats.first(where: { $0.clawixThreadId == session.id }),
+                    projectByPath: Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) }),
+                    pinnedSet: []
+                )
+            }
+            archivedLoaded = true
+            return true
+        } catch {
+            clawJSSessionsCanonicalActive = false
+            return false
         }
     }
 
@@ -2187,12 +2247,16 @@ final class AppState: ObservableObject {
     func hideCodexRoot(path: String) {
         guard isCodexSourcedProject(path: path) else { return }
         hiddenRootsRepo.hide(path)
-        projects = mergedProjects()
+        if !clawJSSessionsCanonicalActive {
+            projects = mergedProjects()
+        }
     }
 
     func showCodexRoot(path: String) {
         hiddenRootsRepo.show(path)
-        projects = mergedProjects()
+        if !clawJSSessionsCanonicalActive {
+            projects = mergedProjects()
+        }
     }
 
     func hiddenCodexRoots() -> [String] {
@@ -2221,7 +2285,9 @@ final class AppState: ObservableObject {
         // waiting for the next runtime reload.
         pinnedOrder = []
         manualProjectOrder = []
-        projects = mergedProjects()
+        if !clawJSSessionsCanonicalActive {
+            projects = mergedProjects()
+        }
         titlesRepo.reload()
         Task { @MainActor in
             await loadThreadsFromRuntime()
@@ -3116,6 +3182,22 @@ final class AppState: ObservableObject {
             return
         }
 
+        if clawJSSessionsCanonicalActive {
+            trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
+            Task { @MainActor in
+                if await self.sendMessageViaClawJSSessions(chatId: chatId, text: combined, attachments: attachments) {
+                    return
+                }
+                if let daemonBridgeClient = self.daemonBridgeClient {
+                    daemonBridgeClient.sendPrompt(chatId: chatId, text: combined, attachments: self.wireAttachments(from: attachments))
+                } else if let clawix = self.clawix {
+                    await clawix.sendUserMessage(chatId: chatId, text: combined)
+                    self.clawixBackendStatus = clawix.status
+                }
+            }
+            return
+        }
+
         if let daemonBridgeClient {
             trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
             daemonBridgeClient.sendPrompt(chatId: chatId, text: combined, attachments: wireAttachments(from: attachments))
@@ -3129,6 +3211,72 @@ final class AppState: ObservableObject {
                 await clawix.sendUserMessage(chatId: chatId, text: combined)
                 self.clawixBackendStatus = clawix.status
             }
+        }
+    }
+
+    private func sendMessageViaClawJSSessions(
+        chatId: UUID,
+        text: String,
+        attachments: [ComposerAttachment]
+    ) async -> Bool {
+        guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return false }
+        let client = ClawJSSessionsClient.local()
+        let sessionId = chats[idx].clawixThreadId ?? chatId.uuidString
+        let projectPath = chats[idx].projectId.flatMap { projectId in
+            projects.first(where: { $0.id == projectId })?.path
+        }
+        do {
+            let response = try await client.startTurn(
+                sessionId: sessionId,
+                input: .init(
+                    prompt: text,
+                    projectId: nil,
+                    projectPath: projectPath,
+                    cwd: projectPath,
+                    title: chats[idx].title,
+                    attachments: attachments.map { attachment in
+                        .object([
+                            "id": .string(attachment.id.uuidString),
+                            "path": .string(attachment.url.path),
+                            "filename": .string(attachment.filename)
+                        ])
+                    },
+                    audioRef: nil,
+                    fakeReply: nil
+                )
+            )
+            guard let currentIdx = chats.firstIndex(where: { $0.id == chatId }) else { return true }
+            chats[currentIdx].clawixThreadId = response.session?.id ?? sessionId
+            chats[currentIdx].hasActiveTurn = false
+            if let assistant = response.assistantMessage, !assistant.contentText.isEmpty {
+                let now = Date()
+                let summary = WorkSummary(
+                    startedAt: now,
+                    endedAt: now,
+                    items: [
+                        WorkItem(
+                            id: assistant.id,
+                            kind: .dynamicTool(name: "Codex"),
+                            status: assistant.streamingState == "complete" ? .completed : .failed
+                        )
+                    ]
+                )
+                chats[currentIdx].messages.append(ChatMessage(
+                    role: .assistant,
+                    content: assistant.contentText,
+                    timestamp: now,
+                    workSummary: summary,
+                    timeline: [
+                        .tools(id: UUID(), items: summary.items),
+                        .message(id: UUID(), text: assistant.contentText)
+                    ]
+                ))
+                chats[currentIdx].lastMessageAt = now
+            }
+            return true
+        } catch {
+            appendErrorBubble(chatId: chatId, message: "Could not send through ClawJS sessions: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -5390,6 +5538,12 @@ final class AppState: ObservableObject {
         // call is an optional mirror gated by SyncSettings.
         archivesRepo.archive(threadId)
         markThreadArchived(threadId: threadId, archived: true)
+        Task { @MainActor in
+            try? await ClawJSSessionsClient.local().updateSession(
+                id: threadId,
+                patch: ["archived": .bool(true), "pinned": .bool(false)]
+            )
+        }
 
         guard SyncSettings.syncArchiveWithCodex else { return }
         guard let clawix, case .ready = clawix.status else {
@@ -5523,6 +5677,12 @@ final class AppState: ObservableObject {
         if !chats.contains(where: { $0.clawixThreadId == threadId }) {
             chats.insert(moved, at: 0)
         }
+        Task { @MainActor in
+            try? await ClawJSSessionsClient.local().updateSession(
+                id: threadId,
+                patch: ["archived": .bool(false), "sidebarVisible": .bool(true)]
+            )
+        }
 
         guard SyncSettings.syncArchiveWithCodex else { return }
         guard let clawix, case .ready = clawix.status else {
@@ -5562,11 +5722,17 @@ final class AppState: ObservableObject {
             }
             if let threadId = copy[idx].clawixThreadId {
                 pinsRepo.setPinned(threadId, atEnd: true)
+                Task { @MainActor in
+                    try? await ClawJSSessionsClient.local().updateSession(id: threadId, patch: ["pinned": .bool(true)])
+                }
             }
         } else {
             pinnedOrder.removeAll { $0 == chatId }
             if let threadId = copy[idx].clawixThreadId {
                 pinsRepo.unpin(threadId)
+                Task { @MainActor in
+                    try? await ClawJSSessionsClient.local().updateSession(id: threadId, patch: ["pinned": .bool(false)])
+                }
             }
         }
     }
@@ -5665,9 +5831,21 @@ final class AppState: ObservableObject {
         if let projectId = chat.projectId,
            let project = projects.first(where: { $0.id == projectId }) {
             chatProjectsRepo.setOverride(threadId: threadId, projectPath: project.path)
+            Task { @MainActor in
+                try? await ClawJSSessionsClient.local().updateSession(
+                    id: threadId,
+                    patch: ["projectPath": .string(project.path)]
+                )
+            }
         } else {
             chatProjectsRepo.clearOverride(threadId: threadId)
             chatProjectsRepo.markProjectless(threadId)
+            Task { @MainActor in
+                try? await ClawJSSessionsClient.local().updateSession(
+                    id: threadId,
+                    patch: ["projectPath": .null]
+                )
+            }
         }
     }
 
@@ -5688,6 +5866,15 @@ final class AppState: ObservableObject {
             if SyncSettings.pushProjectsToCodex {
                 CodexStateWriter.upsertWorkspaceRoot(path: project.path, label: project.name)
             }
+            Task { @MainActor in
+                try? await ClawJSSessionsClient.local().createProject(.init(
+                    displayName: project.name,
+                    path: project.path,
+                    hidden: false,
+                    archived: false,
+                    sortRank: nil
+                ))
+            }
         }
         return project
     }
@@ -5701,6 +5888,15 @@ final class AppState: ObservableObject {
             if SyncSettings.pushProjectsToCodex {
                 CodexStateWriter.upsertWorkspaceRoot(path: project.path, label: project.name)
             }
+            Task { @MainActor in
+                try? await ClawJSSessionsClient.local().createProject(.init(
+                    displayName: project.name,
+                    path: project.path,
+                    hidden: false,
+                    archived: false,
+                    sortRank: nil
+                ))
+            }
         }
     }
 
@@ -5713,6 +5909,13 @@ final class AppState: ObservableObject {
         }
         if selectedProject?.id == projectId { selectedProject = nil }
         projectsRepo.delete(id: projectId)
+        Task { @MainActor in
+            let client = ClawJSSessionsClient.local()
+            guard let projects = try? await client.listProjects(),
+                  let project = projects.first(where: { StableProjectID.uuid(for: $0.path) == projectId })
+            else { return }
+            try? await client.deleteProject(id: project.id)
+        }
     }
 
     func renameProject(id: UUID, newName: String) {
@@ -5725,6 +5928,17 @@ final class AppState: ObservableObject {
         projectsRepo.rename(id: id, to: trimmed)
         if SyncSettings.pushProjectsToCodex, !projectPath.isEmpty {
             CodexStateWriter.renameWorkspaceLabel(path: projectPath, label: trimmed)
+        }
+        if !projectPath.isEmpty {
+            Task { @MainActor in
+                try? await ClawJSSessionsClient.local().createProject(.init(
+                    displayName: trimmed,
+                    path: projectPath,
+                    hidden: false,
+                    archived: false,
+                    sortRank: nil
+                ))
+            }
         }
     }
 

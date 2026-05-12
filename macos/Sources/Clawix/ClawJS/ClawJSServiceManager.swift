@@ -55,6 +55,7 @@ final class ClawJSServiceManager: ObservableObject {
         .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
         .audio: "AUDIO_SHARED_SECRET",
         .index: "CLAWJS_INDEX_ADMIN_TOKEN",
+        .sessions: "SESSIONS_SHARED_SECRET",
     ]
 
     private let bridgeService: BackgroundBridgeService
@@ -439,8 +440,14 @@ final class ClawJSServiceManager: ObservableObject {
             return arguments
         case .vault, .telegram:
             return arguments
-        case .memory, .drive:
+        case .memory, .drive, .sessions:
             arguments += ["--data-dir", Self.dataDirectoryURL(for: service).path]
+            if service == .sessions {
+                arguments += [
+                    "--db-path", Self.dataDirectoryURL(for: service)
+                        .appendingPathComponent("sessions.sqlite", isDirectory: false).path,
+                ]
+            }
             return arguments
         case .audio:
             arguments += [
@@ -684,6 +691,11 @@ final class ClawJSServiceManager: ObservableObject {
         env["DRIVE_HOST"] = "127.0.0.1"
         env["DRIVE_PORT"] = String(ClawJSService.drive.port)
         env["DRIVE_DATA_DIR"] = dataDirectoryURL(for: .drive).path
+        env["SESSIONS_HOST"] = "127.0.0.1"
+        env["SESSIONS_PORT"] = String(ClawJSService.sessions.port)
+        env["SESSIONS_DATA_DIR"] = dataDirectoryURL(for: .sessions).path
+        env["SESSIONS_DB_PATH"] = dataDirectoryURL(for: .sessions)
+            .appendingPathComponent("sessions.sqlite", isDirectory: false).path
         env["VAULT_HOST"] = "127.0.0.1"
         env["VAULT_PORT"] = String(ClawJSService.vault.port)
         env["VAULT_DATA_DIR"] = dataDirectoryURL(for: .vault).path

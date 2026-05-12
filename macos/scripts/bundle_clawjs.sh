@@ -344,6 +344,22 @@ PY
         )
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/audio/node_modules/better-sqlite3"
     fi
+    OVERLAY_SESSIONS="$CLAWJS_DEV_OVERLAY/packages/clawjs-sessions"
+    if [[ -d "$OVERLAY_SESSIONS" ]]; then
+        build_overlay_package "$OVERLAY_SESSIONS"
+        echo "==> Dev overlay: copying $OVERLAY_SESSIONS -> $CLAWJS_DEST/node_modules/@clawjs/sessions"
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/sessions"
+        mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
+        cp -R "$OVERLAY_SESSIONS" "$CLAWJS_DEST/node_modules/@clawjs/sessions"
+        (
+            cd "$CLAWJS_DEST/node_modules/@clawjs/sessions"
+            npm_config_arch=arm64 \
+            npm_config_target_arch=arm64 \
+            npm_config_target_platform=darwin \
+            run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        )
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/sessions/node_modules/better-sqlite3"
+    fi
     # Vault server: launchers resolve `<HERE>/../../../vault/dist/server.js`
     # from @clawjs/cli/bin, i.e. node_modules/vault/dist/server.js.
     OVERLAY_VAULT="$CLAWJS_DEV_OVERLAY/vault"
