@@ -829,32 +829,35 @@ private struct ContentBodyWithTerminal<Content: View>: View {
                     .clipped()
                     .overlay(alignment: .top) {
                         if panelOpen {
-                            ZStack {
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.18))
-                                    .frame(height: 0.7)
-                                    .mask(terminalSeparatorMask)
-                                Rectangle()
-                                    .fill(Color.white.opacity(0.38))
-                                    .frame(height: 0.7)
-                                    .mask(terminalSeparatorMask)
-                                    .opacity(resizeHovered ? 1 : 0)
-                                    .animation(.easeOut(duration: 0.14), value: resizeHovered)
+                            ZStack(alignment: .top) {
+                                ZStack(alignment: .top) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.18))
+                                        .frame(height: 0.7)
+                                        .mask(terminalSeparatorMask)
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.38))
+                                        .frame(height: 0.7)
+                                        .mask(terminalSeparatorMask)
+                                        .opacity(resizeHovered ? 1 : 0)
+                                        .animation(.easeOut(duration: 0.14), value: resizeHovered)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .top)
+                                .allowsHitTesting(false)
+                                TerminalResizeHandle(
+                                    heightRaw: $panelHeightRaw,
+                                    hovered: $resizeHovered,
+                                    maxHeightOverride: maxPanelHeight,
+                                    onClose: {
+                                        withAnimation(.easeInOut(duration: 0.22)) {
+                                            panelOpenRaw = false
+                                        }
+                                    }
+                                )
+                                .frame(height: 10)
+                                .offset(y: -5)
                             }
                             .frame(maxWidth: .infinity, alignment: .top)
-                            .allowsHitTesting(false)
-                            TerminalResizeHandle(
-                                heightRaw: $panelHeightRaw,
-                                hovered: $resizeHovered,
-                                maxHeightOverride: maxPanelHeight,
-                                onClose: {
-                                    withAnimation(.easeInOut(duration: 0.22)) {
-                                        panelOpenRaw = false
-                                    }
-                                }
-                            )
-                            .frame(height: 10)
-                            .offset(y: -5)
                         }
                     }
             }
