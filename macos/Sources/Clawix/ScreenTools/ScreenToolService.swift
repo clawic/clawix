@@ -656,12 +656,14 @@ struct ScreenToolCaptureRect: Equatable {
     init?(selectionRect: NSRect, in screen: NSScreen) {
         let normalized = selectionRect.standardized
         guard normalized.width >= 4, normalized.height >= 4 else { return nil }
-        let scale = screen.backingScaleFactor
-        let screenFrame = screen.frame
-        let x = Int((screenFrame.minX + normalized.minX).rounded(.down) * scale)
-        let y = Int((screenFrame.maxY - normalized.maxY).rounded(.down) * scale)
-        let width = Int(normalized.width.rounded(.up) * scale)
-        let height = Int(normalized.height.rounded(.up) * scale)
+        guard let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID else {
+            return nil
+        }
+        let displayBounds = CGDisplayBounds(displayID)
+        let x = Int((displayBounds.minX + normalized.minX).rounded(.down))
+        let y = Int((displayBounds.minY + (screen.frame.height - normalized.maxY)).rounded(.down))
+        let width = Int(normalized.width.rounded(.up))
+        let height = Int(normalized.height.rounded(.up))
         guard width > 0, height > 0 else { return nil }
         self.init(x: x, y: y, width: width, height: height)
     }
