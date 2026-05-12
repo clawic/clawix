@@ -304,6 +304,7 @@ private struct MenuBarContent: View {
     @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
     @AppStorage(ScreenToolSettings.displayRecordingTimeKey) private var displayRecordingTime = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
+    @AppStorage(ScreenToolSettings.recordingMaxResolutionKey) private var recordingMaxResolution = ScreenToolService.RecordingMaxResolution.original.rawValue
     @AppStorage(ScreenToolSettings.recordingVideoFPSKey) private var recordingVideoFPS = ScreenToolSettings.defaultRecordingVideoFPS
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
@@ -315,6 +316,14 @@ private struct MenuBarContent: View {
             ScreenToolService.BackgroundPreset(rawValue: backgroundPreset) ?? .none
         } set: {
             backgroundPreset = $0.rawValue
+        }
+    }
+
+    private var recordingMaxResolutionBinding: Binding<ScreenToolService.RecordingMaxResolution> {
+        Binding {
+            ScreenToolService.RecordingMaxResolution(rawValue: recordingMaxResolution) ?? .original
+        } set: {
+            recordingMaxResolution = $0.rawValue
         }
     }
 
@@ -406,6 +415,13 @@ private struct MenuBarContent: View {
                 }
                 Toggle(isOn: $showRecordingCountdown) {
                     Label("Show Recording Countdown", systemImage: "timer")
+                }
+                Picker(selection: recordingMaxResolutionBinding) {
+                    ForEach(ScreenToolService.RecordingMaxResolution.allCases) { resolution in
+                        Text(resolution.title).tag(resolution)
+                    }
+                } label: {
+                    Label("Max Resolution", systemImage: "rectangle.arrowtriangle.2.outward")
                 }
                 Picker(selection: $recordingVideoFPS) {
                     ForEach(ScreenToolSettings.recordingVideoFPSOptions, id: \.self) { fps in

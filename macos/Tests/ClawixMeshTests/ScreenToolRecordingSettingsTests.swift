@@ -83,6 +83,38 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
     }
 
     @MainActor
+    func testRecordingMaxResolutionDefaultsToOriginal() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.recordingMaxResolutionKey)
+        defaults.removeObject(forKey: ScreenToolSettings.recordingMaxResolutionKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.recordingMaxResolutionKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.recordingMaxResolutionKey)
+            }
+        }
+
+        XCTAssertEqual(ScreenToolSettings.recordingMaxResolution, .original)
+    }
+
+    @MainActor
+    func testRecordingMaxResolutionIgnoresUnsupportedValues() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.recordingMaxResolutionKey)
+        defaults.set("900p", forKey: ScreenToolSettings.recordingMaxResolutionKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.recordingMaxResolutionKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.recordingMaxResolutionKey)
+            }
+        }
+
+        XCTAssertEqual(ScreenToolSettings.recordingMaxResolution, .original)
+    }
+
+    @MainActor
     func testRecordingVideoFPSIgnoresUnsupportedValues() {
         let defaults = UserDefaults.standard
         let previousValue = defaults.object(forKey: ScreenToolSettings.recordingVideoFPSKey)

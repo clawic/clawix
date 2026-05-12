@@ -25,6 +25,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
     @AppStorage(ScreenToolSettings.displayRecordingTimeKey) private var displayRecordingTime = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
+    @AppStorage(ScreenToolSettings.recordingMaxResolutionKey) private var recordingMaxResolution = ScreenToolService.RecordingMaxResolution.original.rawValue
     @AppStorage(ScreenToolSettings.recordingVideoFPSKey) private var recordingVideoFPS = ScreenToolSettings.defaultRecordingVideoFPS
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
@@ -61,6 +62,14 @@ struct ScreenToolsSettingsPage: View {
             ScreenToolService.BackgroundPreset(rawValue: backgroundPreset) ?? .none
         } set: {
             backgroundPreset = $0.rawValue
+        }
+    }
+
+    private var recordingMaxResolutionBinding: Binding<ScreenToolService.RecordingMaxResolution> {
+        Binding {
+            ScreenToolService.RecordingMaxResolution(rawValue: recordingMaxResolution) ?? .original
+        } set: {
+            recordingMaxResolution = $0.rawValue
         }
     }
 
@@ -241,6 +250,14 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Record microphone audio", detail: "Capture audio from the default input device while recording.", isOn: $recordRecordingAudio)
                 CardDivider()
                 ToggleRow(title: "Show countdown", detail: "Show a short countdown before recording starts.", isOn: $showRecordingCountdown)
+                CardDivider()
+                DropdownRow(
+                    title: "Max resolution",
+                    detail: "Set the maximum recorded movie resolution after recording.",
+                    options: ScreenToolService.RecordingMaxResolution.allCases.map { ($0, $0.title) },
+                    selection: recordingMaxResolutionBinding,
+                    minWidth: 120
+                )
                 CardDivider()
                 DropdownRow(
                     title: "Video FPS",

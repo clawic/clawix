@@ -70,6 +70,39 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
+    enum RecordingMaxResolution: String, CaseIterable, Identifiable {
+        case original
+        case fourK = "4k"
+        case p1440 = "1440p"
+        case p1080 = "1080p"
+        case p720 = "720p"
+        case p480 = "480p"
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .original: return "Original"
+            case .fourK:    return "4k"
+            case .p1440:    return "1440p"
+            case .p1080:    return "1080p"
+            case .p720:     return "720p"
+            case .p480:     return "480p"
+            }
+        }
+
+        var maxDimension: Int? {
+            switch self {
+            case .original: return nil
+            case .fourK:    return 2160
+            case .p1440:    return 1440
+            case .p1080:    return 1080
+            case .p720:     return 720
+            case .p480:     return 480
+            }
+        }
+    }
+
     enum CrosshairMode: String, CaseIterable, Identifiable {
         case always
         case command
@@ -698,7 +731,8 @@ final class ScreenToolService: ObservableObject {
         output: URL,
         scaleRetinaTo1x: Bool,
         monoAudio: Bool,
-        videoFPS: Int = ScreenToolSettings.defaultRecordingVideoFPS
+        videoFPS: Int = ScreenToolSettings.defaultRecordingVideoFPS,
+        maxResolution: RecordingMaxResolution = ScreenToolSettings.recordingMaxResolution
     ) -> [String] {
         var args = [
             "-y",
@@ -710,6 +744,9 @@ final class ScreenToolService: ObservableObject {
         var videoFilters: [String] = []
         if scaleRetinaTo1x {
             videoFilters.append("scale=trunc(iw/4)*2:trunc(ih/4)*2")
+        }
+        if let filter = maxResolutionVideoFilter(maxResolution) {
+            videoFilters.append(filter)
         }
         if videoFPS != ScreenToolSettings.defaultRecordingVideoFPS {
             videoFilters.append("fps=\(videoFPS)")
@@ -736,16 +773,32 @@ final class ScreenToolService: ObservableObject {
         return args
     }
 
+    static func maxResolutionVideoFilter(_ resolution: RecordingMaxResolution) -> String? {
+        guard let maxDimension = resolution.maxDimension else { return nil }
+        return "scale='if(gte(iw,ih),min(iw,\(maxDimension)),-2)':'if(gte(iw,ih),-2,min(ih,\(maxDimension)))'"
+    }
+
     private static func applyRecordingPostProcessing(to url: URL) async -> URL {
         let scaleRetinaTo1x = ScreenToolSettings.scaleRetinaRecordingsTo1x
         let monoAudio = ScreenToolSettings.recordRecordingAudioInMono
         let videoFPS = ScreenToolSettings.recordingVideoFPS
-        guard scaleRetinaTo1x || monoAudio || videoFPS != ScreenToolSettings.defaultRecordingVideoFPS else {
+        let maxResolution = ScreenToolSettings.recordingMaxResolution
+        guard scaleRetinaTo1x
+            || monoAudio
+            || videoFPS != ScreenToolSettings.defaultRecordingVideoFPS
+            || maxResolution != .original
+        else {
             return url
         }
 
         do {
-            try await postProcessRecording(url, scaleRetinaTo1x: scaleRetinaTo1x, monoAudio: monoAudio, videoFPS: videoFPS)
+            try await postProcessRecording(
+                url,
+                scaleRetinaTo1x: scaleRetinaTo1x,
+                monoAudio: monoAudio,
+                videoFPS: videoFPS,
+                maxResolution: maxResolution
+            )
         } catch {
             ToastCenter.shared.show("Could not process recording", icon: .warning)
         }
@@ -756,7 +809,8 @@ final class ScreenToolService: ObservableObject {
         _ url: URL,
         scaleRetinaTo1x: Bool,
         monoAudio: Bool,
-        videoFPS: Int
+        videoFPS: Int,
+        maxResolution: RecordingMaxResolution
     ) async throws {
         guard let ffmpeg = ffmpegExecutableURL() else {
             throw CocoaError(.fileNoSuchFile)
@@ -775,7 +829,8 @@ final class ScreenToolService: ObservableObject {
                 output: temporaryURL,
                 scaleRetinaTo1x: scaleRetinaTo1x,
                 monoAudio: monoAudio,
-                videoFPS: videoFPS
+                videoFPS: videoFPS,
+                maxResolution: maxResolution
             )
         )
         guard result.succeeded, FileManager.default.fileExists(atPath: temporaryURL.path) else {
@@ -1398,6 +1453,7 @@ enum ScreenToolSettings {
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
     static let displayRecordingTimeKey = "clawix.screenTools.displayRecordingTime"
     static let showRecordingCountdownKey = "clawix.screenTools.showRecordingCountdown"
+    static let recordingMaxResolutionKey = "clawix.screenTools.recordingMaxResolution"
     static let recordingVideoFPSKey = "clawix.screenTools.recordingVideoFPS"
     static let scaleRetinaRecordingsTo1xKey = "clawix.screenTools.scaleRetinaRecordingsTo1x"
     static let recordRecordingAudioInMonoKey = "clawix.screenTools.recordRecordingAudioInMono"
@@ -1494,6 +1550,11 @@ enum ScreenToolSettings {
 
     static var showRecordingCountdown: Bool {
         defaults.bool(forKey: showRecordingCountdownKey)
+    }
+
+    static var recordingMaxResolution: ScreenToolService.RecordingMaxResolution {
+        let raw = defaults.string(forKey: recordingMaxResolutionKey) ?? ScreenToolService.RecordingMaxResolution.original.rawValue
+        return ScreenToolService.RecordingMaxResolution(rawValue: raw) ?? .original
     }
 
     static var recordingVideoFPS: Int {

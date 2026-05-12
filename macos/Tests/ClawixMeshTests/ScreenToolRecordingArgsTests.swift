@@ -121,6 +121,34 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
     }
 
     @MainActor
+    func testRecordingPostProcessingArgumentsCanLimitMaxResolution() {
+        let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
+        let output = URL(fileURLWithPath: "/tmp/clawix-recording-1080p.mov")
+
+        let args = ScreenToolService.recordingPostProcessingArguments(
+            input: input,
+            output: output,
+            scaleRetinaTo1x: false,
+            monoAudio: false,
+            maxResolution: .p1080
+        )
+
+        XCTAssertEqual(args, [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-filter:v", "scale='if(gte(iw,ih),min(iw,1080),-2)':'if(gte(iw,ih),-2,min(ih,1080))'",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "18",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            output.path
+        ])
+    }
+
+    @MainActor
     func testRecordingPostProcessingArgumentsCanScaleAndConvertAudioTogether() {
         let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
         let output = URL(fileURLWithPath: "/tmp/clawix-recording-processed.mov")
@@ -158,7 +186,8 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
             output: output,
             scaleRetinaTo1x: true,
             monoAudio: true,
-            videoFPS: 15
+            videoFPS: 15,
+            maxResolution: .p720
         )
 
         XCTAssertEqual(args, [
@@ -166,7 +195,7 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
             "-i", input.path,
             "-map", "0:v:0",
             "-map", "0:a?",
-            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2,fps=15",
+            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2,scale='if(gte(iw,ih),min(iw,720),-2)':'if(gte(iw,ih),-2,min(ih,720))',fps=15",
             "-c:v", "libx264",
             "-preset", "veryfast",
             "-crf", "18",
