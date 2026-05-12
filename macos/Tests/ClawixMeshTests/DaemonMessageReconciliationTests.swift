@@ -66,4 +66,25 @@ final class DaemonMessageReconciliationTests: XCTestCase {
         XCTAssertEqual(state.chats.first?.messages.count, 2)
         XCTAssertEqual(state.chats.first?.messages.last?.id, remoteId)
     }
+
+    func test_emptyDaemonSnapshotDoesNotWipeHydratedThreadMessages() {
+        let state = AppState()
+        let chatId = UUID()
+        let existing = ChatMessage(role: .assistant, content: "Recovered history", timestamp: Date())
+        state.chats = [
+            Chat(
+                id: chatId,
+                title: "Historical",
+                messages: [existing],
+                createdAt: Date(),
+                clawixThreadId: "thread-with-history",
+                historyHydrated: true
+            )
+        ]
+
+        state.applyDaemonMessages(chatId: chatId.uuidString, messages: [], hasMore: false)
+
+        XCTAssertEqual(state.chats.first?.messages.map(\.content), ["Recovered history"])
+        XCTAssertEqual(state.chats.first?.historyHydrated, true)
+    }
 }

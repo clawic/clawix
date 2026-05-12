@@ -3590,9 +3590,14 @@ final class AppState: ObservableObject {
     func ensureSelectedChat(triggerHistoryHydration: Bool = true) {
         guard case let .chat(id) = currentRoute,
               let chat = chat(byId: id) else { return }
-        if triggerHistoryHydration && !chat.historyHydrated {
+        if triggerHistoryHydration && shouldHydrateHistory(chat) {
             hydrateHistoryIfNeeded(chatId: id)
         }
+    }
+
+    private func shouldHydrateHistory(_ chat: Chat) -> Bool {
+        if !chat.historyHydrated { return true }
+        return chat.messages.isEmpty && (chat.rolloutPath != nil || chat.clawixThreadId != nil)
     }
 
     /// Find a chat by id across both the active and archived lists. The
@@ -3616,7 +3621,7 @@ final class AppState: ObservableObject {
     }
 
     private func hydrateHistoryIfNeeded(chatId: UUID, blocking: Bool = false) {
-        guard let chat = chat(byId: chatId), !chat.historyHydrated else { return }
+        guard let chat = chat(byId: chatId), shouldHydrateHistory(chat) else { return }
         if !chat.hasGitRepo, let cwd = chat.cwd {
             if blocking {
                 applyGitSnapshot(GitInspector.inspect(cwd: cwd), chatId: chatId)
@@ -3896,6 +3901,12 @@ final class AppState: ObservableObject {
         if messages.isEmpty,
            chats[idx].forkedFromChatId != nil,
            !chats[idx].messages.isEmpty {
+            chats[idx].historyHydrated = true
+            return
+        }
+        if messages.isEmpty,
+           !chats[idx].messages.isEmpty,
+           (chats[idx].rolloutPath != nil || chats[idx].clawixThreadId != nil) {
             chats[idx].historyHydrated = true
             return
         }
