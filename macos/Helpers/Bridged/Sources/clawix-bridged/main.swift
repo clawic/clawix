@@ -2023,6 +2023,8 @@ struct AgentThreadSummary: Decodable {
         case id
         case cwd
         case name
+        case title
+        case threadName = "thread_name"
         case preview
         case path
         case createdAt
@@ -2034,7 +2036,7 @@ struct AgentThreadSummary: Decodable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
-        name = try c.decodeIfPresent(String.self, forKey: .name)
+        name = try c.decodeFirstNonEmptyString(forKeys: [.name, .title, .threadName])
         preview = (try? c.decode(String.self, forKey: .preview)) ?? ""
         path = try c.decodeIfPresent(String.self, forKey: .path)
         createdAt = Self.decodeInt64IfPresent(c, forKey: .createdAt)
@@ -2061,6 +2063,20 @@ struct AgentThreadSummary: Decodable {
 
     var updatedDate: Date {
         Date(timeIntervalSince1970: TimeInterval(updatedAt))
+    }
+}
+
+private extension KeyedDecodingContainer where Key == AgentThreadSummary.CodingKeys {
+    func decodeFirstNonEmptyString(forKeys keys: [Key]) throws -> String? {
+        for key in keys {
+            guard let value = try decodeIfPresent(String.self, forKey: key)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !value.isEmpty else {
+                continue
+            }
+            return value
+        }
+        return nil
     }
 }
 

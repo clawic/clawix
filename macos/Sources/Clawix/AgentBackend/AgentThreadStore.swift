@@ -14,6 +14,10 @@ struct AgentThreadSummary: Codable, Identifiable, Hashable {
         case id, cwd, name, preview, path, createdAt, updatedAt, archived
     }
 
+    fileprivate enum DecodeKeys: String, CodingKey {
+        case id, cwd, name, title, threadName = "thread_name", preview, path, createdAt, updatedAt, archived
+    }
+
     init(
         id: String,
         cwd: String?,
@@ -35,10 +39,10 @@ struct AgentThreadSummary: Codable, Identifiable, Hashable {
     }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let c = try decoder.container(keyedBy: DecodeKeys.self)
         self.id = try c.decode(String.self, forKey: .id)
         self.cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
-        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+        self.name = try c.decodeFirstNonEmptyString(forKeys: [.name, .title, .threadName])
         self.preview = try c.decodeIfPresent(String.self, forKey: .preview) ?? ""
         self.path = try c.decodeIfPresent(String.self, forKey: .path)
         self.createdAt = Self.decodeInt64IfPresent(c, forKey: .createdAt) ?? 0
@@ -47,8 +51,8 @@ struct AgentThreadSummary: Codable, Identifiable, Hashable {
     }
 
     private static func decodeInt64IfPresent(
-        _ c: KeyedDecodingContainer<CodingKeys>,
-        forKey key: CodingKeys
+        _ c: KeyedDecodingContainer<DecodeKeys>,
+        forKey key: DecodeKeys
     ) -> Int64? {
         if let value = try? c.decodeIfPresent(Int64.self, forKey: key) {
             return value
@@ -69,6 +73,20 @@ struct AgentThreadSummary: Codable, Identifiable, Hashable {
 
     var updatedDate: Date {
         Date(timeIntervalSince1970: TimeInterval(updatedAt))
+    }
+}
+
+private extension KeyedDecodingContainer where Key == AgentThreadSummary.DecodeKeys {
+    func decodeFirstNonEmptyString(forKeys keys: [Key]) throws -> String? {
+        for key in keys {
+            guard let value = try decodeIfPresent(String.self, forKey: key)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !value.isEmpty else {
+                continue
+            }
+            return value
+        }
+        return nil
     }
 }
 
