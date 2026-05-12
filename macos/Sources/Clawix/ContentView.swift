@@ -1703,7 +1703,7 @@ private struct SearchQueryTextField: NSViewRepresentable {
         field.cell?.isScrollable = true
         field.onWindowReady = {
             guard context.coordinator.wantsFocus else { return }
-            context.coordinator.focus(field)
+            context.coordinator.focusIfNeeded(field)
         }
         return field
     }
@@ -1723,7 +1723,7 @@ private struct SearchQueryTextField: NSViewRepresentable {
             field.onSubmitFirst = onSubmitFirst
         }
         if wantsFocus {
-            context.coordinator.focus(nsView)
+            context.coordinator.focusIfNeeded(nsView)
         }
     }
 
@@ -1740,19 +1740,34 @@ private struct SearchQueryTextField: NSViewRepresentable {
             text.wrappedValue = field.stringValue
         }
 
-        func focus(_ field: NSTextField) {
-            DispatchQueue.main.async {
-                guard let window = field.window else { return }
-                if window.firstResponder !== field.currentEditor() {
-                    window.makeFirstResponder(field)
-                }
+        func focusIfNeeded(_ field: NSTextField) {
+            if Self.fieldIsEditing(field) {
+                return
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
-                guard let window = field.window else { return }
-                if window.firstResponder !== field.currentEditor() {
-                    window.makeFirstResponder(field)
-                }
+            DispatchQueue.main.async { [weak field] in
+                guard let field, let window = field.window else { return }
+                if Self.fieldIsEditing(field) { return }
+                window.makeFirstResponder(field)
+                Self.collapseSelectionToEnd(field)
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { [weak field] in
+                guard let field, let window = field.window else { return }
+                if Self.fieldIsEditing(field) { return }
+                window.makeFirstResponder(field)
+                Self.collapseSelectionToEnd(field)
+            }
+        }
+
+        private static func fieldIsEditing(_ field: NSTextField) -> Bool {
+            guard let window = field.window, let editor = field.currentEditor()
+            else { return false }
+            return window.firstResponder === editor
+        }
+
+        private static func collapseSelectionToEnd(_ field: NSTextField) {
+            guard let editor = field.currentEditor() else { return }
+            let end = (field.stringValue as NSString).length
+            editor.selectedRange = NSRange(location: end, length: 0)
         }
     }
 }
