@@ -1,0 +1,206 @@
+import SwiftUI
+import AppKit
+
+struct ScreenToolsSettingsPage: View {
+    @ObservedObject private var service = ScreenToolService.shared
+
+    @AppStorage(ScreenToolSettings.exportDirectoryKey) private var exportDirectory = ""
+    @AppStorage(ScreenToolSettings.afterCaptureActionKey) private var afterCaptureAction = ScreenToolService.CaptureAction.quickOverlay.rawValue
+    @AppStorage(ScreenToolSettings.imageFormatKey) private var imageFormat = ScreenToolService.ImageFormat.png.rawValue
+    @AppStorage(ScreenToolSettings.selfTimerSecondsKey) private var selfTimerSeconds = 5
+    @AppStorage(ScreenToolSettings.playSoundsKey) private var playSounds = true
+    @AppStorage(ScreenToolSettings.includeCursorKey) private var includeCursor = false
+    @AppStorage(ScreenToolSettings.captureWindowShadowKey) private var captureWindowShadow = true
+    @AppStorage(ScreenToolSettings.keepTextLineBreaksKey) private var keepTextLineBreaks = false
+    @AppStorage(ScreenToolSettings.autoDetectTextLanguageKey) private var autoDetectTextLanguage = true
+
+    private var actionBinding: Binding<ScreenToolService.CaptureAction> {
+        Binding {
+            ScreenToolService.CaptureAction(rawValue: afterCaptureAction) ?? .quickOverlay
+        } set: {
+            afterCaptureAction = $0.rawValue
+        }
+    }
+
+    private var formatBinding: Binding<ScreenToolService.ImageFormat> {
+        Binding {
+            ScreenToolService.ImageFormat(rawValue: imageFormat) ?? .png
+        } set: {
+            imageFormat = $0.rawValue
+        }
+    }
+
+    private var timerBinding: Binding<Int> {
+        Binding {
+            selfTimerSeconds == 0 ? 5 : selfTimerSeconds
+        } set: {
+            selfTimerSeconds = $0
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(
+                title: "Screen Tools",
+                subtitle: "Capture, record, recognize text, pin references and manage local outputs."
+            )
+
+            SectionLabel(title: "Actions")
+            SettingsCard {
+                actionRow(
+                    title: "Capture area",
+                    detail: "Select a rectangular region and apply the default after-capture action.",
+                    symbol: "crop",
+                    action: service.captureArea
+                )
+                CardDivider()
+                actionRow(
+                    title: "Capture fullscreen",
+                    detail: "Capture the active display directly.",
+                    symbol: "rectangle.inset.filled",
+                    action: service.captureFullscreen
+                )
+                CardDivider()
+                actionRow(
+                    title: "Capture window",
+                    detail: "Pick one window and capture it.",
+                    symbol: "macwindow",
+                    action: service.captureWindow
+                )
+                CardDivider()
+                actionRow(
+                    title: "Self-timer",
+                    detail: "Capture after the configured delay.",
+                    symbol: "timer",
+                    action: service.captureSelfTimer
+                )
+                CardDivider()
+                actionRow(
+                    title: "Record screen",
+                    detail: "Open the system screen-recording selector and save a movie file locally.",
+                    symbol: "record.circle",
+                    action: service.recordScreen
+                )
+                CardDivider()
+                actionRow(
+                    title: "Capture text",
+                    detail: "Select an area, recognize text on device, and copy it to the clipboard.",
+                    symbol: "text.viewfinder",
+                    action: { service.captureText(keepLineBreaks: keepTextLineBreaks) }
+                )
+            }
+
+            SectionLabel(title: "Output")
+            SettingsCard {
+                SettingsRow {
+                    RowLabel(title: "Export location", detail: currentExportLocation)
+                } trailing: {
+                    IconChipButton(symbol: "folder", label: "Choose…", action: chooseExportDirectory)
+                }
+                CardDivider()
+                DropdownRow(
+                    title: "After capture",
+                    detail: "Default action for screenshot commands.",
+                    options: ScreenToolService.CaptureAction.allCases.map { ($0, $0.title) },
+                    selection: actionBinding,
+                    minWidth: 230
+                )
+                CardDivider()
+                DropdownRow(
+                    title: "File format",
+                    detail: "Image format used for local screenshots.",
+                    options: ScreenToolService.ImageFormat.allCases.map { ($0, $0.title) },
+                    selection: formatBinding,
+                    minWidth: 120
+                )
+                CardDivider()
+                DropdownRow(
+                    title: "Self-timer interval",
+                    detail: "Delay before timed fullscreen capture.",
+                    options: [(3, "3 seconds"), (5, "5 seconds"), (10, "10 seconds")],
+                    selection: timerBinding,
+                    minWidth: 130
+                )
+                CardDivider()
+                ToggleRow(title: "Play sounds", detail: "Use the system capture sound when available.", isOn: $playSounds)
+            }
+
+            SectionLabel(title: "Screenshot Options")
+            SettingsCard {
+                ToggleRow(title: "Show cursor", detail: "Include the pointer in fullscreen and timed captures.", isOn: $includeCursor)
+                CardDivider()
+                ToggleRow(title: "Capture window shadow", detail: "Keep the standard window shadow when capturing windows.", isOn: $captureWindowShadow)
+            }
+
+            SectionLabel(title: "Text Recognition")
+            SettingsCard {
+                ToggleRow(title: "Detect language automatically", detail: "Let on-device text recognition choose the language.", isOn: $autoDetectTextLanguage)
+                CardDivider()
+                ToggleRow(title: "Keep line breaks", detail: "Preserve recognized line breaks when copying text.", isOn: $keepTextLineBreaks)
+            }
+
+            SectionLabel(title: "Pins and History")
+            SettingsCard {
+                actionRow(
+                    title: "Choose and pin an image",
+                    detail: "Open an image in an always-on-top reference window.",
+                    symbol: "pin",
+                    action: service.chooseAndPinImage
+                )
+                CardDivider()
+                actionRow(
+                    title: "Pin last capture",
+                    detail: "Pin the most recent local screenshot.",
+                    symbol: "pin.fill",
+                    action: service.pinLastCapture
+                )
+                CardDivider()
+                actionRow(
+                    title: "Open capture history",
+                    detail: "Reveal the local export folder.",
+                    symbol: "clock",
+                    action: service.openCaptureHistory
+                )
+                CardDivider()
+                SettingsRow {
+                    RowLabel(title: "Open pins", detail: "\(service.pins.count) active")
+                } trailing: {
+                    IconChipButton(symbol: "xmark", label: "Close all", action: service.closeAllPins)
+                }
+            }
+        }
+    }
+
+    private var currentExportLocation: LocalizedStringKey {
+        let path = exportDirectory.isEmpty ? ScreenToolSettings.exportDirectoryURL.path : exportDirectory
+        return LocalizedStringKey(path)
+    }
+
+    @ViewBuilder
+    private func actionRow(
+        title: LocalizedStringKey,
+        detail: LocalizedStringKey,
+        symbol: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        SettingsRow {
+            RowLabel(title: title, detail: detail)
+        } trailing: {
+            IconChipButton(symbol: symbol, label: "Run", isPrimary: true, action: action)
+        }
+    }
+
+    private func chooseExportDirectory() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.directoryURL = ScreenToolSettings.exportDirectoryURL
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            exportDirectory = url.path
+            ToastCenter.shared.show("Export location updated")
+        }
+    }
+}

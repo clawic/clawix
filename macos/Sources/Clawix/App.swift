@@ -295,18 +295,20 @@ private struct MenuBarContent: View {
     @EnvironmentObject private var vault: VaultManager
     @EnvironmentObject private var flags: FeatureFlags
     @ObservedObject private var micPrefs = MicrophonePreferences.shared
+    @ObservedObject private var screenTools = ScreenToolService.shared
     @ObservedObject private var bridge = BackgroundBridgeService.shared
     @Environment(\.openWindow) private var openWindow
 
-    // Status bar dropdown is organized into 4 thematic sections, in fixed order:
+    // Status bar dropdown is organized into thematic sections, in fixed order:
     //
     //   1. CONNECT       pairing actions to link Clawix with other devices
     //                    (Pair iPhone…, future: Pair Watch, Re-pair, Unlink…).
-    //   2. BRIDGE        runtime status and controls of the background bridge
+    //   2. SCREEN TOOLS  local capture, recording, OCR, pins and history.
+    //   3. BRIDGE        runtime status and controls of the background bridge
     //                    daemon (port, LAN/Tailscale IPs, Open Logs, Restart).
-    //   3. VOICE TO TEXT audio capture sources and dictation settings
+    //   4. VOICE TO TEXT audio capture sources and dictation settings
     //                    (Audio Input device picker, future: dictation toggles).
-    //   4. SECRETS       vault state and access (Show vault, Lock now, Unlock…).
+    //   5. SECRETS       vault state and access (Show vault, Lock now, Unlock…).
     //
     // Open Clawix sits above the sections; Quit Clawix sits below. They are
     // app-level meta-actions and stay outside any Section.
@@ -324,6 +326,77 @@ private struct MenuBarContent: View {
         .keyboardShortcut("o")
 
         Divider()
+
+        Section {
+            Menu {
+                Button {
+                    screenTools.captureArea()
+                } label: {
+                    Label("Capture Area", systemImage: "crop")
+                }
+                Button {
+                    screenTools.captureFullscreen()
+                } label: {
+                    Label("Capture Fullscreen", systemImage: "rectangle.inset.filled")
+                }
+                Button {
+                    screenTools.captureWindow()
+                } label: {
+                    Label("Capture Window", systemImage: "macwindow")
+                }
+                Button {
+                    screenTools.captureSelfTimer()
+                } label: {
+                    Label("Self-Timer", systemImage: "timer")
+                }
+                Divider()
+                Button {
+                    screenTools.recordScreen()
+                } label: {
+                    Label("Record Screen", systemImage: "record.circle")
+                }
+                Button {
+                    screenTools.captureText()
+                } label: {
+                    Label("Capture Text", systemImage: "text.viewfinder")
+                }
+                Divider()
+                Button {
+                    screenTools.chooseAndPinImage()
+                } label: {
+                    Label("Pin Image…", systemImage: "pin")
+                }
+                Button {
+                    screenTools.pinLastCapture()
+                } label: {
+                    Label("Pin Last Capture", systemImage: "pin.fill")
+                }
+                Button {
+                    screenTools.openCaptureHistory()
+                } label: {
+                    Label("Capture History…", systemImage: "clock")
+                }
+                if !screenTools.pins.isEmpty {
+                    Button {
+                        screenTools.closeAllPins()
+                    } label: {
+                        Label("Close All Pins", systemImage: "xmark")
+                    }
+                }
+                Divider()
+                Button {
+                    appState.settingsCategory = .screenTools
+                    appState.currentRoute = .settings
+                    openMainWindow()
+                } label: {
+                    Label("Screen Tools Settings…", systemImage: "gearshape")
+                }
+            } label: {
+                Label("Screen Tools", systemImage: "camera.viewfinder")
+            }
+        } header: {
+            Text("Screen Tools")
+        }
 
         Section {
             Button {

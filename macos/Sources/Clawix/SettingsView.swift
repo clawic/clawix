@@ -9,6 +9,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case personalization
     case skills
     case dictation
+    case screenTools
     case quickAsk
     case localModels
     case modelProviders
@@ -17,6 +18,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case git
     case browserUsage
     case usage
+    case macUtilities
     case secrets
     case clawjs
     case telegram
@@ -32,6 +34,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .personalization:  return "Personalization"
         case .skills:           return "Skills"
         case .dictation:        return "Voice to Text"
+        case .screenTools:      return "Screen Tools"
         case .quickAsk:         return "QuickAsk"
         case .localModels:      return "Local models"
         case .modelProviders:   return "Model Providers"
@@ -40,6 +43,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .git:              return "Git"
         case .browserUsage:     return "Browser usage"
         case .usage:            return "Usage"
+        case .macUtilities:     return "Mac Utilities"
         case .secrets:          return "Secrets"
         case .clawjs:           return "ClawJS"
         case .telegram:         return "Telegram"
@@ -55,6 +59,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .personalization:  return "person.crop.circle"
         case .skills:           return "wand.and.stars"
         case .dictation:        return "mic.fill"
+        case .screenTools:      return "camera.viewfinder"
         case .quickAsk:         return "command"
         case .localModels:      return "cpu"
         case .modelProviders:   return "layers"
@@ -63,6 +68,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .git:              return "arrow.triangle.branch"
         case .browserUsage:     return "cursor"
         case .usage:            return "chart.bar"
+        case .macUtilities:     return "bolt"
         case .secrets:          return "lock.shield"
         case .clawjs:           return "shippingbox"
         case .telegram:         return "paperplane.fill"
@@ -249,12 +255,14 @@ struct SettingsContent: View {
                     case .personalization: PersonalizationPage()
                     case .skills:          SkillsSettingsPage()
                     case .dictation:       DictationSettingsPage()
+                    case .screenTools:     ScreenToolsSettingsPage()
                     case .quickAsk:        QuickAskSettingsPage()
                     case .localModels:     LocalModelsPage()
                     case .modelProviders:  ProvidersSettingsPage()
                     case .git:             GitPage()
                     case .browserUsage:    BrowserUsagePage()
                     case .usage:           UsagePage()
+                    case .macUtilities:    PlaceholderPage(category: .macUtilities)
                     case .mcp:             MCPPage()
                     case .machines:        HostsPage()
                     case .secrets:         SecretsSettingsPage()
