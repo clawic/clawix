@@ -71,6 +71,7 @@ final class ScreenToolService: ObservableObject {
             case .captureSelfTimer:    self.captureSelfTimer()
             case .recordScreen:        self.recordScreen()
             case .captureText:         self.captureText()
+            case .recognizeLastText:   self.recognizeLastCaptureText()
             case .openImage:           self.chooseAndOpenImage()
             case .pinImage:            self.chooseAndPinImage()
             case .markupLastCapture:   self.markupLastCapture()
@@ -98,6 +99,7 @@ final class ScreenToolService: ObservableObject {
         menu.addItem(.separator())
         addItem("Record Screen", action: .recordScreen, symbol: "record.circle")
         addItem("Capture Text", action: .captureText, symbol: "text.viewfinder")
+        addItem("Recognize Last Capture Text", action: .recognizeLastText, symbol: "doc.text.viewfinder")
         menu.addItem(.separator())
         addItem("Open Image...", action: .openImage, symbol: "photo")
         addItem("Pin Image...", action: .pinImage, symbol: "pin")
@@ -166,6 +168,16 @@ final class ScreenToolService: ObservableObject {
                 }
                 await Self.recognizeText(in: url, keepLineBreaks: keepLineBreaks)
             }
+        }
+    }
+
+    func recognizeLastCaptureText(keepLineBreaks: Bool = ScreenToolSettings.keepTextLineBreaks) {
+        guard let url = recentCaptureURL() else {
+            ToastCenter.shared.show("No recent capture to recognize", icon: .warning)
+            return
+        }
+        Task { @MainActor in
+            await Self.recognizeText(in: url, keepLineBreaks: keepLineBreaks)
         }
     }
 
@@ -1286,6 +1298,7 @@ private enum ScreenToolMenuAction: String {
     case captureSelfTimer
     case recordScreen
     case captureText
+    case recognizeLastText
     case openImage
     case pinImage
     case markupLastCapture

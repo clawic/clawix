@@ -381,6 +381,11 @@ private struct MenuBarContent: View {
                     Label("Capture Text", systemImage: "text.viewfinder")
                 }
                 Button {
+                    screenTools.recognizeLastCaptureText()
+                } label: {
+                    Label("Recognize Last Capture Text", systemImage: "doc.text.viewfinder")
+                }
+                Button {
                     macUtilities.perform(.toggleDesktopIcons)
                 } label: {
                     Label("Hide Desktop Icons", systemImage: "square.grid.3x3")

@@ -112,6 +112,13 @@ struct ScreenToolsSettingsPage: View {
                 )
                 CardDivider()
                 actionRow(
+                    title: "Recognize last capture text",
+                    detail: "Recognize text from the most recent local capture and copy it.",
+                    symbol: "doc.text.viewfinder",
+                    action: { service.recognizeLastCaptureText(keepLineBreaks: keepTextLineBreaks) }
+                )
+                CardDivider()
+                actionRow(
                     title: "Hide desktop icons",
                     detail: "Toggle Finder desktop items for cleaner captures.",
                     symbol: "square.grid.3x3",
