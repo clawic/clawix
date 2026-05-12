@@ -201,14 +201,14 @@ final class ScreenToolService: ObservableObject {
     private func runCapture(mode: CaptureMode, rect: ScreenToolCaptureRect? = nil) {
         guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: outputPrefix(for: mode), extension: ScreenToolSettings.imageFormat.rawValue)
-        if mode == .area, let rect {
-            ScreenToolSettings.previousAreaRect = rect
-        }
         Self.runScreencapture(args: interactiveArgs(mode: mode, output: url, rect: rect)) { [weak self] result in
             Task { @MainActor in
                 guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
                     ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Capture cancelled"), icon: .warning)
                     return
+                }
+                if mode == .area, let rect {
+                    ScreenToolSettings.previousAreaRect = rect
                 }
                 self?.lastCaptureURL = url
                 self?.handleCapture(url)
@@ -808,19 +808,20 @@ private final class ScreenToolAreaSelectionView: NSView {
     override var acceptsFirstResponder: Bool { true }
 
     override func mouseDown(with event: NSEvent) {
-        startPoint = event.locationInWindow
-        currentPoint = event.locationInWindow
+        let point = clampedEventPoint(event)
+        startPoint = point
+        currentPoint = point
         needsDisplay = true
     }
 
     override func mouseDragged(with event: NSEvent) {
-        currentPoint = event.locationInWindow
+        currentPoint = clampedEventPoint(event)
         needsDisplay = true
     }
 
     override func mouseUp(with event: NSEvent) {
         guard startPoint != nil else { return }
-        currentPoint = event.locationInWindow
+        currentPoint = clampedEventPoint(event)
         guard let rect = currentSelectionRect,
               let captureRect = ScreenToolCaptureRect(selectionRect: rect, in: screen)
         else {
@@ -856,6 +857,14 @@ private final class ScreenToolAreaSelectionView: NSView {
             y: min(startPoint.y, currentPoint.y),
             width: abs(startPoint.x - currentPoint.x),
             height: abs(startPoint.y - currentPoint.y)
+        )
+    }
+
+    private func clampedEventPoint(_ event: NSEvent) -> NSPoint {
+        let point = convert(event.locationInWindow, from: nil)
+        return NSPoint(
+            x: min(max(point.x, bounds.minX), bounds.maxX),
+            y: min(max(point.y, bounds.minY), bounds.maxY)
         )
     }
 }
