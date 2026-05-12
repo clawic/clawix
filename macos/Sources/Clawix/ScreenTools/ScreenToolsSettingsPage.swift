@@ -205,6 +205,13 @@ struct ScreenToolsSettingsPage: View {
                 )
                 CardDivider()
                 actionRow(
+                    title: "Markup last capture",
+                    detail: "Open the most recent local capture for system markup.",
+                    symbol: "pencil.and.outline",
+                    action: service.markupLastCapture
+                )
+                CardDivider()
+                actionRow(
                     title: "Restore last capture",
                     detail: "Make the most recent local capture active again and reopen it.",
                     symbol: "arrow.counterclockwise",

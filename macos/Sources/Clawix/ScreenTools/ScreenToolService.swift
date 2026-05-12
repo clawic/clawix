@@ -73,6 +73,7 @@ final class ScreenToolService: ObservableObject {
             case .captureText:         self.captureText()
             case .openImage:           self.chooseAndOpenImage()
             case .pinImage:            self.chooseAndPinImage()
+            case .markupLastCapture:   self.markupLastCapture()
             case .restoreLastCapture:  self.restoreLastCapture()
             case .captureHistory:      self.openCaptureHistory()
             }
@@ -100,6 +101,7 @@ final class ScreenToolService: ObservableObject {
         menu.addItem(.separator())
         addItem("Open Image...", action: .openImage, symbol: "photo")
         addItem("Pin Image...", action: .pinImage, symbol: "pin")
+        addItem("Markup Last Capture", action: .markupLastCapture, symbol: "pencil.and.outline")
         addItem("Restore Last Capture", action: .restoreLastCapture, symbol: "arrow.counterclockwise")
         addItem("Capture History...", action: .captureHistory, symbol: "clock")
 
@@ -198,6 +200,14 @@ final class ScreenToolService: ObservableObject {
             return
         }
         copyFileAndImage(url)
+    }
+
+    func markupLastCapture() {
+        guard let url = recentCaptureURL() else {
+            ToastCenter.shared.show("No recent capture to mark up", icon: .warning)
+            return
+        }
+        openMarkup(url)
     }
 
     func chooseAndPinImage() {
@@ -377,9 +387,13 @@ final class ScreenToolService: ObservableObject {
         case .pin:
             pin(url: url)
         case .annotate:
-            NSWorkspace.shared.open(url)
-            ToastCenter.shared.show("Capture opened")
+            openMarkup(url)
         }
+    }
+
+    private func openMarkup(_ url: URL) {
+        NSWorkspace.shared.open(url)
+        ToastCenter.shared.show("Capture opened for markup")
     }
 
     func copyFileAndImage(_ url: URL) {
@@ -1274,6 +1288,7 @@ private enum ScreenToolMenuAction: String {
     case captureText
     case openImage
     case pinImage
+    case markupLastCapture
     case restoreLastCapture
     case captureHistory
 }

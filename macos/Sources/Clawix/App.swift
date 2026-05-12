@@ -407,6 +407,11 @@ private struct MenuBarContent: View {
                     Label("Show Last Capture", systemImage: "rectangle.on.rectangle")
                 }
                 Button {
+                    screenTools.markupLastCapture()
+                } label: {
+                    Label("Markup Last Capture", systemImage: "pencil.and.outline")
+                }
+                Button {
                     screenTools.restoreLastCapture()
                 } label: {
                     Label("Restore Last Capture", systemImage: "arrow.counterclockwise")
