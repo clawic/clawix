@@ -296,6 +296,18 @@ struct LucideIcon: View {
         case "checkmark.circle", "checkmark.circle.fill": return .circleCheck
         case "xmark.circle", "xmark.circle.fill": return .circleX
         case "circle":            return .circleDot
+        case "badge.check":       return .badgeCheck
+        case "bookmark",
+             "cloud.moon",
+             "shield",
+             "pencil",
+             "lightbulb",
+             "person.crop.circle",
+             "bubble.middle.bottom",
+             "safari",
+             "flame",
+             "arrow.triangle.branch",
+             "quote.bubble":      return .circleDot
         case "eye":               return .eye
         case "eye.slash":         return .eyeOff
         case "eyeglasses", "eyeglasses.slash": return .glasses

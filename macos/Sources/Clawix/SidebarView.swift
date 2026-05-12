@@ -408,6 +408,11 @@ struct SidebarView: View {
             // peer position as Apps; one click drops into each catalog.
             DesignSidebarSection()
 
+            // Life surface: 80 user-data tracking verticals (health,
+            // habits, emotions, finance, etc.). The sidebar shows only
+            // the verticals the user has enabled in LifeSettingsView.
+            LifeSidebarSection()
+
             if !snapshot.pinned.isEmpty {
                 let pinnedSources = pinnedFilterSources(from: snapshot.pinned)
                 let visiblePinned = applyPinnedFilter(to: snapshot.pinned)

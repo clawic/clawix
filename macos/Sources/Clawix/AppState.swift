@@ -172,6 +172,14 @@ enum SidebarRoute: Equatable {
     /// Badger channels list. Shows every family with its connect / coming
     /// soon state.
     case badgerChannels
+    /// Life home — sidebar entry "Life". Renders the user-data tracking
+    /// catalog (the 80-vertical registry) with a 3-pane explorer.
+    case lifeHome
+    /// Detail panel for a single life vertical (health, sleep, workouts,
+    /// emotions, finance, etc.). The id matches the registry entry id.
+    case lifeVertical(id: String)
+    /// Life settings: show / hide / reorder verticals.
+    case lifeSettings
 }
 
 // MARK: - Models

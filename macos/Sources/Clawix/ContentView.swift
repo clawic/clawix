@@ -131,7 +131,8 @@ struct ContentView: View {
              .agentsHome, .agentDetail, .personalitiesHome, .personalityDetail,
              .skillCollectionsHome, .skillCollectionDetail,
              .connectionsHome, .connectionDetail,
-             .badgerHome, .badgerComposer, .badgerChannels:
+             .badgerHome, .badgerComposer, .badgerChannels,
+             .lifeHome, .lifeVertical, .lifeSettings:
             return false
         }
     }
@@ -181,6 +182,9 @@ struct ContentView: View {
         case .badgerComposer(let prefill):
             return "badger-composer-\(prefill?.hashValue ?? 0)"
         case .badgerChannels: return "badger-channels"
+        case .lifeHome: return "life-home"
+        case .lifeVertical(let id): return "life-\(id)"
+        case .lifeSettings: return "life-settings"
         }
     }
 
@@ -297,6 +301,9 @@ struct ContentView: View {
                             case .badgerHome:                 BadgerHomeView()
                             case .badgerComposer(let prefill): BadgerComposerView(prefillBody: prefill)
                             case .badgerChannels:             BadgerChannelsView()
+                            case .lifeHome:                   LifeHomeScreen()
+                            case .lifeVertical(let id):       LifeVerticalScreen(verticalId: id)
+                            case .lifeSettings:               LifeSettingsView()
                             }
                         }
                         .id(routeRenderID)
