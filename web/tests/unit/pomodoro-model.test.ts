@@ -75,6 +75,19 @@ describe("pomodoro model", () => {
     expect(currentBlockers(state)).toEqual([]);
   });
 
+  it("applies local profile rules for reading focus and learn blockers", () => {
+    const now = Date.UTC(2026, 4, 12, 12, 30, 0);
+    let state = defaultPomodoroState(now);
+    state.settings.sessionWebBlocker = { enabled: true, type: "deny", entries: "news.example" };
+
+    state = startFocus(state, now, "Reading design notes", "general", 25);
+    expect(state.active?.totalSec).toBe(30 * 60);
+    state = finishTimer(state, now + 60_000);
+
+    state = startFocus(state, now + 120_000, "learn shortcuts", "general", 25);
+    expect(currentBlockers(state)).toEqual([]);
+  });
+
   it("runs shortcut actions against the timer state", () => {
     const now = Date.UTC(2026, 4, 12, 13, 0, 0);
     let state = defaultPomodoroState(now);

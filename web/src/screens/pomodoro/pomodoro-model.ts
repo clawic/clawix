@@ -264,14 +264,16 @@ export function startFocus(
   categoryId = state.categoryId,
   minutes = state.settings.sessionMinutes,
 ): PomodoroState {
-  const totalSec = Math.max(60, Math.round(minutes * 60));
   const cleanIntention = intention.trim();
+  const resolvedCategoryId = categoryId || state.categoryId;
+  const resolvedMinutes = focusMinutesForProfile(cleanIntention, minutes);
+  const totalSec = Math.max(60, Math.round(resolvedMinutes * 60));
   return {
     ...state,
     active: {
       mode: "focus",
       intention: cleanIntention,
-      categoryId,
+      categoryId: resolvedCategoryId,
       startAt: now,
       endAt: now + totalSec * 1000,
       totalSec,
@@ -280,8 +282,13 @@ export function startFocus(
       notes: "",
     },
     intentionDraft: cleanIntention,
-    categoryId,
-    notices: pushNotice(state, now, "Session started", cleanIntention || "Focus timer started."),
+    categoryId: resolvedCategoryId,
+    notices: pushNotice(
+      state,
+      now,
+      "Session started",
+      profileStartDetail(state, cleanIntention, resolvedCategoryId, resolvedMinutes),
+    ),
   };
 }
 
@@ -514,8 +521,10 @@ export function exportLogsCsv(state: PomodoroState): string {
 }
 
 export function currentBlockers(state: PomodoroState): string[] {
-  const mode = state.active?.mode;
+  const active = state.active;
+  const mode = active?.mode;
   if (!mode || mode === "idle" || mode === "paused" || mode === "ended") return [];
+  if (mode === "focus" && intentionHas(active.intention, "learn")) return [];
   const webRule = mode === "break" ? state.settings.breakWebBlocker : state.settings.sessionWebBlocker;
   const appRule = mode === "break" ? state.settings.breakAppBlocker : state.settings.sessionAppBlocker;
   const webEntries = webRule.enabled
@@ -610,6 +619,29 @@ export function runPomodoroUrlCommand(
 function remainingSeconds(active: PomodoroActiveTimer, now: number): number {
   if (active.mode === "paused") return active.remainingSec;
   return Math.max(0, Math.ceil((active.endAt - now) / 1000));
+}
+
+function focusMinutesForProfile(intention: string, minutes: number): number {
+  if (intentionHas(intention, "reading")) return 30;
+  return minutes;
+}
+
+function profileStartDetail(state: PomodoroState, intention: string, categoryId: string, minutes: number): string {
+  const details = [intention || "Focus timer started."];
+  if (intentionHas(intention, "reading")) details.push("Profile rule: reading uses 30 min focus.");
+  if (intentionHas(intention, "learn")) details.push("Profile rule: learn disables blockers.");
+  const category = state.categories.find((cat) => cat.id === categoryId);
+  if (category?.name.toLowerCase() === "meeting") details.push("Profile rule: Meeting silences ending notifications.");
+  if (minutes !== state.settings.sessionMinutes) details.push(`${minutes} min`);
+  return details.join(" ");
+}
+
+function intentionHas(intention: string, needle: string): boolean {
+  return intention.toLowerCase().includes(needle.toLowerCase());
+}
+
+function includesFolded(value: string, expected: string): boolean {
+  return value.toLowerCase().includes(expected.toLowerCase());
 }
 
 function pushNotice(state: PomodoroState, at: number, title: string, detail: string): PomodoroNotice[] {
