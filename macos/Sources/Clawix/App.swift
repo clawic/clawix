@@ -217,6 +217,8 @@ struct ClawixApp: App {
                     appState.currentRoute = .drivePhotos
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift, .option])
+                Divider()
+                DatabaseWorkbenchCommands(appState: appState)
             }
             CommandGroup(replacing: .help) {
                 HelpMenuCommands(appState: appState)
@@ -304,19 +306,20 @@ private struct MenuBarContent: View {
     //   1. CONNECT       pairing actions to link Clawix with other devices
     //                    (Pair iPhone…, future: Pair Watch, Re-pair, Unlink…).
     //   2. SCREEN TOOLS  local capture, recording, OCR, pins and history.
-    //   3. BRIDGE        runtime status and controls of the background bridge
+    //   3. MAC UTILITIES local macOS window, clipboard, display and settings actions.
+    //   4. BRIDGE        runtime status and controls of the background bridge
     //                    daemon (port, LAN/Tailscale IPs, Open Logs, Restart).
-    //   4. VOICE TO TEXT audio capture sources and dictation settings
+    //   5. VOICE TO TEXT audio capture sources and dictation settings
     //                    (Audio Input device picker, future: dictation toggles).
-    //   5. SECRETS       vault state and access (Show vault, Lock now, Unlock…).
+    //   6. SECRETS       vault state and access (Show vault, Lock now, Unlock…).
     //
     // Open Clawix sits above the sections; Quit Clawix sits below. They are
     // app-level meta-actions and stay outside any Section.
     //
-    // When adding a new menu item, decide which of the 4 sections it belongs
+    // When adding a new menu item, decide which listed section it belongs
     // to and place it inside that Section. Never add a top-level entry between
     // Open and Quit. If it doesn't fit any section, raise it before introducing
-    // a 5th.
+    // another one.
     var body: some View {
         Button {
             openMainWindow()
@@ -397,6 +400,17 @@ private struct MenuBarContent: View {
         } header: {
             Text("Screen Tools")
         }
+
+        MacUtilitiesMenuSection {
+            appState.settingsCategory = .macUtilities
+            appState.currentRoute = .settings
+            openMainWindow()
+        }
+
+        DatabaseWorkbenchMenuBarSection(
+            appState: appState,
+            openMainWindow: openMainWindow
+        )
 
         Section {
             Button {
@@ -549,6 +563,76 @@ private struct MenuBarContent: View {
         }
         openWindow(id: FileMenuActions.mainWindowID)
         NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+private struct MacUtilitiesMenuSection: View {
+    @ObservedObject private var controller = MacUtilitiesController.shared
+    @State private var pendingAction: MacUtilityActionID?
+    let openSettings: () -> Void
+
+    var body: some View {
+        Section {
+            Menu {
+                ForEach(MacUtilityGroup.allCases) { group in
+                    Menu(group.title) {
+                        ForEach(MacUtilityActionID.actions(in: group)) { action in
+                            Button {
+                                request(action)
+                            } label: {
+                                Label(label(for: action), systemImage: action.systemImage)
+                            }
+                        }
+                    }
+                }
+                Divider()
+                Button(action: openSettings) {
+                    Label("Mac Utilities Settings…", systemImage: "gearshape")
+                }
+            } label: {
+                Label("Mac Utilities", systemImage: "bolt")
+            }
+        } header: {
+            Text("Mac Utilities")
+        }
+        .confirmationDialog(
+            pendingAction?.title ?? "Confirm Action",
+            isPresented: Binding(
+                get: { pendingAction != nil },
+                set: { if !$0 { pendingAction = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingAction
+        ) { action in
+            Button(action.title, role: .destructive) {
+                controller.perform(action)
+                pendingAction = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingAction = nil
+            }
+        } message: { action in
+            if action == .clearClipboard {
+                Text("This removes all current clipboard contents.")
+            } else {
+                Text("Run this macOS action now?")
+            }
+        }
+    }
+
+    private func request(_ action: MacUtilityActionID) {
+        if action.requiresConfirmation {
+            pendingAction = action
+        } else {
+            controller.perform(action)
+        }
+    }
+
+    private func label(for action: MacUtilityActionID) -> String {
+        if action == .toggleKeepAwake {
+            return controller.keepAwakeEnabled ? "Keep Awake Off" : "Keep Awake On"
+        }
+        return action.title
     }
 }
 
