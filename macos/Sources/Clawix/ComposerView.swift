@@ -142,6 +142,7 @@ struct ComposerView: View {
                             }
                         )
                         .frame(width: proxy.size.width)
+                        .reportsComposerPopupRect()
                         .alignmentGuide(.top) { d in d[.bottom] + 8 }
                         .alignmentGuide(.leading) { d in d[.leading] }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -710,6 +711,7 @@ struct ComposerView: View {
                         plugins: appState.plugins,
                         onPickFiles: { presentFilePicker() }
                     )
+                    .reportsComposerPopupRect()
                     .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
                     .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -727,6 +729,7 @@ struct ComposerView: View {
                         selection: $appState.permissionMode
                     )
                     .fixedSize(horizontal: true, vertical: false)
+                    .reportsComposerPopupRect()
                     .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
                     .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX + 6 }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -766,6 +769,7 @@ struct ComposerView: View {
                             ? localModelsService.installedModels.map { $0.name }
                             : []
                     )
+                    .reportsComposerPopupRect()
                     .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
                     .alignmentGuide(.leading) { d in
                         d[.leading] - (buttonFrame.maxX - ModelMenuPopup.mainColumnWidth)
@@ -781,6 +785,7 @@ struct ComposerView: View {
                 if flags.isVisible(.remoteMesh), meshTargetMenuOpen, let anchor {
                     let buttonFrame = proxy[anchor]
                     MeshTargetPopup(isPresented: $meshTargetMenuOpen)
+                        .reportsComposerPopupRect()
                         .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
                         .alignmentGuide(.leading) { d in d[.leading] - buttonFrame.minX }
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -817,6 +822,7 @@ struct ComposerView: View {
                             projectEditorContext = ProjectEditorContext(project: nil)
                         }
                     )
+                    .reportsComposerPopupRect()
                     .alignmentGuide(.top) { d in
                         placeBelow
                             ? -(buttonFrame.maxY + gap)
@@ -849,6 +855,9 @@ struct ComposerView: View {
         }
         .onChange(of: meshTargetMenuOpen) { _, isOpen in
             if isOpen { closeComposerPopups(except: .meshTarget) }
+        }
+        .onPreferenceChange(ComposerPopupRectsKey.self) { rects in
+            ComposerCursorRectsBridge.shared.popupSwiftUIRects = rects
         }
         .sheet(item: $projectEditorContext) { ctx in
             ProjectEditorSheet(context: ctx) { projectEditorContext = nil }
@@ -2100,6 +2109,8 @@ final class ComposerNSTextView: NSTextView {
     /// composer auto-focuses on home / new chat.
     var wantsInitialFocus: Bool = false
 
+    var popupSwiftUIRects: [CGRect] = []
+
     override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
         super.init(frame: frameRect, textContainer: container)
         pruneFileDragTypes()
@@ -2141,6 +2152,10 @@ final class ComposerNSTextView: NSTextView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if window != nil {
+            ComposerCursorRectsBridge.shared.textView = self
+            popupSwiftUIRects = ComposerCursorRectsBridge.shared.popupSwiftUIRects
+        }
         guard wantsInitialFocus, let window else { return }
         wantsInitialFocus = false
         DispatchQueue.main.async { [weak self, weak window] in
@@ -2157,6 +2172,63 @@ final class ComposerNSTextView: NSTextView {
             container.containerSize = NSSize(width: targetWidth,
                                              height: CGFloat.greatestFiniteMagnitude)
         }
+    }
+
+    private func swiftUIWindowPoint(for event: NSEvent) -> CGPoint? {
+        guard let contentView = window?.contentView else { return nil }
+        let p = event.locationInWindow
+        return CGPoint(x: p.x, y: contentView.bounds.height - p.y)
+    }
+
+    private func isInsidePopup(_ event: NSEvent) -> Bool {
+        guard !popupSwiftUIRects.isEmpty,
+              let p = swiftUIWindowPoint(for: event) else { return false }
+        return popupSwiftUIRects.contains { $0.contains(p) }
+    }
+
+    override func cursorUpdate(with event: NSEvent) {
+        if isInsidePopup(event) {
+            NSCursor.pointingHand.set()
+        } else {
+            super.cursorUpdate(with: event)
+        }
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        if isInsidePopup(event) {
+            NSCursor.pointingHand.set()
+            return
+        }
+        super.mouseMoved(with: event)
+    }
+}
+
+@MainActor
+final class ComposerCursorRectsBridge {
+    static let shared = ComposerCursorRectsBridge()
+    weak var textView: ComposerNSTextView?
+    var popupSwiftUIRects: [CGRect] = [] {
+        didSet { textView?.popupSwiftUIRects = popupSwiftUIRects }
+    }
+    private init() {}
+}
+
+private struct ComposerPopupRectsKey: PreferenceKey {
+    static var defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+private extension View {
+    func reportsComposerPopupRect() -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: ComposerPopupRectsKey.self,
+                                value: [proxy.frame(in: .global)])
+            }
+        )
     }
 }
 
