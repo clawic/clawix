@@ -204,34 +204,34 @@ private final class TerminalResizeNSView: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard let coordinator, isDragging else { return }
         NSCursor.resizeUpDown.set()
-        // Window-coordinate Y grows upward in non-flipped windows. The
-        // panel is anchored to the bottom of the content area, so
-        // dragging the handle DOWN in window coordinates (decreasing Y)
-        // shrinks the panel; dragging UP grows it.
-        let delta = dragStartLocationY - event.locationInWindow.y
-        let proposed = dragStartHeight + delta
-        let maxH = coordinator.maxHeightOverride ?? .greatestFiniteMagnitude
-        let clamped = max(terminalPanelMinHeight, min(maxH, proposed))
-        coordinator.heightRaw.wrappedValue = Double(clamped)
+        coordinator.heightRaw.wrappedValue = Double(clampedHeight(for: event))
     }
 
     override func mouseUp(with event: NSEvent) {
         guard let coordinator, isDragging else { return }
         isDragging = false
-        let delta = dragStartLocationY - event.locationInWindow.y
-        let proposed = dragStartHeight + delta
+        let proposed = proposedHeight(for: event)
         if proposed < terminalPanelCloseThreshold {
             coordinator.onClose()
             coordinator.heightRaw.wrappedValue = Double(terminalPanelDefaultHeight)
         } else {
-            let maxH = coordinator.maxHeightOverride ?? .greatestFiniteMagnitude
-            let clamped = max(terminalPanelMinHeight, min(maxH, proposed))
-            coordinator.heightRaw.wrappedValue = Double(clamped)
+            coordinator.heightRaw.wrappedValue = Double(clampedHeight(for: event))
         }
         let mouse = convert(event.locationInWindow, from: nil)
         if !bounds.contains(mouse) {
             coordinator.hovered.wrappedValue = false
         }
+    }
+
+    private func proposedHeight(for event: NSEvent) -> CGFloat {
+        let delta = event.locationInWindow.y - dragStartLocationY
+        return dragStartHeight + delta
+    }
+
+    private func clampedHeight(for event: NSEvent) -> CGFloat {
+        guard let coordinator else { return dragStartHeight }
+        let maxH = coordinator.maxHeightOverride ?? .greatestFiniteMagnitude
+        return max(terminalPanelMinHeight, min(maxH, proposedHeight(for: event)))
     }
 }
 
