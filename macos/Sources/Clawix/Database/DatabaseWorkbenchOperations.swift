@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import GRDB
 
 enum DatabaseWorkbenchOperationKind: String, Codable, CaseIterable, Identifiable {
     case importCSV
@@ -211,6 +212,14 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         }
 
         switch kind {
+        case .importCSV:
+            return importSQLiteCSV(
+                inputPath: inputPath,
+                objectName: objectName,
+                profile: profile,
+                preferences: preferences,
+                fileManager: fileManager
+            )
         case .exportQuery:
             return exportSQLiteQuery(
                 activeSQL,
@@ -287,6 +296,8 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         }
 
         switch kind {
+        case .importCSV where objectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty:
+            return .init(kind: kind, status: .blocked, message: "Enter a table name before preparing CSV import.")
         case .exportTable where objectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty:
             return .init(kind: kind, status: .blocked, message: "Enter a table or view name before preparing export.")
         case .databaseSearch where searchTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty:
@@ -302,6 +313,59 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
             status: .externalPending,
             message: "EXTERNAL PENDING: \(kind.label) is prepared for \(profile.displayName). Real execution requires explicit approval."
         )
+    }
+
+    private static func importSQLiteCSV(
+        inputPath: String,
+        objectName: String,
+        profile: DatabaseConnectionProfile,
+        preferences: DatabaseWorkbenchPreferences,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        let source = DatabaseConnectionProfileStore.expanded(inputPath)
+        guard let table = quotedSQLiteIdentifier(objectName) else {
+            return .init(kind: .importCSV, status: .blocked, message: "Use a simple table name before importing locally.")
+        }
+
+        do {
+            let csv = try String(contentsOfFile: source, encoding: .utf8)
+            let rows = try parseCSV(
+                csv,
+                delimiter: csvDelimiter(preferences.csvDelimiter)
+            )
+            guard let header = rows.first, !header.isEmpty else {
+                return .init(kind: .importCSV, status: .blocked, message: "CSV import failed: CSV header is empty.")
+            }
+            let columns = try header.map { column -> String in
+                guard let quoted = quotedSQLiteIdentifier(column) else {
+                    throw DatabaseWorkbenchLocalOperationError.invalidCSVHeader
+                }
+                return quoted
+            }
+            let dataRows = rows.dropFirst().filter { row in
+                row.count > 1 || row.first?.isEmpty == false
+            }
+            guard dataRows.allSatisfy({ $0.count == header.count }) else {
+                return .init(kind: .importCSV, status: .blocked, message: "CSV import failed: row column counts do not match the header.")
+            }
+
+            let databasePath = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+            guard fileManager.fileExists(atPath: databasePath) else {
+                return .init(kind: .importCSV, status: .blocked, message: "SQLite import failed: database file does not exist.")
+            }
+
+            let queue = try DatabaseQueue(path: databasePath)
+            try queue.write { db in
+                let placeholders = Array(repeating: "?", count: columns.count).joined(separator: ", ")
+                let sql = "INSERT INTO \(table) (\(columns.joined(separator: ", "))) VALUES (\(placeholders))"
+                for row in dataRows {
+                    try db.execute(sql: sql, arguments: StatementArguments(row))
+                }
+            }
+            return .init(kind: .importCSV, status: .localReady, message: "SQLite CSV import wrote \(dataRows.count) row\(dataRows.count == 1 ? "" : "s").")
+        } catch {
+            return .init(kind: .importCSV, status: .blocked, message: "SQLite CSV import failed: \(error.localizedDescription)")
+        }
     }
 
     private static func exportSQLiteQuery(
@@ -427,6 +491,77 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
     }
 
+    private static func parseCSV(_ body: String, delimiter: String) throws -> [[String]] {
+        var rows: [[String]] = []
+        var row: [String] = []
+        var field = ""
+        var index = body.startIndex
+        var quoted = false
+
+        func appendField() {
+            row.append(field)
+            field.removeAll(keepingCapacity: true)
+        }
+
+        func appendRow() {
+            appendField()
+            if row.count > 1 || row.first?.isEmpty == false {
+                rows.append(row)
+            }
+            row.removeAll(keepingCapacity: true)
+        }
+
+        while index < body.endIndex {
+            let character = body[index]
+            let nextIndex = body.index(after: index)
+
+            if quoted {
+                if character == "\"" {
+                    if nextIndex < body.endIndex, body[nextIndex] == "\"" {
+                        field.append("\"")
+                        index = body.index(after: nextIndex)
+                    } else {
+                        quoted = false
+                        index = nextIndex
+                    }
+                } else {
+                    field.append(character)
+                    index = nextIndex
+                }
+                continue
+            }
+
+            if character == "\"" && field.isEmpty {
+                quoted = true
+                index = nextIndex
+            } else if String(character) == delimiter {
+                appendField()
+                index = nextIndex
+            } else if character == "\n" {
+                appendRow()
+                index = nextIndex
+            } else if character == "\r" {
+                appendRow()
+                if nextIndex < body.endIndex, body[nextIndex] == "\n" {
+                    index = body.index(after: nextIndex)
+                } else {
+                    index = nextIndex
+                }
+            } else {
+                field.append(character)
+                index = nextIndex
+            }
+        }
+
+        if quoted {
+            throw DatabaseWorkbenchLocalOperationError.malformedCSV
+        }
+        if !field.isEmpty || !row.isEmpty {
+            appendRow()
+        }
+        return rows
+    }
+
     private static func csvDelimiter(_ delimiter: DatabaseWorkbenchPreferences.CSVDelimiter) -> String {
         switch delimiter {
         case .tab:       return "\t"
@@ -468,6 +603,8 @@ enum DatabaseWorkbenchLocalOperationError: LocalizedError, Equatable {
     case emptyOutputPath
     case outputAlreadyExists
     case outputDirectoryMissing
+    case invalidCSVHeader
+    case malformedCSV
 
     var errorDescription: String? {
         switch self {
@@ -477,6 +614,10 @@ enum DatabaseWorkbenchLocalOperationError: LocalizedError, Equatable {
             return "Output file already exists."
         case .outputDirectoryMissing:
             return "Output folder does not exist."
+        case .invalidCSVHeader:
+            return "CSV header contains a column name that cannot be mapped safely."
+        case .malformedCSV:
+            return "CSV contains an unclosed quoted field."
         }
     }
 }

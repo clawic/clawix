@@ -91,6 +91,96 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         XCTAssertEqual(reloaded.records.first?.kind, .exportQuery)
     }
 
+    func test_sqliteCSVImportWritesRows() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("users.csv")
+        try "id,name\n1,Ada\n2,\"Linus, Torvalds\"\n".write(to: input, atomically: true, encoding: .utf8)
+        let prefs = DatabaseWorkbenchPreferences(defaults: defaults)
+        prefs.csvDelimiter = .comma
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+        store.objectName = "users"
+
+        let plan = store.perform(
+            .importCSV,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: prefs
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertEqual(plan.message, "SQLite CSV import wrote 2 rows.")
+        let queue = try DatabaseQueue(path: paths.database.path)
+        let names = try queue.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM users ORDER BY id")
+        }
+        XCTAssertEqual(names, ["Ada", "Linus, Torvalds"])
+    }
+
+    func test_sqliteCSVImportRequiresTableName() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("users.csv")
+        try "id,name\n1,Ada\n".write(to: input, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+
+        let plan = store.perform(
+            .importCSV,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertEqual(plan.message, "Enter a table name before preparing CSV import.")
+    }
+
+    func test_sqliteCSVImportBlocksMismatchedRows() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("users.csv")
+        try "id,name\n1,Ada,extra\n".write(to: input, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+        store.objectName = "users"
+        let prefs = DatabaseWorkbenchPreferences(defaults: defaults)
+        prefs.csvDelimiter = .comma
+
+        let plan = store.perform(
+            .importCSV,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: prefs
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertTrue(plan.message.contains("row column counts do not match"), plan.message)
+    }
+
+    func test_sqliteCSVImportBlocksMalformedQuotedInput() throws {
+        let paths = try makeSQLiteFixture(includeRows: false)
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let input = paths.directory.appendingPathComponent("users.csv")
+        try "id,name\n1,\"Ada\n".write(to: input, atomically: true, encoding: .utf8)
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.inputPath = input.path
+        store.objectName = "users"
+        let prefs = DatabaseWorkbenchPreferences(defaults: defaults)
+        prefs.csvDelimiter = .comma
+
+        let plan = store.perform(
+            .importCSV,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: prefs
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertTrue(plan.message.contains("unclosed quoted field"), plan.message)
+    }
+
     func test_sqliteQueryExportWritesCSV() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }
@@ -183,7 +273,7 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         XCTAssertEqual(plan.message, "Only read-only SQLite queries can be exported locally.")
     }
 
-    private func makeSQLiteFixture() throws -> (directory: URL, profile: DatabaseConnectionProfile) {
+    private func makeSQLiteFixture(includeRows: Bool = true) throws -> (directory: URL, database: URL, profile: DatabaseConnectionProfile) {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("clawix-workbench-ops-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -191,13 +281,15 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         let queue = try DatabaseQueue(path: database.path)
         try queue.write { db in
             try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
-            try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada'), ('Linus, Torvalds')")
+            if includeRows {
+                try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada'), ('Linus, Torvalds')")
+            }
         }
         var profile = DatabaseConnectionProfile.draft(
             engine: DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == "sqlite" }
         )
         profile.name = "Local SQLite"
         profile.hostOrPath = database.path
-        return (directory, profile)
+        return (directory, database, profile)
     }
 }
