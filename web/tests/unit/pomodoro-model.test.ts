@@ -24,6 +24,7 @@ import {
   tickPomodoro,
   totalFocusSeconds,
   undoAbandon,
+  updateTaskEstimate,
 } from "../../src/screens/pomodoro/pomodoro-model";
 
 describe("pomodoro model", () => {
@@ -69,6 +70,17 @@ describe("pomodoro model", () => {
     const tasks = parsePlainTasks("- One\nTwo\n\n* Three", "general");
     expect(tasks.map((task) => task.title)).toEqual(["One", "Two", "Three"]);
     expect(formatClock(65)).toBe("1:05");
+  });
+
+  it("starts tasks with their edited estimate", () => {
+    const now = Date.UTC(2026, 4, 12, 11, 30, 0);
+    let state = defaultPomodoroState(now);
+    state.tasks = parsePlainTasks("Estimate task", "general");
+    state = updateTaskEstimate(state, state.tasks[0]!.id, 45);
+    expect(state.tasks[0]?.estimateMinutes).toBe(45);
+
+    state = startFocus(state, now, state.tasks[0]!.title, state.tasks[0]!.categoryId, state.tasks[0]!.estimateMinutes);
+    expect(state.active?.totalSec).toBe(45 * 60);
   });
 
   it("only enforces blockers while focus or break is active", () => {

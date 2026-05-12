@@ -583,6 +583,14 @@ export function parsePlainTasks(text: string, categoryId: string): PomodoroTask[
     }));
 }
 
+export function updateTaskEstimate(state: PomodoroState, id: string, estimateMinutes: number): PomodoroState {
+  const nextEstimate = Math.max(1, Math.round(estimateMinutes));
+  return {
+    ...state,
+    tasks: state.tasks.map((task) => (task.id === id ? { ...task, estimateMinutes: nextEstimate } : task)),
+  };
+}
+
 export function scheduledItemsForDate(state: PomodoroState, key: string): PomodoroScheduleItem[] {
   return [...(state.schedules ?? [])]
     .filter((item) => item.dateKey === key)

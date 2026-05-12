@@ -33,6 +33,7 @@ import {
   totalBreakSeconds,
   totalFocusSeconds,
   undoAbandon,
+  updateTaskEstimate,
   type BlockerRule,
   type Mood,
   type PomodoroCategory,
@@ -105,6 +106,7 @@ type Action =
   | { type: "task-toggle"; id: string }
   | { type: "task-delete"; id: string }
   | { type: "task-start"; task: PomodoroTask; now: number }
+  | { type: "task-estimate"; id: string; value: number }
   | { type: "schedule-add"; now: number; title: string; categoryId: string; startTime: string; durationMinutes: number }
   | { type: "schedule-start"; now: number; id: string }
   | { type: "schedule-delete"; now: number; id: string }
@@ -238,6 +240,8 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return { ...state, tasks: state.tasks.filter((task) => task.id !== action.id) };
     case "task-start":
       return startFocus(state, action.now, action.task.title, action.task.categoryId, action.task.estimateMinutes);
+    case "task-estimate":
+      return updateTaskEstimate(state, action.id, action.value);
     case "schedule-add":
       return addScheduleItem(state, action.now, action.title, action.categoryId, action.startTime, action.durationMinutes);
     case "schedule-start":
@@ -724,6 +728,14 @@ function TasksPanel({ state, dispatch }: { state: PomodoroState; dispatch: React
                   <div className={cx("truncate text-[13px]", task.done && "line-through text-[var(--color-fg-secondary)]")}>{task.title}</div>
                   <div className="text-[11.5px] text-[var(--color-fg-secondary)]">{task.source} / {task.estimateMinutes} min</div>
                 </div>
+                <input
+                  type="number"
+                  min={1}
+                  value={task.estimateMinutes}
+                  onChange={(event) => dispatch({ type: "task-estimate", id: task.id, value: Number(event.target.value) })}
+                  className="field h-8 w-16 text-right"
+                  aria-label={`Estimate for ${task.title}`}
+                />
                 <ActionButton icon={<PlayIcon size={14} />} label="Start" onClick={() => dispatch({ type: "task-start", task, now: Date.now() })} />
                 <button className="icon-btn" onClick={() => dispatch({ type: "task-delete", id: task.id })} aria-label="Delete task"><TrashIcon size={14} /></button>
               </div>
