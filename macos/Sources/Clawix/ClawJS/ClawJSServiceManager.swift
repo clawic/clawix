@@ -310,7 +310,7 @@ final class ClawJSServiceManager: ObservableObject {
         for service in ClawJSService.allCases {
             let url = URL(string: "http://127.0.0.1:\(service.port)\(service.healthPath)")!
             if await ping(url: url) {
-                if await reclaimOrphanedSidecarIfPossible(service) {
+                if await Self.reclaimOrphanedSidecarIfPossible(service) {
                     await launchLocal(service, force: true)
                 } else if Self.canAdoptExistingService(service) {
                     publishDaemonReady(service)
@@ -342,7 +342,7 @@ final class ClawJSServiceManager: ObservableObject {
         while !Task.isCancelled {
             let alive = await ping(url: url)
             if alive {
-                if await reclaimOrphanedSidecarIfPossible(service) {
+                if await Self.reclaimOrphanedSidecarIfPossible(service) {
                     await launchLocal(service, force: true)
                     return
                 } else if Self.canAdoptExistingService(service) {
@@ -382,7 +382,7 @@ final class ClawJSServiceManager: ObservableObject {
         }
     }
 
-    private func reclaimOrphanedSidecarIfPossible(_ service: ClawJSService) async -> Bool {
+    private nonisolated static func reclaimOrphanedSidecarIfPossible(_ service: ClawJSService) async -> Bool {
         guard let pid = Self.listenerPID(on: service.port),
               Self.isClawixSidecar(pid: pid),
               Self.parentPID(of: pid) == 1 else {
@@ -797,7 +797,7 @@ final class ClawJSServiceManager: ObservableObject {
         return (try? adminTokenFromDataDir(for: service)).map { !$0.isEmpty } ?? false
     }
 
-    private static func listenerPID(on port: UInt16) -> pid_t? {
+    private nonisolated static func listenerPID(on port: UInt16) -> pid_t? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", "/usr/sbin/lsof -nP -tiTCP:\(port) -sTCP:LISTEN 2>/dev/null | head -n 1"]
@@ -812,7 +812,7 @@ final class ClawJSServiceManager: ObservableObject {
         return value
     }
 
-    private static func isClawixSidecar(pid: pid_t) -> Bool {
+    private nonisolated static func isClawixSidecar(pid: pid_t) -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
         process.arguments = ["-p", String(pid), "-o", "command="]
@@ -826,7 +826,7 @@ final class ClawJSServiceManager: ObservableObject {
             || command.contains("/Application Support/Clawix/clawjs/")
     }
 
-    private static func parentPID(of pid: pid_t) -> pid_t? {
+    private nonisolated static func parentPID(of pid: pid_t) -> pid_t? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/ps")
         process.arguments = ["-p", String(pid), "-o", "ppid="]
@@ -841,7 +841,7 @@ final class ClawJSServiceManager: ObservableObject {
         return value
     }
 
-    private static func isRunning(pid: pid_t) -> Bool {
+    private nonisolated static func isRunning(pid: pid_t) -> Bool {
         kill(pid, 0) == 0
     }
 
