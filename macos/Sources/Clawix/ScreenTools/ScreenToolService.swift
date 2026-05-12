@@ -333,6 +333,9 @@ final class ScreenToolService: ObservableObject {
                 if mode == .area, let rect {
                     ScreenToolSettings.previousAreaRect = rect
                 }
+                if ScreenToolSettings.scaleRetinaScreenshotsTo1x {
+                    _ = try? Self.scaleRetinaImageTo1xIfNeeded(url)
+                }
                 self?.lastCaptureURL = url
                 self?.handleCapture(url)
             }
@@ -371,6 +374,9 @@ final class ScreenToolService: ObservableObject {
             let output = outputURL(prefix: "scrolling", extension: "png")
             do {
                 try Self.writeStitchedImage(from: temporaryURLs, to: output)
+                if ScreenToolSettings.scaleRetinaScreenshotsTo1x {
+                    _ = try? Self.scaleRetinaImageTo1xIfNeeded(output)
+                }
                 lastCaptureURL = output
                 handleCapture(output)
             } catch {
@@ -579,6 +585,58 @@ final class ScreenToolService: ObservableObject {
         if recordAudio { args.append("-g") }
         args.append(url.path)
         return args
+    }
+
+    @discardableResult
+    static func scaleRetinaImageTo1xIfNeeded(_ url: URL) throws -> Bool {
+        guard
+            let image = NSImage(contentsOf: url),
+            let sourceRep = image.representations.compactMap({ $0 as? NSBitmapImageRep }).first
+        else {
+            return false
+        }
+
+        let targetWidth = Int(image.size.width.rounded())
+        let targetHeight = Int(image.size.height.rounded())
+        guard
+            targetWidth > 0,
+            targetHeight > 0,
+            sourceRep.pixelsWide > targetWidth || sourceRep.pixelsHigh > targetHeight
+        else {
+            return false
+        }
+
+        guard let targetRep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: targetWidth,
+            pixelsHigh: targetHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return false
+        }
+
+        targetRep.size = image.size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: targetRep)
+        image.draw(
+            in: NSRect(origin: .zero, size: image.size),
+            from: .zero,
+            operation: .copy,
+            fraction: 1
+        )
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let data = targetRep.representation(using: .png, properties: [:]) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: url, options: .atomic)
+        return true
     }
 
     private static func displayDate(for url: URL) -> String {
@@ -919,6 +977,7 @@ enum ScreenToolSettings {
     static let playSoundsKey = "clawix.screenTools.playSounds"
     static let includeCursorKey = "clawix.screenTools.includeCursor"
     static let captureWindowShadowKey = "clawix.screenTools.captureWindowShadow"
+    static let scaleRetinaScreenshotsTo1xKey = "clawix.screenTools.scaleRetinaScreenshotsTo1x"
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
@@ -958,6 +1017,10 @@ enum ScreenToolSettings {
 
     static var captureWindowShadow: Bool {
         defaults.object(forKey: captureWindowShadowKey) == nil ? true : defaults.bool(forKey: captureWindowShadowKey)
+    }
+
+    static var scaleRetinaScreenshotsTo1x: Bool {
+        defaults.bool(forKey: scaleRetinaScreenshotsTo1xKey)
     }
 
     static var showRecordingControls: Bool {

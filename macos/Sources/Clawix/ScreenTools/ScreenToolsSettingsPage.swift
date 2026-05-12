@@ -12,6 +12,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.playSoundsKey) private var playSounds = true
     @AppStorage(ScreenToolSettings.includeCursorKey) private var includeCursor = false
     @AppStorage(ScreenToolSettings.captureWindowShadowKey) private var captureWindowShadow = true
+    @AppStorage(ScreenToolSettings.scaleRetinaScreenshotsTo1xKey) private var scaleRetinaScreenshotsTo1x = false
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
     @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
@@ -169,6 +170,8 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Show cursor", detail: "Include the pointer in fullscreen and timed captures.", isOn: $includeCursor)
                 CardDivider()
                 ToggleRow(title: "Capture window shadow", detail: "Keep the standard window shadow when capturing windows.", isOn: $captureWindowShadow)
+                CardDivider()
+                ToggleRow(title: "Scale Retina screenshots to 1x", detail: "Downscale Retina screenshots to logical point size after capture.", isOn: $scaleRetinaScreenshotsTo1x)
             }
 
             SectionLabel(title: "Recording")
