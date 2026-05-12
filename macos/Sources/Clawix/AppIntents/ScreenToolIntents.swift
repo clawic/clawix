@@ -2,6 +2,24 @@ import AppIntents
 import AppKit
 import Foundation
 
+enum ScreenToolsIntentError: Error, CustomLocalizedStringResourceConvertible {
+    case disabled
+
+    var localizedStringResource: LocalizedStringResource {
+        switch self {
+        case .disabled:
+            return "Screen Tools is currently disabled. Enable the experimental feature in Clawix settings to use this action."
+        }
+    }
+}
+
+@MainActor
+private func ensureScreenToolsEnabled() throws {
+    guard FeatureFlags.shared.isVisible(.screenTools) else {
+        throw ScreenToolsIntentError.disabled
+    }
+}
+
 @available(macOS 13.0, *)
 struct RestoreLastCaptureIntent: AppIntent {
     static var title: LocalizedStringResource = "Restore last capture"
@@ -12,6 +30,7 @@ struct RestoreLastCaptureIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.restoreLastCapture()
         return .result()
@@ -28,6 +47,7 @@ struct ShowLastCaptureIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.showLastCaptureOverlay()
         return .result()
@@ -44,6 +64,7 @@ struct PinLastCaptureIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.pinLastCapture()
         return .result()
@@ -60,6 +81,7 @@ struct CopyLastCaptureIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.copyLastCapture()
         return .result()
@@ -76,6 +98,7 @@ struct OpenLastCaptureIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.openLastCapture()
         return .result()
@@ -92,6 +115,7 @@ struct RevealLastCaptureIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.revealLastCapture()
         return .result()
@@ -108,6 +132,7 @@ struct RecognizeLastCaptureTextIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.recognizeLastCaptureText()
         return .result()
@@ -124,6 +149,7 @@ struct RevealCaptureFolderIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try ensureScreenToolsEnabled()
         NSApp.activate(ignoringOtherApps: true)
         ScreenToolService.shared.revealCaptureFolder()
         return .result()
