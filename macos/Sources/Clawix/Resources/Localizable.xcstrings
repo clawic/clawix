@@ -57357,67 +57357,67 @@
         }
       }
     },
-    "Show vault": {
+    "Show Secrets": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show vault"
+            "value": "Show Secrets"
           }
         }
       }
@@ -57747,67 +57747,67 @@
         }
       }
     },
-    "Set up vault…": {
+    "Set up Secrets…": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up vault…"
+            "value": "Set up Secrets…"
           }
         }
       }
@@ -59697,67 +59697,67 @@
         }
       }
     },
-    "Save the bot token in your Secrets vault first, then reference it here by name.": {
+    "Save the bot token in your Secrets first, then reference it here by name.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Save the bot token in your Secrets vault first, then reference it here by name."
+            "value": "Save the bot token in your Secrets first, then reference it here by name."
           }
         }
       }
@@ -68797,67 +68797,67 @@
         }
       }
     },
-    "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore.": {
+    "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore."
+            "value": "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore."
           }
         }
       }
@@ -69577,67 +69577,67 @@
         }
       }
     },
-    "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas.": {
+    "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas."
+            "value": "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas."
           }
         }
       }
@@ -69902,132 +69902,132 @@
         }
       }
     },
-    "Secrets vault → Codex": {
+    "Secrets → Codex": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Secrets vault → Codex"
+            "value": "Secrets → Codex"
           }
         }
       }
     },
-    "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.": {
+    "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
+            "value": "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched."
           }
         }
       }
@@ -70357,132 +70357,132 @@
         }
       }
     },
-    "Vault locked": {
+    "Secrets locked": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault locked"
+            "value": "Secrets locked"
           }
         }
       }
     },
-    "Enter your master password to unlock the secrets vault.": {
+    "Enter your master password to unlock the Secrets.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter your master password to unlock the secrets vault."
+            "value": "Enter your master password to unlock the Secrets."
           }
         }
       }
@@ -70617,67 +70617,67 @@
         }
       }
     },
-    "Could not open the vault": {
+    "Could not open Secrets": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Could not open the vault"
+            "value": "Could not open Secrets"
           }
         }
       }
@@ -70747,132 +70747,132 @@
         }
       }
     },
-    "Set up your secrets vault": {
+    "Set up Secrets": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set up your secrets vault"
+            "value": "Set up Secrets"
           }
         }
       }
     },
-    "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step.": {
+    "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
+            "value": "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step."
           }
         }
       }
@@ -70942,197 +70942,197 @@
         }
       }
     },
-    "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again.": {
+    "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again."
+            "value": "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again."
           }
         }
       }
     },
-    "Vault ready": {
+    "Secrets ready": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vault ready"
+            "value": "Secrets ready"
           }
         }
       }
     },
-    "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value.": {
+    "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value."
+            "value": "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value."
           }
         }
       }
@@ -73347,67 +73347,67 @@
         }
       }
     },
-    "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability.": {
+    "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability."
+            "value": "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability."
           }
         }
       }

@@ -7,7 +7,7 @@ import SecretsVault
 /// the governance struct and pushes it back via
 /// `SecretsStore.updateGovernance(secretId:to:)` on Save.
 struct PermissionsTab: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     let secret: SecretRecord
     let onChanged: () -> Void
 
@@ -44,7 +44,7 @@ struct PermissionsTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            VaultCard {
+            SecretsCard {
                 VStack(alignment: .leading, spacing: 12) {
                     section("Hosts and headers") {
                         labeledField("Allowed hosts", subtitle: "Comma-separated. `*.subdomain.com` allows wildcards on the leftmost label.") {
@@ -130,7 +130,7 @@ struct PermissionsTab: View {
                 }
             }
 
-            if let error { VaultErrorLine(text: error) }
+            if let error { SecretsErrorLine(text: error) }
             if let saved {
                 Text(saved)
                     .font(BodyFont.system(size: 11.5, wght: 600))

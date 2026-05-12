@@ -2,11 +2,11 @@ import SwiftUI
 
 /// Thin compatibility wrappers around the canonical primitives in
 /// SettingsKit + SheetChrome. Existing Secrets surfaces still call
-/// `VaultCard` / `VaultPrimaryButton` / etc, but the visuals now come
+/// `SecretsCard` / `SecretsPrimaryButton` / etc, but the visuals now come
 /// from the shared design system. As each surface gets its phase-2..6
 /// rewrite, calls migrate to the canonical primitives directly. Once
-/// the migration is complete the file is reduced to just `VaultUI`.
-enum VaultUI {
+/// the migration is complete the file is reduced to just `SecretsUI`.
+enum SecretsUI {
 
     /// Centered panel for vault chrome (lock screen, onboarding,
     /// recovery). Constrains width so it reads like a card on a wide
@@ -22,7 +22,7 @@ enum VaultUI {
     }
 }
 
-struct VaultCard<Content: View>: View {
+struct SecretsCard<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -37,7 +37,7 @@ struct VaultCard<Content: View>: View {
     }
 }
 
-struct VaultPrimaryButton: View {
+struct SecretsPrimaryButton: View {
     let title: String
     var isLoading: Bool = false
     var isEnabled: Bool = true
@@ -61,7 +61,7 @@ struct VaultPrimaryButton: View {
     }
 }
 
-struct VaultSecondaryButton: View {
+struct SecretsSecondaryButton: View {
     let title: String
     let action: () -> Void
 
@@ -74,7 +74,7 @@ struct VaultSecondaryButton: View {
     }
 }
 
-struct VaultPasswordField: View {
+struct SecretsPasswordField: View {
     let placeholder: String
     @Binding var text: String
     var onSubmit: () -> Void = {}
@@ -85,7 +85,7 @@ struct VaultPasswordField: View {
     }
 }
 
-struct VaultErrorLine: View {
+struct SecretsErrorLine: View {
     let text: String
     var body: some View {
         Text(text)

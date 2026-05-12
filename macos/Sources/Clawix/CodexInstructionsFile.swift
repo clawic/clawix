@@ -144,11 +144,11 @@ enum CodexSecretsBlock {
     static let defaultBody: String = """
 # Secrets (Clawix)
 
-- All secrets must always be used through `clawix-secrets-proxy`. Never read, paste, or store the literal value in plain text.
-- Discover available secrets with `clawix-secrets-proxy list-secrets [--search TERM]`.
-- Get metadata of a specific secret with `clawix-secrets-proxy describe-secret --name <internal_name>`. Metadata is safe (allowed hosts, allowed headers, type, fields, notes); the value is never returned.
+- All secrets must always be used through `claw secrets`. Never read, paste, or store the literal value in plain text.
+- Discover available secrets with `claw secrets list [--search TERM]`.
+- Get metadata of a specific secret with `claw secrets describe <internal_name>`. Metadata is safe (allowed hosts, allowed headers, type, fields, notes); the value is never returned.
 - Use placeholders `{{secret_name}}` for the primary value of a secret, `{{secret_name.field_name}}` for any field of a secret.
-- Normal HTTP usage: `clawix-secrets-proxy request --url https://host... --header "Authorization: Bearer {{secret_name}}"`.
+- Normal HTTP usage: `claw secrets broker-http --url https://host... --header "Authorization: Bearer {{secret_name}}"`.
 - All output is automatically redacted; secret values are replaced with `[REDACTED:secret_name]` in stdout, stderr, headers, and bodies.
 - If you need a secret that doesn't exist, propose its exact metadata (internal name, allowed hosts, allowed headers, read-only, justification) so the user can create it once. Never request the literal value.
 """

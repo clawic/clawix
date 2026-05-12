@@ -9,7 +9,7 @@ import SecretsVault
 /// folder live as inline menus under the icon, so the form column never
 /// has to spell out "Folder" / "Type" rows: the rail already says it.
 struct AddSecretSheet: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @Binding var isPresented: Bool
     var onCreated: (EntityID) -> Void
 

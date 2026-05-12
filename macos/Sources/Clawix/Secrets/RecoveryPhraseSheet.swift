@@ -2,7 +2,7 @@ import SwiftUI
 import SecretsCrypto
 
 struct RecoveryPhraseSheet: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @Binding var isPresented: Bool
 
     enum Stage: Equatable {
@@ -51,7 +51,7 @@ struct RecoveryPhraseSheet: View {
                 .foregroundColor(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            VaultCard {
+            SecretsCard {
                 VStack(spacing: 12) {
                     TextEditor(text: $phraseText)
                         .scrollContentBackground(.hidden)
@@ -69,10 +69,10 @@ struct RecoveryPhraseSheet: View {
                         )
 
                     if let error {
-                        VaultErrorLine(text: error)
+                        SecretsErrorLine(text: error)
                     }
 
-                    VaultPrimaryButton(
+                    SecretsPrimaryButton(
                         title: "Recover",
                         isLoading: isWorking,
                         isEnabled: !phraseText.isEmpty
@@ -100,12 +100,12 @@ struct RecoveryPhraseSheet: View {
                 .foregroundColor(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            VaultCard {
+            SecretsCard {
                 VStack(spacing: 12) {
-                    VaultPasswordField(placeholder: "New master password", text: $newPassword)
-                    VaultPasswordField(placeholder: "Confirm new password", text: $newPasswordConfirm)
-                    if let error { VaultErrorLine(text: error) }
-                    VaultPrimaryButton(
+                    SecretsPasswordField(placeholder: "New master password", text: $newPassword)
+                    SecretsPasswordField(placeholder: "Confirm new password", text: $newPasswordConfirm)
+                    if let error { SecretsErrorLine(text: error) }
+                    SecretsPrimaryButton(
                         title: "Save and continue",
                         isLoading: isWorking,
                         isEnabled: newPassword.count >= 8 && newPassword == newPasswordConfirm
@@ -133,7 +133,7 @@ struct RecoveryPhraseSheet: View {
                 .foregroundColor(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            VaultCard {
+            SecretsCard {
                 VStack(alignment: .leading, spacing: 10) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                         ForEach(Array(newPhrase.enumerated()), id: \.offset) { idx, word in
@@ -156,12 +156,12 @@ struct RecoveryPhraseSheet: View {
                         }
                     }
                     HStack(spacing: 10) {
-                        VaultSecondaryButton(title: "Copy to clipboard") {
+                        SecretsSecondaryButton(title: "Copy to clipboard") {
                             let pb = NSPasteboard.general
                             pb.clearContents()
                             pb.setString(newPhrase.joined(separator: " "), forType: .string)
                         }
-                        VaultPrimaryButton(title: "Done") {
+                        SecretsPrimaryButton(title: "Done") {
                             isPresented = false
                         }
                     }

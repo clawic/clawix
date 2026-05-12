@@ -3,7 +3,7 @@ import SecretsModels
 import SecretsVault
 
 struct SecretDetailPane: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @EnvironmentObject private var appState: AppState
     let secret: SecretRecord
 

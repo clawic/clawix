@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Thin SwiftUI bridge over `AIAccountStore`. Re-publishes the latest
 /// accounts list and exposes mutating helpers that refresh on success.
-/// Backed by `AIAccountVaultStore.shared` in production; tests inject
+/// Backed by `AIAccountSecretsStore.shared` in production; tests inject
 /// any `AIAccountStore`.
 @MainActor
 final class AIAccountStoreObservable: ObservableObject {
@@ -17,7 +17,7 @@ final class AIAccountStoreObservable: ObservableObject {
 
     private let store: AIAccountStore
 
-    init(store: AIAccountStore = AIAccountVaultStore.shared) {
+    init(store: AIAccountStore = AIAccountSecretsStore.shared) {
         self.store = store
         refresh()
     }

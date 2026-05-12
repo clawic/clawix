@@ -17,7 +17,7 @@ struct FeatureProviderPicker: View {
         let resolved = FeatureRouting.resolve(
             feature: featureId,
             capability: capability,
-            store: AIAccountVaultStore.shared
+            store: AIAccountSecretsStore.shared
         )
         Button { isOpen.toggle() } label: {
             HStack(spacing: 8) {

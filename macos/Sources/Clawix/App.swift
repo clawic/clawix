@@ -79,7 +79,7 @@ struct ClawixApp: App {
     @StateObject private var updater = UpdaterController()
     @StateObject private var windowState = WindowState()
     @StateObject private var dictation = DictationCoordinator.shared
-    @StateObject private var vaultManager = VaultManager.shared
+    @StateObject private var vaultManager = SecretsManager.shared
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
     @StateObject private var terminalStore = TerminalSessionStore.shared
@@ -257,7 +257,7 @@ struct ClawixToolApp: App {
     @StateObject private var appState: AppState
     @StateObject private var windowState = WindowState()
     @StateObject private var dictation = DictationCoordinator.shared
-    @StateObject private var vaultManager = VaultManager.shared
+    @StateObject private var vaultManager = SecretsManager.shared
     @StateObject private var databaseManager = DatabaseManager()
     @StateObject private var featureFlags = FeatureFlags.shared
     @StateObject private var terminalStore = TerminalSessionStore.shared
@@ -297,7 +297,7 @@ struct ClawixToolApp: App {
 
 private struct MenuBarContent: View {
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @EnvironmentObject private var flags: FeatureFlags
     @ObservedObject private var micPrefs = MicrophonePreferences.shared
     @ObservedObject private var screenTools = ScreenToolService.shared

@@ -173,7 +173,7 @@
 "Check for Updates…" = "Buscar actualizaciones…";
 "Check the current bundle and save diagnostic logs" = "Comprueba el bundle actual y guarda logs de diagnóstico";
 "Choose a default tone for Clawix's responses" = "Elige un tono por defecto para las respuestas de Clawix";
-"Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step." = "Choose a master password. It protects everything in the vault. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step.";
+"Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step." = "Choose a master password. It protects everything in Secrets. Clawix never stores it; if you forget it, you'll need the recovery phrase you'll see in the next step.";
 "Choose a new master password" = "Choose a new master password";
 "Choose how Clawix merges pull requests" = "Elige cómo fusiona Clawix las pull requests";
 "Choose how fast inference runs in chats, sub-agents and compaction. Fast uses more of the plan" = "Elige a qué velocidad se ejecuta la inferencia en chats, sub-agentes y compactación. Rápido consume más del plan";
@@ -258,7 +258,7 @@
 "Copy working directory" = "Copiar directorio de trabajo";
 "Could not load AGENTS.md: \\(loadError)" = "Could not load AGENTS.md: \\(loadError)";
 "Could not locate the required binary. Set its path under Settings → Advanced settings." = "No se ha encontrado el binario requerido. Configúralo en Configuración → Configuración avanzada.";
-"Could not open the vault" = "Could not open the vault";
+"Could not open Secrets" = "Could not open Secrets";
 "Could not read the runtime index: %@" = "No se pudo leer el índice del runtime: %@";
 "Could not sign in." = "No se ha podido iniciar sesión.";
 "Could not sign in: %@" = "No se ha podido iniciar sesión: %@";
@@ -361,7 +361,7 @@
 "Enhanced" = "Mejorado";
 "Enhancement (coming soon)" = "Mejora (próximamente)";
 "Enter the passphrase that was used when this backup was exported. Existing secrets with the same internal name will be skipped." = "Enter the passphrase that was used when this backup was exported. Existing secrets with the same internal name will be skipped.";
-"Enter your master password to unlock the secrets vault." = "Enter your master password to unlock the secrets vault.";
+"Enter your master password to unlock the Secrets." = "Enter your master password to unlock the Secrets.";
 "Entity" = "Entity";
 "Environment variable pass-through" = "Paso de variables de entorno";
 "Environment variable passthrough" = "Environment variable passthrough";
@@ -425,7 +425,7 @@
 "Give Codex extra instructions and context for your project. Learn more" = "Dale a Codex instrucciones y contexto adicionales para tu proyecto. Más información";
 "Go to skills" = "Ir a skills";
 "Granted" = "Concedido";
-"Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability." = "Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability.";
+"Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability." = "Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability.";
 "Group by" = "Group by";
 "Grouped by project" = "Agrupado por proyecto";
 "Hard reload" = "Recarga forzada";
@@ -457,7 +457,7 @@
 "Incidents & triage" = "Incidentes y triaje";
 "Independent toggle for the start cue" = "Interruptor independiente para el sonido de inicio";
 "Independent toggle for the stop cue" = "Interruptor independiente para el sonido de parada";
-"Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched." = "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.";
+"Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched." = "Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use claw secrets. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.";
 "Inject a paragraph into ~/.codex/AGENTS.md teaching agents how to use `claw memory`. The block is delimited by sentinel comments so flipping the toggle off removes only this block." = "Inject a paragraph into ~/.codex/AGENTS.md teaching agents how to use `claw memory`. The block is delimited by sentinel comments so flipping the toggle off removes only this block.";
 "Inline" = "En línea";
 "Input Monitoring" = "Supervisión de entrada";
@@ -651,7 +651,7 @@
 "Pantallas" = "Pantallas";
 "Paste into the focused app" = "Pegar en la app enfocada";
 "Paste last transcription" = "Pegar última transcripción";
-"Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas." = "Paste the 24 words you wrote down when you set up the vault. Words can be separated by spaces, line breaks, or commas.";
+"Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas." = "Paste the 24 words you wrote down when you set up Secrets. Words can be separated by spaces, line breaks, or commas.";
 "Pause Music, Spotify or Podcasts (whichever is playing) and resume only that app" = "Pausa Música, Spotify o Podcasts (lo que esté sonando) y reanuda solo esa app";
 "Pause media while recording" = "Pausar reproducción mientras se graba";
 "Pause resume delay" = "Retardo al reanudar tras pausar";
@@ -665,7 +665,7 @@
 "Pick a Whisper size to start. Tiny is fast and runs anywhere; Small balances quality and disk; Large is the most accurate. You can change this later from Settings → Voice to Text." = "Elige un tamaño de Whisper para empezar. Tiny es rápido y funciona en cualquier sitio; Small equilibra calidad y disco; Large es el más preciso. Puedes cambiarlo más tarde desde Ajustes → Voice to Text.";
 "Pick a collection from the left." = "Pick a collection from the left.";
 "Pick a model to download. All run on this Mac." = "Elige un modelo para descargar. Todos se ejecutan en este Mac.";
-"Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore." = "Pick a passphrase to protect the backup. It is independent of the vault master password and is required to restore.";
+"Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore." = "Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore.";
 "Pick a profile from the list, or create a new one." = "Elige un perfil de la lista o crea uno nuevo.";
 "Pick a secret to inspect" = "Pick a secret to inspect";
 "Pick a transcript on the left." = "Elige una transcripción en la izquierda.";
@@ -804,7 +804,7 @@
 "Save failed: \\(saveError)" = "Save failed: \\(saveError)";
 "Save paragraph" = "Save paragraph";
 "Save permissions" = "Save permissions";
-"Save the bot token in your Secrets vault first, then reference it here by name." = "Save the bot token in your Secrets vault first, then reference it here by name.";
+"Save the bot token in your Secrets first, then reference it here by name." = "Save the bot token in your Secrets first, then reference it here by name.";
 "Save your new recovery phrase" = "Save your new recovery phrase";
 "Save your recovery phrase" = "Save your recovery phrase";
 "Saved \\(savedAt.formatted(.relative(presentation: .numeric)))" = "Saved \\(savedAt.formatted(.relative(presentation: .numeric)))";
@@ -829,8 +829,10 @@
 "Seconds to wait after recording stops before unmuting the system" = "Segundos a esperar tras parar la grabación antes de desactivar el silencio del sistema";
 "Secret token (optional)" = "Secret token (optional)";
 "Secrets" = "Secrets";
-"Secrets vault → Codex" = "Secrets vault → Codex";
+"Secrets locked" = "Secrets locked";
+"Secrets ready" = "Secrets ready";
 "Secrets you delete land here for 30 days. Restore them, or delete them forever." = "Secrets you delete land here for 30 days. Restore them, or delete them forever.";
+"Secrets → Codex" = "Secrets → Codex";
 "Select" = "Seleccionar";
 "Select a bot to see its details, or add one to get started." = "Select a bot to see its details, or add one to get started.";
 "Select a memory" = "Select a memory";
@@ -854,10 +856,10 @@
 "Set" = "Establecer";
 "Set a global keyboard shortcut for the popover. Leave empty to keep it disabled." = "Establece un atajo de teclado global para el popover. Déjalo vacío para mantenerlo desactivado.";
 "Set prefix" = "Establecer prefijo";
+"Set up Secrets" = "Set up Secrets";
+"Set up Secrets…" = "Set up Secrets…";
 "Set up Voice to Text" = "Configurar Voice to Text";
 "Set up local runtime" = "Configurar runtime local";
-"Set up vault…" = "Set up vault…";
-"Set up your secrets vault" = "Set up your secrets vault";
 "Set webhook" = "Set webhook";
 "Set when Clawix notifies you it has finished" = "Define cuándo te avisa Clawix de que ha terminado";
 "Setting up local runtime…" = "Configurando runtime local…";
@@ -871,6 +873,7 @@
 "Show MCP server status" = "Mostrar el estado del servidor MCP";
 "Show PR icons in the sidebar" = "Mostrar iconos de PR en la barra lateral";
 "Show PR status icons on chat rows in the sidebar" = "Mostrar iconos de estado de PR en las filas de chat de la barra lateral";
+"Show Secrets" = "Show Secrets";
 "Show alerts when notification permissions are required" = "Mostrar alertas cuando se requieran permisos de notificación";
 "Show alerts when your input is needed to continue" = "Mostrar alertas cuando se necesite tu intervención para continuar";
 "Show chat ID, context usage and rate limits" = "Mostrar el ID del chat, el uso del contexto y los límites de uso";
@@ -882,7 +885,6 @@
 "Show streaming partial transcripts in the floating pill. Only fires with backends that stream (Apple Speech)" = "Muestra transcripciones parciales en streaming en la cápsula flotante. Solo funciona con backends que envían en streaming (Apple Speech)";
 "Show token count" = "Mostrar conteo de tokens";
 "Show token usage in the composer" = "Muestra el uso de tokens en el compositor";
-"Show vault" = "Show vault";
 "Sidebar" = "Barra lateral";
 "Sidecar services that back upcoming database, memory, and drive features." = "Sidecar services that back upcoming database, memory, and drive features.";
 "Sign in" = "Iniciar sesión";
@@ -1036,8 +1038,6 @@
 "Utilities" = "Utilities";
 "Value" = "Value";
 "Variables" = "Variables";
-"Vault locked" = "Vault locked";
-"Vault ready" = "Vault ready";
 "Ventanas" = "Ventanas";
 "Version" = "Versión";
 "View all" = "Ver todo";
@@ -1091,14 +1091,14 @@
 "Working for %@" = "Trabajando %@";
 "Workspace dependencies" = "Dependencias del Workspace";
 "Worktrees" = "Worktrees";
-"Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again." = "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover the vault if you forget your master password. Clawix will not show them again.";
+"Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again." = "Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again.";
 "Write these 24 words down. The previous phrase no longer works. Clawix will not show this again." = "Write these 24 words down. The previous phrase no longer works. Clawix will not show this again.";
 "Writing plan" = "Plan de escritura";
 "You are editing a memory written by an agent. The original body will be preserved as `originalBody` and the edit will be stamped with `lastEditedBy: user`." = "You are editing a memory written by an agent. The original body will be preserved as `originalBody` and the edit will be stamped with `lastEditedBy: user`.";
 "You do not have any pinned chats yet" = "Aún no tienes chats anclados";
 "You: %@" = "Tú: %@";
+"Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value." = "Your Secrets is set up and unlocked. Codex can now use claw secrets to read placeholders without ever seeing the literal value.";
 "Your browser has been opened for the next step. Return here once you have confirmed." = "Te hemos abierto el navegador. Vuelve aquí cuando confirmes.";
-"Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value." = "Your secrets vault is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value.";
 "Zoom" = "Zoom";
 "Zoom In" = "Acercar";
 "Zoom Out" = "Alejar";

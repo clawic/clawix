@@ -85,7 +85,7 @@ enum AIClientFactory {
     static func client(
         for account: ProviderAccount,
         model: ModelDefinition,
-        accountStore: AIAccountStore = AIAccountVaultStore.shared
+        accountStore: AIAccountStore = AIAccountSecretsStore.shared
     ) async throws -> any AIClient {
         let credentials = try accountStore.revealCredentials(accountId: account.id)
         switch account.providerId {
@@ -112,7 +112,7 @@ enum AIClientFactory {
     static func client(
         forFeature feature: FeatureRouting.FeatureID,
         capability: Capability,
-        accountStore: AIAccountStore = AIAccountVaultStore.shared
+        accountStore: AIAccountStore = AIAccountSecretsStore.shared
     ) async throws -> any AIClient {
         guard let resolved = FeatureRouting.resolve(
             feature: feature,

@@ -56,7 +56,7 @@ struct TelegramServiceClient {
 
     // MARK: - Register a bot
 
-    /// Wraps `claw channels telegram connect`. The Secrets vault must
+    /// Wraps `claw channels telegram connect`. The Secrets must
     /// already contain the bot token under `secretName`. Returns the
     /// raw envelope so the UI can show the CLI stderr if the connect
     /// failed (e.g. secret not found, token invalid).

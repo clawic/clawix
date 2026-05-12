@@ -3,7 +3,7 @@ import GRDB
 import SecretsCrypto
 import SecretsPersistence
 
-enum VaultMetaStore {
+enum SecretsMetaStore {
 
     private static let snapshotKey = "snapshot"
 

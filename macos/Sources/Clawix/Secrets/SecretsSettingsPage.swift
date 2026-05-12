@@ -10,11 +10,11 @@ import SecretsVault
 /// "Secrets" entry; the Secrets data lives in the dedicated
 /// `secretsHome` route, this is just the operations panel.
 struct SecretsSettingsPage: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @EnvironmentObject private var appState: AppState
 
     @State private var importPreview: ImportPreview?
-    @State private var importPreviewFormat: VaultManager.ImportFormat?
+    @State private var importPreviewFormat: SecretsManager.ImportFormat?
     @State private var importBanner: String?
     @State private var importErrorBanner: String?
     @State private var integrityResult: AuditIntegrityReport?
@@ -85,8 +85,8 @@ struct SecretsSettingsPage: View {
                 statusLabel(
                     title: "Codex shell access",
                     detail: symlinkInstalled
-                        ? "Installed at ~/bin/clawix-secrets-proxy."
-                        : "Not installed. Codex can’t read Secrets from the shell yet."
+                        ? "Installed at ~/bin/claw."
+                        : "Not installed. Codex can’t use Secrets from the shell yet."
                 )
             } trailing: {
                 IconChipButton(
@@ -323,10 +323,13 @@ struct SecretsSettingsPage: View {
 
     // MARK: - Helpers
 
-    // The legacy UDS proxy + CLI symlink are gone: the bundled `claw`
-    // CLI lives inside the .app at Contents/Helpers/clawjs and is
-    // invoked directly by the app and by scripts-dev wrappers.
-    private var symlinkInstalled: Bool { false }
+    private var symlinkInstalled: Bool {
+        FileManager.default.fileExists(
+            atPath: FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("bin/claw", isDirectory: false)
+                .path
+        )
+    }
 
     private func installSymlink() {
         if let url = vault.installCliSymlink() {
@@ -345,7 +348,7 @@ struct SecretsSettingsPage: View {
         }
     }
 
-    private func pickAndImport(format: VaultManager.ImportFormat, allowed: [UTType]) {
+    private func pickAndImport(format: SecretsManager.ImportFormat, allowed: [UTType]) {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = allowed
         panel.allowsMultipleSelection = false
@@ -373,7 +376,7 @@ struct SecretsSettingsPage: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let data = try Data(contentsOf: url)
-            guard BackupCodec.verifyMagic(data: data) else {
+            guard SecretsBackupFile.verifyMagic(data: data) else {
                 importErrorBanner = "Not a valid .clawixsecrets file (magic header mismatch)."
                 return
             }
@@ -385,10 +388,17 @@ struct SecretsSettingsPage: View {
     }
 }
 
+private enum SecretsBackupFile {
+    static func verifyMagic(data: Data) -> Bool {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        return object["format"] as? String == "clawix-secrets-backup-v1"
+    }
+}
+
 // MARK: - Backup sheets
 
 private struct BackupExportSheet: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @Binding var isPresented: Bool
     @State private var passphrase: String = ""
     @State private var passphraseConfirm: String = ""
@@ -413,14 +423,14 @@ private struct BackupExportSheet: View {
             Text("Pick a passphrase to protect the backup. It is independent of Secrets master password and is required to restore.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
-            VaultCard {
+            SecretsCard {
                 VStack(spacing: 12) {
-                    VaultPasswordField(placeholder: "Backup passphrase", text: $passphrase)
-                    VaultPasswordField(placeholder: "Confirm passphrase", text: $passphraseConfirm)
-                    if let error { VaultErrorLine(text: error) }
+                    SecretsPasswordField(placeholder: "Backup passphrase", text: $passphrase)
+                    SecretsPasswordField(placeholder: "Confirm passphrase", text: $passphraseConfirm)
+                    if let error { SecretsErrorLine(text: error) }
                     HStack(spacing: 10) {
-                        VaultSecondaryButton(title: "Cancel") { isPresented = false }
-                        VaultPrimaryButton(
+                        SecretsSecondaryButton(title: "Cancel") { isPresented = false }
+                        SecretsPrimaryButton(
                             title: "Export and choose location…",
                             isLoading: isWorking,
                             isEnabled: passphrase.count >= 8 && passphrase == passphraseConfirm
@@ -445,7 +455,7 @@ private struct BackupExportSheet: View {
         Task {
             defer { isWorking = false }
             do {
-                let data = try vault.exportEncryptedBackup(passphrase: passphrase)
+                let data = try await vault.exportEncryptedBackup(passphrase: passphrase)
                 let panel = NSSavePanel()
                 panel.title = "Save Secrets backup"
                 panel.nameFieldStringValue = "clawix.clawixsecrets"
@@ -462,7 +472,7 @@ private struct BackupExportSheet: View {
 }
 
 private struct BackupImportSheet: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @Binding var isPresented: Bool
     let data: Data
     @State private var passphrase: String = ""
@@ -488,10 +498,10 @@ private struct BackupImportSheet: View {
             Text("Enter the passphrase that was used when this backup was exported. Existing secrets with the same internal name will be skipped.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
-            VaultCard {
+            SecretsCard {
                 VStack(spacing: 12) {
-                    VaultPasswordField(placeholder: "Backup passphrase", text: $passphrase)
-                    if let error { VaultErrorLine(text: error) }
+                    SecretsPasswordField(placeholder: "Backup passphrase", text: $passphrase)
+                    if let error { SecretsErrorLine(text: error) }
                     if let resultText {
                         Text(resultText)
                             .font(BodyFont.system(size: 11.5, wght: 600))
@@ -499,8 +509,8 @@ private struct BackupImportSheet: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     HStack(spacing: 10) {
-                        VaultSecondaryButton(title: "Cancel") { isPresented = false }
-                        VaultPrimaryButton(title: "Restore", isLoading: isWorking, isEnabled: !passphrase.isEmpty) {
+                        SecretsSecondaryButton(title: "Cancel") { isPresented = false }
+                        SecretsPrimaryButton(title: "Restore", isLoading: isWorking, isEnabled: !passphrase.isEmpty) {
                             restore()
                         }
                     }
@@ -518,7 +528,7 @@ private struct BackupImportSheet: View {
         Task {
             defer { isWorking = false }
             do {
-                let result = try vault.importEncryptedBackup(data, passphrase: passphrase)
+                let result = try await vault.importEncryptedBackup(data, passphrase: passphrase)
                 resultText = "Restored \(result.created) secret\(result.created == 1 ? "" : "s"); \(result.skipped) skipped as duplicates."
                 error = nil
             } catch {

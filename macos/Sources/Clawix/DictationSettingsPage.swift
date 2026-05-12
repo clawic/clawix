@@ -1316,7 +1316,7 @@ private struct DictionaryFieldStyle: View {
 private struct CloudBackendsRow: View {
     @State private var sheetOpen = false
     @State private var configuredCount: Int = 0
-    @ObservedObject private var vault: VaultManager = .shared
+    @ObservedObject private var vault: SecretsManager = .shared
 
     var body: some View {
         SettingsRow {

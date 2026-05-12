@@ -1,6 +1,6 @@
 import Foundation
 
-enum VaultPaths {
+enum SecretsPaths {
     /// Secrets directory. Honors `CLAWIX_SECRETS_DIR` so dummy mode (and tests)
     /// can sandbox Secrets away from the user's real Application Support
     /// folder. Without it the real production location is used.

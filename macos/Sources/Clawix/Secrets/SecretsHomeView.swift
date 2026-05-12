@@ -2,7 +2,7 @@ import SwiftUI
 import SecretsModels
 import SecretsVault
 struct SecretsHomeView: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @State private var selectedSecretId: EntityID?
     @State private var showAddSheet: Bool = false
     @State private var listFilter: ListFilter = .all

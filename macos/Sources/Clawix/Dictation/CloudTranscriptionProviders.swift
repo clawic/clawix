@@ -6,7 +6,7 @@ import AVFoundation
 /// `/v1/audio/transcriptions` endpoint. Each takes a 16 kHz mono
 /// WAV blob and returns the transcript as a string. API keys live in
 /// the user's encrypted vault under the "Clawix System" container
-/// (see `CloudTranscriptionSecrets`); the vault must be unlocked.
+/// (see `CloudTranscriptionSecrets`); Secrets must be unlocked.
 ///
 /// These providers are dispatched from `DictationCoordinator.stop()`
 /// when the user picks one in Settings → Voice to Text → Avanzado →

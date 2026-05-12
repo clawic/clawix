@@ -50,7 +50,7 @@ final class OAuthCoordinator: NSObject, ObservableObject {
             throw CoordinatorError.missingCode
         }
         let tokens = try await strategy.exchangeCode(code, verifier: authorization.codeVerifier)
-        let store = AIAccountVaultStore.shared
+        let store = AIAccountSecretsStore.shared
         let label = labelFromTokens(tokens, store: store, providerId: strategy.providerId)
         let draft = ProviderAccountDraft(
             providerId: strategy.providerId,

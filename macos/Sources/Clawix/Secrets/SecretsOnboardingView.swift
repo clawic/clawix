@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SecretsOnboardingView: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
 
     enum Step: Equatable {
         case password
@@ -17,7 +17,7 @@ struct SecretsOnboardingView: View {
     @State private var isWorking: Bool = false
 
     var body: some View {
-        VaultUI.centered(480) {
+        SecretsUI.centered(480) {
             VStack(spacing: 16) {
                 switch step {
                 case .password:
@@ -48,15 +48,15 @@ struct SecretsOnboardingView: View {
                 .multilineTextAlignment(.center)
         }
 
-        VaultCard {
+        SecretsCard {
             VStack(spacing: 12) {
-                VaultPasswordField(placeholder: "Master password", text: $password)
-                VaultPasswordField(placeholder: "Confirm master password", text: $passwordConfirm)
+                SecretsPasswordField(placeholder: "Master password", text: $password)
+                SecretsPasswordField(placeholder: "Confirm master password", text: $passwordConfirm)
                 if let error {
-                    VaultErrorLine(text: error)
+                    SecretsErrorLine(text: error)
                 }
                 strengthIndicator
-                VaultPrimaryButton(
+                SecretsPrimaryButton(
                     title: "Continue",
                     isLoading: isWorking,
                     isEnabled: canSubmitPassword
@@ -122,7 +122,7 @@ struct SecretsOnboardingView: View {
                 .multilineTextAlignment(.center)
         }
 
-        VaultCard {
+        SecretsCard {
             VStack(alignment: .leading, spacing: 10) {
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
@@ -134,10 +134,10 @@ struct SecretsOnboardingView: View {
                 }
                 Divider().background(Color.white.opacity(0.05))
                 HStack(spacing: 10) {
-                    VaultSecondaryButton(title: "Copy to clipboard") {
+                    SecretsSecondaryButton(title: "Copy to clipboard") {
                         copyPhrase(phrase)
                     }
-                    VaultPrimaryButton(title: "I've written it down") {
+                    SecretsPrimaryButton(title: "I've written it down") {
                         step = .verifyPhrase(phrase: phrase)
                     }
                 }
@@ -190,7 +190,7 @@ struct SecretsOnboardingView: View {
             Text("Secrets ready")
                 .font(BodyFont.system(size: 17, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Text("Your Secrets is set up and unlocked. Codex can now use clawix-secrets-proxy to read placeholders without ever seeing the literal value.")
+            Text("Secrets is set up and unlocked. Codex can now use `claw secrets` without ever seeing literal values.")
                 .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textSecondary)
                 .multilineTextAlignment(.center)
@@ -260,7 +260,7 @@ private struct VerifyPhrasePanel: View {
                 .multilineTextAlignment(.center)
         }
 
-        VaultCard {
+        SecretsCard {
             VStack(spacing: 12) {
                 ForEach(Array(indices.enumerated()), id: \.offset) { rowIndex, wordIndex in
                     HStack(spacing: 10) {
@@ -290,10 +290,10 @@ private struct VerifyPhrasePanel: View {
                         )
                     }
                 }
-                if let error { VaultErrorLine(text: error) }
+                if let error { SecretsErrorLine(text: error) }
                 HStack(spacing: 10) {
-                    VaultSecondaryButton(title: "Back to phrase", action: onBack)
-                    VaultPrimaryButton(title: "Confirm and finish", isEnabled: canSubmit) {
+                    SecretsSecondaryButton(title: "Back to phrase", action: onBack)
+                    SecretsPrimaryButton(title: "Confirm and finish", isEnabled: canSubmit) {
                         verify()
                     }
                 }

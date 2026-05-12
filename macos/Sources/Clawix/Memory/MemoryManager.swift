@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// State orchestrator for the Memory tab. Mirrors the role `VaultManager`
+/// State orchestrator for the Memory tab. Mirrors the role `SecretsManager`
 /// plays for Secrets: a thin wrapper that owns the HTTP client, exposes
 /// `@Published` state for SwiftUI, and routes mutations through the
 /// daemon. Memory has no master-password lock, so the state machine is

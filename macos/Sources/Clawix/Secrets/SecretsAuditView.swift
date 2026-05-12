@@ -3,7 +3,7 @@ import SecretsModels
 import SecretsVault
 
 struct SecretsAuditView: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     let onBack: () -> Void
 
     @State private var events: [DecryptedAuditEvent] = []

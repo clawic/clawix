@@ -3,7 +3,7 @@ import SecretsModels
 import SecretsVault
 
 struct GrantsTab: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     let secret: SecretRecord
     let onChanged: () -> Void
     @State private var error: String?
@@ -11,12 +11,12 @@ struct GrantsTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let error { VaultErrorLine(text: error) }
+            if let error { SecretsErrorLine(text: error) }
             if grantsForSecret.isEmpty {
                 Text("No agent grants for this secret yet.")
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
-                Text("Grants are created via `clawix-secrets-proxy request-activation`. Approving the prompt issues a one-time token bound to a specific capability.")
+                Text("Grants are created via `claw secrets grants issue`. Approving the prompt issues a one-time token bound to a specific capability.")
                     .font(BodyFont.system(size: 11))
                     .foregroundColor(Palette.textSecondary)
             } else {

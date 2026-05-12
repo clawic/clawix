@@ -241,24 +241,6 @@ if [[ -f "$BRIDGED_PKG/Package.swift" ]]; then
     fi
 fi
 
-# 1.6) Build the secrets-vault proxy helper (clawix-secrets-proxy). Lives
-#      under Helpers/SecretsProxy/, shares SecretsProxyCore with the GUI,
-#      and is what Codex / Claude Code / scripts call to use vault
-#      secrets without ever seeing the literal value. The helper connects
-#      to the running app over a unix-domain socket inside
-#      ~/Library/Application Support/Clawix/secrets/proxy.sock.
-SECRETS_PROXY_PKG="$PROJECT_DIR/Helpers/SecretsProxy"
-SECRETS_PROXY_BIN_BUILT=""
-if [[ -f "$SECRETS_PROXY_PKG/Package.swift" ]]; then
-    echo "==> Building clawix-secrets-proxy helper…"
-    (cd "$SECRETS_PROXY_PKG" && swift build 2>&1)
-    SECRETS_PROXY_BIN_BUILT="$SECRETS_PROXY_PKG/.build/debug/clawix-secrets-proxy"
-    if [[ ! -f "$SECRETS_PROXY_BIN_BUILT" ]]; then
-        echo "WARN: clawix-secrets-proxy binary not produced; bundle will ship without it" >&2
-        SECRETS_PROXY_BIN_BUILT=""
-    fi
-fi
-
 # 2) Kill any previous instance, however launched.
 #    The frame is persisted on every move/resize, so killing is safe.
 PIDS=$({
@@ -368,12 +350,6 @@ shopt -u nullglob
 #      register the same agent slot. The defaults suite is also the
 #      literal `clawix.bridge` so the pairing bearer is shared between
 #      the GUI's PairingService and the daemon.
-if [[ -n "$SECRETS_PROXY_BIN_BUILT" ]]; then
-    mkdir -p "$BUNDLE/Contents/Helpers"
-    cp "$SECRETS_PROXY_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-secrets-proxy"
-    chmod +x "$BUNDLE/Contents/Helpers/clawix-secrets-proxy"
-fi
-
 if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
     mkdir -p "$BUNDLE/Contents/Helpers" "$BUNDLE/Contents/Library/LaunchAgents"
     cp "$BRIDGED_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-bridged"
@@ -594,23 +570,6 @@ if [[ -f "$HELPER_BIN" ]]; then
         echo "WARN: codesign for clawix-bridged with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
         cat /tmp/clawix-bridged-sign.err >&2
         codesign --force --sign - --identifier "clawix.bridge" "$HELPER_BIN"
-    fi
-fi
-
-SECRETS_PROXY_HELPER_BIN="$BUNDLE/Contents/Helpers/clawix-secrets-proxy"
-if [[ -f "$SECRETS_PROXY_HELPER_BIN" ]]; then
-    if ! codesign --force --sign "$SIGN_IDENTITY" \
-                  --identifier "clawix.secrets-proxy" \
-                  --timestamp=none \
-                  "$SECRETS_PROXY_HELPER_BIN" 2>/tmp/clawix-secrets-proxy-sign.err; then
-        if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
-            echo "ERROR: codesign for clawix-secrets-proxy failed:" >&2
-            cat /tmp/clawix-secrets-proxy-sign.err >&2
-            exit 1
-        fi
-        echo "WARN: codesign for clawix-secrets-proxy with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
-        cat /tmp/clawix-secrets-proxy-sign.err >&2
-        codesign --force --sign - --identifier "clawix.secrets-proxy" "$SECRETS_PROXY_HELPER_BIN"
     fi
 fi
 

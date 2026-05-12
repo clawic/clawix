@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct VaultLockScreen: View {
-    @EnvironmentObject private var vault: VaultManager
+struct SecretsLockScreen: View {
+    @EnvironmentObject private var vault: SecretsManager
     @State private var password: String = ""
     @State private var error: String?
     @State private var isWorking: Bool = false
@@ -40,7 +40,7 @@ struct VaultLockScreen: View {
                     .frame(maxWidth: columnWidth)
                     .padding(.bottom, 24)
 
-                VaultUnlockPasswordField(
+                SecretsUnlockPasswordField(
                     password: $password,
                     showPassword: $showPassword,
                     focused: $passwordFocused,
@@ -69,7 +69,7 @@ struct VaultLockScreen: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(VaultUnlockButtonStyle(enabled: canUnlock))
+                .buttonStyle(SecretsUnlockButtonStyle(enabled: canUnlock))
                 .frame(width: columnWidth)
                 .disabled(!canUnlock)
                 .padding(.bottom, 14)
@@ -132,7 +132,7 @@ struct VaultLockScreen: View {
 /// The visual shell is shared between secure and plain modes so toggling
 /// the eye doesn't pop the layout. Focus animates the fill and stroke a
 /// touch brighter so the user gets a clear "you're typing here" cue.
-private struct VaultUnlockPasswordField: View {
+private struct SecretsUnlockPasswordField: View {
     @Binding var password: String
     @Binding var showPassword: Bool
     var focused: FocusState<Bool>.Binding
@@ -191,15 +191,15 @@ private struct VaultUnlockPasswordField: View {
 /// rendered as a subtle dark capsule (matching the field) instead of a
 /// 45%-opacity white pill, which read as washed-out gray. The button only
 /// "lights up" once there is a password to submit.
-private struct VaultUnlockButtonStyle: ButtonStyle {
+private struct SecretsUnlockButtonStyle: ButtonStyle {
     var enabled: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        VaultUnlockButtonLabel(configuration: configuration, enabled: enabled)
+        SecretsUnlockButtonLabel(configuration: configuration, enabled: enabled)
     }
 }
 
-private struct VaultUnlockButtonLabel: View {
+private struct SecretsUnlockButtonLabel: View {
     let configuration: ButtonStyle.Configuration
     let enabled: Bool
     @State private var hovered = false

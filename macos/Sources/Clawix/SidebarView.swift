@@ -180,7 +180,7 @@ enum SidebarPrefs {
 
 struct SidebarView: View {
     @EnvironmentObject var appState: AppState
-    @EnvironmentObject var vault: VaultManager
+    @EnvironmentObject var vault: SecretsManager
     @EnvironmentObject var flags: FeatureFlags
     @State private var settingsPopoverOpen: Bool = false
     @State private var projectEditor: ProjectEditorContext?
@@ -5168,7 +5168,7 @@ private struct ToolsFilterRow: View {
     let action: () -> Void
 
     @State private var hovered = false
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
 
     var body: some View {
         Button(action: action) {
@@ -5639,7 +5639,7 @@ private struct ToolDragChipView: View {
     let entry: SidebarToolEntry
     let width: CGFloat
     let shadowInset: CGFloat
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
 
     var body: some View {
         HStack(spacing: 11) {

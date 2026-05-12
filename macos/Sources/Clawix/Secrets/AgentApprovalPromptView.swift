@@ -20,7 +20,7 @@ struct AgentApprovalPromptView: View {
             header
                 .padding(.bottom, 14)
 
-            VaultCard {
+            SecretsCard {
                 VStack(alignment: .leading, spacing: 12) {
                     detailRow(label: "Agent", value: pending.request.agent)
                     detailRow(label: "Secret", value: pending.request.secretInternalName)
@@ -73,7 +73,7 @@ struct AgentApprovalPromptView: View {
                 .padding(.top, 10)
 
             HStack(spacing: 10) {
-                VaultSecondaryButton(title: "Deny", action: onDeny)
+                SecretsSecondaryButton(title: "Deny", action: onDeny)
                 Spacer()
                 Button(action: onApprove) {
                     Text("Approve · issue token")

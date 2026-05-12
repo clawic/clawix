@@ -18,7 +18,7 @@ struct SecretsCodexInjectionCard: View {
             Text("Secrets → Codex")
                 .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Text("Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use clawix-secrets-proxy. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.")
+            Text("Inject a paragraph into ~/.codex/AGENTS.md teaching Codex how to use `claw secrets`. The block is delimited by sentinel comments so flipping the toggle off removes only this block, leaving the rest of your AGENTS.md untouched.")
                 .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Palette.textSecondary)
                 .padding(.bottom, 14)
@@ -36,7 +36,7 @@ struct SecretsCodexInjectionCard: View {
                         .foregroundColor(Palette.textPrimary)
                     Text(isInjected
                          ? "Codex sees the secrets paragraph at the top of every conversation."
-                         : "Turn on to teach Codex how to call the proxy.")
+                         : "Turn on to teach Codex how to call `claw secrets`.")
                         .font(BodyFont.system(size: 11))
                         .foregroundColor(Palette.textSecondary)
                 }

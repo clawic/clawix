@@ -85,7 +85,7 @@ enum SkillParamType: String, Codable, CaseIterable {
     case enumValue = "enum"
     case number
     case bool
-    /// Reference to a Secrets-Vault secret. The UI shows a secret picker.
+    /// Reference to a Secrets secret. The UI shows a secret picker.
     case secretRef
 }
 
@@ -112,7 +112,7 @@ struct SkillParam: Codable, Equatable, Identifiable, Hashable {
 /// Tagged union of values a `SkillParam` can hold. Mirrors what
 /// SKILL.md frontmatter can declare (string/number/bool/enum). The
 /// `secretRef` case carries the secret id; the daemon fetches the
-/// actual value from the Vault at compile time and never lets it
+/// actual value from Secrets at compile time and never lets it
 /// reach the LLM as a literal in clear text.
 enum SkillParamValue: Codable, Equatable, Hashable {
     case string(String)

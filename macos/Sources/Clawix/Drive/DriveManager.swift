@@ -10,7 +10,7 @@ extension Notification.Name {
 /// `ClawJSDriveClient` (HTTP) and `ClawJSDriveRealtimeClient` (WS), owns
 /// the auto-login flow, and exposes a SwiftUI-friendly snapshot of items
 /// for the active folder + counts + audit tail. Mirrors the philosophy
-/// of `VaultManager`: state machine, no hidden globals, all mutations
+/// of `SecretsManager`: state machine, no hidden globals, all mutations
 /// flow through this object so views can drive optimistic updates.
 @MainActor
 final class DriveManager: ObservableObject {

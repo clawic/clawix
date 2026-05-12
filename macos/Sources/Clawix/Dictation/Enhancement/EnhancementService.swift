@@ -103,7 +103,7 @@ final class EnhancementService {
         if let routed = FeatureRouting.resolve(
             feature: .enhancement,
             capability: .chat,
-            store: AIAccountVaultStore.shared
+            store: AIAccountSecretsStore.shared
         ) {
             let context = EnhancementContext(
                 clipboardText: defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
@@ -122,7 +122,7 @@ final class EnhancementService {
                     timeoutSeconds: timeout
                 )
                 let answer = try await client.chat(request).trimmingCharacters(in: .whitespacesAndNewlines)
-                try? AIAccountVaultStore.shared.touch(accountId: routed.account.id)
+                try? AIAccountSecretsStore.shared.touch(accountId: routed.account.id)
                 return answer.isEmpty ? raw : answer
             } catch {
                 NSLog("[Clawix.Enhancement] new-routing failed, falling back: %@", String(describing: error))

@@ -95,6 +95,39 @@ final class ClawJSSecretsClient {
         try await post("/v1/secrets/change-password", body: ["oldPassword": old, "newPassword": new])
     }
 
+    struct BackupExportResponse: Codable {
+        let ok: Bool
+        let format: String
+        let exportedAt: String
+        let backup: AnyCodable
+    }
+
+    struct BackupImportResponse: Codable {
+        let ok: Bool
+        let format: String
+        let imported: [String: AnyCodable]
+    }
+
+    func exportBackup(passphrase: String) async throws -> Data {
+        let response: BackupExportResponse = try await post(
+            "/v1/secrets/backup/export",
+            body: ["passphrase": passphrase]
+        )
+        return try JSONEncoder().encode(response.backup)
+    }
+
+    func importBackup(data: Data, passphrase: String) async throws -> BackupImportResponse {
+        let object = try JSONSerialization.jsonObject(with: data)
+        guard let backup = object as? [String: Any],
+              backup["format"] as? String == "clawix-secrets-backup-v1" else {
+            throw ClawJSSecretsError.server(status: 400, message: "Not a valid .clawixsecrets file")
+        }
+        return try await post(
+            "/v1/secrets/backup/import",
+            body: ["passphrase": passphrase, "backup": backup]
+        )
+    }
+
     // MARK: - Doctor + plugins
 
     func doctor() async throws -> [String: AnyCodable] {

@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 
 /// Singleton observable manager for the bundled `@clawjs/database`
-/// daemon. Mirrors the role of `VaultManager` for the Vault service.
+/// daemon. Mirrors the role of `SecretsManager` for Secrets service.
 ///
 /// Owns:
 ///   - The HTTP client (`DatabaseClient`) with a fresh JWT.

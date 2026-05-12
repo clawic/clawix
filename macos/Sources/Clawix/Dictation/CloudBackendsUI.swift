@@ -7,7 +7,7 @@ import SwiftUI
 /// "Clawix System" container; never touches the system Keychain.
 struct CloudBackendsSheet: View {
     @Binding var isPresented: Bool
-    @ObservedObject private var vault: VaultManager = .shared
+    @ObservedObject private var vault: SecretsManager = .shared
 
     @State private var groqKey: String = ""
     @State private var deepgramKey: String = ""

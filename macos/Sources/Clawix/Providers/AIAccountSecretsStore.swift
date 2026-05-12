@@ -20,12 +20,12 @@ import SecretsVault
 /// the trash event names the account, and the new secret carries the
 /// same `internalName`.
 @MainActor
-final class AIAccountVaultStore: AIAccountStore {
+final class AIAccountSecretsStore: AIAccountStore {
 
-    static let shared = AIAccountVaultStore()
+    static let shared = AIAccountSecretsStore()
 
     /// Container name for provider accounts. Uses the same "Clawix
-    /// System" container `SystemVaultSecrets` does, so users see one
+    /// System" container `SystemSecrets` does, so users see one
     /// folder of app-owned secrets instead of two.
     static let containerName = "Clawix System"
 
@@ -43,7 +43,7 @@ final class AIAccountVaultStore: AIAccountStore {
 
     @MainActor
     private func _listAccountsOnMain() throws -> [ProviderAccount] {
-        guard let store = VaultManager.shared.store else {
+        guard let store = SecretsManager.shared.store else {
             // Vault locked. Treat as "no accounts visible".
             return []
         }
@@ -68,7 +68,7 @@ final class AIAccountVaultStore: AIAccountStore {
 
     @MainActor
     private func _createOnMain(_ draft: ProviderAccountDraft) throws -> ProviderAccount {
-        guard let store = VaultManager.shared.store else {
+        guard let store = SecretsManager.shared.store else {
             throw AIAccountStoreError.vaultLocked
         }
         let trimmedLabel = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -152,7 +152,7 @@ final class AIAccountVaultStore: AIAccountStore {
         baseURLOverride: URL??,
         accountEmail: String??
     ) throws -> ProviderAccount {
-        guard let store = VaultManager.shared.store else { throw AIAccountStoreError.vaultLocked }
+        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
         guard let (existing, secret, fields) = try findAccount(id: id, store: store) else {
             throw AIAccountStoreError.accountNotFound
         }
@@ -229,7 +229,7 @@ final class AIAccountVaultStore: AIAccountStore {
         expiresAt: Date?,
         scope: String?
     ) throws {
-        guard let store = VaultManager.shared.store else { throw AIAccountStoreError.vaultLocked }
+        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
         guard let (existing, secret, _) = try findAccount(id: accountId, store: store) else {
             throw AIAccountStoreError.accountNotFound
         }
@@ -259,7 +259,7 @@ final class AIAccountVaultStore: AIAccountStore {
 
     @MainActor
     private func _touchOnMain(accountId: UUID) throws {
-        guard let store = VaultManager.shared.store else { return }
+        guard let store = SecretsManager.shared.store else { return }
         guard let (existing, secret, fields) = try findAccount(id: accountId, store: store) else { return }
         let credentials = revealCredentialsRaw(secret: secret, fields: fields, store: store)
         try replaceSecret(
@@ -288,7 +288,7 @@ final class AIAccountVaultStore: AIAccountStore {
 
     @MainActor
     private func _deleteOnMain(id: UUID) throws {
-        guard let store = VaultManager.shared.store else { throw AIAccountStoreError.vaultLocked }
+        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
         guard let (_, secret, _) = try findAccount(id: id, store: store) else {
             throw AIAccountStoreError.accountNotFound
         }
@@ -303,7 +303,7 @@ final class AIAccountVaultStore: AIAccountStore {
 
     @MainActor
     private func _revealOnMain(accountId: UUID) throws -> AIAccountCredentials {
-        guard let store = VaultManager.shared.store else { throw AIAccountStoreError.vaultLocked }
+        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
         guard let (_, secret, fields) = try findAccount(id: accountId, store: store) else {
             throw AIAccountStoreError.accountNotFound
         }

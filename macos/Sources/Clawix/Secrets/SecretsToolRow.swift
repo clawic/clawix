@@ -5,7 +5,7 @@ import SwiftUI
 /// padding, font, hover/selected colors and corner radius are identical
 /// across the whole sidebar nav.
 struct SecretsToolRow: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     let isSelected: Bool
     let onTap: () -> Void
     @State private var hovered = false

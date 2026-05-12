@@ -592,7 +592,7 @@ final class DictationCoordinator: ObservableObject {
         guard let routed = FeatureRouting.resolve(
             feature: .sttCloud,
             capability: .stt,
-            store: AIAccountVaultStore.shared
+            store: AIAccountSecretsStore.shared
         ) else { return nil }
         do {
             let client = try await AIClientFactory.client(for: routed.account, model: routed.model)
@@ -604,7 +604,7 @@ final class DictationCoordinator: ObservableObject {
                 timeoutSeconds: 60
             )
             let raw = try await client.transcribe(request)
-            try? AIAccountVaultStore.shared.touch(accountId: routed.account.id)
+            try? AIAccountSecretsStore.shared.touch(accountId: routed.account.id)
             trace("transcribe: routed-stt ok provider=\(routed.account.providerId.rawValue) chars=\(raw.count)")
             return autoFormat ? TranscriptFormatter.format(raw) : raw
         } catch {

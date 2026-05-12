@@ -59,7 +59,7 @@ struct EnhancementSummaryRow: View {
 struct EnhancementSettingsSheet: View {
     @ObservedObject var library: PromptLibrary
     @Binding var isPresented: Bool
-    @ObservedObject private var vault: VaultManager = .shared
+    @ObservedObject private var vault: SecretsManager = .shared
 
     @AppStorage(EnhancementSettings.providerKey) private var providerRaw = EnhancementProviderID.openai.rawValue
     @AppStorage(EnhancementSettings.skipShortEnabledKey) private var skipShortEnabled = true

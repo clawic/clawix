@@ -25,16 +25,16 @@ let package = Package(
         // of `AppState`'s engine-side responsibilities as the daemon
         // refactor progresses.
         .package(path: "../packages/ClawixEngine"),
-        // Secrets vault data model (Codable records; pure Foundation).
+        // Secrets data model (Codable records; pure Foundation).
         .package(path: "../packages/SecretsModels"),
-        // Secrets vault crypto primitives (Argon2id KDF + ChaCha20-Poly1305
+        // Secrets crypto primitives (Argon2id KDF + ChaCha20-Poly1305
         // AEAD + verifier + LockableSecret + calibration).
         .package(path: "../packages/SecretsCrypto"),
         // Argon2id reference implementation, vendored.
         .package(path: "../packages/ClawixArgon2"),
-        // Secrets vault persistence (GRDB schema, migrator, record conformances).
+        // Secrets persistence (GRDB schema, migrator, record conformances).
         .package(path: "../packages/SecretsPersistence"),
-        // High-level secrets vault store (CRUD + per-item key wrapping).
+        // High-level Secrets store (CRUD + per-item key wrapping).
         .package(path: "../packages/SecretsVault"),
         // Wire types + placeholder resolver + redactor shared with the helper.
         .package(path: "../packages/SecretsProxyCore"),

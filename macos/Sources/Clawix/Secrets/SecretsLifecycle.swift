@@ -2,12 +2,12 @@ import Foundation
 import AppKit
 
 @MainActor
-final class VaultLifecycle {
+final class SecretsLifecycle {
 
-    private weak var vault: VaultManager?
+    private weak var vault: SecretsManager?
     private var observers: [NSObjectProtocol] = []
 
-    init(attaching vault: VaultManager) {
+    init(attaching vault: SecretsManager) {
         self.vault = vault
         installObservers()
     }

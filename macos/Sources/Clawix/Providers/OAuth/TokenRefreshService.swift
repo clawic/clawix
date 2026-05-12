@@ -3,7 +3,7 @@ import Foundation
 
 /// Background actor that walks every OAuth account on a 60s timer and
 /// refreshes their access tokens before they expire (5-min lookahead).
-/// Pauses when the vault is locked; resumes on `VaultLifecycle.didUnlock`.
+/// Pauses when the vault is locked; resumes on `SecretsLifecycle.didUnlock`.
 @MainActor
 final class TokenRefreshService: ObservableObject {
 
@@ -29,7 +29,7 @@ final class TokenRefreshService: ObservableObject {
     }
 
     func tick() async {
-        let store = AIAccountVaultStore.shared
+        let store = AIAccountSecretsStore.shared
         let accounts = (try? store.listAccounts()) ?? []
         for account in accounts {
             guard case .oauth(let flavor) = account.authMethod, account.isEnabled else { continue }

@@ -5,7 +5,7 @@ import Combine
 /// Top-level `@MainActor` observable for the Badger UI. Wraps the typed
 /// HTTP client and watches `ClawJSServiceManager` for liveness transitions
 /// so views can react when the helper crashes / restarts. Mirrors the
-/// philosophy of `DriveManager` / `VaultManager`: one state machine, no
+/// philosophy of `DriveManager` / `SecretsManager`: one state machine, no
 /// hidden globals, all mutations flow through this object.
 @MainActor
 final class BadgerManager: ObservableObject {

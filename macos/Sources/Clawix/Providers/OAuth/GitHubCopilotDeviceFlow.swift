@@ -94,7 +94,7 @@ final class GitHubCopilotDeviceFlow {
     /// access token; the per-request Copilot token is fetched on demand
     /// by `GitHubCopilotClient`.
     func persistAccount(githubAccessToken: String, accountEmail: String?) throws -> ProviderAccount {
-        let store = AIAccountVaultStore.shared
+        let store = AIAccountSecretsStore.shared
         let count = (try? store.listAccounts(for: .githubCopilot).count) ?? 0
         let label = (accountEmail ?? (count == 0 ? "Personal" : "Account \(count + 1)"))
         let draft = ProviderAccountDraft(

@@ -4,7 +4,7 @@ import SecretsModels
 import SecretsVault
 import SecretsProxyCore
 
-/// VaultManager owns the lifecycle of the local Secrets UI but delegates
+/// SecretsManager owns the lifecycle of the local Secrets UI but delegates
 /// every cryptographic and storage operation to the bundled ClawJS Vault
 /// HTTP server. It keeps the surface that the existing SwiftUI views
 /// consume (`store`, `audit`, `grants`, `vaults`, `secrets`, ...) so the
@@ -35,13 +35,13 @@ final class PendingApprovalRequest: ObservableObject, Identifiable {
 }
 
 @MainActor
-final class VaultManager: ObservableObject {
+final class SecretsManager: ObservableObject {
 
     /// Process-wide singleton. The SwiftUI root mounts this as a
     /// `@StateObject` (so views observe its `@Published` properties),
     /// while non-UI code (e.g., enhancement / transcription providers
     /// that need API keys at request time) reads it directly.
-    static let shared = VaultManager()
+    static let shared = SecretsManager()
 
     enum State: Equatable {
         case loading
@@ -88,14 +88,14 @@ final class VaultManager: ObservableObject {
 
     var autoLockMinutes: Int = 5
     private var autoLockTask: Task<Void, Never>?
-    private var lifecycle: VaultLifecycle?
+    private var lifecycle: SecretsLifecycle?
     private var loadGeneration: UUID?
 
     private let client: ClawJSSecretsClient
 
     init() {
         self.client = ClawJSSecretsClient.local()
-        self.lifecycle = VaultLifecycle(attaching: self)
+        self.lifecycle = SecretsLifecycle(attaching: self)
         if Self.isDisabledForLaunch {
             self.state = .openFailed("Secrets service disabled for this launch.")
             self.lastError = "Secrets service disabled for this launch."
@@ -106,7 +106,7 @@ final class VaultManager: ObservableObject {
 
     init(client: ClawJSSecretsClient) {
         self.client = client
-        self.lifecycle = VaultLifecycle(attaching: self)
+        self.lifecycle = SecretsLifecycle(attaching: self)
         if Self.isDisabledForLaunch {
             self.state = .openFailed("Secrets service disabled for this launch.")
             self.lastError = "Secrets service disabled for this launch."
@@ -296,18 +296,17 @@ final class VaultManager: ObservableObject {
         return preview
     }
 
-    func exportEncryptedBackup(passphrase: String) throws -> Data {
-        // The HTTP backend does not yet expose backup; surface a clear
-        // error rather than masquerade with empty data.
-        _ = passphrase
-        throw ClawJSBackendError.server("Encrypted backup not yet supported on the ClawJS Secrets HTTP backend")
+    func exportEncryptedBackup(passphrase: String) async throws -> Data {
+        try await client.exportBackup(passphrase: passphrase)
     }
 
     @discardableResult
-    func importEncryptedBackup(_ data: Data, passphrase: String) throws -> (created: Int, skipped: Int) {
-        _ = data
-        _ = passphrase
-        throw ClawJSBackendError.server("Encrypted backup import not yet supported on the ClawJS Secrets HTTP backend")
+    func importEncryptedBackup(_ data: Data, passphrase: String) async throws -> (created: Int, skipped: Int) {
+        let response = try await client.importBackup(data: data, passphrase: passphrase)
+        let imported = response.imported
+        let created = (imported["secrets"]?.value as? Int) ?? 0
+        Task { await self.load() }
+        return (created: created, skipped: 0)
     }
 
     func staleSecrets(olderThanDays days: Int) -> [SecretRecord] {
@@ -320,9 +319,28 @@ final class VaultManager: ObservableObject {
 
     @discardableResult
     func installCliSymlink() -> URL? {
-        // No-op now: the bundled `claw` CLI lives inside the .app at
-        // Contents/Helpers/clawjs and is invoked by the Mac app directly.
-        return nil
+        let bundledCLI = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Resources/clawjs/node_modules/@clawjs/cli/bin/clawjs.mjs")
+        guard FileManager.default.fileExists(atPath: bundledCLI.path) else {
+            lastError = "Bundled claw CLI not found in the app bundle."
+            return nil
+        }
+
+        let binDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("bin", isDirectory: true)
+        let linkURL = binDir.appendingPathComponent("claw", isDirectory: false)
+        do {
+            try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
+            if FileManager.default.fileExists(atPath: linkURL.path) {
+                try FileManager.default.removeItem(at: linkURL)
+            }
+            try FileManager.default.createSymbolicLink(at: linkURL, withDestinationURL: bundledCLI)
+            lastError = nil
+            return linkURL
+        } catch {
+            lastError = String(describing: error)
+            return nil
+        }
     }
 
     // MARK: - Anomaly detector + integrity
@@ -459,7 +477,7 @@ final class VaultManager: ObservableObject {
     }
 }
 
-extension VaultManager {
+extension SecretsManager {
     enum Error: Swift.Error, CustomStringConvertible {
         case invalidState
         case notSetUp

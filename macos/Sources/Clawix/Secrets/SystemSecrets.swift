@@ -13,7 +13,7 @@ import SecretsVault
 /// if Secrets is not unlocked (callers treat that as "provider not
 /// configured" and surface an unlock prompt at the call site).
 @MainActor
-enum SystemVaultSecrets {
+enum SystemSecrets {
 
     /// Display name of the dedicated container. Created on demand.
     static let containerName = "Clawix System"
@@ -24,8 +24,8 @@ enum SystemVaultSecrets {
     /// `internalName` inside the system container. Throws when Secrets
     /// is not unlocked.
     static func set(internalName: String, title: String, value: String) async throws {
-        guard let store = VaultManager.shared.store else {
-            throw VaultManager.Error.notUnlocked
+        guard let store = SecretsManager.shared.store else {
+            throw SecretsManager.Error.notUnlocked
         }
         if let existing = try store.fetchSecret(byInternalName: internalName) {
             try store.trashSecret(id: existing.id)
@@ -55,7 +55,7 @@ enum SystemVaultSecrets {
     /// Reads the cleartext secret stored under `internalName`. Returns
     /// nil when Secrets is locked or the secret does not exist.
     static func read(internalName: String) async -> String? {
-        guard let store = VaultManager.shared.store else { return nil }
+        guard let store = SecretsManager.shared.store else { return nil }
         do {
             guard let secret = try store.fetchSecret(byInternalName: internalName) else {
                 return nil
@@ -73,7 +73,7 @@ enum SystemVaultSecrets {
     /// True iff Secrets is unlocked AND a non-trashed secret exists at
     /// `internalName`. Does not reveal the value.
     static func has(internalName: String) async -> Bool {
-        guard let store = VaultManager.shared.store else { return false }
+        guard let store = SecretsManager.shared.store else { return false }
         guard let secret = try? store.fetchSecret(byInternalName: internalName) else { return false }
         return secret.trashedAt == nil
     }
@@ -94,7 +94,7 @@ enum SystemVaultSecrets {
 @MainActor
 enum EnhancementSecrets {
     static func setAPIKey(_ key: String, for provider: EnhancementProviderID) async throws {
-        try await SystemVaultSecrets.set(
+        try await SystemSecrets.set(
             internalName: internalName(for: provider),
             title: "Enhancement - \(provider.rawValue)",
             value: key
@@ -102,11 +102,11 @@ enum EnhancementSecrets {
     }
 
     static func apiKey(for provider: EnhancementProviderID) async -> String? {
-        await SystemVaultSecrets.read(internalName: internalName(for: provider))
+        await SystemSecrets.read(internalName: internalName(for: provider))
     }
 
     static func hasAPIKey(for provider: EnhancementProviderID) async -> Bool {
-        await SystemVaultSecrets.has(internalName: internalName(for: provider))
+        await SystemSecrets.has(internalName: internalName(for: provider))
     }
 
     private static func internalName(for provider: EnhancementProviderID) -> String {
@@ -119,7 +119,7 @@ enum EnhancementSecrets {
 @MainActor
 enum CloudTranscriptionSecrets {
     static func setAPIKey(_ key: String, for provider: CloudTranscriptionProvider) async throws {
-        try await SystemVaultSecrets.set(
+        try await SystemSecrets.set(
             internalName: internalName(for: provider),
             title: "Transcription - \(provider.rawValue)",
             value: key
@@ -127,11 +127,11 @@ enum CloudTranscriptionSecrets {
     }
 
     static func apiKey(for provider: CloudTranscriptionProvider) async -> String? {
-        await SystemVaultSecrets.read(internalName: internalName(for: provider))
+        await SystemSecrets.read(internalName: internalName(for: provider))
     }
 
     static func hasAPIKey(for provider: CloudTranscriptionProvider) async -> Bool {
-        await SystemVaultSecrets.has(internalName: internalName(for: provider))
+        await SystemSecrets.has(internalName: internalName(for: provider))
     }
 
     private static func internalName(for provider: CloudTranscriptionProvider) -> String {

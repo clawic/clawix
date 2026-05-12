@@ -7,7 +7,7 @@ enum SecretsScreenMode: Equatable {
 }
 
 struct SecretsScreen: View {
-    @EnvironmentObject private var vault: VaultManager
+    @EnvironmentObject private var vault: SecretsManager
     @State private var mode: SecretsScreenMode = .home
 
     var body: some View {
@@ -22,7 +22,7 @@ struct SecretsScreen: View {
             case .uninitialized:
                 SecretsOnboardingView()
             case .locked, .unlocking:
-                VaultLockScreen()
+                SecretsLockScreen()
             case .unlocked:
                 unlockedContent
             case .openFailed(let message):
