@@ -141,6 +141,12 @@ struct ScreenToolsSettingsPage: View {
 
             SectionLabel(title: "Pins and History")
             SettingsCard {
+                SettingsRow {
+                    RowLabel(title: "Quick Access overlays", detail: "\(service.overlays.count) active")
+                } trailing: {
+                    IconChipButton(symbol: "xmark", label: "Close all", action: service.closeAllOverlays)
+                }
+                CardDivider()
                 actionRow(
                     title: "Choose and pin an image",
                     detail: "Open an image in an always-on-top reference window.",

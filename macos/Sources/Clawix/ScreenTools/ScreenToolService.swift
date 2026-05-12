@@ -8,6 +8,7 @@ final class ScreenToolService: ObservableObject {
 
     @Published private(set) var lastCaptureURL: URL?
     @Published private(set) var pins: [ScreenToolPinWindow] = []
+    @Published private(set) var overlays: [ScreenToolOverlayWindow] = []
 
     private init() {}
 
@@ -118,6 +119,12 @@ final class ScreenToolService: ObservableObject {
         ToastCenter.shared.show("Pins closed")
     }
 
+    func closeAllOverlays() {
+        overlays.forEach { $0.close() }
+        overlays.removeAll()
+        ToastCenter.shared.show("Overlays closed")
+    }
+
     func openCaptureHistory() {
         let dir = ScreenToolSettings.exportDirectoryURL
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -150,7 +157,7 @@ final class ScreenToolService: ObservableObject {
         switch ScreenToolSettings.afterCaptureAction {
         case .quickOverlay:
             lastCaptureURL = url
-            ToastCenter.shared.show("Capture ready")
+            showOverlay(for: url)
         case .copy:
             copyFileAndImage(url)
         case .save:
@@ -163,7 +170,7 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
-    private func copyFileAndImage(_ url: URL) {
+    func copyFileAndImage(_ url: URL) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         if let image = NSImage(contentsOf: url) {
@@ -174,7 +181,7 @@ final class ScreenToolService: ObservableObject {
         ToastCenter.shared.show("Capture copied")
     }
 
-    private func pin(url: URL) {
+    func pin(url: URL) {
         guard let image = NSImage(contentsOf: url) else {
             ToastCenter.shared.show("Could not pin image", icon: .error)
             return
@@ -185,6 +192,31 @@ final class ScreenToolService: ObservableObject {
         pins.append(pin)
         pin.show()
         ToastCenter.shared.show("Pinned to screen")
+    }
+
+    func reveal(url: URL) {
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    private func showOverlay(for url: URL) {
+        guard let image = NSImage(contentsOf: url) else {
+            ToastCenter.shared.show("Capture ready")
+            return
+        }
+        let overlay = ScreenToolOverlayWindow(
+            image: image,
+            url: url,
+            copy: { [weak self] in self?.copyFileAndImage(url) },
+            pin: { [weak self] in self?.pin(url: url) },
+            open: { NSWorkspace.shared.open(url) },
+            reveal: { [weak self] in self?.reveal(url: url) },
+            closeOverlay: { [weak self] window in
+                Task { @MainActor in self?.overlays.removeAll { $0 === window } }
+            }
+        )
+        overlays.append(overlay)
+        overlay.show()
+        ToastCenter.shared.show("Capture ready")
     }
 
     private func outputURL(prefix: String, extension ext: String) -> URL {
@@ -371,5 +403,109 @@ final class ScreenToolPinWindow: NSPanel {
     override func close() {
         super.close()
         onClose(self)
+    }
+}
+
+final class ScreenToolOverlayWindow: NSPanel {
+    private let onClose: (ScreenToolOverlayWindow) -> Void
+
+    init(
+        image: NSImage,
+        url: URL,
+        copy: @escaping () -> Void,
+        pin: @escaping () -> Void,
+        open: @escaping () -> Void,
+        reveal: @escaping () -> Void,
+        closeOverlay: @escaping (ScreenToolOverlayWindow) -> Void
+    ) {
+        self.onClose = closeOverlay
+
+        let imageSize = image.size
+        let previewWidth: CGFloat = 320
+        let previewHeight = max(120, min(220, previewWidth * imageSize.height / max(imageSize.width, 1)))
+        let rect = NSRect(x: 80, y: 120, width: 360, height: previewHeight + 86)
+
+        super.init(
+            contentRect: rect,
+            styleMask: [.nonactivatingPanel, .hudWindow, .closable],
+            backing: .buffered,
+            defer: false
+        )
+
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        isMovableByWindowBackground = true
+        titleVisibility = .hidden
+        titlebarAppearsTransparent = true
+
+        let root = NSStackView()
+        root.orientation = .vertical
+        root.spacing = 10
+        root.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 12, right: 14)
+
+        let imageView = NSImageView()
+        imageView.image = image
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.heightAnchor.constraint(equalToConstant: previewHeight).isActive = true
+
+        let filename = NSTextField(labelWithString: url.lastPathComponent)
+        filename.lineBreakMode = .byTruncatingMiddle
+        filename.maximumNumberOfLines = 1
+        filename.font = .systemFont(ofSize: 11, weight: .medium)
+        filename.textColor = .secondaryLabelColor
+
+        let buttonRow = NSStackView()
+        buttonRow.orientation = .horizontal
+        buttonRow.spacing = 8
+        buttonRow.distribution = .fillEqually
+
+        let copyButton = Self.actionButton(title: "Copy", action: copy)
+        let pinButton = Self.actionButton(title: "Pin", action: pin)
+        let openButton = Self.actionButton(title: "Open", action: open)
+        let revealButton = Self.actionButton(title: "Reveal", action: reveal)
+
+        [copyButton, pinButton, openButton, revealButton].forEach(buttonRow.addArrangedSubview)
+
+        root.addArrangedSubview(imageView)
+        root.addArrangedSubview(filename)
+        root.addArrangedSubview(buttonRow)
+        contentView = root
+    }
+
+    func show() {
+        makeKeyAndOrderFront(nil)
+    }
+
+    override func close() {
+        super.close()
+        onClose(self)
+    }
+
+    private static func actionButton(title: String, action: @escaping () -> Void) -> NSButton {
+        let button = ClosureButton(title: title, action: action)
+        button.bezelStyle = .rounded
+        button.controlSize = .small
+        return button
+    }
+}
+
+private final class ClosureButton: NSButton {
+    private let closure: () -> Void
+
+    init(title: String, action: @escaping () -> Void) {
+        self.closure = action
+        super.init(frame: .zero)
+        self.title = title
+        target = self
+        self.action = #selector(run)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func run() {
+        closure()
     }
 }

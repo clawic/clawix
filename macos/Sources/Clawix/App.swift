@@ -379,6 +379,13 @@ private struct MenuBarContent: View {
                 } label: {
                     Label("Capture History…", systemImage: "clock")
                 }
+                if !screenTools.overlays.isEmpty {
+                    Button {
+                        screenTools.closeAllOverlays()
+                    } label: {
+                        Label("Close All Overlays", systemImage: "xmark")
+                    }
+                }
                 if !screenTools.pins.isEmpty {
                     Button {
                         screenTools.closeAllPins()
