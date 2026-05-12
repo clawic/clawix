@@ -95,7 +95,20 @@ private struct MacUtilityActionRow: View {
 
     private var actionButtonTitle: String {
         switch action {
-        case .openVPNSettings, .openPrivateRelaySettings, .openHideMyEmailSettings:
+        case .openFinder,
+             .openTerminal,
+             .openShortcuts,
+             .openPasswords,
+             .openAirDrop,
+             .openVPNSettings,
+             .openPrivateRelaySettings,
+             .openHideMyEmailSettings,
+             .openKeyboardSettings,
+             .openDisplaySettings,
+             .openDesktopDockSettings,
+             .openNotificationsSettings,
+             .openSoundSettings,
+             .openPrivacySettings:
             return "Open"
         case .toggleKeepAwake:
             return keepAwakeEnabled ? "Turn Off" : "Turn On"
