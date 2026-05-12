@@ -433,9 +433,9 @@ final class ClawJSServiceManager: ObservableObject {
         switch service {
         case .database:
             arguments += [
-                "--data-dir", Self.dataDirectoryURL(for: service).path,
-                "--files-dir", Self.dataDirectoryURL(for: service)
-                    .appendingPathComponent("files", isDirectory: true).path,
+                "--data-dir", Self.mainDataDirectoryURL.path,
+                "--db-path", Self.mainDatabaseURL.path,
+                "--files-dir", Self.mainFilesDirectoryURL.path,
             ]
             return arguments
         case .vault, .telegram:
@@ -630,8 +630,8 @@ final class ClawJSServiceManager: ObservableObject {
 
     // MARK: - Paths and environment
 
-    /// Single workspace shared by all three services. SQLite files
-    /// land under `<workspace>/.clawjs/data/`.
+    /// Single workspace shared by services for process cwd and runtime
+    /// artifacts that are not the canonical ClawJS data store.
     static var workspaceURL: URL {
         applicationSupportRoot.appendingPathComponent("workspace", isDirectory: true)
     }
@@ -643,6 +643,18 @@ final class ClawJSServiceManager: ObservableObject {
         }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Clawix/clawjs", isDirectory: true)
+    }
+
+    static var mainDataDirectoryURL: URL {
+        applicationSupportRoot
+    }
+
+    static var mainDatabaseURL: URL {
+        mainDataDirectoryURL.appendingPathComponent("clawjs.sqlite", isDirectory: false)
+    }
+
+    static var mainFilesDirectoryURL: URL {
+        mainDataDirectoryURL.appendingPathComponent("files", isDirectory: true)
     }
 
     static func logFileURL(for service: ClawJSService) -> URL {
@@ -672,12 +684,20 @@ final class ClawJSServiceManager: ObservableObject {
             at: dataDirectoryURL(for: service),
             withIntermediateDirectories: true
         )
+        try fm.createDirectory(
+            at: mainFilesDirectoryURL,
+            withIntermediateDirectories: true
+        )
     }
 
     private static func environment(for service: ClawJSService, adminToken: String?) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAWJS_WORKSPACE"] = workspaceURL.path
+        env["CLAWJS_MAIN_DATA_DIR"] = mainDataDirectoryURL.path
+        env["CLAWIX_CLAWJS_DATA_DIR"] = mainDataDirectoryURL.path
+        env["CLAWJS_MAIN_DB_PATH"] = mainDatabaseURL.path
+        env["CLAWJS_MAIN_FILES_DIR"] = mainFilesDirectoryURL.path
         env["CLAWJS_PORT"] = String(service.port)
         env["CLAWJS_SERVICE"] = service.rawValue
         env["CLAWJS_SECRETS_PROXY_PATH"] = FileManager.default.homeDirectoryForCurrentUser
@@ -687,7 +707,9 @@ final class ClawJSServiceManager: ObservableObject {
         env["HOST"] = "127.0.0.1"
         env["DATABASE_HOST"] = "127.0.0.1"
         env["DATABASE_PORT"] = String(ClawJSService.database.port)
-        env["DATABASE_DATA_DIR"] = dataDirectoryURL(for: .database).path
+        env["DATABASE_DATA_DIR"] = mainDataDirectoryURL.path
+        env["DATABASE_DB_PATH"] = mainDatabaseURL.path
+        env["DATABASE_FILES_DIR"] = mainFilesDirectoryURL.path
         env["DRIVE_HOST"] = "127.0.0.1"
         env["DRIVE_PORT"] = String(ClawJSService.drive.port)
         env["DRIVE_DATA_DIR"] = dataDirectoryURL(for: .drive).path
@@ -824,7 +846,10 @@ final class ClawJSServiceManager: ObservableObject {
     }
 
     private static func dataDirectoryURL(for service: ClawJSService) -> URL {
-        workspaceURL
+        if service == .database {
+            return mainDataDirectoryURL
+        }
+        return workspaceURL
             .appendingPathComponent(".clawjs", isDirectory: true)
             .appendingPathComponent(service.rawValue, isDirectory: true)
     }
