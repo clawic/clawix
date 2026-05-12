@@ -72,6 +72,7 @@ final class ScreenToolService: ObservableObject {
             case .recordScreen:        self.recordScreen()
             case .captureText:         self.captureText()
             case .pinImage:            self.chooseAndPinImage()
+            case .restoreLastCapture:  self.restoreLastCapture()
             case .captureHistory:      self.openCaptureHistory()
             }
         }
@@ -97,6 +98,7 @@ final class ScreenToolService: ObservableObject {
         addItem("Capture Text", action: .captureText, symbol: "text.viewfinder")
         menu.addItem(.separator())
         addItem("Pin Image...", action: .pinImage, symbol: "pin")
+        addItem("Restore Last Capture", action: .restoreLastCapture, symbol: "arrow.counterclockwise")
         addItem("Capture History...", action: .captureHistory, symbol: "clock")
 
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
@@ -176,6 +178,15 @@ final class ScreenToolService: ObservableObject {
             ToastCenter.shared.show("No recent capture to show", icon: .warning)
             return
         }
+        showOverlay(for: url)
+    }
+
+    func restoreLastCapture() {
+        guard let url = recentCaptureURL() else {
+            ToastCenter.shared.show("No recent capture to restore", icon: .warning)
+            return
+        }
+        lastCaptureURL = url
         showOverlay(for: url)
     }
 
@@ -1244,6 +1255,7 @@ private enum ScreenToolMenuAction: String {
     case recordScreen
     case captureText
     case pinImage
+    case restoreLastCapture
     case captureHistory
 }
 

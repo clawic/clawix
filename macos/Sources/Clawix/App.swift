@@ -402,6 +402,11 @@ private struct MenuBarContent: View {
                     Label("Show Last Capture", systemImage: "rectangle.on.rectangle")
                 }
                 Button {
+                    screenTools.restoreLastCapture()
+                } label: {
+                    Label("Restore Last Capture", systemImage: "arrow.counterclockwise")
+                }
+                Button {
                     screenTools.copyLastCapture()
                 } label: {
                     Label("Copy Last Capture", systemImage: "doc.on.doc")

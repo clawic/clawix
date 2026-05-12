@@ -198,6 +198,13 @@ struct ScreenToolsSettingsPage: View {
                 )
                 CardDivider()
                 actionRow(
+                    title: "Restore last capture",
+                    detail: "Make the most recent local capture active again and reopen it.",
+                    symbol: "arrow.counterclockwise",
+                    action: service.restoreLastCapture
+                )
+                CardDivider()
+                actionRow(
                     title: "Copy last capture",
                     detail: "Copy the most recent local capture to the clipboard.",
                     symbol: "doc.on.doc",
