@@ -95,6 +95,8 @@ enum SidebarRoute: Equatable {
     case secretsHome
     /// Database admin (3-pane explorer over all collections).
     case databaseHome
+    /// External database workbench shell for connection profiles, SQL drafts, and result workflow.
+    case databaseWorkbench
     /// Curated entry pointing at a single collection. Renders the same
     /// adaptive UI as `.databaseHome` but filtered + with curated tabs.
     case databaseCollection(String)

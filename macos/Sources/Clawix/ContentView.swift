@@ -120,7 +120,7 @@ struct ContentView: View {
         switch appState.currentRoute {
         case .home, .search, .plugins, .project, .chat:
             return true
-        case .automations, .settings, .secretsHome, .databaseHome, .databaseCollection, .memoryHome,
+        case .automations, .settings, .secretsHome, .databaseHome, .databaseWorkbench, .databaseCollection, .memoryHome,
              .indexHome,
              .calendarHome, .contactsHome,
              .driveAdmin, .drivePhotos, .driveDocuments, .driveRecent, .driveFolder,
@@ -148,6 +148,7 @@ struct ContentView: View {
         case .settings: return "settings"
         case .secretsHome: return "secrets"
         case .databaseHome: return "database"
+        case .databaseWorkbench: return "database-workbench"
         case .databaseCollection(let name): return "database-\(name)"
         case .memoryHome: return "memory"
         case .indexHome: return "index"
@@ -269,6 +270,7 @@ struct ContentView: View {
                             case .settings:      SettingsContent()
                             case .secretsHome:   SecretsScreen()
                             case .databaseHome:  DatabaseScreen(mode: .admin)
+                            case .databaseWorkbench: DatabaseWorkbenchView()
                             case .databaseCollection(let name):
                                 DatabaseScreen(mode: .curated(collectionName: name))
                             case .memoryHome:    MemoryScreen()

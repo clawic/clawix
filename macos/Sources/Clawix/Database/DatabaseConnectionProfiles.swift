@@ -296,7 +296,7 @@ final class DatabaseConnectionProfileStore: ObservableObject {
         return copy
     }
 
-    private static func expanded(_ path: String) -> String {
+    static func expanded(_ path: String) -> String {
         (path as NSString).expandingTildeInPath
     }
 }

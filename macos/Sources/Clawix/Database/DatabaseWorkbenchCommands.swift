@@ -4,6 +4,7 @@ struct DatabaseWorkbenchCommands: View {
     @ObservedObject var appState: AppState
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
+    @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
 
     var body: some View {
         Button("Open Database Workbench") {
@@ -36,6 +37,31 @@ struct DatabaseWorkbenchCommands: View {
                 }
             }
         }
+
+        Divider()
+
+        Button("New Query Draft") {
+            session.newDraft()
+            openWorkbench()
+            ToastCenter.shared.show("Query draft created")
+        }
+        .keyboardShortcut("n", modifiers: [.command, .shift])
+
+        Button("Save Query Draft") {
+            _ = session.saveDraft()
+            ToastCenter.shared.show("Query draft saved")
+        }
+        .keyboardShortcut("s", modifiers: [.command, .shift])
+
+        Button("Format Current Query") {
+            session.formatActiveSQL()
+            ToastCenter.shared.show("SQL formatted")
+        }
+
+        Button("Dry Run Current Query") {
+            dryRunCurrentQuery()
+        }
+        .keyboardShortcut(.return, modifiers: [.command])
 
         Divider()
 
@@ -81,7 +107,7 @@ struct DatabaseWorkbenchCommands: View {
     }
 
     private func openWorkbench() {
-        appState.currentRoute = .databaseHome
+        appState.currentRoute = .databaseWorkbench
         ToastCenter.shared.show("Database workbench opened")
     }
 
@@ -102,19 +128,33 @@ struct DatabaseWorkbenchCommands: View {
             ToastCenter.shared.show(result.message, icon: .error)
         }
     }
+
+    private func dryRunCurrentQuery() {
+        let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
+        let plan = session.dryRun(profile: profile, preferences: prefs)
+        switch plan.status {
+        case .readyForFileProfile:
+            ToastCenter.shared.show(plan.message)
+        case .externalPending:
+            ToastCenter.shared.show(plan.message, icon: .warning)
+        case .blocked:
+            ToastCenter.shared.show(plan.message, icon: .error)
+        }
+    }
 }
 
 struct DatabaseWorkbenchMenuBarSection: View {
     @ObservedObject var appState: AppState
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
+    @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
     let openMainWindow: () -> Void
 
     var body: some View {
         Section {
             Menu {
                 Button {
-                    appState.currentRoute = .databaseHome
+                    appState.currentRoute = .databaseWorkbench
                     openMainWindow()
                 } label: {
                     Label("Open Workbench", systemImage: "cylinder.split.1x2")
@@ -145,6 +185,31 @@ struct DatabaseWorkbenchMenuBarSection: View {
                             }
                         }
                     }
+                }
+
+                Divider()
+
+                Button {
+                    session.newDraft()
+                    appState.currentRoute = .databaseWorkbench
+                    openMainWindow()
+                } label: {
+                    Label("New Query Draft", systemImage: "doc.badge.plus")
+                }
+                Button {
+                    _ = session.saveDraft()
+                } label: {
+                    Label("Save Query Draft", systemImage: "square.and.arrow.down")
+                }
+                Button {
+                    session.formatActiveSQL()
+                } label: {
+                    Label("Format Current Query", systemImage: "text.alignleft")
+                }
+                Button {
+                    dryRunCurrentQuery()
+                } label: {
+                    Label("Dry Run Current Query", systemImage: "play")
                 }
 
                 Divider()
@@ -194,6 +259,19 @@ struct DatabaseWorkbenchMenuBarSection: View {
             ToastCenter.shared.show("EXTERNAL PENDING: \(result.message)", icon: .warning)
         case .failed:
             ToastCenter.shared.show(result.message, icon: .error)
+        }
+    }
+
+    private func dryRunCurrentQuery() {
+        let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
+        let plan = session.dryRun(profile: profile, preferences: prefs)
+        switch plan.status {
+        case .readyForFileProfile:
+            ToastCenter.shared.show(plan.message)
+        case .externalPending:
+            ToastCenter.shared.show(plan.message, icon: .warning)
+        case .blocked:
+            ToastCenter.shared.show(plan.message, icon: .error)
         }
     }
 }
