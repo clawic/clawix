@@ -21,3 +21,8 @@ xcuserdata/
 .signing.env.*
 !.signing.env.example
 .release-notes.md
+
+# Generated web SPA bundle copied into the bridged helper's SwiftPM resources.
+macos/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/**
+!macos/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/
+!macos/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/.gitkeep
