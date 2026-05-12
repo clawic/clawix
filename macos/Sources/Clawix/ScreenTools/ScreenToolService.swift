@@ -678,48 +678,85 @@ final class ScreenToolService: ObservableObject {
     }
 
     static func retinaVideoScaleArguments(input: URL, output: URL) -> [String] {
-        [
+        recordingPostProcessingArguments(input: input, output: output, scaleRetinaTo1x: true, monoAudio: false)
+    }
+
+    static func monoRecordingAudioArguments(input: URL, output: URL) -> [String] {
+        recordingPostProcessingArguments(input: input, output: output, scaleRetinaTo1x: false, monoAudio: true)
+    }
+
+    static func recordingPostProcessingArguments(
+        input: URL,
+        output: URL,
+        scaleRetinaTo1x: Bool,
+        monoAudio: Bool
+    ) -> [String] {
+        var args = [
             "-y",
             "-i", input.path,
             "-map", "0:v:0",
-            "-map", "0:a?",
-            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
-            "-c:v", "libx264",
-            "-preset", "veryfast",
-            "-crf", "18",
-            "-c:a", "copy",
-            "-movflags", "+faststart",
-            output.path
+            "-map", "0:a?"
         ]
+
+        if scaleRetinaTo1x {
+            args.append(contentsOf: [
+                "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
+                "-c:v", "libx264",
+                "-preset", "veryfast",
+                "-crf", "18"
+            ])
+        } else {
+            args.append(contentsOf: ["-c:v", "copy"])
+        }
+
+        if monoAudio {
+            args.append(contentsOf: ["-c:a", "aac", "-ac", "1"])
+        } else {
+            args.append(contentsOf: ["-c:a", "copy"])
+        }
+
+        args.append(contentsOf: ["-movflags", "+faststart", output.path])
+        return args
     }
 
     private static func applyRecordingPostProcessing(to url: URL) async -> URL {
-        guard ScreenToolSettings.scaleRetinaRecordingsTo1x else {
+        let scaleRetinaTo1x = ScreenToolSettings.scaleRetinaRecordingsTo1x
+        let monoAudio = ScreenToolSettings.recordRecordingAudioInMono
+        guard scaleRetinaTo1x || monoAudio else {
             return url
         }
 
         do {
-            try await scaleRetinaRecordingTo1x(url)
+            try await postProcessRecording(url, scaleRetinaTo1x: scaleRetinaTo1x, monoAudio: monoAudio)
         } catch {
-            ToastCenter.shared.show("Could not scale recording", icon: .warning)
+            ToastCenter.shared.show("Could not process recording", icon: .warning)
         }
         return url
     }
 
-    private static func scaleRetinaRecordingTo1x(_ url: URL) async throws {
+    private static func postProcessRecording(
+        _ url: URL,
+        scaleRetinaTo1x: Bool,
+        monoAudio: Bool
+    ) async throws {
         guard let ffmpeg = ffmpegExecutableURL() else {
             throw CocoaError(.fileNoSuchFile)
         }
 
         let temporaryURL = url.deletingLastPathComponent()
-            .appendingPathComponent(".\(url.deletingPathExtension().lastPathComponent)-1x-\(UUID().uuidString).mov")
+            .appendingPathComponent(".\(url.deletingPathExtension().lastPathComponent)-processed-\(UUID().uuidString).mov")
         defer {
             try? FileManager.default.removeItem(at: temporaryURL)
         }
 
         let result = await runProcess(
             executableURL: ffmpeg,
-            arguments: retinaVideoScaleArguments(input: url, output: temporaryURL)
+            arguments: recordingPostProcessingArguments(
+                input: url,
+                output: temporaryURL,
+                scaleRetinaTo1x: scaleRetinaTo1x,
+                monoAudio: monoAudio
+            )
         )
         guard result.succeeded, FileManager.default.fileExists(atPath: temporaryURL.path) else {
             throw CocoaError(.fileWriteUnknown)
@@ -1341,6 +1378,7 @@ enum ScreenToolSettings {
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
     static let showRecordingCountdownKey = "clawix.screenTools.showRecordingCountdown"
     static let scaleRetinaRecordingsTo1xKey = "clawix.screenTools.scaleRetinaRecordingsTo1x"
+    static let recordRecordingAudioInMonoKey = "clawix.screenTools.recordRecordingAudioInMono"
     static let openRecordingEditorAfterRecordingKey = "clawix.screenTools.openRecordingEditorAfterRecording"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
@@ -1432,6 +1470,10 @@ enum ScreenToolSettings {
 
     static var scaleRetinaRecordingsTo1x: Bool {
         defaults.bool(forKey: scaleRetinaRecordingsTo1xKey)
+    }
+
+    static var recordRecordingAudioInMono: Bool {
+        defaults.bool(forKey: recordRecordingAudioInMonoKey)
     }
 
     static var openRecordingEditorAfterRecording: Bool {

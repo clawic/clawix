@@ -71,4 +71,52 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
             output.path
         ])
     }
+
+    @MainActor
+    func testMonoRecordingAudioArgumentsCopyVideoAndConvertAudio() {
+        let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
+        let output = URL(fileURLWithPath: "/tmp/clawix-recording-mono.mov")
+
+        let args = ScreenToolService.monoRecordingAudioArguments(input: input, output: output)
+
+        XCTAssertEqual(args, [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-ac", "1",
+            "-movflags", "+faststart",
+            output.path
+        ])
+    }
+
+    @MainActor
+    func testRecordingPostProcessingArgumentsCanScaleAndConvertAudioTogether() {
+        let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
+        let output = URL(fileURLWithPath: "/tmp/clawix-recording-processed.mov")
+
+        let args = ScreenToolService.recordingPostProcessingArguments(
+            input: input,
+            output: output,
+            scaleRetinaTo1x: true,
+            monoAudio: true
+        )
+
+        XCTAssertEqual(args, [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "18",
+            "-c:a", "aac",
+            "-ac", "1",
+            "-movflags", "+faststart",
+            output.path
+        ])
+    }
 }

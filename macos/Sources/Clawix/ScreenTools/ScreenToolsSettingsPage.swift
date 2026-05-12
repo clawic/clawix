@@ -25,6 +25,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
+    @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
     @AppStorage(ScreenToolSettings.openRecordingEditorAfterRecordingKey) private var openRecordingEditorAfterRecording = false
     @AppStorage(ScreenToolSettings.keepTextLineBreaksKey) private var keepTextLineBreaks = false
     @AppStorage(ScreenToolSettings.autoDetectTextLanguageKey) private var autoDetectTextLanguage = true
@@ -238,6 +239,8 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Show countdown", detail: "Show a short countdown before recording starts.", isOn: $showRecordingCountdown)
                 CardDivider()
                 ToggleRow(title: "Scale Retina videos to 1x", detail: "Downscale recorded movies to logical point size after recording.", isOn: $scaleRetinaRecordingsTo1x)
+                CardDivider()
+                ToggleRow(title: "Record audio in mono", detail: "Convert recorded audio tracks to one channel after recording.", isOn: $recordRecordingAudioInMono)
                 CardDivider()
                 ToggleRow(title: "Open editor after recording", detail: "Open the saved movie after recording completes.", isOn: $openRecordingEditorAfterRecording)
             }

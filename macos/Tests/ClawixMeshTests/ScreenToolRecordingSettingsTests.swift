@@ -49,4 +49,20 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
 
         XCTAssertFalse(ScreenToolSettings.scaleRetinaRecordingsTo1x)
     }
+
+    @MainActor
+    func testRecordRecordingAudioInMonoDefaultsOff() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.recordRecordingAudioInMonoKey)
+        defaults.removeObject(forKey: ScreenToolSettings.recordRecordingAudioInMonoKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.recordRecordingAudioInMonoKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.recordRecordingAudioInMonoKey)
+            }
+        }
+
+        XCTAssertFalse(ScreenToolSettings.recordRecordingAudioInMono)
+    }
 }
