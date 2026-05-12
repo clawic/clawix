@@ -12,11 +12,13 @@ final class ScreenToolService: ObservableObject {
     @Published private(set) var overlays: [ScreenToolOverlayWindow] = []
 
     private var historyWindow: ScreenToolHistoryWindow?
+    private var areaSelectionWindow: ScreenToolAreaSelectionWindow?
 
     private init() {}
 
     enum CaptureMode {
         case area
+        case previousArea
         case fullscreen
         case window
         case selfTimer
@@ -53,7 +55,17 @@ final class ScreenToolService: ObservableObject {
     }
 
     func captureArea() {
-        runCapture(mode: .area)
+        selectArea { [weak self] rect in
+            self?.runCapture(mode: .area, rect: rect)
+        }
+    }
+
+    func capturePreviousArea() {
+        guard let rect = ScreenToolSettings.previousAreaRect else {
+            ToastCenter.shared.show("No previous area", icon: .warning)
+            return
+        }
+        runCapture(mode: .previousArea, rect: rect)
     }
 
     func captureFullscreen() {
@@ -186,10 +198,13 @@ final class ScreenToolService: ObservableObject {
         reveal(url: url)
     }
 
-    private func runCapture(mode: CaptureMode) {
+    private func runCapture(mode: CaptureMode, rect: ScreenToolCaptureRect? = nil) {
         guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: outputPrefix(for: mode), extension: ScreenToolSettings.imageFormat.rawValue)
-        Self.runScreencapture(args: interactiveArgs(mode: mode, output: url)) { [weak self] result in
+        if mode == .area, let rect {
+            ScreenToolSettings.previousAreaRect = rect
+        }
+        Self.runScreencapture(args: interactiveArgs(mode: mode, output: url, rect: rect)) { [weak self] result in
             Task { @MainActor in
                 guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
                     ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Capture cancelled"), icon: .warning)
@@ -199,6 +214,32 @@ final class ScreenToolService: ObservableObject {
                 self?.handleCapture(url)
             }
         }
+    }
+
+    private func selectArea(completion: @escaping (ScreenToolCaptureRect) -> Void) {
+        guard let screen = Self.activeScreen() else {
+            ToastCenter.shared.show("No screen available", icon: .error)
+            return
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        let window = ScreenToolAreaSelectionWindow(
+            screen: screen,
+            onCancel: { [weak self] selectionWindow in
+                if self?.areaSelectionWindow === selectionWindow {
+                    self?.areaSelectionWindow = nil
+                }
+                ToastCenter.shared.show("Capture cancelled", icon: .warning)
+            },
+            onComplete: { [weak self] selectionWindow, rect in
+                if self?.areaSelectionWindow === selectionWindow {
+                    self?.areaSelectionWindow = nil
+                }
+                completion(rect)
+            }
+        )
+        areaSelectionWindow?.close()
+        areaSelectionWindow = window
+        window.show()
     }
 
     private func handleCapture(_ url: URL) {
@@ -276,20 +317,25 @@ final class ScreenToolService: ObservableObject {
 
     private func outputPrefix(for mode: CaptureMode) -> String {
         switch mode {
-        case .area:       return "area"
-        case .fullscreen: return "fullscreen"
-        case .window:     return "window"
-        case .selfTimer:  return "timer"
+        case .area:         return "area"
+        case .previousArea: return "area"
+        case .fullscreen:   return "fullscreen"
+        case .window:       return "window"
+        case .selfTimer:    return "timer"
         }
     }
 
-    private func interactiveArgs(mode: CaptureMode, output url: URL) -> [String] {
+    private func interactiveArgs(mode: CaptureMode, output url: URL, rect: ScreenToolCaptureRect? = nil) -> [String] {
         var args: [String] = []
         if !ScreenToolSettings.playSounds { args.append("-x") }
         args.append(contentsOf: ["-t", ScreenToolSettings.imageFormat.rawValue])
         switch mode {
-        case .area:
-            args.append(contentsOf: ["-i", "-s"])
+        case .area, .previousArea:
+            if let rect {
+                args.append(contentsOf: ["-R", rect.screencaptureArgument])
+            } else {
+                args.append(contentsOf: ["-i", "-s"])
+            }
         case .fullscreen:
             if ScreenToolSettings.includeCursor { args.append("-C") }
         case .window:
@@ -301,6 +347,13 @@ final class ScreenToolService: ObservableObject {
         }
         args.append(url.path)
         return args
+    }
+
+    private static func activeScreen() -> NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { $0.frame.contains(mouse) }
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
     }
 
     private func recentCaptureURL() -> URL? {
@@ -573,6 +626,47 @@ final class ScreenToolService: ObservableObject {
     }()
 }
 
+struct ScreenToolCaptureRect: Equatable {
+    let x: Int
+    let y: Int
+    let width: Int
+    let height: Int
+
+    var screencaptureArgument: String {
+        "\(x),\(y),\(width),\(height)"
+    }
+
+    var storageValue: String {
+        screencaptureArgument
+    }
+
+    init(x: Int, y: Int, width: Int, height: Int) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+
+    init?(storageValue: String) {
+        let parts = storageValue.split(separator: ",").compactMap { Int($0) }
+        guard parts.count == 4, parts[2] > 0, parts[3] > 0 else { return nil }
+        self.init(x: parts[0], y: parts[1], width: parts[2], height: parts[3])
+    }
+
+    init?(selectionRect: NSRect, in screen: NSScreen) {
+        let normalized = selectionRect.standardized
+        guard normalized.width >= 4, normalized.height >= 4 else { return nil }
+        let scale = screen.backingScaleFactor
+        let screenFrame = screen.frame
+        let x = Int((screenFrame.minX + normalized.minX).rounded(.down) * scale)
+        let y = Int((screenFrame.maxY - normalized.maxY).rounded(.down) * scale)
+        let width = Int(normalized.width.rounded(.up) * scale)
+        let height = Int(normalized.height.rounded(.up) * scale)
+        guard width > 0, height > 0 else { return nil }
+        self.init(x: x, y: y, width: width, height: height)
+    }
+}
+
 enum ScreenToolSettings {
     private static let defaults = UserDefaults.standard
 
@@ -585,6 +679,7 @@ enum ScreenToolSettings {
     static let captureWindowShadowKey = "clawix.screenTools.captureWindowShadow"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
+    static let previousAreaRectKey = "clawix.screenTools.previousAreaRect"
 
     static var exportDirectoryURL: URL {
         if let path = defaults.string(forKey: exportDirectoryKey), !path.isEmpty {
@@ -626,6 +721,141 @@ enum ScreenToolSettings {
 
     static var autoDetectTextLanguage: Bool {
         defaults.object(forKey: autoDetectTextLanguageKey) == nil ? true : defaults.bool(forKey: autoDetectTextLanguageKey)
+    }
+
+    static var previousAreaRect: ScreenToolCaptureRect? {
+        get {
+            guard let value = defaults.string(forKey: previousAreaRectKey), !value.isEmpty else { return nil }
+            return ScreenToolCaptureRect(storageValue: value)
+        }
+        set {
+            if let newValue {
+                defaults.set(newValue.storageValue, forKey: previousAreaRectKey)
+            } else {
+                defaults.removeObject(forKey: previousAreaRectKey)
+            }
+        }
+    }
+}
+
+final class ScreenToolAreaSelectionWindow: NSPanel {
+    private let onCancel: (ScreenToolAreaSelectionWindow) -> Void
+    private let onComplete: (ScreenToolAreaSelectionWindow, ScreenToolCaptureRect) -> Void
+
+    init(
+        screen: NSScreen,
+        onCancel: @escaping (ScreenToolAreaSelectionWindow) -> Void,
+        onComplete: @escaping (ScreenToolAreaSelectionWindow, ScreenToolCaptureRect) -> Void
+    ) {
+        self.onCancel = onCancel
+        self.onComplete = onComplete
+        super.init(
+            contentRect: screen.frame,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        level = .screenSaver
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        backgroundColor = .clear
+        isOpaque = false
+        hasShadow = false
+        ignoresMouseEvents = false
+
+        contentView = ScreenToolAreaSelectionView(
+            screen: screen,
+            cancel: { [weak self] in
+                guard let self else { return }
+                self.close()
+                self.onCancel(self)
+            },
+            complete: { [weak self] rect in
+                guard let self else { return }
+                self.close()
+                self.onComplete(self, rect)
+            }
+        )
+    }
+
+    func show() {
+        makeKeyAndOrderFront(nil)
+        makeFirstResponder(contentView)
+    }
+
+    override var canBecomeKey: Bool { true }
+}
+
+private final class ScreenToolAreaSelectionView: NSView {
+    private let screen: NSScreen
+    private let cancel: () -> Void
+    private let complete: (ScreenToolCaptureRect) -> Void
+    private var startPoint: NSPoint?
+    private var currentPoint: NSPoint?
+
+    init(screen: NSScreen, cancel: @escaping () -> Void, complete: @escaping (ScreenToolCaptureRect) -> Void) {
+        self.screen = screen
+        self.cancel = cancel
+        self.complete = complete
+        super.init(frame: NSRect(origin: .zero, size: screen.frame.size))
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.black.withAlphaComponent(0.16).cgColor
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        startPoint = event.locationInWindow
+        currentPoint = event.locationInWindow
+        needsDisplay = true
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        currentPoint = event.locationInWindow
+        needsDisplay = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        currentPoint = event.locationInWindow
+        guard let rect = currentSelectionRect,
+              let captureRect = ScreenToolCaptureRect(selectionRect: rect, in: screen)
+        else {
+            cancel()
+            return
+        }
+        complete(captureRect)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            cancel()
+        } else {
+            super.keyDown(with: event)
+        }
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard let rect = currentSelectionRect else { return }
+        NSColor.clear.setFill()
+        rect.fill(using: .copy)
+        NSColor.controlAccentColor.withAlphaComponent(0.95).setStroke()
+        let path = NSBezierPath(rect: rect)
+        path.lineWidth = 2
+        path.stroke()
+    }
+
+    private var currentSelectionRect: NSRect? {
+        guard let startPoint, let currentPoint else { return nil }
+        return NSRect(
+            x: min(startPoint.x, currentPoint.x),
+            y: min(startPoint.y, currentPoint.y),
+            width: abs(startPoint.x - currentPoint.x),
+            height: abs(startPoint.y - currentPoint.y)
+        )
     }
 }
 
