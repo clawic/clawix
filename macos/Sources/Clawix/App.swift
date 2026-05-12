@@ -304,6 +304,7 @@ private struct MenuBarContent: View {
     @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
     @AppStorage(ScreenToolSettings.displayRecordingTimeKey) private var displayRecordingTime = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
+    @AppStorage(ScreenToolSettings.recordingVideoFPSKey) private var recordingVideoFPS = ScreenToolSettings.defaultRecordingVideoFPS
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
     @AppStorage(ScreenToolSettings.openRecordingEditorAfterRecordingKey) private var openRecordingEditorAfterRecording = false
@@ -405,6 +406,13 @@ private struct MenuBarContent: View {
                 }
                 Toggle(isOn: $showRecordingCountdown) {
                     Label("Show Recording Countdown", systemImage: "timer")
+                }
+                Picker(selection: $recordingVideoFPS) {
+                    ForEach(ScreenToolSettings.recordingVideoFPSOptions, id: \.self) { fps in
+                        Text("\(fps) FPS").tag(fps)
+                    }
+                } label: {
+                    Label("Video FPS", systemImage: "speedometer")
                 }
                 Toggle(isOn: $scaleRetinaRecordingsTo1x) {
                     Label("Scale Retina Videos to 1x", systemImage: "rectangle.compress.vertical")

@@ -67,6 +67,38 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
     }
 
     @MainActor
+    func testRecordingVideoFPSDefaultsTo60() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.recordingVideoFPSKey)
+        defaults.removeObject(forKey: ScreenToolSettings.recordingVideoFPSKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.recordingVideoFPSKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.recordingVideoFPSKey)
+            }
+        }
+
+        XCTAssertEqual(ScreenToolSettings.recordingVideoFPS, 60)
+    }
+
+    @MainActor
+    func testRecordingVideoFPSIgnoresUnsupportedValues() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.recordingVideoFPSKey)
+        defaults.set(24, forKey: ScreenToolSettings.recordingVideoFPSKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.recordingVideoFPSKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.recordingVideoFPSKey)
+            }
+        }
+
+        XCTAssertEqual(ScreenToolSettings.recordingVideoFPS, 60)
+    }
+
+    @MainActor
     func testRecordRecordingAudioInMonoDefaultsOff() {
         let defaults = UserDefaults.standard
         let previousValue = defaults.object(forKey: ScreenToolSettings.recordRecordingAudioInMonoKey)

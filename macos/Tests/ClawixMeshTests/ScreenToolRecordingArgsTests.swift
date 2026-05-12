@@ -93,6 +93,34 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
     }
 
     @MainActor
+    func testRecordingPostProcessingArgumentsCanLimitVideoFPS() {
+        let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
+        let output = URL(fileURLWithPath: "/tmp/clawix-recording-30fps.mov")
+
+        let args = ScreenToolService.recordingPostProcessingArguments(
+            input: input,
+            output: output,
+            scaleRetinaTo1x: false,
+            monoAudio: false,
+            videoFPS: 30
+        )
+
+        XCTAssertEqual(args, [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-filter:v", "fps=30",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "18",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            output.path
+        ])
+    }
+
+    @MainActor
     func testRecordingPostProcessingArgumentsCanScaleAndConvertAudioTogether() {
         let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
         let output = URL(fileURLWithPath: "/tmp/clawix-recording-processed.mov")
@@ -110,6 +138,35 @@ final class ScreenToolRecordingArgsTests: XCTestCase {
             "-map", "0:v:0",
             "-map", "0:a?",
             "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "18",
+            "-c:a", "aac",
+            "-ac", "1",
+            "-movflags", "+faststart",
+            output.path
+        ])
+    }
+
+    @MainActor
+    func testRecordingPostProcessingArgumentsCanScaleAndLimitVideoFPSTogether() {
+        let input = URL(fileURLWithPath: "/tmp/clawix-recording.mov")
+        let output = URL(fileURLWithPath: "/tmp/clawix-recording-processed.mov")
+
+        let args = ScreenToolService.recordingPostProcessingArguments(
+            input: input,
+            output: output,
+            scaleRetinaTo1x: true,
+            monoAudio: true,
+            videoFPS: 15
+        )
+
+        XCTAssertEqual(args, [
+            "-y",
+            "-i", input.path,
+            "-map", "0:v:0",
+            "-map", "0:a?",
+            "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2,fps=15",
             "-c:v", "libx264",
             "-preset", "veryfast",
             "-crf", "18",

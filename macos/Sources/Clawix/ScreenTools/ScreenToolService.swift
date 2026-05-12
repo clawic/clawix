@@ -697,7 +697,8 @@ final class ScreenToolService: ObservableObject {
         input: URL,
         output: URL,
         scaleRetinaTo1x: Bool,
-        monoAudio: Bool
+        monoAudio: Bool,
+        videoFPS: Int = ScreenToolSettings.defaultRecordingVideoFPS
     ) -> [String] {
         var args = [
             "-y",
@@ -706,15 +707,23 @@ final class ScreenToolService: ObservableObject {
             "-map", "0:a?"
         ]
 
+        var videoFilters: [String] = []
         if scaleRetinaTo1x {
+            videoFilters.append("scale=trunc(iw/4)*2:trunc(ih/4)*2")
+        }
+        if videoFPS != ScreenToolSettings.defaultRecordingVideoFPS {
+            videoFilters.append("fps=\(videoFPS)")
+        }
+
+        if videoFilters.isEmpty {
+            args.append(contentsOf: ["-c:v", "copy"])
+        } else {
             args.append(contentsOf: [
-                "-filter:v", "scale=trunc(iw/4)*2:trunc(ih/4)*2",
+                "-filter:v", videoFilters.joined(separator: ","),
                 "-c:v", "libx264",
                 "-preset", "veryfast",
                 "-crf", "18"
             ])
-        } else {
-            args.append(contentsOf: ["-c:v", "copy"])
         }
 
         if monoAudio {
@@ -730,12 +739,13 @@ final class ScreenToolService: ObservableObject {
     private static func applyRecordingPostProcessing(to url: URL) async -> URL {
         let scaleRetinaTo1x = ScreenToolSettings.scaleRetinaRecordingsTo1x
         let monoAudio = ScreenToolSettings.recordRecordingAudioInMono
-        guard scaleRetinaTo1x || monoAudio else {
+        let videoFPS = ScreenToolSettings.recordingVideoFPS
+        guard scaleRetinaTo1x || monoAudio || videoFPS != ScreenToolSettings.defaultRecordingVideoFPS else {
             return url
         }
 
         do {
-            try await postProcessRecording(url, scaleRetinaTo1x: scaleRetinaTo1x, monoAudio: monoAudio)
+            try await postProcessRecording(url, scaleRetinaTo1x: scaleRetinaTo1x, monoAudio: monoAudio, videoFPS: videoFPS)
         } catch {
             ToastCenter.shared.show("Could not process recording", icon: .warning)
         }
@@ -745,7 +755,8 @@ final class ScreenToolService: ObservableObject {
     private static func postProcessRecording(
         _ url: URL,
         scaleRetinaTo1x: Bool,
-        monoAudio: Bool
+        monoAudio: Bool,
+        videoFPS: Int
     ) async throws {
         guard let ffmpeg = ffmpegExecutableURL() else {
             throw CocoaError(.fileNoSuchFile)
@@ -763,7 +774,8 @@ final class ScreenToolService: ObservableObject {
                 input: url,
                 output: temporaryURL,
                 scaleRetinaTo1x: scaleRetinaTo1x,
-                monoAudio: monoAudio
+                monoAudio: monoAudio,
+                videoFPS: videoFPS
             )
         )
         guard result.succeeded, FileManager.default.fileExists(atPath: temporaryURL.path) else {
@@ -1386,12 +1398,15 @@ enum ScreenToolSettings {
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
     static let displayRecordingTimeKey = "clawix.screenTools.displayRecordingTime"
     static let showRecordingCountdownKey = "clawix.screenTools.showRecordingCountdown"
+    static let recordingVideoFPSKey = "clawix.screenTools.recordingVideoFPS"
     static let scaleRetinaRecordingsTo1xKey = "clawix.screenTools.scaleRetinaRecordingsTo1x"
     static let recordRecordingAudioInMonoKey = "clawix.screenTools.recordRecordingAudioInMono"
     static let openRecordingEditorAfterRecordingKey = "clawix.screenTools.openRecordingEditorAfterRecording"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
     static let previousAreaRectKey = "clawix.screenTools.previousAreaRect"
+    static let recordingVideoFPSOptions = [15, 30, 60]
+    static let defaultRecordingVideoFPS = 60
 
     static var exportDirectoryURL: URL {
         if let path = defaults.string(forKey: exportDirectoryKey), !path.isEmpty {
@@ -1479,6 +1494,11 @@ enum ScreenToolSettings {
 
     static var showRecordingCountdown: Bool {
         defaults.bool(forKey: showRecordingCountdownKey)
+    }
+
+    static var recordingVideoFPS: Int {
+        let value = defaults.integer(forKey: recordingVideoFPSKey)
+        return recordingVideoFPSOptions.contains(value) ? value : defaultRecordingVideoFPS
     }
 
     static var scaleRetinaRecordingsTo1x: Bool {

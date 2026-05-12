@@ -25,6 +25,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
     @AppStorage(ScreenToolSettings.displayRecordingTimeKey) private var displayRecordingTime = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
+    @AppStorage(ScreenToolSettings.recordingVideoFPSKey) private var recordingVideoFPS = ScreenToolSettings.defaultRecordingVideoFPS
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
     @AppStorage(ScreenToolSettings.openRecordingEditorAfterRecordingKey) private var openRecordingEditorAfterRecording = false
@@ -240,6 +241,14 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Record microphone audio", detail: "Capture audio from the default input device while recording.", isOn: $recordRecordingAudio)
                 CardDivider()
                 ToggleRow(title: "Show countdown", detail: "Show a short countdown before recording starts.", isOn: $showRecordingCountdown)
+                CardDivider()
+                DropdownRow(
+                    title: "Video FPS",
+                    detail: "Limit recorded movies to the selected frame rate after recording.",
+                    options: ScreenToolSettings.recordingVideoFPSOptions.map { ($0, "\($0) FPS") },
+                    selection: $recordingVideoFPS,
+                    minWidth: 120
+                )
                 CardDivider()
                 ToggleRow(title: "Scale Retina videos to 1x", detail: "Downscale recorded movies to logical point size after recording.", isOn: $scaleRetinaRecordingsTo1x)
                 CardDivider()
