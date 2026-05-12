@@ -17,6 +17,7 @@ import { MemoryView } from "../memory/memory-view";
 import { SecretsView } from "../secrets/secrets-view";
 import { ProjectsView } from "../projects/projects-view";
 import { DatabaseView } from "../database/database-view";
+import { PomodoroView } from "../pomodoro/pomodoro-view";
 import { McpView } from "../mcp/mcp-view";
 import { LocalModelsView } from "../local-models/local-models-view";
 import { VersionMismatchBanner } from "./version-mismatch";
@@ -108,6 +109,7 @@ export function MainShell() {
           {route === "memory" && <MemoryView />}
           {route === "secrets" && <SecretsView />}
           {route === "database" && <DatabaseView />}
+          {route === "pomodoro" && <PomodoroView />}
           {route === "mcp" && <McpView />}
           {route === "local-models" && <LocalModelsView />}
           {route === "settings" && <SettingsView />}

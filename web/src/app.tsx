@@ -8,6 +8,7 @@ import { useBridgeStore } from "./bridge/store";
 import { storage, StorageKeys } from "./lib/storage";
 import { PairingScreen } from "./screens/pairing/pairing-screen";
 import { MainShell } from "./screens/shell/main-shell";
+import { PomodoroView } from "./screens/pomodoro/pomodoro-view";
 import { ToastHost } from "./components/ui/toast-center";
 
 export function App() {
@@ -22,10 +23,11 @@ export function App() {
 
   const showShell =
     conn.kind === "ready" || conn.kind === "offline" || conn.kind === "version-mismatch";
+  const showPomodoroExample = new URLSearchParams(window.location.search).get("example") === "pomodoro";
 
   return (
     <div className="h-full">
-      {showShell ? <MainShell /> : <PairingScreen />}
+      {showPomodoroExample ? <PomodoroView /> : showShell ? <MainShell /> : <PairingScreen />}
       <ToastHost />
     </div>
   );

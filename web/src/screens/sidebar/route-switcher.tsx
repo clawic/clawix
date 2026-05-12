@@ -8,6 +8,7 @@ import {
   BrainIcon,
   KeyIcon,
   DatabaseIcon,
+  ClockIcon,
   PuzzleIcon,
   ServerIcon,
   SettingsIcon,
@@ -20,6 +21,7 @@ export type AppRoute =
   | "memory"
   | "secrets"
   | "database"
+  | "pomodoro"
   | "mcp"
   | "local-models"
   | "settings";
@@ -35,6 +37,7 @@ const ITEMS: { route: AppRoute; label: string; Icon: (p: { size?: number; classN
   { route: "memory", label: "Memory", Icon: BrainIcon },
   { route: "secrets", label: "Secrets", Icon: KeyIcon },
   { route: "database", label: "Database", Icon: DatabaseIcon },
+  { route: "pomodoro", label: "Pomodoro", Icon: ClockIcon },
   { route: "mcp", label: "MCP", Icon: PuzzleIcon },
   { route: "local-models", label: "Local models", Icon: ServerIcon },
   { route: "settings", label: "Settings", Icon: SettingsIcon },

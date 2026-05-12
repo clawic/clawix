@@ -14,7 +14,7 @@ import {
   // 76 icons mirroring the Mac LucideIcons/ folder.
   AppWindow, ArrowDown, ArrowDownToLine, ArrowLeft, ArrowRight,
   ArrowRightToLine, ArrowUpRight, AudioWaveform, BadgeCheck, Braces,
-  Camera, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
+  Calendar, Camera, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
   CircleAlert, CircleCheck, CircleDot, CircleStop, CircleX,
   Clock, Database, Download, Drama, Ellipsis,
   Eye, EyeOff, FileQuestion, FileText, Folder,
@@ -110,6 +110,7 @@ export const AudioWaveformIcon      = wrap(AudioWaveform);
 export const BadgeCheckIcon         = wrap(BadgeCheck);
 export const BracesIcon             = wrap(Braces);
 export const CameraIcon             = wrap(Camera);
+export const CalendarIcon           = wrap(Calendar);
 export const ClockIcon              = wrap(Clock);
 export const DownloadIcon           = wrap(Download);
 export const DramaIcon              = wrap(Drama);
