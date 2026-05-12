@@ -19,11 +19,8 @@ struct ChatView: View {
     @EnvironmentObject private var flags: FeatureFlags
     @EnvironmentObject private var badgerManager: BadgerManager
 
-    /// True when the badger helper is alive. Drives whether the "Push to
-    /// badger" action surfaces on each assistant bubble (we hide the
-    /// affordance when the service is dead so the user doesn't get a
-    /// useless icon).
     private var badgerReady: Bool {
+        guard flags.isVisible(.badger) else { return false }
         if case .ready = badgerManager.state { return true }
         return false
     }
