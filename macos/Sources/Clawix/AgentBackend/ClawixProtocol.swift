@@ -581,12 +581,38 @@ struct RateLimitWindow: Decodable, Equatable {
     let usedPercent: Int
     let resetsAt: Int64?
     let windowDurationMins: Int64?
+
+    init(usedPercent: Int, resetsAt: Int64?, windowDurationMins: Int64?) {
+        self.usedPercent = usedPercent
+        self.resetsAt = resetsAt
+        self.windowDurationMins = windowDurationMins
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: FlexibleRateLimitKey.self)
+        self.usedPercent = try c.decodeFlexiblePercent(keys: ["usedPercent", "used_percent"])
+        self.resetsAt = try c.decodeFlexibleIfPresent(Int64.self, keys: ["resetsAt", "resets_at"])
+        self.windowDurationMins = try c.decodeFlexibleIfPresent(Int64.self, keys: ["windowDurationMins", "window_minutes", "windowMinutes"])
+    }
 }
 
 struct CreditsSnapshot: Decodable, Equatable {
     let hasCredits: Bool
     let unlimited: Bool
     let balance: String?
+
+    init(hasCredits: Bool, unlimited: Bool, balance: String?) {
+        self.hasCredits = hasCredits
+        self.unlimited = unlimited
+        self.balance = balance
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: FlexibleRateLimitKey.self)
+        self.hasCredits = try c.decodeFlexible(Bool.self, keys: ["hasCredits", "has_credits"])
+        self.unlimited = try c.decodeFlexible(Bool.self, keys: ["unlimited"])
+        self.balance = try c.decodeFlexibleIfPresent(String.self, keys: ["balance"])
+    }
 }
 
 struct RateLimitSnapshot: Decodable, Equatable {
@@ -595,6 +621,29 @@ struct RateLimitSnapshot: Decodable, Equatable {
     let credits: CreditsSnapshot?
     let limitId: String?
     let limitName: String?
+
+    init(
+        primary: RateLimitWindow?,
+        secondary: RateLimitWindow?,
+        credits: CreditsSnapshot?,
+        limitId: String?,
+        limitName: String?
+    ) {
+        self.primary = primary
+        self.secondary = secondary
+        self.credits = credits
+        self.limitId = limitId
+        self.limitName = limitName
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: FlexibleRateLimitKey.self)
+        self.primary = try c.decodeFlexibleIfPresent(RateLimitWindow.self, keys: ["primary"])
+        self.secondary = try c.decodeFlexibleIfPresent(RateLimitWindow.self, keys: ["secondary"])
+        self.credits = try c.decodeFlexibleIfPresent(CreditsSnapshot.self, keys: ["credits"])
+        self.limitId = try c.decodeFlexibleIfPresent(String.self, keys: ["limitId", "limit_id"])
+        self.limitName = try c.decodeFlexibleIfPresent(String.self, keys: ["limitName", "limit_name"])
+    }
 }
 
 struct GetAccountRateLimitsResponse: Decodable {
@@ -603,11 +652,81 @@ struct GetAccountRateLimitsResponse: Decodable {
     /// "codex_<model>"). Optional because older daemons only emit the
     /// top-level `rateLimits` field.
     let rateLimitsByLimitId: [String: RateLimitSnapshot]?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: FlexibleRateLimitKey.self)
+        self.rateLimits = try c.decodeFlexible(RateLimitSnapshot.self, keys: ["rateLimits", "rate_limits"])
+        self.rateLimitsByLimitId = try c.decodeFlexibleIfPresent(
+            [String: RateLimitSnapshot].self,
+            keys: ["rateLimitsByLimitId", "rate_limits_by_limit_id"]
+        )
+    }
 }
 
 struct AccountRateLimitsUpdatedNotification: Decodable {
     let rateLimits: RateLimitSnapshot
     let rateLimitsByLimitId: [String: RateLimitSnapshot]?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: FlexibleRateLimitKey.self)
+        self.rateLimits = try c.decodeFlexible(RateLimitSnapshot.self, keys: ["rateLimits", "rate_limits"])
+        self.rateLimitsByLimitId = try c.decodeFlexibleIfPresent(
+            [String: RateLimitSnapshot].self,
+            keys: ["rateLimitsByLimitId", "rate_limits_by_limit_id"]
+        )
+    }
+}
+
+private struct FlexibleRateLimitKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = "\(intValue)"
+        self.intValue = intValue
+    }
+}
+
+private extension KeyedDecodingContainer where Key == FlexibleRateLimitKey {
+    func decodeFlexible<T: Decodable>(_ type: T.Type, keys: [String]) throws -> T {
+        for key in keys {
+            guard let codingKey = FlexibleRateLimitKey(stringValue: key), contains(codingKey) else { continue }
+            return try decode(type, forKey: codingKey)
+        }
+        throw DecodingError.keyNotFound(
+            FlexibleRateLimitKey(stringValue: keys.first ?? "")!,
+            DecodingError.Context(codingPath: codingPath, debugDescription: "Missing any of keys: \(keys.joined(separator: ", "))")
+        )
+    }
+
+    func decodeFlexibleIfPresent<T: Decodable>(_ type: T.Type, keys: [String]) throws -> T? {
+        for key in keys {
+            guard let codingKey = FlexibleRateLimitKey(stringValue: key), contains(codingKey) else { continue }
+            return try decodeIfPresent(type, forKey: codingKey)
+        }
+        return nil
+    }
+
+    func decodeFlexiblePercent(keys: [String]) throws -> Int {
+        for key in keys {
+            guard let codingKey = FlexibleRateLimitKey(stringValue: key), contains(codingKey) else { continue }
+            if let value = try? decode(Int.self, forKey: codingKey) {
+                return value
+            }
+            if let value = try? decode(Double.self, forKey: codingKey) {
+                return Int(value.rounded())
+            }
+        }
+        throw DecodingError.keyNotFound(
+            FlexibleRateLimitKey(stringValue: keys.first ?? "")!,
+            DecodingError.Context(codingPath: codingPath, debugDescription: "Missing percent key: \(keys.joined(separator: ", "))")
+        )
+    }
 }
 
 // MARK: - JSONValue (untyped JSON)
