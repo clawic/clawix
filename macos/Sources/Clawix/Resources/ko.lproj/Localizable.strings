@@ -874,7 +874,6 @@
 "Show alerts when notification permissions are required" = "Show alerts when notification permissions are required";
 "Show alerts when your input is needed to continue" = "Show alerts when your input is needed to continue";
 "Show chat ID, context usage and rate limits" = "채팅 ID, 컨텍스트 사용량, 사용 한도를 표시";
-"Show device toolbar" = "Show device toolbar";
 "Show in the menu bar" = "Show in the menu bar";
 "Show more" = "더 보기";
 "Show original (before user edit)" = "Show original (before user edit)";
@@ -1026,6 +1025,7 @@
 "Use drafts by default when creating PRs from Clawix" = "Use drafts by default when creating PRs from Clawix";
 "Use global" = "Use global";
 "Use light, dark, or system appearance" = "라이트, 다크 또는 시스템 설정 사용";
+"Use mobile user agent" = "Use mobile user agent";
 "Use plan mode" = "Use plan mode";
 "Use pointer cursors" = "Use pointer cursors";
 "Use recovery phrase" = "Use recovery phrase";

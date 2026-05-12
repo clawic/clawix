@@ -444,7 +444,7 @@ struct BrowserMoreOptionsMenu: View {
             }
             simpleRow(
                 id: "deviceToolbar",
-                title: "Show device toolbar",
+                title: "Use mobile user agent",
                 trailingCheck: controller.mobileMode
             ) {
                 controller.toggleMobileMode()

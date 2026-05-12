@@ -48817,66 +48817,66 @@
         }
       }
     },
-    "Show device toolbar": {
+    "Use mobile user agent": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostrar barra de dispositivos"
+            "value": "Usar agente de usuario móvil"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show device toolbar"
+            "value": "Use mobile user agent"
           }
         }
       }

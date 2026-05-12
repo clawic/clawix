@@ -874,7 +874,6 @@
 "Show alerts when notification permissions are required" = "Show alerts when notification permissions are required";
 "Show alerts when your input is needed to continue" = "Show alerts when your input is needed to continue";
 "Show chat ID, context usage and rate limits" = "Show chat ID, context usage and rate limits";
-"Show device toolbar" = "Show device toolbar";
 "Show in the menu bar" = "Show in the menu bar";
 "Show more" = "Show more";
 "Show original (before user edit)" = "Show original (before user edit)";
@@ -1026,6 +1025,7 @@
 "Use drafts by default when creating PRs from Clawix" = "Use drafts by default when creating PRs from Clawix";
 "Use global" = "Use global";
 "Use light, dark, or system appearance" = "Use light, dark, or system appearance";
+"Use mobile user agent" = "Use mobile user agent";
 "Use plan mode" = "Use plan mode";
 "Use pointer cursors" = "Use pointer cursors";
 "Use recovery phrase" = "Use recovery phrase";
