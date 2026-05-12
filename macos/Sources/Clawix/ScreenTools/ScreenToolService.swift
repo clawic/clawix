@@ -13,6 +13,7 @@ final class ScreenToolService: ObservableObject {
 
     private var historyWindow: ScreenToolHistoryWindow?
     private var areaSelectionWindow: ScreenToolAreaSelectionWindow?
+    private var allInOneMenu: NSMenu?
     private var allInOneMenuTarget: ScreenToolMenuActionTarget?
 
     private init() {}
@@ -59,6 +60,7 @@ final class ScreenToolService: ObservableObject {
         let menu = NSMenu()
         let target = ScreenToolMenuActionTarget { [weak self] action in
             guard let self else { return }
+            self.allInOneMenu = nil
             self.allInOneMenuTarget = nil
             switch action {
             case .captureArea:         self.captureArea()
@@ -72,10 +74,11 @@ final class ScreenToolService: ObservableObject {
             case .captureHistory:      self.openCaptureHistory()
             }
         }
+        allInOneMenu = menu
         allInOneMenuTarget = target
 
         func addItem(_ title: String, action: ScreenToolMenuAction, symbol: String) {
-            let item = NSMenuItem(title: title, action: #selector(ScreenToolMenuActionTarget.perform(_:)), keyEquivalent: "")
+            let item = NSMenuItem(title: title, action: #selector(ScreenToolMenuActionTarget.runScreenToolMenuAction(_:)), keyEquivalent: "")
             item.target = target
             item.representedObject = action.rawValue
             item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
@@ -1146,7 +1149,7 @@ private final class ScreenToolMenuActionTarget: NSObject {
         self.handler = handler
     }
 
-    @objc func perform(_ sender: NSMenuItem) {
+    @objc func runScreenToolMenuAction(_ sender: NSMenuItem) {
         guard
             let rawValue = sender.representedObject as? String,
             let action = ScreenToolMenuAction(rawValue: rawValue)
