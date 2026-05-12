@@ -36,7 +36,7 @@ struct TerminalSplitView: View {
     @ViewBuilder
     private func leafView(_ leaf: TerminalSplitNode.LeafID) -> some View {
         let isActive = focusedLeafId == leaf.id
-        ZStack {
+        ZStack(alignment: .topTrailing) {
             if let session = store.session(for: leaf.id) {
                 TerminalEmulatorView(
                     session: session,
@@ -55,6 +55,34 @@ struct TerminalSplitView: View {
                     .onTapGesture {
                         store.setFocusedLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id)
                     }
+            }
+            if isActive {
+                TerminalPaneControls(
+                    onSplitRight: {
+                        store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .horizontal)
+                    },
+                    onSplitDown: {
+                        store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .vertical)
+                    },
+                    onClose: {
+                        store.closeLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id)
+                    }
+                )
+                .padding(.top, 6)
+                .padding(.trailing, 8)
+                .allowsHitTesting(true)
+            }
+        }
+        .contextMenu {
+            Button("Split Right") {
+                store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .horizontal)
+            }
+            Button("Split Down") {
+                store.splitLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id, direction: .vertical)
+            }
+            Divider()
+            Button("Close Pane") {
+                store.closeLeaf(chatId: chatId, tabId: tabId, leafId: leaf.id)
             }
         }
     }
