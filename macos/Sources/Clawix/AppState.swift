@@ -187,6 +187,54 @@ enum SidebarRoute: Equatable {
     case lifeSettings
 }
 
+extension SidebarRoute {
+    var gatedFeature: AppFeature? {
+        switch self {
+        case .appsHome, .app:
+            return .apps
+        case .secretsHome:
+            return .secrets
+        case .databaseHome:
+            return .database
+        case .databaseWorkbench:
+            return .databaseWorkbench
+        case .indexHome:
+            return .index
+        case .marketplaceHome:
+            return .marketplace
+        case .calendarHome:
+            return .calendar
+        case .contactsHome:
+            return .contacts
+        case .skills, .skillDetail:
+            return .skills
+        case .iotHome, .iotThingDetail:
+            return .iotHome
+        case .designStylesHome, .designStyleDetail, .designTemplatesHome,
+             .designTemplateDetail, .designReferencesHome, .designEditor:
+            return .design
+        case .agentsHome, .agentDetail, .personalitiesHome, .personalityDetail,
+             .connectionsHome, .connectionDetail:
+            return .agents
+        case .skillCollectionsHome, .skillCollectionDetail:
+            return .skillCollections
+        case .badgerHome, .badgerComposer, .badgerChannels:
+            return .badger
+        case .lifeHome, .lifeVertical, .lifeSettings:
+            return .life
+        case .home, .search, .plugins, .automations, .project, .chat, .settings,
+             .databaseCollection, .memoryHome, .driveAdmin, .drivePhotos,
+             .driveDocuments, .driveRecent, .driveFolder:
+            return nil
+        }
+    }
+
+    func visibleRoute(isVisible: (AppFeature) -> Bool) -> SidebarRoute {
+        guard let feature = gatedFeature, !isVisible(feature) else { return self }
+        return .home
+    }
+}
+
 // MARK: - Models
 
 struct ChatMessage: Identifiable, Equatable {
@@ -890,6 +938,11 @@ final class ComposerState: ObservableObject {
 final class AppState: ObservableObject {
     @Published var currentRoute: SidebarRoute = .home {
         didSet {
+            let visibleRoute = currentRoute.visibleRoute(isVisible: FeatureFlags.shared.isVisible)
+            if visibleRoute != currentRoute {
+                currentRoute = visibleRoute
+                return
+            }
             clearUnreadIfChatRoute()
             if case let .chat(id) = currentRoute {
                 daemonBridgeClient?.openChat(id)
@@ -915,8 +968,22 @@ final class AppState: ObservableObject {
     @Published var driveQuickUploadRequestID: UUID? = nil
 
     func navigate(to route: SidebarRoute) {
-        guard currentRoute != route else { return }
-        currentRoute = route
+        let visibleRoute = route.visibleRoute(isVisible: FeatureFlags.shared.isVisible)
+        guard currentRoute != visibleRoute else { return }
+        currentRoute = visibleRoute
+    }
+
+    func enforceCurrentRouteVisibility() {
+        navigate(to: currentRoute)
+        if !FeatureFlags.shared.isVisible(.browserUsage) {
+            removeWebTabsFromCurrentSidebar()
+        }
+        if !FeatureFlags.shared.isVisible(.remoteMesh), !selectedMeshTarget.isLocal {
+            selectedMeshTarget = .local
+        }
+        if !FeatureFlags.shared.isVisible(.localModels), selectedModel.hasPrefix("ollama:") {
+            selectedModel = "5.5"
+        }
     }
 
     func requestDriveQuickUpload() {
@@ -3092,6 +3159,7 @@ final class AppState: ObservableObject {
     /// rest of the app can keep treating `selectedModel` as an opaque
     /// string. Returns nil for the GPT/Codex options.
     func localModelName(forSelected raw: String) -> String? {
+        guard FeatureFlags.shared.isVisible(.localModels) else { return nil }
         let prefix = "ollama:"
         guard raw.hasPrefix(prefix) else { return nil }
         return String(raw.dropFirst(prefix.count))
@@ -3635,7 +3703,7 @@ final class AppState: ObservableObject {
 
     private func hydrateHistoryIfNeeded(chatId: UUID, blocking: Bool = false) {
         guard let chat = chat(byId: chatId), shouldHydrateHistory(chat) else { return }
-        if !chat.hasGitRepo, let cwd = chat.cwd {
+        if FeatureFlags.shared.isVisible(.git), !chat.hasGitRepo, let cwd = chat.cwd {
             if blocking {
                 applyGitSnapshot(GitInspector.inspect(cwd: cwd), chatId: chatId)
             } else {
@@ -4722,6 +4790,7 @@ final class AppState: ObservableObject {
     /// shell out to `git checkout`; it only reflects the user's choice in
     /// the chrome.
     func switchBranch(chatId: UUID, to branch: String) {
+        guard FeatureFlags.shared.isVisible(.git) else { return }
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
         chats[idx].branch = branch
         if !chats[idx].availableBranches.contains(branch) {
@@ -4733,6 +4802,7 @@ final class AppState: ObservableObject {
     /// Append a new branch to the chat's known list and switch to it.
     /// Mirrors the "Create and switch to a new branch..." flow.
     func createBranch(chatId: UUID, name: String) {
+        guard FeatureFlags.shared.isVisible(.git) else { return }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               let idx = chats.firstIndex(where: { $0.id == chatId }) else { return }
@@ -5661,6 +5731,28 @@ final class AppState: ObservableObject {
 
     var activeSidebarItem: SidebarItem? { currentSidebar.activeItem }
 
+    private func removeWebTabsFromCurrentSidebar() {
+        var s = currentSidebar
+        let activeWasWeb = s.activeItem.map {
+            if case .web = $0 { return true }
+            return false
+        } ?? false
+        s.items.removeAll {
+            if case .web = $0 { return true }
+            return false
+        }
+        let activeStillExists = s.activeItemId.map { activeID in
+            s.items.contains(where: { $0.id == activeID })
+        } ?? false
+        if activeWasWeb || !activeStillExists {
+            s.activeItemId = s.items.first?.id
+        }
+        if s.items.isEmpty {
+            s.isOpen = false
+        }
+        currentSidebar = s
+    }
+
     /// Whether the browser panel is showing a web tab right now. Drives the
     /// enabled state of browser-scoped menu commands (Cmd+R, Cmd+L, Cmd+W,
     /// Cmd+/-/0) so they fall through to the system when there's nothing
@@ -5676,6 +5768,7 @@ final class AppState: ObservableObject {
     /// distinct values (otherwise Combine wouldn't fire `onChange` for
     /// identical enums).
     func requestBrowserCommand(_ command: BrowserCommandRequest.Action) {
+        guard FeatureFlags.shared.isVisible(.browserUsage) else { return }
         Self.browserCommandSequence &+= 1
         pendingBrowserCommand = BrowserCommandRequest(
             action: command,
@@ -5764,6 +5857,7 @@ final class AppState: ObservableObject {
     /// time on this chat) reuses the first existing web tab so reopening the
     /// panel doesn't spawn an extra google.com every time.
     func openBrowser(initialURL: URL = URL(string: "about:blank")!) {
+        guard FeatureFlags.shared.isVisible(.browserUsage) else { return }
         var s = currentSidebar
         let hasWebTab = s.items.contains(where: {
             if case .web = $0 { return true } else { return false }
@@ -5802,6 +5896,7 @@ final class AppState: ObservableObject {
             openFileInSidebar(url.path)
             return
         }
+        guard FeatureFlags.shared.isVisible(.browserUsage) else { return }
         var s = currentSidebar
         let key = Self.browserDedupKey(for: url)
         if let existing = s.items.first(where: {
@@ -5873,6 +5968,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func newBrowserTab(url: URL = URL(string: "about:blank")!) -> SidebarItem.WebPayload? {
+        guard FeatureFlags.shared.isVisible(.browserUsage) else { return nil }
         var s = currentSidebar
         let payload = SidebarItem.WebPayload(
             id: UUID(),

@@ -245,6 +245,7 @@ final class DictationCoordinator: ObservableObject {
     /// language setting, the same resolution the global hotkey uses.
     /// An explicit value overrides the setting for that one session.
     func startFromComposer(language: String? = nil, completion: @escaping (String) -> Void) {
+        guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
         guard state == .idle else { return }
         source = .composer(completion: completion)
         languageHint = language ?? resolvedLanguageHint()
@@ -253,6 +254,7 @@ final class DictationCoordinator: ObservableObject {
     }
 
     func startFromQuickAsk(language: String? = nil, completion: @escaping (String) -> Void) {
+        guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
         guard state == .idle else { return }
         source = .quickAsk(completion: completion)
         languageHint = language ?? resolvedLanguageHint()
@@ -276,6 +278,7 @@ final class DictationCoordinator: ObservableObject {
     /// which ignored the user's Settings choice — Spanish dictation
     /// against an English-locale app got translated to English text.
     func startFromHotkey(language: String? = nil) {
+        guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
         guard state == .idle else { return }
         source = .hotkey
         languageHint = language ?? resolvedLanguageHint()

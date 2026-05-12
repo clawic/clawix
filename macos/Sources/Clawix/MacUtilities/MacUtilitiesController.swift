@@ -215,6 +215,7 @@ final class MacUtilitiesController: ObservableObject {
     private init() {}
 
     func perform(_ action: MacUtilityActionID) {
+        guard FeatureFlags.shared.isVisible(.macUtilities) else { return }
         do {
             switch action {
             case .hideAllWindows:

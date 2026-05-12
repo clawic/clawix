@@ -311,7 +311,7 @@ struct ChatView: View {
                             .frame(maxWidth: chatRailMaxWidth)
                             .environmentObject(isSideChat ? sideComposer : appState.composer)
 
-                        if flags.isVisible(.remoteMesh) || chat.hasGitRepo {
+                        if flags.isVisible(.remoteMesh) || (flags.isVisible(.git) && chat.hasGitRepo) {
                             HStack(spacing: 14) {
                                 if flags.isVisible(.remoteMesh) {
                                     ChatFooterPill(
@@ -325,7 +325,7 @@ struct ChatView: View {
                                     .anchorPreference(key: WorkPillAnchorKey.self, value: .bounds) { $0 }
                                 }
 
-                            if chat.hasGitRepo {
+                            if flags.isVisible(.git), chat.hasGitRepo {
                                 ChatFooterPill(
                                     icon: "arrow.triangle.branch",
                                     label: chat.branch ?? "main",
@@ -377,7 +377,7 @@ struct ChatView: View {
                 }
                 .overlayPreferenceValue(BranchPillAnchorKey.self) { anchor in
                     GeometryReader { proxy in
-                        if branchMenuOpen, let anchor {
+                        if flags.isVisible(.git), branchMenuOpen, let anchor {
                             let buttonFrame = proxy[anchor]
                             BranchPickerPopup(
                                 isPresented: $branchMenuOpen,
@@ -408,6 +408,7 @@ struct ChatView: View {
                 .animation(.easeOut(duration: 0.20), value: workMenuOpen)
                 .animation(.easeOut(duration: 0.20), value: branchMenuOpen)
                 .sheet(isPresented: $branchCreateOpen) {
+                    if flags.isVisible(.git) {
                     BranchCreateSheet(
                         initialName: suggestedNewBranchName(for: chat),
                         onCancel: { branchCreateOpen = false },
@@ -416,6 +417,7 @@ struct ChatView: View {
                             branchCreateOpen = false
                         }
                     )
+                    }
                 }
             } else {
                     Text(verbatim: "Chat not found")
@@ -1589,7 +1591,7 @@ private struct ChatFooterPill: View {
                 Text(verbatim: label)
                     .font(BodyFont.system(size: 12.5, wght: 500))
                     .lineLimit(1)
-                LucideIcon(.chevronDown, size: 10)
+                LucideIcon(.chevronDown, size: 12)
             }
             .foregroundColor(Color(white: (hovered || isOpen) ? 0.82 : 0.55))
             .padding(.horizontal, 4)

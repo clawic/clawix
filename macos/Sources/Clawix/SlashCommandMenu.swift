@@ -7,6 +7,21 @@ struct SlashCommand: Identifiable, Equatable {
     let label: String
     let description: String?
     let iconName: String
+    let gatedFeature: AppFeature?
+
+    init(
+        id: String,
+        label: String,
+        description: String?,
+        iconName: String,
+        gatedFeature: AppFeature? = nil
+    ) {
+        self.id = id
+        self.label = label
+        self.description = description
+        self.iconName = iconName
+        self.gatedFeature = gatedFeature
+    }
 }
 
 enum SlashCommandCatalog {
@@ -22,7 +37,8 @@ enum SlashCommandCatalog {
         SlashCommand(id: "mcp",
                      label: "MCP",
                      description: "Show MCP server status",
-                     iconName: "paperclip"),
+                     iconName: "paperclip",
+                     gatedFeature: .mcp),
         SlashCommand(id: "modelo",
                      label: "Model",
                      description: "GPT-5.5",
@@ -38,7 +54,8 @@ enum SlashCommandCatalog {
         SlashCommand(id: "personalidad",
                      label: "Personality",
                      description: nil,
-                     iconName: "person.crop.circle"),
+                     iconName: "person.crop.circle",
+                     gatedFeature: .agents),
         SlashCommand(id: "proyecto",
                      label: "Project",
                      description: "Select project for new chats",
@@ -57,10 +74,14 @@ enum SlashCommandCatalog {
                      iconName: "bolt")
     ]
 
-    static func filter(_ query: String) -> [SlashCommand] {
+    static func filter(_ query: String, isVisible: (AppFeature) -> Bool) -> [SlashCommand] {
         let trimmed = query.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !trimmed.isEmpty else { return all }
-        return all.filter { cmd in
+        let visible = all.filter { cmd in
+            guard let feature = cmd.gatedFeature else { return true }
+            return isVisible(feature)
+        }
+        guard !trimmed.isEmpty else { return visible }
+        return visible.filter { cmd in
             cmd.id.lowercased().hasPrefix(trimmed)
                 || cmd.label.lowercased().hasPrefix(trimmed)
                 || cmd.label.lowercased().contains(trimmed)

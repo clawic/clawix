@@ -104,7 +104,9 @@ fileprivate enum SidebarToolsCatalog {
         case "index":            return .index
         case "marketplace":      return .marketplace
         case "agents":           return .agents
+        case "personalities":    return .agents
         case "skillCollections": return .skillCollections
+        case "connections":      return .agents
         case "badger":           return .badger
         default:                 return nil
         }

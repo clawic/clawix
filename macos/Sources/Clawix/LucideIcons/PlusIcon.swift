@@ -7,11 +7,15 @@ import SwiftUI
 /// at the same visual weight.
 struct PlusIcon: View {
     var size: CGFloat = 16
+    /// Override the default stroke (which scales linearly with `size`).
+    /// Used by the composer's oversized `+` button, where the icon needs to
+    /// be ~3x bigger than the rest of the chrome but still read as thin.
+    var lineWidth: CGFloat? = nil
 
     var body: some View {
         PlusIconShape()
             .stroke(style: StrokeStyle(
-                lineWidth: 2.5 * (size / 28),
+                lineWidth: lineWidth ?? 2.5 * (size / 28),
                 lineCap: .round,
                 lineJoin: .round
             ))

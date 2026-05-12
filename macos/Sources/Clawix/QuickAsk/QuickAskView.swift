@@ -34,6 +34,7 @@ struct QuickAskView: View {
     @ObservedObject var appState: AppState
 
     @ObservedObject private var dictation = DictationCoordinator.shared
+    @ObservedObject private var flags = FeatureFlags.shared
 
     @State private var prompt: String = ""
     @State private var promptHeight: CGFloat = 28
@@ -610,12 +611,14 @@ struct QuickAskView: View {
             )
             Spacer(minLength: 0)
 
-            if dictation.state == .transcribing, dictation.activeSource == .quickAsk {
+            if flags.isVisible(.voiceToText),
+               dictation.state == .transcribing,
+               dictation.activeSource == .quickAsk {
                 TranscribingSpinner()
                     .frame(width: 26, height: 26)
                     .padding(.bottom, -secondaryDrop)
                     .accessibilityLabel("Transcribing voice note")
-            } else {
+            } else if flags.isVisible(.voiceToText) {
                 micButton
                     .padding(.bottom, -secondaryDrop)
             }

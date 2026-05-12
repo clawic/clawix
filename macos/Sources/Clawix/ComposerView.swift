@@ -76,7 +76,7 @@ struct ComposerView: View {
 
     private var slashCommands: [SlashCommand] {
         guard let q = slashQuery else { return [] }
-        return SlashCommandCatalog.filter(q)
+        return SlashCommandCatalog.filter(q, isVisible: flags.isVisible)
     }
 
     private var slashOpen: Bool { slashQuery != nil }
@@ -261,7 +261,9 @@ struct ComposerView: View {
             .anchorPreference(key: ModelButtonAnchorKey.self, value: .bounds) { $0 }
             .hoverHint(L10n.t("Change model"))
 
-            if dictation.state == .transcribing, dictation.activeSource == .composer {
+            if flags.isVisible(.voiceToText),
+               dictation.state == .transcribing,
+               dictation.activeSource == .composer {
                 Button {
                     dictation.cancel()
                 } label: {
@@ -271,7 +273,7 @@ struct ComposerView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Cancel voice transcription")
                 .hoverHint(L10n.t("Cancel transcription"))
-            } else {
+            } else if flags.isVisible(.voiceToText) {
                 Button {
                     startVoice()
                 } label: {
@@ -368,10 +370,10 @@ struct ComposerView: View {
         return Button {
             addMenuOpen.toggle()
         } label: {
-            LucideIcon(.plus, size: 11)
+            PlusIcon(size: 28, lineWidth: 1.4)
                 .foregroundColor(.white)
                 .opacity(active ? 0.96 : 0.62)
-                .frame(width: 28, height: 28)
+                .frame(width: 34, height: 34)
                 .background(
                     Circle().fill(Color.white.opacity(active ? 0.08 : 0.0))
                 )
@@ -666,7 +668,7 @@ struct ComposerView: View {
                             Text(appState.selectedProject?.name
                                  ?? String(localized: "Work on a project", bundle: AppLocale.bundle, locale: AppLocale.current))
                                 .font(BodyFont.system(size: 11.5, wght: 500))
-                            LucideIcon(.chevronDown, size: 8)
+                            LucideIcon(.chevronDown, size: 11)
                         }
                         .foregroundColor(Color(white: 0.55))
                     }
@@ -760,7 +762,9 @@ struct ComposerView: View {
                         speed: $appState.selectedSpeed,
                         primaryModels: appState.availableModels,
                         otherModels: appState.otherModels,
-                        localModels: localModelsService.installedModels.map { $0.name }
+                        localModels: flags.isVisible(.localModels)
+                            ? localModelsService.installedModels.map { $0.name }
+                            : []
                     )
                     .alignmentGuide(.top) { d in d[.bottom] - buttonFrame.minY + 6 }
                     .alignmentGuide(.leading) { d in

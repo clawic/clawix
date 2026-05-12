@@ -21,7 +21,7 @@ enum FeatureTier {
     case experimental
 }
 
-enum AppFeature {
+enum AppFeature: Equatable {
     case voiceToText
     case quickAsk
     case secrets

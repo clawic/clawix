@@ -8,7 +8,24 @@ struct PaletteItem: Identifiable {
     let icon: String
     let title: String
     let shortcut: String?
+    let gatedFeature: AppFeature?
     let action: @MainActor (AppState) -> Void
+
+    init(
+        id: String,
+        icon: String,
+        title: String,
+        shortcut: String?,
+        gatedFeature: AppFeature? = nil,
+        action: @escaping @MainActor (AppState) -> Void
+    ) {
+        self.id = id
+        self.icon = icon
+        self.title = title
+        self.shortcut = shortcut
+        self.gatedFeature = gatedFeature
+        self.action = action
+    }
 }
 
 struct PaletteSection: Identifiable {
@@ -44,9 +61,11 @@ private enum PaletteCatalog {
                         action: { $0.isLeftSidebarOpen.toggle() }),
             PaletteItem(id: "browser-tab", icon: "globe",
                         title: "Open browser tab", shortcut: "⌘T",
+                        gatedFeature: .browserUsage,
                         action: { $0.openBrowser() }),
             PaletteItem(id: "browser-panel", icon: "globe",
                         title: "Toggle browser panel", shortcut: "⇧⌘B",
+                        gatedFeature: .browserUsage,
                         action: { state in
                             if state.isRightSidebarOpen, case .web = state.activeSidebarItem {
                                 state.closeBrowserPanel()
@@ -107,16 +126,24 @@ struct CommandPaletteOverlay: View {
 
 struct CommandPaletteView: View {
     @ObservedObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
     @State private var query: String = ""
     @State private var selectedID: String?
     @FocusState private var queryFocused: Bool
 
     private var filtered: [(PaletteSection, [PaletteItem])] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        if q.isEmpty {
-            return PaletteCatalog.sections.map { ($0, $0.items) }
+        let sections = PaletteCatalog.sections.compactMap { section -> PaletteSection? in
+            let items = section.items.filter { item in
+                guard let feature = item.gatedFeature else { return true }
+                return flags.isVisible(feature)
+            }
+            return items.isEmpty ? nil : PaletteSection(id: section.id, title: section.title, items: items)
         }
-        return PaletteCatalog.sections.compactMap { section in
+        if q.isEmpty {
+            return sections.map { ($0, $0.items) }
+        }
+        return sections.compactMap { section in
             let matches = section.items.filter { $0.title.lowercased().contains(q) }
             return matches.isEmpty ? nil : (section, matches)
         }

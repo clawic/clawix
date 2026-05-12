@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ViewMenuCommands: View {
     @ObservedObject var appState: AppState
+    @ObservedObject private var flags = FeatureFlags.shared
     @ObservedObject private var terminalStore = TerminalSessionStore.shared
 
     private var isChatRoute: Bool {
@@ -48,21 +49,22 @@ struct ViewMenuCommands: View {
             appState.openBrowser()
         }
         .keyboardShortcut("t", modifiers: .command)
+        .disabled(!flags.isVisible(.browserUsage))
         Button("Reload Browser Page") {
             appState.requestBrowserCommand(.reload)
         }
         .keyboardShortcut("r", modifiers: .command)
-        .disabled(!appState.hasActiveWebTab)
+        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
         Button("Open Location") {
             appState.requestBrowserCommand(.focusURLBar)
         }
         .keyboardShortcut("l", modifiers: .command)
-        .disabled(!appState.hasActiveWebTab)
+        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
         Button("Close Browser Tab") {
             appState.requestBrowserCommand(.closeActiveTab)
         }
         .keyboardShortcut("w", modifiers: .command)
-        .disabled(!appState.hasActiveWebTab)
+        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
         Button("Find in Chat") {
             appState.openFindBar()
         }
@@ -79,17 +81,17 @@ struct ViewMenuCommands: View {
             appState.requestBrowserCommand(.zoomIn)
         }
         .keyboardShortcut("+", modifiers: .command)
-        .disabled(!appState.hasActiveWebTab)
+        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
         Button("Zoom Out") {
             appState.requestBrowserCommand(.zoomOut)
         }
         .keyboardShortcut("-", modifiers: .command)
-        .disabled(!appState.hasActiveWebTab)
+        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
         Button("Actual Size") {
             appState.requestBrowserCommand(.zoomReset)
         }
         .keyboardShortcut("0", modifiers: .command)
-        .disabled(!appState.hasActiveWebTab)
+        .disabled(!flags.isVisible(.browserUsage) || !appState.hasActiveWebTab)
     }
 
     private func createTerminalTab() {

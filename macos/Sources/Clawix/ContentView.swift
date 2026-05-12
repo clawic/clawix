@@ -16,6 +16,7 @@ private let contentCornerRadius: CGFloat = 14
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
 
     @AppStorage("LeftSidebarWidth", store: SidebarPrefs.store)
     private var leftSidebarWidthRaw: Double = Double(sidebarDefaultWidth)
@@ -39,8 +40,12 @@ struct ContentView: View {
     }
 
     private var isSettingsRoute: Bool {
-        if case .settings = appState.currentRoute { return true }
+        if case .settings = visibleRoute { return true }
         return false
+    }
+
+    private var visibleRoute: SidebarRoute {
+        appState.currentRoute.visibleRoute(isVisible: flags.isVisible)
     }
 
     private var leftColumnWidth: CGFloat {
@@ -117,7 +122,7 @@ struct ContentView: View {
     /// files as composer attachments. Settings and Automations don't
     /// host the composer, so dropping there is silently ignored.
     private var routeAcceptsFileDrops: Bool {
-        switch appState.currentRoute {
+        switch visibleRoute {
         case .home, .search, .plugins, .project, .chat:
             return true
         case .automations, .settings, .secretsHome, .databaseHome, .databaseWorkbench, .databaseCollection, .memoryHome,
@@ -138,7 +143,7 @@ struct ContentView: View {
     }
 
     private var routeRenderID: String {
-        switch appState.currentRoute {
+        switch visibleRoute {
         case .home: return "home"
         case .search: return "search"
         case .plugins: return "plugins"
@@ -210,7 +215,7 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         SidebarTopChrome()
                         Group {
-                            if case .settings = appState.currentRoute {
+                            if case .settings = visibleRoute {
                                 SettingsSidebar()
                                     .accessibilityElement(children: .contain)
                                     .accessibilityLabel("Settings categories")
@@ -254,7 +259,7 @@ struct ContentView: View {
 
                     ContentBodyWithTerminal(windowHeight: windowHeight) {
                         Group {
-                            switch appState.currentRoute {
+                            switch visibleRoute {
                             case .home:          MainContentView()
                             case .search:
                                 MainContentView()
@@ -440,6 +445,12 @@ struct ContentView: View {
             if !open && appState.isRightSidebarMaximized {
                 appState.isRightSidebarMaximized = false
             }
+        }
+        .onChange(of: flags.beta) { _, _ in
+            appState.enforceCurrentRouteVisibility()
+        }
+        .onChange(of: flags.experimental) { _, _ in
+            appState.enforceCurrentRouteVisibility()
         }
         .overlay(CommandPaletteOverlay(appState: appState))
         .overlay(ImagePreviewOverlay(appState: appState))
@@ -631,7 +642,7 @@ private struct ContentTopChrome: View {
                     .padding(.leading, 17)
                     .padding(.top, 6)
                 Button { chatActionsOpen.toggle() } label: {
-                    LucideIcon(.ellipsis, size: 11)
+                    LucideIcon(.ellipsis, size: 16)
                         .foregroundColor(Color(white: hoverEllipsis ? 0.78 : 0.55))
                         .frame(width: 24, height: 24)
                         .background(
@@ -972,6 +983,7 @@ private struct RightSidebarBody: View {
 private struct RightSidebarAddMenu: View {
     @Binding var isOpen: Bool
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var flags: FeatureFlags
     @State private var hovered: String?
 
     var body: some View {
@@ -979,7 +991,9 @@ private struct RightSidebarAddMenu: View {
             row(id: "open", icon: "magnifyingglass", title: "Open file", shortcut: "⌘P")
             MenuStandardDivider()
                 .padding(.vertical, 4)
-            row(id: "browser", icon: "globe", title: "Browser", shortcut: "⌘T")
+            if flags.isVisible(.browserUsage) {
+                row(id: "browser", icon: "globe", title: "Browser", shortcut: "⌘T")
+            }
             row(id: "iosSimulator", icon: "app.window", title: "iOS Simulator", shortcut: "")
             row(id: "androidSimulator", icon: "smartphone", title: "Android Emulator", shortcut: "")
         }

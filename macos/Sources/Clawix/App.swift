@@ -599,28 +599,30 @@ private struct MenuBarContent: View {
             }
         }
 
-        Section {
-            Menu {
-                if micPrefs.devices.isEmpty {
-                    Text(L10n.t("No input devices"))
-                } else {
-                    ForEach(micPrefs.devices) { device in
-                        Button {
-                            micPrefs.selectPreferred(uid: device.uid)
-                        } label: {
-                            if device.uid == micPrefs.activeUID {
-                                Label(device.name, systemImage: "checkmark")
-                            } else {
-                                Text(device.name)
+        if flags.isVisible(.voiceToText) {
+            Section {
+                Menu {
+                    if micPrefs.devices.isEmpty {
+                        Text(L10n.t("No input devices"))
+                    } else {
+                        ForEach(micPrefs.devices) { device in
+                            Button {
+                                micPrefs.selectPreferred(uid: device.uid)
+                            } label: {
+                                if device.uid == micPrefs.activeUID {
+                                    Label(device.name, systemImage: "checkmark")
+                                } else {
+                                    Text(device.name)
+                                }
                             }
                         }
                     }
+                } label: {
+                    Label(L10n.t("Audio Input"), systemImage: "mic")
                 }
-            } label: {
-                Label(L10n.t("Audio Input"), systemImage: "mic")
+            } header: {
+                Text(L10n.t("Voice to text"))
             }
-        } header: {
-            Text(L10n.t("Voice to text"))
         }
 
         if flags.isVisible(.secrets) {

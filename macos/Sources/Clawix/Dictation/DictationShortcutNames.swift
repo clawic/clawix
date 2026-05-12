@@ -30,17 +30,21 @@ enum DictationShortcutsInstaller {
             DictationCoordinator.shared.toggleFromHotkey()
         }
         KeyboardShortcuts.onKeyUp(for: .dictationCancel) {
+            guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
             DictationCoordinator.shared.cancel()
         }
         KeyboardShortcuts.onKeyUp(for: .pasteLastTranscription) {
+            guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
             try? LastTranscriptionStore.shared.pasteLastOriginal()
         }
         KeyboardShortcuts.onKeyUp(for: .retryLastTranscription) {
+            guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
             Task { @MainActor in
                 try? await LastTranscriptionStore.shared.retryLast()
             }
         }
         KeyboardShortcuts.onKeyUp(for: .toggleEnhancement) {
+            guard FeatureFlags.shared.isVisible(.voiceToText) else { return }
             let key = EnhancementSettings.enabledKey
             let current = UserDefaults.standard.bool(forKey: key)
             UserDefaults.standard.set(!current, forKey: key)
