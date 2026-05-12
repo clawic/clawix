@@ -140,6 +140,29 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
     }
 
     @discardableResult
+    func perform(
+        _ kind: DatabaseWorkbenchOperationKind,
+        profile: DatabaseConnectionProfile?,
+        activeSQL: String,
+        preferences: DatabaseWorkbenchPreferences = .shared
+    ) -> DatabaseWorkbenchOperationPlan {
+        let plan = Self.perform(
+            kind,
+            profile: profile,
+            activeSQL: activeSQL,
+            preferences: preferences,
+            inputPath: inputPath,
+            outputPath: outputPath,
+            objectName: objectName,
+            searchTerm: searchTerm,
+            pluginScript: pluginScript,
+            fileManager: fileManager
+        )
+        record(plan, profile: profile)
+        return plan
+    }
+
+    @discardableResult
     func plan(
         _ kind: DatabaseWorkbenchOperationKind,
         profile: DatabaseConnectionProfile?
@@ -154,9 +177,71 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
             pluginScript: pluginScript,
             fileManager: fileManager
         )
+        record(plan, profile: profile)
+        return plan
+    }
+
+    static func perform(
+        _ kind: DatabaseWorkbenchOperationKind,
+        profile: DatabaseConnectionProfile?,
+        activeSQL: String,
+        preferences: DatabaseWorkbenchPreferences,
+        inputPath: String,
+        outputPath: String,
+        objectName: String,
+        searchTerm: String,
+        pluginScript: String,
+        fileManager: FileManager = .default
+    ) -> DatabaseWorkbenchOperationPlan {
+        let prepared = plan(
+            kind,
+            profile: profile,
+            inputPath: inputPath,
+            outputPath: outputPath,
+            objectName: objectName,
+            searchTerm: searchTerm,
+            pluginScript: pluginScript,
+            fileManager: fileManager
+        )
+        guard prepared.status == .externalPending, let profile else {
+            return prepared
+        }
+        guard profile.engineId == "sqlite" else {
+            return prepared
+        }
+
+        switch kind {
+        case .exportQuery:
+            return exportSQLiteQuery(
+                activeSQL,
+                profile: profile,
+                outputPath: outputPath,
+                preferences: preferences,
+                fileManager: fileManager
+            )
+        case .exportTable:
+            return exportSQLiteTable(
+                objectName,
+                profile: profile,
+                outputPath: outputPath,
+                preferences: preferences,
+                fileManager: fileManager
+            )
+        case .backupDatabase:
+            return backupSQLiteDatabase(
+                profile,
+                outputPath: outputPath,
+                fileManager: fileManager
+            )
+        default:
+            return prepared
+        }
+    }
+
+    private func record(_ plan: DatabaseWorkbenchOperationPlan, profile: DatabaseConnectionProfile?) {
         let record = DatabaseWorkbenchOperationRecord(
             id: UUID(),
-            kind: kind,
+            kind: plan.kind,
             profileName: profile?.displayName ?? "No profile",
             message: plan.message,
             createdAt: Date()
@@ -164,7 +249,6 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         records.insert(record, at: 0)
         records = Array(records.prefix(100))
         persistRecords()
-        return plan
     }
 
     static func plan(
@@ -220,6 +304,146 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         )
     }
 
+    private static func exportSQLiteQuery(
+        _ sql: String,
+        profile: DatabaseConnectionProfile,
+        outputPath: String,
+        preferences: DatabaseWorkbenchPreferences,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        guard DatabaseWorkbenchSessionStore.classify(sql) == .readOnly else {
+            return .init(kind: .exportQuery, status: .blocked, message: "Only read-only SQLite queries can be exported locally.")
+        }
+
+        do {
+            let result = try DatabaseWorkbenchSessionStore.runSQLiteReadOnly(
+                sql: sql,
+                profile: profile,
+                fileManager: fileManager,
+                rowLimit: 10_000
+            )
+            try writeCSV(result, outputPath: outputPath, preferences: preferences, fileManager: fileManager)
+            return .init(kind: .exportQuery, status: .localReady, message: "SQLite query export wrote \(result.rows.count) row\(result.rows.count == 1 ? "" : "s").")
+        } catch {
+            return .init(kind: .exportQuery, status: .blocked, message: "SQLite query export failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func exportSQLiteTable(
+        _ objectName: String,
+        profile: DatabaseConnectionProfile,
+        outputPath: String,
+        preferences: DatabaseWorkbenchPreferences,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        guard let identifier = quotedSQLiteIdentifier(objectName) else {
+            return .init(kind: .exportTable, status: .blocked, message: "Use a simple table or view name before exporting locally.")
+        }
+
+        do {
+            let result = try DatabaseWorkbenchSessionStore.runSQLiteReadOnly(
+                sql: "SELECT * FROM \(identifier)",
+                profile: profile,
+                fileManager: fileManager,
+                rowLimit: 10_000
+            )
+            try writeCSV(result, outputPath: outputPath, preferences: preferences, fileManager: fileManager)
+            return .init(kind: .exportTable, status: .localReady, message: "SQLite table export wrote \(result.rows.count) row\(result.rows.count == 1 ? "" : "s").")
+        } catch {
+            return .init(kind: .exportTable, status: .blocked, message: "SQLite table export failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func backupSQLiteDatabase(
+        _ profile: DatabaseConnectionProfile,
+        outputPath: String,
+        fileManager: FileManager
+    ) -> DatabaseWorkbenchOperationPlan {
+        let source = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+        let target = DatabaseConnectionProfileStore.expanded(outputPath)
+        do {
+            try validateNewOutputPath(target, fileManager: fileManager)
+            guard source != target else {
+                return .init(kind: .backupDatabase, status: .blocked, message: "Backup output must be different from the source database.")
+            }
+            try fileManager.copyItem(atPath: source, toPath: target)
+            return .init(kind: .backupDatabase, status: .localReady, message: "SQLite backup wrote \(target).")
+        } catch {
+            return .init(kind: .backupDatabase, status: .blocked, message: "SQLite backup failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func writeCSV(
+        _ result: DatabaseWorkbenchResultSet,
+        outputPath: String,
+        preferences: DatabaseWorkbenchPreferences,
+        fileManager: FileManager
+    ) throws {
+        let target = DatabaseConnectionProfileStore.expanded(outputPath)
+        try validateNewOutputPath(target, fileManager: fileManager)
+        let delimiter = csvDelimiter(preferences.csvDelimiter)
+        let lineBreak = csvLineBreak(preferences.csvLineBreak)
+        var lines: [String] = []
+        lines.append(result.columns.map { csvCell($0, delimiter: delimiter) }.joined(separator: delimiter))
+        for row in result.rows {
+            lines.append(row.map { csvCell($0, delimiter: delimiter) }.joined(separator: delimiter))
+        }
+        let body = lines.joined(separator: lineBreak) + lineBreak
+        try body.write(toFile: target, atomically: true, encoding: .utf8)
+    }
+
+    private static func validateNewOutputPath(_ path: String, fileManager: FileManager) throws {
+        let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw DatabaseWorkbenchLocalOperationError.emptyOutputPath
+        }
+        guard !fileManager.fileExists(atPath: trimmed) else {
+            throw DatabaseWorkbenchLocalOperationError.outputAlreadyExists
+        }
+        let parent = (trimmed as NSString).deletingLastPathComponent
+        guard parent.isEmpty || fileManager.fileExists(atPath: parent) else {
+            throw DatabaseWorkbenchLocalOperationError.outputDirectoryMissing
+        }
+    }
+
+    private static func quotedSQLiteIdentifier(_ raw: String) -> String? {
+        let parts = raw
+            .split(separator: ".", omittingEmptySubsequences: false)
+            .map(String.init)
+        guard (1...2).contains(parts.count) else { return nil }
+        let allowed = try? NSRegularExpression(pattern: #"^[A-Za-z_][A-Za-z0-9_]*$"#)
+        let quoted = parts.compactMap { part -> String? in
+            let range = NSRange(part.startIndex..<part.endIndex, in: part)
+            guard allowed?.firstMatch(in: part, range: range) != nil else { return nil }
+            return "\"\(part)\""
+        }
+        guard quoted.count == parts.count else { return nil }
+        return quoted.joined(separator: ".")
+    }
+
+    private static func csvCell(_ value: String, delimiter: String) -> String {
+        let needsQuotes = value.contains(delimiter) || value.contains("\"") || value.contains("\n") || value.contains("\r")
+        guard needsQuotes else { return value }
+        return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+    }
+
+    private static func csvDelimiter(_ delimiter: DatabaseWorkbenchPreferences.CSVDelimiter) -> String {
+        switch delimiter {
+        case .tab:       return "\t"
+        case .comma:     return ","
+        case .semicolon: return ";"
+        case .pipe:      return "|"
+        }
+    }
+
+    private static func csvLineBreak(_ lineBreak: DatabaseWorkbenchPreferences.CSVLineBreak) -> String {
+        switch lineBreak {
+        case .lf:   return "\n"
+        case .crlf: return "\r\n"
+        case .cr:   return "\r"
+        }
+    }
+
     private func persistState() {
         defaults.set(inputPath, forKey: inputPathKey)
         defaults.set(outputPath, forKey: outputPathKey)
@@ -237,5 +461,22 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
     private func persistRecords() {
         guard let data = try? encoder.encode(records) else { return }
         defaults.set(data, forKey: recordsKey)
+    }
+}
+
+enum DatabaseWorkbenchLocalOperationError: LocalizedError, Equatable {
+    case emptyOutputPath
+    case outputAlreadyExists
+    case outputDirectoryMissing
+
+    var errorDescription: String? {
+        switch self {
+        case .emptyOutputPath:
+            return "Choose an output path before running the local operation."
+        case .outputAlreadyExists:
+            return "Output file already exists."
+        case .outputDirectoryMissing:
+            return "Output folder does not exist."
+        }
     }
 }

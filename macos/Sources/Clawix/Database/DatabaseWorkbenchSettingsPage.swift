@@ -3,6 +3,7 @@ import SwiftUI
 struct DatabaseWorkbenchSettingsPage: View {
     @ObservedObject private var prefs = DatabaseWorkbenchPreferences.shared
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
+    @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
     @ObservedObject private var operations = DatabaseWorkbenchOperationStore.shared
     @State private var editedProfile: DatabaseConnectionProfile?
 
@@ -297,7 +298,7 @@ struct DatabaseWorkbenchSettingsPage: View {
 
     private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
         let profile = profiles.profiles.first { $0.id == DatabaseWorkbenchSessionStore.shared.selectedProfileID } ?? profiles.profiles.first
-        let plan = operations.plan(kind, profile: profile)
+        let plan = operations.perform(kind, profile: profile, activeSQL: session.activeSQL, preferences: prefs)
         switch plan.status {
         case .localReady:
             ToastCenter.shared.show(plan.message)

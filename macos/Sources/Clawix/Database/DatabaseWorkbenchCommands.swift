@@ -153,7 +153,7 @@ struct DatabaseWorkbenchCommands: View {
 
     private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
         let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
-        let plan = operations.plan(kind, profile: profile)
+        let plan = operations.perform(kind, profile: profile, activeSQL: session.activeSQL, preferences: prefs)
         session.appendOperationMessage(plan.message)
         switch plan.status {
         case .localReady:
@@ -309,7 +309,7 @@ struct DatabaseWorkbenchMenuBarSection: View {
 
     private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
         let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
-        let plan = operations.plan(kind, profile: profile)
+        let plan = operations.perform(kind, profile: profile, activeSQL: session.activeSQL, preferences: prefs)
         session.appendOperationMessage(plan.message)
         switch plan.status {
         case .localReady:

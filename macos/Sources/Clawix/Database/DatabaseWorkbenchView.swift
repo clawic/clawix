@@ -326,7 +326,7 @@ struct DatabaseWorkbenchView: View {
     }
 
     private func prepareOperation(_ kind: DatabaseWorkbenchOperationKind) {
-        let plan = operations.plan(kind, profile: selectedProfile)
+        let plan = operations.perform(kind, profile: selectedProfile, activeSQL: session.activeSQL, preferences: prefs)
         session.appendOperationMessage(plan.message)
         switch plan.status {
         case .localReady:

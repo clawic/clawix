@@ -1,4 +1,5 @@
 import XCTest
+import GRDB
 @testable import Clawix
 
 @MainActor
@@ -88,5 +89,115 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         let reloaded = DatabaseWorkbenchOperationStore(defaults: defaults)
         XCTAssertEqual(reloaded.outputPath, "/tmp/export.csv")
         XCTAssertEqual(reloaded.records.first?.kind, .exportQuery)
+    }
+
+    func test_sqliteQueryExportWritesCSV() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let output = paths.directory.appendingPathComponent("query.csv")
+        let prefs = DatabaseWorkbenchPreferences(defaults: defaults)
+        prefs.csvDelimiter = .comma
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.outputPath = output.path
+
+        let plan = store.perform(
+            .exportQuery,
+            profile: paths.profile,
+            activeSQL: "SELECT id, name FROM users ORDER BY id",
+            preferences: prefs
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertEqual(
+            try String(contentsOf: output, encoding: .utf8),
+            "id,name\n1,Ada\n2,\"Linus, Torvalds\"\n"
+        )
+        XCTAssertEqual(store.records.first?.kind, .exportQuery)
+    }
+
+    func test_sqliteTableExportEscapesCSVCells() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let output = paths.directory.appendingPathComponent("table.csv")
+        let prefs = DatabaseWorkbenchPreferences(defaults: defaults)
+        prefs.csvDelimiter = .comma
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.outputPath = output.path
+        store.objectName = "users"
+
+        let plan = store.perform(
+            .exportTable,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: prefs
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertEqual(
+            try String(contentsOf: output, encoding: .utf8),
+            "id,name\n1,Ada\n2,\"Linus, Torvalds\"\n"
+        )
+    }
+
+    func test_sqliteBackupCopiesDatabaseWithoutOverwriting() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let output = paths.directory.appendingPathComponent("backup.sqlite")
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.outputPath = output.path
+
+        let plan = store.perform(
+            .backupDatabase,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .localReady)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output.path))
+
+        let overwrite = store.perform(
+            .backupDatabase,
+            profile: paths.profile,
+            activeSQL: "",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+        XCTAssertEqual(overwrite.status, .blocked)
+        XCTAssertTrue(overwrite.message.contains("Output file already exists"))
+    }
+
+    func test_sqliteQueryExportBlocksWriteSQL() throws {
+        let paths = try makeSQLiteFixture()
+        defer { try? FileManager.default.removeItem(at: paths.directory) }
+        let store = DatabaseWorkbenchOperationStore(defaults: defaults)
+        store.outputPath = paths.directory.appendingPathComponent("blocked.csv").path
+
+        let plan = store.perform(
+            .exportQuery,
+            profile: paths.profile,
+            activeSQL: "DELETE FROM users",
+            preferences: DatabaseWorkbenchPreferences(defaults: defaults)
+        )
+
+        XCTAssertEqual(plan.status, .blocked)
+        XCTAssertEqual(plan.message, "Only read-only SQLite queries can be exported locally.")
+    }
+
+    private func makeSQLiteFixture() throws -> (directory: URL, profile: DatabaseConnectionProfile) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("clawix-workbench-ops-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let database = directory.appendingPathComponent("fixture.sqlite")
+        let queue = try DatabaseQueue(path: database.path)
+        try queue.write { db in
+            try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+            try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada'), ('Linus, Torvalds')")
+        }
+        var profile = DatabaseConnectionProfile.draft(
+            engine: DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == "sqlite" }
+        )
+        profile.name = "Local SQLite"
+        profile.hostOrPath = database.path
+        return (directory, profile)
     }
 }
