@@ -1806,15 +1806,19 @@ private struct SearchScopedRow: View {
         return f
     }()
 
+    private var displayTitle: String {
+        title.isEmpty
+            ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
+            : title
+    }
+
     var body: some View {
         HStack(spacing: 11) {
             LucideIcon(.messageCircle, size: 11)
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
 
-            Text(title.isEmpty
-                 ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
-                 : title)
+            Text(displayTitle)
                 .font(BodyFont.system(size: 13.5, wght: 500))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
@@ -1836,6 +1840,11 @@ private struct SearchScopedRow: View {
         )
         .onHover { hovered = $0 }
         .onTapGesture(perform: onSelect)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(displayTitle)
+        .accessibilityValue(Self.relativeFormatter.localizedString(for: createdAt, relativeTo: Date()))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: Text("Open chat"), onSelect)
     }
 }
 
@@ -1848,13 +1857,19 @@ private struct SearchPinnedRow: View {
 
     @State private var hovered = false
 
+    private var displayTitle: String {
+        title.isEmpty
+            ? String(localized: "Conversation", bundle: AppLocale.packageBundle)
+            : title
+    }
+
     var body: some View {
         HStack(spacing: 11) {
             PinIcon(size: 13, lineWidth: 1.0)
                 .foregroundColor(MenuStyle.rowIcon)
                 .frame(width: 18, alignment: .center)
 
-            Text(title)
+            Text(displayTitle)
                 .font(BodyFont.system(size: 13.5, wght: 500))
                 .foregroundColor(MenuStyle.rowText)
                 .lineLimit(1)
@@ -1884,6 +1899,11 @@ private struct SearchPinnedRow: View {
         )
         .onHover { hovered = $0 }
         .onTapGesture(perform: onSelect)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(displayTitle)
+        .accessibilityValue(projectName ?? "")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: Text("Open chat"), onSelect)
     }
 }
 
