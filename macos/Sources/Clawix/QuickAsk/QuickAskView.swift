@@ -1114,6 +1114,7 @@ private struct QuickAskModelPicker: View {
     @Binding var runtime: AgentRuntimeChoice
     let primary: [String]
     let others: [String]
+    @ObservedObject private var flags = FeatureFlags.shared
     @State private var hovered = false
 
     var body: some View {
@@ -1125,15 +1126,17 @@ private struct QuickAskModelPicker: View {
                 } label: {
                     if runtime == .codex { Label("Codex", systemImage: "checkmark") } else { Text("Codex") }
                 }
-                Button {
-                    runtime = .opencode
-                    selection = AgentRuntimeChoice.defaultOpenCodeModel
-                } label: {
-                    if runtime == .opencode { Label("OpenCode", systemImage: "checkmark") } else { Text("OpenCode") }
+                if flags.isVisible(.openCode) {
+                    Button {
+                        runtime = .opencode
+                        selection = AgentRuntimeChoice.defaultOpenCodeModel
+                    } label: {
+                        if runtime == .opencode { Label("OpenCode", systemImage: "checkmark") } else { Text("OpenCode") }
+                    }
                 }
             }
             Section("Model") {
-                if runtime == .opencode {
+                if flags.isVisible(.openCode), runtime == .opencode {
                     Button {
                         selection = AgentRuntimeChoice.defaultOpenCodeModel
                     } label: {
@@ -1173,7 +1176,7 @@ private struct QuickAskModelPicker: View {
                 }
             }
         } label: {
-            Text(runtime == .opencode ? selection : "GPT-\(selection)")
+            Text(flags.isVisible(.openCode) && runtime == .opencode ? selection : "GPT-\(selection)")
                 .font(BodyFont.system(size: 13, wght: 600))
                 .foregroundColor(Color(white: 0.85))
                 .padding(.horizontal, 8)

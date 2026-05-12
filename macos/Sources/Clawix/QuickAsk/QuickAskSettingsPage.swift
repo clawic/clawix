@@ -11,6 +11,7 @@ struct QuickAskSettingsPage: View {
     @ObservedObject private var hotkeyManager = QuickAskHotkeyManager.shared
     @ObservedObject private var slashStore = QuickAskSlashCommandsStore.shared
     @ObservedObject private var mentionsStore = QuickAskMentionsStore.shared
+    @ObservedObject private var flags = FeatureFlags.shared
     @EnvironmentObject private var appState: AppState
     @State private var recording = false
     @State private var advancedExpanded = false
@@ -77,7 +78,9 @@ struct QuickAskSettingsPage: View {
                     Spacer(minLength: 12)
                     Picker("", selection: $defaultModelSelection) {
                         Text("Follow main composer").tag("")
-                        Text(AgentRuntimeChoice.defaultOpenCodeModel).tag(AgentRuntimeChoice.defaultOpenCodeModel)
+                        if flags.isVisible(.openCode) {
+                            Text(AgentRuntimeChoice.defaultOpenCodeModel).tag(AgentRuntimeChoice.defaultOpenCodeModel)
+                        }
                         ForEach(appState.availableModels + appState.otherModels, id: \.self) { m in
                             Text("GPT-\(m)").tag(m)
                         }
@@ -85,12 +88,27 @@ struct QuickAskSettingsPage: View {
                     .labelsHidden()
                     .frame(maxWidth: 220)
                     .onChange(of: defaultModelSelection) { newValue in
+                        if newValue.contains("/"), !flags.isVisible(.openCode) {
+                            defaultModelSelection = ""
+                            QuickAskController.shared.quickAskDefaultModel = nil
+                            return
+                        }
                         QuickAskController.shared.quickAskDefaultModel =
                             newValue.isEmpty ? nil : newValue
+                    }
+                    .onChange(of: flags.experimental) { _, _ in
+                        if defaultModelSelection.contains("/"), !flags.isVisible(.openCode) {
+                            defaultModelSelection = ""
+                            QuickAskController.shared.quickAskDefaultModel = nil
+                        }
                     }
                     .onAppear {
                         defaultModelSelection =
                             QuickAskController.shared.quickAskDefaultModel ?? ""
+                        if defaultModelSelection.contains("/"), !flags.isVisible(.openCode) {
+                            defaultModelSelection = ""
+                            QuickAskController.shared.quickAskDefaultModel = nil
+                        }
                     }
                 }
                 .padding(.horizontal, 14)

@@ -221,7 +221,7 @@ struct ComposerView: View {
                 modelMenuOpen.toggle()
             } label: {
                 HStack(spacing: 4) {
-                    if appState.selectedAgentRuntime == .opencode {
+                    if flags.isVisible(.openCode), appState.selectedAgentRuntime == .opencode {
                         LucideIcon(.globe, size: 13)
                             .foregroundColor(Color(white: 0.92))
                             .accessibilityHidden(true)
@@ -248,7 +248,7 @@ struct ComposerView: View {
                             .font(BodyFont.system(size: 11.5, wght: 500))
                             .foregroundColor(Color(white: 0.55))
                     }
-                    LucideIcon(.chevronDown, size: 11)
+                    LucideIcon(.chevronDown, size: 13)
                         .foregroundColor(Color(white: 0.55))
                 }
                 .padding(.horizontal, 6)
@@ -370,10 +370,10 @@ struct ComposerView: View {
         return Button {
             addMenuOpen.toggle()
         } label: {
-            PlusIcon(size: 28, lineWidth: 1.4)
+            PlusIcon(size: 24, lineWidth: 1.3)
                 .foregroundColor(.white)
                 .opacity(active ? 0.96 : 0.62)
-                .frame(width: 34, height: 34)
+                .frame(width: 30, height: 30)
                 .background(
                     Circle().fill(Color.white.opacity(active ? 0.08 : 0.0))
                 )
@@ -1266,6 +1266,7 @@ private struct ModelMenuPopup: View {
 
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var agentStore: AgentStore
+    @ObservedObject private var flags = FeatureFlags.shared
 
     static let mainColumnWidth: CGFloat = 232
     private static let modelColumnWidth: CGFloat = 220
@@ -1347,7 +1348,7 @@ private struct ModelMenuPopup: View {
                 .padding(.vertical, 5)
             ModelMenuHeader(L10n.t("Runtime"))
 
-            ForEach(AgentRuntimeChoice.allCases) { choice in
+            ForEach(AgentRuntimeChoice.visibleCases()) { choice in
                 ModelMenuCheckRow(
                     label: choice.label,
                     isSelected: runtime == choice
@@ -1387,7 +1388,7 @@ private struct ModelMenuPopup: View {
                 .padding(.vertical, 5)
 
             ModelMenuChevronRow(
-                label: runtime == .opencode ? model : "GPT-\(model)",
+                label: flags.isVisible(.openCode) && runtime == .opencode ? model : "GPT-\(model)",
                 highlighted: openSubmenu == .model || openSubmenu == .otherModels
             ) {
                 openSubmenu = (openSubmenu == .model || openSubmenu == .otherModels) ? .none : .model
@@ -1478,7 +1479,7 @@ private struct ModelMenuPopup: View {
         VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader(L10n.t("Model"))
 
-            if runtime == .opencode {
+            if flags.isVisible(.openCode), runtime == .opencode {
                 ModelMenuCheckRow(
                     label: AgentRuntimeChoice.defaultOpenCodeModel,
                     isSelected: model == AgentRuntimeChoice.defaultOpenCodeModel
@@ -1568,7 +1569,9 @@ private struct ModelMenuPopup: View {
     /// `selectedAgentRuntime` / `selectedModel` keep working without a
     /// migration. The built-in Codex agent sits at the top of the list.
     private var agentSection: some View {
-        let agents = agentStore.agents
+        let agents = flags.isVisible(.openCode)
+            ? agentStore.agents
+            : agentStore.agents.filter { $0.runtime == .codex }
         return VStack(alignment: .leading, spacing: 0) {
             ModelMenuHeader(L10n.t("Agent"))
             ForEach(agents) { agent in
@@ -1623,7 +1626,7 @@ private struct ModelMenuCheckRow: View {
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
                 if isSelected {
-                    CheckIcon(size: 10)
+                    CheckIcon(size: 13)
                         .foregroundColor(MenuStyle.rowText)
                 }
             }
@@ -1653,7 +1656,7 @@ private struct ModelMenuChevronRow: View {
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                 Spacer(minLength: 8)
-                LucideIcon(.chevronRight, size: 11)
+                LucideIcon(.chevronRight, size: 13)
                     .font(BodyFont.system(size: MenuStyle.rowTrailingIconSize, weight: .semibold))
                     .foregroundColor(MenuStyle.rowSubtle)
             }
@@ -1694,7 +1697,7 @@ private struct ModelMenuDescriptionRow: View {
                 }
                 Spacer(minLength: 8)
                 if isSelected {
-                    CheckIcon(size: 10)
+                    CheckIcon(size: 13)
                         .foregroundColor(MenuStyle.rowText)
                         .padding(.top, 2)
                 }

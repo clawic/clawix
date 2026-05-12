@@ -319,6 +319,7 @@ def main():
         env.update(
             {
                 "CLAWIX_AGENT_RUNTIME": "opencode",
+                "CLAWIX_EXPERIMENTAL_FEATURES": "1",
                 "CLAWIX_OPENCODE_BASE_URL": f"http://127.0.0.1:{http_port}",
                 "CLAWIX_BRIDGED_PORT": str(ws_port),
                 "CLAWIX_BRIDGED_BEARER": token,

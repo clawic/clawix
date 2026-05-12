@@ -843,29 +843,29 @@ private struct GeneralPage: View {
                         set: { backgroundBridge.toggle($0) }
                     )
                 )
-                CardDivider()
-                SegmentedRow(
-                    title: "Agent runtime",
-                    detail: appState.selectedAgentRuntime == .opencode
-                        ? "OpenCode uses \(appState.openCodeModelSelection). Restart the background bridge after switching."
-                        : "Codex remains the default runtime.",
-                    options: AgentRuntimeChoice.allCases.map { ($0, $0.label) },
-                    selection: $appState.selectedAgentRuntime
-                )
-                CardDivider()
-                DropdownRow(
-                    title: "OpenCode model",
-                    detail: "Provider/model id used when OpenCode is active. DeepSeek V4 Pro is selected by default.",
-                    options: [(AgentRuntimeChoice.defaultOpenCodeModel, AgentRuntimeChoice.defaultOpenCodeModel)],
-                    selection: Binding(
-                        get: { appState.openCodeModelSelection },
-                        set: {
-                            appState.selectedModel = $0
-                            appState.selectedAgentRuntime = .opencode
-                        }
-                    )
-                )
                 if flags.experimental {
+                    CardDivider()
+                    SegmentedRow(
+                        title: "Agent runtime",
+                        detail: appState.selectedAgentRuntime == .opencode
+                            ? "OpenCode uses \(appState.openCodeModelSelection). Restart the background bridge after switching."
+                            : "Codex remains the default runtime.",
+                        options: AgentRuntimeChoice.visibleCases().map { ($0, $0.label) },
+                        selection: $appState.selectedAgentRuntime
+                    )
+                    CardDivider()
+                    DropdownRow(
+                        title: "OpenCode model",
+                        detail: "Provider/model id used when OpenCode is active. DeepSeek V4 Pro is selected by default.",
+                        options: [(AgentRuntimeChoice.defaultOpenCodeModel, AgentRuntimeChoice.defaultOpenCodeModel)],
+                        selection: Binding(
+                            get: { appState.openCodeModelSelection },
+                            set: {
+                                appState.selectedModel = $0
+                                appState.selectedAgentRuntime = .opencode
+                            }
+                        )
+                    )
                     CardDivider()
                     DropdownRow(
                         title: "Default open destination",

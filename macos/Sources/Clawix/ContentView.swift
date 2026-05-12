@@ -451,6 +451,7 @@ struct ContentView: View {
         }
         .onChange(of: flags.experimental) { _, _ in
             appState.enforceCurrentRouteVisibility()
+            appState.enforceExperimentalRuntimeVisibility()
         }
         .overlay(CommandPaletteOverlay(appState: appState))
         .overlay(ImagePreviewOverlay(appState: appState))

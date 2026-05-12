@@ -797,10 +797,19 @@ enum AgentRuntimeChoice: String, CaseIterable, Identifiable {
     static let openCodeModelKey = "ClawixOpenCodeModel"
     static let defaultOpenCodeModel = "deepseekv4/deepseek-v4-pro"
 
+    @MainActor
+    static func visibleCases() -> [AgentRuntimeChoice] {
+        FeatureFlags.shared.isVisible(.openCode) ? allCases : [.codex]
+    }
+
+    @MainActor
     static func loadPersisted() -> AgentRuntimeChoice {
         let defaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
         if let raw = defaults.string(forKey: runtimeKey),
            let runtime = AgentRuntimeChoice(rawValue: raw) {
+            if runtime == .opencode, !FeatureFlags.shared.isVisible(.openCode) {
+                return .codex
+            }
             return runtime
         }
         return .codex
@@ -811,12 +820,19 @@ enum AgentRuntimeChoice: String, CaseIterable, Identifiable {
         return defaults.string(forKey: openCodeModelKey) ?? defaultOpenCodeModel
     }
 
+    @MainActor
     static func persist(runtime: AgentRuntimeChoice, openCodeModel: String) {
+        let resolvedRuntime: AgentRuntimeChoice = {
+            if runtime == .opencode, !FeatureFlags.shared.isVisible(.openCode) {
+                return .codex
+            }
+            return runtime
+        }()
         for defaults in [
             UserDefaults(suiteName: appPrefsSuite) ?? .standard,
             UserDefaults(suiteName: "clawix.bridge") ?? .standard
         ] {
-            defaults.set(runtime.rawValue, forKey: runtimeKey)
+            defaults.set(resolvedRuntime.rawValue, forKey: runtimeKey)
             defaults.set(openCodeModel, forKey: openCodeModelKey)
         }
     }
@@ -1055,6 +1071,10 @@ final class AppState: ObservableObject {
     @Published var selectedAgentRuntime: AgentRuntimeChoice = .codex {
         didSet {
             guard oldValue != selectedAgentRuntime else { return }
+            if selectedAgentRuntime == .opencode, !FeatureFlags.shared.isVisible(.openCode) {
+                selectedAgentRuntime = .codex
+                return
+            }
             if selectedAgentRuntime == .opencode, !selectedModel.contains("/") {
                 selectedModel = AgentRuntimeChoice.persistedOpenCodeModel()
             } else if selectedAgentRuntime == .codex, selectedModel.contains("/") {
@@ -1069,6 +1089,10 @@ final class AppState: ObservableObject {
     @Published var selectedModel: String = "5.5" {
         didSet {
             guard oldValue != selectedModel else { return }
+            if selectedModel.contains("/"), !FeatureFlags.shared.isVisible(.openCode) {
+                selectedModel = "5.5"
+                return
+            }
             if selectedAgentRuntime == .opencode {
                 AgentRuntimeChoice.persist(
                     runtime: selectedAgentRuntime,
@@ -3197,6 +3221,23 @@ final class AppState: ObservableObject {
     var openCodeModelSelection: String {
         if selectedModel.contains("/") { return selectedModel }
         return AgentRuntimeChoice.persistedOpenCodeModel()
+    }
+
+    func enforceExperimentalRuntimeVisibility() {
+        guard !FeatureFlags.shared.isVisible(.openCode) else { return }
+        if selectedAgentRuntime == .opencode {
+            selectedAgentRuntime = .codex
+        }
+        if selectedModel.contains("/") {
+            selectedModel = "5.5"
+        }
+        if let selectedAgent = AgentStore.shared.agent(id: selectedAgentId),
+           selectedAgent.runtime != .codex {
+            selectedAgentId = Agent.defaultCodexId
+        }
+        if QuickAskController.shared.quickAskDefaultModel?.contains("/") == true {
+            QuickAskController.shared.quickAskDefaultModel = nil
+        }
     }
 
     /// Submit a prompt from the QuickAsk HUD. Mirrors the home-route

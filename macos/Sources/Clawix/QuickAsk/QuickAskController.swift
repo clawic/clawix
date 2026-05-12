@@ -245,6 +245,11 @@ final class QuickAskController: ObservableObject {
         // value at every show() so the picker inside the HUD always
         // opens at the user's preferred QuickAsk model regardless of
         // what the main composer is currently using.
+        if quickAskDefaultModel?.contains("/") == true,
+           !FeatureFlags.shared.isVisible(.openCode)
+        {
+            quickAskDefaultModel = nil
+        }
         if let preferred = quickAskDefaultModel,
            let appState,
            appState.selectedModel != preferred
