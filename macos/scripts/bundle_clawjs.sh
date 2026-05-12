@@ -266,6 +266,23 @@ PY
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/better-sqlite3"
         copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/database/node_modules/@clawjs/core"
     fi
+    OVERLAY_INDEX="$CLAWJS_DEV_OVERLAY/packages/clawjs-index"
+    if [[ -d "$OVERLAY_INDEX" ]]; then
+        build_overlay_package "$OVERLAY_INDEX"
+        echo "==> Dev overlay: copying $OVERLAY_INDEX → $CLAWJS_DEST/node_modules/@clawjs/index"
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/index"
+        mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
+        cp -R "$OVERLAY_INDEX" "$CLAWJS_DEST/node_modules/@clawjs/index"
+        (
+            cd "$CLAWJS_DEST/node_modules/@clawjs/index"
+            npm_config_arch=arm64 \
+            npm_config_target_arch=arm64 \
+            npm_config_target_platform=darwin \
+            run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        )
+        rm -rf "$CLAWJS_DEST/node_modules/@clawjs/index/node_modules/better-sqlite3"
+        copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/index/node_modules/@clawjs/core"
+    fi
     # @clawjs/audio: same shape as database (own node_modules with
     # better-sqlite3 + fastify; the launcher imports buildAudioApp via
     # `import("@clawjs/audio")`).
