@@ -17,6 +17,9 @@ struct ChangedFileCard: View {
     /// and sibling z-order entirely. Anchored on the pill (not just the
     /// chevron) so the popup left-aligns with the "Open" label.
     @State private var openPillWindowFrame: CGRect = .zero
+    /// Fallback anchor for accessibility-triggered menu presentation when
+    /// the trailing pill has not reported a window frame yet.
+    @State private var cardWindowFrame: CGRect = .zero
 
     private var fileURL: URL { URL(fileURLWithPath: path) }
     private var fileName: String { fileURL.lastPathComponent }
@@ -31,18 +34,32 @@ struct ChangedFileCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            iconBadge
-            VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: fileName)
-                    .font(BodyFont.system(size: 14, wght: 700))
-                    .foregroundColor(Palette.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Text(verbatim: subtitle)
-                    .font(BodyFont.system(size: 12.5, wght: 500))
-                    .foregroundColor(Color(white: 0.55))
+            Button {
+                appState.openFileInSidebar(path)
+            } label: {
+                HStack(spacing: 12) {
+                    iconBadge
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(verbatim: fileName)
+                            .font(BodyFont.system(size: 14, wght: 700))
+                            .foregroundColor(Palette.textPrimary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Text(verbatim: subtitle)
+                            .font(BodyFont.system(size: 12.5, wght: 500))
+                            .foregroundColor(Color(white: 0.55))
+                    }
+                    Spacer(minLength: 8)
+                }
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: 8)
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: "Open file \(fileName)"))
+            .accessibilityValue(Text(verbatim: subtitle))
+            .accessibilityIdentifier("changed-file-card-\(fileName)")
+            .accessibilityAddTraits(.isButton)
+
             openPill
         }
         .padding(.horizontal, 14)
@@ -56,6 +73,7 @@ struct ChangedFileCard: View {
                 .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
         )
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(ChangedFileWindowFrameReader(frame: $cardWindowFrame))
         // Whole card opens the file in the sidebar preview. The "Open"
         // pill has its own identical tap handler so taps on the pill
         // body never get swallowed by intermediate hit-testing; the
@@ -68,9 +86,7 @@ struct ChangedFileCard: View {
         // Smoother, slightly longer easing so the highlight breathes
         // instead of snapping in/out of hover.
         .animation(.easeInOut(duration: 0.22), value: hovered)
-        .accessibilityElement(children: .ignore)
-        .accessibilityHidden(!NSWorkspace.shared.isVoiceOverEnabled)
-        .accessibilityLabel(Text(verbatim: "\(fileName), \(subtitle)"))
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: - Icon
@@ -131,13 +147,20 @@ struct ChangedFileCard: View {
         .onTapGesture {
             appState.openFileInSidebar(path)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "Open with…"))
+        .accessibilityIdentifier("changed-file-open-with-\(fileName)")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction {
+            presentMenuPanel()
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
         )
         // Track the whole pill's window frame so the popup anchors on
         // the pill's bottom-left edge.
-        .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame, enabled: openPillHovered))
+        .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame, enabled: true))
     }
 
     private func presentMenuPanel() {
@@ -146,13 +169,56 @@ struct ChangedFileCard: View {
         }
         // Anchor the popup's top-left at the pill's bottom-left in screen
         // coordinates so the menu left-aligns with the "Open" label.
-        let screenRect = window.convertToScreen(openPillWindowFrame)
+        let anchorFrame = openPillWindowFrame.isEmpty ? cardWindowFrame : openPillWindowFrame
+        let screenRect = window.convertToScreen(anchorFrame)
         let anchorPoint = NSPoint(x: screenRect.minX, y: screenRect.minY)
         ChangedFileMenuPanel.present(leftTopAnchor: anchorPoint, path: path)
     }
 }
 
 // MARK: - Open pill frame reader
+
+private struct ChangedFileWindowFrameReader: NSViewRepresentable {
+    @Binding var frame: CGRect
+
+    func makeNSView(context: Context) -> Reader {
+        let v = Reader()
+        v.onFrameChange = { rect in
+            DispatchQueue.main.async { frame = rect }
+        }
+        return v
+    }
+
+    func updateNSView(_ nsView: Reader, context: Context) {
+        nsView.onFrameChange = { rect in
+            DispatchQueue.main.async { frame = rect }
+        }
+        nsView.report()
+    }
+
+    final class Reader: NSView {
+        var onFrameChange: ((CGRect) -> Void)?
+        private var lastReported: CGRect = .null
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            report()
+        }
+
+        override func layout() {
+            super.layout()
+            report()
+        }
+
+        func report() {
+            guard window != nil else { return }
+            let r = convert(bounds, to: nil)
+            guard r != lastReported else { return }
+            lastReported = r
+            onFrameChange?(r)
+        }
+    }
+}
 
 /// Reports the "Open" pill's frame in window-local coordinates whenever
 /// layout changes. The popup panel uses this to land in the right place
