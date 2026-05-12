@@ -302,6 +302,7 @@ private struct MenuBarContent: View {
     @ObservedObject private var bridge = BackgroundBridgeService.shared
     @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
     @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
+    @AppStorage(ScreenToolSettings.displayRecordingTimeKey) private var displayRecordingTime = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
@@ -398,6 +399,9 @@ private struct MenuBarContent: View {
                 }
                 Toggle(isOn: $showRecordingCursor) {
                     Label("Show Cursor in Recordings", systemImage: "cursorarrow")
+                }
+                Toggle(isOn: $displayRecordingTime) {
+                    Label("Display Recording Time", systemImage: "timer")
                 }
                 Toggle(isOn: $showRecordingCountdown) {
                     Label("Show Recording Countdown", systemImage: "timer")

@@ -16,6 +16,7 @@ final class ScreenToolService: ObservableObject {
     private var allInOneMenu: NSMenu?
     private var allInOneMenuTarget: ScreenToolMenuActionTarget?
     private var recordingCountdownTask: Task<Void, Never>?
+    private var recordingTimerWindow: ScreenToolRecordingTimerWindow?
 
     private init() {}
 
@@ -233,8 +234,15 @@ final class ScreenToolService: ObservableObject {
 
     private func startScreenRecording() {
         let url = outputURL(prefix: "recording", extension: "mov")
+        if ScreenToolSettings.displayRecordingTime {
+            let timerWindow = ScreenToolRecordingTimerWindow()
+            timerWindow.show()
+            recordingTimerWindow = timerWindow
+        }
         Self.runScreencapture(args: Self.recordingArgs(output: url)) { [weak self] result in
             Task { @MainActor in
+                self?.recordingTimerWindow?.close()
+                self?.recordingTimerWindow = nil
                 guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
                     ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Recording cancelled"), icon: .warning)
                     return
@@ -1376,6 +1384,7 @@ enum ScreenToolSettings {
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
+    static let displayRecordingTimeKey = "clawix.screenTools.displayRecordingTime"
     static let showRecordingCountdownKey = "clawix.screenTools.showRecordingCountdown"
     static let scaleRetinaRecordingsTo1xKey = "clawix.screenTools.scaleRetinaRecordingsTo1x"
     static let recordRecordingAudioInMonoKey = "clawix.screenTools.recordRecordingAudioInMono"
@@ -1462,6 +1471,10 @@ enum ScreenToolSettings {
 
     static var recordRecordingAudio: Bool {
         defaults.bool(forKey: recordRecordingAudioKey)
+    }
+
+    static var displayRecordingTime: Bool {
+        defaults.bool(forKey: displayRecordingTimeKey)
     }
 
     static var showRecordingCountdown: Bool {
@@ -1804,6 +1817,90 @@ final class ScreenToolPinWindow: NSPanel {
     override func close() {
         super.close()
         onClose(self)
+    }
+}
+
+final class ScreenToolRecordingTimerWindow: NSPanel {
+    private let label = NSTextField(labelWithString: "00:00")
+    private let startedAt = Date()
+    private var timer: Timer?
+
+    init(screen: NSScreen? = nil) {
+        let size = NSSize(width: 96, height: 38)
+        let visibleFrame = (screen ?? NSScreen.main ?? NSScreen.screens.first)?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 640, height: 480)
+        let rect = NSRect(
+            x: visibleFrame.maxX - size.width - 24,
+            y: visibleFrame.maxY - size.height - 24,
+            width: size.width,
+            height: size.height
+        )
+
+        super.init(
+            contentRect: rect,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+
+        level = .statusBar
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        backgroundColor = .clear
+        isOpaque = false
+        hasShadow = true
+        ignoresMouseEvents = true
+
+        let root = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
+        root.material = .hudWindow
+        root.blendingMode = .behindWindow
+        root.state = .active
+        root.wantsLayer = true
+        root.layer?.cornerRadius = 8
+        root.layer?.cornerCurve = .continuous
+        root.layer?.masksToBounds = true
+
+        label.alignment = .center
+        label.font = .monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
+        label.textColor = .labelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -12),
+            label.centerYAnchor.constraint(equalTo: root.centerYAnchor)
+        ])
+
+        contentView = root
+        updateLabel()
+    }
+
+    func show() {
+        orderFrontRegardless()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            self?.updateLabel()
+        }
+    }
+
+    override func close() {
+        timer?.invalidate()
+        timer = nil
+        super.close()
+    }
+
+    static func formattedElapsedTime(_ elapsedSeconds: TimeInterval) -> String {
+        let total = max(0, Int(elapsedSeconds.rounded(.down)))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func updateLabel() {
+        label.stringValue = Self.formattedElapsedTime(Date().timeIntervalSince(startedAt))
     }
 }
 

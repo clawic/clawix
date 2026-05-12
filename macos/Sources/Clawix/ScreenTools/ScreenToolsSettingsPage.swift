@@ -23,6 +23,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
     @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
+    @AppStorage(ScreenToolSettings.displayRecordingTimeKey) private var displayRecordingTime = false
     @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
     @AppStorage(ScreenToolSettings.scaleRetinaRecordingsTo1xKey) private var scaleRetinaRecordingsTo1x = false
     @AppStorage(ScreenToolSettings.recordRecordingAudioInMonoKey) private var recordRecordingAudioInMono = false
@@ -229,6 +230,8 @@ struct ScreenToolsSettingsPage: View {
             SectionLabel(title: "Recording")
             SettingsCard {
                 ToggleRow(title: "Show controls while recording", detail: "Keep the system recording controls visible during screen recordings.", isOn: $showRecordingControls)
+                CardDivider()
+                ToggleRow(title: "Display recording time", detail: "Show an elapsed-time overlay while recording.", isOn: $displayRecordingTime)
                 CardDivider()
                 ToggleRow(title: "Show cursor", detail: "Include the pointer in screen recordings.", isOn: $showRecordingCursor)
                 CardDivider()

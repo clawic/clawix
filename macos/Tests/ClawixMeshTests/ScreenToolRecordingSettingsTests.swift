@@ -35,6 +35,22 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
     }
 
     @MainActor
+    func testDisplayRecordingTimeDefaultsOff() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.displayRecordingTimeKey)
+        defaults.removeObject(forKey: ScreenToolSettings.displayRecordingTimeKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.displayRecordingTimeKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.displayRecordingTimeKey)
+            }
+        }
+
+        XCTAssertFalse(ScreenToolSettings.displayRecordingTime)
+    }
+
+    @MainActor
     func testScaleRetinaRecordingsTo1xDefaultsOff() {
         let defaults = UserDefaults.standard
         let previousValue = defaults.object(forKey: ScreenToolSettings.scaleRetinaRecordingsTo1xKey)
@@ -64,5 +80,12 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
         }
 
         XCTAssertFalse(ScreenToolSettings.recordRecordingAudioInMono)
+    }
+
+    @MainActor
+    func testRecordingTimerFormatsElapsedTime() {
+        XCTAssertEqual(ScreenToolRecordingTimerWindow.formattedElapsedTime(0), "00:00")
+        XCTAssertEqual(ScreenToolRecordingTimerWindow.formattedElapsedTime(65), "01:05")
+        XCTAssertEqual(ScreenToolRecordingTimerWindow.formattedElapsedTime(3661), "1:01:01")
     }
 }
