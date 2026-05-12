@@ -516,6 +516,33 @@ export function testSoundProfile(state: PomodoroState, now: number, slot: Pomodo
   };
 }
 
+export function runTimerEndMainAction(
+  state: PomodoroState,
+  now: number,
+  mood: Mood = state.settings.defaultMood,
+  notes = state.active?.notes ?? "",
+): PomodoroState {
+  const active = state.active;
+  if (!active || active.mode !== "ended") return state;
+  const kind = activeKind(active);
+  if (kind === "break") {
+    const saved = finishTimer(state, now);
+    if (state.settings.breakMainAction === "start-session") {
+      return startFocus(saved, now + 1, saved.intentionDraft, saved.categoryId, saved.settings.sessionMinutes);
+    }
+    return saved;
+  }
+
+  const saved = finishTimer(state, now, mood, notes);
+  if (state.settings.sessionMainAction === "break") {
+    return startBreak(saved, now + 1);
+  }
+  if (state.settings.sessionMainAction === "restart") {
+    return startFocus(saved, now + 1, active.intention, active.categoryId, active.totalSec / 60);
+  }
+  return saved;
+}
+
 export function nextBreakMinutes(state: PomodoroState): number {
   const totalFocusMinutes = totalFocusSeconds(state, state.selectedDate) / 60;
   if (totalFocusMinutes >= state.settings.longBreakAfterFocusMinutes) {

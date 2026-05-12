@@ -21,6 +21,7 @@ import {
   removeWindowTrackerRule,
   runPomodoroShortcut,
   runPomodoroUrlCommand,
+  runTimerEndMainAction,
   sameDay,
   scheduledItemsForDate,
   startBreak,
@@ -93,6 +94,7 @@ type Action =
   | { type: "pause"; now: number }
   | { type: "resume"; now: number }
   | { type: "finish"; now: number; mood?: Mood; notes?: string }
+  | { type: "end-main-action"; now: number; mood?: Mood; notes?: string }
   | { type: "break"; now: number; minutes?: number }
   | { type: "abandon"; now: number }
   | { type: "undo"; now: number }
@@ -181,6 +183,8 @@ function reducer(state: PomodoroState, action: Action): PomodoroState {
       return resumeTimer(state, action.now);
     case "finish":
       return finishTimer(state, action.now, action.mood, action.notes);
+    case "end-main-action":
+      return runTimerEndMainAction(state, action.now, action.mood, action.notes);
     case "break":
       return startBreak(state, action.now, action.minutes);
     case "abandon":
@@ -544,7 +548,11 @@ function TimerPanel({
             )}
             {active?.mode === "ended" && (
               <>
-                <PrimaryButton icon={<CheckIcon size={15} />} label="Save" onClick={() => dispatch({ type: "finish", now: Date.now(), mood, notes: reflection || active.notes })} />
+                <PrimaryButton
+                  icon={<CheckIcon size={15} />}
+                  label={timerEndMainActionLabel(state)}
+                  onClick={() => dispatch({ type: "end-main-action", now: Date.now(), mood, notes: reflection || active.notes })}
+                />
                 <ActionButton icon={<PlayIcon size={14} />} label="Take Break" onClick={() => dispatch({ type: "break", now: Date.now() })} />
                 <ActionButton icon={<RefreshCwIcon size={14} />} label="Repeat" onClick={() => dispatch({ type: "start", now: Date.now(), intention: active.intention, categoryId: active.categoryId })} />
               </>
@@ -792,6 +800,18 @@ function ProfilesPanel({ state, dispatch }: { state: PomodoroState; dispatch: Re
           <NumberRow label="Breaths before focus" value={settings.breathCount} onChange={(v) => dispatch({ type: "settings", patch: { breathCount: v } })} />
           <Toggle label="Auto-start break after Session ends" checked={settings.autoStartBreak} onChange={(v) => dispatch({ type: "settings", patch: { autoStartBreak: v } })} />
           <Toggle label="Auto-start Session after break ends" checked={settings.autoStartFocus} onChange={(v) => dispatch({ type: "settings", patch: { autoStartFocus: v } })} />
+          <SelectRow
+            label="Session end main action"
+            value={settings.sessionMainAction}
+            options={["restart", "break", "idle"]}
+            onChange={(v) => dispatch({ type: "settings", patch: { sessionMainAction: v as PomodoroSettings["sessionMainAction"] } })}
+          />
+          <SelectRow
+            label="Break end main action"
+            value={settings.breakMainAction}
+            options={["start-session", "finish-break", "idle"]}
+            onChange={(v) => dispatch({ type: "settings", patch: { breakMainAction: v as PomodoroSettings["breakMainAction"] } })}
+          />
         </Card>
         <Card title="Notification profile" action="Overflow">
           <Toggle label="Ending soon notification" checked={settings.endingSoonEnabled} onChange={(v) => dispatch({ type: "settings", patch: { endingSoonEnabled: v } })} />
@@ -993,6 +1013,22 @@ function ScheduleRow({ item, state, dispatch }: { item: PomodoroScheduleItem; st
       <button className="icon-btn" onClick={() => dispatch({ type: "schedule-delete", now: Date.now(), id: item.id })} aria-label="Delete scheduled Session"><TrashIcon size={14} /></button>
     </div>
   );
+}
+
+function timerEndMainActionLabel(state: PomodoroState): string {
+  const activeKind = state.active?.kind ?? (state.active?.mode === "break" ? "break" : "focus");
+  if (activeKind === "break") {
+    return state.settings.breakMainAction === "start-session" ? "Start Session" : "Save Break";
+  }
+  switch (state.settings.sessionMainAction) {
+    case "break":
+      return "Take Break";
+    case "idle":
+      return "Save";
+    case "restart":
+    default:
+      return "Repeat";
+  }
 }
 
 function SettingsPanel({ state, dispatch }: { state: PomodoroState; dispatch: React.Dispatch<Action> }) {
