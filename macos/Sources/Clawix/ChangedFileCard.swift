@@ -135,18 +135,11 @@ struct ChangedFileCard: View {
         .onTapGesture {
             presentMenuPanel()
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "Open with…"))
-        .accessibilityIdentifier("changed-file-open-with-\(fileName)")
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { presentMenuPanel() }
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
         )
-        .overlay(OpenPillClickTarget { anchorFrame in
-            presentMenuPanel(anchorFrame: anchorFrame)
-        }.accessibilityHidden(true))
+        .overlay(OpenPillClickTarget(path: path))
         // Track the whole pill's window frame so the popup anchors on
         // the pill's bottom-left edge.
         .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame, enabled: true))
@@ -172,29 +165,42 @@ struct ChangedFileCard: View {
 }
 
 private struct OpenPillClickTarget: NSViewRepresentable {
-    let onClick: (CGRect) -> Void
+    let path: String
 
     func makeNSView(context: Context) -> Reader {
         let v = Reader()
-        v.onClick = onClick
+        v.path = path
         return v
     }
 
     func updateNSView(_ nsView: Reader, context: Context) {
-        nsView.onClick = onClick
+        nsView.path = path
     }
 
     final class Reader: NSView {
-        var onClick: ((CGRect) -> Void)?
+        var path = ""
+        private var fileName: String {
+            URL(fileURLWithPath: path).lastPathComponent
+        }
 
         override var acceptsFirstResponder: Bool { true }
 
         override func mouseDown(with event: NSEvent) {
-            onClick?(convert(bounds, to: nil))
+            popMenu()
         }
 
         override func rightMouseDown(with event: NSEvent) {
-            onClick?(convert(bounds, to: nil))
+            popMenu()
+        }
+
+        private func popMenu() {
+            let menu = NSMenu()
+            for action in ChangedFileOpenAction.editorActions {
+                menu.addItem(ChangedFileOpenActionMenuItem(action: action, path: path))
+            }
+            menu.addItem(.separator())
+            menu.addItem(ChangedFileOpenActionMenuItem(action: .openInFolder, path: path))
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: bounds.minY - 4), in: self)
         }
 
         override func resetCursorRects() {
@@ -202,7 +208,24 @@ private struct OpenPillClickTarget: NSViewRepresentable {
         }
 
         override func isAccessibilityElement() -> Bool {
-            false
+            true
+        }
+
+        override func accessibilityRole() -> NSAccessibility.Role? {
+            .button
+        }
+
+        override func accessibilityLabel() -> String? {
+            "Open with…"
+        }
+
+        override func accessibilityIdentifier() -> String {
+            "changed-file-open-with-\(fileName)"
+        }
+
+        override func accessibilityPerformPress() -> Bool {
+            popMenu()
+            return true
         }
     }
 }
@@ -504,6 +527,26 @@ final class ChangedFileMenuPanel: NSObject {
 }
 
 // MARK: - Open actions
+
+private final class ChangedFileOpenActionMenuItem: NSMenuItem {
+    private let openAction: ChangedFileOpenAction
+    private let filePath: String
+
+    init(action: ChangedFileOpenAction, path: String) {
+        openAction = action
+        filePath = path
+        super.init(title: action.title, action: #selector(runAction), keyEquivalent: "")
+        target = self
+    }
+
+    required init(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    @objc private func runAction() {
+        openAction.run(path: filePath)
+    }
+}
 
 private enum ChangedFileOpenAction: Identifiable {
     case editor(EditorOption)
