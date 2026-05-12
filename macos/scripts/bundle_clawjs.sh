@@ -240,6 +240,45 @@ PY
         cp -R "$overlay_core" "$dest"
     }
 
+    copy_overlay_package() {
+        local overlay_dir="$1"
+        local dest="$2"
+        [[ -d "$overlay_dir" ]] || return 0
+        build_overlay_package "$overlay_dir"
+        echo "==> Dev overlay: copying $overlay_dir → $dest"
+        rm -rf "$dest"
+        mkdir -p "$(dirname "$dest")"
+        cp -R "$overlay_dir" "$dest"
+    }
+
+    rewrite_index_local_overlay_dependencies() {
+        local package_json="$1"
+        [[ -f "$package_json" ]] || return 0
+        /usr/bin/python3 - "$package_json" "$CLAWJS_DEST/node_modules/@clawjs/mp" "$CLAWJS_DEST/node_modules/@clawjs/profile" <<'PY'
+import json
+import os
+import sys
+
+package_json, mp_dir, profile_dir = sys.argv[1:4]
+with open(package_json, encoding="utf-8") as handle:
+    data = json.load(handle)
+
+deps = data.setdefault("dependencies", {})
+changed = False
+if os.path.isdir(mp_dir) and deps.get("@clawjs/mp") == "*":
+    deps["@clawjs/mp"] = "file:../mp"
+    changed = True
+if os.path.isdir(profile_dir) and deps.get("@clawjs/profile") == "*":
+    deps["@clawjs/profile"] = "file:../profile"
+    changed = True
+
+if changed:
+    with open(package_json, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+        handle.write("\n")
+PY
+    }
+
     OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/packages/clawjs/bin"
     if [[ ! -d "$OVERLAY_BIN" && -d "$CLAWJS_DEV_OVERLAY/bin" ]]; then
         OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/bin"
@@ -273,6 +312,9 @@ PY
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/index"
         mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
         cp -R "$OVERLAY_INDEX" "$CLAWJS_DEST/node_modules/@clawjs/index"
+        copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/clawjs-mp" "$CLAWJS_DEST/node_modules/@clawjs/mp"
+        copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/clawjs-profile" "$CLAWJS_DEST/node_modules/@clawjs/profile"
+        rewrite_index_local_overlay_dependencies "$CLAWJS_DEST/node_modules/@clawjs/index/package.json"
         (
             cd "$CLAWJS_DEST/node_modules/@clawjs/index"
             npm_config_arch=arm64 \
