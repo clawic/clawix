@@ -5,6 +5,7 @@ dist
 .vite
 .DS_Store
 playwright-report
+.playwright-cli
 test-results
 coverage
 *.tsbuildinfo
