@@ -103,10 +103,8 @@ struct ChangedFileCard: View {
 
     // MARK: - Open pill
 
-    /// "Open ⌄" pill that mirrors the Codex Desktop card. The label area
-    /// runs the same open-in-sidebar action as the parent card; the
-    /// chevron is the only sub-region that intercepts the tap and pops
-    /// the editor dropdown.
+    /// "Open ⌄" pill that mirrors the Codex Desktop card and presents
+    /// the editor dropdown from a single accessible control.
     private var openPill: some View {
         HStack(spacing: 4) {
             Text(verbatim: String(localized: "Open",
@@ -114,23 +112,13 @@ struct ChangedFileCard: View {
                                   locale: AppLocale.current))
                 .font(BodyFont.system(size: 14, wght: 500))
                 .foregroundColor(Color(white: 0.94))
-                // SwiftUI Text on macOS hijacks the I-beam cursor and
-                // swallows taps over its glyphs. Pass-through so the
-                // parent pill owns both the pointer cursor and the tap.
                 .allowsHitTesting(false)
 
             LucideIcon(.chevronDown, size: 11)
                 .foregroundColor(Color(white: 0.72))
                 .padding(.leading, 2)
                 .padding(.vertical, 4)
-                .contentShape(Rectangle())
-                .onContinuousHover { phase in
-                    if case .active = phase { NSCursor.pointingHand.set() }
-                }
-                .onTapGesture {
-                    presentMenuPanel()
-                }
-                .accessibilityLabel("Open with…")
+                .allowsHitTesting(false)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
@@ -145,34 +133,77 @@ struct ChangedFileCard: View {
             }
         }
         .onTapGesture {
-            appState.openFileInSidebar(path)
+            presentMenuPanel()
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: "Open with…"))
         .accessibilityIdentifier("changed-file-open-with-\(fileName)")
         .accessibilityAddTraits(.isButton)
-        .accessibilityAction {
-            presentMenuPanel()
-        }
+        .accessibilityAction { presentMenuPanel() }
         .overlay(
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
         )
+        .overlay(OpenPillClickTarget { anchorFrame in
+            presentMenuPanel(anchorFrame: anchorFrame)
+        }.accessibilityHidden(true))
         // Track the whole pill's window frame so the popup anchors on
         // the pill's bottom-left edge.
         .background(OpenPillWindowFrameReader(frame: $openPillWindowFrame, enabled: true))
     }
 
-    private func presentMenuPanel() {
+    private func presentMenuPanel(anchorFrame explicitAnchorFrame: CGRect? = nil) {
         guard let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0.isVisible }) else {
             return
         }
         // Anchor the popup's top-left at the pill's bottom-left in screen
         // coordinates so the menu left-aligns with the "Open" label.
-        let anchorFrame = openPillWindowFrame.isEmpty ? cardWindowFrame : openPillWindowFrame
-        let screenRect = window.convertToScreen(anchorFrame)
-        let anchorPoint = NSPoint(x: screenRect.minX, y: screenRect.minY)
+        let anchorFrame = explicitAnchorFrame
+            ?? (openPillWindowFrame.isEmpty ? cardWindowFrame : openPillWindowFrame)
+        let anchorPoint: NSPoint
+        if anchorFrame.isEmpty {
+            anchorPoint = NSEvent.mouseLocation
+        } else {
+            let screenRect = window.convertToScreen(anchorFrame)
+            anchorPoint = NSPoint(x: screenRect.minX, y: screenRect.minY)
+        }
         ChangedFileMenuPanel.present(leftTopAnchor: anchorPoint, path: path)
+    }
+}
+
+private struct OpenPillClickTarget: NSViewRepresentable {
+    let onClick: (CGRect) -> Void
+
+    func makeNSView(context: Context) -> Reader {
+        let v = Reader()
+        v.onClick = onClick
+        return v
+    }
+
+    func updateNSView(_ nsView: Reader, context: Context) {
+        nsView.onClick = onClick
+    }
+
+    final class Reader: NSView {
+        var onClick: ((CGRect) -> Void)?
+
+        override var acceptsFirstResponder: Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            onClick?(convert(bounds, to: nil))
+        }
+
+        override func rightMouseDown(with event: NSEvent) {
+            onClick?(convert(bounds, to: nil))
+        }
+
+        override func resetCursorRects() {
+            addCursorRect(bounds, cursor: .pointingHand)
+        }
+
+        override func isAccessibilityElement() -> Bool {
+            false
+        }
     }
 }
 
