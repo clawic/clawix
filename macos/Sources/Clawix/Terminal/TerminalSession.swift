@@ -65,7 +65,26 @@ final class TerminalSession: ObservableObject, Identifiable {
     @discardableResult
     func sendSignal(_ signal: Int32) -> Bool {
         guard let pid = currentShellPid(), pid > 0 else { return false }
-        return kill(pid, signal) == 0
+        return signalShell(pid: pid, signal: signal)
+    }
+
+    func terminate() {
+        guard let pid = currentShellPid(), pid > 0 else {
+            terminalView.terminate()
+            return
+        }
+        _ = signalShell(pid: pid, signal: SIGHUP)
+        terminalView.terminate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            guard Self.processIsAlive(pid) else { return }
+            _ = Self.signalProcessGroupIfOwned(pid: pid, signal: SIGTERM)
+            _ = kill(pid, SIGTERM)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            guard Self.processIsAlive(pid) else { return }
+            _ = Self.signalProcessGroupIfOwned(pid: pid, signal: SIGKILL)
+            _ = kill(pid, SIGKILL)
+        }
     }
 
     func sendText(_ text: String) {
@@ -84,23 +103,24 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
     }
 
-    /// Try to read the child PID from SwiftTerm's `LocalProcess` via
-    /// `Mirror`. SwiftTerm exposes the property as `shellPid` on most
-    /// recent versions; the reflective lookup keeps us forward-compatible
-    /// across renames.
     private func currentShellPid() -> pid_t? {
-        let mirror = Mirror(reflecting: terminalView)
-        for child in mirror.children {
-            guard child.label == "process" else { continue }
-            let processMirror = Mirror(reflecting: child.value)
-            for processChild in processMirror.children {
-                if processChild.label == "shellPid",
-                   let pid = processChild.value as? pid_t {
-                    return pid
-                }
-            }
-        }
-        return nil
+        let pid = terminalView.process.shellPid
+        return pid > 0 ? pid : nil
+    }
+
+    private func signalShell(pid: pid_t, signal: Int32) -> Bool {
+        let groupSent = Self.signalProcessGroupIfOwned(pid: pid, signal: signal)
+        let pidSent = kill(pid, signal) == 0
+        return groupSent || pidSent
+    }
+
+    private static func signalProcessGroupIfOwned(pid: pid_t, signal: Int32) -> Bool {
+        guard getpgid(pid) == pid else { return false }
+        return kill(-pid, signal) == 0
+    }
+
+    private static func processIsAlive(_ pid: pid_t) -> Bool {
+        kill(pid, 0) == 0
     }
 
     /// Spawn (or respawn) the shell in `initialCwd`. Falls back to

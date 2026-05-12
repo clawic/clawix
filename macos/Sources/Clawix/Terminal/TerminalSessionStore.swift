@@ -272,7 +272,7 @@ final class TerminalSessionStore: ObservableObject {
     /// read loop exit cleanly.
     private func killSession(leafId: UUID) {
         guard let session = sessions.removeValue(forKey: leafId) else { return }
-        _ = session.sendSignal(SIGHUP)
+        session.terminate()
         let view = session.terminalView
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak view] in
             _ = view  // retain briefly while OS reaps the child
@@ -300,7 +300,7 @@ final class TerminalSessionStore: ObservableObject {
     /// process exit reaps the rest synchronously.
     func shutdown() {
         for (_, session) in sessions {
-            _ = session.sendSignal(SIGHUP)
+            session.terminate()
         }
         sessions.removeAll()
     }
