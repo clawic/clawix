@@ -1924,10 +1924,39 @@ final class AppState: ObservableObject {
                 if page >= maxPages { break }
             } while resolvedPins.count < pinnedTargets.count
 
-            applyThreads(collected)
+            let stateThreads = CodexStateThreadIndex.list(
+                limit: 1_200,
+                pinnedThreadIds: backendState.pinnedThreadIds
+            )
+            applyThreads(shouldPreferCodexStateThreads(runtime: collected, state: stateThreads)
+                ? stateThreads
+                : collected)
         } catch {
+            let stateThreads = CodexStateThreadIndex.list(
+                limit: 1_200,
+                pinnedThreadIds: backendState.pinnedThreadIds
+            )
+            if !stateThreads.isEmpty {
+                applyThreads(stateThreads)
+                return
+            }
             appendRuntimeStatusError(L10n.runtimeIndexReadFailed("\(error)"))
         }
+    }
+
+    private func shouldPreferCodexStateThreads(
+        runtime: [AgentThreadSummary],
+        state: [AgentThreadSummary]
+    ) -> Bool {
+        guard !state.isEmpty else { return false }
+        guard !runtime.isEmpty else { return true }
+        let pins = Set(backendState.pinnedThreadIds)
+        let runtimePins = runtime.reduce(0) { $0 + (pins.contains($1.id) ? 1 : 0) }
+        let statePins = state.reduce(0) { $0 + (pins.contains($1.id) ? 1 : 0) }
+        if statePins > runtimePins { return true }
+        if state.count > runtime.count * 2 { return true }
+        if runtime.count < min(100, state.count) { return true }
+        return false
     }
 
     /// Refreshes the chat list for a single project in the background.

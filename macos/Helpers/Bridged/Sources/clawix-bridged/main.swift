@@ -1130,13 +1130,24 @@ final class DaemonEngineHost: EngineHost {
                 page += 1
             } while cursor != nil && page < maxPages
 
-            let snapshots = collected.map(snapshot(from:))
-            BridgedLog.write("thread-list ok count=\(snapshots.count) pages=\(page) pinned=\(pinnedThreadIds.count)")
+            let runtimeSnapshots = collected.map(snapshot(from:))
+            let stateSnapshots = loadCodexStateSnapshots(limit: 1_200)
+            let useStateSnapshots = shouldPreferCodexStateSnapshots(runtime: runtimeSnapshots, state: stateSnapshots)
+            let snapshots = useStateSnapshots ? stateSnapshots : runtimeSnapshots
+            let source = useStateSnapshots ? "state-db" : "runtime"
+            BridgedLog.write("thread-list ok count=\(snapshots.count) source=\(source) pages=\(page) pinned=\(pinnedThreadIds.count)")
             chatsSubject.send(snapshots)
             lastChatsPublishedAt = Date()
             return true
         } catch {
             BridgedLog.write("thread-list failed \(error)")
+            let stateFallback = loadCodexStateSnapshots(limit: 1_200)
+            if !stateFallback.isEmpty {
+                BridgedLog.write("thread-list fallback from state-db count=\(stateFallback.count)")
+                chatsSubject.send(stateFallback)
+                lastChatsPublishedAt = Date()
+                return true
+            }
             let fallback = loadRolloutFallbackSnapshots(limit: 1_200)
             if !fallback.isEmpty {
                 BridgedLog.write("thread-list fallback from rollouts count=\(fallback.count)")
@@ -1152,6 +1163,28 @@ final class DaemonEngineHost: EngineHost {
             stateSubject.send(.error("Couldn't load chats: \(shortReason(error))"))
             return false
         }
+    }
+
+    private func shouldPreferCodexStateSnapshots(
+        runtime: [BridgeChatSnapshot],
+        state: [BridgeChatSnapshot]
+    ) -> Bool {
+        guard !state.isEmpty else { return false }
+        guard !runtime.isEmpty else { return true }
+        let runtimePins = runtime.reduce(0) { $0 + ($1.chat.isPinned ? 1 : 0) }
+        let statePins = state.reduce(0) { $0 + ($1.chat.isPinned ? 1 : 0) }
+        if statePins > runtimePins { return true }
+        if state.count > runtime.count * 2 { return true }
+        if runtime.count < min(100, state.count) { return true }
+        return false
+    }
+
+    private func loadCodexStateSnapshots(limit: Int) -> [BridgeChatSnapshot] {
+        refreshPinnedThreadIds()
+        guard let threads = CodexStateThreadLoader.load(limit: limit, pinnedThreadIds: pinnedThreadIds) else {
+            return []
+        }
+        return threads.map(snapshot(from:))
     }
 
     private func loadRolloutFallbackSnapshots(limit: Int) -> [BridgeChatSnapshot] {
@@ -2120,6 +2153,103 @@ struct ThreadListResponse: Decodable {
     }
 }
 
+enum CodexStateThreadLoader {
+    private static var defaultURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex/state_5.sqlite")
+    }
+
+    static func load(limit: Int, pinnedThreadIds: Set<String>) -> [AgentThreadSummary]? {
+        let env = ProcessInfo.processInfo.environment
+        let dbURL = env["CLAWIX_CODEX_STATE_DB"]
+            .map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
+            ?? defaultURL
+        guard FileManager.default.fileExists(atPath: dbURL.path) else { return nil }
+        let boundedLimit = max(1, min(limit, 5_000))
+        let query = stateQuery(limit: boundedLimit, pinnedThreadIds: pinnedThreadIds)
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+        process.arguments = ["-readonly", "-json", dbURL.path, query]
+
+        let output = Pipe()
+        let error = Pipe()
+        process.standardOutput = output
+        process.standardError = error
+
+        do {
+            try process.run()
+        } catch {
+            BridgedLog.write("state-db read failed \(error)")
+            return nil
+        }
+
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = error.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        if process.terminationStatus != 0 {
+            let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+            BridgedLog.write("state-db sqlite failed \(stderr.trimmingCharacters(in: .whitespacesAndNewlines))")
+            return nil
+        }
+        guard !data.isEmpty else { return [] }
+        do {
+            return try JSONDecoder().decode([AgentThreadSummary].self, from: data)
+        } catch {
+            BridgedLog.write("state-db decode failed \(error)")
+            return nil
+        }
+    }
+
+    private static func stateQuery(limit: Int, pinnedThreadIds: Set<String>) -> String {
+        let selectedColumns = """
+        id,
+        NULLIF(cwd, '') AS cwd,
+        NULLIF(title, '') AS name,
+        COALESCE(first_user_message, '') AS preview,
+        NULLIF(rollout_path, '') AS path,
+        CASE
+            WHEN created_at_ms IS NOT NULL AND created_at_ms > 0 THEN created_at_ms / 1000
+            ELSE created_at
+        END AS createdAt,
+        CASE
+            WHEN updated_at_ms IS NOT NULL AND updated_at_ms > 0 THEN updated_at_ms / 1000
+            ELSE updated_at
+        END AS updatedAt,
+        archived
+        """
+        let pinnedPredicate: String
+        if pinnedThreadIds.isEmpty {
+            pinnedPredicate = "0"
+        } else {
+            let quoted = pinnedThreadIds
+                .map { "'\($0.replacingOccurrences(of: "'", with: "''"))'" }
+                .sorted()
+                .joined(separator: ",")
+            pinnedPredicate = "id IN (\(quoted))"
+        }
+        return """
+        WITH recent AS (
+            SELECT \(selectedColumns)
+            FROM threads
+            WHERE archived = 0
+            ORDER BY updated_at DESC
+            LIMIT \(limit)
+        ),
+        pinned AS (
+            SELECT \(selectedColumns)
+            FROM threads
+            WHERE archived = 0 AND \(pinnedPredicate)
+        )
+        SELECT * FROM recent
+        UNION
+        SELECT * FROM pinned
+        ORDER BY updatedAt DESC
+        LIMIT \(limit + pinnedThreadIds.count);
+        """
+    }
+}
+
 private struct LossyAgentThreadSummary: Decodable {
     let value: AgentThreadSummary?
 
@@ -2160,7 +2290,7 @@ struct AgentThreadSummary: Decodable {
         path = try c.decodeIfPresent(String.self, forKey: .path)
         createdAt = Self.decodeInt64IfPresent(c, forKey: .createdAt)
         updatedAt = Self.decodeInt64IfPresent(c, forKey: .updatedAt) ?? createdAt ?? 0
-        archived = try c.decodeIfPresent(Bool.self, forKey: .archived)
+        archived = Self.decodeBoolIfPresent(c, forKey: .archived)
     }
 
     private static func decodeInt64IfPresent(
@@ -2176,6 +2306,26 @@ struct AgentThreadSummary: Decodable {
         if let value = try? c.decodeIfPresent(String.self, forKey: key) {
             if let int = Int64(value) { return int }
             if let double = Double(value) { return Int64(double) }
+        }
+        return nil
+    }
+
+    private static func decodeBoolIfPresent(
+        _ c: KeyedDecodingContainer<CodingKeys>,
+        forKey key: CodingKeys
+    ) -> Bool? {
+        if let value = try? c.decodeIfPresent(Bool.self, forKey: key) {
+            return value
+        }
+        if let value = try? c.decodeIfPresent(Int.self, forKey: key) {
+            return value != 0
+        }
+        if let value = try? c.decodeIfPresent(String.self, forKey: key) {
+            switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "1", "true", "yes": return true
+            case "0", "false", "no": return false
+            default: return nil
+            }
         }
         return nil
     }
