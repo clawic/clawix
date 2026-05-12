@@ -1,4 +1,5 @@
 import AppKit
+import CoreGraphics
 import UniformTypeIdentifiers
 import Vision
 
@@ -66,11 +67,12 @@ final class ScreenToolService: ObservableObject {
     }
 
     func recordScreen() {
+        guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: "recording", extension: "mov")
         Self.runScreencapture(args: ["-v", "-i", "-J", "video", url.path]) { [weak self] result in
             Task { @MainActor in
-                guard result == .success, FileManager.default.fileExists(atPath: url.path) else {
-                    ToastCenter.shared.show("Recording cancelled", icon: .warning)
+                guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
+                    ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Recording cancelled"), icon: .warning)
                     return
                 }
                 self?.lastCaptureURL = url
@@ -80,11 +82,12 @@ final class ScreenToolService: ObservableObject {
     }
 
     func captureText(keepLineBreaks: Bool = ScreenToolSettings.keepTextLineBreaks) {
+        guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: "text", extension: "png")
         Self.runScreencapture(args: interactiveArgs(mode: .area, output: url)) { result in
             Task { @MainActor in
-                guard result == .success, FileManager.default.fileExists(atPath: url.path) else {
-                    ToastCenter.shared.show("Text capture cancelled", icon: .warning)
+                guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
+                    ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Text capture cancelled"), icon: .warning)
                     return
                 }
                 await Self.recognizeText(in: url, keepLineBreaks: keepLineBreaks)
@@ -140,11 +143,12 @@ final class ScreenToolService: ObservableObject {
     }
 
     private func runCapture(mode: CaptureMode) {
+        guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: outputPrefix(for: mode), extension: ScreenToolSettings.imageFormat.rawValue)
         Self.runScreencapture(args: interactiveArgs(mode: mode, output: url)) { [weak self] result in
             Task { @MainActor in
-                guard result == .success, FileManager.default.fileExists(atPath: url.path) else {
-                    ToastCenter.shared.show("Capture cancelled", icon: .warning)
+                guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
+                    ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Capture cancelled"), icon: .warning)
                     return
                 }
                 self?.lastCaptureURL = url
@@ -255,20 +259,50 @@ final class ScreenToolService: ObservableObject {
         return args
     }
 
+    private static func ensureScreenCaptureAccess() -> Bool {
+        if CGPreflightScreenCaptureAccess() {
+            return true
+        }
+
+        if CGRequestScreenCaptureAccess() {
+            return true
+        }
+
+        ToastCenter.shared.show("Allow Screen Recording in System Settings", icon: .warning, duration: 4)
+        return false
+    }
+
     private static func runScreencapture(args: [String], completion: @escaping (ProcessResult) -> Void) {
         let task = Process()
+        let stderr = Pipe()
         task.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
         task.arguments = args
+        task.standardError = stderr
         task.terminationHandler = { task in
+            let data = stderr.fileHandleForReading.readDataToEndOfFile()
+            let message = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             DispatchQueue.main.async {
-                completion(task.terminationStatus == 0 ? .success : .failed)
+                completion(ProcessResult(exitStatus: task.terminationStatus, stderr: message))
             }
         }
         do {
             try task.run()
         } catch {
-            DispatchQueue.main.async { completion(.failed) }
+            DispatchQueue.main.async {
+                completion(ProcessResult(exitStatus: -1, stderr: error.localizedDescription))
+            }
         }
+    }
+
+    private static func captureFailureMessage(_ result: ProcessResult, fallback: String) -> String {
+        if !CGPreflightScreenCaptureAccess() {
+            return "Screen Recording permission required"
+        }
+        if !result.stderr.isEmpty {
+            return result.stderr
+        }
+        return fallback
     }
 
     private static func recognizeText(in url: URL, keepLineBreaks: Bool) async {
@@ -295,9 +329,13 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
-    private enum ProcessResult {
-        case success
-        case failed
+    private struct ProcessResult {
+        let exitStatus: Int32
+        let stderr: String
+
+        var succeeded: Bool {
+            exitStatus == 0
+        }
     }
 
     private static let timestampFormatter: DateFormatter = {
