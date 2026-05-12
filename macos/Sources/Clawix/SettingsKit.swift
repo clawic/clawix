@@ -213,7 +213,7 @@ struct IconChipButton: View {
                                 color: Palette.textPrimary,
                                 isLocked: isLocked)
                 } else {
-                    LucideIcon.auto(symbol, size: 11)
+                    IconImage(symbol, size: 11)
                         .foregroundColor(Palette.textPrimary)
                 }
                 if let label {

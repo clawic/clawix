@@ -246,7 +246,7 @@ struct LucideIcon: View {
         case "bubble.left":      return .messageCircle
         case "globe", "globe.americas.fill": return .globe
         case "paperclip":        return .paperclip
-        case "camera", "camera.fill": return .camera
+        case "camera", "camera.fill", "camera.viewfinder": return .camera
         case "photo":            return .image
         case "photo.on.rectangle.angled": return .images
         case "photo.badge.exclamationmark": return .imageOff
@@ -254,7 +254,7 @@ struct LucideIcon: View {
         case "bolt", "bolt.fill": return .zap
         case "bolt.slash", "bolt.slash.fill": return .zapOff
         case "star", "star.fill": return .star
-        case "clock":            return .clock
+        case "clock", "timer":   return .clock
         case "list.bullet":      return .list
         case "checklist":        return .listChecks
         case "text.alignleft":   return .textAlignStart
@@ -267,12 +267,12 @@ struct LucideIcon: View {
         case "key.viewfinder":   return .key
         case "link", "link.circle": return .link
         case "laptopcomputer":   return .laptop
-        case "viewfinder":       return .scan
+        case "viewfinder", "crop", "rectangle.inset.filled": return .scan
         case "tornado":          return .tornado
         case "theatermasks":     return .drama
         case "doc.questionmark": return .fileQuestionMark
         case "questionmark.square.dashed", "app.dashed": return .squareDashed
-        case "app":              return .appWindow
+        case "app", "macwindow": return .appWindow
         case "point.3.connected.trianglepath.dotted": return .workflow
         case "square.and.arrow.down": return .download
         case "square.and.arrow.up":   return .share2
@@ -281,6 +281,7 @@ struct LucideIcon: View {
         case "pause", "pause.fill":   return .pause
         case "stop.fill":             return .square
         case "stop.circle", "stop.circle.fill": return .circleStop
+        case "record.circle":        return .circleDot
         case "moon", "moon.zzz":      return .moon
         case "waveform":              return .audioWaveform
         case "exclamationmark.triangle",
@@ -291,6 +292,7 @@ struct LucideIcon: View {
              "exclamationmark.shield.fill": return .shieldAlert
         case "exclamationmark.applewatch": return .circleAlert
         case "info.circle", "info.circle.fill": return .info
+        case "text.viewfinder":      return .textAlignStart
         case "checkmark.circle", "checkmark.circle.fill": return .circleCheck
         case "xmark.circle", "xmark.circle.fill": return .circleX
         case "circle":            return .circleDot
