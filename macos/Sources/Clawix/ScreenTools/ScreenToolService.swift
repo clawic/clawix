@@ -626,13 +626,15 @@ final class ScreenToolService: ObservableObject {
     static func recordingArgs(
         output url: URL,
         playSounds: Bool = ScreenToolSettings.playSounds,
+        showCursor: Bool = ScreenToolSettings.showRecordingCursor,
         showControls: Bool = ScreenToolSettings.showRecordingControls,
         highlightClicks: Bool = ScreenToolSettings.highlightRecordingClicks,
         recordAudio: Bool = ScreenToolSettings.recordRecordingAudio
     ) -> [String] {
         var args: [String] = []
         if !playSounds { args.append("-x") }
-        args.append(contentsOf: ["-v", "-i", "-J", "video"])
+        args.append(contentsOf: ["-v", "-J", "video"])
+        if showCursor { args.append("-i") }
         if showControls { args.append("-U") }
         if highlightClicks { args.append("-k") }
         if recordAudio { args.append("-g") }
@@ -1215,6 +1217,7 @@ enum ScreenToolSettings {
     static let backgroundPresetKey = "clawix.screenTools.backgroundPreset"
     static let crosshairModeKey = "clawix.screenTools.crosshairMode"
     static let showCrosshairMagnifierKey = "clawix.screenTools.showCrosshairMagnifier"
+    static let showRecordingCursorKey = "clawix.screenTools.showRecordingCursor"
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
@@ -1284,6 +1287,10 @@ enum ScreenToolSettings {
 
     static var showCrosshairMagnifier: Bool {
         defaults.object(forKey: showCrosshairMagnifierKey) == nil ? true : defaults.bool(forKey: showCrosshairMagnifierKey)
+    }
+
+    static var showRecordingCursor: Bool {
+        defaults.object(forKey: showRecordingCursorKey) == nil ? true : defaults.bool(forKey: showRecordingCursorKey)
     }
 
     static var showRecordingControls: Bool {

@@ -301,6 +301,7 @@ private struct MenuBarContent: View {
     @ObservedObject private var macUtilities = MacUtilitiesController.shared
     @ObservedObject private var bridge = BackgroundBridgeService.shared
     @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
+    @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
     @Environment(\.openWindow) private var openWindow
 
     private var backgroundPresetBinding: Binding<ScreenToolService.BackgroundPreset> {
@@ -390,6 +391,9 @@ private struct MenuBarContent: View {
                     screenTools.recordScreen()
                 } label: {
                     Label("Record Screen", systemImage: "record.circle")
+                }
+                Toggle(isOn: $showRecordingCursor) {
+                    Label("Show Cursor in Recordings", systemImage: "cursorarrow")
                 }
                 Button {
                     screenTools.captureText()

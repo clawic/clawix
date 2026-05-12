@@ -19,6 +19,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
     @AppStorage(ScreenToolSettings.crosshairModeKey) private var crosshairMode = ScreenToolService.CrosshairMode.disabled.rawValue
     @AppStorage(ScreenToolSettings.showCrosshairMagnifierKey) private var showCrosshairMagnifier = true
+    @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
     @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
@@ -224,6 +225,8 @@ struct ScreenToolsSettingsPage: View {
             SectionLabel(title: "Recording")
             SettingsCard {
                 ToggleRow(title: "Show controls while recording", detail: "Keep the system recording controls visible during screen recordings.", isOn: $showRecordingControls)
+                CardDivider()
+                ToggleRow(title: "Show cursor", detail: "Include the pointer in screen recordings.", isOn: $showRecordingCursor)
                 CardDivider()
                 ToggleRow(title: "Highlight clicks", detail: "Show click feedback in screen recordings.", isOn: $highlightRecordingClicks)
                 CardDivider()
