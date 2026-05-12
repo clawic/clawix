@@ -15,6 +15,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.scaleRetinaScreenshotsTo1xKey) private var scaleRetinaScreenshotsTo1x = false
     @AppStorage(ScreenToolSettings.convertScreenshotsToSRGBKey) private var convertScreenshotsToSRGB = false
     @AppStorage(ScreenToolSettings.addOnePixelBorderKey) private var addOnePixelBorder = false
+    @AppStorage(ScreenToolSettings.freezeScreenOnCaptureKey) private var freezeScreenOnCapture = false
     @AppStorage(ScreenToolSettings.crosshairModeKey) private var crosshairMode = ScreenToolService.CrosshairMode.disabled.rawValue
     @AppStorage(ScreenToolSettings.showCrosshairMagnifierKey) private var showCrosshairMagnifier = true
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
@@ -188,6 +189,8 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Convert to sRGB profile", detail: "Write screenshots with the standard sRGB color profile.", isOn: $convertScreenshotsToSRGB)
                 CardDivider()
                 ToggleRow(title: "Add 1px border", detail: "Add a one-pixel border around saved screenshots.", isOn: $addOnePixelBorder)
+                CardDivider()
+                ToggleRow(title: "Freeze screen", detail: "Freeze visible content while selecting a screenshot area.", isOn: $freezeScreenOnCapture)
                 CardDivider()
                 DropdownRow(
                     title: "Crosshair mode",

@@ -153,8 +153,13 @@ final class ScreenToolService: ObservableObject {
     }
 
     func captureArea() {
-        selectArea { [weak self] rect in
-            self?.runCapture(mode: .area, rect: rect)
+        selectArea { [weak self] selection in
+            guard let self else { return }
+            if let frozenSnapshot = selection.frozenSnapshot, ScreenToolSettings.imageFormat != .pdf {
+                self.runFrozenAreaCapture(selection: selection, snapshot: frozenSnapshot)
+            } else {
+                self.runCapture(mode: .area, rect: selection.rect)
+            }
         }
     }
 
@@ -175,8 +180,8 @@ final class ScreenToolService: ObservableObject {
     }
 
     func captureScrolling() {
-        selectArea { [weak self] rect in
-            self?.runScrollingCapture(rect: rect)
+        selectArea { [weak self] selection in
+            self?.runScrollingCapture(rect: selection.rect)
         }
     }
 
@@ -364,6 +369,22 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
+    private func runFrozenAreaCapture(selection: ScreenToolAreaSelectionResult, snapshot: NSImage) {
+        let url = outputURL(prefix: outputPrefix(for: .area), extension: ScreenToolSettings.imageFormat.rawValue)
+        do {
+            guard try Self.writeFrozenSelection(from: snapshot, selectionRect: selection.snapshotRect, to: url) else {
+                runCapture(mode: .area, rect: selection.rect)
+                return
+            }
+            ScreenToolSettings.previousAreaRect = selection.rect
+            try? Self.applyScreenshotPostProcessing(to: url)
+            lastCaptureURL = url
+            handleCapture(url)
+        } catch {
+            ToastCenter.shared.show("Could not save frozen capture", icon: .error)
+        }
+    }
+
     private func runScrollingCapture(rect: ScreenToolCaptureRect) {
         guard Self.ensureScreenCaptureAccess() else { return }
         ScreenToolSettings.previousAreaRect = rect
@@ -405,7 +426,7 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
-    private func selectArea(completion: @escaping (ScreenToolCaptureRect) -> Void) {
+    private func selectArea(completion: @escaping (ScreenToolAreaSelectionResult) -> Void) {
         guard let screen = Self.activeScreen() else {
             ToastCenter.shared.show("No screen available", icon: .error)
             return
@@ -419,11 +440,11 @@ final class ScreenToolService: ObservableObject {
                 }
                 ToastCenter.shared.show("Capture cancelled", icon: .warning)
             },
-            onComplete: { [weak self] selectionWindow, rect in
+            onComplete: { [weak self] selectionWindow, selection in
                 if self?.areaSelectionWindow === selectionWindow {
                     self?.areaSelectionWindow = nil
                 }
-                completion(rect)
+                completion(selection)
             }
         )
         areaSelectionWindow?.close()
@@ -617,6 +638,56 @@ final class ScreenToolService: ObservableObject {
         if ScreenToolSettings.convertScreenshotsToSRGB {
             _ = try convertImageToSRGB(url)
         }
+    }
+
+    @discardableResult
+    static func writeFrozenSelection(from image: NSImage, selectionRect: NSRect, to url: URL) throws -> Bool {
+        guard
+            selectionRect.width > 0,
+            selectionRect.height > 0,
+            let sourceRep = image.representations.compactMap({ $0 as? NSBitmapImageRep }).first,
+            image.size.width > 0,
+            image.size.height > 0
+        else {
+            return false
+        }
+
+        let xScale = CGFloat(sourceRep.pixelsWide) / image.size.width
+        let yScale = CGFloat(sourceRep.pixelsHigh) / image.size.height
+        let targetWidth = max(1, Int((selectionRect.width * xScale).rounded(.up)))
+        let targetHeight = max(1, Int((selectionRect.height * yScale).rounded(.up)))
+
+        guard let targetRep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: targetWidth,
+            pixelsHigh: targetHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return false
+        }
+
+        targetRep.size = selectionRect.size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: targetRep)
+        image.draw(
+            in: NSRect(origin: .zero, size: selectionRect.size),
+            from: selectionRect,
+            operation: .copy,
+            fraction: 1
+        )
+        NSGraphicsContext.restoreGraphicsState()
+
+        guard let data = bitmapData(for: targetRep, url: url) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: url, options: .atomic)
+        return true
     }
 
     @discardableResult
@@ -1109,6 +1180,12 @@ struct ScreenToolCaptureRect: Equatable {
     }
 }
 
+struct ScreenToolAreaSelectionResult {
+    let rect: ScreenToolCaptureRect
+    let snapshotRect: NSRect
+    let frozenSnapshot: NSImage?
+}
+
 enum ScreenToolSettings {
     private static let defaults = UserDefaults.standard
 
@@ -1122,6 +1199,7 @@ enum ScreenToolSettings {
     static let scaleRetinaScreenshotsTo1xKey = "clawix.screenTools.scaleRetinaScreenshotsTo1x"
     static let convertScreenshotsToSRGBKey = "clawix.screenTools.convertScreenshotsToSRGB"
     static let addOnePixelBorderKey = "clawix.screenTools.addOnePixelBorder"
+    static let freezeScreenOnCaptureKey = "clawix.screenTools.freezeScreenOnCapture"
     static let crosshairModeKey = "clawix.screenTools.crosshairMode"
     static let showCrosshairMagnifierKey = "clawix.screenTools.showCrosshairMagnifier"
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
@@ -1177,6 +1255,10 @@ enum ScreenToolSettings {
         defaults.bool(forKey: addOnePixelBorderKey)
     }
 
+    static var freezeScreenOnCapture: Bool {
+        defaults.bool(forKey: freezeScreenOnCaptureKey)
+    }
+
     static var crosshairMode: ScreenToolService.CrosshairMode {
         let raw = defaults.string(forKey: crosshairModeKey) ?? ScreenToolService.CrosshairMode.disabled.rawValue
         return ScreenToolService.CrosshairMode(rawValue: raw) ?? .disabled
@@ -1223,12 +1305,12 @@ enum ScreenToolSettings {
 
 final class ScreenToolAreaSelectionWindow: NSPanel {
     private let onCancel: (ScreenToolAreaSelectionWindow) -> Void
-    private let onComplete: (ScreenToolAreaSelectionWindow, ScreenToolCaptureRect) -> Void
+    private let onComplete: (ScreenToolAreaSelectionWindow, ScreenToolAreaSelectionResult) -> Void
 
     init(
         screen: NSScreen,
         onCancel: @escaping (ScreenToolAreaSelectionWindow) -> Void,
-        onComplete: @escaping (ScreenToolAreaSelectionWindow, ScreenToolCaptureRect) -> Void
+        onComplete: @escaping (ScreenToolAreaSelectionWindow, ScreenToolAreaSelectionResult) -> Void
     ) {
         self.onCancel = onCancel
         self.onComplete = onComplete
@@ -1252,10 +1334,10 @@ final class ScreenToolAreaSelectionWindow: NSPanel {
                 self.close()
                 self.onCancel(self)
             },
-            complete: { [weak self] rect in
+            complete: { [weak self] selection in
                 guard let self else { return }
                 self.close()
-                self.onComplete(self, rect)
+                self.onComplete(self, selection)
             }
         )
     }
@@ -1271,9 +1353,10 @@ final class ScreenToolAreaSelectionWindow: NSPanel {
 private final class ScreenToolAreaSelectionView: NSView {
     private let screen: NSScreen
     private let cancel: () -> Void
-    private let complete: (ScreenToolCaptureRect) -> Void
+    private let complete: (ScreenToolAreaSelectionResult) -> Void
     private let crosshairMode: ScreenToolService.CrosshairMode
     private let showMagnifier: Bool
+    private let freezeScreen: Bool
     private let screenSnapshot: NSImage?
     private var startPoint: NSPoint?
     private var currentPoint: NSPoint?
@@ -1281,16 +1364,17 @@ private final class ScreenToolAreaSelectionView: NSView {
     private var activeModifierFlags: NSEvent.ModifierFlags = []
     private var trackingArea: NSTrackingArea?
 
-    init(screen: NSScreen, cancel: @escaping () -> Void, complete: @escaping (ScreenToolCaptureRect) -> Void) {
+    init(screen: NSScreen, cancel: @escaping () -> Void, complete: @escaping (ScreenToolAreaSelectionResult) -> Void) {
         self.screen = screen
         self.cancel = cancel
         self.complete = complete
         self.crosshairMode = ScreenToolSettings.crosshairMode
         self.showMagnifier = ScreenToolSettings.showCrosshairMagnifier
+        self.freezeScreen = ScreenToolSettings.freezeScreenOnCapture
         self.screenSnapshot = Self.captureSnapshot(for: screen)
         super.init(frame: NSRect(origin: .zero, size: screen.frame.size))
         wantsLayer = true
-        layer?.backgroundColor = NSColor.black.withAlphaComponent(0.16).cgColor
+        layer?.backgroundColor = NSColor.black.withAlphaComponent(freezeScreen ? 0 : 0.16).cgColor
     }
 
     required init?(coder: NSCoder) {
@@ -1351,7 +1435,11 @@ private final class ScreenToolAreaSelectionView: NSView {
             cancel()
             return
         }
-        complete(captureRect)
+        complete(ScreenToolAreaSelectionResult(
+            rect: captureRect,
+            snapshotRect: rect,
+            frozenSnapshot: freezeScreen ? screenSnapshot : nil
+        ))
     }
 
     override func keyDown(with event: NSEvent) {
@@ -1370,6 +1458,11 @@ private final class ScreenToolAreaSelectionView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
+        if freezeScreen, let screenSnapshot {
+            screenSnapshot.draw(in: bounds, from: .zero, operation: .copy, fraction: 1)
+            NSColor.black.withAlphaComponent(0.16).setFill()
+            bounds.fill()
+        }
         if let rect = currentSelectionRect {
             NSColor.clear.setFill()
             rect.fill(using: .copy)
