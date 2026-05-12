@@ -189,6 +189,19 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
             preferences: preferences,
             fileManager: fileManager
         )
+        if plan.status == .readyForFileProfile,
+           profile?.engineId == "sqlite",
+           plan.statementKind != .readOnly {
+            lastResult = nil
+            let blocked = DatabaseWorkbenchRunPlan(
+                status: .blocked,
+                statementKind: plan.statementKind,
+                message: DatabaseWorkbenchSQLiteError.writeStatementBlocked.localizedDescription,
+                requiresWriteConfirmation: plan.requiresWriteConfirmation
+            )
+            record(plan: blocked, profile: profile)
+            return blocked
+        }
         guard plan.status == .readyForFileProfile,
               plan.statementKind == .readOnly,
               profile?.engineId == "sqlite",

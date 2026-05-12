@@ -127,8 +127,10 @@ final class DatabaseWorkbenchSessionTests: XCTestCase {
         XCTAssertEqual(store.lastResult?.rows.first?[1], "Ada")
 
         store.activeSQL = "DELETE FROM users"
-        _ = store.runLocalSQLiteIfAvailable(profile: profile, preferences: DatabaseWorkbenchPreferences(defaults: defaults))
+        let blocked = store.runLocalSQLiteIfAvailable(profile: profile, preferences: DatabaseWorkbenchPreferences(defaults: defaults))
 
+        XCTAssertEqual(blocked.status, .blocked)
+        XCTAssertEqual(blocked.message, "Only read-only SQLite statements can run locally.")
         XCTAssertNil(store.lastResult)
     }
 
