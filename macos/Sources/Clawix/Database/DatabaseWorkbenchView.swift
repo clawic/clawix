@@ -217,15 +217,30 @@ struct DatabaseWorkbenchView: View {
             Text("Results")
                 .font(BodyFont.system(size: 12, wght: 700))
                 .foregroundColor(Palette.textPrimary)
-            HStack(spacing: 0) {
-                resultCell("status")
-                resultCell("statement")
-                resultCell("profile")
-            }
-            HStack(spacing: 0) {
-                resultCell("dry-run")
-                resultCell(DatabaseWorkbenchSessionStore.classify(session.activeSQL).rawValue)
-                resultCell(selectedProfile?.displayName ?? "No profile")
+            if let result = session.lastResult, !result.columns.isEmpty {
+                HStack(spacing: 0) {
+                    ForEach(result.columns, id: \.self) { column in
+                        resultCell(column)
+                    }
+                }
+                ForEach(Array(result.rows.prefix(12).enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: 0) {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, value in
+                            resultCell(value)
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 0) {
+                    resultCell("status")
+                    resultCell("statement")
+                    resultCell("profile")
+                }
+                HStack(spacing: 0) {
+                    resultCell("dry-run")
+                    resultCell(DatabaseWorkbenchSessionStore.classify(session.activeSQL).rawValue)
+                    resultCell(selectedProfile?.displayName ?? "No profile")
+                }
             }
             Spacer()
         }
@@ -299,7 +314,7 @@ struct DatabaseWorkbenchView: View {
     }
 
     private func runDry() {
-        let plan = session.dryRun(profile: selectedProfile, preferences: prefs)
+        let plan = session.runLocalSQLiteIfAvailable(profile: selectedProfile, preferences: prefs)
         switch plan.status {
         case .readyForFileProfile:
             ToastCenter.shared.show(plan.message)

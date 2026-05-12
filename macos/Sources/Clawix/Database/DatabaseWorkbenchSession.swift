@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import GRDB
 
 struct DatabaseWorkbenchQueryDraft: Codable, Equatable, Identifiable {
     var id: UUID
@@ -60,6 +61,12 @@ struct DatabaseWorkbenchRunPlan: Equatable {
     var requiresWriteConfirmation: Bool
 }
 
+struct DatabaseWorkbenchResultSet: Codable, Equatable {
+    var columns: [String]
+    var rows: [[String]]
+    var message: String
+}
+
 @MainActor
 final class DatabaseWorkbenchSessionStore: ObservableObject {
     static let shared = DatabaseWorkbenchSessionStore()
@@ -73,6 +80,7 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
     @Published private(set) var drafts: [DatabaseWorkbenchQueryDraft] = []
     @Published private(set) var history: [DatabaseWorkbenchHistoryEntry] = []
     @Published private(set) var console: [String] = []
+    @Published private(set) var lastResult: DatabaseWorkbenchResultSet?
 
     private let defaults: UserDefaults
     private let fileManager: FileManager
@@ -170,6 +178,53 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
         appendConsole(line)
     }
 
+    @discardableResult
+    func runLocalSQLiteIfAvailable(
+        profile: DatabaseConnectionProfile?,
+        preferences: DatabaseWorkbenchPreferences = .shared
+    ) -> DatabaseWorkbenchRunPlan {
+        let plan = Self.runPlan(
+            sql: activeSQL,
+            profile: profile,
+            preferences: preferences,
+            fileManager: fileManager
+        )
+        guard plan.status == .readyForFileProfile,
+              plan.statementKind == .readOnly,
+              profile?.engineId == "sqlite",
+              let profile else {
+            lastResult = nil
+            record(plan: plan, profile: profile)
+            return plan
+        }
+
+        do {
+            lastResult = try Self.runSQLiteReadOnly(
+                sql: activeSQL,
+                profile: profile,
+                fileManager: fileManager
+            )
+            let executed = DatabaseWorkbenchRunPlan(
+                status: .readyForFileProfile,
+                statementKind: plan.statementKind,
+                message: lastResult?.message ?? "SQLite query completed.",
+                requiresWriteConfirmation: false
+            )
+            record(plan: executed, profile: profile)
+            return executed
+        } catch {
+            lastResult = nil
+            let failed = DatabaseWorkbenchRunPlan(
+                status: .blocked,
+                statementKind: plan.statementKind,
+                message: "SQLite query failed: \(error.localizedDescription)",
+                requiresWriteConfirmation: false
+            )
+            record(plan: failed, profile: profile)
+            return failed
+        }
+    }
+
     static func runPlan(
         sql: String,
         profile: DatabaseConnectionProfile?,
@@ -239,6 +294,42 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
         )
     }
 
+    static func runSQLiteReadOnly(
+        sql: String,
+        profile: DatabaseConnectionProfile,
+        fileManager: FileManager = .default,
+        rowLimit: Int = 200
+    ) throws -> DatabaseWorkbenchResultSet {
+        guard profile.engineId == "sqlite" else {
+            throw DatabaseWorkbenchSQLiteError.unsupportedProfile
+        }
+        guard classify(sql) == .readOnly else {
+            throw DatabaseWorkbenchSQLiteError.writeStatementBlocked
+        }
+        let path = DatabaseConnectionProfileStore.expanded(profile.hostOrPath)
+        guard fileManager.fileExists(atPath: path) else {
+            throw DatabaseWorkbenchSQLiteError.fileMissing
+        }
+        var config = Configuration()
+        config.readonly = true
+        let queue = try DatabaseQueue(path: path, configuration: config)
+        return try queue.read { db in
+            let rows = try Row.fetchAll(db, sql: sql)
+            let limited = Array(rows.prefix(max(1, rowLimit)))
+            let columns = limited.first.map { Array($0.columnNames) } ?? []
+            let values = limited.map { row in
+                columns.map { column in
+                    stringValue(row: row, column: column)
+                }
+            }
+            return DatabaseWorkbenchResultSet(
+                columns: columns,
+                rows: values,
+                message: "SQLite query returned \(limited.count) row\(limited.count == 1 ? "" : "s")."
+            )
+        }
+    }
+
     static func classify(_ sql: String) -> DatabaseWorkbenchRunPlan.StatementKind {
         let stripped = sql
             .components(separatedBy: .newlines)
@@ -304,9 +395,40 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
         return preview.isEmpty ? "Untitled query" : preview
     }
 
+    private static func stringValue(row: Row, column: String) -> String {
+        let value: DatabaseValue = row[column]
+        switch value.storage {
+        case .null:
+            return "NULL"
+        case .int64(let int):
+            return "\(int)"
+        case .double(let double):
+            return "\(double)"
+        case .string(let string):
+            return string
+        case .blob(let data):
+            return data.base64EncodedString()
+        }
+    }
+
     private func appendConsole(_ line: String) {
         console.insert(line, at: 0)
         console = Array(console.prefix(100))
+    }
+
+    private func record(plan: DatabaseWorkbenchRunPlan, profile: DatabaseConnectionProfile?) {
+        let entry = DatabaseWorkbenchHistoryEntry(
+            id: UUID(),
+            profileName: profile?.displayName ?? "No profile",
+            statementPreview: Self.statementPreview(activeSQL),
+            outcome: plan.status == .blocked ? .blocked : (plan.status == .externalPending ? .externalPending : .dryRun),
+            message: plan.message,
+            createdAt: Date()
+        )
+        history.insert(entry, at: 0)
+        history = Array(history.prefix(200))
+        persistHistory()
+        appendConsole(plan.message)
     }
 
     private func persistActiveState() {
@@ -338,5 +460,22 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
     private func persistHistory() {
         guard let data = try? encoder.encode(history) else { return }
         defaults.set(data, forKey: historyKey)
+    }
+}
+
+enum DatabaseWorkbenchSQLiteError: LocalizedError, Equatable {
+    case unsupportedProfile
+    case writeStatementBlocked
+    case fileMissing
+
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedProfile:
+            return "Only SQLite file profiles can use the local runner."
+        case .writeStatementBlocked:
+            return "Only read-only SQLite statements can run locally."
+        case .fileMissing:
+            return "Database file does not exist."
+        }
     }
 }

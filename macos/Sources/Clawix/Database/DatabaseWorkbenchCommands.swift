@@ -140,7 +140,7 @@ struct DatabaseWorkbenchCommands: View {
 
     private func dryRunCurrentQuery() {
         let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
-        let plan = session.dryRun(profile: profile, preferences: prefs)
+        let plan = session.runLocalSQLiteIfAvailable(profile: profile, preferences: prefs)
         switch plan.status {
         case .readyForFileProfile:
             ToastCenter.shared.show(plan.message)
@@ -296,7 +296,7 @@ struct DatabaseWorkbenchMenuBarSection: View {
 
     private func dryRunCurrentQuery() {
         let profile = profiles.profiles.first { $0.id == session.selectedProfileID } ?? profiles.profiles.first
-        let plan = session.dryRun(profile: profile, preferences: prefs)
+        let plan = session.runLocalSQLiteIfAvailable(profile: profile, preferences: prefs)
         switch plan.status {
         case .readyForFileProfile:
             ToastCenter.shared.show(plan.message)

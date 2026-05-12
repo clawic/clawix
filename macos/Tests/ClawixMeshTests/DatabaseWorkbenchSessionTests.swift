@@ -1,4 +1,5 @@
 import XCTest
+import GRDB
 @testable import Clawix
 
 @MainActor
@@ -79,5 +80,71 @@ final class DatabaseWorkbenchSessionTests: XCTestCase {
         XCTAssertEqual(reloaded.drafts.first?.id, draft.id)
         XCTAssertEqual(reloaded.drafts.first?.title, "Smoke query")
         XCTAssertEqual(reloaded.history.first?.outcome, .blocked)
+    }
+
+    func test_sqliteReadOnlyRunnerReturnsRowsFromLocalFile() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("clawix-workbench-\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let queue = try DatabaseQueue(path: url.path)
+        try queue.write { db in
+            try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+            try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada'), ('Linus')")
+        }
+
+        var profile = DatabaseConnectionProfile.draft(
+            engine: DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == "sqlite" }
+        )
+        profile.hostOrPath = url.path
+        let result = try DatabaseWorkbenchSessionStore.runSQLiteReadOnly(
+            sql: "SELECT id, name FROM users ORDER BY id",
+            profile: profile
+        )
+
+        XCTAssertEqual(result.columns, ["id", "name"])
+        XCTAssertEqual(result.rows.count, 2)
+        XCTAssertEqual(result.rows[0][1], "Ada")
+    }
+
+    func test_localSQLiteRunClearsStaleResultsWhenBlocked() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("clawix-workbench-\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let queue = try DatabaseQueue(path: url.path)
+        try queue.write { db in
+            try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+            try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada')")
+        }
+
+        var profile = DatabaseConnectionProfile.draft(
+            engine: DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == "sqlite" }
+        )
+        profile.hostOrPath = url.path
+        let store = DatabaseWorkbenchSessionStore(defaults: defaults)
+        store.activeSQL = "SELECT id, name FROM users"
+        _ = store.runLocalSQLiteIfAvailable(profile: profile, preferences: DatabaseWorkbenchPreferences(defaults: defaults))
+
+        XCTAssertEqual(store.lastResult?.rows.first?[1], "Ada")
+
+        store.activeSQL = "DELETE FROM users"
+        _ = store.runLocalSQLiteIfAvailable(profile: profile, preferences: DatabaseWorkbenchPreferences(defaults: defaults))
+
+        XCTAssertNil(store.lastResult)
+    }
+
+    func test_sqliteRunnerBlocksWriteStatements() throws {
+        var profile = DatabaseConnectionProfile.draft(
+            engine: DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == "sqlite" }
+        )
+        profile.hostOrPath = "/tmp/placeholder.sqlite"
+
+        XCTAssertThrowsError(
+            try DatabaseWorkbenchSessionStore.runSQLiteReadOnly(
+                sql: "DELETE FROM users",
+                profile: profile
+            )
+        ) { error in
+            XCTAssertEqual(error as? DatabaseWorkbenchSQLiteError, .writeStatementBlocked)
+        }
     }
 }
