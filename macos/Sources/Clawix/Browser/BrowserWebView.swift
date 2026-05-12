@@ -36,6 +36,7 @@ final class BrowserTabController: NSObject, ObservableObject {
     private var bgSampleTimer: Timer?
     private var lastSampledBgRaw: String?
     private var requestedURL: URL?
+    private var fallbackBackURLAfterError: URL?
     private static let blankURL = URL(string: "about:blank")!
     private static let blankPageHTML = """
         <!doctype html>
@@ -124,6 +125,7 @@ final class BrowserTabController: NSObject, ObservableObject {
     private func loadApproved(_ url: URL) {
         if Self.isBlankURL(url) {
             requestedURL = nil
+            fallbackBackURLAfterError = nil
             currentURL = Self.blankURL
             title = ""
             lastNavigationError = nil
@@ -134,6 +136,9 @@ final class BrowserTabController: NSObject, ObservableObject {
             return
         }
         requestedURL = url
+        if !Self.isBlankURL(currentURL), currentURL != url, lastNavigationError == nil {
+            fallbackBackURLAfterError = currentURL
+        }
         currentURL = url
         title = ""
         lastNavigationError = nil
@@ -167,7 +172,14 @@ final class BrowserTabController: NSObject, ObservableObject {
         }
     }
 
-    func goBack()    { if webView.canGoBack    { webView.goBack() } }
+    func goBack() {
+        if lastNavigationError != nil, let fallback = fallbackBackURLAfterError {
+            fallbackBackURLAfterError = nil
+            load(fallback)
+            return
+        }
+        if webView.canGoBack { webView.goBack() }
+    }
     func goForward() { if webView.canGoForward { webView.goForward() } }
     func reload() {
         if lastNavigationError != nil || Self.isBlankURL(webView.url ?? Self.blankURL) {
@@ -322,7 +334,10 @@ final class BrowserTabController: NSObject, ObservableObject {
     private func attachObservers() {
         observers.append(webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] wv, _ in
             let value = wv.canGoBack
-            Task { @MainActor in self?.canGoBack = value }
+            Task { @MainActor in
+                guard let self else { return }
+                self.canGoBack = value || (self.lastNavigationError != nil && self.fallbackBackURLAfterError != nil)
+            }
         })
         observers.append(webView.observe(\.canGoForward, options: [.initial, .new]) { [weak self] wv, _ in
             let value = wv.canGoForward
@@ -620,6 +635,7 @@ extension BrowserTabController: WKNavigationDelegate {
             self.fetchFavicon()
             self.sampleBottomLeftBackground()
             self.requestedURL = nil
+            self.fallbackBackURLAfterError = nil
             self.lastNavigationError = nil
         }
     }
@@ -648,6 +664,7 @@ extension BrowserTabController: WKNavigationDelegate {
                 message: message,
                 failedURL: failingURL
             )
+            self.canGoBack = self.webView.canGoBack || self.fallbackBackURLAfterError != nil
         }
     }
 
@@ -671,6 +688,7 @@ extension BrowserTabController: WKNavigationDelegate {
                 message: message,
                 failedURL: webView.url
             )
+            self.canGoBack = self.webView.canGoBack || self.fallbackBackURLAfterError != nil
         }
     }
 }
