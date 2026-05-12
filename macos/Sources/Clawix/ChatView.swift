@@ -2432,14 +2432,25 @@ struct FlowLayout: Layout {
     var horizontalSpacing: CGFloat = 0
     var verticalSpacing: CGFloat = 4
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let maxWidth = proposal.width ?? .infinity
+    struct Cache {
+        var sizes: [CGSize] = []
+    }
+
+    func makeCache(subviews: Subviews) -> Cache {
+        Cache(sizes: subviews.map { $0.sizeThatFits(.unspecified) })
+    }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) {
+        cache.sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+        let maxWidth = resolvedMaxWidth(proposal.width)
         var totalWidth: CGFloat = 0
         var totalHeight: CGFloat = 0
         var lineWidth: CGFloat = 0
         var lineHeight: CGFloat = 0
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
+        for size in cache.sizes {
             if lineWidth + size.width > maxWidth, lineWidth > 0 {
                 totalWidth = max(totalWidth, lineWidth)
                 totalHeight += lineHeight + verticalSpacing
@@ -2454,13 +2465,13 @@ struct FlowLayout: Layout {
         return CGSize(width: min(totalWidth, maxWidth), height: totalHeight)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let maxWidth = bounds.width
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
+        let maxWidth = resolvedMaxWidth(bounds.width)
         var x: CGFloat = bounds.minX
         var y: CGFloat = bounds.minY
         var lineHeight: CGFloat = 0
-        for sub in subviews {
-            let size = sub.sizeThatFits(.unspecified)
+        for (index, sub) in subviews.enumerated() {
+            let size = index < cache.sizes.count ? cache.sizes[index] : sub.sizeThatFits(.unspecified)
             if x - bounds.minX + size.width > maxWidth, x > bounds.minX {
                 x = bounds.minX
                 y += lineHeight + verticalSpacing
@@ -2470,6 +2481,13 @@ struct FlowLayout: Layout {
             x += size.width + horizontalSpacing
             lineHeight = max(lineHeight, size.height)
         }
+    }
+
+    private func resolvedMaxWidth(_ proposed: CGFloat?) -> CGFloat {
+        guard let proposed, proposed.isFinite, proposed > 0 else {
+            return chatRailMaxWidth
+        }
+        return proposed
     }
 }
 
