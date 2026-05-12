@@ -12,6 +12,9 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.playSoundsKey) private var playSounds = true
     @AppStorage(ScreenToolSettings.includeCursorKey) private var includeCursor = false
     @AppStorage(ScreenToolSettings.captureWindowShadowKey) private var captureWindowShadow = true
+    @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
+    @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
+    @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
     @AppStorage(ScreenToolSettings.keepTextLineBreaksKey) private var keepTextLineBreaks = false
     @AppStorage(ScreenToolSettings.autoDetectTextLanguageKey) private var autoDetectTextLanguage = true
 
@@ -166,6 +169,15 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Show cursor", detail: "Include the pointer in fullscreen and timed captures.", isOn: $includeCursor)
                 CardDivider()
                 ToggleRow(title: "Capture window shadow", detail: "Keep the standard window shadow when capturing windows.", isOn: $captureWindowShadow)
+            }
+
+            SectionLabel(title: "Recording")
+            SettingsCard {
+                ToggleRow(title: "Show controls while recording", detail: "Keep the system recording controls visible during screen recordings.", isOn: $showRecordingControls)
+                CardDivider()
+                ToggleRow(title: "Highlight clicks", detail: "Show click feedback in screen recordings.", isOn: $highlightRecordingClicks)
+                CardDivider()
+                ToggleRow(title: "Record microphone audio", detail: "Capture audio from the default input device while recording.", isOn: $recordRecordingAudio)
             }
 
             SectionLabel(title: "Text Recognition")

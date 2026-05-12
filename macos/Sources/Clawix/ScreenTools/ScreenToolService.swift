@@ -163,7 +163,7 @@ final class ScreenToolService: ObservableObject {
     func recordScreen() {
         guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: "recording", extension: "mov")
-        Self.runScreencapture(args: ["-v", "-i", "-J", "video", url.path]) { [weak self] result in
+        Self.runScreencapture(args: Self.recordingArgs(output: url)) { [weak self] result in
             Task { @MainActor in
                 guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
                     ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Recording cancelled"), icon: .warning)
@@ -564,6 +564,23 @@ final class ScreenToolService: ObservableObject {
         return sorted
     }
 
+    static func recordingArgs(
+        output url: URL,
+        playSounds: Bool = ScreenToolSettings.playSounds,
+        showControls: Bool = ScreenToolSettings.showRecordingControls,
+        highlightClicks: Bool = ScreenToolSettings.highlightRecordingClicks,
+        recordAudio: Bool = ScreenToolSettings.recordRecordingAudio
+    ) -> [String] {
+        var args: [String] = []
+        if !playSounds { args.append("-x") }
+        args.append(contentsOf: ["-v", "-i", "-J", "video"])
+        if showControls { args.append("-U") }
+        if highlightClicks { args.append("-k") }
+        if recordAudio { args.append("-g") }
+        args.append(url.path)
+        return args
+    }
+
     private static func displayDate(for url: URL) -> String {
         historyDateFormatter.string(from: modificationDate(for: url))
     }
@@ -902,6 +919,9 @@ enum ScreenToolSettings {
     static let playSoundsKey = "clawix.screenTools.playSounds"
     static let includeCursorKey = "clawix.screenTools.includeCursor"
     static let captureWindowShadowKey = "clawix.screenTools.captureWindowShadow"
+    static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
+    static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
+    static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
     static let previousAreaRectKey = "clawix.screenTools.previousAreaRect"
@@ -938,6 +958,18 @@ enum ScreenToolSettings {
 
     static var captureWindowShadow: Bool {
         defaults.object(forKey: captureWindowShadowKey) == nil ? true : defaults.bool(forKey: captureWindowShadowKey)
+    }
+
+    static var showRecordingControls: Bool {
+        defaults.object(forKey: showRecordingControlsKey) == nil ? true : defaults.bool(forKey: showRecordingControlsKey)
+    }
+
+    static var highlightRecordingClicks: Bool {
+        defaults.object(forKey: highlightRecordingClicksKey) == nil ? true : defaults.bool(forKey: highlightRecordingClicksKey)
+    }
+
+    static var recordRecordingAudio: Bool {
+        defaults.bool(forKey: recordRecordingAudioKey)
     }
 
     static var keepTextLineBreaks: Bool {
