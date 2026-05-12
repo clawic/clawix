@@ -6,6 +6,8 @@ enum MacUtilityGroup: String, CaseIterable, Identifiable {
     case windows
     case system
     case toggles
+    case tools
+    case apps
     case settings
 
     var id: String { rawValue }
@@ -15,6 +17,8 @@ enum MacUtilityGroup: String, CaseIterable, Identifiable {
         case .windows:  return "Windows"
         case .system:   return "System"
         case .toggles:  return "Toggles"
+        case .tools:    return "Tools"
+        case .apps:     return "Apps"
         case .settings: return "System Settings"
         }
     }
@@ -30,13 +34,26 @@ enum MacUtilityActionID: String, CaseIterable, Identifiable {
     case showDesktop
     case clearClipboard
     case sleepDisplays
+    case centerMousePointer
+    case showColorPicker
     case toggleDarkMode
     case toggleMuteSound
     case toggleKeepAwake
     case toggleDesktopIcons
+    case openFinder
+    case openTerminal
+    case openShortcuts
+    case openPasswords
+    case openAirDrop
     case openVPNSettings
     case openPrivateRelaySettings
     case openHideMyEmailSettings
+    case openKeyboardSettings
+    case openDisplaySettings
+    case openDesktopDockSettings
+    case openNotificationsSettings
+    case openSoundSettings
+    case openPrivacySettings
 
     var id: String { rawValue }
 
@@ -51,13 +68,26 @@ enum MacUtilityActionID: String, CaseIterable, Identifiable {
         case .showDesktop: return "Show Desktop"
         case .clearClipboard: return "Clear Clipboard"
         case .sleepDisplays: return "Sleep Displays"
+        case .centerMousePointer: return "Center Mouse Pointer"
+        case .showColorPicker: return "Pick Color"
         case .toggleDarkMode: return "Dark Mode"
         case .toggleMuteSound: return "Mute Sound"
         case .toggleKeepAwake: return "Keep Awake"
         case .toggleDesktopIcons: return "Desktop Icons"
+        case .openFinder: return "Finder"
+        case .openTerminal: return "Terminal"
+        case .openShortcuts: return "Shortcuts"
+        case .openPasswords: return "Passwords"
+        case .openAirDrop: return "AirDrop"
         case .openVPNSettings: return "VPN & Filters"
         case .openPrivateRelaySettings: return "Private Relay"
         case .openHideMyEmailSettings: return "Hide My Email"
+        case .openKeyboardSettings: return "Keyboard"
+        case .openDisplaySettings: return "Displays"
+        case .openDesktopDockSettings: return "Desktop & Dock"
+        case .openNotificationsSettings: return "Notifications"
+        case .openSoundSettings: return "Sound"
+        case .openPrivacySettings: return "Privacy & Security"
         }
     }
 
@@ -72,13 +102,26 @@ enum MacUtilityActionID: String, CaseIterable, Identifiable {
         case .showDesktop: return "Use the system Show Desktop shortcut."
         case .clearClipboard: return "Remove all current pasteboard contents."
         case .sleepDisplays: return "Put connected displays to sleep immediately."
+        case .centerMousePointer: return "Move the pointer to the center of the main display."
+        case .showColorPicker: return "Open the system color picker."
         case .toggleDarkMode: return "Switch the system appearance between light and dark."
         case .toggleMuteSound: return "Toggle the default output mute state."
         case .toggleKeepAwake: return "Prevent idle sleep until disabled or Clawix quits."
         case .toggleDesktopIcons: return "Show or hide Finder desktop items."
+        case .openFinder: return "Open or focus Finder."
+        case .openTerminal: return "Open or focus Terminal."
+        case .openShortcuts: return "Open or focus Shortcuts."
+        case .openPasswords: return "Open or focus Passwords."
+        case .openAirDrop: return "Open AirDrop in Finder."
         case .openVPNSettings: return "Open Network settings."
         case .openPrivateRelaySettings: return "Open iCloud Private Relay settings."
         case .openHideMyEmailSettings: return "Open iCloud Hide My Email settings."
+        case .openKeyboardSettings: return "Open Keyboard settings."
+        case .openDisplaySettings: return "Open Displays settings."
+        case .openDesktopDockSettings: return "Open Desktop & Dock settings."
+        case .openNotificationsSettings: return "Open Notifications settings."
+        case .openSoundSettings: return "Open Sound settings."
+        case .openPrivacySettings: return "Open Privacy & Security settings."
         }
     }
 
@@ -103,9 +146,21 @@ enum MacUtilityActionID: String, CaseIterable, Identifiable {
             return .windows
         case .clearClipboard, .sleepDisplays:
             return .system
+        case .centerMousePointer, .showColorPicker:
+            return .tools
         case .toggleDarkMode, .toggleMuteSound, .toggleKeepAwake, .toggleDesktopIcons:
             return .toggles
-        case .openVPNSettings, .openPrivateRelaySettings, .openHideMyEmailSettings:
+        case .openFinder, .openTerminal, .openShortcuts, .openPasswords, .openAirDrop:
+            return .apps
+        case .openVPNSettings,
+             .openPrivateRelaySettings,
+             .openHideMyEmailSettings,
+             .openKeyboardSettings,
+             .openDisplaySettings,
+             .openDesktopDockSettings,
+             .openNotificationsSettings,
+             .openSoundSettings,
+             .openPrivacySettings:
             return .settings
         }
     }
@@ -121,13 +176,26 @@ enum MacUtilityActionID: String, CaseIterable, Identifiable {
         case .showDesktop: return "desktopcomputer"
         case .clearClipboard: return "clipboard"
         case .sleepDisplays: return "display"
+        case .centerMousePointer: return "cursorarrow.motionlines"
+        case .showColorPicker: return "eyedropper"
         case .toggleDarkMode: return "moon"
         case .toggleMuteSound: return "speaker.slash"
         case .toggleKeepAwake: return "cup.and.saucer"
         case .toggleDesktopIcons: return "square.grid.3x3"
+        case .openFinder: return "face.smiling"
+        case .openTerminal: return "terminal"
+        case .openShortcuts: return "sparkles"
+        case .openPasswords: return "key"
+        case .openAirDrop: return "antenna.radiowaves.left.and.right"
         case .openVPNSettings: return "network"
         case .openPrivateRelaySettings: return "icloud"
         case .openHideMyEmailSettings: return "envelope.badge.shield.half.filled"
+        case .openKeyboardSettings: return "keyboard"
+        case .openDisplaySettings: return "display"
+        case .openDesktopDockSettings: return "dock.rectangle"
+        case .openNotificationsSettings: return "bell"
+        case .openSoundSettings: return "speaker.wave.2"
+        case .openPrivacySettings: return "hand.raised"
         }
     }
 
@@ -167,6 +235,10 @@ final class MacUtilitiesController: ObservableObject {
                 NSPasteboard.general.clearContents()
             case .sleepDisplays:
                 try runProcess("/usr/bin/pmset", arguments: ["displaysleepnow"])
+            case .centerMousePointer:
+                try centerMousePointer()
+            case .showColorPicker:
+                showColorPicker()
             case .toggleDarkMode:
                 try runAppleScript(Self.toggleDarkModeScript)
             case .toggleMuteSound:
@@ -175,12 +247,34 @@ final class MacUtilitiesController: ObservableObject {
                 try setKeepAwake(!keepAwakeEnabled)
             case .toggleDesktopIcons:
                 try toggleDesktopIcons()
+            case .openFinder:
+                openApplication("/System/Library/CoreServices/Finder.app")
+            case .openTerminal:
+                openApplication("/System/Applications/Utilities/Terminal.app")
+            case .openShortcuts:
+                openApplication("/System/Applications/Shortcuts.app")
+            case .openPasswords:
+                openApplication("/System/Applications/Passwords.app")
+            case .openAirDrop:
+                try runAppleScript(Self.openAirDropScript)
             case .openVPNSettings:
                 openSystemSettings("x-apple.systempreferences:com.apple.Network-Settings.extension")
             case .openPrivateRelaySettings:
                 openSystemSettings("x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane?PRIVATERELAY")
             case .openHideMyEmailSettings:
                 openSystemSettings("x-apple.systempreferences:com.apple.preferences.AppleIDPrefPane?HIDE_MY_EMAIL")
+            case .openKeyboardSettings:
+                openSystemSettings("x-apple.systempreferences:com.apple.Keyboard-Settings.extension")
+            case .openDisplaySettings:
+                openSystemSettings("x-apple.systempreferences:com.apple.Displays-Settings.extension")
+            case .openDesktopDockSettings:
+                openSystemSettings("x-apple.systempreferences:com.apple.Desktop-Settings.extension")
+            case .openNotificationsSettings:
+                openSystemSettings("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+            case .openSoundSettings:
+                openSystemSettings("x-apple.systempreferences:com.apple.Sound-Settings.extension")
+            case .openPrivacySettings:
+                openSystemSettings("x-apple.systempreferences:com.apple.preference.security")
             }
             ToastCenter.shared.show("\(action.title) done")
         } catch {
@@ -225,6 +319,25 @@ final class MacUtilitiesController: ObservableObject {
             arguments: ["write", "com.apple.finder", "CreateDesktop", showsDesktop ? "false" : "true"]
         )
         try runProcess("/usr/bin/killall", arguments: ["Finder"], allowFailure: true)
+    }
+
+    private func centerMousePointer() throws {
+        let bounds = CGDisplayBounds(CGMainDisplayID())
+        let result = CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
+        guard result == .success else {
+            throw MacUtilityError.message("Could not move the pointer")
+        }
+        CGAssociateMouseAndMouseCursorPosition(1)
+    }
+
+    private func showColorPicker() {
+        NSColorPanel.shared.orderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func openApplication(_ path: String) {
+        let url = URL(fileURLWithPath: path)
+        NSWorkspace.shared.open(url)
     }
 
     private func openSystemSettings(_ urlString: String) {
@@ -379,5 +492,12 @@ private extension MacUtilitiesController {
     static let toggleMuteSoundScript = """
     set currentMute to output muted of (get volume settings)
     set volume output muted (not currentMute)
+    """
+
+    static let openAirDropScript = """
+    tell application "Finder"
+        activate
+        open AirDrop
+    end tell
     """
 }
