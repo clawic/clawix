@@ -410,7 +410,7 @@ struct ClawJSIndexClient {
 
     private struct Empty: Decodable {}
 
-    private func request<T: Decodable>(
+    func request<T: Decodable>(
         _ path: String,
         method: String = "GET",
         body: Any? = nil,
