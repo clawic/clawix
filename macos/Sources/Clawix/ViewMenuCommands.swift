@@ -2,10 +2,21 @@ import SwiftUI
 
 struct ViewMenuCommands: View {
     @ObservedObject var appState: AppState
+    @ObservedObject private var terminalStore = TerminalSessionStore.shared
 
     private var isChatRoute: Bool {
         if case .chat = appState.currentRoute { return true }
         return false
+    }
+
+    private var currentChatId: UUID? {
+        if case let .chat(id) = appState.currentRoute { return id }
+        return nil
+    }
+
+    private var hasActiveTerminalTab: Bool {
+        guard let currentChatId else { return false }
+        return terminalStore.activeTabId(for: currentChatId) != nil
     }
 
     var body: some View {
@@ -20,6 +31,19 @@ struct ViewMenuCommands: View {
         }
             .keyboardShortcut("j", modifiers: .command)
             .disabled(!isChatRoute)
+        Button("New Terminal") {
+            createTerminalTab()
+        }
+        .keyboardShortcut("t", modifiers: [.command, .shift])
+        .disabled(!isChatRoute)
+        Button("Close Terminal Tab") {
+            closeActiveTerminalTab()
+        }
+        .keyboardShortcut("w", modifiers: [.command, .shift])
+        .disabled(!hasActiveTerminalTab)
+
+        Divider()
+
         Button("New Browser Tab") {
             appState.openBrowser()
         }
@@ -66,5 +90,20 @@ struct ViewMenuCommands: View {
         }
         .keyboardShortcut("0", modifiers: .command)
         .disabled(!appState.hasActiveWebTab)
+    }
+
+    private func createTerminalTab() {
+        guard let currentChatId else { return }
+        let cwd = terminalStore.activeTab(for: currentChatId)?.initialCwd
+            ?? appState.chat(byId: currentChatId)?.cwd
+            ?? NSHomeDirectory()
+        terminalStore.createTab(chatId: currentChatId, cwd: cwd)
+        SidebarPrefs.store.set(true, forKey: "TerminalPanelOpen")
+    }
+
+    private func closeActiveTerminalTab() {
+        guard let currentChatId,
+              let active = terminalStore.activeTabId(for: currentChatId) else { return }
+        terminalStore.closeTab(chatId: currentChatId, tabId: active)
     }
 }

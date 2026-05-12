@@ -16,8 +16,8 @@ struct TerminalTabBar: View {
         HStack(spacing: 4) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
-                    ForEach(store.tabs(for: chatId)) { tab in
-                        chip(for: tab)
+                    ForEach(Array(store.tabs(for: chatId).enumerated()), id: \.element.id) { idx, tab in
+                        chip(for: tab, ordinal: idx + 1)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -50,8 +50,9 @@ struct TerminalTabBar: View {
     }
 
     @ViewBuilder
-    private func chip(for tab: TerminalTab) -> some View {
+    private func chip(for tab: TerminalTab, ordinal: Int) -> some View {
         let isActive = store.activeTabId(for: chatId) == tab.id
+        let tabLabel = tab.label.isEmpty ? "shell" : tab.label
         HStack(spacing: 6) {
             if renamingTabId == tab.id {
                 TextField("", text: $renameDraft, onCommit: {
@@ -64,7 +65,7 @@ struct TerminalTabBar: View {
                 .frame(minWidth: 60, maxWidth: 140)
                 .onExitCommand { renamingTabId = nil }
             } else {
-                Text(tab.label.isEmpty ? "shell" : tab.label)
+                Text(tabLabel)
                     .font(.system(size: 11, weight: .medium, design: .default))
                     .foregroundColor(isActive ? Palette.textPrimary : Color(white: 0.65))
                     .lineLimit(1)
@@ -82,7 +83,7 @@ struct TerminalTabBar: View {
             }
             .buttonStyle(.plain)
             .help("Close tab")
-            .accessibilityLabel("Close tab")
+            .accessibilityLabel(Text(verbatim: "Close terminal tab \(ordinal): \(tabLabel)"))
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

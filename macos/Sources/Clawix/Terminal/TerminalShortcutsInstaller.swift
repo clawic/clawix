@@ -28,6 +28,7 @@ enum TerminalShortcutsInstaller {
         }
 
         KeyboardShortcuts.onKeyDown(for: .terminalNewTab) {
+            guard !NSApp.isActive else { return }
             guard let chatId = resolveChatId() else { return }
             let cwd = TerminalShortcutsInstaller.cwdForChat(chatId, store: store)
             store.createTab(chatId: chatId, cwd: cwd)
@@ -36,6 +37,7 @@ enum TerminalShortcutsInstaller {
         }
 
         KeyboardShortcuts.onKeyDown(for: .terminalCloseTab) {
+            guard !NSApp.isActive else { return }
             guard let chatId = resolveChatId(),
                   let active = store.activeTabId(for: chatId) else { return }
             store.closeTab(chatId: chatId, tabId: active)
