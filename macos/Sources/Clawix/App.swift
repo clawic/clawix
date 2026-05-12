@@ -387,6 +387,11 @@ private struct MenuBarContent: View {
                 }
                 Divider()
                 Button {
+                    screenTools.chooseAndOpenImage()
+                } label: {
+                    Label("Open Image…", systemImage: "photo")
+                }
+                Button {
                     screenTools.chooseAndPinImage()
                 } label: {
                     Label("Pin Image…", systemImage: "pin")

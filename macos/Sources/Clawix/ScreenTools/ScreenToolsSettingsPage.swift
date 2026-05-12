@@ -177,6 +177,13 @@ struct ScreenToolsSettingsPage: View {
                 }
                 CardDivider()
                 actionRow(
+                    title: "Open image",
+                    detail: "Choose a local image and show it in a Quick Access overlay.",
+                    symbol: "photo",
+                    action: service.chooseAndOpenImage
+                )
+                CardDivider()
+                actionRow(
                     title: "Choose and pin an image",
                     detail: "Open an image in an always-on-top reference window.",
                     symbol: "pin",

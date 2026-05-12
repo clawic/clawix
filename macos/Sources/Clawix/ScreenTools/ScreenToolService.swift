@@ -71,6 +71,7 @@ final class ScreenToolService: ObservableObject {
             case .captureSelfTimer:    self.captureSelfTimer()
             case .recordScreen:        self.recordScreen()
             case .captureText:         self.captureText()
+            case .openImage:           self.chooseAndOpenImage()
             case .pinImage:            self.chooseAndPinImage()
             case .restoreLastCapture:  self.restoreLastCapture()
             case .captureHistory:      self.openCaptureHistory()
@@ -97,6 +98,7 @@ final class ScreenToolService: ObservableObject {
         addItem("Record Screen", action: .recordScreen, symbol: "record.circle")
         addItem("Capture Text", action: .captureText, symbol: "text.viewfinder")
         menu.addItem(.separator())
+        addItem("Open Image...", action: .openImage, symbol: "photo")
         addItem("Pin Image...", action: .pinImage, symbol: "pin")
         addItem("Restore Last Capture", action: .restoreLastCapture, symbol: "arrow.counterclockwise")
         addItem("Capture History...", action: .captureHistory, symbol: "clock")
@@ -208,6 +210,22 @@ final class ScreenToolService: ObservableObject {
         panel.begin { [weak self] response in
             guard response == .OK, let url = panel.url else { return }
             Task { @MainActor in self?.pin(url: url) }
+        }
+    }
+
+    func chooseAndOpenImage() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.image]
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            Task { @MainActor in
+                self?.lastCaptureURL = url
+                self?.showOverlay(for: url)
+            }
         }
     }
 
@@ -1254,6 +1272,7 @@ private enum ScreenToolMenuAction: String {
     case captureSelfTimer
     case recordScreen
     case captureText
+    case openImage
     case pinImage
     case restoreLastCapture
     case captureHistory
