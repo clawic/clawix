@@ -356,6 +356,7 @@ private struct MenuBarContent: View {
 
         Divider()
 
+        if flags.isVisible(.screenTools) {
         Section {
             Menu {
                 Button {
@@ -538,17 +539,22 @@ private struct MenuBarContent: View {
         } header: {
             Text("Screen Tools")
         }
-
-        MacUtilitiesMenuSection {
-            appState.settingsCategory = .macUtilities
-            appState.currentRoute = .settings
-            openMainWindow()
         }
 
-        DatabaseWorkbenchMenuBarSection(
-            appState: appState,
-            openMainWindow: openMainWindow
-        )
+        if flags.isVisible(.macUtilities) {
+            MacUtilitiesMenuSection {
+                appState.settingsCategory = .macUtilities
+                appState.currentRoute = .settings
+                openMainWindow()
+            }
+        }
+
+        if flags.isVisible(.databaseWorkbench) {
+            DatabaseWorkbenchMenuBarSection(
+                appState: appState,
+                openMainWindow: openMainWindow
+            )
+        }
 
         Section {
             Button {

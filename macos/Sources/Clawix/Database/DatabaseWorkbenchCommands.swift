@@ -6,8 +6,16 @@ struct DatabaseWorkbenchCommands: View {
     @ObservedObject private var profiles = DatabaseConnectionProfileStore.shared
     @ObservedObject private var session = DatabaseWorkbenchSessionStore.shared
     @ObservedObject private var operations = DatabaseWorkbenchOperationStore.shared
+    @ObservedObject private var flags = FeatureFlags.shared
 
     var body: some View {
+        if flags.isVisible(.databaseWorkbench) {
+            commandsBody
+        }
+    }
+
+    @ViewBuilder
+    private var commandsBody: some View {
         Button("Open Database Workbench") {
             openWorkbench()
         }
