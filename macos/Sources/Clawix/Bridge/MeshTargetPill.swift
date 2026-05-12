@@ -146,6 +146,7 @@ struct MeshTargetPopup: View {
                         .stroke(Palette.popupStroke, lineWidth: Palette.popupStrokeWidth)
                 )
         )
+        .background(MenuOutsideClickWatcher(isPresented: $isPresented))
         .shadow(color: MenuStyle.shadowColor, radius: MenuStyle.shadowRadius, x: 0, y: MenuStyle.shadowOffsetY)
     }
 

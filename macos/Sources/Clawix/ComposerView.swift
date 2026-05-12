@@ -1955,6 +1955,7 @@ struct MenuOutsideClickWatcher: NSViewRepresentable {
 final class ClickWatcherView: NSView {
     var onOutsideClick: (() -> Void)?
     private var monitor: Any?
+    private var keyMonitor: Any?
 
     /// Optional extra hit-test, in window coordinates. When present and
     /// it returns `true` for the click point, the watcher treats the
@@ -1973,20 +1974,29 @@ final class ClickWatcherView: NSView {
     }
 
     private func attach() {
-        guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self, let win = self.window, event.window == win else { return event }
-            let pointInSelf = self.convert(event.locationInWindow, from: nil)
-            if self.bounds.contains(pointInSelf) { return event }
-            if let extra = self.extraInsideTest, extra(event.locationInWindow) { return event }
-            // Swallow the dismissal click. SwiftUI Buttons fire on mouseUp,
-            // so if we let mouseDown through to a trigger that does
-            // `isOpen.toggle()`, the watcher closes the menu and the
-            // button reopens it on release. NSPopover/NSMenu transient
-            // dismissal works the same way: the click that closes the
-            // popup is consumed.
-            self.onOutsideClick?()
-            return nil
+        if monitor == nil {
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                guard let self, let win = self.window, event.window == win else { return event }
+                let pointInSelf = self.convert(event.locationInWindow, from: nil)
+                if self.bounds.contains(pointInSelf) { return event }
+                if let extra = self.extraInsideTest, extra(event.locationInWindow) { return event }
+                // Swallow the dismissal click. SwiftUI Buttons fire on mouseUp,
+                // so if we let mouseDown through to a trigger that does
+                // `isOpen.toggle()`, the watcher closes the menu and the
+                // button reopens it on release. NSPopover/NSMenu transient
+                // dismissal works the same way: the click that closes the
+                // popup is consumed.
+                self.onOutsideClick?()
+                return nil
+            }
+        }
+        if keyMonitor == nil {
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                guard let self, let win = self.window, event.window == win else { return event }
+                guard event.keyCode == 53 else { return event }
+                self.onOutsideClick?()
+                return nil
+            }
         }
     }
 
@@ -1994,6 +2004,10 @@ final class ClickWatcherView: NSView {
         if let m = monitor {
             NSEvent.removeMonitor(m)
             monitor = nil
+        }
+        if let m = keyMonitor {
+            NSEvent.removeMonitor(m)
+            keyMonitor = nil
         }
     }
 
