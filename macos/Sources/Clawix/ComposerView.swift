@@ -2365,13 +2365,18 @@ private struct ComposerAttachmentChip: View {
 
     var body: some View {
         HStack(spacing: attachment.isImage ? 6 : 4) {
-            iconView
-            Text(attachment.filename)
-                .font(BodyFont.system(size: 13, wght: 500))
-                .foregroundColor(Color(white: 0.94))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .layoutPriority(0)
+            HStack(spacing: attachment.isImage ? 6 : 4) {
+                iconView
+                Text(attachment.filename)
+                    .font(BodyFont.system(size: 13, wght: 500))
+                    .foregroundColor(Color(white: 0.94))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .layoutPriority(0)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { onOpen() }
+            .help(attachment.isImage ? L10n.t("Click to enlarge") : attachment.url.path)
             Button(action: onRemove) {
                 LucideIcon(.x, size: 11)
                     .foregroundColor(Color(white: removeHovered ? 1.0 : 0.78))
@@ -2380,7 +2385,8 @@ private struct ComposerAttachmentChip: View {
             }
             .buttonStyle(.plain)
             .opacity(hovered ? 1 : 0.001)
-            .accessibilityLabel(L10n.t("Remove attachment"))
+            .accessibilityLabel(Text("\(L10n.t("Remove attachment")): \(attachment.filename)"))
+            .accessibilityIdentifier("composer-attachment-remove-\(attachment.id.uuidString)")
             .accessibilityAction(named: Text(L10n.t("Remove attachment"))) {
                 onRemove()
             }
@@ -2402,9 +2408,7 @@ private struct ComposerAttachmentChip: View {
         )
         .animation(.easeOut(duration: 0.14), value: hovered)
         .contentShape(Capsule(style: .continuous))
-        .onTapGesture { onOpen() }
         .onHover { hovered = $0 }
-        .help(attachment.isImage ? L10n.t("Click to enlarge") : attachment.url.path)
     }
 
     @ViewBuilder
