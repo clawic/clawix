@@ -21,6 +21,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case macUtilities
     case databaseWorkbench
     case secrets
+    case identity
     case clawjs
     case telegram
     case apps
@@ -47,6 +48,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .macUtilities:     return "Mac Utilities"
         case .databaseWorkbench: return "Database Workbench"
         case .secrets:          return "Secrets"
+        case .identity:         return "Identity"
         case .clawjs:           return "ClawJS"
         case .telegram:         return "Telegram"
         case .apps:             return "Apps"
@@ -73,6 +75,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .macUtilities:     return "bolt"
         case .databaseWorkbench: return "cylinder.split.1x2"
         case .secrets:          return "lock.shield"
+        case .identity:         return "fingerprint"
         case .clawjs:           return "shippingbox"
         case .telegram:         return "paperplane.fill"
         case .apps:             return "square.grid.2x2"
@@ -270,6 +273,7 @@ struct SettingsContent: View {
                     case .mcp:             MCPPage()
                     case .machines:        HostsPage()
                     case .secrets:         SecretsSettingsPage()
+                    case .identity:        IdentitySettingsPage()
                     case .clawjs:          ClawJSSettingsPage()
                     case .telegram:        TelegramSettingsPage()
                     case .apps:            AppsSettingsPage()
