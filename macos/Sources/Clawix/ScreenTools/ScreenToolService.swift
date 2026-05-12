@@ -13,6 +13,7 @@ final class ScreenToolService: ObservableObject {
 
     private var historyWindow: ScreenToolHistoryWindow?
     private var areaSelectionWindow: ScreenToolAreaSelectionWindow?
+    private var allInOneMenuTarget: ScreenToolMenuActionTarget?
 
     private init() {}
 
@@ -52,6 +53,48 @@ final class ScreenToolService: ObservableObject {
 
         var id: String { rawValue }
         var title: String { rawValue.uppercased() }
+    }
+
+    func showAllInOneMenu() {
+        let menu = NSMenu()
+        let target = ScreenToolMenuActionTarget { [weak self] action in
+            guard let self else { return }
+            self.allInOneMenuTarget = nil
+            switch action {
+            case .captureArea:         self.captureArea()
+            case .capturePreviousArea: self.capturePreviousArea()
+            case .captureFullscreen:   self.captureFullscreen()
+            case .captureWindow:       self.captureWindow()
+            case .captureSelfTimer:    self.captureSelfTimer()
+            case .recordScreen:        self.recordScreen()
+            case .captureText:         self.captureText()
+            case .pinImage:            self.chooseAndPinImage()
+            case .captureHistory:      self.openCaptureHistory()
+            }
+        }
+        allInOneMenuTarget = target
+
+        func addItem(_ title: String, action: ScreenToolMenuAction, symbol: String) {
+            let item = NSMenuItem(title: title, action: #selector(ScreenToolMenuActionTarget.perform(_:)), keyEquivalent: "")
+            item.target = target
+            item.representedObject = action.rawValue
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+            menu.addItem(item)
+        }
+
+        addItem("Capture Area", action: .captureArea, symbol: "crop")
+        addItem("Capture Previous Area", action: .capturePreviousArea, symbol: "rectangle.dashed")
+        addItem("Capture Fullscreen", action: .captureFullscreen, symbol: "rectangle.inset.filled")
+        addItem("Capture Window", action: .captureWindow, symbol: "macwindow")
+        addItem("Self-Timer", action: .captureSelfTimer, symbol: "timer")
+        menu.addItem(.separator())
+        addItem("Record Screen", action: .recordScreen, symbol: "record.circle")
+        addItem("Capture Text", action: .captureText, symbol: "text.viewfinder")
+        menu.addItem(.separator())
+        addItem("Pin Image...", action: .pinImage, symbol: "pin")
+        addItem("Capture History...", action: .captureHistory, symbol: "clock")
+
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 
     func captureArea() {
@@ -1081,5 +1124,33 @@ private final class ClosureButton: NSButton {
 
     @objc private func run() {
         closure()
+    }
+}
+
+private enum ScreenToolMenuAction: String {
+    case captureArea
+    case capturePreviousArea
+    case captureFullscreen
+    case captureWindow
+    case captureSelfTimer
+    case recordScreen
+    case captureText
+    case pinImage
+    case captureHistory
+}
+
+private final class ScreenToolMenuActionTarget: NSObject {
+    private let handler: (ScreenToolMenuAction) -> Void
+
+    init(handler: @escaping (ScreenToolMenuAction) -> Void) {
+        self.handler = handler
+    }
+
+    @objc func perform(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let action = ScreenToolMenuAction(rawValue: rawValue)
+        else { return }
+        handler(action)
     }
 }

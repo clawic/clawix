@@ -49,6 +49,13 @@ struct ScreenToolsSettingsPage: View {
             SectionLabel(title: "Actions")
             SettingsCard {
                 actionRow(
+                    title: "All-In-One",
+                    detail: "Open one menu with capture, recording, text, pin and history actions.",
+                    symbol: "camera.viewfinder",
+                    action: service.showAllInOneMenu
+                )
+                CardDivider()
+                actionRow(
                     title: "Capture area",
                     detail: "Select a rectangular region and apply the default after-capture action.",
                     symbol: "crop",

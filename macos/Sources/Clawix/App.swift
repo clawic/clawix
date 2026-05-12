@@ -334,6 +334,12 @@ private struct MenuBarContent: View {
         Section {
             Menu {
                 Button {
+                    screenTools.showAllInOneMenu()
+                } label: {
+                    Label("All-In-One", systemImage: "camera.viewfinder")
+                }
+                Divider()
+                Button {
                     screenTools.captureArea()
                 } label: {
                     Label("Capture Area", systemImage: "crop")
