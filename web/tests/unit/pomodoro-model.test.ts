@@ -8,9 +8,11 @@ import {
   defaultPomodoroState,
   finishTimer,
   formatClock,
+  logInReportRange,
   parsePlainTasks,
   pauseTimer,
   resumeTimer,
+  reportRangeLabel,
   scheduledItemsForDate,
   startScheduleItem,
   runPomodoroShortcut,
@@ -210,5 +212,52 @@ describe("pomodoro model", () => {
     expect(state.active?.intention).toBe("Calendar focus");
     expect(state.active?.totalSec).toBe(45 * 60);
     expect(state.schedules[0]?.started).toBe(true);
+  });
+
+  it("filters analytics by day week and month ranges", () => {
+    const now = Date.UTC(2026, 4, 12, 9, 0, 0);
+    let state = defaultPomodoroState(now);
+    state.logs = [
+      {
+        id: "monday",
+        kind: "focus",
+        intention: "Monday",
+        categoryId: "general",
+        startAt: new Date("2026-05-11T09:00:00").getTime(),
+        endAt: new Date("2026-05-11T09:25:00").getTime(),
+        durationSec: 25 * 60,
+        pausesSec: 0,
+      },
+      {
+        id: "today",
+        kind: "focus",
+        intention: "Today",
+        categoryId: "general",
+        startAt: new Date("2026-05-12T09:00:00").getTime(),
+        endAt: new Date("2026-05-12T09:25:00").getTime(),
+        durationSec: 25 * 60,
+        pausesSec: 0,
+      },
+      {
+        id: "previous-month",
+        kind: "focus",
+        intention: "April",
+        categoryId: "general",
+        startAt: new Date("2026-04-30T09:00:00").getTime(),
+        endAt: new Date("2026-04-30T09:25:00").getTime(),
+        durationSec: 25 * 60,
+        pausesSec: 0,
+      },
+    ];
+
+    state.reportRange = "day";
+    expect(state.logs.filter((log) => logInReportRange(log, state)).map((log) => log.id)).toEqual(["today"]);
+
+    state.reportRange = "week";
+    expect(state.logs.filter((log) => logInReportRange(log, state)).map((log) => log.id)).toEqual(["monday", "today"]);
+
+    state.reportRange = "month";
+    expect(state.logs.filter((log) => logInReportRange(log, state)).map((log) => log.id)).toEqual(["monday", "today"]);
+    expect(reportRangeLabel(state)).toContain("2026");
   });
 });
