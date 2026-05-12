@@ -360,6 +360,11 @@ private struct MenuBarContent: View {
                     Label("Capture Window", systemImage: "macwindow")
                 }
                 Button {
+                    screenTools.captureScrolling()
+                } label: {
+                    Label("Scrolling Capture", systemImage: "arrow.down.doc")
+                }
+                Button {
                     screenTools.captureSelfTimer()
                 } label: {
                     Label("Self-Timer", systemImage: "timer")

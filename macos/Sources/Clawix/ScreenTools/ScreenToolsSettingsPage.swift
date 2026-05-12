@@ -84,6 +84,13 @@ struct ScreenToolsSettingsPage: View {
                 )
                 CardDivider()
                 actionRow(
+                    title: "Scrolling capture",
+                    detail: "Select an area, scroll it, and save a stitched local capture.",
+                    symbol: "arrow.down.doc",
+                    action: service.captureScrolling
+                )
+                CardDivider()
+                actionRow(
                     title: "Self-timer",
                     detail: "Capture after the configured delay.",
                     symbol: "timer",

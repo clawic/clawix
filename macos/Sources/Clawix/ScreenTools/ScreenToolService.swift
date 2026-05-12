@@ -67,6 +67,7 @@ final class ScreenToolService: ObservableObject {
             case .capturePreviousArea: self.capturePreviousArea()
             case .captureFullscreen:   self.captureFullscreen()
             case .captureWindow:       self.captureWindow()
+            case .captureScrolling:    self.captureScrolling()
             case .captureSelfTimer:    self.captureSelfTimer()
             case .recordScreen:        self.recordScreen()
             case .captureText:         self.captureText()
@@ -89,6 +90,7 @@ final class ScreenToolService: ObservableObject {
         addItem("Capture Previous Area", action: .capturePreviousArea, symbol: "rectangle.dashed")
         addItem("Capture Fullscreen", action: .captureFullscreen, symbol: "rectangle.inset.filled")
         addItem("Capture Window", action: .captureWindow, symbol: "macwindow")
+        addItem("Scrolling Capture", action: .captureScrolling, symbol: "arrow.down.doc")
         addItem("Self-Timer", action: .captureSelfTimer, symbol: "timer")
         menu.addItem(.separator())
         addItem("Record Screen", action: .recordScreen, symbol: "record.circle")
@@ -120,6 +122,12 @@ final class ScreenToolService: ObservableObject {
 
     func captureWindow() {
         runCapture(mode: .window)
+    }
+
+    func captureScrolling() {
+        selectArea { [weak self] rect in
+            self?.runScrollingCapture(rect: rect)
+        }
     }
 
     func captureSelfTimer() {
@@ -262,6 +270,46 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
+    private func runScrollingCapture(rect: ScreenToolCaptureRect) {
+        guard Self.ensureScreenCaptureAccess() else { return }
+        ScreenToolSettings.previousAreaRect = rect
+        ToastCenter.shared.show("Scrolling capture started")
+
+        Task { @MainActor in
+            let temporaryURLs = (0..<Self.scrollingCaptureFrameCount).map { index in
+                FileManager.default.temporaryDirectory
+                    .appendingPathComponent("clawix-scrolling-\(UUID().uuidString)-\(index).png")
+            }
+            defer {
+                for url in temporaryURLs {
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+
+            for (index, url) in temporaryURLs.enumerated() {
+                let result = await Self.runScreencapture(args: scrollingCaptureArgs(rect: rect, output: url))
+                guard result.succeeded, FileManager.default.fileExists(atPath: url.path) else {
+                    ToastCenter.shared.show(Self.captureFailureMessage(result, fallback: "Scrolling capture cancelled"), icon: .warning)
+                    return
+                }
+
+                if index < temporaryURLs.count - 1 {
+                    Self.scrollDown(rect: rect)
+                    try? await Task.sleep(nanoseconds: Self.scrollingCaptureFrameDelay)
+                }
+            }
+
+            let output = outputURL(prefix: "scrolling", extension: "png")
+            do {
+                try Self.writeStitchedImage(from: temporaryURLs, to: output)
+                lastCaptureURL = output
+                handleCapture(output)
+            } catch {
+                ToastCenter.shared.show("Could not assemble scrolling capture", icon: .error)
+            }
+        }
+    }
+
     private func selectArea(completion: @escaping (ScreenToolCaptureRect) -> Void) {
         guard let screen = Self.activeScreen() else {
             ToastCenter.shared.show("No screen available", icon: .error)
@@ -361,6 +409,13 @@ final class ScreenToolService: ObservableObject {
         return dir.appendingPathComponent("\(prefix)-\(stamp).\(ext)")
     }
 
+    private func scrollingCaptureArgs(rect: ScreenToolCaptureRect, output url: URL) -> [String] {
+        var args: [String] = []
+        if !ScreenToolSettings.playSounds { args.append("-x") }
+        args.append(contentsOf: ["-t", "png", "-R", rect.screencaptureArgument, url.path])
+        return args
+    }
+
     private func outputPrefix(for mode: CaptureMode) -> String {
         switch mode {
         case .area:         return "area"
@@ -420,7 +475,7 @@ final class ScreenToolService: ObservableObject {
             return []
         }
 
-        let prefixes = ["area-", "fullscreen-", "window-", "timer-", "text-", "recording-"]
+        let prefixes = ["area-", "fullscreen-", "window-", "scrolling-", "timer-", "text-", "recording-"]
         let extensions = Set(["png", "jpg", "tiff", "pdf", "mov"])
         let sorted = urls
             .filter { url in
@@ -618,6 +673,52 @@ final class ScreenToolService: ObservableObject {
         }
     }
 
+    private static func runScreencapture(args: [String]) async -> ProcessResult {
+        await withCheckedContinuation { continuation in
+            runScreencapture(args: args) { result in
+                continuation.resume(returning: result)
+            }
+        }
+    }
+
+    private static func scrollDown(rect: ScreenToolCaptureRect) {
+        let amount = max(120, Int32(Double(rect.height) * 0.85))
+        CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: -amount, wheel2: 0, wheel3: 0)?
+            .post(tap: .cghidEventTap)
+    }
+
+    private static func writeStitchedImage(from urls: [URL], to outputURL: URL) throws {
+        let images = urls.compactMap(NSImage.init(contentsOf:))
+        guard !images.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+
+        let width = images.map(\.size.width).max() ?? 0
+        let height = images.reduce(CGFloat(0)) { $0 + $1.size.height }
+        let stitched = NSImage(size: NSSize(width: width, height: height))
+        stitched.lockFocus()
+        NSColor.clear.setFill()
+        NSRect(x: 0, y: 0, width: width, height: height).fill()
+        var y = height
+        for image in images {
+            y -= image.size.height
+            image.draw(
+                in: NSRect(x: 0, y: y, width: image.size.width, height: image.size.height),
+                from: .zero,
+                operation: .copy,
+                fraction: 1
+            )
+        }
+        stitched.unlockFocus()
+
+        guard
+            let tiff = stitched.tiffRepresentation,
+            let bitmap = NSBitmapImageRep(data: tiff),
+            let data = bitmap.representation(using: .png, properties: [:])
+        else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: outputURL, options: .atomic)
+    }
+
     private static func captureFailureMessage(_ result: ProcessResult, fallback: String) -> String {
         if !CGPreflightScreenCaptureAccess() {
             return "Screen Recording permission required"
@@ -670,6 +771,9 @@ final class ScreenToolService: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd-HH.mm.ss"
         return formatter
     }()
+
+    private static let scrollingCaptureFrameCount = 3
+    private static let scrollingCaptureFrameDelay: UInt64 = 450_000_000
 }
 
 struct ScreenToolCaptureRect: Equatable {
@@ -1135,6 +1239,7 @@ private enum ScreenToolMenuAction: String {
     case capturePreviousArea
     case captureFullscreen
     case captureWindow
+    case captureScrolling
     case captureSelfTimer
     case recordScreen
     case captureText
