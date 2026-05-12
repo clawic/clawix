@@ -23,6 +23,7 @@ struct ScreenToolsSettingsPage: View {
     @AppStorage(ScreenToolSettings.showRecordingControlsKey) private var showRecordingControls = true
     @AppStorage(ScreenToolSettings.highlightRecordingClicksKey) private var highlightRecordingClicks = true
     @AppStorage(ScreenToolSettings.recordRecordingAudioKey) private var recordRecordingAudio = false
+    @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
     @AppStorage(ScreenToolSettings.openRecordingEditorAfterRecordingKey) private var openRecordingEditorAfterRecording = false
     @AppStorage(ScreenToolSettings.keepTextLineBreaksKey) private var keepTextLineBreaks = false
     @AppStorage(ScreenToolSettings.autoDetectTextLanguageKey) private var autoDetectTextLanguage = true
@@ -232,6 +233,8 @@ struct ScreenToolsSettingsPage: View {
                 ToggleRow(title: "Highlight clicks", detail: "Show click feedback in screen recordings.", isOn: $highlightRecordingClicks)
                 CardDivider()
                 ToggleRow(title: "Record microphone audio", detail: "Capture audio from the default input device while recording.", isOn: $recordRecordingAudio)
+                CardDivider()
+                ToggleRow(title: "Show countdown", detail: "Show a short countdown before recording starts.", isOn: $showRecordingCountdown)
                 CardDivider()
                 ToggleRow(title: "Open editor after recording", detail: "Open the saved movie after recording completes.", isOn: $openRecordingEditorAfterRecording)
             }

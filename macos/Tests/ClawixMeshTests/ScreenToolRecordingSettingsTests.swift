@@ -17,4 +17,20 @@ final class ScreenToolRecordingSettingsTests: XCTestCase {
 
         XCTAssertFalse(ScreenToolSettings.openRecordingEditorAfterRecording)
     }
+
+    @MainActor
+    func testShowRecordingCountdownDefaultsOff() {
+        let defaults = UserDefaults.standard
+        let previousValue = defaults.object(forKey: ScreenToolSettings.showRecordingCountdownKey)
+        defaults.removeObject(forKey: ScreenToolSettings.showRecordingCountdownKey)
+        defer {
+            if let previousValue {
+                defaults.set(previousValue, forKey: ScreenToolSettings.showRecordingCountdownKey)
+            } else {
+                defaults.removeObject(forKey: ScreenToolSettings.showRecordingCountdownKey)
+            }
+        }
+
+        XCTAssertFalse(ScreenToolSettings.showRecordingCountdown)
+    }
 }

@@ -15,6 +15,7 @@ final class ScreenToolService: ObservableObject {
     private var areaSelectionWindow: ScreenToolAreaSelectionWindow?
     private var allInOneMenu: NSMenu?
     private var allInOneMenuTarget: ScreenToolMenuActionTarget?
+    private var recordingCountdownTask: Task<Void, Never>?
 
     private init() {}
 
@@ -203,6 +204,34 @@ final class ScreenToolService: ObservableObject {
 
     func recordScreen() {
         guard Self.ensureScreenCaptureAccess() else { return }
+        guard recordingCountdownTask == nil else { return }
+
+        if ScreenToolSettings.showRecordingCountdown {
+            startRecordingCountdown()
+            return
+        }
+
+        startScreenRecording()
+    }
+
+    private func startRecordingCountdown() {
+        recordingCountdownTask = Task { [weak self] in
+            for value in stride(from: 3, through: 1, by: -1) {
+                await MainActor.run {
+                    ToastCenter.shared.show("Recording starts in \(value)", icon: .info, duration: 0.9)
+                }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                guard !Task.isCancelled else { return }
+            }
+
+            await MainActor.run {
+                self?.recordingCountdownTask = nil
+                self?.startScreenRecording()
+            }
+        }
+    }
+
+    private func startScreenRecording() {
         let url = outputURL(prefix: "recording", extension: "mov")
         Self.runScreencapture(args: Self.recordingArgs(output: url)) { [weak self] result in
             Task { @MainActor in
@@ -1226,6 +1255,7 @@ enum ScreenToolSettings {
     static let showRecordingControlsKey = "clawix.screenTools.showRecordingControls"
     static let highlightRecordingClicksKey = "clawix.screenTools.highlightRecordingClicks"
     static let recordRecordingAudioKey = "clawix.screenTools.recordRecordingAudio"
+    static let showRecordingCountdownKey = "clawix.screenTools.showRecordingCountdown"
     static let openRecordingEditorAfterRecordingKey = "clawix.screenTools.openRecordingEditorAfterRecording"
     static let keepTextLineBreaksKey = "clawix.screenTools.keepTextLineBreaks"
     static let autoDetectTextLanguageKey = "clawix.screenTools.autoDetectTextLanguage"
@@ -1309,6 +1339,10 @@ enum ScreenToolSettings {
 
     static var recordRecordingAudio: Bool {
         defaults.bool(forKey: recordRecordingAudioKey)
+    }
+
+    static var showRecordingCountdown: Bool {
+        defaults.bool(forKey: showRecordingCountdownKey)
     }
 
     static var openRecordingEditorAfterRecording: Bool {

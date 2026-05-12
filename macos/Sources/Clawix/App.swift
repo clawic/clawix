@@ -302,6 +302,7 @@ private struct MenuBarContent: View {
     @ObservedObject private var bridge = BackgroundBridgeService.shared
     @AppStorage(ScreenToolSettings.backgroundPresetKey) private var backgroundPreset = ScreenToolService.BackgroundPreset.none.rawValue
     @AppStorage(ScreenToolSettings.showRecordingCursorKey) private var showRecordingCursor = true
+    @AppStorage(ScreenToolSettings.showRecordingCountdownKey) private var showRecordingCountdown = false
     @AppStorage(ScreenToolSettings.openRecordingEditorAfterRecordingKey) private var openRecordingEditorAfterRecording = false
     @Environment(\.openWindow) private var openWindow
 
@@ -395,6 +396,9 @@ private struct MenuBarContent: View {
                 }
                 Toggle(isOn: $showRecordingCursor) {
                     Label("Show Cursor in Recordings", systemImage: "cursorarrow")
+                }
+                Toggle(isOn: $showRecordingCountdown) {
+                    Label("Show Recording Countdown", systemImage: "timer")
                 }
                 Toggle(isOn: $openRecordingEditorAfterRecording) {
                     Label("Open Editor After Recording", systemImage: "rectangle.and.pencil.and.ellipsis")
