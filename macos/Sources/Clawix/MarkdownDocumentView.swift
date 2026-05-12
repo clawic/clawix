@@ -147,14 +147,32 @@ struct MarkdownDocumentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { idx, block in
-                blockView(block, isFirst: idx == 0)
+            ForEach(indexedBlocks) { item in
+                blockView(
+                    item.block,
+                    isFirst: item.id == 0,
+                    codeBlockOrdinal: item.codeBlockOrdinal
+                )
             }
         }
     }
 
+    private var indexedBlocks: [IndexedMarkdownBlock] {
+        var codeBlockCount = 0
+        return blocks.enumerated().map { idx, block in
+            if case .codeBlock = block {
+                codeBlockCount += 1
+            }
+            return IndexedMarkdownBlock(
+                id: idx,
+                block: block,
+                codeBlockOrdinal: codeBlockCount
+            )
+        }
+    }
+
     @ViewBuilder
-    private func blockView(_ block: MarkdownBlock, isFirst: Bool) -> some View {
+    private func blockView(_ block: MarkdownBlock, isFirst: Bool, codeBlockOrdinal: Int) -> some View {
         switch block {
         case .heading(let level, let text):
             Text(text)
@@ -214,7 +232,7 @@ struct MarkdownDocumentView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
         case .codeBlock(let language, let code):
-            CodeBlockView(language: language, code: code)
+            CodeBlockView(language: language, code: code, ordinal: codeBlockOrdinal)
                 .padding(.bottom, 14)
         }
     }
@@ -262,9 +280,16 @@ struct MarkdownDocumentView: View {
     }
 }
 
+private struct IndexedMarkdownBlock: Identifiable {
+    let id: Int
+    let block: MarkdownBlock
+    let codeBlockOrdinal: Int
+}
+
 private struct CodeBlockView: View {
     let language: String
     let code: String
+    let ordinal: Int
 
     @EnvironmentObject var appState: AppState
     @State private var copied = false
@@ -324,7 +349,7 @@ private struct CodeBlockView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { hoverCopy = $0 }
-                .accessibilityLabel("Copy code")
+                .accessibilityLabel(Text(verbatim: "Copy code block \(ordinal)"))
             }
             .padding(.horizontal, 14)
             .padding(.top, 10)

@@ -265,15 +265,25 @@ struct AssistantMarkdownText: View {
     @ViewBuilder
     private func blocksView(_ blocks: [AnnotatedBlock], checkpoints: [StreamCheckpoint], now: Date) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block, checkpoints: checkpoints, now: now)
+            ForEach(indexedBlocks(from: blocks)) { item in
+                blockView(
+                    item.block,
+                    checkpoints: checkpoints,
+                    now: now,
+                    codeBlockOrdinal: item.codeBlockOrdinal
+                )
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     @ViewBuilder
-    private func blockView(_ block: AnnotatedBlock, checkpoints: [StreamCheckpoint], now: Date) -> some View {
+    private func blockView(
+        _ block: AnnotatedBlock,
+        checkpoints: [StreamCheckpoint],
+        now: Date,
+        codeBlockOrdinal: Int
+    ) -> some View {
         switch block {
         case .paragraph(let p):
             ParagraphFlow(paragraph: p, weight: weight, color: color, checkpoints: checkpoints, now: now, findQuery: findQuery) { url in
@@ -347,7 +357,21 @@ struct AssistantMarkdownText: View {
             }
 
         case .codeBlock(let language, let code):
-            AssistantCodeBlockView(language: language, code: code)
+            AssistantCodeBlockView(language: language, code: code, ordinal: codeBlockOrdinal)
+        }
+    }
+
+    private func indexedBlocks(from blocks: [AnnotatedBlock]) -> [IndexedAnnotatedBlock] {
+        var codeBlockCount = 0
+        return blocks.enumerated().map { idx, block in
+            if case .codeBlock = block {
+                codeBlockCount += 1
+            }
+            return IndexedAnnotatedBlock(
+                id: idx,
+                block: block,
+                codeBlockOrdinal: codeBlockCount
+            )
         }
     }
 
@@ -359,6 +383,12 @@ struct AssistantMarkdownText: View {
         default: return 14
         }
     }
+}
+
+private struct IndexedAnnotatedBlock: Identifiable {
+    let id: Int
+    let block: AnnotatedBlock
+    let codeBlockOrdinal: Int
 }
 
 // MARK: - Table
@@ -435,6 +465,7 @@ struct AssistantTableView: View {
 struct AssistantCodeBlockView: View {
     let language: String
     let code: String
+    let ordinal: Int
 
     @EnvironmentObject var appState: AppState
     @State private var copied = false
@@ -493,7 +524,7 @@ struct AssistantCodeBlockView: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { hoverCopy = $0 }
-                .accessibilityLabel(Text(verbatim: "Copy code"))
+                .accessibilityLabel(Text(verbatim: "Copy code block \(ordinal)"))
             }
             .padding(.horizontal, 14)
             .padding(.top, 10)
