@@ -784,6 +784,7 @@ final class ScreenToolHistoryWindow: NSPanel {
         title = "Capture History"
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
+        positionOnActiveScreen(size: rect.size)
 
         let scroll = NSScrollView(frame: NSRect(origin: .zero, size: rect.size))
         scroll.drawsBackground = false
@@ -798,12 +799,26 @@ final class ScreenToolHistoryWindow: NSPanel {
     }
 
     func show() {
+        NSApp.activate(ignoringOtherApps: true)
         makeKeyAndOrderFront(nil)
     }
 
     override func close() {
         super.close()
         onClose(self)
+    }
+
+    private func positionOnActiveScreen(size: NSSize) {
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(mouse) }
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+        guard let visible = screen?.visibleFrame else { return }
+        let origin = NSPoint(
+            x: visible.midX - size.width / 2,
+            y: visible.midY - size.height / 2
+        )
+        setFrame(NSRect(origin: origin, size: size), display: false)
     }
 }
 
