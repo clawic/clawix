@@ -66,5 +66,14 @@ struct ClawixAppShortcuts: AppShortcutsProvider {
             shortTitle: "Send prompt",
             systemImageName: "paperplane.fill"
         )
+        AppShortcut(
+            intent: RestoreLastCaptureIntent(),
+            phrases: [
+                "Restore last \(.applicationName) capture",
+                "Reopen last \(.applicationName) capture"
+            ],
+            shortTitle: "Restore last capture",
+            systemImageName: "arrow.counterclockwise"
+        )
     }
 }
