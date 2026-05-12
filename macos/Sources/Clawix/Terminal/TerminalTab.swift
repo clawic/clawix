@@ -54,13 +54,15 @@ struct TerminalTab: Identifiable, Equatable, Codable {
     }
 
     /// Strips the path prefix and returns a friendly basename used as
-    /// default label. Falls back to "shell" for the home dir.
+    /// default label. Falls back to "~" for the home dir or "/" for the
+    /// filesystem root so the tab always shows a directory marker; the
+    /// generic "shell" label is intentionally avoided.
     static func deriveLabel(from cwd: String) -> String {
         let expanded = (cwd as NSString).expandingTildeInPath
+        if expanded == NSHomeDirectory() { return "~" }
         let url = URL(fileURLWithPath: expanded)
         let base = url.lastPathComponent
-        if base.isEmpty || base == "/" { return "shell" }
-        if expanded == NSHomeDirectory() { return "shell" }
+        if base.isEmpty || base == "/" { return "/" }
         return base
     }
 }
