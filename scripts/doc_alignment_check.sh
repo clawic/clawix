@@ -42,6 +42,7 @@ for snippet in \
   "~/.claw" \
   "~/.clawix" \
   ".claw/" \
+  "retired pre-public path" \
   "ClawHostKit" \
   "Claw.app" \
   "\`claw\` is the single public CLI" \

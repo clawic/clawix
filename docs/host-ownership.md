@@ -10,8 +10,9 @@ domain APIs, storage resolution, command routing, and any capability that
 another application could reasonably call through the public CLI.
 
 `claw` is the single public CLI. Public docs must not introduce a parallel
-public `clawjs`, `clawix`, or `commander` command surface for new work. Legacy
-commands may exist only as compatibility paths and must be labelled that way.
+public `clawjs`, `clawix`, or `commander` command surface for new work.
+Pre-public accidental commands are retired instead of carried as public
+compatibility paths unless an ADR explicitly grants a temporary exception.
 
 `Claw.app` is the standalone signed macOS host for the framework. It owns native
 permission prompts, LaunchAgents, Mach services, host audit logs, grants,
@@ -46,9 +47,9 @@ Clawix host-operational state lives in:
 Host GUI-only app state may use platform-native app data when it is not
 framework state.
 
-`.clawjs` is legacy compatibility only. New canonical workspace writes must use
-`.claw/`. Reads from `.clawjs` are allowed only inside explicit migration,
-compatibility, or removal code.
+`.clawjs` is a retired pre-public path. New canonical workspace writes must use
+`.claw/`, and framework or host code must not add new `.clawjs` readers or
+migrations unless an ADR explicitly grants a bounded removal exception.
 
 The detailed database and sidecar split is defined in
 `docs/data-storage-boundary.md`. In short: user-facing structured records go to

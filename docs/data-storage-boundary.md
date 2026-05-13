@@ -15,7 +15,7 @@ who is responsible; this page says where data lives.
   state
 
 Older `.clawjs/` workspace paths and older Clawix-named framework data roots are
-legacy compatibility only. New canonical writes must not create
+retired pre-public locations. New canonical writes must not create
 `.clawjs/data/database.sqlite`, `.clawjs/data/productivity.sqlite`,
 `.clawjs/data/storage.sqlite`, or `.clawjs/code/code.sqlite`.
 
@@ -94,9 +94,10 @@ owns the native permission identity and approval UI.
 other source-like files that should travel with a workspace.
 
 Do not add new workspace-local SQLite databases for canonical framework data.
-Legacy `.clawjs/` databases may be read during explicit migration or
-compatibility code, but new writes go to `.claw/`, `core.sqlite`, or a
-canonical sidecar under the framework global root.
+Do not add `.clawjs/` readers or migrations for pre-public workspace databases
+unless a later ADR records a bounded removal exception. New writes go to
+`.claw/`, `core.sqlite`, or a canonical sidecar under the framework global
+root.
 
 ## Migration rule
 

@@ -26,7 +26,7 @@ identity, never from Node.
 - Canonical workspace data lives in `.claw/`.
 - Clawix host-operational state lives in `~/.clawix`; GUI-only native app state
   may use platform-native app data when it is not framework state.
-- `.clawjs` is legacy compatibility only.
+- `.clawjs` is a retired pre-public path.
 - User-facing structured records converge into the main database instead of
   per-domain files such as `productivity.sqlite`; service sidecars are reserved
   for runtime, sessions, audio, drive/blob, search, notification, monitor,
@@ -49,4 +49,5 @@ embedded `ClawHostKit`. Clawix must remove duplicated canonical stores for
 migrated domains and keep only UI projections, visual state, and host-specific
 approvals. Public docs and templates must describe `Claw.app`, `ClawHostKit`,
 and `claw`; legacy `commander`, `clawix`, or `.clawjs` references must be
-clearly marked as compatibility content.
+clearly marked as retired pre-public content unless a later ADR grants a
+bounded compatibility exception.
