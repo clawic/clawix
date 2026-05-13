@@ -25,6 +25,7 @@ for file in \
   "AGENTS.md" \
   "CLAUDE.md" \
   "docs/host-ownership.md" \
+  "docs/data-storage-boundary.md" \
   "docs/adr/0001-claw-framework-host-boundary.md"
 do
   require_file "$file"
@@ -32,6 +33,7 @@ done
 
 require_snippet "CLAUDE.md" "AGENTS.md"
 require_snippet "CLAUDE.md" "docs/host-ownership.md"
+require_snippet "CLAUDE.md" "docs/data-storage-boundary.md"
 require_snippet "CLAUDE.md" "docs/adr/0001-claw-framework-host-boundary.md"
 
 for snippet in \
@@ -43,6 +45,17 @@ for snippet in \
   "~/.codex"
 do
   require_snippet "docs/host-ownership.md" "$snippet"
+done
+
+for snippet in \
+  "claw.sqlite" \
+  "productivity.sqlite" \
+  "vault.sqlite" \
+  "runtime.sqlite" \
+  "search.sqlite" \
+  "Plaintext secrets never live"
+do
+  require_snippet "docs/data-storage-boundary.md" "$snippet"
 done
 
 DOC_TARGETS=(

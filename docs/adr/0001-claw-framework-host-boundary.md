@@ -22,9 +22,16 @@ identity, never from Node.
 - Clawix embeds `ClawHostKit` and remains the human UI plus Clawix-signed host.
 - A per-user host registry records available hosts and the active host.
 - Framework global data lives in `~/Library/Application Support/Claw`.
+- The framework main database is `~/Library/Application Support/Claw/claw.sqlite`.
 - Canonical workspace data lives in `.claw/`.
 - Host-local data lives in `~/Library/Application Support/<Host>`.
 - `.clawjs` is legacy compatibility only.
+- User-facing structured records converge into the main database instead of
+  per-domain files such as `productivity.sqlite`; service sidecars are reserved
+  for runtime, sessions, audio, drive/blob, search, notification, monitor,
+  infra, ops, feed, and encrypted vault state.
+- Plaintext secrets never live in the main database; records use opaque secret
+  references.
 - Sensitive permissions, approvals, grants, audit logs, LaunchAgents, Mach
   services, and native execution belong to the active signed host.
 - Node code must not request macOS permissions directly.

@@ -1,7 +1,7 @@
 # ClawJS, Claw.app, and Clawix ownership
 
 This document defines the canonical ownership boundary for the ClawJS/Clawix
-refactor.
+refactor. Data placement is defined in `docs/data-storage-boundary.md`.
 
 ## Ownership rule
 
@@ -46,6 +46,11 @@ Host-local state lives in:
 `.clawjs` is legacy compatibility only. New canonical workspace writes must use
 `.claw/`. Reads from `.clawjs` are allowed only inside explicit migration,
 compatibility, or removal code.
+
+The detailed database and sidecar split is defined in
+`docs/data-storage-boundary.md`. In short: user-facing structured records go to
+`claw.sqlite`; high-churn service/runtime/index/blob state uses named sidecars;
+plaintext secrets never live in the main database.
 
 ## Host boundary
 
