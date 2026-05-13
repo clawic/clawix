@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "budgets": [
+    {
+      "boundary": "swift-logic-packages",
+      "lane": "fast",
+      "metric": "package_test_coverage",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "web-surface",
+      "lane": "fast",
+      "metric": "unit_test_coverage",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "bridge-protocol",
+      "lane": "fast",
+      "metric": "roundtrip_fixture_coverage",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "daemon-and-local-bridge",
+      "lane": "integration",
+      "metric": "fixture_coverage",
+      "minimum": 1,
+      "ratchet": true
+    },
+    {
+      "boundary": "macos-host-app",
+      "lane": "host",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": false
+    },
+    {
+      "boundary": "device-clients",
+      "lane": "device",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": false
+    },
+    {
+      "boundary": "live-integrations",
+      "lane": "live",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": false
+    }
+  ]
+}

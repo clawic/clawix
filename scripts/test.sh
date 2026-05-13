@@ -18,6 +18,7 @@ policy_guard() {
     "$ROOT_DIR/docs/adr/0003-testing-architecture.md" \
     "$ROOT_DIR/playbooks/testing.md" \
     "$ROOT_DIR/playbooks/testing-matrix.md" \
+    "$ROOT_DIR/qa/coverage-budgets.json" \
     "$ROOT_DIR/qa/quarantine.json" \
     "$ROOT_DIR/qa/scenarios/external-pending.md" \
     "$ROOT_DIR/qa/scenarios/signed-host-validation.md"
@@ -57,6 +58,45 @@ for (const entry of quarantine.entries) {
   }
 }
 console.error("testing policy passed");
+NODE
+
+  node - "$ROOT_DIR/qa/coverage-budgets.json" <<'NODE'
+const fs = require("fs");
+const file = process.argv[2];
+const requiredBoundaries = [
+  "swift-logic-packages",
+  "web-surface",
+  "bridge-protocol",
+  "daemon-and-local-bridge",
+  "macos-host-app",
+  "device-clients",
+  "live-integrations",
+];
+const budgets = JSON.parse(fs.readFileSync(file, "utf8"));
+if (!Array.isArray(budgets.budgets)) {
+  console.error("testing policy failed: qa/coverage-budgets.json must contain budgets");
+  process.exit(1);
+}
+const seen = new Set();
+for (const budget of budgets.budgets) {
+  for (const field of ["boundary", "lane", "metric", "minimum"]) {
+    if (budget[field] === undefined || budget[field] === "") {
+      console.error(`testing policy failed: coverage budget is missing ${field}`);
+      process.exit(1);
+    }
+  }
+  if (typeof budget.minimum !== "number" || budget.minimum < 0) {
+    console.error(`testing policy failed: invalid coverage minimum for ${budget.boundary || "<unknown>"}`);
+    process.exit(1);
+  }
+  seen.add(budget.boundary);
+}
+for (const boundary of requiredBoundaries) {
+  if (!seen.has(boundary)) {
+    console.error(`testing policy failed: missing coverage budget boundary ${boundary}`);
+    process.exit(1);
+  }
+}
 NODE
 }
 
