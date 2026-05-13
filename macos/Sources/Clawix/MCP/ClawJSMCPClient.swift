@@ -65,6 +65,15 @@ struct ClawJSMCPClient: MCPServersPersistence {
         }
     }
 
+    func configPath(scope: String, projectPath: String?) throws -> MCPConfigPath {
+        var args = ["mcp", "config-path", "--scope", scope, "--json"]
+        if let projectPath, !projectPath.isEmpty {
+            args += ["--project", projectPath]
+        }
+        let data = try runner.run(args)
+        return try JSONDecoder().decode(MCPConfigPath.self, from: data)
+    }
+
     @MainActor
     private static func runClawJS(args: [String]) throws -> Data {
         guard ClawJSRuntime.isAvailable else {
@@ -109,6 +118,11 @@ struct ClawJSMCPClient: MCPServersPersistence {
 
 private struct MCPListResponse: Decodable {
     let items: [MCPServerDTO]
+}
+
+struct MCPConfigPath: Decodable {
+    let configPath: String
+    let exists: Bool
 }
 
 private struct MCPServerDTO: Decodable {

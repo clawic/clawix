@@ -39921,66 +39921,66 @@
         }
       }
     },
-    "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it.": {
+    "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se eliminará de ~/.codex/config.toml. Las sesiones de Codex iniciadas después no lo verán."
+            "value": "Se eliminará a través del adaptador MCP de ClawJS. Las sesiones de Codex iniciadas después no lo verán."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it."
+            "value": "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it."
           }
         }
       }

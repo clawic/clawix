@@ -316,26 +316,26 @@ private enum SettingsUtilities {
         ToastCenter.shared.show("Diagnostics folder opened")
     }
 
-    static func openConfigToml(scope: String, selectedProject: Project?) {
-        let url: URL
-        if scope == "Project settings" {
-            guard let path = selectedProject?.path, !path.isEmpty else {
-                ToastCenter.shared.show("Select a project before opening project config", icon: .warning)
-                return
-            }
-            url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
-                .appendingPathComponent(".codex/config.toml", isDirectory: false)
-        } else {
-            url = FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".codex/config.toml", isDirectory: false)
-        }
-
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            ToastCenter.shared.show("config.toml not found", icon: .warning)
+    static func openConfigToml(scope: String, selectedProject: Project?) async {
+        let projectPath = selectedProject?.path
+        if scope == "Project settings", projectPath?.isEmpty ?? true {
+            ToastCenter.shared.show("Select a project before opening project config", icon: .warning)
             return
         }
-        NSWorkspace.shared.open(url)
-        ToastCenter.shared.show("config.toml opened")
+        do {
+            let result = try ClawJSMCPClient().configPath(
+                scope: scope == "Project settings" ? "project" : "user",
+                projectPath: projectPath
+            )
+            guard result.exists else {
+                ToastCenter.shared.show("config.toml not found", icon: .warning)
+                return
+            }
+            NSWorkspace.shared.open(URL(fileURLWithPath: result.configPath))
+            ToastCenter.shared.show("config.toml opened")
+        } catch {
+            ToastCenter.shared.show(error.localizedDescription, icon: .error)
+        }
     }
 }
 
@@ -1878,7 +1878,9 @@ private struct ConfigurationPage: View {
                 )
                 Spacer()
                 Button {
-                    SettingsUtilities.openConfigToml(scope: configScope, selectedProject: appState.selectedProject)
+                    Task {
+                        await SettingsUtilities.openConfigToml(scope: configScope, selectedProject: appState.selectedProject)
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Text("Open config.toml")
@@ -3220,11 +3222,10 @@ private struct CommitInstructionsBlock: View {
 
 // MARK: - MCP servers page
 //
-// Lists every `[mcp_servers.<name>]` declared in `~/.codex/config.toml`,
-// with toggles to enable/disable each entry and a sheet (popup) to
-// add or edit them. Persistence flows through `MCPServersStore`, which
-// preserves the rest of `config.toml` byte-for-byte and only rewrites
-// the MCP blocks.
+// Lists every MCP server exposed by the ClawJS JSON adapter, with toggles
+// to enable/disable each entry and a sheet (popup) to add or edit them.
+// Persistence flows through `MCPServersStore`; the GUI never parses or
+// rewrites Codex-owned configuration directly.
 private struct MCPPage: View {
     @StateObject private var store: MCPServersStore = .shared
     @State private var sheet: MCPSheetItem? = nil

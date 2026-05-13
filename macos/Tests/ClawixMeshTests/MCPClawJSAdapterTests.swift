@@ -33,6 +33,9 @@ final class MCPClawJSAdapterTests: XCTestCase {
                 }
                 """.utf8)
             }
+            if args == ["mcp", "config-path", "--scope", "user", "--json"] {
+                return Data(#"{"configPath":"/tmp/config.toml","exists":true}"#.utf8)
+            }
             return Data("{}".utf8)
         })
 
@@ -61,6 +64,11 @@ final class MCPClawJSAdapterTests: XCTestCase {
                 && call.contains("--enabled")
                 && call.contains("false")
         })
+
+        let configPath = try client.configPath(scope: "user", projectPath: nil)
+        XCTAssertEqual(configPath.configPath, "/tmp/config.toml")
+        XCTAssertEqual(configPath.exists, true)
+        XCTAssertTrue(calls.contains(["mcp", "config-path", "--scope", "user", "--json"]))
     }
 }
 

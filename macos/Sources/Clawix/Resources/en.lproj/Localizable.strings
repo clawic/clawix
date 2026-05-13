@@ -467,7 +467,7 @@
 "Interface font" = "Interface font";
 "Interface font size" = "Interface font size";
 "Invalid JSON" = "Invalid JSON";
-"It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it." = "It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it.";
+"It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it." = "It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it.";
 "Keep Clawix in the macOS menu bar when the main window closes" = "Keep Clawix in the macOS menu bar when the main window closes";
 "Keep both" = "Keep both";
 "Keep it short and easy to recognise" = "Keep it short and easy to recognise";
