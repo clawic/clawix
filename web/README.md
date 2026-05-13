@@ -6,7 +6,7 @@ Web client for Clawix. Third bridge client (after the macOS GUI and the iOS comp
 
 The web client is a pure SPA. It does NOT run Codex itself; it pairs with the user's `clawix-bridge` daemon and renders the same data the macOS app renders. Secrets and Codex auth never leave the user's Mac.
 
-The daemon serves the static bundle at `http://localhost:24080/` and exposes the WebSocket at `/ws`. A loopback-only `/pairing/qr.json` endpoint lets the SPA self-configure when opened from the same machine.
+The daemon serves the static bundle at `http://localhost:24080/` and exposes the private SPA WebSocket at `/ws`. Public framework event contracts use `/v1/events`; `/ws` is an internal Clawix bridge transport. A loopback-only `/pairing/qr.json` endpoint lets the SPA self-configure when opened from the same machine.
 
 For remote access, the user opens `http://<mac>.local:24080` (mDNS) or the Tailscale IP from another device and pastes the short code.
 
@@ -14,7 +14,7 @@ For remote access, the user opens `http://<mac>.local:24080` (mDNS) or the Tails
 
 ```bash
 pnpm install
-pnpm dev    # Vite dev server on http://localhost:5173, proxies /ws -> daemon
+pnpm dev    # Vite dev server on http://localhost:5173, proxies private /ws -> daemon
 ```
 
 The daemon must be running:
