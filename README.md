@@ -15,6 +15,24 @@ Clawix is the native human interface and embedded signed host for ClawJS/Claw. I
 
 This repository is a monorepo. Platform clients live at the root under `macos/` and `ios/`, with shared Swift packages under `packages/`.
 
+## What Clawix Adds
+
+Clawix turns local agent work into an app you can see, approve, and carry
+between devices.
+
+```mermaid
+flowchart LR
+  work["Agent work"] --> clawix["Clawix"]
+  clawix --> see["See"]
+  clawix --> approve["Approve"]
+  clawix --> continue["Continue"]
+  continue -.-> phone["iPhone"]
+  continue -.-> mac["Mac"]
+```
+
+ClawJS owns the framework. Clawix owns the experience: pairing, native
+permissions, previews, visual state, and host identity.
+
 ## macOS app
 
 <p align="center">
