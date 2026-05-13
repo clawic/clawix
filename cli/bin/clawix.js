@@ -6,9 +6,7 @@ const pkg = require('../package.json');
 
 const COMMANDS = [
     'up', 'start', 'stop', 'status', 'pair', 'unpair', 'logs', 'doctor',
-    'install-app', 'restart', 'uninstall', 'mesh',
-    'devices', 'scenes', 'automations', 'homes', 'areas', 'approvals',
-    'mp',
+    'install-app', 'restart', 'uninstall',
 ];
 
 // Honour --no-color BEFORE require()ing ui.js: ui.js samples
@@ -34,27 +32,10 @@ ${ui.bold('commands')}
   status           bridge state, port, peers, app presence
   pair             show pairing QR + short code
   unpair           rotate bearer + short code (kicks every paired device)
-  mesh             manage paired Macs, workspaces, and remote jobs
   doctor           run health checks across the whole environment
   logs [-f]        tail bridge logs
   install-app      install /Applications/Clawix.app from the latest release
   uninstall        remove ~/.clawix/bin and unregister launchd agents
-
-  ${ui.bold('IoT (Home)')}
-  devices          list / control / add / remove smart-home things
-  scenes           list / activate scenes
-  automations      list / enable / disable / run / create automations
-  homes            list homes
-  areas            list rooms and zones
-  approvals        triage the IoT approval queue
-
-  ${ui.bold('Marketplace (mp/1.0.0)')}
-  mp status        daemon + identity snapshot
-  mp identity      list root keys, devices and roles
-  mp intents       list local intents (offers and wants)
-  mp inbox         list pending inbound messages
-  mp receipts      list match receipts
-  mp brokers       list known brokers
 
 ${ui.bold('flags')}
   --json           machine-readable output (status, pair, doctor)
@@ -181,11 +162,6 @@ async function main(argv) {
             logs.tail({ follow: flag('-f') || flag('--follow') });
             return;
         }
-        case 'mesh': {
-            const mesh = require('../lib/mesh');
-            await mesh.run(rest.filter((a) => a !== '--json'), { json: flag('--json') });
-            return;
-        }
         case 'doctor': {
             const doctor = require('../lib/doctor');
             const checks = doctor.run();
@@ -202,23 +178,6 @@ async function main(argv) {
             const { uninstall } = require('../lib/uninstall');
             uninstall({ keepState: !flag('--purge') });
             console.log('clawix: uninstalled. To remove the npm package run `npm uninstall -g clawix`.');
-            return;
-        }
-        case 'devices':
-        case 'scenes':
-        case 'automations':
-        case 'homes':
-        case 'areas':
-        case 'approvals': {
-            const lib = require(`../lib/${cmd}`);
-            const restNoJSON = rest.filter((a) => a !== '--json');
-            await lib.run(restNoJSON, { json: flag('--json') });
-            return;
-        }
-        case 'mp': {
-            const mp = require('../lib/mp');
-            const restNoJSON = rest.filter((a) => a !== '--json');
-            await mp.run(restNoJSON, { json: flag('--json') });
             return;
         }
     }
