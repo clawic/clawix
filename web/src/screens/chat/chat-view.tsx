@@ -10,14 +10,14 @@ interface Props {
   chatId: string | null;
 }
 
-const EMPTY_MESSAGES: ReturnType<typeof useBridgeStore.getState>["messagesByChat"][string] = [];
+const EMPTY_MESSAGES: ReturnType<typeof useBridgeStore.getState>["messagesBySession"][string] = [];
 
 export function ChatView({ chatId }: Props) {
-  const messages = useBridgeStore((s) => (chatId ? s.messagesByChat[chatId] ?? EMPTY_MESSAGES : EMPTY_MESSAGES));
+  const messages = useBridgeStore((s) => (chatId ? s.messagesBySession[chatId] ?? EMPTY_MESSAGES : EMPTY_MESSAGES));
   const chats = useBridgeStore((s) => s.chats);
-  const openChat = useBridgeStore((s) => s.openChat);
+  const openSession = useBridgeStore((s) => s.openSession);
   const loadOlder = useBridgeStore((s) => s.loadOlderMessages);
-  const hasMore = useBridgeStore((s) => (chatId ? s.hasMoreByChat[chatId] ?? false : false));
+  const hasMore = useBridgeStore((s) => (chatId ? s.hasMoreBySession[chatId] ?? false : false));
   const chat = chats.find((c) => c.id === chatId) ?? null;
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -27,9 +27,9 @@ export function ChatView({ chatId }: Props) {
   useEffect(() => {
     if (chatId && lastChatRef.current !== chatId) {
       lastChatRef.current = chatId;
-      openChat(chatId);
+      openSession(chatId);
     }
-  }, [chatId, openChat]);
+  }, [chatId, openSession]);
 
   useLayoutEffect(() => {
     if (!scrollerRef.current) return;

@@ -45,9 +45,9 @@ export interface BridgeStoreState {
   sessions: WireChat[];
   projects: WireProject[];
   /** Indexed by sessionId. Only populated for sessions the user has opened. */
-  messagesByChat: Record<string, WireMessage[]>;
+  messagesBySession: Record<string, WireMessage[]>;
   /** True when more older messages can be fetched. */
-  hasMoreByChat: Record<string, boolean>;
+  hasMoreBySession: Record<string, boolean>;
   rateLimits: WireRateLimitSnapshot | null;
   rateLimitsByLimitId: Record<string, WireRateLimitSnapshot>;
   files: Record<string, { content?: string; isMarkdown: boolean; error?: string }>;
@@ -59,7 +59,6 @@ export interface BridgeStoreState {
   detach(): void;
 
   openSession(sessionId: string, useInitialPage?: boolean): void;
-  openChat(chatId: string, useInitialPage?: boolean): void;
   loadOlderMessages(sessionId: string): void;
   sendPrompt(sessionId: string, text: string, attachments?: WireMessage["attachments"]): void;
   newSession(text: string, attachments?: WireMessage["attachments"]): string;
@@ -98,8 +97,8 @@ export const useBridgeStore = create<BridgeStoreState>()(
     chats: [],
     sessions: [],
     projects: [],
-    messagesByChat: {},
-    hasMoreByChat: {},
+    messagesBySession: {},
+    hasMoreBySession: {},
     rateLimits: null,
     rateLimitsByLimitId: {},
     files: {},
@@ -129,8 +128,8 @@ export const useBridgeStore = create<BridgeStoreState>()(
         chats: [],
         sessions: [],
         projects: [],
-        messagesByChat: {},
-        hasMoreByChat: {},
+        messagesBySession: {},
+        hasMoreBySession: {},
         macName: null,
         rateLimits: null,
         rateLimitsByLimitId: {},
@@ -146,13 +145,9 @@ export const useBridgeStore = create<BridgeStoreState>()(
         ...(useInitialPage ? { limit: BRIDGE_INITIAL_PAGE_LIMIT } : {}),
       });
     },
-    openChat(chatId, useInitialPage = true) {
-      get().openSession(chatId, useInitialPage);
-    },
-
     loadOlderMessages(sessionId) {
       const client = get().client;
-      const msgs = get().messagesByChat[sessionId];
+      const msgs = get().messagesBySession[sessionId];
       if (!client || !msgs || msgs.length === 0) return;
       const beforeMessageId = msgs[0]!.id;
       client.send({
@@ -269,30 +264,30 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
       break;
     }
     case "messagesSnapshot": {
-      const messagesByChat = { ...get().messagesByChat, [frame.sessionId]: frame.messages };
-      const hasMoreByChat = { ...get().hasMoreByChat, [frame.sessionId]: frame.hasMore ?? false };
-      set({ messagesByChat, hasMoreByChat });
+      const messagesBySession = { ...get().messagesBySession, [frame.sessionId]: frame.messages };
+      const hasMoreBySession = { ...get().hasMoreBySession, [frame.sessionId]: frame.hasMore ?? false };
+      set({ messagesBySession, hasMoreBySession });
       break;
     }
     case "messagesPage": {
-      const cur = get().messagesByChat[frame.sessionId] ?? [];
+      const cur = get().messagesBySession[frame.sessionId] ?? [];
       const merged = [...frame.messages, ...cur];
-      const messagesByChat = { ...get().messagesByChat, [frame.sessionId]: dedupeById(merged) };
-      const hasMoreByChat = { ...get().hasMoreByChat, [frame.sessionId]: frame.hasMore };
-      set({ messagesByChat, hasMoreByChat });
+      const messagesBySession = { ...get().messagesBySession, [frame.sessionId]: dedupeById(merged) };
+      const hasMoreBySession = { ...get().hasMoreBySession, [frame.sessionId]: frame.hasMore };
+      set({ messagesBySession, hasMoreBySession });
       break;
     }
     case "messageAppended": {
-      const cur = get().messagesByChat[frame.sessionId] ?? [];
-      const messagesByChat = {
-        ...get().messagesByChat,
+      const cur = get().messagesBySession[frame.sessionId] ?? [];
+      const messagesBySession = {
+        ...get().messagesBySession,
         [frame.sessionId]: dedupeById([...cur, frame.message]),
       };
-      set({ messagesByChat });
+      set({ messagesBySession });
       break;
     }
     case "messageStreaming": {
-      const cur = get().messagesByChat[frame.sessionId] ?? [];
+      const cur = get().messagesBySession[frame.sessionId] ?? [];
       const idx = cur.findIndex((m) => m.id === frame.messageId);
       let next: WireMessage[];
       if (idx >= 0) {
@@ -319,7 +314,7 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
           } satisfies WireMessage,
         ];
       }
-      set({ messagesByChat: { ...get().messagesByChat, [frame.sessionId]: next } });
+      set({ messagesBySession: { ...get().messagesBySession, [frame.sessionId]: next } });
       break;
     }
     case "errorEvent":
