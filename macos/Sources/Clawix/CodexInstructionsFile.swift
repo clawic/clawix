@@ -167,6 +167,6 @@ enum CodexMemoryBlock {
 - Always include a short Why and How-to-apply line when saving a decision or preference, so the memory stays useful out of context.
 - Before recommending an action based on a memory, verify the underlying file or state still exists. Memories can become stale.
 - When wrapping up a task, call `claw memory conclude --content "<verbatim conclusion>"` so working memory promotes cleanly.
-- Set `CLAWJS_MEMORY_EDITOR=agent` in your environment so edits to existing memories are stamped correctly.
+- Set `CLAW_MEMORY_EDITOR=agent` in your environment so edits to existing memories are stamped correctly.
 """
 }

@@ -698,14 +698,14 @@ final class ClawJSServiceManager: ObservableObject {
     private static func environment(for service: ClawJSService, adminToken: String?) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
-        env["CLAWJS_WORKSPACE"] = workspaceURL.path
+        env["CLAW_WORKSPACE"] = workspaceURL.path
         env["CLAW_DATA_DIR"] = mainDataDirectoryURL.path
         env["CLAWIX_CLAW_DATA_DIR"] = mainDataDirectoryURL.path
         env["CLAW_DB_PATH"] = mainDatabaseURL.path
         env["CLAW_FILES_DIR"] = mainFilesDirectoryURL.path
-        env["CLAWJS_PORT"] = String(service.port)
-        env["CLAWJS_SERVICE"] = service.rawValue
-        env["CLAWJS_SECRETS_PROXY_PATH"] = FileManager.default.homeDirectoryForCurrentUser
+        env["CLAW_SERVICE_PORT"] = String(service.port)
+        env["CLAW_SERVICE_NAME"] = service.rawValue
+        env["CLAW_SECRETS_PROXY_PATH"] = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("bin/secrets-proxy", isDirectory: false)
             .path
         env["PORT"] = String(service.port)
