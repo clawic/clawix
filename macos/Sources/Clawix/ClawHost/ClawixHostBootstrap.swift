@@ -1,5 +1,5 @@
 import Foundation
-import CommanderCore
+import ClawHostKit
 
 enum ClawixHostBootstrap {
     private struct Registry: Codable {
