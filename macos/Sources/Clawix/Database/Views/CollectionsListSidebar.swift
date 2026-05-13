@@ -74,7 +74,7 @@ struct CollectionsListSidebar: View {
         if collection.name == "events" { return "calendar" }
         if collection.name == "issues" { return "exclamationmark.bubble" }
         if collection.name == "decisions" { return "scale.3d" }
-        if collection.name == "wiki_pages" { return "book" }
+        if collection.name == "pages" { return "book" }
         if collection.name == "hub_messages" { return "bubble.left" }
         if collection.builtin { return "doc.text" }
         return "rectangle.stack"
