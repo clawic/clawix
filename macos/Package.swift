@@ -56,7 +56,7 @@ let package = Package(
         .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.2.0"),
         // Local framework host runtime. Clawix embeds this under its own
         // signed identity instead of calling a standalone Claw.app.
-        .package(path: "../../../clawjs/apps/commander")
+        .package(path: "../../../clawjs/apps/host")
     ],
     targets: [
         .testTarget(
@@ -84,7 +84,7 @@ let package = Package(
                 .product(name: "AIProviders", package: "AIProviders"),
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
-                .product(name: "ClawHostKit", package: "commander")
+                .product(name: "ClawHostKit", package: "host")
             ],
             path: "Sources/Clawix",
             resources: [
