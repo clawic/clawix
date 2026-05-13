@@ -11,7 +11,6 @@ enum SyncSettings {
     private static let store: UserDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
     private static let archiveKey = "SyncArchiveWithCodex"
     private static let renamesKey = "SyncRenamesWithCodex"
-    private static let pushProjectsKey = "PushProjectsToCodex"
     private static let autoReloadKey = "AutoReloadOnFocus"
 
     static var syncArchiveWithCodex: Bool {
@@ -22,13 +21,6 @@ enum SyncSettings {
     static var syncRenamesWithCodex: Bool {
         get { store.object(forKey: renamesKey) as? Bool ?? true }
         set { store.set(newValue, forKey: renamesKey) }
-    }
-
-    /// Default OFF: writing to Codex's `.codex-global-state.json` is a
-    /// privileged op the user must opt into via the confirmation dialog.
-    static var pushProjectsToCodex: Bool {
-        get { store.object(forKey: pushProjectsKey) as? Bool ?? false }
-        set { store.set(newValue, forKey: pushProjectsKey) }
     }
 
     static var autoReloadOnFocus: Bool {

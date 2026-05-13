@@ -75,8 +75,8 @@ enum RolloutReader {
     /// Default tail-read window for `readTailWithStatus`. 4 MB covers
     /// dozens to hundreds of typical assistant turns (more than any
     /// viewport ever shows on first paint), while keeping the parse
-    /// cost bounded regardless of how big the rollout has grown — real
-    /// sessions in `~/.codex/sessions/` reach 100+ MB. Read the head
+    /// cost bounded regardless of how big the rollout has grown; raw
+    /// runtime artifacts can reach 100+ MB. Read the head
     /// (`tailHeadProbeBytes`) separately to recover `session_meta`.
     static let defaultTailBytes: Int = 4 * 1024 * 1024
 

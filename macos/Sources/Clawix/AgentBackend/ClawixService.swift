@@ -348,8 +348,8 @@ final class ClawixService: ObservableObject {
         return newThreadId
     }
 
-    /// Bind an existing chat to a server thread (called by the sidebar
-    /// when the user clicks an entry coming from SessionsIndex).
+    /// Bind an existing chat to a server thread when the sidebar opens a
+    /// runtime-indexed conversation.
     func attach(chatId: UUID, threadId: String) async {
         threadByChat[chatId] = threadId
         chatByThread[threadId] = chatId

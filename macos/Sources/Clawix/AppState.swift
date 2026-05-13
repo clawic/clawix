@@ -21,9 +21,6 @@ enum ClawixDeepLink: Equatable {
 }
 
 private let daemonBridgePort: UInt16 = 7778
-private var rolloutPathByThread: [String: URL] = [:]
-private var rolloutPathScanDone = false
-private let rolloutPathLock = NSLock()
 
 private func rolloutChatMessages(from result: RolloutReader.ReadResult) -> [ChatMessage] {
     result.entries.map { e in
@@ -38,43 +35,6 @@ private func rolloutChatMessages(from result: RolloutReader.ReadResult) -> [Chat
             attachments: e.attachments
         )
     }
-}
-
-/// One-shot index of `~/.codex/sessions/**/rollout-*.jsonl` keyed
-/// by the trailing UUID in the filename, which matches the runtime's
-/// `clawixThreadId`. Built lazily the first time a chat asks for a
-/// rollout we can't get from `applyThreads`.
-private func rolloutPath(forThreadId tid: String) -> URL? {
-    rolloutPathLock.lock()
-    defer { rolloutPathLock.unlock() }
-    if !rolloutPathScanDone {
-        rolloutPathScanDone = true
-        let root = SessionsIndex.defaultRoot
-        let fm = FileManager.default
-        guard let yearDirs = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) else {
-            return nil
-        }
-        for year in yearDirs {
-            guard let months = try? fm.contentsOfDirectory(at: year, includingPropertiesForKeys: nil) else { continue }
-            for month in months {
-                guard let days = try? fm.contentsOfDirectory(at: month, includingPropertiesForKeys: nil) else { continue }
-                for day in days {
-                    guard let files = try? fm.contentsOfDirectory(at: day, includingPropertiesForKeys: nil) else { continue }
-                    for file in files {
-                        let name = file.lastPathComponent
-                        guard name.hasPrefix("rollout-"),
-                              file.pathExtension == "jsonl" else { continue }
-                        // `rollout-YYYY-MM-DDThh-mm-ss-<UUID>.jsonl`
-                        let stem = file.deletingPathExtension().lastPathComponent
-                        guard stem.count >= 36 else { continue }
-                        let uuid = String(stem.suffix(36)).lowercased()
-                        rolloutPathByThread[uuid] = file
-                    }
-                }
-            }
-        }
-    }
-    return rolloutPathByThread[tid.lowercased()]
 }
 
 // MARK: - Route
@@ -486,8 +446,8 @@ struct Chat: Identifiable, Equatable {
     var messages: [ChatMessage]
     var createdAt: Date
     var clawixThreadId: String?
-    /// Path to the rollout JSONL on disk (for sessions discovered via
-    /// SessionsIndex; nil for chats started inside the app).
+    /// Path to a rollout JSONL when the daemon explicitly exposes one;
+    /// nil for ClawJS-indexed sessions that hydrate through the sessions API.
     var rolloutPath: URL?
     var historyHydrated: Bool
     var hasActiveTurn: Bool
@@ -1219,7 +1179,6 @@ final class AppState: ObservableObject {
     /// bottom-trailing rounded-corner cutout blends with whatever the
     /// active page is currently painting at that edge.
     @Published var browserPageBackgroundColors: [UUID: Color] = [:]
-    @Published var recentSessions: [ClawixSessionSummary] = []
     @Published var clawixBackendStatus: ClawixService.Status = .idle
     /// Snapshot of the user's primary/secondary rate-limit windows as
     /// reported by the backend (`account/rateLimits/read` once at boot,
@@ -1309,20 +1268,9 @@ final class AppState: ObservableObject {
     private let snapshotEnabled: Bool = (AgentThreadStore.fixtureThreads() == nil
                                          && ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] != "1")
     private var backendState: BackendState = .empty
-    /// File-descriptor watcher for `~/.codex/.codex-global-state.json`.
-    /// Refreshes `backendState` (and the projects list) off the main
-    /// thread whenever Codex rewrites that file, so the live state in
-    /// memory stays current without re-reading from disk on every
-    /// `applyThreads` / `mergeThreads`.
-    private var backendStateWatcher: DispatchSourceFileSystemObject?
-    /// File descriptor backing `backendStateWatcher`. -1 when no watcher
-    /// is installed (file missing, dummy mode, etc.).
-    private var backendStateFD: Int32 = -1
 
-    /// Resolves session ids to thread names by aggregating the runtime
-    /// session index (~/.codex/session_index.jsonl) and the app's own
-    /// session_titles table. User renames and generated titles are
-    /// persisted through this repository.
+    /// Resolves user renames and generated titles persisted by Clawix.
+    /// Runtime titles arrive from the ClawJS sessions adapter.
     private let titlesRepo = SessionTitlesRepository()
     /// Available only when ClawixBinary.resolve() returned a path. If
     /// nil, automatic title generation is silently disabled and
@@ -1486,13 +1434,6 @@ final class AppState: ObservableObject {
         self.clawix = resolvedBinary.map { ClawixService(binary: $0) }
         self.titleGenerator = nil
 
-        backendState = BackendStateReader.read()
-        // Mirror Codex's pin set into the local repo. One-way: any pin
-        // present in `.codex-global-state.json` that we don't have yet
-        // is appended to the local order. We never write back to Codex,
-        // and pins removed from Codex stay locally pinned.
-        pinsRepo.addIfMissing(backendState.pinnedThreadIds)
-        installBackendStateWatcher()
         manualProjectOrder = projectOrdersRepo.orderedIds()
         loadMockData()
         if let fixtureThreads = AgentThreadStore.fixtureThreads() {
@@ -1560,7 +1501,6 @@ final class AppState: ObservableObject {
             $rateLimitsByLimitId.dropFirst().sink { _ in RenderProbe.tick("AppState.rateLimitsByLimitId") },
             $hostFavicons.dropFirst().sink { _ in RenderProbe.tick("AppState.hostFavicons") },
             $browserPageBackgroundColors.dropFirst().sink { _ in RenderProbe.tick("AppState.browserPageBackgroundColors") },
-            $recentSessions.dropFirst().sink { _ in RenderProbe.tick("AppState.recentSessions") },
             $chatSidebars.dropFirst().sink { _ in RenderProbe.tick("AppState.chatSidebars") },
             $pendingReloadTabId.dropFirst().sink { _ in RenderProbe.tick("AppState.pendingReloadTabId") },
             $richViewDisabledPaths.dropFirst().sink { _ in RenderProbe.tick("AppState.richViewDisabledPaths") },
@@ -1879,27 +1819,6 @@ final class AppState: ObservableObject {
         pinnedItems = []
     }
 
-    private func loadClawixSessions() {
-        // Temporary bridge while the runtime app-server is starting: keep the
-        // sidebar useful, but only the app-server index is authoritative once
-        // it becomes available.
-        let sessions = SessionsIndex.list(limit: 60)
-        recentSessions = sessions
-        let threads = sessions.map {
-            AgentThreadSummary(
-                id: $0.id,
-                cwd: $0.cwd,
-                name: titlesRepo.title(for: $0.id),
-                preview: $0.firstMessage,
-                path: $0.path.path,
-                createdAt: Int64($0.updatedAt.timeIntervalSince1970),
-                updatedAt: Int64($0.updatedAt.timeIntervalSince1970),
-                archived: false
-            )
-        }
-        applyThreads(threads)
-    }
-
     func loadThreadsFromRuntime() async {
         // When a thread fixture drives the sidebar (showcase / E2E /
         // demo recordings), the runtime is intentionally empty and a
@@ -1918,13 +1837,9 @@ final class AppState: ObservableObject {
             var cursor: String? = nil
             var page = 0
 
-            // Pinned ids from Codex's global state. Used as the stop
-            // condition for backfilling: keep paginating older threads
-            // until every pinned id has been resolved. Without this the
-            // sidebar drops pins whose updated_at falls outside the first
-            // page (heavy users routinely have >1000 active threads).
-            // Sourced from the in-memory cache kept fresh by
-            // `backendStateWatcher`.
+            // Pinned ids from the startup global-state snapshot. Used as the
+            // stop condition for backfilling: keep paginating older threads
+            // until every pinned id has been resolved.
             let pinnedTargets = Set(backendState.pinnedThreadIds)
             var resolvedPins = Set<String>()
             // Safety cap so a corrupt cursor or a stale pin id doesn't
@@ -1954,22 +1869,8 @@ final class AppState: ObservableObject {
                 if page >= maxPages { break }
             } while resolvedPins.count < pinnedTargets.count
 
-            let stateThreads = CodexStateThreadIndex.list(
-                limit: 1_200,
-                pinnedThreadIds: backendState.pinnedThreadIds
-            )
-            applyThreads(shouldPreferCodexStateThreads(runtime: collected, state: stateThreads)
-                ? stateThreads
-                : collected)
+            applyThreads(collected)
         } catch {
-            let stateThreads = CodexStateThreadIndex.list(
-                limit: 1_200,
-                pinnedThreadIds: backendState.pinnedThreadIds
-            )
-            if !stateThreads.isEmpty {
-                applyThreads(stateThreads)
-                return
-            }
             appendRuntimeStatusError(L10n.runtimeIndexReadFailed("\(error)"))
         }
     }
@@ -2026,21 +1927,6 @@ final class AppState: ObservableObject {
             clawJSSessionsCanonicalActive = false
             return false
         }
-    }
-
-    private func shouldPreferCodexStateThreads(
-        runtime: [AgentThreadSummary],
-        state: [AgentThreadSummary]
-    ) -> Bool {
-        guard !state.isEmpty else { return false }
-        guard !runtime.isEmpty else { return true }
-        let pins = Set(backendState.pinnedThreadIds)
-        let runtimePins = runtime.reduce(0) { $0 + (pins.contains($1.id) ? 1 : 0) }
-        let statePins = state.reduce(0) { $0 + (pins.contains($1.id) ? 1 : 0) }
-        if statePins > runtimePins { return true }
-        if state.count > runtime.count * 2 { return true }
-        if runtime.count < min(100, state.count) { return true }
-        return false
     }
 
     /// Refreshes the chat list for a single project in the background.
@@ -2489,99 +2375,10 @@ final class AppState: ObservableObject {
     /// surface through subsequent server-side searches.
     static let popupFullProjectFetchLimit = 500
 
-    /// Installs a `DispatchSource` watcher on
-    /// `~/.codex/.codex-global-state.json` so changes (Codex bumping
-    /// pins, the user adding a workspace root, etc.) refresh the
-    /// in-memory `backendState` without main-thread I/O. Idempotent;
-    /// re-arms itself on `.delete` / `.rename` since many writers use
-    /// atomic rename. No-op when the file doesn't exist (dummy mode,
-    /// fresh install before Codex has written it).
-    private func installBackendStateWatcher() {
-        backendStateWatcher?.cancel()
-        backendStateWatcher = nil
-        if backendStateFD >= 0 {
-            close(backendStateFD)
-            backendStateFD = -1
-        }
-        let url = BackendStateReader.sourceURL
-        let fd = open(url.path, O_EVTONLY)
-        guard fd >= 0 else { return }
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .delete, .rename, .extend, .attrib],
-            queue: DispatchQueue.global(qos: .utility)
-        )
-        source.setEventHandler { [weak self] in
-            guard let self else { return }
-            let events = source.data
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                if events.contains(.delete) || events.contains(.rename) {
-                    // Atomic rename / delete: re-arm against the canonical
-                    // path so we keep tracking the new inode.
-                    self.installBackendStateWatcher()
-                }
-                self.refreshBackendStateFromDisk()
-            }
-        }
-        source.setCancelHandler {
-            close(fd)
-        }
-        backendStateFD = fd
-        backendStateWatcher = source
-        source.resume()
-    }
-
-    /// Re-reads the global state file off-main, then applies the result
-    /// on `MainActor`. Updates `projects` and `pinnedOrder` so newly
-    /// added workspace roots and pin changes show up without a relaunch.
-    private func refreshBackendStateFromDisk() {
-        Task.detached(priority: .utility) { [weak self] in
-            let next = BackendStateReader.read()
-            await MainActor.run {
-                guard let self else { return }
-                self.backendState = next
-                let oldProjects = self.projects
-                let nextProjects = self.mergedProjects()
-                if oldProjects != nextProjects {
-                    withAnimation(.easeOut(duration: 0.20)) {
-                        self.projects = nextProjects
-                    }
-                }
-                // Mirror any newly-arrived Codex pins into the local
-                // repo, then recompute the pinned set against the live
-                // chats so a `codex pin <id>` from the CLI shows up in
-                // the sidebar without requiring a relaunch.
-                self.pinsRepo.addIfMissing(self.backendState.pinnedThreadIds)
-                let pinIds = self.pinsRepo.orderedThreadIds()
-                let pinnedSet = Set(pinIds)
-                var chatsCopy = self.chats
-                var changed = false
-                for i in chatsCopy.indices {
-                    guard let tid = chatsCopy[i].clawixThreadId else { continue }
-                    let shouldBe = !chatsCopy[i].isArchived && pinnedSet.contains(tid)
-                    if chatsCopy[i].isPinned != shouldBe {
-                        chatsCopy[i].isPinned = shouldBe
-                        changed = true
-                    }
-                }
-                if changed { self.chats = chatsCopy }
-                let threadToChat = Dictionary(uniqueKeysWithValues: self.chats.compactMap { chat in
-                    chat.clawixThreadId.map { ($0, chat.id) }
-                })
-                let nextPinned = pinIds.compactMap { threadToChat[$0] }
-                if nextPinned != self.pinnedOrder {
-                    self.pinnedOrder = nextPinned
-                }
-            }
-        }
-    }
-
     private func applyThreads(_ threads: [AgentThreadSummary]) {
-        // `backendState` is kept fresh by `backendStateWatcher` (see
-        // installBackendStateWatcher). Re-reading here on every apply
-        // would block the main thread on disk I/O for no benefit.
-        projects = mergedProjects()
+        if !clawJSSessionsCanonicalActive {
+            projects = mergedProjects()
+        }
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
         let pinIds = pinsRepo.orderedThreadIds()
         let pinnedSet = Set(pinIds)
@@ -2654,10 +2451,9 @@ final class AppState: ObservableObject {
     /// replacing the whole list. Used by per-project lazy loads so they
     /// don't wipe chats from other projects already in memory.
     private func mergeThreads(_ threads: [AgentThreadSummary]) {
-        // Same as `applyThreads`: `backendState` is kept current off
-        // the main thread by `backendStateWatcher`. Avoids the sync
-        // disk read that used to sit on the folder-expansion hot path.
-        projects = mergedProjects()
+        if !clawJSSessionsCanonicalActive {
+            projects = mergedProjects()
+        }
         let projectByPath = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0) })
         let pinIds = pinsRepo.orderedThreadIds()
         let pinnedSet = Set(pinIds)
@@ -2746,8 +2542,8 @@ final class AppState: ObservableObject {
     /// variant but parameterised on the thread id + cwd directly so
     /// wire chats coming from the daemon (which carry both via the
     /// `threadId` field added to `WireChat`) can be reconciled
-    /// against `BackendStateReader`'s hints without first being
-    /// re-wrapped as an `AgentThreadSummary`. Returns nil when the
+    /// without first being re-wrapped as an `AgentThreadSummary`.
+    /// Returns nil when the
     /// thread id is missing (legacy daemons that don't emit it yet),
     /// preserving the previous "stay in flat list" behaviour.
     private func rootPath(threadId: String?, cwd: String?, projectByPath: [String: Project]) -> String? {
@@ -3928,42 +3724,7 @@ final class AppState: ObservableObject {
                 scheduleGitInspection(chatId: chatId, cwd: cwd)
             }
         }
-        // Resolve the rollout path. The first-paint snapshot loaded
-        // from SQLite carries `rolloutPath == nil` until `applyThreads`
-        // arrives with the runtime's listing; for a chat the iPhone
-        // opens before that, fall back to scanning the on-disk
-        // sessions tree by `clawixThreadId`. Only mark the chat
-        // hydrated when we actually had a path to read from, otherwise
-        // a later `chatFromThread` would carry `historyHydrated: true`
-        // forward and freeze the chat with empty messages (the Mac UI
-        // hides this because the live stream populates the chat
-        // anyway, but the iPhone bridge only ships what the rollout
-        // reader returns).
-        var resolvedPath = chat.rolloutPath
-        if resolvedPath == nil, let tid = chat.clawixThreadId {
-            if blocking {
-                resolvedPath = rolloutPath(forThreadId: tid)
-                if let resolvedPath {
-                    mutateChat(id: chatId) { c in c.rolloutPath = resolvedPath }
-                }
-            } else {
-                Task.detached(priority: .userInitiated) { [weak self] in
-                    guard let resolvedPath = rolloutPath(forThreadId: tid) else { return }
-                    let result = RolloutReader.readTailWithStatus(path: resolvedPath)
-                    let messages = rolloutChatMessages(from: result)
-                    await MainActor.run { [weak self] in
-                        guard let self else { return }
-                        self.mutateChat(id: chatId) { c in c.rolloutPath = resolvedPath }
-                        self.applyRolloutMessages(
-                            messages,
-                            lastTurnInterrupted: result.lastTurnInterrupted,
-                            chatId: chatId
-                        )
-                    }
-                }
-            }
-        }
-        if let path = resolvedPath {
+        if let path = chat.rolloutPath {
             // Mac UI path (`blocking == false`): read off the main
             // actor AND only the trailing window of the JSONL so a
             // multi-hundred-MB rollout doesn't stall hydration. The
@@ -3990,6 +3751,8 @@ final class AppState: ObservableObject {
                     }
                 }
             }
+        } else if let threadId = chat.clawixThreadId {
+            hydrateHistoryFromClawJSSessions(threadId: threadId, chatId: chatId, blocking: blocking)
         }
         if let threadId = chat.clawixThreadId, let clawix {
             Task { @MainActor in
@@ -4025,6 +3788,41 @@ final class AppState: ObservableObject {
             rolloutChatMessages(from: result),
             lastTurnInterrupted: result.lastTurnInterrupted,
             chatId: chatId
+        )
+    }
+
+    private func hydrateHistoryFromClawJSSessions(threadId: String, chatId: UUID, blocking: Bool) {
+        let client = ClawJSSessionsClient.local()
+        if blocking {
+            // The bridge entry point is synchronous. Do not fall back to
+            // scanning Codex rollouts here; the daemon/session sidecar is the
+            // boundary. The async UI path below will hydrate the chat when it
+            // can reach the service.
+            return
+        }
+        Task { @MainActor [weak self] in
+            do {
+                let records = try await client.listMessages(sessionId: threadId)
+                let messages = records.map(Self.chatMessage(fromClawJSSessionMessage:))
+                self?.applyRolloutMessages(
+                    messages,
+                    lastTurnInterrupted: false,
+                    chatId: chatId
+                )
+            } catch {
+                self?.appendRuntimeStatusError("Could not load ClawJS session history: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private static func chatMessage(fromClawJSSessionMessage record: ClawJSSessionsClient.MessageRecord) -> ChatMessage {
+        let seconds = record.timestamp > 10_000_000_000 ? Double(record.timestamp) / 1000.0 : Double(record.timestamp)
+        return ChatMessage(
+            role: record.role == "user" ? .user : .assistant,
+            content: record.contentText,
+            reasoningText: "",
+            streamingFinished: record.streamingState != "streaming",
+            timestamp: Date(timeIntervalSince1970: seconds)
         )
     }
 
@@ -5299,11 +5097,6 @@ final class AppState: ObservableObject {
             return rolloutChatMessages(from: RolloutReader.readTailWithStatus(path: path))
         }
 
-        if let threadId = source.clawixThreadId,
-           let path = rolloutPath(forThreadId: threadId) {
-            return rolloutChatMessages(from: RolloutReader.readTailWithStatus(path: path))
-        }
-
         return []
     }
 
@@ -5863,9 +5656,6 @@ final class AppState: ObservableObject {
         projects.append(project)
         if !project.path.isEmpty {
             projectsRepo.upsert(project)
-            if SyncSettings.pushProjectsToCodex {
-                CodexStateWriter.upsertWorkspaceRoot(path: project.path, label: project.name)
-            }
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().createProject(.init(
                     displayName: project.name,
@@ -5885,9 +5675,6 @@ final class AppState: ObservableObject {
         if selectedProject?.id == project.id { selectedProject = project }
         if !project.path.isEmpty {
             projectsRepo.upsert(project)
-            if SyncSettings.pushProjectsToCodex {
-                CodexStateWriter.upsertWorkspaceRoot(path: project.path, label: project.name)
-            }
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().createProject(.init(
                     displayName: project.name,
@@ -5926,9 +5713,6 @@ final class AppState: ObservableObject {
         let projectPath = projects[idx].path
         if selectedProject?.id == id { selectedProject = projects[idx] }
         projectsRepo.rename(id: id, to: trimmed)
-        if SyncSettings.pushProjectsToCodex, !projectPath.isEmpty {
-            CodexStateWriter.renameWorkspaceLabel(path: projectPath, label: trimmed)
-        }
         if !projectPath.isEmpty {
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().createProject(.init(

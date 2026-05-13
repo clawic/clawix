@@ -739,7 +739,6 @@ private struct GeneralPage: View {
     @State private var questionNotify: Bool = true
     @State private var syncArchiveWithCodex: Bool = SyncSettings.syncArchiveWithCodex
     @State private var syncRenamesWithCodex: Bool = SyncSettings.syncRenamesWithCodex
-    @State private var pushProjectsToCodex: Bool = SyncSettings.pushProjectsToCodex
     @State private var autoReloadOnFocus: Bool = SyncSettings.autoReloadOnFocus
 
     enum WorkMode: Hashable { case coding, daily }
@@ -961,17 +960,6 @@ private struct GeneralPage: View {
                     )
                 )
                 CardDivider()
-                ToggleRow(
-                    title: "Push local projects to Codex",
-                    detail: "When enabled, projects you create in this app are written to Codex's global state file so other Codex apps see them. Default off to keep your local projects local.",
-                    isOn: Binding(
-                        get: { pushProjectsToCodex },
-                        set: { newValue in
-                            handlePushProjectsToggle(newValue)
-                        }
-                    )
-                )
-                CardDivider()
                 PinsSourceInfoRow()
             }
 
@@ -1054,27 +1042,6 @@ private struct GeneralPage: View {
         }
     }
 
-    /// Toggling Push projects ON triggers a confirmation dialog explaining
-    /// that we will write to a Codex-managed file. Cancelling reverts the
-    /// toggle to OFF so the @State stays in sync with the actual setting.
-    /// Toggling OFF is silent (no confirm, no Codex side-effect).
-    private func handlePushProjectsToggle(_ newValue: Bool) {
-        if !newValue {
-            pushProjectsToCodex = false
-            SyncSettings.pushProjectsToCodex = false
-            return
-        }
-        appState.pendingConfirmation = ConfirmationRequest(
-            title: "Sync local projects to Codex?",
-            body: "This will write your local projects to Codex's global state file at ~/.codex/.codex-global-state.json. Other Codex apps (CLI, Electron desktop) will see them. Existing Codex data is not affected.\n\nThis is a write to a file managed by Codex. We cannot guarantee that future Codex updates won't change its format.",
-            confirmLabel: "Enable sync",
-            isDestructive: false,
-            onConfirm: {
-                self.pushProjectsToCodex = true
-                SyncSettings.pushProjectsToCodex = true
-            }
-        )
-    }
 }
 
 private struct PinsSourceInfoRow: View {
@@ -1084,7 +1051,7 @@ private struct PinsSourceInfoRow: View {
                 Text("Pins")
                     .font(BodyFont.system(size: 13, wght: 500))
                     .foregroundColor(Color(white: 0.94))
-                Text("Pins are mirrored from Codex on each launch. Pinning or unpinning from this app applies locally and never writes back to Codex.")
+                Text("Pins are stored locally in Clawix and session state is synchronized through the ClawJS sessions adapter.")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Color(white: 0.55))
             }

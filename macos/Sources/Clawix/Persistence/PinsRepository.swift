@@ -46,12 +46,8 @@ final class PinsRepository {
     }
 
     /// Append every id in `threadIds` that is not already pinned, in the
-    /// order received, after the current last pinned row. Used to mirror
-    /// Codex's `pinned-thread-ids` into the local store on each read of
-    /// `~/.codex/.codex-global-state.json`. One-way sync: pins removed
-    /// in Codex stay locally pinned (the Mac app never writes back, and
-    /// removing on import would punish a user who explicitly pinned
-    /// here for an old chat). Returns the count of newly inserted rows.
+    /// order received, after the current last pinned row. Returns the
+    /// count of newly inserted rows.
     @discardableResult
     func addIfMissing(_ threadIds: [String]) -> Int {
         guard !threadIds.isEmpty else { return 0 }
