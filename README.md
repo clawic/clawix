@@ -4,13 +4,6 @@
 
 # Clawix
 
-> [!WARNING]
-> Clawix is currently experimental, pre-beta software. Expect severe breaking changes without notice, including changes to UI, configuration, persisted preferences and the integration contract with the underlying CLI.
->
-> Do not use Clawix in production. Do not connect it to sensitive systems, real user data, paid APIs, security-critical services, or important integrations.
->
-> Use it only for local evaluation, ideally on an isolated machine, VM, or sandboxed environment. Assume things can fail, data can break, and migrations may not exist yet.
-
 Clawix is a native agent app for Mac, iPhone, Android, Windows, and Web.
 Bring your own model (Claude, GPT, Gemini, DeepSeek, or run one locally),
 talk to it, give it skills and memory, let it drive your browser and your
@@ -112,6 +105,15 @@ Builds `macos/build/Clawix.app`. Uses the same `SIGN_IDENTITY` / `BUNDLE_ID` res
 For notarized DMG distribution use `macos/scripts/build_release_app.sh`, which reads `DEVELOPER_ID_IDENTITY` from the environment and applies hardened-runtime per-component signing in the order Sparkle requires. The full release pipeline (notarization, DMG, appcast generation, GitHub release upload) is private to the maintainer and not part of this public tree.
 
 The marketing version lives in [`macos/VERSION`](./macos/VERSION). It is the single source of truth: build scripts read it at compile time and inject it into `CFBundleShortVersionString`.
+
+## Experimental Status
+
+> [!WARNING]
+> Clawix is currently experimental, pre-beta software. Expect severe breaking changes without notice, including changes to UI, configuration, persisted preferences and the integration contract with the underlying CLI.
+>
+> Do not use Clawix in production. Do not connect it to sensitive systems, real user data, paid APIs, security-critical services, or important integrations.
+>
+> Use it only for local evaluation, ideally on an isolated machine, VM, or sandboxed environment. Assume things can fail, data can break, and migrations may not exist yet.
 
 ## Privacy guarantee for contributors
 
