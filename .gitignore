@@ -30,6 +30,6 @@ xcuserdata/
 .release-notes.md
 
 # Generated web SPA bundle copied into the bridged helper's SwiftPM resources.
-macos/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/**
-!macos/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/
-!macos/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/.gitkeep
+macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/**
+!macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/
+!macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/.gitkeep
