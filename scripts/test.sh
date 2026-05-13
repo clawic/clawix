@@ -29,6 +29,13 @@ policy_guard() {
     fi
   done
 
+  for lane_root in fast integration e2e host device fixtures live; do
+    if [[ ! -d "$ROOT_DIR/tests/$lane_root" ]]; then
+      echo "testing policy failed: missing tests/$lane_root" >&2
+      exit 1
+    fi
+  done
+
   for ignored in 'test-results/' 'artifacts/' 'coverage/' '.tmp/'; do
     if ! grep -Fqx "$ignored" "$ROOT_DIR/.gitignore"; then
       echo "testing policy failed: .gitignore must include $ignored" >&2
