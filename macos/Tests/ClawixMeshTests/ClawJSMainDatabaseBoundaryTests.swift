@@ -1,7 +1,7 @@
 import XCTest
 
 final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
-    func testClawixDoesNotReferenceClawJSMainDatabaseOutsideSupervisor() throws {
+    func testClawixDoesNotReferenceClawJSDataStoresOutsideSupervisor() throws {
         let testFile = URL(fileURLWithPath: #filePath)
         let sourcesRoot = testFile
             .deletingLastPathComponent()
@@ -13,6 +13,15 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
         ]
         let forbiddenTerms = [
             "clawjs.sqlite",
+            "sessions.sqlite",
+            "audio.sqlite",
+            "drive.sqlite",
+            "search.sqlite",
+            "runtime.sqlite",
+            "notify.sqlite",
+            "monitor.sqlite",
+            "infra.sqlite",
+            "ops.sqlite",
             "CLAWJS_MAIN_DB_PATH",
             "CLAWJS_MAIN_DATA_DIR",
             "CLAWJS_MAIN_FILES_DIR",
@@ -41,7 +50,7 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
         XCTAssertEqual(
             violations,
             [],
-            "Clawix must reach the ClawJS main data store through ClawJSServiceManager/CLI JSON, not direct SQLite paths."
+            "Clawix must reach ClawJS main/sidecar data stores through ClawJSServiceManager/CLI JSON, not direct SQLite paths."
         )
     }
 }
