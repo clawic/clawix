@@ -22,12 +22,35 @@ public enum SnapshotCache {
     public struct Payload: Codable {
         public let cacheKey: String?
         public let chats: [WireChat]
-        public let messagesByChat: [String: [WireMessage]]
+        public let messagesBySession: [String: [WireMessage]]
 
-        public init(cacheKey: String? = nil, chats: [WireChat], messagesByChat: [String: [WireMessage]]) {
+        public init(cacheKey: String? = nil, chats: [WireChat], messagesBySession: [String: [WireMessage]]) {
             self.cacheKey = cacheKey
             self.chats = chats
-            self.messagesByChat = messagesByChat
+            self.messagesBySession = messagesBySession
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case cacheKey
+            case chats
+            case messagesBySession
+            case messagesByChat
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            cacheKey = try container.decodeIfPresent(String.self, forKey: .cacheKey)
+            chats = try container.decode([WireChat].self, forKey: .chats)
+            messagesBySession = try container.decodeIfPresent([String: [WireMessage]].self, forKey: .messagesBySession)
+                ?? container.decodeIfPresent([String: [WireMessage]].self, forKey: .messagesByChat)
+                ?? [:]
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(cacheKey, forKey: .cacheKey)
+            try container.encode(chats, forKey: .chats)
+            try container.encode(messagesBySession, forKey: .messagesBySession)
         }
     }
 
@@ -94,10 +117,10 @@ public enum SnapshotCache {
             .map { $0 }
         let topIds = Set(topChats.map(\.id))
         var clipped: [String: [WireMessage]] = [:]
-        for (chatId, list) in messages where topIds.contains(chatId) {
-            clipped[chatId] = Array(list.suffix(maxMessagesPerChat))
+        for (sessionId, list) in messages where topIds.contains(sessionId) {
+            clipped[sessionId] = Array(list.suffix(maxMessagesPerChat))
         }
-        let payload = Payload(cacheKey: cacheKey, chats: topChats, messagesByChat: clipped)
+        let payload = Payload(cacheKey: cacheKey, chats: topChats, messagesBySession: clipped)
         guard let data = try? BridgeCoder.encoder.encode(payload) else { return }
         let tmp = url.appendingPathExtension("tmp")
         do {

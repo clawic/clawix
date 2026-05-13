@@ -1065,7 +1065,7 @@ final class BridgeStore {
         guard chats.isEmpty, messagesByChat.isEmpty else { return }
         guard let payload = SnapshotCache.load(cacheKey: snapshotCacheKey) else { return }
         chats = payload.chats
-        messagesByChat = payload.messagesByChat
+        messagesByChat = payload.messagesBySession
     }
 
     /// Schedule a persist of the current chats + messages snapshot

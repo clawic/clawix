@@ -743,12 +743,12 @@ final class AppState: ObservableObject {
         guard let deepLink = ClawixDeepLink.parse(url) else { return false }
         switch deepLink {
         case .chat(let token):
-            return openChatDeepLink(token)
+            return openSessionDeepLink(token)
         }
     }
 
     @discardableResult
-    private func openChatDeepLink(_ token: String) -> Bool {
+    private func openSessionDeepLink(_ token: String) -> Bool {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
 
@@ -1831,7 +1831,7 @@ final class AppState: ObservableObject {
             defaults.string(forKey: Self.launchRouteChatUuidKey)
         ]
         for token in tokens.compactMap({ $0 }) {
-            if openChatDeepLink(token) {
+            if openSessionDeepLink(token) {
                 return true
             }
         }
@@ -3337,7 +3337,7 @@ final class AppState: ObservableObject {
     func loadCachedSnapshot() {
         guard let payload = SnapshotCache.load() else { return }
         cachedWireChats = payload.chats
-        cachedWireMessagesByChat = payload.messagesByChat
+        cachedWireMessagesByChat = payload.messagesBySession
         if chats.isEmpty && archivedChats.isEmpty {
             // Fresh install / no SQLite: populate `chats` from the
             // snapshot. No animation; the user is staring at a launch
@@ -3345,7 +3345,7 @@ final class AppState: ObservableObject {
             let active: [Chat] = payload.chats.compactMap { wire in
                 guard !wire.isArchived else { return nil }
                 var c = chat(from: wire, old: nil)
-                if let cached = payload.messagesByChat[wire.id] {
+                if let cached = payload.messagesBySession[wire.id] {
                     c.messages = cached.compactMap { chatMessage(from: $0) }
                     c.historyHydrated = true
                 }
@@ -3354,7 +3354,7 @@ final class AppState: ObservableObject {
             let arch: [Chat] = payload.chats.compactMap { wire in
                 guard wire.isArchived else { return nil }
                 var c = chat(from: wire, old: nil)
-                if let cached = payload.messagesByChat[wire.id] {
+                if let cached = payload.messagesBySession[wire.id] {
                     c.messages = cached.compactMap { chatMessage(from: $0) }
                     c.historyHydrated = true
                 }
@@ -3367,7 +3367,7 @@ final class AppState: ObservableObject {
             // for those that match a snapshot entry; leave the rest
             // alone so the daemon can fill them in or the rollout
             // fallback can.
-            for (chatIdString, msgs) in payload.messagesByChat {
+            for (chatIdString, msgs) in payload.messagesBySession {
                 guard let id = UUID(uuidString: chatIdString) else { continue }
                 mutateChat(id: id) { c in
                     guard c.messages.isEmpty else { return }
@@ -3381,7 +3381,7 @@ final class AppState: ObservableObject {
         // an `oldestKnownId` to send. `hasMore` defaults to `false`
         // because we don't know yet; the daemon will refresh on
         // `messagesSnapshot`.
-        for (chatIdString, msgs) in payload.messagesByChat {
+        for (chatIdString, msgs) in payload.messagesBySession {
             guard let id = UUID(uuidString: chatIdString) else { continue }
             messagesPaginationByChat[id] = ChatPagination(
                 oldestKnownId: msgs.first?.id,
