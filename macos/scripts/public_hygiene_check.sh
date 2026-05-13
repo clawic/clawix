@@ -16,6 +16,10 @@ ROOT_DIR="$(dirname "$PROJECT_DIR")"        # repo root
 
 FAIL=0
 
+if [[ -x "$ROOT_DIR/scripts/doc_alignment_check.sh" ]]; then
+  "$ROOT_DIR/scripts/doc_alignment_check.sh"
+fi
+
 COMMON_GLOBS=(
   --glob '!**/.build/**'
   --glob '!**/build/**'
