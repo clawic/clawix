@@ -28,7 +28,7 @@ caches. For migrated domains, Clawix must not keep a second canonical store.
 Framework global data lives in:
 
 ```text
-~/Library/Application Support/Claw
+~/.claw
 ```
 
 Canonical workspace data lives in:
@@ -37,11 +37,14 @@ Canonical workspace data lives in:
 .claw/
 ```
 
-Host-local state lives in:
+Clawix host-operational state lives in:
 
 ```text
-~/Library/Application Support/<Host>
+~/.clawix
 ```
+
+Host GUI-only app state may use platform-native app data when it is not
+framework state.
 
 `.clawjs` is legacy compatibility only. New canonical workspace writes must use
 `.claw/`. Reads from `.clawjs` are allowed only inside explicit migration,
@@ -49,7 +52,7 @@ compatibility, or removal code.
 
 The detailed database and sidecar split is defined in
 `docs/data-storage-boundary.md`. In short: user-facing structured records go to
-`claw.sqlite`; high-churn service/runtime/index/blob state uses named sidecars;
+`core.sqlite`; high-churn service/runtime/search/blob state uses named sidecars;
 plaintext secrets never live in the main database.
 
 ## Host boundary

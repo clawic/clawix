@@ -37,7 +37,8 @@ require_snippet "CLAUDE.md" "docs/data-storage-boundary.md"
 require_snippet "CLAUDE.md" "docs/adr/0001-claw-framework-host-boundary.md"
 
 for snippet in \
-  "~/Library/Application Support/Claw" \
+  "~/.claw" \
+  "~/.clawix" \
   ".claw/" \
   "ClawHostKit" \
   "Claw.app" \
@@ -48,7 +49,7 @@ do
 done
 
 for snippet in \
-  "claw.sqlite" \
+  "core.sqlite" \
   "productivity.sqlite" \
   "vault.sqlite" \
   "runtime.sqlite" \
@@ -82,6 +83,8 @@ scan_forbidden() {
 scan_forbidden "stale Clawix-as-Codex-only description" "Native clients for the [\`codex\`](https://github.com/openai/codex) CLI"
 scan_forbidden "stale macOS Codex-only description" "Native macOS client (SwiftUI) for the \`codex\` CLI"
 scan_forbidden "stale framework storage root" "~/Library/Application Support/Clawix/clawjs"
+scan_forbidden "stale framework global root" "~/Library/Application Support/Claw"
+scan_forbidden "stale main database name" "claw.sqlite"
 
 if [[ "$FAIL" -ne 0 ]]; then
   exit 1
