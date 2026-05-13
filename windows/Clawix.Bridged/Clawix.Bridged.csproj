@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>Clawix.Bridged</RootNamespace>
-    <AssemblyName>clawix-bridged</AssemblyName>
+    <AssemblyName>clawix-bridge</AssemblyName>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
     <Description>Background daemon. Owns the Codex CLI subprocess and the bridge WebSocket server.</Description>

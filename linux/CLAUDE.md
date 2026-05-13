@@ -9,7 +9,7 @@ secrets, and launcher behavior.
 ## Stack
 
 - Tauri 2 (Rust shell) + SolidJS + TypeScript + Vite + TailwindCSS.
-- WebSocket client to `clawix-bridged` on `127.0.0.1:7778`, using the
+- WebSocket client to `clawix-bridge` on `127.0.0.1:24080`, using the
   bearer read from `~/.clawix/state/bridge-token`.
 - Local persistence: `rusqlite` on the Tauri side for chat history and
   preferences. The logical schema mirrors the Mac app's GRDB cache.
@@ -66,10 +66,10 @@ unit: `clawix-bridge.service`. The binary path can be overridden with
 this order:
 
 1. `$CLAWIX_BRIDGE_BIN`
-2. `~/.clawix/bin/clawix-bridged` (CLI npm install)
-3. `/usr/lib/clawix/clawix-bridged` (`.deb`)
-4. `/opt/clawix/clawix-bridged` (AppImage extract or `.deb` opt layout)
-5. `clawix-bridged` on `PATH`
+2. `~/.clawix/bin/clawix-bridge` (CLI npm install)
+3. `/usr/lib/clawix/clawix-bridge` (`.deb`)
+4. `/opt/clawix/clawix-bridge` (AppImage extract or `.deb` opt layout)
+5. `clawix-bridge` on `PATH`
 
 ## Versioning
 

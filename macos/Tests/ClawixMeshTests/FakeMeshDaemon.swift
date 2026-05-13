@@ -2,7 +2,7 @@ import Foundation
 import Network
 import ClawixCore
 
-/// Tiny in-process HTTP server that mimics the daemon's `/mesh/*`
+/// Tiny in-process HTTP server that mimics the daemon's `/v1/mesh/*`
 /// surface for unit tests. Boots on a random local port (so two
 /// concurrent test runs don't collide), routes incoming requests via
 /// a closure provided by the test, and tears down cleanly.
@@ -173,8 +173,8 @@ enum MeshTestFixtures {
             signingPublicKey: "AAA=",
             agreementPublicKey: "BBB=",
             endpoints: [
-                RemoteEndpoint(kind: "lan", host: "192.168.1.10", bridgePort: 7778, httpPort: 7779),
-                RemoteEndpoint(kind: "loopback", host: "127.0.0.1", bridgePort: 7778, httpPort: 7779)
+                RemoteEndpoint(kind: "lan", host: "192.168.1.10", bridgePort: 24080, httpPort: 24081),
+                RemoteEndpoint(kind: "loopback", host: "127.0.0.1", bridgePort: 24080, httpPort: 24081)
             ],
             capabilities: ["remote.job"]
         )
@@ -186,7 +186,7 @@ enum MeshTestFixtures {
             displayName: displayName,
             signingPublicKey: "PEER=",
             agreementPublicKey: "PEER2=",
-            endpoints: [RemoteEndpoint(kind: "linked", host: "10.0.0.5", bridgePort: 7778, httpPort: 7779)],
+            endpoints: [RemoteEndpoint(kind: "linked", host: "10.0.0.5", bridgePort: 24080, httpPort: 24081)],
             permissionProfile: .scoped,
             capabilities: ["remote.job"],
             lastSeenAt: Date(),

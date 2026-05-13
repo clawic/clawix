@@ -32,13 +32,13 @@ function bridgePlist(binaryPath, suiteName = 'clawix.bridge') {
     program: binaryPath,
     args: [],
     env: {
-      CLAWIX_BRIDGED_PORT: String(BRIDGE_PORT),
-      CLAWIX_BRIDGED_DEFAULTS_SUITE: suiteName,
+      CLAWIX_BRIDGE_PORT: String(BRIDGE_PORT),
+      CLAWIX_BRIDGE_DEFAULTS_SUITE: suiteName,
     },
     keepAlive: true,
     runAtLoad: true,
-    stdoutPath: path.join(STATE_DIR, 'clawix-bridged.out'),
-    stderrPath: path.join(STATE_DIR, 'clawix-bridged.err'),
+    stdoutPath: path.join(STATE_DIR, 'clawix-bridge.out'),
+    stderrPath: path.join(STATE_DIR, 'clawix-bridge.err'),
   }, null, 2);
 }
 

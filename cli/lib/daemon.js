@@ -36,7 +36,7 @@ function start() {
   const binary = resolveBridged();
   if (!fs.existsSync(binary)) {
     throw new Error(
-      `clawix-bridged not found at ${binary}.\n` +
+      `clawix-bridge not found at ${binary}.\n` +
       `Run \`clawix uninstall\` followed by \`npm install -g clawix\` to repair.`
     );
   }

@@ -72,7 +72,7 @@ ${ui.bold('paths')}
   ~/.clawix/state/bridge-status.json          ${ui.dim('daemon heartbeat')}
   ~/Library/LaunchAgents/clawix.bridge.plist  ${ui.dim('launchd registration')}
   ~/Library/Preferences/clawix.bridge.plist   ${ui.dim('pairing bearer + short code')}
-  /tmp/clawix-bridged.{out,err}               ${ui.dim('daemon logs')}
+  /tmp/clawix-bridge.{out,err}               ${ui.dim('daemon logs')}
 `);
 }
 

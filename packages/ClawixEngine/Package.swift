@@ -2,7 +2,7 @@
 import PackageDescription
 
 // ClawixEngine is the runtime that hosts the bridge between any Clawix
-// front-end (the macOS GUI today, the `clawix-bridged` LaunchAgent /
+// front-end (the macOS GUI today, the `clawix-bridge` LaunchAgent /
 // systemd user-service daemon, the iOS companion, the Linux Tauri GUI)
 // and the Clawix backend subprocess. It owns the wire types
 // (`Chat`, `ChatMessage`, …), the `PairingService`, the WebSocket server,

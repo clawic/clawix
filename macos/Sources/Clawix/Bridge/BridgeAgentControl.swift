@@ -8,12 +8,12 @@ import AppKit
 /// same `clawix.bridge` agent the standalone CLI installs.
 enum BridgeAgentControl {
 
-    /// Loopback port the bundled `clawix-bridged` helper binds to.
+    /// Loopback port the bundled `clawix-bridge` helper binds to.
     /// Mirrors `BRIDGE_PORT` in `cli/lib/platform.js`. Both have to
     /// agree because the iOS pairing payload bakes this in.
-    static let bridgePort: UInt16 = 7778
+    static let bridgePort: UInt16 = 24080
 
-    /// LaunchAgent label of the bundled `clawix-bridged` daemon. Same
+    /// LaunchAgent label of the bundled `clawix-bridge` daemon. Same
     /// label the npm CLI registers, so installing both does not leak
     /// a second daemon. Mirrors `BRIDGE_LABEL` in `cli/lib/platform.js`.
     static let bridgeLabel = "clawix.bridge"
@@ -23,7 +23,7 @@ enum BridgeAgentControl {
     /// `cli/lib/platform.js`. Keep in sync.
     static let menubarLabel = "clawix.menubar"
 
-    private static let bridgeStderrPath = "/tmp/clawix-bridged.err"
+    private static let bridgeStderrPath = "/tmp/clawix-bridge.err"
 
     static func openLogs() {
         let url = URL(fileURLWithPath: bridgeStderrPath)
@@ -79,7 +79,7 @@ enum BridgeAgentControl {
         FileManager.default.fileExists(atPath: menubarPlistPath)
     }
 
-    /// True if the bundled `clawix-bridged` helper LaunchAgent is loaded.
+    /// True if the bundled `clawix-bridge` helper LaunchAgent is loaded.
     /// We only restore the CLI menubar at GUI shutdown if the daemon is
     /// still alive; otherwise an empty CLI menubar would just sit there
     /// saying "Bridge: not running".

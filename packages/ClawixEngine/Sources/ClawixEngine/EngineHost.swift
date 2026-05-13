@@ -60,7 +60,7 @@ public struct BridgeChatSnapshot: Equatable, Sendable {
 public protocol EngineHost: AnyObject {
 
     /// Most recent chats snapshot. Used for the immediate reply to
-    /// `listChats` / `openChat` before the publisher emits a new tick.
+    /// `listSessions` / `openSession` before the publisher emits a new tick.
     var bridgeChatsCurrent: [BridgeChatSnapshot] { get }
 
     /// Stream of chat snapshots. The bus throttles + diffs internally,
@@ -97,7 +97,7 @@ public protocol EngineHost: AnyObject {
     /// that read rollouts lazily should hydrate the history off disk
     /// here so subsequent `bridgeChatsCurrent` lookups already carry
     /// the full message list.
-    func handleHydrateHistory(chatId: UUID)
+    func handleHydrateHistory(sessionId: UUID)
 
     /// Inbound `sendPrompt` from a client. The host is responsible for
     /// routing the prompt into the agent (the macOS GUI delegates to
@@ -105,35 +105,35 @@ public protocol EngineHost: AnyObject {
     /// image payloads the daemon writes to disk and forwards as
     /// `localImage` user input items; hosts that don't support them
     /// can ignore the array.
-    func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment])
+    func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment])
 
-    /// Inbound `newChat` from a client. The host creates a fresh chat
+    /// Inbound `newSession` from a client. The host creates a fresh chat
     /// with the supplied UUID, appends the user message, and kicks off
     /// the agent. Pre-minting the id on the client side lets the iPhone
     /// route to the chat detail screen synchronously while the round
     /// trip is in flight.
-    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment])
+    func handleNewSession(sessionId: UUID, text: String, attachments: [WireAttachment])
 
     /// Inbound `interruptTurn` from a client. Stop the in-flight turn
-    /// for `chatId` if any: clear `hasActiveTurn`, mark the turn
+    /// for `sessionId` if any: clear `hasActiveTurn`, mark the turn
     /// interrupted so late deltas are dropped, and ask the backend to
     /// cancel. Mirrors the Mac composer's stop button.
-    func handleInterruptTurn(chatId: UUID)
+    func handleInterruptTurn(sessionId: UUID)
 
     // MARK: - v2 desktop-only hooks (LaunchAgent daemon will override)
 
     /// Edit a previous user message in place and re-run the turn.
     /// Default impl is a no-op so v1 hosts (the in-process server in
     /// the GUI) can ignore desktop-only frames.
-    func handleEditPrompt(chatId: UUID, messageId: UUID, text: String)
+    func handleEditPrompt(sessionId: UUID, messageId: UUID, text: String)
 
-    func handleArchiveChat(chatId: UUID, archived: Bool)
-    func handlePinChat(chatId: UUID, pinned: Bool)
+    func handleArchiveSession(sessionId: UUID, archived: Bool)
+    func handlePinSession(sessionId: UUID, pinned: Bool)
 
-    /// Rename `chatId` to `title`. Daemon writes through to the runtime
+    /// Rename `sessionId` to `title`. Daemon writes through to the runtime
     /// (Codex `thread/name/set`) and republishes the chat snapshot so
     /// every subscriber sees the new name.
-    func handleRenameChat(chatId: UUID, title: String)
+    func handleRenameSession(sessionId: UUID, title: String)
 
     /// Mint a new pairing payload (token + QR JSON) and return it via
     /// the completion. The bridge translates this into a
@@ -231,14 +231,14 @@ public protocol EngineHost: AnyObject {
 // MARK: - Default no-op impls for desktop-only hooks
 
 public extension EngineHost {
-    func handleEditPrompt(chatId: UUID, messageId: UUID, text: String) {}
-    func handleArchiveChat(chatId: UUID, archived: Bool) {}
-    func handlePinChat(chatId: UUID, pinned: Bool) {}
-    func handleRenameChat(chatId: UUID, title: String) {}
+    func handleEditPrompt(sessionId: UUID, messageId: UUID, text: String) {}
+    func handleArchiveSession(sessionId: UUID, archived: Bool) {}
+    func handlePinSession(sessionId: UUID, pinned: Bool) {}
+    func handleRenameSession(sessionId: UUID, title: String) {}
     func handlePairingStart() -> (qrJson: String, bearer: String)? { nil }
     func currentProjects() -> [WireProject] { [] }
-    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {}
-    func handleInterruptTurn(chatId: UUID) {}
+    func handleNewSession(sessionId: UUID, text: String, attachments: [WireAttachment]) {}
+    func handleInterruptTurn(sessionId: UUID) {}
 
     /// In-process hosts come up instantly: nothing to bootstrap, the
     /// chat store is already populated from disk before the bridge

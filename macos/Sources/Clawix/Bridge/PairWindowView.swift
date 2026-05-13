@@ -4,7 +4,7 @@ import CoreImage.CIFilterBuiltins
 import AppKit
 import ClawixEngine
 
-private let daemonBridgePort: UInt16 = 7778
+private let daemonBridgePort: UInt16 = 24080
 
 struct PairWindowView: View {
     @State private var payload: String = ""

@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  *
  * Cap: 30 chats (sorted by recency) × 80 trailing messages per chat.
  * The first paint after cold-start hydrates from this file before the
- * WebSocket has time to land a fresh `chatsSnapshot`.
+ * WebSocket has time to land a fresh `sessionsSnapshot`.
  *
  * Atomic writes: serialize to `<file>.tmp` then `renameTo` so a crash
  * mid-write can never leave a partial file.
@@ -18,7 +18,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SnapshotPayload(
     val schemaVersion: Int,
-    val chats: List<WireChat>,
+    val sessions: List<WireChat>,
     val messagesByChat: Map<String, List<WireMessage>>,
 )
 

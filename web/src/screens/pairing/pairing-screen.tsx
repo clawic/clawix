@@ -86,7 +86,7 @@ export function PairingScreen() {
           Open Clawix on your Mac, enable the background bridge in Settings, and copy the short
           code. Or just open this page from{" "}
           <code className="font-mono" style={{ fontSize: 12, color: "var(--color-fg)" }}>
-            localhost:7778
+            localhost:24080
           </code>{" "}
           and we will pair automatically.
         </p>

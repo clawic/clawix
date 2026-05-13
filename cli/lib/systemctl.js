@@ -34,10 +34,10 @@ After=network.target
 
 [Service]
 ExecStart=${binaryPath}
-Environment=CLAWIX_BRIDGED_PORT=${BRIDGE_PORT}
-Environment=CLAWIX_BRIDGED_DEFAULTS_SUITE=${suiteName}
-StandardOutput=append:/tmp/clawix-bridged.out
-StandardError=append:/tmp/clawix-bridged.err
+Environment=CLAWIX_BRIDGE_PORT=${BRIDGE_PORT}
+Environment=CLAWIX_BRIDGE_DEFAULTS_SUITE=${suiteName}
+StandardOutput=append:/tmp/clawix-bridge.out
+StandardError=append:/tmp/clawix-bridge.err
 Restart=on-failure
 RestartSec=5
 

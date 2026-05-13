@@ -32,7 +32,7 @@ COMMON_GLOBS=(
   # mirrored copy ship with hashed filenames and minified bundles that are
   # uninteresting for hygiene scans.
   --glob '!**/web/dist/**'
-  --glob '!**/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist/**'
+  --glob '!**/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/**'
 )
 
 scan() {

@@ -57,49 +57,49 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
                 GetStrOpt("deviceName"),
                 Get<ClientKind?>("clientKind")),
 
-            "listChats" => new BridgeBody.ListChats(),
-            "openChat" => new BridgeBody.OpenChat(GetStr("chatId"), GetIntOpt("limit")),
+            "listSessions" => new BridgeBody.ListSessions(),
+            "openSession" => new BridgeBody.OpenSession(GetStr("sessionId"), GetIntOpt("limit")),
 
             "loadOlderMessages" => new BridgeBody.LoadOlderMessages(
-                GetStr("chatId"),
+                GetStr("sessionId"),
                 GetStr("beforeMessageId"),
                 GetInt("limit")),
 
-            "sendPrompt" => new BridgeBody.SendPrompt(GetStr("chatId"), GetStr("text"), GetAttachments()),
-            "newChat" => new BridgeBody.NewChat(GetStr("chatId"), GetStr("text"), GetAttachments()),
-            "interruptTurn" => new BridgeBody.InterruptTurn(GetStr("chatId")),
+            "sendPrompt" => new BridgeBody.SendPrompt(GetStr("sessionId"), GetStr("text"), GetAttachments()),
+            "newSession" => new BridgeBody.NewSession(GetStr("sessionId"), GetStr("text"), GetAttachments()),
+            "interruptTurn" => new BridgeBody.InterruptTurn(GetStr("sessionId")),
             "authOk" => new BridgeBody.AuthOk(GetStrOpt("macName")),
             "authFailed" => new BridgeBody.AuthFailed(GetStr("reason")),
             "versionMismatch" => new BridgeBody.VersionMismatch(GetInt("serverVersion")),
-            "chatsSnapshot" => new BridgeBody.ChatsSnapshot(GetReq<List<WireChat>>("chats")),
+            "sessionsSnapshot" => new BridgeBody.SessionsSnapshot(GetReq<List<WireChat>>("sessions")),
             "chatUpdated" => new BridgeBody.ChatUpdated(GetReq<WireChat>("chat")),
 
             "messagesSnapshot" => new BridgeBody.MessagesSnapshot(
-                GetStr("chatId"),
+                GetStr("sessionId"),
                 GetReq<List<WireMessage>>("messages"),
                 GetBoolOpt("hasMore")),
 
             "messagesPage" => new BridgeBody.MessagesPage(
-                GetStr("chatId"),
+                GetStr("sessionId"),
                 GetReq<List<WireMessage>>("messages"),
                 GetBool("hasMore")),
 
-            "messageAppended" => new BridgeBody.MessageAppended(GetStr("chatId"), GetReq<WireMessage>("message")),
+            "messageAppended" => new BridgeBody.MessageAppended(GetStr("sessionId"), GetReq<WireMessage>("message")),
 
             "messageStreaming" => new BridgeBody.MessageStreaming(
-                GetStr("chatId"),
+                GetStr("sessionId"),
                 GetStr("messageId"),
                 GetStr("content"),
                 GetStr("reasoningText"),
                 GetBool("finished")),
 
             "errorEvent" => new BridgeBody.ErrorEvent(GetStr("code"), GetStr("message")),
-            "editPrompt" => new BridgeBody.EditPrompt(GetStr("chatId"), GetStr("messageId"), GetStr("text")),
-            "archiveChat" => new BridgeBody.ArchiveChat(GetStr("chatId")),
-            "unarchiveChat" => new BridgeBody.UnarchiveChat(GetStr("chatId")),
-            "pinChat" => new BridgeBody.PinChat(GetStr("chatId")),
-            "unpinChat" => new BridgeBody.UnpinChat(GetStr("chatId")),
-            "renameChat" => new BridgeBody.RenameChat(GetStr("chatId"), GetStr("title")),
+            "editPrompt" => new BridgeBody.EditPrompt(GetStr("sessionId"), GetStr("messageId"), GetStr("text")),
+            "archiveSession" => new BridgeBody.ArchiveSession(GetStr("sessionId")),
+            "unarchiveSession" => new BridgeBody.UnarchiveSession(GetStr("sessionId")),
+            "pinSession" => new BridgeBody.PinSession(GetStr("sessionId")),
+            "unpinSession" => new BridgeBody.UnpinSession(GetStr("sessionId")),
+            "renameSession" => new BridgeBody.RenameSession(GetStr("sessionId"), GetStr("title")),
             "pairingStart" => new BridgeBody.PairingStart(),
             "listProjects" => new BridgeBody.ListProjects(),
             "pairingPayload" => new BridgeBody.PairingPayload(GetStr("qrJson"), GetStr("bearer")),

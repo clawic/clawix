@@ -252,8 +252,8 @@ async function main() {
   }
 
   const binNames = process.platform === 'win32'
-    ? ['clawix-bridged.exe', 'clawix-menubar.exe']
-    : ['clawix-bridged', 'clawix-menubar'];
+    ? ['clawix-bridge.exe', 'clawix-menubar.exe']
+    : ['clawix-bridge', 'clawix-menubar'];
   for (const name of binNames) {
     const p = path.join(stagingDir, name);
     if (!fs.existsSync(p)) continue;

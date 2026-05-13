@@ -85,7 +85,7 @@ export default function SettingsView() {
                 <input
                   type="number"
                   class="w-32 px-3 py-1.5 rounded-lg bg-zinc-100/70 dark:bg-zinc-800/40 text-sm"
-                  value={7778}
+                  value={24080}
                   onChange={(e) => persist("daemon.port", e.currentTarget.value)}
                 />
               </Field>

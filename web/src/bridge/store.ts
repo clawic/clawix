@@ -3,7 +3,7 @@
  * `clawix/ios/Sources/Clawix/Bridge/BridgeStore.swift`. Listens to the
  * BridgeClient and re-derives the UI state from incoming frames.
  *
- * Design contract: chats, messages and projects come from the daemon on
+ * Design contract: sessions, messages and projects come from the daemon on
  * every connection. We do NOT persist them locally. The only thing the
  * web SPA persists is the pairing token (so a refresh doesn't re-pair).
  */
@@ -40,9 +40,11 @@ export interface BridgeStoreState {
   connection: ConnectionState;
   bridge: BridgeRuntime;
   macName: string | null;
+  /** UI vocabulary. Wire frames call these sessions. */
   chats: WireChat[];
+  sessions: WireChat[];
   projects: WireProject[];
-  /** Indexed by chatId. Only populated for chats the user has opened. */
+  /** Indexed by sessionId. Only populated for sessions the user has opened. */
   messagesByChat: Record<string, WireMessage[]>;
   /** True when more older messages can be fetched. */
   hasMoreByChat: Record<string, boolean>;
@@ -56,17 +58,19 @@ export interface BridgeStoreState {
   attach(token: string): void;
   detach(): void;
 
+  openSession(sessionId: string, useInitialPage?: boolean): void;
   openChat(chatId: string, useInitialPage?: boolean): void;
-  loadOlderMessages(chatId: string): void;
-  sendPrompt(chatId: string, text: string, attachments?: WireMessage["attachments"]): void;
+  loadOlderMessages(sessionId: string): void;
+  sendPrompt(sessionId: string, text: string, attachments?: WireMessage["attachments"]): void;
+  newSession(text: string, attachments?: WireMessage["attachments"]): string;
   newChat(text: string, attachments?: WireMessage["attachments"]): string;
-  interruptTurn(chatId: string): void;
-  editPrompt(chatId: string, messageId: string, text: string): void;
-  archive(chatId: string): void;
-  unarchive(chatId: string): void;
-  pin(chatId: string): void;
-  unpin(chatId: string): void;
-  rename(chatId: string, title: string): void;
+  interruptTurn(sessionId: string): void;
+  editPrompt(sessionId: string, messageId: string, text: string): void;
+  archive(sessionId: string): void;
+  unarchive(sessionId: string): void;
+  pin(sessionId: string): void;
+  unpin(sessionId: string): void;
+  rename(sessionId: string, title: string): void;
   listProjects(): void;
   readFile(path: string): void;
   requestAudio(audioId: string): void;
@@ -92,6 +96,7 @@ export const useBridgeStore = create<BridgeStoreState>()(
     bridge: { state: "booting", chatCount: 0 },
     macName: null,
     chats: [],
+    sessions: [],
     projects: [],
     messagesByChat: {},
     hasMoreByChat: {},
@@ -122,6 +127,7 @@ export const useBridgeStore = create<BridgeStoreState>()(
         client: null,
         connection: { kind: "idle" },
         chats: [],
+        sessions: [],
         projects: [],
         messagesByChat: {},
         hasMoreByChat: {},
@@ -131,56 +137,62 @@ export const useBridgeStore = create<BridgeStoreState>()(
       });
     },
 
-    openChat(chatId, useInitialPage = true) {
+    openSession(sessionId, useInitialPage = true) {
       const client = get().client;
       if (!client) return;
       client.send({
-        type: "openChat",
-        chatId,
+        type: "openSession",
+        sessionId,
         ...(useInitialPage ? { limit: BRIDGE_INITIAL_PAGE_LIMIT } : {}),
       });
     },
+    openChat(chatId, useInitialPage = true) {
+      get().openSession(chatId, useInitialPage);
+    },
 
-    loadOlderMessages(chatId) {
+    loadOlderMessages(sessionId) {
       const client = get().client;
-      const msgs = get().messagesByChat[chatId];
+      const msgs = get().messagesByChat[sessionId];
       if (!client || !msgs || msgs.length === 0) return;
       const beforeMessageId = msgs[0]!.id;
       client.send({
         type: "loadOlderMessages",
-        chatId,
+        sessionId,
         beforeMessageId,
         limit: BRIDGE_OLDER_PAGE_LIMIT,
       });
     },
 
-    sendPrompt(chatId, text, attachments = []) {
+    sendPrompt(sessionId, text, attachments = []) {
       const client = get().client;
       if (!client) return;
-      client.send({ type: "sendPrompt", chatId, text, attachments });
+      client.send({ type: "sendPrompt", sessionId, text, attachments });
     },
 
-    newChat(text, attachments = []) {
+    newSession(text, attachments = []) {
       const client = get().client;
-      const chatId = uuidv4();
-      if (!client) return chatId;
-      client.send({ type: "newChat", chatId, text, attachments });
-      return chatId;
+      const sessionId = uuidv4();
+      if (!client) return sessionId;
+      client.send({ type: "newSession", sessionId, text, attachments });
+      return sessionId;
+    },
+    newChat(text, attachments = []) {
+      return get().newSession(text, attachments);
     },
 
-    interruptTurn(chatId) {
-      get().client?.send({ type: "interruptTurn", chatId });
+    interruptTurn(sessionId) {
+      get().client?.send({ type: "interruptTurn", sessionId });
     },
 
-    editPrompt(chatId, messageId, text) {
-      get().client?.send({ type: "editPrompt", chatId, messageId, text });
+    editPrompt(sessionId, messageId, text) {
+      get().client?.send({ type: "editPrompt", sessionId, messageId, text });
     },
 
-    archive(chatId) { get().client?.send({ type: "archiveChat", chatId }); },
-    unarchive(chatId) { get().client?.send({ type: "unarchiveChat", chatId }); },
-    pin(chatId) { get().client?.send({ type: "pinChat", chatId }); },
-    unpin(chatId) { get().client?.send({ type: "unpinChat", chatId }); },
-    rename(chatId, title) { get().client?.send({ type: "renameChat", chatId, title }); },
+    archive(sessionId) { get().client?.send({ type: "archiveSession", sessionId }); },
+    unarchive(sessionId) { get().client?.send({ type: "unarchiveSession", sessionId }); },
+    pin(sessionId) { get().client?.send({ type: "pinSession", sessionId }); },
+    unpin(sessionId) { get().client?.send({ type: "unpinSession", sessionId }); },
+    rename(sessionId, title) { get().client?.send({ type: "renameSession", sessionId, title }); },
 
     listProjects() { get().client?.send({ type: "listProjects" }); },
     readFile(path) { get().client?.send({ type: "readFile", path }); },
@@ -246,41 +258,41 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
       get().requestRateLimits();
       get().listProjects();
       break;
-    case "chatsSnapshot":
-      set({ chats: sortChats(frame.chats) });
+    case "sessionsSnapshot":
+      setSessions(set, sortSessions(frame.sessions));
       break;
     case "chatUpdated": {
-      const { chats } = get();
-      const idx = chats.findIndex((c) => c.id === frame.chat.id);
-      const next = idx >= 0 ? chats.with(idx, frame.chat) : [...chats, frame.chat];
-      set({ chats: sortChats(next) });
+      const { sessions } = get();
+      const idx = sessions.findIndex((c) => c.id === frame.chat.id);
+      const next = idx >= 0 ? sessions.with(idx, frame.chat) : [...sessions, frame.chat];
+      setSessions(set, sortSessions(next));
       break;
     }
     case "messagesSnapshot": {
-      const messagesByChat = { ...get().messagesByChat, [frame.chatId]: frame.messages };
-      const hasMoreByChat = { ...get().hasMoreByChat, [frame.chatId]: frame.hasMore ?? false };
+      const messagesByChat = { ...get().messagesByChat, [frame.sessionId]: frame.messages };
+      const hasMoreByChat = { ...get().hasMoreByChat, [frame.sessionId]: frame.hasMore ?? false };
       set({ messagesByChat, hasMoreByChat });
       break;
     }
     case "messagesPage": {
-      const cur = get().messagesByChat[frame.chatId] ?? [];
+      const cur = get().messagesByChat[frame.sessionId] ?? [];
       const merged = [...frame.messages, ...cur];
-      const messagesByChat = { ...get().messagesByChat, [frame.chatId]: dedupeById(merged) };
-      const hasMoreByChat = { ...get().hasMoreByChat, [frame.chatId]: frame.hasMore };
+      const messagesByChat = { ...get().messagesByChat, [frame.sessionId]: dedupeById(merged) };
+      const hasMoreByChat = { ...get().hasMoreByChat, [frame.sessionId]: frame.hasMore };
       set({ messagesByChat, hasMoreByChat });
       break;
     }
     case "messageAppended": {
-      const cur = get().messagesByChat[frame.chatId] ?? [];
+      const cur = get().messagesByChat[frame.sessionId] ?? [];
       const messagesByChat = {
         ...get().messagesByChat,
-        [frame.chatId]: dedupeById([...cur, frame.message]),
+        [frame.sessionId]: dedupeById([...cur, frame.message]),
       };
       set({ messagesByChat });
       break;
     }
     case "messageStreaming": {
-      const cur = get().messagesByChat[frame.chatId] ?? [];
+      const cur = get().messagesByChat[frame.sessionId] ?? [];
       const idx = cur.findIndex((m) => m.id === frame.messageId);
       let next: WireMessage[];
       if (idx >= 0) {
@@ -307,7 +319,7 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
           } satisfies WireMessage,
         ];
       }
-      set({ messagesByChat: { ...get().messagesByChat, [frame.chatId]: next } });
+      set({ messagesByChat: { ...get().messagesByChat, [frame.sessionId]: next } });
       break;
     }
     case "errorEvent":
@@ -369,13 +381,17 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
   }
 }
 
-function sortChats(chats: WireChat[]): WireChat[] {
-  return [...chats].sort((a, b) => {
+function sortSessions(sessions: WireChat[]): WireChat[] {
+  return [...sessions].sort((a, b) => {
     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
     const aTs = a.lastMessageAt ? Date.parse(a.lastMessageAt) : Date.parse(a.createdAt);
     const bTs = b.lastMessageAt ? Date.parse(b.lastMessageAt) : Date.parse(b.createdAt);
     return bTs - aTs;
   });
+}
+
+function setSessions(set: Set, sessions: WireChat[]): void {
+  set({ sessions, chats: sessions });
 }
 
 function dedupeById<T extends { id: string }>(items: T[]): T[] {

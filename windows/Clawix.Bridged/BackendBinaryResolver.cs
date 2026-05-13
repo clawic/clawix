@@ -9,7 +9,7 @@ public static class BackendBinaryResolver
 {
     public static string? Resolve()
     {
-        var overridePath = Environment.GetEnvironmentVariable("CLAWIX_BRIDGED_BACKEND_PATH");
+        var overridePath = Environment.GetEnvironmentVariable("CLAWIX_BRIDGE_BACKEND_PATH");
         if (!string.IsNullOrEmpty(overridePath) && File.Exists(overridePath)) return overridePath;
 
         foreach (var candidate in CandidatePaths())

@@ -123,7 +123,7 @@ public final class BridgeSession: Identifiable {
         // peer that connected during boot sees `syncing → ready`.
         send(BridgeFrame(.authOk(macName: HostIdentity.localizedName)))
         send(bus.currentBridgeStateFrame())
-        send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
+        send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
         BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")
     }
 

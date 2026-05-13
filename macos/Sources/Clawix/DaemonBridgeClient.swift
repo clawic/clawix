@@ -57,7 +57,7 @@ final class DaemonBridgeClient {
         // transcript on every chat tap was the dominant cost behind
         // the "transcript reanchors visibly while building from the
         // top" symptom on Mac, even over loopback.
-        send(.openChat(chatId: chatId.uuidString, limit: bridgeInitialPageLimit))
+        send(.openSession(sessionId: chatId.uuidString, limit: bridgeInitialPageLimit))
     }
 
     /// Fetch the next page of older messages for `chatId`. The cursor
@@ -67,26 +67,26 @@ final class DaemonBridgeClient {
     @discardableResult
     func loadOlderMessages(chatId: UUID, beforeMessageId: String) -> Bool {
         send(.loadOlderMessages(
-            chatId: chatId.uuidString,
+            sessionId: chatId.uuidString,
             beforeMessageId: beforeMessageId,
             limit: bridgeOlderPageLimit
         ))
     }
 
     func sendPrompt(chatId: UUID, text: String, attachments: [WireAttachment] = []) {
-        send(.sendPrompt(chatId: chatId.uuidString, text: text, attachments: attachments))
+        send(.sendPrompt(sessionId: chatId.uuidString, text: text, attachments: attachments))
     }
 
     func archiveChat(_ chatId: UUID) {
-        send(.archiveChat(chatId: chatId.uuidString))
+        send(.archiveSession(sessionId: chatId.uuidString))
     }
 
     func unarchiveChat(_ chatId: UUID) {
-        send(.unarchiveChat(chatId: chatId.uuidString))
+        send(.unarchiveSession(sessionId: chatId.uuidString))
     }
 
     func interruptTurn(chatId: UUID) {
-        send(.interruptTurn(chatId: chatId.uuidString))
+        send(.interruptTurn(sessionId: chatId.uuidString))
     }
 
     private func handle(_ state: NWConnection.State) {
@@ -133,13 +133,13 @@ final class DaemonBridgeClient {
         switch frame.body {
         case .authOk:
             isAuthenticated = true
-            send(.listChats)
+            send(.listSessions)
             // The daemon owns the Codex backend in this mode, so the GUI
             // can no longer pull rate limits via its own ClawixService.
             // Ask the daemon for the current snapshot; subsequent
             // changes flow back as `rateLimitsUpdated` pushes.
             send(.requestRateLimits)
-        case .chatsSnapshot(let chats):
+        case .sessionsSnapshot(let chats):
             if chats.isEmpty,
                bridgeState != "ready",
                let appState,

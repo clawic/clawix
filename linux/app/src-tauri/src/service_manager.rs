@@ -1,4 +1,4 @@
-// Manages the systemd user unit that hosts `clawix-bridged`. Same unit
+// Manages the systemd user unit that hosts `clawix-bridge`. Same unit
 // is shared between the npm CLI install, the AppImage, and the .deb so
 // only one daemon runs even if all three are installed. The path to the
 // binary is overridable via the `CLAWIX_BRIDGE_BIN` env var.
@@ -69,7 +69,7 @@ fn write_unit_if_missing() -> Result<()> {
         return Ok(());
     }
     let bin = daemon_bin()
-        .ok_or_else(|| anyhow::anyhow!("clawix-bridged binary not found"))?;
+        .ok_or_else(|| anyhow::anyhow!("clawix-bridge binary not found"))?;
     let unit = format!(
         r#"[Unit]
 Description=Clawix Bridge Daemon
@@ -77,7 +77,7 @@ After=network.target
 
 [Service]
 ExecStart={bin}
-Environment=CLAWIX_BRIDGED_PORT=7778
+Environment=CLAWIX_BRIDGE_PORT=24080
 Restart=on-failure
 RestartSec=5
 
@@ -105,15 +105,15 @@ fn daemon_bin() -> Option<PathBuf> {
         }
     }
     let candidates = [
-        dirs::home_dir().map(|h| h.join(".clawix/bin/clawix-bridged")),
-        Some(PathBuf::from("/usr/lib/clawix/clawix-bridged")),
-        Some(PathBuf::from("/opt/clawix/clawix-bridged")),
-        Some(PathBuf::from("/usr/local/bin/clawix-bridged")),
+        dirs::home_dir().map(|h| h.join(".clawix/bin/clawix-bridge")),
+        Some(PathBuf::from("/usr/lib/clawix/clawix-bridge")),
+        Some(PathBuf::from("/opt/clawix/clawix-bridge")),
+        Some(PathBuf::from("/usr/local/bin/clawix-bridge")),
     ];
     for c in candidates.into_iter().flatten() {
         if c.exists() {
             return Some(c);
         }
     }
-    which::which("clawix-bridged").ok()
+    which::which("clawix-bridge").ok()
 }

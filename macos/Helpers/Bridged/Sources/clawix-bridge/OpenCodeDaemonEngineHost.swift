@@ -73,7 +73,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
     }
 
     func bootstrap() async {
-        BridgedLog.write("opencode bootstrap-start")
+        BridgeLog.write("opencode bootstrap-start")
         stateSubject.send(.syncing)
         do {
             let client = try await OpenCodeClient.start(defaults: defaults, environment: environment)
@@ -84,15 +84,15 @@ final class OpenCodeDaemonEngineHost: EngineHost {
             stateSubject.send(.ready)
         } catch {
             let message = OpenCodeClient.shortReason(error)
-            BridgedLog.write("opencode bootstrap failed \(message)")
+            BridgeLog.write("opencode bootstrap failed \(message)")
             stateSubject.send(.error(message))
         }
     }
 
-    func handleHydrateHistory(chatId: UUID) {
-        let chatIdString = chatId.uuidString
+    func handleHydrateHistory(sessionId: UUID) {
+        let chatIdString = sessionId.uuidString
         guard let sessionID = sessionByChat[chatIdString], let client else { return }
-        BridgedLog.write("opencode hydrate chat=\(chatIdString) session=\(sessionID)")
+        BridgeLog.write("opencode hydrate chat=\(chatIdString) session=\(sessionID)")
         Task { @MainActor in
             do {
                 let payload = try await client.messages(sessionID: sessionID)
@@ -114,9 +114,9 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         }
     }
 
-    func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment]) {
-        let chatIdString = chatId.uuidString
-        BridgedLog.write("opencode send chat=\(chatIdString) textChars=\(text.count) attachments=\(attachments.count)")
+    func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment]) {
+        let chatIdString = sessionId.uuidString
+        BridgeLog.write("opencode send chat=\(chatIdString) textChars=\(text.count) attachments=\(attachments.count)")
         Task { @MainActor in
             do {
                 guard let client else { throw OpenCodeError.notRunning }
@@ -152,12 +152,12 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         }
     }
 
-    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {
-        handleSendPrompt(chatId: chatId, text: text, attachments: attachments)
+    func handleNewSession(sessionId: UUID, text: String, attachments: [WireAttachment]) {
+        handleSendPrompt(sessionId: sessionId, text: text, attachments: attachments)
     }
 
-    func handleInterruptTurn(chatId: UUID) {
-        let chatIdString = chatId.uuidString
+    func handleInterruptTurn(sessionId: UUID) {
+        let chatIdString = sessionId.uuidString
         guard let sessionID = sessionByChat[chatIdString], let client else { return }
         if let assistantId = activeAssistantIdBySession[sessionID] {
             let messages = existingMessages(chatId: chatIdString)
@@ -182,13 +182,13 @@ final class OpenCodeDaemonEngineHost: EngineHost {
             do {
                 _ = try await client.abort(sessionID: sessionID)
             } catch {
-                BridgedLog.write("opencode abort failed \(OpenCodeClient.shortReason(error))")
+                BridgeLog.write("opencode abort failed \(OpenCodeClient.shortReason(error))")
             }
         }
     }
 
-    func handleArchiveChat(chatId: UUID, archived: Bool) {
-        let chatIdString = chatId.uuidString
+    func handleArchiveSession(sessionId: UUID, archived: Bool) {
+        let chatIdString = sessionId.uuidString
         guard let sessionID = sessionByChat[chatIdString], let client else { return }
         Task { @MainActor in
             do {
@@ -200,10 +200,10 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         }
     }
 
-    func handleRenameChat(chatId: UUID, title: String) {
+    func handleRenameSession(sessionId: UUID, title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let chatIdString = chatId.uuidString
+        let chatIdString = sessionId.uuidString
         guard let sessionID = sessionByChat[chatIdString], let client else { return }
         updateChat(chatId: chatIdString) { $0.title = trimmed }
         Task { @MainActor in
@@ -241,7 +241,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
             let snapshots = sessions.map(snapshot(from:))
             chatsSubject.send(snapshots)
             lastChatsPublishedAt = Date()
-            BridgedLog.write("opencode session-list ok count=\(sessions.count)")
+            BridgeLog.write("opencode session-list ok count=\(sessions.count)")
         } catch {
             stateSubject.send(.error("Couldn't load OpenCode chats: \(OpenCodeClient.shortReason(error))"))
         }
@@ -319,7 +319,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
                     self?.handle(event)
                 }
             } catch {
-                BridgedLog.write("opencode event stream ended \(OpenCodeClient.shortReason(error))")
+                BridgeLog.write("opencode event stream ended \(OpenCodeClient.shortReason(error))")
             }
         }
     }
@@ -733,7 +733,7 @@ private final class OpenCodeClient {
         error.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty, let text = String(data: data, encoding: .utf8), !text.isEmpty else { return }
-            BridgedLog.write("opencode stderr \(text.trimmingCharacters(in: .whitespacesAndNewlines))")
+            BridgeLog.write("opencode stderr \(text.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
         try proc.run()
         let client = OpenCodeClient(

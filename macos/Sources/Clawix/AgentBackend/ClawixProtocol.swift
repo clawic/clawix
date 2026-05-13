@@ -173,7 +173,7 @@ struct ThreadStartParams: Encodable {
 /// active entry refers to a parametrizable template instance — the
 /// daemon substitutes them while rendering the body.
 struct ActiveSkill: Encodable {
-    /// Stable slug as it appears under `~/.clawjs/skills/<kind>/<slug>/`.
+    /// Stable slug as it appears under `~/.claw/skills/<kind>/<slug>/`.
     let slug: String
     /// "personality" | "procedure" | "snippet" | "role". Helps the daemon
     /// place the rendered fragment in the right slot of the compiled
@@ -253,7 +253,7 @@ typealias ThreadResumeResult = ThreadStartResult
 /// protocol accepts a small discriminated union of input items. We
 /// support `text` for the prompt body and `localImage` for inline image
 /// attachments materialized to temp files (the daemon's wire protocol
-/// uses the same shape, see `clawix-bridged`'s mirror enum). Encoding
+/// uses the same shape, see `clawix-bridge`'s mirror enum). Encoding
 /// is hand-rolled because Codable's default derivation would emit both
 /// fields for every case.
 enum TurnStartUserInput: Encodable {

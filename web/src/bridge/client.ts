@@ -55,7 +55,7 @@ interface BridgeBootstrap {
 }
 
 function defaultEndpoint(): string {
-  if (typeof window === "undefined") return "ws://localhost:7778/ws";
+  if (typeof window === "undefined") return "ws://localhost:24080/ws";
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   const bootstrap = (window as Window & { __CLAWIX_BRIDGE__?: BridgeBootstrap }).__CLAWIX_BRIDGE__;
   if (bootstrap?.wsPort) {
@@ -65,7 +65,7 @@ function defaultEndpoint(): string {
   // Vite dev server proxies /ws to the daemon, so same-origin works in dev.
   // Embedded mode injects the bootstrap snippet, so we never reach this branch
   // when served from the daemon.
-  const host = window.location.host || "localhost:7778";
+  const host = window.location.host || "localhost:24080";
   return `${proto}//${host}/ws`;
 }
 

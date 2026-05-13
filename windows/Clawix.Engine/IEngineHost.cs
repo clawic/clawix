@@ -8,7 +8,7 @@ namespace Clawix.Engine;
 /// can drive a <see cref="BridgeServer"/> implements this: the daemon
 /// (<c>Clawix.Bridged</c>) for production, the GUI (<c>Clawix.App</c>)
 /// for in-process mode, and a stub for tests. Keeps the bridge
-/// transport agnostic of who owns the chats.
+/// transport agnostic of who owns the sessions.
 /// </summary>
 public interface IEngineHost
 {
@@ -16,35 +16,35 @@ public interface IEngineHost
 
     BridgeRuntimeState BridgeStateCurrent { get; }
 
-    IReadOnlyList<WireChat> BridgeChatsCurrent { get; }
+    IReadOnlyList<WireChat> BridgeSessionsCurrent { get; }
 
     event Action<BridgeRuntimeState>? BridgeStateChanged;
 
-    event Action<IReadOnlyList<WireChat>>? BridgeChatsChanged;
+    event Action<IReadOnlyList<WireChat>>? BridgeSessionsChanged;
 
     event Action<WireChat>? ChatChanged;
 
     event Action<MessagesEvent>? MessagesChanged;
 
-    // ===== Chat actions =====
+    // ===== Session actions =====
 
-    Task HandleSendPromptAsync(string chatId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
+    Task HandleSendPromptAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
 
-    Task HandleNewChatAsync(string chatId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
+    Task HandleNewSessionAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
 
-    Task HandleInterruptTurnAsync(string chatId, CancellationToken ct);
+    Task HandleInterruptTurnAsync(string sessionId, CancellationToken ct);
 
-    Task<IReadOnlyList<WireMessage>> HandleOpenChatAsync(string chatId, int? limit, CancellationToken ct);
+    Task<IReadOnlyList<WireMessage>> HandleOpenSessionAsync(string sessionId, int? limit, CancellationToken ct);
 
-    Task<(IReadOnlyList<WireMessage> Messages, bool HasMore)> HandleLoadOlderMessagesAsync(string chatId, string beforeMessageId, int limit, CancellationToken ct);
+    Task<(IReadOnlyList<WireMessage> Messages, bool HasMore)> HandleLoadOlderMessagesAsync(string sessionId, string beforeMessageId, int limit, CancellationToken ct);
 
-    Task HandleEditPromptAsync(string chatId, string messageId, string text, CancellationToken ct);
+    Task HandleEditPromptAsync(string sessionId, string messageId, string text, CancellationToken ct);
 
-    Task HandleArchiveAsync(string chatId, bool archived, CancellationToken ct);
+    Task HandleArchiveAsync(string sessionId, bool archived, CancellationToken ct);
 
-    Task HandlePinAsync(string chatId, bool pinned, CancellationToken ct);
+    Task HandlePinAsync(string sessionId, bool pinned, CancellationToken ct);
 
-    Task HandleRenameAsync(string chatId, string title, CancellationToken ct);
+    Task HandleRenameAsync(string sessionId, string title, CancellationToken ct);
 
     // ===== Projects + files =====
 
@@ -74,7 +74,7 @@ public interface IEngineHost
 /// </summary>
 public abstract record MessagesEvent
 {
-    public required string ChatId { get; init; }
+    public required string SessionId { get; init; }
 
     public sealed record Snapshot : MessagesEvent
     {

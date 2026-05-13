@@ -49,7 +49,7 @@ mkdir -p "$APPDIR/usr/lib/clawix" "$APPDIR/usr/bin" "$APPDIR/usr/share/applicati
 
 echo "[release] building daemon (release)…"
 ( cd "$DAEMON_DIR" && swift build --configuration release )
-cp "$DAEMON_DIR/.build/release/clawix-bridged" "$APPDIR/usr/lib/clawix/clawix-bridged"
+cp "$DAEMON_DIR/.build/release/clawix-bridge" "$APPDIR/usr/lib/clawix/clawix-bridge"
 
 echo "[release] building frontend (release)…"
 ( cd "$APP_DIR" && npm install --silent && npm run build )

@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwind from "@tailwindcss/vite";
 import path from "node:path";
 
-const DAEMON_HOST = process.env.CLAWIX_BRIDGED_HOST ?? "localhost";
-const DAEMON_PORT = process.env.CLAWIX_BRIDGED_PORT ?? "7778";
+const DAEMON_HOST = process.env.CLAWIX_BRIDGE_HOST ?? "localhost";
+const DAEMON_PORT = process.env.CLAWIX_BRIDGE_PORT ?? "24080";
 
 export default defineConfig({
   plugins: [react(), tailwind()],

@@ -58,7 +58,7 @@ import Foundation
 ///
 /// v6 (2026-05): Skills. Surfaces the unified Skills library
 /// (kind: personality | procedure | snippet | role, agentskills.io
-/// compatible; central source of truth at `~/.clawjs/skills/`). The
+/// compatible; central source of truth at `~/.claw/skills/`). The
 /// daemon owns the SKILL.md filesystem and the SQLite index; clients
 /// browse, search, view, edit, activate/deactivate per scope, and
 /// trigger sync to external agent dirs (Codex CLI, HermesAgent,
@@ -77,10 +77,10 @@ import Foundation
 /// payloads — `WireAgent`, `WirePersonality`, `WireSkillCollection`,
 /// `WireConnection`, `WireAgentApprovalRequest`,
 /// `WireAgentAuditEntry` — surface the four new top-level entities
-/// the macOS app manages locally at `~/.clawjs/`. The frame surface
+/// the macOS app manages locally at `~/.claw/`. The frame surface
 /// for CRUD is filesystem-backed on the client side; cross-device
 /// sync of agent records happens via filesystem-level mechanisms
-/// (iCloud Drive / Syncthing / git on the `~/.clawjs/` tree), so the
+/// (iCloud Drive / Syncthing / git on the `~/.claw/` tree), so the
 /// v8 bump is for the additive Wire model rather than for a new
 /// daemon RPC. Old peers receiving a frame whose `WireChat` carries
 /// an unknown `agentId` keep parsing because the field decodes via
@@ -88,7 +88,7 @@ import Foundation
 public let bridgeSchemaVersion: Int = 8
 
 /// Default count of trailing messages the server returns on
-/// `openChat(limit:)` when the client opts into pagination. 60 covers
+/// `openSession(limit:)` when the client opts into pagination. 60 covers
 /// the last ~6-10 turns including their tool-call timelines and inline
 /// attachments without burning the first paint on a big chat. Older
 /// pages stream in via `loadOlderMessages` as the user scrolls up.
@@ -104,7 +104,7 @@ public let bridgeOlderPageLimit: Int = 40
 /// Kind of client speaking on a session. Affects which frame types the
 /// server is willing to dispatch:
 ///
-/// - `.ios` is the read-mostly mobile companion: list/open chats and
+/// - `.ios` is the read-mostly mobile companion: list/open sessions and
 ///   send prompts, but not the chat-mutation grab-bag.
 /// - `.desktop` is the macOS GUI talking to the LaunchAgent daemon. It
 ///   gets the full surface (edit, archive, pin, branch switch, project
@@ -152,62 +152,62 @@ public struct BridgeFrame: Codable, Equatable, Sendable {
 public enum BridgeBody: Equatable, Sendable {
     // MARK: - v1 outbound (iPhone -> Mac)
     case auth(token: String, deviceName: String?, clientKind: ClientKind?)
-    case listChats
+    case listSessions
     /// Open a chat for streaming. `limit` is optional: when set, the
     /// server replies with the trailing N messages and a `hasMore`
     /// flag so the client can lazily fetch older history via
     /// `loadOlderMessages`. Old clients omit the field and receive the
     /// full transcript like before; old servers receiving a frame with
     /// `limit` ignore it because the field decodes via `decodeIfPresent`.
-    case openChat(chatId: String, limit: Int?)
+    case openSession(sessionId: String, limit: Int?)
     /// Pull a window of older messages anchored at the oldest message
     /// the client currently holds. `beforeMessageId` is exclusive
     /// (clients have it already), `limit` is how many earlier rows to
     /// fetch. Server replies with `messagesPage`.
-    case loadOlderMessages(chatId: String, beforeMessageId: String, limit: Int)
+    case loadOlderMessages(sessionId: String, beforeMessageId: String, limit: Int)
     /// Carries optional inline attachments alongside the prompt. The
     /// daemon writes each one to a turn-scoped temp file and forwards
     /// the resulting paths to Codex as `localImage` user input items.
     /// Old peers that don't know about attachments omit the field; old
     /// servers receiving a frame with attachments fall back to text
     /// because the field is decoded with `decodeIfPresent ?? []`.
-    case sendPrompt(chatId: String, text: String, attachments: [WireAttachment])
+    case sendPrompt(sessionId: String, text: String, attachments: [WireAttachment])
     /// New conversation kicked off from the iPhone FAB. The client
     /// pre-mints the UUID so it can route to the chat detail screen
     /// before the round trip lands; the Mac creates a chat with that
     /// exact id, appends the user message, and runs the turn. The bus
     /// auto-subscribes the new id so streaming deltas flow back without
-    /// an extra `openChat`.
-    case newChat(chatId: String, text: String, attachments: [WireAttachment])
-    /// Stop the active turn for `chatId` if any. Mirrors the macOS
+    /// an extra `openSession`.
+    case newSession(sessionId: String, text: String, attachments: [WireAttachment])
+    /// Stop the active turn for `sessionId` if any. Mirrors the macOS
     /// composer's stop button: marks the turn interrupted, clears
     /// `hasActiveTurn` on the chat, and asks the backend to cancel.
     /// No-op when the chat has no in-flight turn.
-    case interruptTurn(chatId: String)
+    case interruptTurn(sessionId: String)
 
     // MARK: - v1 inbound (Mac -> iPhone)
     case authOk(macName: String?)
     case authFailed(reason: String)
     case versionMismatch(serverVersion: Int)
-    case chatsSnapshot(chats: [WireChat])
+    case sessionsSnapshot(sessions: [WireChat])
     case chatUpdated(chat: WireChat)
     /// Replace the client's view of a chat with the server's. `hasMore`
     /// is optional and only populated when the server honoured a paged
-    /// `openChat` (`limit != nil`); a `nil` value means "old server
+    /// `openSession` (`limit != nil`); a `nil` value means "old server
     /// path, no pagination metadata, treat as no older history". When
     /// the client receives this it MUST reset its pagination state for
-    /// `chatId` because every snapshot is the new baseline.
-    case messagesSnapshot(chatId: String, messages: [WireMessage], hasMore: Bool?)
+    /// `sessionId` because every snapshot is the new baseline.
+    case messagesSnapshot(sessionId: String, messages: [WireMessage], hasMore: Bool?)
     /// Reply to `loadOlderMessages`. `messages` is the slice prior to
     /// the cursor (chronological order, oldest first); `hasMore` is
     /// `false` when the slice reaches the start of the chat.
-    case messagesPage(chatId: String, messages: [WireMessage], hasMore: Bool)
-    case messageAppended(chatId: String, message: WireMessage)
+    case messagesPage(sessionId: String, messages: [WireMessage], hasMore: Bool)
+    case messageAppended(sessionId: String, message: WireMessage)
     /// Carries the full current state of the message (content +
     /// reasoning) every tick, not deltas. The iPhone replaces. Trades
     /// a few extra KB on LAN for no append/delta correctness bugs.
     case messageStreaming(
-        chatId: String,
+        sessionId: String,
         messageId: String,
         content: String,
         reasoningText: String,
@@ -216,28 +216,28 @@ public enum BridgeBody: Equatable, Sendable {
     case errorEvent(code: String, message: String)
 
     // MARK: - v2 outbound (desktop client -> daemon)
-    /// Edit a prompt in place and re-run the turn. `chatId` is the
+    /// Edit a prompt in place and re-run the turn. `sessionId` is the
     /// chat, `messageId` is the user message being rewritten, `text`
     /// is the new content. Daemon truncates the rollout at this turn,
     /// applies the new prompt, and re-streams.
-    case editPrompt(chatId: String, messageId: String, text: String)
+    case editPrompt(sessionId: String, messageId: String, text: String)
     /// Toggle the archived flag. Sticks across relaunches because the
     /// archive state lives in the GRDB database the daemon owns.
-    case archiveChat(chatId: String)
-    case unarchiveChat(chatId: String)
+    case archiveSession(sessionId: String)
+    case unarchiveSession(sessionId: String)
     /// Toggle the pinned flag.
-    case pinChat(chatId: String)
-    case unpinChat(chatId: String)
+    case pinSession(sessionId: String)
+    case unpinSession(sessionId: String)
     /// Rename a chat. Daemon writes the new name to the runtime
     /// (`thread/name/set` JSON-RPC against Codex) and echoes the
     /// updated `WireChat` back via `chatUpdated` so every other
     /// connected client sees the new title.
-    case renameChat(chatId: String, title: String)
+    case renameSession(sessionId: String, title: String)
     /// Ask the daemon for a fresh pairing payload (token + QR JSON).
     /// Used by `PairWindowView` in the GUI.
     case pairingStart
     /// Ask the daemon for the current list of projects derived from
-    /// chats + manual additions. Reply is `projectsSnapshot`.
+    /// sessions + manual additions. Reply is `projectsSnapshot`.
     case listProjects
     /// Ask the daemon to read a text file off disk and ship its
     /// contents back so the iPhone can render the same Markdown / raw
@@ -303,7 +303,7 @@ public enum BridgeBody: Equatable, Sendable {
 
     /// Host-side bootstrap state. `state` is one of `booting`,
     /// `syncing`, `ready`, `error`. `chatCount` is the size of the
-    /// chats list as the host currently knows it (useful while in
+    /// sessions list as the host currently knows it (useful while in
     /// `ready` to confirm the snapshot is non-empty by design, not by
     /// race). `message` carries a short reason when state is `error`,
     /// or a hint for `syncing` (e.g. "loading rollouts"); nil otherwise.
@@ -338,7 +338,7 @@ public enum BridgeBody: Equatable, Sendable {
 
     // MARK: - v6 outbound (client -> daemon)
     /// List skills the daemon has, optionally pre-filtered. The daemon
-    /// scans `~/.clawjs/skills/` (single source of truth) and any
+    /// scans `~/.claw/skills/` (single source of truth) and any
     /// configured `external_dirs` (read-only discovery). Reply is
     /// `skillsListResult`.
     case skillsList(filter: WireSkillListFilter?)
@@ -357,19 +357,19 @@ public enum BridgeBody: Equatable, Sendable {
     case skillsUpdateResult(slug: String, error: String?)
     /// Remove a skill. The daemon deletes the directory, drops index
     /// rows, removes any sync-target symlinks pointing at it, and
-    /// strips it from every active scope so chats with it on don't
+    /// strips it from every active scope so sessions with it on don't
     /// carry a ghost reference.
     case skillsRemove(slug: String)
     case skillsRemoveResult(slug: String, error: String?)
     /// Toggle a skill on at the given scope. The daemon updates
-    /// `~/.clawjs/state.json` and emits `skillsActiveChanged`. Param
+    /// `~/.claw/state.json` and emits `skillsActiveChanged`. Param
     /// overrides for parametrizable templates ride along as JSON.
     case skillsActivate(slug: String, scopeTag: String, paramsJSON: String?)
     case skillsDeactivate(slug: String, scopeTag: String)
     /// Trigger a re-sync to external agent dirs. `targets` is a list
     /// of registered target ids (e.g. ["codex", "hermes"]); empty
     /// means "all". The daemon walks each skill, materializes
-    /// `metadata.clawjs.syncTo` into symlinks (or copies if mode is
+    /// `metadata.claw.syncTo` into symlinks (or copies if mode is
     /// copy), and streams progress via `skillsSyncProgress`.
     case skillsSync(targets: [String])
     case skillsSyncProgress(target: String, processed: Int, total: Int, error: String?)
@@ -387,7 +387,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// per-scope endpoint when it exists) and re-render their chip
     /// bars / active toggles. Sent on activate/deactivate, on
     /// successful create/update/remove that touched an active scope,
-    /// and on filesystem-watch events from `~/.clawjs/skills/`.
+    /// and on filesystem-watch events from `~/.claw/skills/`.
     case skillsActiveChanged(scopeTag: String)
 
     // MARK: - v7 audio catalog (outbound: client -> daemon)
@@ -437,16 +437,16 @@ public enum BridgeBody: Equatable, Sendable {
     private var legacyTypeTag: String {
         switch self {
         case .auth:               return "auth"
-        case .listChats:          return "listChats"
-        case .openChat:           return "openChat"
+        case .listSessions:          return "listSessions"
+        case .openSession:           return "openSession"
         case .loadOlderMessages:  return "loadOlderMessages"
         case .sendPrompt:         return "sendPrompt"
-        case .newChat:            return "newChat"
+        case .newSession:            return "newSession"
         case .interruptTurn:      return "interruptTurn"
         case .authOk:             return "authOk"
         case .authFailed:         return "authFailed"
         case .versionMismatch:    return "versionMismatch"
-        case .chatsSnapshot:      return "chatsSnapshot"
+        case .sessionsSnapshot:      return "sessionsSnapshot"
         case .chatUpdated:        return "chatUpdated"
         case .messagesSnapshot:   return "messagesSnapshot"
         case .messagesPage:       return "messagesPage"
@@ -454,11 +454,11 @@ public enum BridgeBody: Equatable, Sendable {
         case .messageStreaming:   return "messageStreaming"
         case .errorEvent:         return "errorEvent"
         case .editPrompt:         return "editPrompt"
-        case .archiveChat:        return "archiveChat"
-        case .unarchiveChat:      return "unarchiveChat"
-        case .pinChat:            return "pinChat"
-        case .unpinChat:          return "unpinChat"
-        case .renameChat:         return "renameChat"
+        case .archiveSession:        return "archiveSession"
+        case .unarchiveSession:      return "unarchiveSession"
+        case .pinSession:            return "pinSession"
+        case .unpinSession:          return "unpinSession"
+        case .renameSession:         return "renameSession"
         case .pairingStart:       return "pairingStart"
         case .pairingPayload:     return "pairingPayload"
         case .listProjects:       return "listProjects"
@@ -528,9 +528,9 @@ public enum BridgeBody: Equatable, Sendable {
 
     private enum FlatKeys: String, CodingKey {
         case token, deviceName, clientKind
-        case chatId, text, messageId, title
+        case sessionId, text, messageId, title
         case macName, reason, serverVersion
-        case chats, chat, messages, message
+        case sessions, chat, messages, message
         case content, reasoningText, finished
         case code
         case qrJson, bearer
@@ -567,52 +567,52 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encode(token, forKey: .token)
             try c.encodeIfPresent(deviceName, forKey: .deviceName)
             try c.encodeIfPresent(clientKind, forKey: .clientKind)
-        case .listChats:
+        case .listSessions:
             break
-        case .openChat(let chatId, let limit):
-            try c.encode(chatId, forKey: .chatId)
+        case .openSession(let sessionId, let limit):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encodeIfPresent(limit, forKey: .limit)
-        case .loadOlderMessages(let chatId, let beforeMessageId, let limit):
-            try c.encode(chatId, forKey: .chatId)
+        case .loadOlderMessages(let sessionId, let beforeMessageId, let limit):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(beforeMessageId, forKey: .beforeMessageId)
             try c.encode(limit, forKey: .limit)
-        case .sendPrompt(let chatId, let text, let attachments):
-            try c.encode(chatId, forKey: .chatId)
+        case .sendPrompt(let sessionId, let text, let attachments):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(text, forKey: .text)
             if !attachments.isEmpty {
                 try c.encode(attachments, forKey: .attachments)
             }
-        case .newChat(let chatId, let text, let attachments):
-            try c.encode(chatId, forKey: .chatId)
+        case .newSession(let sessionId, let text, let attachments):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(text, forKey: .text)
             if !attachments.isEmpty {
                 try c.encode(attachments, forKey: .attachments)
             }
-        case .interruptTurn(let chatId):
-            try c.encode(chatId, forKey: .chatId)
+        case .interruptTurn(let sessionId):
+            try c.encode(sessionId, forKey: .sessionId)
         case .authOk(let macName):
             try c.encodeIfPresent(macName, forKey: .macName)
         case .authFailed(let reason):
             try c.encode(reason, forKey: .reason)
         case .versionMismatch(let serverVersion):
             try c.encode(serverVersion, forKey: .serverVersion)
-        case .chatsSnapshot(let chats):
-            try c.encode(chats, forKey: .chats)
+        case .sessionsSnapshot(let sessions):
+            try c.encode(sessions, forKey: .sessions)
         case .chatUpdated(let chat):
             try c.encode(chat, forKey: .chat)
-        case .messagesSnapshot(let chatId, let messages, let hasMore):
-            try c.encode(chatId, forKey: .chatId)
+        case .messagesSnapshot(let sessionId, let messages, let hasMore):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(messages, forKey: .messages)
             try c.encodeIfPresent(hasMore, forKey: .hasMore)
-        case .messagesPage(let chatId, let messages, let hasMore):
-            try c.encode(chatId, forKey: .chatId)
+        case .messagesPage(let sessionId, let messages, let hasMore):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(messages, forKey: .messages)
             try c.encode(hasMore, forKey: .hasMore)
-        case .messageAppended(let chatId, let message):
-            try c.encode(chatId, forKey: .chatId)
+        case .messageAppended(let sessionId, let message):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(message, forKey: .message)
-        case .messageStreaming(let chatId, let messageId, let content, let reasoningText, let finished):
-            try c.encode(chatId, forKey: .chatId)
+        case .messageStreaming(let sessionId, let messageId, let content, let reasoningText, let finished):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(messageId, forKey: .messageId)
             try c.encode(content, forKey: .content)
             try c.encode(reasoningText, forKey: .reasoningText)
@@ -620,15 +620,15 @@ public enum BridgeBody: Equatable, Sendable {
         case .errorEvent(let code, let message):
             try c.encode(code, forKey: .code)
             try c.encode(message, forKey: .message)
-        case .editPrompt(let chatId, let messageId, let text):
-            try c.encode(chatId, forKey: .chatId)
+        case .editPrompt(let sessionId, let messageId, let text):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(messageId, forKey: .messageId)
             try c.encode(text, forKey: .text)
-        case .archiveChat(let chatId), .unarchiveChat(let chatId),
-             .pinChat(let chatId), .unpinChat(let chatId):
-            try c.encode(chatId, forKey: .chatId)
-        case .renameChat(let chatId, let title):
-            try c.encode(chatId, forKey: .chatId)
+        case .archiveSession(let sessionId), .unarchiveSession(let sessionId),
+             .pinSession(let sessionId), .unpinSession(let sessionId):
+            try c.encode(sessionId, forKey: .sessionId)
+        case .renameSession(let sessionId, let title):
+            try c.encode(sessionId, forKey: .sessionId)
             try c.encode(title, forKey: .title)
         case .pairingStart, .listProjects:
             break
@@ -890,63 +890,63 @@ public enum BridgeBody: Equatable, Sendable {
                 deviceName: try c.decodeIfPresent(String.self, forKey: .deviceName),
                 clientKind: try c.decodeIfPresent(ClientKind.self, forKey: .clientKind)
             )
-        case "listChats":
-            return .listChats
-        case "openChat":
-            return .openChat(
-                chatId: try c.decode(String.self, forKey: .chatId),
+        case "listSessions":
+            return .listSessions
+        case "openSession":
+            return .openSession(
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 limit: try c.decodeIfPresent(Int.self, forKey: .limit)
             )
         case "loadOlderMessages":
             return .loadOlderMessages(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 beforeMessageId: try c.decode(String.self, forKey: .beforeMessageId),
                 limit: try c.decode(Int.self, forKey: .limit)
             )
         case "sendPrompt":
             return .sendPrompt(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 text: try c.decode(String.self, forKey: .text),
                 attachments: try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
             )
-        case "newChat":
-            return .newChat(
-                chatId: try c.decode(String.self, forKey: .chatId),
+        case "newSession":
+            return .newSession(
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 text: try c.decode(String.self, forKey: .text),
                 attachments: try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
             )
         case "interruptTurn":
-            return .interruptTurn(chatId: try c.decode(String.self, forKey: .chatId))
+            return .interruptTurn(sessionId: try c.decode(String.self, forKey: .sessionId))
         case "authOk":
             return .authOk(macName: try c.decodeIfPresent(String.self, forKey: .macName))
         case "authFailed":
             return .authFailed(reason: try c.decode(String.self, forKey: .reason))
         case "versionMismatch":
             return .versionMismatch(serverVersion: try c.decode(Int.self, forKey: .serverVersion))
-        case "chatsSnapshot":
-            return .chatsSnapshot(chats: try c.decode([WireChat].self, forKey: .chats))
+        case "sessionsSnapshot":
+            return .sessionsSnapshot(sessions: try c.decode([WireChat].self, forKey: .sessions))
         case "chatUpdated":
             return .chatUpdated(chat: try c.decode(WireChat.self, forKey: .chat))
         case "messagesSnapshot":
             return .messagesSnapshot(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 messages: try c.decode([WireMessage].self, forKey: .messages),
                 hasMore: try c.decodeIfPresent(Bool.self, forKey: .hasMore)
             )
         case "messagesPage":
             return .messagesPage(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 messages: try c.decode([WireMessage].self, forKey: .messages),
                 hasMore: try c.decode(Bool.self, forKey: .hasMore)
             )
         case "messageAppended":
             return .messageAppended(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 message: try c.decode(WireMessage.self, forKey: .message)
             )
         case "messageStreaming":
             return .messageStreaming(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 messageId: try c.decode(String.self, forKey: .messageId),
                 content: try c.decode(String.self, forKey: .content),
                 reasoningText: try c.decode(String.self, forKey: .reasoningText),
@@ -959,21 +959,21 @@ public enum BridgeBody: Equatable, Sendable {
             )
         case "editPrompt":
             return .editPrompt(
-                chatId: try c.decode(String.self, forKey: .chatId),
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 messageId: try c.decode(String.self, forKey: .messageId),
                 text: try c.decode(String.self, forKey: .text)
             )
-        case "archiveChat":
-            return .archiveChat(chatId: try c.decode(String.self, forKey: .chatId))
-        case "unarchiveChat":
-            return .unarchiveChat(chatId: try c.decode(String.self, forKey: .chatId))
-        case "pinChat":
-            return .pinChat(chatId: try c.decode(String.self, forKey: .chatId))
-        case "unpinChat":
-            return .unpinChat(chatId: try c.decode(String.self, forKey: .chatId))
-        case "renameChat":
-            return .renameChat(
-                chatId: try c.decode(String.self, forKey: .chatId),
+        case "archiveSession":
+            return .archiveSession(sessionId: try c.decode(String.self, forKey: .sessionId))
+        case "unarchiveSession":
+            return .unarchiveSession(sessionId: try c.decode(String.self, forKey: .sessionId))
+        case "pinSession":
+            return .pinSession(sessionId: try c.decode(String.self, forKey: .sessionId))
+        case "unpinSession":
+            return .unpinSession(sessionId: try c.decode(String.self, forKey: .sessionId))
+        case "renameSession":
+            return .renameSession(
+                sessionId: try c.decode(String.self, forKey: .sessionId),
                 title: try c.decode(String.self, forKey: .title)
             )
         case "pairingStart":
@@ -1135,7 +1135,7 @@ public enum BridgeRuntimeState: Equatable, Sendable {
     case syncing
     /// First chat snapshot has been published to the bus. Subsequent
     /// snapshots flow through the throttled chat publisher; clients
-    /// are expected to render the chats list now.
+    /// are expected to render the sessions list now.
     case ready
     /// Bootstrap failed. The string is short and user-facing
     /// (surfaced as the "fail" line in `clawix up` and as an error
@@ -1297,7 +1297,7 @@ public struct WireSkillSummary: Codable, Equatable, Sendable {
     }
 }
 
-/// Full SKILL.md view. `frontmatterJSON` carries `metadata.clawjs.*`
+/// Full SKILL.md view. `frontmatterJSON` carries `metadata.claw.*`
 /// as a compact JSON string so the bridge doesn't need a Swift mirror
 /// for every new frontmatter field ClawJS adds. The macOS UI parses
 /// this into typed model on receipt; iPhone v1 doesn't unpack it

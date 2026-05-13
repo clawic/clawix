@@ -1,8 +1,8 @@
 #!/bin/sh
 # Drop a built clawjs-bridged tarball into a Clawix.app bundle so the
 # Mac app can switch its BackgroundBridgeService over to the Node
-# daemon. The legacy Swift `clawix-bridged` helper stays untouched
-# under Contents/Helpers/clawix-bridged so the cutover is reversible.
+# daemon. The legacy Swift `clawix-bridge` helper stays untouched
+# under Contents/Helpers/clawix-bridge so the cutover is reversible.
 #
 # Usage:
 #   scripts/bundle_clawjs_bridged.sh \

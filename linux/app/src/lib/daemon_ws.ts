@@ -26,18 +26,18 @@ export function useDaemonStream(): void {
     const unlisten = await listen<BridgeFrame[]>("bridge:frames", (event) => {
       for (const frame of event.payload) {
         switch (frame.body.type) {
-          case "chatsSnapshot":
-            setChats((frame.body.chats as unknown[]) ?? []);
+          case "sessionsSnapshot":
+            setChats((frame.body.sessions as unknown[]) ?? []);
             break;
           case "messagesSnapshot":
             setStreamingMessages((prev) => ({
               ...prev,
-              [frame.body.chatId as string]: frame.body.messages
+              [frame.body.sessionId as string]: frame.body.messages
             }));
             break;
           case "messageStreaming":
             setStreamingMessages((prev) => {
-              const id = frame.body.chatId as string;
+              const id = frame.body.sessionId as string;
               const list = (prev[id] as Array<Record<string, unknown>>) ?? [];
               const updated = list.map((m) =>
                 m.id === frame.body.messageId

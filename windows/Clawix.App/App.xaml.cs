@@ -42,10 +42,10 @@ public partial class App : Application
             if (probe.Alive) return Task.CompletedTask;
 
             var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var bridged = Path.Combine(local, "Clawix", "clawix-bridged.exe");
+            var bridged = Path.Combine(local, "Clawix", "clawix-bridge.exe");
             if (!File.Exists(bridged))
             {
-                Services.Logger.LogWarning("clawix-bridged.exe not installed; user must run `clawix install` first.");
+                Services.Logger.LogWarning("clawix-bridge.exe not installed; user must run `clawix install` first.");
                 return Task.CompletedTask;
             }
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo

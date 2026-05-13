@@ -57,7 +57,7 @@ public struct AudioStoreEntry: Codable, Equatable, Sendable {
 
 /// On-disk store for voice clips attached to user messages. Owned by
 /// whichever process holds the chat backend (the macOS GUI's
-/// `AppState` in in-process mode, or `clawix-bridged` in daemon mode).
+/// `AppState` in in-process mode, or `clawix-bridge` in daemon mode).
 /// The actor is the only writer; readers go through the public async
 /// API so concurrent calls from the bridge thread don't race.
 ///

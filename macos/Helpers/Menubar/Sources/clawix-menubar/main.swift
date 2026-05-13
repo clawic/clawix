@@ -15,10 +15,10 @@ import ClawixEngine
 @MainActor
 final class MenubarApp: NSObject, NSApplicationDelegate {
 
-    private let port: UInt16 = 7778
+    private let port: UInt16 = 24080
     private let pairing = PairingService(
         defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
-        port: 7778
+        port: 24080
     )
 
     private var statusItem: NSStatusItem!
@@ -219,7 +219,7 @@ final class MenubarApp: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openLogs() {
-        let url = URL(fileURLWithPath: "/tmp/clawix-bridged.err")
+        let url = URL(fileURLWithPath: "/tmp/clawix-bridge.err")
         guard FileManager.default.fileExists(atPath: url.path) else {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: "/tmp")])
             return
@@ -264,7 +264,7 @@ final class MenubarApp: NSObject, NSApplicationDelegate {
     @objc private func openAbout() {
         let alert = NSAlert()
         alert.messageText = "clawix CLI"
-        alert.informativeText = "Standalone bridge for the Codex CLI. Runs in the menu bar; the heavy lifting is in clawix-bridged."
+        alert.informativeText = "Standalone bridge for the Codex CLI. Runs in the menu bar; the heavy lifting is in clawix-bridge."
         alert.addButton(withTitle: "OK")
         alert.runModal()
     }
@@ -321,7 +321,7 @@ final class QRView: NSView {
         addSubview(captionLabel)
 
         if let host = PairingService.currentLANIPv4() {
-            hostLabel.stringValue = "\(host):7778"
+            hostLabel.stringValue = "\(host):24080"
         } else {
             hostLabel.stringValue = "loopback only"
         }

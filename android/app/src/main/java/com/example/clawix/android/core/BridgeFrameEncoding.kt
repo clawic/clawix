@@ -9,52 +9,52 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
             body.deviceName?.let { b.put("deviceName", it) }
             body.clientKind?.let { b.put("clientKind", it.name) }
         }
-        BridgeBody.ListChats -> {}
-        is BridgeBody.OpenChat -> {
-            b.put("chatId", body.chatId)
+        BridgeBody.ListSessions -> {}
+        is BridgeBody.OpenSession -> {
+            b.put("sessionId", body.sessionId)
             body.limit?.let { b.put("limit", it) }
         }
         is BridgeBody.LoadOlderMessages -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("beforeMessageId", body.beforeMessageId)
             b.put("limit", body.limit)
         }
         is BridgeBody.SendPrompt -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("text", body.text)
             if (body.attachments.isNotEmpty()) {
                 b.put("attachments", BridgeJson.encodeToJsonElement(WireAttachment.listSerializer, body.attachments))
             }
         }
-        is BridgeBody.NewChat -> {
-            b.put("chatId", body.chatId)
+        is BridgeBody.NewSession -> {
+            b.put("sessionId", body.sessionId)
             b.put("text", body.text)
             if (body.attachments.isNotEmpty()) {
                 b.put("attachments", BridgeJson.encodeToJsonElement(WireAttachment.listSerializer, body.attachments))
             }
         }
-        is BridgeBody.InterruptTurn -> b.put("chatId", body.chatId)
+        is BridgeBody.InterruptTurn -> b.put("sessionId", body.sessionId)
         is BridgeBody.AuthOk -> body.macName?.let { b.put("macName", it) }
         is BridgeBody.AuthFailed -> b.put("reason", body.reason)
         is BridgeBody.VersionMismatch -> b.put("serverVersion", body.serverVersion)
-        is BridgeBody.ChatsSnapshot -> b.put("chats", BridgeJson.encodeToJsonElement(WireChat.listSerializer, body.chats))
+        is BridgeBody.SessionsSnapshot -> b.put("sessions", BridgeJson.encodeToJsonElement(WireChat.listSerializer, body.sessions))
         is BridgeBody.ChatUpdated -> b.put("chat", BridgeJson.encodeToJsonElement(WireChat.serializer(), body.chat))
         is BridgeBody.MessagesSnapshot -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("messages", BridgeJson.encodeToJsonElement(WireMessage.listSerializer, body.messages))
             body.hasMore?.let { b.put("hasMore", it) }
         }
         is BridgeBody.MessagesPage -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("messages", BridgeJson.encodeToJsonElement(WireMessage.listSerializer, body.messages))
             b.put("hasMore", body.hasMore)
         }
         is BridgeBody.MessageAppended -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("message", BridgeJson.encodeToJsonElement(WireMessage.serializer(), body.message))
         }
         is BridgeBody.MessageStreaming -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("messageId", body.messageId)
             b.put("content", body.content)
             b.put("reasoningText", body.reasoningText)
@@ -65,16 +65,16 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
             b.put("message", body.message)
         }
         is BridgeBody.EditPrompt -> {
-            b.put("chatId", body.chatId)
+            b.put("sessionId", body.sessionId)
             b.put("messageId", body.messageId)
             b.put("text", body.text)
         }
-        is BridgeBody.ArchiveChat -> b.put("chatId", body.chatId)
-        is BridgeBody.UnarchiveChat -> b.put("chatId", body.chatId)
-        is BridgeBody.PinChat -> b.put("chatId", body.chatId)
-        is BridgeBody.UnpinChat -> b.put("chatId", body.chatId)
-        is BridgeBody.RenameChat -> {
-            b.put("chatId", body.chatId)
+        is BridgeBody.ArchiveSession -> b.put("sessionId", body.sessionId)
+        is BridgeBody.UnarchiveSession -> b.put("sessionId", body.sessionId)
+        is BridgeBody.PinSession -> b.put("sessionId", body.sessionId)
+        is BridgeBody.UnpinSession -> b.put("sessionId", body.sessionId)
+        is BridgeBody.RenameSession -> {
+            b.put("sessionId", body.sessionId)
             b.put("title", body.title)
         }
         BridgeBody.PairingStart, BridgeBody.ListProjects, BridgeBody.RequestRateLimits -> {}

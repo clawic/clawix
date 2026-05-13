@@ -38,7 +38,7 @@ function isDevLink() {
 //   3. Clawix.app's embedded daemon if installed.
 //   4. The npm-installed daemon under ~/.clawix/bin/.
 function resolveBridged() {
-  const override = process.env.CLAWIX_BRIDGED_PATH;
+  const override = process.env.CLAWIX_BRIDGE_PATH;
   if (override && fs.existsSync(override)) return override;
   const npmBin = path.join(BIN_DIR, DAEMON_BIN_NAME);
   if (isDevLink() && fs.existsSync(npmBin)) return npmBin;

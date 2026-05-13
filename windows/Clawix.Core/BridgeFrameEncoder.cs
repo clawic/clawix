@@ -26,19 +26,19 @@ internal sealed partial class BridgeFrameConverter
                     JsonSerializer.Serialize(writer, a.ClientKind.Value, options);
                 }
                 break;
-            case BridgeBody.ListChats:
+            case BridgeBody.ListSessions:
                 break;
-            case BridgeBody.OpenChat o:
-                writer.WriteString("chatId", o.ChatId);
+            case BridgeBody.OpenSession o:
+                writer.WriteString("sessionId", o.SessionId);
                 if (o.Limit is not null) writer.WriteNumber("limit", o.Limit.Value);
                 break;
             case BridgeBody.LoadOlderMessages l:
-                writer.WriteString("chatId", l.ChatId);
+                writer.WriteString("sessionId", l.SessionId);
                 writer.WriteString("beforeMessageId", l.BeforeMessageId);
                 writer.WriteNumber("limit", l.Limit);
                 break;
             case BridgeBody.SendPrompt s:
-                writer.WriteString("chatId", s.ChatId);
+                writer.WriteString("sessionId", s.SessionId);
                 writer.WriteString("text", s.Text);
                 if (s.Attachments.Count > 0)
                 {
@@ -46,8 +46,8 @@ internal sealed partial class BridgeFrameConverter
                     JsonSerializer.Serialize(writer, s.Attachments, options);
                 }
                 break;
-            case BridgeBody.NewChat n:
-                writer.WriteString("chatId", n.ChatId);
+            case BridgeBody.NewSession n:
+                writer.WriteString("sessionId", n.SessionId);
                 writer.WriteString("text", n.Text);
                 if (n.Attachments.Count > 0)
                 {
@@ -56,7 +56,7 @@ internal sealed partial class BridgeFrameConverter
                 }
                 break;
             case BridgeBody.InterruptTurn it:
-                writer.WriteString("chatId", it.ChatId);
+                writer.WriteString("sessionId", it.SessionId);
                 break;
             case BridgeBody.AuthOk ao:
                 if (ao.MacName is not null) writer.WriteString("macName", ao.MacName);
@@ -67,33 +67,33 @@ internal sealed partial class BridgeFrameConverter
             case BridgeBody.VersionMismatch vm:
                 writer.WriteNumber("serverVersion", vm.ServerVersion);
                 break;
-            case BridgeBody.ChatsSnapshot cs:
-                writer.WritePropertyName("chats");
-                JsonSerializer.Serialize(writer, cs.Chats, options);
+            case BridgeBody.SessionsSnapshot cs:
+                writer.WritePropertyName("sessions");
+                JsonSerializer.Serialize(writer, cs.Sessions, options);
                 break;
             case BridgeBody.ChatUpdated cu:
                 writer.WritePropertyName("chat");
                 JsonSerializer.Serialize(writer, cu.Chat, options);
                 break;
             case BridgeBody.MessagesSnapshot ms:
-                writer.WriteString("chatId", ms.ChatId);
+                writer.WriteString("sessionId", ms.SessionId);
                 writer.WritePropertyName("messages");
                 JsonSerializer.Serialize(writer, ms.Messages, options);
                 if (ms.HasMore is not null) writer.WriteBoolean("hasMore", ms.HasMore.Value);
                 break;
             case BridgeBody.MessagesPage mp:
-                writer.WriteString("chatId", mp.ChatId);
+                writer.WriteString("sessionId", mp.SessionId);
                 writer.WritePropertyName("messages");
                 JsonSerializer.Serialize(writer, mp.Messages, options);
                 writer.WriteBoolean("hasMore", mp.HasMore);
                 break;
             case BridgeBody.MessageAppended ma:
-                writer.WriteString("chatId", ma.ChatId);
+                writer.WriteString("sessionId", ma.SessionId);
                 writer.WritePropertyName("message");
                 JsonSerializer.Serialize(writer, ma.Message, options);
                 break;
             case BridgeBody.MessageStreaming mst:
-                writer.WriteString("chatId", mst.ChatId);
+                writer.WriteString("sessionId", mst.SessionId);
                 writer.WriteString("messageId", mst.MessageId);
                 writer.WriteString("content", mst.Content);
                 writer.WriteString("reasoningText", mst.ReasoningText);
@@ -104,24 +104,24 @@ internal sealed partial class BridgeFrameConverter
                 writer.WriteString("message", ee.Message);
                 break;
             case BridgeBody.EditPrompt ep:
-                writer.WriteString("chatId", ep.ChatId);
+                writer.WriteString("sessionId", ep.SessionId);
                 writer.WriteString("messageId", ep.MessageId);
                 writer.WriteString("text", ep.Text);
                 break;
-            case BridgeBody.ArchiveChat ac:
-                writer.WriteString("chatId", ac.ChatId);
+            case BridgeBody.ArchiveSession ac:
+                writer.WriteString("sessionId", ac.SessionId);
                 break;
-            case BridgeBody.UnarchiveChat uac:
-                writer.WriteString("chatId", uac.ChatId);
+            case BridgeBody.UnarchiveSession uac:
+                writer.WriteString("sessionId", uac.SessionId);
                 break;
-            case BridgeBody.PinChat pc:
-                writer.WriteString("chatId", pc.ChatId);
+            case BridgeBody.PinSession pc:
+                writer.WriteString("sessionId", pc.SessionId);
                 break;
-            case BridgeBody.UnpinChat upc:
-                writer.WriteString("chatId", upc.ChatId);
+            case BridgeBody.UnpinSession upc:
+                writer.WriteString("sessionId", upc.SessionId);
                 break;
-            case BridgeBody.RenameChat rc:
-                writer.WriteString("chatId", rc.ChatId);
+            case BridgeBody.RenameSession rc:
+                writer.WriteString("sessionId", rc.SessionId);
                 writer.WriteString("title", rc.Title);
                 break;
             case BridgeBody.PairingStart:

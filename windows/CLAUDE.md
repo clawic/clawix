@@ -5,7 +5,7 @@ This directory is the Windows target for Clawix. Any conversation opened from he
 ## Stack And Architecture
 
 - **UI**: WinUI 3 on **.NET 8** (C# 12). Native Windows 11 Fluent Design with Mica windowing and acrylic backgrounds.
-- **Daemon**: `Clawix.Bridged/clawix-bridged.exe` runs as a per-user process started at login through `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. It is not a Windows Service, does not require admin rights, and keeps running after the GUI closes.
+- **Daemon**: `Clawix.Bridged/clawix-bridge.exe` runs as a per-user process started at login through `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. It is not a Windows Service, does not require admin rights, and keeps running after the GUI closes.
 - **Wire protocol**: identical to macOS and iOS. Schema version 5. JSON frames over WebSocket on `127.0.0.1:7777`.
 - **Bonjour**: publishes `_clawix-bridge._tcp` with `Makaretu.Dns.Multicast` in pure C#, without requiring Apple Bonjour Service.
 - **Codex CLI**: the daemon spawns `codex.cmd` as a subprocess, searched in `%APPDATA%\npm\codex.cmd`, `%LOCALAPPDATA%\nvm\v*\codex.cmd`, and `where codex`.
@@ -19,7 +19,7 @@ windows/
 ├── Clawix.App/             ← WinUI 3 GUI
 ├── Clawix.Core/            ← wire protocol + models (C# port of packages/ClawixCore)
 ├── Clawix.Engine/          ← bridge server, pairing, mDNS (C# port of packages/ClawixEngine)
-├── Clawix.Bridged/         ← clawix-bridged.exe daemon
+├── Clawix.Bridged/         ← clawix-bridge.exe daemon
 ├── Clawix.Secrets/         ← vault crypto + persistence (port of packages/Secrets*)
 ├── Clawix.Tests/           ← xUnit, round-trip JSON against Swift fixtures
 ├── scripts/                ← dev.ps1, build-app.ps1, public_hygiene_check.ps1

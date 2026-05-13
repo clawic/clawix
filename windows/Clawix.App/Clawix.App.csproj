@@ -13,7 +13,7 @@
     <WindowsPackageType>None</WindowsPackageType>
     <ApplicationIcon>Assets\Clawix.ico</ApplicationIcon>
     <AssemblyName>Clawix</AssemblyName>
-    <Description>Clawix Windows app (WinUI 3 GUI). Pairs with the local clawix-bridged daemon.</Description>
+    <Description>Clawix Windows app (WinUI 3 GUI). Pairs with the local clawix-bridge daemon.</Description>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240607001" />

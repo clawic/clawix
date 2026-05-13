@@ -25,8 +25,8 @@ The current version is `1`.
    the connection with WS code `1008`.
 3. Server replies with `authOk` or `authFailed`. On `authFailed` the
    iPhone clears its credentials and prompts for re-pairing.
-4. After `authOk`, the iPhone may request `listChats`, `openChat`,
-   `sendPrompt`. The server may push `chatsSnapshot`, `chatUpdated`,
+4. After `authOk`, the iPhone may request `listSessions`, `openSession`,
+   `sendPrompt`. The server may push `sessionsSnapshot`, `chatUpdated`,
    `messagesSnapshot`, `messageAppended`, `messageStreaming`,
    `errorEvent` at any time.
 
@@ -34,13 +34,13 @@ The current version is `1`.
 
 - `auth` `{ token, deviceName? }`. Bearer token from the QR. Must be
   the first frame.
-- `listChats` `{}`. Asks for a snapshot of the current chats list. The
-  server replies with `chatsSnapshot`.
-- `openChat` `{ chatId }`. Subscribes to a chat. The server replies
+- `listSessions` `{}`. Asks for a snapshot of the current sessions list. The
+  server replies with `sessionsSnapshot`.
+- `openSession` `{ sessionId }`. Subscribes to a chat. The server replies
   with `messagesSnapshot` and continues to push `messageAppended` and
   `messageStreaming` for that chat.
-- `sendPrompt` `{ chatId, text }`. Routes a user prompt to the
-  existing `AppState.sendUserMessageFromBridge(chatId, text)` flow.
+- `sendPrompt` `{ sessionId, text }`. Routes a user prompt to the
+  existing `AppState.sendUserMessageFromBridge(sessionId, text)` flow.
 
 ## Inbound (Mac -> iPhone)
 
@@ -48,15 +48,15 @@ The current version is `1`.
 - `authFailed` `{ reason }`. Generic reason string for debugging.
 - `versionMismatch` `{ serverVersion }`. Sent before close when the
   server detects a frame with an older/newer `schemaVersion`.
-- `chatsSnapshot` `{ chats: [WireChat] }`. Full list of chats visible
+- `sessionsSnapshot` `{ sessions: [WireChat] }`. Full list of sessions visible
   on the Mac.
 - `chatUpdated` `{ chat: WireChat }`. Single chat changed (title,
   branch, hasActiveTurn, last message preview, etc.).
-- `messagesSnapshot` `{ chatId, messages: [WireMessage] }`. Full
-  message list for a chat. Sent in response to `openChat`.
-- `messageAppended` `{ chatId, message: WireMessage }`. A new message
+- `messagesSnapshot` `{ sessionId, messages: [WireMessage] }`. Full
+  message list for a chat. Sent in response to `openSession`.
+- `messageAppended` `{ sessionId, message: WireMessage }`. A new message
   joined the chat (user echo, assistant placeholder, etc.).
-- `messageStreaming` `{ chatId, messageId, content, reasoningText, finished }`.
+- `messageStreaming` `{ sessionId, messageId, content, reasoningText, finished }`.
   Carries the full current state of the message every tick. The
   iPhone replaces. Sending the full state, not deltas, trades a few
   extra KB on LAN for no append/delta correctness bugs (e.g. retry

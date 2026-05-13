@@ -1,6 +1,6 @@
 # Clawix · Windows target
 
-Windows port of Clawix. Pairs with the local `clawix-bridged.exe`
+Windows port of Clawix. Pairs with the local `clawix-bridge.exe`
 daemon and the iOS companion exactly the same way macOS does.
 
 ## Quick start
@@ -39,7 +39,7 @@ windows/
 |-- Clawix.App/                   WinUI 3 GUI (.NET 8)
 |-- Clawix.Core/                  Wire protocol + models (port of packages/ClawixCore)
 |-- Clawix.Engine/                Bridge server + pairing + mDNS (port of packages/ClawixEngine)
-|-- Clawix.Bridged/               clawix-bridged.exe daemon
+|-- Clawix.Bridged/               clawix-bridge.exe daemon
 |-- Clawix.Secrets/               Vault crypto + persistence
 |-- Clawix.Tests/                 xUnit, round-trip JSON against Swift fixtures
 |-- scripts/                      dev.ps1, build-app.ps1, build-release.ps1, public_hygiene_check.ps1

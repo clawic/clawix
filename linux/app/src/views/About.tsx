@@ -9,7 +9,7 @@ export default function About() {
           through the same bridge protocol the macOS app uses.
         </p>
         <ul class="text-xs text-zinc-500 list-disc pl-5 space-y-1">
-          <li>Bridge daemon: clawix-bridged (Swift + SwiftNIO)</li>
+          <li>Bridge daemon: clawix-bridge (Swift + SwiftNIO)</li>
           <li>Shell: Tauri 2.x + SolidJS</li>
           <li>Updater: AppImageUpdate / apt</li>
         </ul>

@@ -21,7 +21,7 @@ public sealed class BridgeSession
     private readonly SemaphoreSlim _sendGate = new(1, 1);
     private bool _authenticated;
     private ClientKind _clientKind = ClientKind.Ios;
-    private readonly HashSet<string> _subscribedChatIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _subscribedSessionIds = new(StringComparer.Ordinal);
 
     public BridgeSession(WebSocket socket, IEngineHost host, PairingService pairing, ILogger logger)
     {
@@ -82,55 +82,55 @@ public sealed class BridgeSession
         await SendAsync(new BridgeFrame(new BridgeBody.AuthOk(_pairing.BonjourServiceName)), ct);
         var state = _host.BridgeStateCurrent;
         await SendAsync(new BridgeFrame(new BridgeBody.BridgeState(
-            state.WireTag, _host.BridgeChatsCurrent.Count, state.ErrorMessage)), ct);
+            state.WireTag, _host.BridgeSessionsCurrent.Count, state.ErrorMessage)), ct);
     }
 
     private async Task DispatchAsync(BridgeFrame frame, CancellationToken ct)
     {
         switch (frame.Body)
         {
-            case BridgeBody.ListChats:
-                await SendAsync(new BridgeFrame(new BridgeBody.ChatsSnapshot(_host.BridgeChatsCurrent)), ct);
+            case BridgeBody.ListSessions:
+                await SendAsync(new BridgeFrame(new BridgeBody.SessionsSnapshot(_host.BridgeSessionsCurrent)), ct);
                 break;
 
-            case BridgeBody.OpenChat oc:
-                _subscribedChatIds.Add(oc.ChatId);
-                var msgs = await _host.HandleOpenChatAsync(oc.ChatId, oc.Limit, ct);
-                await SendAsync(new BridgeFrame(new BridgeBody.MessagesSnapshot(oc.ChatId, msgs, oc.Limit is null ? null : msgs.Count >= oc.Limit)), ct);
+            case BridgeBody.OpenSession oc:
+                _subscribedSessionIds.Add(oc.SessionId);
+                var msgs = await _host.HandleOpenSessionAsync(oc.SessionId, oc.Limit, ct);
+                await SendAsync(new BridgeFrame(new BridgeBody.MessagesSnapshot(oc.SessionId, msgs, oc.Limit is null ? null : msgs.Count >= oc.Limit)), ct);
                 break;
 
             case BridgeBody.LoadOlderMessages lom:
-                var page = await _host.HandleLoadOlderMessagesAsync(lom.ChatId, lom.BeforeMessageId, lom.Limit, ct);
-                await SendAsync(new BridgeFrame(new BridgeBody.MessagesPage(lom.ChatId, page.Messages, page.HasMore)), ct);
+                var page = await _host.HandleLoadOlderMessagesAsync(lom.SessionId, lom.BeforeMessageId, lom.Limit, ct);
+                await SendAsync(new BridgeFrame(new BridgeBody.MessagesPage(lom.SessionId, page.Messages, page.HasMore)), ct);
                 break;
 
             case BridgeBody.SendPrompt sp:
-                await _host.HandleSendPromptAsync(sp.ChatId, sp.Text, sp.Attachments, ct);
+                await _host.HandleSendPromptAsync(sp.SessionId, sp.Text, sp.Attachments, ct);
                 break;
 
-            case BridgeBody.NewChat nc:
-                await _host.HandleNewChatAsync(nc.ChatId, nc.Text, nc.Attachments, ct);
+            case BridgeBody.NewSession nc:
+                await _host.HandleNewSessionAsync(nc.SessionId, nc.Text, nc.Attachments, ct);
                 break;
 
             case BridgeBody.InterruptTurn it:
-                await _host.HandleInterruptTurnAsync(it.ChatId, ct);
+                await _host.HandleInterruptTurnAsync(it.SessionId, ct);
                 break;
 
             case BridgeBody.EditPrompt ep when _clientKind == ClientKind.Desktop:
-                await _host.HandleEditPromptAsync(ep.ChatId, ep.MessageId, ep.Text, ct);
+                await _host.HandleEditPromptAsync(ep.SessionId, ep.MessageId, ep.Text, ct);
                 break;
 
-            case BridgeBody.ArchiveChat ac when _clientKind == ClientKind.Desktop:
-                await _host.HandleArchiveAsync(ac.ChatId, true, ct); break;
-            case BridgeBody.UnarchiveChat uac when _clientKind == ClientKind.Desktop:
-                await _host.HandleArchiveAsync(uac.ChatId, false, ct); break;
-            case BridgeBody.PinChat pc when _clientKind == ClientKind.Desktop:
-                await _host.HandlePinAsync(pc.ChatId, true, ct); break;
-            case BridgeBody.UnpinChat upc when _clientKind == ClientKind.Desktop:
-                await _host.HandlePinAsync(upc.ChatId, false, ct); break;
+            case BridgeBody.ArchiveSession ac when _clientKind == ClientKind.Desktop:
+                await _host.HandleArchiveAsync(ac.SessionId, true, ct); break;
+            case BridgeBody.UnarchiveSession uac when _clientKind == ClientKind.Desktop:
+                await _host.HandleArchiveAsync(uac.SessionId, false, ct); break;
+            case BridgeBody.PinSession pc when _clientKind == ClientKind.Desktop:
+                await _host.HandlePinAsync(pc.SessionId, true, ct); break;
+            case BridgeBody.UnpinSession upc when _clientKind == ClientKind.Desktop:
+                await _host.HandlePinAsync(upc.SessionId, false, ct); break;
 
-            case BridgeBody.RenameChat rc when _clientKind == ClientKind.Desktop:
-                await _host.HandleRenameAsync(rc.ChatId, rc.Title, ct); break;
+            case BridgeBody.RenameSession rc when _clientKind == ClientKind.Desktop:
+                await _host.HandleRenameAsync(rc.SessionId, rc.Title, ct); break;
 
             case BridgeBody.PairingStart when _clientKind == ClientKind.Desktop:
                 await SendAsync(new BridgeFrame(new BridgeBody.PairingPayload(_pairing.QrPayload(), _pairing.Bearer)), ct);

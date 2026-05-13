@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BIN = ROOT / ".build" / "debug" / "clawix-bridged"
+BIN = ROOT / ".build" / "debug" / "clawix-bridge"
 
 
 def build():
@@ -166,7 +166,7 @@ class WebSocket:
 
 def main():
     build()
-    with tempfile.TemporaryDirectory(prefix="clawix-bridged-e2e-") as raw:
+    with tempfile.TemporaryDirectory(prefix="clawix-bridge-e2e-") as raw:
         tmp = Path(raw)
         backend = write_fake_backend(tmp)
         port = random.randint(39000, 49000)
@@ -174,10 +174,10 @@ def main():
         env = os.environ.copy()
         env.update(
             {
-                "CLAWIX_BRIDGED_BACKEND_PATH": str(backend),
-                "CLAWIX_BRIDGED_PORT": str(port),
-                "CLAWIX_BRIDGED_BEARER": token,
-                "CLAWIX_BRIDGED_DISABLE_BONJOUR": "1",
+                "CLAWIX_BRIDGE_BACKEND_PATH": str(backend),
+                "CLAWIX_BRIDGE_PORT": str(port),
+                "CLAWIX_BRIDGE_BEARER": token,
+                "CLAWIX_BRIDGE_DISABLE_BONJOUR": "1",
                 "HOME": str(tmp),
             }
         )
@@ -210,17 +210,17 @@ def main():
             qr_ws.close()
             desktop.close()
 
-            snapshot = ws.recv_until(lambda f: f["type"] == "chatsSnapshot" and f["chats"])
-            chat_id = snapshot["chats"][0]["id"]
+            snapshot = ws.recv_until(lambda f: f["type"] == "sessionsSnapshot" and f["sessions"])
+            chat_id = snapshot["sessions"][0]["id"]
 
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": chat_id})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": chat_id})
             ws.recv_until(
                 lambda f: f["type"] == "messagesSnapshot"
-                and f["chatId"] == chat_id
+                and f["sessionId"] == chat_id
                 and any(m["content"] == "existing answer" for m in f["messages"])
             )
 
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "chatId": chat_id, "text": "new prompt"})
+            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": chat_id, "text": "new prompt"})
             ws.recv_until(
                 lambda f: (
                     f["type"] == "messageStreaming"
@@ -235,30 +235,30 @@ def main():
             )
 
             new_chat_id = "11111111-2222-4333-8444-555555555555"
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": new_chat_id})
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "chatId": new_chat_id, "text": "brand new prompt"})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": new_chat_id})
+            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": new_chat_id, "text": "brand new prompt"})
             ws.recv_until(
                 lambda f: (
-                    f["type"] == "chatsSnapshot"
-                    and any(c["id"] == new_chat_id and c["title"] == "brand new prompt" for c in f["chats"])
+                    f["type"] == "sessionsSnapshot"
+                    and any(c["id"] == new_chat_id and c["title"] == "brand new prompt" for c in f["sessions"])
                 )
             )
             ws.recv_until(
                 lambda f: (
                     f["type"] == "messageStreaming"
-                    and f["chatId"] == new_chat_id
+                    and f["sessionId"] == new_chat_id
                     and f["content"] == "hello from daemon"
                     and f["finished"] is True
                 )
                 or (
                     f["type"] == "messageAppended"
-                    and f["chatId"] == new_chat_id
+                    and f["sessionId"] == new_chat_id
                     and f["message"]["role"] == "assistant"
                     and f["message"]["content"] == "hello from daemon"
                 )
             )
 
-            ws.send_json({"schemaVersion": 2, "type": "archiveChat", "chatId": new_chat_id})
+            ws.send_json({"schemaVersion": 2, "type": "archiveSession", "sessionId": new_chat_id})
             ws.recv_until(
                 lambda f: (
                     f["type"] == "chatUpdated"
@@ -266,7 +266,7 @@ def main():
                     and f["chat"]["isArchived"] is True
                 )
             )
-            ws.send_json({"schemaVersion": 2, "type": "unarchiveChat", "chatId": new_chat_id})
+            ws.send_json({"schemaVersion": 2, "type": "unarchiveSession", "sessionId": new_chat_id})
             ws.recv_until(
                 lambda f: (
                     f["type"] == "chatUpdated"
@@ -280,10 +280,10 @@ def main():
             timeout_env = env.copy()
             timeout_env.update(
                 {
-                    "CLAWIX_BRIDGED_PORT": str(timeout_port),
+                    "CLAWIX_BRIDGE_PORT": str(timeout_port),
                     "CLAWIX_E2E_HANG_THREAD_LIST": "1",
-                    "CLAWIX_BRIDGED_THREAD_LIST_TIMEOUT_SECONDS": "0.2",
-                    "CLAWIX_BRIDGED_RATE_LIMITS_TIMEOUT_SECONDS": "0.2",
+                    "CLAWIX_BRIDGE_THREAD_LIST_TIMEOUT_SECONDS": "0.2",
+                    "CLAWIX_BRIDGE_RATE_LIMITS_TIMEOUT_SECONDS": "0.2",
                 }
             )
             timeout_daemon = subprocess.Popen([str(BIN)], cwd=ROOT, env=timeout_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

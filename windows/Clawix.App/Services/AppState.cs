@@ -48,7 +48,7 @@ public sealed partial class AppState : ObservableObject
         _client.ConnectionStateChanged += alive => Connected = alive;
         _client.FrameReceived += ApplyFrame;
         await _client.ConnectAsync(ct);
-        await _client.SendAsync(new BridgeFrame(new BridgeBody.ListChats()), ct);
+        await _client.SendAsync(new BridgeFrame(new BridgeBody.ListSessions()), ct);
     }
 
     public void ApplyFrame(BridgeFrame frame)
@@ -64,19 +64,19 @@ public sealed partial class AppState : ObservableObject
             case BridgeBody.BridgeState bs:
                 BridgeStateLabel = bs.State + (bs.Message is null ? "" : $" ({bs.Message})");
                 break;
-            case BridgeBody.ChatsSnapshot cs:
-                Chats = cs.Chats.ToList();
+            case BridgeBody.SessionsSnapshot cs:
+                Sessions = cs.Sessions.ToList();
                 break;
             case BridgeBody.ChatUpdated cu:
-                Chats = Chats.Select(c => c.Id == cu.Chat.Id ? cu.Chat : c).ToList();
+                Sessions = Sessions.Select(c => c.Id == cu.Chat.Id ? cu.Chat : c).ToList();
                 break;
-            case BridgeBody.MessagesSnapshot ms when CurrentChat?.Id == ms.ChatId:
+            case BridgeBody.MessagesSnapshot ms when CurrentChat?.Id == ms.SessionId:
                 CurrentMessages = ms.Messages.ToList();
                 break;
-            case BridgeBody.MessageAppended ma when CurrentChat?.Id == ma.ChatId:
+            case BridgeBody.MessageAppended ma when CurrentChat?.Id == ma.SessionId:
                 CurrentMessages = CurrentMessages.Append(ma.Message).ToList();
                 break;
-            case BridgeBody.MessageStreaming mst when CurrentChat?.Id == mst.ChatId:
+            case BridgeBody.MessageStreaming mst when CurrentChat?.Id == mst.SessionId:
                 CurrentMessages = CurrentMessages.Select(m => m.Id == mst.MessageId
                     ? m with { Content = mst.Content, ReasoningText = mst.ReasoningText, StreamingFinished = mst.Finished }
                     : m).ToList();
@@ -88,7 +88,7 @@ public sealed partial class AppState : ObservableObject
     {
         CurrentChat = chat;
         CurrentMessages = [];
-        return _client?.SendAsync(new BridgeFrame(new BridgeBody.OpenChat(chat.Id, BridgeConstants.InitialPageLimit)), CancellationToken.None)
+        return _client?.SendAsync(new BridgeFrame(new BridgeBody.OpenSession(chat.Id, BridgeConstants.InitialPageLimit)), CancellationToken.None)
             ?? Task.CompletedTask;
     }
 

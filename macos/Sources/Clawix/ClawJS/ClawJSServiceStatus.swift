@@ -18,7 +18,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Loopback port. Picked far from the bridge's `7778` so a
+    /// Loopback port. Picked far from the bridge's `24080` so a
     /// runaway service does not collide with the daemon. Telegram lives
     /// on the surface port the upstream `clawjs/telegram` server defaults
     /// to (`CLAWJS_TELEGRAM_PORT=22011`) so a manual `npm --prefix

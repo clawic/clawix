@@ -12,12 +12,12 @@ public sealed class BackendBinaryResolverTests
         File.WriteAllText(tmp, "@echo dummy");
         try
         {
-            Environment.SetEnvironmentVariable("CLAWIX_BRIDGED_BACKEND_PATH", tmp);
+            Environment.SetEnvironmentVariable("CLAWIX_BRIDGE_BACKEND_PATH", tmp);
             Assert.Equal(tmp, BackendBinaryResolver.Resolve());
         }
         finally
         {
-            Environment.SetEnvironmentVariable("CLAWIX_BRIDGED_BACKEND_PATH", null);
+            Environment.SetEnvironmentVariable("CLAWIX_BRIDGE_BACKEND_PATH", null);
             try { File.Delete(tmp); } catch { }
         }
     }

@@ -1,8 +1,8 @@
 import Foundation
 import ClawixCore
 
-// HTTP wrapper around the local daemon's `/mesh/*` endpoints. The daemon
-// (clawix-bridged) listens on loopback at the HTTP port; the Mac app
+// HTTP wrapper around the local daemon's `/v1/mesh/*` endpoints. The daemon
+// (clawix-bridge) listens on loopback at the HTTP port; the Mac app
 // talks to it as a regular client. v1 only goes through loopback, so
 // no TLS and no auth headers — the daemon validates `isLoopback` itself
 // and only honours mesh write/read calls for the local user. Pure
@@ -30,19 +30,19 @@ enum MeshClientError: LocalizedError, Equatable {
     }
 }
 
-/// Loopback-only HTTP client for the daemon's /mesh/* surface. Lives
+/// Loopback-only HTTP client for the daemon's /v1/mesh/* surface. Lives
 /// for the lifetime of the app; methods are async and re-entrant.
 struct MeshClient {
     /// UserDefaults key the explorer / E2E tests flip when they want
     /// the app to talk to a fake daemon on a different port.
     static let httpPortDefaultsKey = "ClawixMesh.HTTPPort.v1"
 
-    /// Daemon default. Mirrors `CLAWIX_BRIDGED_HTTP_PORT` in
-    /// `clawix-bridged/main.swift`. We never poke the heartbeat file
+    /// Daemon default. Mirrors `CLAWIX_BRIDGE_HTTP_PORT` in
+    /// `clawix-bridge/main.swift`. We never poke the heartbeat file
     /// for this; if the user runs the daemon on a non-default port
     /// they set the override below from the menu bar Dev tooling
     /// (out of scope for v1) or via E2E tests.
-    static let defaultHTTPPort: UInt16 = 7779
+    static let defaultHTTPPort: UInt16 = 24081
 
     let baseURL: URL
     private let session: URLSession
@@ -65,49 +65,49 @@ struct MeshClient {
 
     // MARK: - Public surface
 
-    /// GET /mesh/identity — returns this Mac's mesh identity (node id,
+    /// GET /v1/mesh/identity — returns this Mac's mesh identity (node id,
     /// display name, endpoints). Always callable; safe even when the
     /// daemon is freshly booted.
     func identity() async throws -> NodeIdentity {
-        try await get("/mesh/identity", as: NodeIdentity.self)
+        try await get("/v1/mesh/identity", as: NodeIdentity.self)
     }
 
-    /// GET /mesh/peers — full list of paired Macs. Loopback-only on
+    /// GET /v1/mesh/peers — full list of paired Macs. Loopback-only on
     /// the daemon side, so this is the canonical "who is paired"
     /// query.
     func peers() async throws -> [PeerRecord] {
-        let payload: PeersOutput = try await get("/mesh/peers")
+        let payload: PeersOutput = try await get("/v1/mesh/peers")
         return payload.peers
     }
 
-    /// POST /mesh/link — link to another Mac by host + http port +
+    /// POST /v1/mesh/link — link to another Mac by host + http port +
     /// pairing token. The daemon does the round-trip (fetches the
     /// remote's identity, posts its own back), and on success persists
     /// the remote as a `PeerRecord` on disk.
     func link(host: String, httpPort: Int, token: String, profile: PeerPermissionProfile = .scoped) async throws -> PeerRecord {
         let body = LinkInput(host: host, httpPort: httpPort, bridgePort: nil, token: token, permissionProfile: profile)
-        let payload: PeerOutput = try await post("/mesh/link", body: body)
+        let payload: PeerOutput = try await post("/v1/mesh/link", body: body)
         return payload.peer
     }
 
-    /// GET /mesh/workspaces — local allowlist of folders this Mac will
+    /// GET /v1/mesh/workspaces — local allowlist of folders this Mac will
     /// allow remote peers to execute jobs in. The list is editable from
     /// the Machines settings page (`add(workspace:)`).
     func workspaces() async throws -> [RemoteWorkspace] {
-        let payload: WorkspacesOutput = try await get("/mesh/workspaces")
+        let payload: WorkspacesOutput = try await get("/v1/mesh/workspaces")
         return payload.workspaces
     }
 
-    /// POST /mesh/workspaces — append (or update) a folder in the
+    /// POST /v1/mesh/workspaces — append (or update) a folder in the
     /// local allowlist. The daemon stores the absolute path; jobs from
     /// peers may target any subpath under it.
     func addWorkspace(path: String, label: String? = nil) async throws -> RemoteWorkspace {
         let body = LocalWorkspaceInput(path: path, label: label)
-        let payload: WorkspaceOutput = try await post("/mesh/workspaces", body: body)
+        let payload: WorkspaceOutput = try await post("/v1/mesh/workspaces", body: body)
         return payload.workspace
     }
 
-    /// POST /mesh/remote-jobs — start an outbound job on a paired
+    /// POST /v1/mesh/remote-jobs — start an outbound job on a paired
     /// peer. The daemon seals the prompt, signs it, and forwards it to
     /// the peer over the encrypted mesh channel. Returns the initial
     /// `RemoteJob` row (status `queued` or `running`).
@@ -118,19 +118,19 @@ struct MeshClient {
         jobId: String? = nil
     ) async throws -> RemoteJob {
         let body = StartRemoteJobInput(peerId: peerId, workspacePath: workspacePath, prompt: prompt, jobId: jobId)
-        let payload: RemoteJobResponse = try await post("/mesh/remote-jobs", body: body)
+        let payload: RemoteJobResponse = try await post("/v1/mesh/remote-jobs", body: body)
         return payload.job
     }
 
-    /// GET /mesh/jobs/<id> — current snapshot of a job + the full
+    /// GET /v1/mesh/jobs/<id> — current snapshot of a job + the full
     /// event log. Polled from `RemoteJobTracker` to drive the status
     /// UI. Returns nil for the job if the daemon does not know about
     /// it (race with deletion / clean reset).
     func job(id: String) async throws -> JobOutput {
-        try await get("/mesh/jobs/\(id)", as: JobOutput.self)
+        try await get("/v1/mesh/jobs/\(id)", as: JobOutput.self)
     }
 
-    /// POST /mesh/hosts — upsert a host record on the daemon. If
+    /// POST /v1/mesh/hosts — upsert a host record on the daemon. If
     /// `sshSecret` is included, the daemon also persists it in its
     /// loopback SshSecretStore so subsequent `ssh.*` jobs can resolve
     /// the credential by id. Available only when the Node daemon is
@@ -138,26 +138,26 @@ struct MeshClient {
     /// these CRUD endpoints).
     func upsertHost(_ host: HostInput, sshSecret: SshSecretInput? = nil) async throws -> PeerRecord {
         let body = HostUpsertInput(host: host, sshSecret: sshSecret)
-        let payload: HostUpsertOutput = try await post("/mesh/hosts", body: body)
+        let payload: HostUpsertOutput = try await post("/v1/mesh/hosts", body: body)
         return payload.host
     }
 
-    /// POST /mesh/hosts/:id/revoke — soft-revoke a host. The peer
+    /// POST /v1/mesh/hosts/:id/revoke — soft-revoke a host. The peer
     /// keeps its row but `revokedAt` is set; the daemon refuses jobs
     /// signed by its node id from that point on.
     func revokePeer(nodeId: String) async throws {
-        try await postEmpty("/mesh/hosts/\(nodeId)/revoke")
+        try await postEmpty("/v1/mesh/hosts/\(nodeId)/revoke")
     }
 
-    /// POST /mesh/hosts/:id/unrevoke — clear the revoked flag.
+    /// POST /v1/mesh/hosts/:id/unrevoke — clear the revoked flag.
     func unrevokePeer(nodeId: String) async throws {
-        try await postEmpty("/mesh/hosts/\(nodeId)/unrevoke")
+        try await postEmpty("/v1/mesh/hosts/\(nodeId)/unrevoke")
     }
 
-    /// DELETE /mesh/hosts/:id — drop the host record entirely.
+    /// DELETE /v1/mesh/hosts/:id — drop the host record entirely.
     /// Cascades to host_endpoints in the daemon's SQLite store.
     func removeHost(nodeId: String) async throws {
-        try await delete("/mesh/hosts/\(nodeId)")
+        try await delete("/v1/mesh/hosts/\(nodeId)")
     }
 
     // MARK: - Wire types

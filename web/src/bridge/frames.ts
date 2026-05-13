@@ -39,19 +39,19 @@ export const ZAuth = z.object({
   clientKind: ZClientKind.optional(),
 });
 
-export const ZListChats = z.object({ ...base, type: z.literal("listChats") });
+export const ZListSessions = z.object({ ...base, type: z.literal("listSessions") });
 
-export const ZOpenChat = z.object({
+export const ZOpenSession = z.object({
   ...base,
-  type: z.literal("openChat"),
-  chatId: z.string(),
+  type: z.literal("openSession"),
+  sessionId: z.string(),
   limit: z.number().int().optional(),
 });
 
 export const ZLoadOlderMessages = z.object({
   ...base,
   type: z.literal("loadOlderMessages"),
-  chatId: z.string(),
+  sessionId: z.string(),
   beforeMessageId: z.string(),
   limit: z.number().int(),
 });
@@ -59,34 +59,34 @@ export const ZLoadOlderMessages = z.object({
 export const ZSendPrompt = z.object({
   ...base,
   type: z.literal("sendPrompt"),
-  chatId: z.string(),
+  sessionId: z.string(),
   text: z.string(),
   attachments: z.array(ZWireAttachment).optional().default([]),
 });
 
-export const ZNewChat = z.object({
+export const ZNewSession = z.object({
   ...base,
-  type: z.literal("newChat"),
-  chatId: z.string(),
+  type: z.literal("newSession"),
+  sessionId: z.string(),
   text: z.string(),
   attachments: z.array(ZWireAttachment).optional().default([]),
 });
 
-export const ZInterruptTurn = z.object({ ...base, type: z.literal("interruptTurn"), chatId: z.string() });
+export const ZInterruptTurn = z.object({ ...base, type: z.literal("interruptTurn"), sessionId: z.string() });
 
 export const ZEditPrompt = z.object({
   ...base,
   type: z.literal("editPrompt"),
-  chatId: z.string(),
+  sessionId: z.string(),
   messageId: z.string(),
   text: z.string(),
 });
 
-export const ZArchiveChat = z.object({ ...base, type: z.literal("archiveChat"), chatId: z.string() });
-export const ZUnarchiveChat = z.object({ ...base, type: z.literal("unarchiveChat"), chatId: z.string() });
-export const ZPinChat = z.object({ ...base, type: z.literal("pinChat"), chatId: z.string() });
-export const ZUnpinChat = z.object({ ...base, type: z.literal("unpinChat"), chatId: z.string() });
-export const ZRenameChat = z.object({ ...base, type: z.literal("renameChat"), chatId: z.string(), title: z.string() });
+export const ZArchiveSession = z.object({ ...base, type: z.literal("archiveSession"), sessionId: z.string() });
+export const ZUnarchiveSession = z.object({ ...base, type: z.literal("unarchiveSession"), sessionId: z.string() });
+export const ZPinSession = z.object({ ...base, type: z.literal("pinSession"), sessionId: z.string() });
+export const ZUnpinSession = z.object({ ...base, type: z.literal("unpinSession"), sessionId: z.string() });
+export const ZRenameSession = z.object({ ...base, type: z.literal("renameSession"), sessionId: z.string(), title: z.string() });
 export const ZPairingStart = z.object({ ...base, type: z.literal("pairingStart") });
 export const ZListProjects = z.object({ ...base, type: z.literal("listProjects") });
 export const ZReadFile = z.object({ ...base, type: z.literal("readFile"), path: z.string() });
@@ -108,13 +108,13 @@ export const ZAuthOk = z.object({ ...base, type: z.literal("authOk"), macName: z
 export const ZAuthFailed = z.object({ ...base, type: z.literal("authFailed"), reason: z.string() });
 export const ZVersionMismatch = z.object({ ...base, type: z.literal("versionMismatch"), serverVersion: z.number().int() });
 
-export const ZChatsSnapshot = z.object({ ...base, type: z.literal("chatsSnapshot"), chats: z.array(ZWireChat) });
+export const ZSessionsSnapshot = z.object({ ...base, type: z.literal("sessionsSnapshot"), sessions: z.array(ZWireChat) });
 export const ZChatUpdated = z.object({ ...base, type: z.literal("chatUpdated"), chat: ZWireChat });
 
 export const ZMessagesSnapshot = z.object({
   ...base,
   type: z.literal("messagesSnapshot"),
-  chatId: z.string(),
+  sessionId: z.string(),
   messages: z.array(ZWireMessage),
   hasMore: z.boolean().optional(),
 });
@@ -122,7 +122,7 @@ export const ZMessagesSnapshot = z.object({
 export const ZMessagesPage = z.object({
   ...base,
   type: z.literal("messagesPage"),
-  chatId: z.string(),
+  sessionId: z.string(),
   messages: z.array(ZWireMessage),
   hasMore: z.boolean(),
 });
@@ -130,14 +130,14 @@ export const ZMessagesPage = z.object({
 export const ZMessageAppended = z.object({
   ...base,
   type: z.literal("messageAppended"),
-  chatId: z.string(),
+  sessionId: z.string(),
   message: ZWireMessage,
 });
 
 export const ZMessageStreaming = z.object({
   ...base,
   type: z.literal("messageStreaming"),
-  chatId: z.string(),
+  sessionId: z.string(),
   messageId: z.string(),
   content: z.string(),
   reasoningText: z.string(),
@@ -310,18 +310,18 @@ export const ZAudioDeleteResult = z.object({
 /** Full discriminated union covering both directions. */
 export const ZBridgeFrame = z.discriminatedUnion("type", [
   ZAuth,
-  ZListChats,
-  ZOpenChat,
+  ZListSessions,
+  ZOpenSession,
   ZLoadOlderMessages,
   ZSendPrompt,
-  ZNewChat,
+  ZNewSession,
   ZInterruptTurn,
   ZEditPrompt,
-  ZArchiveChat,
-  ZUnarchiveChat,
-  ZPinChat,
-  ZUnpinChat,
-  ZRenameChat,
+  ZArchiveSession,
+  ZUnarchiveSession,
+  ZPinSession,
+  ZUnpinSession,
+  ZRenameSession,
   ZPairingStart,
   ZListProjects,
   ZReadFile,
@@ -332,7 +332,7 @@ export const ZBridgeFrame = z.discriminatedUnion("type", [
   ZAuthOk,
   ZAuthFailed,
   ZVersionMismatch,
-  ZChatsSnapshot,
+  ZSessionsSnapshot,
   ZChatUpdated,
   ZMessagesSnapshot,
   ZMessagesPage,

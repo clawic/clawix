@@ -51,27 +51,27 @@ if (IS_WINDOWS) {
 // bridge in two on a machine that has both installed.
 const BRIDGE_LABEL = 'clawix.bridge';
 const MENUBAR_LABEL = 'clawix.menubar';
-const BRIDGE_PORT = 7778;
-const BRIDGE_HTTP_PORT = 7779;
+const BRIDGE_PORT = 24080;
+const BRIDGE_HTTP_PORT = 24081;
 
 let APP_BUNDLE_PATH;
 let APP_BUNDLED_DAEMON;
 if (IS_WINDOWS) {
   APP_BUNDLE_PATH = path.join(process.env.LOCALAPPDATA || HOME, 'Clawix');
-  APP_BUNDLED_DAEMON = path.join(APP_BUNDLE_PATH, 'clawix-bridged.exe');
+  APP_BUNDLED_DAEMON = path.join(APP_BUNDLE_PATH, 'clawix-bridge.exe');
 } else if (IS_LINUX) {
   // Resolved at runtime by service_manager.rs / daemon.js because the
   // installer might be the .deb (/opt/clawix), the AppImage AppDir
   // (extracted), or the npm tarball (~/.clawix/bin). We expose the most
   // common static path here as a hint; real lookup walks all three.
   APP_BUNDLE_PATH = '/opt/clawix';
-  APP_BUNDLED_DAEMON = '/opt/clawix/clawix-bridged';
+  APP_BUNDLED_DAEMON = '/opt/clawix/clawix-bridge';
 } else {
   APP_BUNDLE_PATH = '/Applications/Clawix.app';
-  APP_BUNDLED_DAEMON = path.join(APP_BUNDLE_PATH, 'Contents', 'Helpers', 'clawix-bridged');
+  APP_BUNDLED_DAEMON = path.join(APP_BUNDLE_PATH, 'Contents', 'Helpers', 'clawix-bridge');
 }
 
-const DAEMON_BIN_NAME = IS_WINDOWS ? 'clawix-bridged.exe' : 'clawix-bridged';
+const DAEMON_BIN_NAME = IS_WINDOWS ? 'clawix-bridge.exe' : 'clawix-bridge';
 const MENUBAR_BIN_NAME = IS_WINDOWS ? 'clawix-menubar.exe' : 'clawix-menubar';
 
 module.exports = {

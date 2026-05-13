@@ -45,7 +45,7 @@ if ($mode -eq "dummy") {
 }
 
 # Kill running instances.
-foreach ($proc in @("Clawix","clawix-bridged")) {
+foreach ($proc in @("Clawix","clawix-bridge")) {
     Get-Process -Name $proc -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 

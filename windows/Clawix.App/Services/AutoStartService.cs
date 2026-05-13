@@ -4,7 +4,7 @@ using Microsoft.Win32;
 namespace Clawix.App.Services;
 
 /// <summary>
-/// SMAppService equivalent. Registers <c>clawix-bridged.exe</c> to
+/// SMAppService equivalent. Registers <c>clawix-bridge.exe</c> to
 /// auto-start at login under
 /// <c>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</c>.
 /// Per-user, no admin required, no Windows Service.

@@ -18,7 +18,7 @@ public enum WireAttachmentKind: String, Codable, Equatable, Sendable {
     case audio
 }
 
-/// One attachment piggy-backing on a `sendPrompt` / `newChat` frame. The
+/// One attachment piggy-backing on a `sendPrompt` / `newSession` frame. The
 /// payload rides inline as base64 because the bridge speaks JSON over
 /// WebSocket (no multipart). The daemon's behaviour depends on `kind`:
 /// images are forwarded to Codex as `localImage`; audio is transcribed
@@ -67,7 +67,7 @@ public struct WireAttachment: Codable, Equatable, Sendable {
 /// Project descriptor exposed to the desktop client when it asks the
 /// daemon for `listProjects`. Mirrors the macOS `DerivedProject` shape
 /// the GUI consumes today, minus the cached chat list (clients pull
-/// chats independently via `chatsSnapshot`).
+/// chats independently via `sessionsSnapshot`).
 public struct WireProject: Codable, Equatable, Sendable {
     public let id: String
     public var title: String
@@ -721,7 +721,7 @@ public struct WireAudioListResult: Codable, Equatable, Sendable {
 //
 // Wire shape of the four new entities described in
 // the v8 agents implementation plan.
-// macOS keeps the filesystem (`~/.clawjs/`) as the source of truth; the
+// macOS keeps the filesystem (`~/.claw/`) as the source of truth; the
 // daemon serializes records into these structs on `agentList` / push
 // frames so cross-device clients see the same roster. Every field is
 // either non-optional or carries an explicit default so v7 peers
@@ -908,7 +908,7 @@ public struct WireConnection: Codable, Equatable, Sendable, Identifiable {
 /// Audit log row surfaced when one agent delegates to another or when
 /// an approval gate is evaluated. Clients render these inside the
 /// agent detail surface; the daemon owns the persistent storage at
-/// `~/.clawjs/agents/<id>/audit.log` (one JSON-encoded entry per line).
+/// `~/.claw/agents/<id>/audit.log` (one JSON-encoded entry per line).
 public struct WireAgentAuditEntry: Codable, Equatable, Sendable, Identifiable {
     public let id: String
     public let timestamp: Date

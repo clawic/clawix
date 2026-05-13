@@ -21,12 +21,12 @@ public sealed class BridgeFrameSerializationTests
     }
 
     [Fact] public void Auth_RoundTrip() => Assert.Equal("token", RoundTrip(new BridgeBody.Auth("token", null, null)).Token);
-    [Fact] public void OpenChat_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.OpenChat("c1", 60)).ChatId);
+    [Fact] public void OpenSession_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.OpenSession("c1", 60)).SessionId);
     [Fact] public void LoadOlder_RoundTrip() => Assert.Equal(40, RoundTrip(new BridgeBody.LoadOlderMessages("c1", "m1", 40)).Limit);
     [Fact] public void EditPrompt_RoundTrip() => Assert.Equal("hi", RoundTrip(new BridgeBody.EditPrompt("c1", "m1", "hi")).Text);
-    [Fact] public void RenameChat_RoundTrip() => Assert.Equal("New title", RoundTrip(new BridgeBody.RenameChat("c1", "New title")).Title);
-    [Fact] public void Archive_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.ArchiveChat("c1")).ChatId);
-    [Fact] public void Pin_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.PinChat("c1")).ChatId);
+    [Fact] public void RenameSession_RoundTrip() => Assert.Equal("New title", RoundTrip(new BridgeBody.RenameSession("c1", "New title")).Title);
+    [Fact] public void Archive_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.ArchiveSession("c1")).SessionId);
+    [Fact] public void Pin_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.PinSession("c1")).SessionId);
     [Fact] public void PairingPayload_RoundTrip() => Assert.Equal("{}", RoundTrip(new BridgeBody.PairingPayload("{}", "tok")).QrJson);
     [Fact] public void Bridgestate_RoundTrip() => Assert.Equal("ready", RoundTrip(new BridgeBody.BridgeState("ready", 5, null)).State);
 

@@ -33,11 +33,11 @@ function bridgePlist(binaryPath, suiteName = 'clawix.bridge') {
     <key>KeepAlive</key>                   <true/>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>CLAWIX_BRIDGED_PORT</key>     <string>${BRIDGE_PORT}</string>
-        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>${suiteName}</string>
+        <key>CLAWIX_BRIDGE_PORT</key>     <string>${BRIDGE_PORT}</string>
+        <key>CLAWIX_BRIDGE_DEFAULTS_SUITE</key> <string>${suiteName}</string>
     </dict>
-    <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
-    <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
+    <key>StandardOutPath</key>             <string>/tmp/clawix-bridge.out</string>
+    <key>StandardErrorPath</key>           <string>/tmp/clawix-bridge.err</string>
 </dict>
 </plist>
 `;

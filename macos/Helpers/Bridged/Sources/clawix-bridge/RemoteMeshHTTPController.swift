@@ -30,27 +30,27 @@ final class RemoteMeshHTTPController {
     func handle(_ request: HTTPRequest, isLoopback: Bool) async -> HTTPResponse? {
         do {
             switch (request.method, request.path) {
-            case ("GET", "/mesh/identity"):
+            case ("GET", "/v1/mesh/identity"):
                 return try json(identityPayload())
 
-            case ("GET", "/mesh/peers") where isLoopback:
+            case ("GET", "/v1/mesh/peers") where isLoopback:
                 return try json(PeersOutput(peers: store.peers()))
 
-            case ("GET", "/mesh/workspaces") where isLoopback:
+            case ("GET", "/v1/mesh/workspaces") where isLoopback:
                 return try json(WorkspacesOutput(workspaces: store.workspaces()))
 
-            case ("GET", let path) where path.hasPrefix("/mesh/jobs/") && isLoopback:
-                let jobId = String(path.dropFirst("/mesh/jobs/".count))
+            case ("GET", let path) where path.hasPrefix("/v1/mesh/jobs/") && isLoopback:
+                let jobId = String(path.dropFirst("/v1/mesh/jobs/".count))
                 return try json(JobOutput(job: store.job(id: jobId), events: store.events(jobId: jobId)))
 
-            case ("POST", "/mesh/workspaces") where isLoopback:
+            case ("POST", "/v1/mesh/workspaces") where isLoopback:
                 let input = try decode(LocalWorkspaceInput.self, from: request.body)
                 let path = URL(fileURLWithPath: input.path).standardizedFileURL.path
                 let workspace = RemoteWorkspace(path: path, label: input.label ?? URL(fileURLWithPath: path).lastPathComponent)
                 store.upsert(workspace: workspace)
                 return try json(WorkspaceOutput(workspace: workspace))
 
-            case ("POST", "/mesh/peers") where isLoopback:
+            case ("POST", "/v1/mesh/peers") where isLoopback:
                 let input = try decode(LocalPeerInput.self, from: request.body)
                 var peer = PeerRecord(
                     nodeId: input.identity.nodeId,
@@ -66,17 +66,17 @@ final class RemoteMeshHTTPController {
                 store.upsert(peer: peer)
                 return try json(PeerOutput(peer: peer))
 
-            case ("POST", "/mesh/link") where isLoopback:
+            case ("POST", "/v1/mesh/link") where isLoopback:
                 let input = try decode(LinkInput.self, from: request.body)
                 let peer = try await linkPeer(input)
                 return try json(PeerOutput(peer: peer))
 
-            case ("POST", "/mesh/remote-jobs") where isLoopback:
+            case ("POST", "/v1/mesh/remote-jobs") where isLoopback:
                 let input = try decode(StartRemoteJobInput.self, from: request.body)
                 let result = try await startOutboundJob(input)
                 return try json(result)
 
-            case ("POST", "/mesh/pair"):
+            case ("POST", "/v1/mesh/pair"):
                 let input = try decode(PairInput.self, from: request.body)
                 guard pairing.acceptToken(input.token) else {
                     return text(status: 403, "bad pairing token")
@@ -95,7 +95,7 @@ final class RemoteMeshHTTPController {
                 store.upsert(peer: peer)
                 return try json(PairOutput(identity: try identityPayload(), peer: peer))
 
-            case ("POST", "/mesh/jobs"):
+            case ("POST", "/v1/mesh/jobs"):
                 let envelope = try decode(RemoteMeshSignedEnvelope.self, from: request.body)
                 let peer = try verifiedPeer(envelope.senderNodeId)
                 let input = try identity.open(envelope, from: peer, as: StartJobInput.self)
@@ -106,20 +106,20 @@ final class RemoteMeshHTTPController {
                     workspacePath: input.workspacePath,
                     prompt: input.prompt
                 )
-                return try encrypted(RemoteJobResponse(job: job), to: peer, path: "/mesh/jobs", method: "POST")
+                return try encrypted(RemoteJobResponse(job: job), to: peer, path: "/v1/mesh/jobs", method: "POST")
 
-            case ("POST", "/mesh/jobs/cancel"):
+            case ("POST", "/v1/mesh/jobs/cancel"):
                 let envelope = try decode(RemoteMeshSignedEnvelope.self, from: request.body)
                 let peer = try verifiedPeer(envelope.senderNodeId)
                 let input = try identity.open(envelope, from: peer, as: CancelJobInput.self)
                 await host?.cancelRemoteJob(jobId: input.jobId)
-                return try encrypted(OkOutput(ok: true), to: peer, path: "/mesh/jobs/cancel", method: "POST")
+                return try encrypted(OkOutput(ok: true), to: peer, path: "/v1/mesh/jobs/cancel", method: "POST")
 
-            case ("POST", "/mesh/jobs/events"):
+            case ("POST", "/v1/mesh/jobs/events"):
                 let envelope = try decode(RemoteMeshSignedEnvelope.self, from: request.body)
                 let peer = try verifiedPeer(envelope.senderNodeId)
                 let input = try identity.open(envelope, from: peer, as: JobEventsInput.self)
-                return try encrypted(JobEventsOutput(events: store.events(jobId: input.jobId)), to: peer, path: "/mesh/jobs/events", method: "POST")
+                return try encrypted(JobEventsOutput(events: store.events(jobId: input.jobId)), to: peer, path: "/v1/mesh/jobs/events", method: "POST")
 
             default:
                 return nil
@@ -146,11 +146,11 @@ final class RemoteMeshHTTPController {
     }
 
     private func linkPeer(_ input: LinkInput) async throws -> PeerRecord {
-        let identityURL = URL(string: "http://\(input.host):\(input.httpPort)/mesh/identity")!
+        let identityURL = URL(string: "http://\(input.host):\(input.httpPort)/v1/mesh/identity")!
         let (identityData, _) = try await URLSession.shared.data(from: identityURL)
         let remoteIdentity = try RemoteMeshCodec.decoder.decode(NodeIdentity.self, from: identityData)
         let localIdentity = try identityPayload()
-        let pairURL = URL(string: "http://\(input.host):\(input.httpPort)/mesh/pair")!
+        let pairURL = URL(string: "http://\(input.host):\(input.httpPort)/v1/mesh/pair")!
         var req = URLRequest(url: pairURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -164,7 +164,7 @@ final class RemoteMeshHTTPController {
             RemoteEndpoint(
                 kind: "linked",
                 host: input.host,
-                bridgePort: input.bridgePort ?? 7778,
+                bridgePort: input.bridgePort ?? 24080,
                 httpPort: input.httpPort
             ),
             at: 0
@@ -186,8 +186,8 @@ final class RemoteMeshHTTPController {
     private func startOutboundJob(_ input: StartRemoteJobInput) async throws -> RemoteJobResponse {
         let peer = try verifiedPeer(input.peerId)
         let payload = StartJobInput(jobId: input.jobId ?? UUID().uuidString, workspacePath: input.workspacePath, prompt: input.prompt)
-        let envelope = try identity.seal(payload, for: peer, path: "/mesh/jobs", method: "POST")
-        let response: RemoteMeshSignedEnvelope = try await postEncrypted(envelope, to: peer, path: "/mesh/jobs")
+        let envelope = try identity.seal(payload, for: peer, path: "/v1/mesh/jobs", method: "POST")
+        let response: RemoteMeshSignedEnvelope = try await postEncrypted(envelope, to: peer, path: "/v1/mesh/jobs")
         let opened = try identity.open(response, from: peer, as: RemoteJobResponse.self)
         return opened
     }

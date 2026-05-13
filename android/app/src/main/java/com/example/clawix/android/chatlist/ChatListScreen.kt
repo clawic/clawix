@@ -78,7 +78,7 @@ fun ChatListScreen(
 
     LaunchedEffect(Unit) {
         // Refresh chats list once on entry
-        container.bridgeClient.send(com.example.clawix.android.core.BridgeBody.ListChats)
+        container.bridgeClient.send(com.example.clawix.android.core.BridgeBody.ListSessions)
         container.bridgeClient.send(com.example.clawix.android.core.BridgeBody.ListProjects)
     }
 

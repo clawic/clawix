@@ -7,7 +7,7 @@ namespace Clawix.App.Views;
 
 public sealed partial class SidebarView : UserControl
 {
-    public ObservableCollection<WireChat> Chats { get; } = new();
+    public ObservableCollection<WireChat> Sessions { get; } = new();
 
     public SidebarView()
     {
@@ -20,11 +20,11 @@ public sealed partial class SidebarView : UserControl
         var state = App.Services.State;
         state.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(state.Chats))
+            if (args.PropertyName == nameof(state.Sessions))
                 DispatcherQueue.TryEnqueue(() =>
                 {
-                    Chats.Clear();
-                    foreach (var c in state.Chats) Chats.Add(c);
+                    Sessions.Clear();
+                    foreach (var c in state.Sessions) Sessions.Add(c);
                 });
             if (args.PropertyName == nameof(state.BridgeStateLabel))
                 DispatcherQueue.TryEnqueue(() => BridgeStatusText.Text = state.BridgeStateLabel);
@@ -38,7 +38,7 @@ public sealed partial class SidebarView : UserControl
             await App.Services.State.SelectChatAsync(chat);
     }
 
-    private void NewChat_Click(object sender, RoutedEventArgs e)
+    private void NewSession_Click(object sender, RoutedEventArgs e)
     {
         // Phase 4: open ProjectEditorSheet to pick the cwd, then send `newChat` frame.
     }

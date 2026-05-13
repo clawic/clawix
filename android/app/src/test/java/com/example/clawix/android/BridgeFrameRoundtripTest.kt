@@ -61,9 +61,9 @@ class BridgeFrameRoundtripTest {
     @Test fun roundtrip_outbound_v1() {
         roundtrip(BridgeBody.Auth("tok", "iPhone", ClientKind.ios))
         roundtrip(BridgeBody.Auth("tok", null, null))
-        roundtrip(BridgeBody.ListChats)
-        roundtrip(BridgeBody.OpenChat("chat-1", null))
-        roundtrip(BridgeBody.OpenChat("chat-1", 60))
+        roundtrip(BridgeBody.ListSessions)
+        roundtrip(BridgeBody.OpenSession("chat-1", null))
+        roundtrip(BridgeBody.OpenSession("chat-1", 60))
         roundtrip(BridgeBody.LoadOlderMessages("chat-1", "msg-x", 40))
         roundtrip(BridgeBody.SendPrompt("chat-1", "hello", emptyList()))
         roundtrip(
@@ -73,7 +73,7 @@ class BridgeFrameRoundtripTest {
                 listOf(WireAttachment("a-1", WireAttachmentKind.image, "image/jpeg", "x.jpg", "AAA="))
             )
         )
-        roundtrip(BridgeBody.NewChat("c-x", "kick off", emptyList()))
+        roundtrip(BridgeBody.NewSession("c-x", "kick off", emptyList()))
         roundtrip(BridgeBody.InterruptTurn("chat-1"))
     }
 
@@ -83,7 +83,7 @@ class BridgeFrameRoundtripTest {
         roundtrip(BridgeBody.AuthFailed("bad token"))
         roundtrip(BridgeBody.VersionMismatch(99))
         roundtrip(
-            BridgeBody.ChatsSnapshot(
+            BridgeBody.SessionsSnapshot(
                 listOf(
                     WireChat(
                         id = "c-1",
@@ -112,12 +112,12 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun roundtrip_chat_management_v2() {
-        roundtrip(BridgeBody.ArchiveChat("c-1"))
-        roundtrip(BridgeBody.UnarchiveChat("c-1"))
-        roundtrip(BridgeBody.PinChat("c-1"))
-        roundtrip(BridgeBody.UnpinChat("c-1"))
-        roundtrip(BridgeBody.RenameChat("c-1", "New title"))
-        roundtrip(BridgeBody.RenameChat("c-1", ""))
+        roundtrip(BridgeBody.ArchiveSession("c-1"))
+        roundtrip(BridgeBody.UnarchiveSession("c-1"))
+        roundtrip(BridgeBody.PinSession("c-1"))
+        roundtrip(BridgeBody.UnpinSession("c-1"))
+        roundtrip(BridgeBody.RenameSession("c-1", "New title"))
+        roundtrip(BridgeBody.RenameSession("c-1", ""))
     }
 
     @Test fun roundtrip_voice_v3() {
@@ -173,23 +173,23 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun unknown_fields_in_known_type_are_ignored() {
-        val raw = """{"schemaVersion":5,"type":"openChat","chatId":"c-1","limit":60,"thisIsFromTheFuture":true}"""
+        val raw = """{"schemaVersion":5,"type":"openSession","sessionId":"c-1","limit":60,"thisIsFromTheFuture":true}"""
         val decoded = BridgeCoder.decode(raw)
-        assertEquals(BridgeBody.OpenChat("c-1", 60), decoded.body)
+        assertEquals(BridgeBody.OpenSession("c-1", 60), decoded.body)
     }
 
     @Test fun open_chat_omits_limit_when_null() {
-        val raw = BridgeCoder.encode(BridgeFrame(body = BridgeBody.OpenChat("c-1", null)))
+        val raw = BridgeCoder.encode(BridgeFrame(body = BridgeBody.OpenSession("c-1", null)))
         assertTrue("expected no limit field, got $raw", !raw.contains("\"limit\""))
     }
 
     @Test fun chat_decodes_with_legacy_payload_missing_optional_fields() {
         val raw = """
-            {"schemaVersion":5,"type":"chatsSnapshot",
+            {"schemaVersion":5,"type":"sessionsSnapshot",
              "chats":[{"id":"c-1","title":"t","createdAt":"2026-05-01T12:00:00Z"}]}
         """.trimIndent()
         val decoded = BridgeCoder.decode(raw)
-        val chats = (decoded.body as BridgeBody.ChatsSnapshot).chats
+        val chats = (decoded.body as BridgeBody.SessionsSnapshot).chats
         assertEquals(1, chats.size)
         val c = chats.first()
         assertEquals(false, c.isPinned)

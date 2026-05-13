@@ -2,10 +2,10 @@ import Foundation
 import ServiceManagement
 
 /// Wrapper around `SMAppService.agent` that lets the user opt into the
-/// LaunchAgent daemon (`clawix-bridged`). When registered, launchd
+/// LaunchAgent daemon (`clawix-bridge`). When registered, launchd
 /// keeps the daemon alive across Cmd+Q of the GUI, app crashes, and
 /// logout/login. Bundle layout (helper at
-/// `Contents/Helpers/clawix-bridged`, plist at
+/// `Contents/Helpers/clawix-bridge`, plist at
 /// `Contents/Library/LaunchAgents/clawix.bridge.plist`) is set up by
 /// `dev.sh` and the release script; this service only flips the
 /// registration on or off.
@@ -38,7 +38,7 @@ final class BackgroundBridgeService: ObservableObject {
         status == .enabled
     }
 
-    /// True when *any* `clawix-bridged` daemon is reachable on this Mac,
+    /// True when *any* `clawix-bridge` daemon is reachable on this Mac,
     /// regardless of who registered it. Reads
     /// `~/.clawix/state/bridge-status.json` (the daemon's heartbeat file)
     /// and confirms the recorded PID is still alive.
@@ -46,7 +46,7 @@ final class BackgroundBridgeService: ObservableObject {
     /// Why this exists: SMAppService.status is bundle-relative. A
     /// LaunchAgent registered by the npm CLI (its plist sitting in
     /// `~/Library/LaunchAgents/clawix.bridge.plist` and pointing at
-    /// `~/.clawix/bin/clawix-bridged`) does NOT show up as `.enabled`
+    /// `~/.clawix/bin/clawix-bridge`) does NOT show up as `.enabled`
     /// for the GUI app's SMAppService.agent — that API only sees agents
     /// the calling .app itself registered through `register()`. So a
     /// dev build launched via dev.sh sees `isEnabled = false` even

@@ -8,7 +8,7 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
             .deletingLastPathComponent()
         let sourceRoots = [
             macosRoot.appendingPathComponent("Sources/Clawix", isDirectory: true),
-            macosRoot.appendingPathComponent("Helpers/Bridged/Sources/clawix-bridged", isDirectory: true),
+            macosRoot.appendingPathComponent("Helpers/Bridged/Sources/clawix-bridge", isDirectory: true),
         ]
 
         let allowedSuffixes: Set<String> = [
@@ -25,10 +25,10 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
             "monitor.sqlite",
             "infra.sqlite",
             "ops.sqlite",
-            "CLAWJS_MAIN_DB_PATH",
-            "CLAWJS_MAIN_DATA_DIR",
-            "CLAWJS_MAIN_FILES_DIR",
-            "CLAWIX_CLAWJS_DATA_DIR",
+            "CLAW_DB_PATH",
+            "CLAW_DATA_DIR",
+            "CLAW_FILES_DIR",
+            "CLAWIX_CLAW_DATA_DIR",
             "state_5.sqlite",
             ".codex/session_index.jsonl",
             ".codex/sessions",

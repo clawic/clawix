@@ -234,7 +234,7 @@ act on and what state it is in.
 **The rule.** Connectivity loss is rendered, not hidden. Reconnection
 works without a relaunch.
 
-- Loss of the local bridge daemon (`clawix-bridged`) is rendered
+- Loss of the local bridge daemon (`clawix-bridge`) is rendered
   prominently: the user sees that the daemon is down and a one-click
   restart action.
 - Loss of network on a surface that needs it (sign-in, model

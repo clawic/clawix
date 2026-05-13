@@ -29,7 +29,7 @@ final class WebStaticServer {
     private var connections: [BridgeConnection] = []
 
     init(httpPort: UInt16, wsPort: UInt16, pairing: PairingService, mesh: RemoteMeshHTTPController? = nil) {
-        self.httpPort = NWEndpoint.Port(rawValue: httpPort) ?? NWEndpoint.Port(rawValue: 7779)!
+        self.httpPort = NWEndpoint.Port(rawValue: httpPort) ?? NWEndpoint.Port(rawValue: 24081)!
         self.wsPort = wsPort
         self.pairing = pairing
         self.mesh = mesh
@@ -47,14 +47,14 @@ final class WebStaticServer {
             }
             listener.stateUpdateHandler = { state in
                 if case .failed(let err) = state {
-                    BridgedLog.write("web-http listener failed: \(err)")
+                    BridgeLog.write("web-http listener failed: \(err)")
                 }
             }
             listener.start(queue: .main)
             self.listener = listener
-            BridgedLog.write("web-http listening tcp/\(httpPort.rawValue) wsPort=\(wsPort)")
+            BridgeLog.write("web-http listening tcp/\(httpPort.rawValue) wsPort=\(wsPort)")
         } catch {
-            BridgedLog.write("web-http listen-failed \(error)")
+            BridgeLog.write("web-http listen-failed \(error)")
         }
     }
 
@@ -174,7 +174,7 @@ final class BridgeConnection {
     }
 
     private func handle(_ request: HTTPRequest) async {
-        if request.path.hasPrefix("/mesh/"), let mesh {
+        if request.path.hasPrefix("/v1/mesh/"), let mesh {
             if let response = await mesh.handle(request, isLoopback: isLoopback) {
                 send(response)
                 return
@@ -339,7 +339,7 @@ struct HTTPRequest {
 /// Reads embedded web assets (the `clawix/web/` Vite build output) from the
 /// SwiftPM resource bundle. The build pipeline (clawix/macos/scripts/dev.sh
 /// and release.sh) runs `pnpm --filter @clawix/web build` and copies the
-/// output into `Sources/clawix-bridged/Resources/web-dist/` before invoking
+/// output into `Sources/clawix-bridge/Resources/web-dist/` before invoking
 /// `swift build`.
 enum WebAssets {
     static func read(path: String) -> Data? {

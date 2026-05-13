@@ -20,7 +20,7 @@ enum ClawixDeepLink: Equatable {
     }
 }
 
-private let daemonBridgePort: UInt16 = 7778
+private let daemonBridgePort: UInt16 = 24080
 
 private func rolloutChatMessages(from result: RolloutReader.ReadResult) -> [ChatMessage] {
     result.entries.map { e in
@@ -1114,7 +1114,7 @@ final class AppState: ObservableObject {
     let meshStore: MeshStore
     /// Currently-selected destination for outbound prompts. `.local`
     /// runs through the regular Codex/daemon path. `.peer(nodeId)`
-    /// routes through `/mesh/remote-jobs` instead.
+    /// routes through `/v1/mesh/remote-jobs` instead.
     @Published var selectedMeshTarget: MeshTarget = .local
     @Published var pinnedItems: [PinnedItem] = []
     @Published var isLeftSidebarOpen: Bool = AppState.sidebarDefaults.object(forKey: AppState.leftSidebarOpenKey) as? Bool ?? true
@@ -1572,7 +1572,7 @@ final class AppState: ObservableObject {
         } else if daemonBridgeEnabled {
             // Bridge state (bearer token, paired peers) lives in the
             // public `clawix.bridge` suite so the daemon (started with
-            // CLAWIX_BRIDGED_DEFAULTS_SUITE=clawix.bridge) and a future
+            // CLAWIX_BRIDGE_DEFAULTS_SUITE=clawix.bridge) and a future
             // standalone CLI surface share the same bearer.
             let pairing = PairingService(defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
                                          port: daemonBridgePort)
@@ -3319,7 +3319,7 @@ final class AppState: ObservableObject {
     /// `attachments` carries images the iPhone composer encoded inline.
     /// They are spooled to a chat-scoped temp dir and forwarded as
     /// `localImage` items either through `daemonBridgeClient` (which
-    /// reships the wire `WireAttachment`s to `clawix-bridged`) or
+    /// reships the wire `WireAttachment`s to `clawix-bridge`) or
     /// straight into the in-process `ClawixService`. Sending an
     /// attachment-only message (empty `text`) is supported so the
     /// composer can ship a photo with no caption.

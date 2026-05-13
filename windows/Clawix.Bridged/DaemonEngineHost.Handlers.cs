@@ -6,30 +6,30 @@ namespace Clawix.Bridged;
 
 public sealed partial class DaemonEngineHost
 {
-    public async Task HandleSendPromptAsync(string chatId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct)
+    public async Task HandleSendPromptAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct)
     {
-        await _backend.NotifyAsync("thread/prompt", new { chatId, text, attachments }, ct);
+        await _backend.NotifyAsync("thread/prompt", new { sessionId, text, attachments }, ct);
     }
 
-    public async Task HandleNewChatAsync(string chatId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct)
+    public async Task HandleNewSessionAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct)
     {
-        await _backend.NotifyAsync("thread/start", new { chatId, text, attachments }, ct);
+        await _backend.NotifyAsync("thread/start", new { sessionId, text, attachments }, ct);
     }
 
-    public async Task HandleInterruptTurnAsync(string chatId, CancellationToken ct)
+    public async Task HandleInterruptTurnAsync(string sessionId, CancellationToken ct)
     {
-        await _backend.NotifyAsync("thread/interrupt", new { chatId }, ct);
+        await _backend.NotifyAsync("thread/interrupt", new { sessionId }, ct);
     }
 
-    public async Task<IReadOnlyList<WireMessage>> HandleOpenChatAsync(string chatId, int? limit, CancellationToken ct)
+    public async Task<IReadOnlyList<WireMessage>> HandleOpenSessionAsync(string sessionId, int? limit, CancellationToken ct)
     {
-        var res = await _backend.CallAsync("thread/messages", new { chatId, limit }, ct);
+        var res = await _backend.CallAsync("thread/messages", new { sessionId, limit }, ct);
         return JsonSerializer.Deserialize<List<WireMessage>>(res.GetRawText(), BridgeCoder.Options) ?? [];
     }
 
-    public async Task<(IReadOnlyList<WireMessage> Messages, bool HasMore)> HandleLoadOlderMessagesAsync(string chatId, string beforeMessageId, int limit, CancellationToken ct)
+    public async Task<(IReadOnlyList<WireMessage> Messages, bool HasMore)> HandleLoadOlderMessagesAsync(string sessionId, string beforeMessageId, int limit, CancellationToken ct)
     {
-        var res = await _backend.CallAsync("thread/messagesPage", new { chatId, beforeMessageId, limit }, ct);
+        var res = await _backend.CallAsync("thread/messagesPage", new { sessionId, beforeMessageId, limit }, ct);
         var msgs = res.TryGetProperty("messages", out var m)
             ? JsonSerializer.Deserialize<List<WireMessage>>(m.GetRawText(), BridgeCoder.Options) ?? []
             : new List<WireMessage>();
@@ -37,17 +37,17 @@ public sealed partial class DaemonEngineHost
         return (msgs, hasMore);
     }
 
-    public Task HandleEditPromptAsync(string chatId, string messageId, string text, CancellationToken ct)
-        => _backend.NotifyAsync("thread/editPrompt", new { chatId, messageId, text }, ct);
+    public Task HandleEditPromptAsync(string sessionId, string messageId, string text, CancellationToken ct)
+        => _backend.NotifyAsync("thread/editPrompt", new { sessionId, messageId, text }, ct);
 
-    public Task HandleArchiveAsync(string chatId, bool archived, CancellationToken ct)
-        => _backend.NotifyAsync(archived ? "thread/archive" : "thread/unarchive", new { chatId }, ct);
+    public Task HandleArchiveAsync(string sessionId, bool archived, CancellationToken ct)
+        => _backend.NotifyAsync(archived ? "thread/archive" : "thread/unarchive", new { sessionId }, ct);
 
-    public Task HandlePinAsync(string chatId, bool pinned, CancellationToken ct)
-        => _backend.NotifyAsync(pinned ? "thread/pin" : "thread/unpin", new { chatId }, ct);
+    public Task HandlePinAsync(string sessionId, bool pinned, CancellationToken ct)
+        => _backend.NotifyAsync(pinned ? "thread/pin" : "thread/unpin", new { sessionId }, ct);
 
-    public Task HandleRenameAsync(string chatId, string title, CancellationToken ct)
-        => _backend.NotifyAsync("thread/name/set", new { chatId, title }, ct);
+    public Task HandleRenameAsync(string sessionId, string title, CancellationToken ct)
+        => _backend.NotifyAsync("thread/name/set", new { sessionId, title }, ct);
 
     public async Task<IReadOnlyList<WireProject>> HandleListProjectsAsync(CancellationToken ct)
     {

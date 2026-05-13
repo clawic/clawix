@@ -32,7 +32,7 @@ public sealed partial class DaemonEngineHost
         switch (method)
         {
             case "thread/list/changed":
-                _ = RefreshChatsAsync(CancellationToken.None);
+                _ = RefreshSessionsAsync(CancellationToken.None);
                 break;
             case "thread/messageStreaming":
                 if (TryReadStreaming(@params, out var ev)) MessagesChanged?.Invoke(ev);
@@ -49,10 +49,10 @@ public sealed partial class DaemonEngineHost
     private static bool TryReadStreaming(JsonElement el, out MessagesEvent ev)
     {
         ev = default!;
-        if (!el.TryGetProperty("chatId", out var cid)) return false;
+        if (!el.TryGetProperty("sessionId", out var cid)) return false;
         ev = new MessagesEvent.Streaming
         {
-            ChatId = cid.GetString() ?? "",
+            SessionId = cid.GetString() ?? "",
             MessageId = el.TryGetProperty("messageId", out var m) ? m.GetString() ?? "" : "",
             Content = el.TryGetProperty("content", out var c) ? c.GetString() ?? "" : "",
             ReasoningText = el.TryGetProperty("reasoningText", out var r) ? r.GetString() ?? "" : "",
@@ -64,11 +64,11 @@ public sealed partial class DaemonEngineHost
     private static bool TryReadAppended(JsonElement el, out MessagesEvent ev)
     {
         ev = default!;
-        if (!el.TryGetProperty("chatId", out var cid)) return false;
+        if (!el.TryGetProperty("sessionId", out var cid)) return false;
         if (!el.TryGetProperty("message", out var msg)) return false;
         var wm = JsonSerializer.Deserialize<WireMessage>(msg.GetRawText(), BridgeCoder.Options);
         if (wm is null) return false;
-        ev = new MessagesEvent.Appended { ChatId = cid.GetString() ?? "", Message = wm };
+        ev = new MessagesEvent.Appended { SessionId = cid.GetString() ?? "", Message = wm };
         return true;
     }
 

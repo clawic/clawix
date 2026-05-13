@@ -12,9 +12,9 @@ import WhisperKit
 #endif
 
 @main
-struct BridgedMain {
+struct BridgeMain {
     static func main() {
-        // Maintenance flag: `clawix-bridged --download-model <variant>`
+        // Maintenance flag: `clawix-bridge --download-model <variant>`
         // pulls a WhisperKit model under `~/Documents/huggingface/models/...`
         // and exits. Used by `dev.sh` to recover a corrupted/incomplete
         // cache without forcing the user through the GUI Settings flow.
@@ -57,14 +57,14 @@ struct BridgedMain {
             #endif
         }
 
-        BridgedLog.write("starting schemaVersion=\(bridgeSchemaVersion)")
+        BridgeLog.write("starting schemaVersion=\(bridgeSchemaVersion)")
         let env = ProcessInfo.processInfo.environment
-        let port = env["CLAWIX_BRIDGED_PORT"].flatMap(UInt16.init) ?? 7778
-        let httpPort = env["CLAWIX_BRIDGED_HTTP_PORT"].flatMap(UInt16.init) ?? 7779
-        let defaults = env["CLAWIX_BRIDGED_DEFAULTS_SUITE"]
+        let port = env["CLAWIX_BRIDGE_PORT"].flatMap(UInt16.init) ?? 24080
+        let httpPort = env["CLAWIX_BRIDGE_HTTP_PORT"].flatMap(UInt16.init) ?? 24081
+        let defaults = env["CLAWIX_BRIDGE_DEFAULTS_SUITE"]
             .flatMap { UserDefaults(suiteName: $0) }
             ?? .standard
-        if let bearer = env["CLAWIX_BRIDGED_BEARER"], !bearer.isEmpty {
+        if let bearer = env["CLAWIX_BRIDGE_BEARER"], !bearer.isEmpty {
             defaults.set(bearer, forKey: "ClawixBridge.Bearer.v1")
         }
         let pairing = PairingService(defaults: defaults, port: port)
@@ -76,16 +76,16 @@ struct BridgedMain {
         // to UserDefaults if not already there.
         _ = pairing.bearer
         _ = pairing.shortCode
-        let publishBonjour = env["CLAWIX_BRIDGED_DISABLE_BONJOUR"] != "1"
+        let publishBonjour = env["CLAWIX_BRIDGE_DISABLE_BONJOUR"] != "1"
         let box = HostBox()
-        BridgedHeartbeat.start(port: port, hostBox: box)
+        BridgeHeartbeat.start(port: port, hostBox: box)
 
         Task { @MainActor in
             let runtime = AgentRuntimeSelection.resolve(environment: env, defaults: defaults)
             switch runtime {
             case .codex:
                 guard let binary = BackendBinary.resolve(environment: env) else {
-                    BridgedLog.write("backend binary not found")
+                    BridgeLog.write("backend binary not found")
                     exit(78)
                 }
                 let host = DaemonEngineHost(binary: binary, pairing: pairing)
@@ -108,7 +108,7 @@ struct BridgedMain {
                 server.start()
                 box.host = host
                 box.server = server
-                BridgedLog.write("listening tcp/\(port) runtime=codex backend=\(binary.path.path)")
+                BridgeLog.write("listening tcp/\(port) runtime=codex backend=\(binary.path.path)")
                 let webServer = WebStaticServer(httpPort: httpPort, wsPort: port, pairing: pairing, mesh: mesh)
                 webServer.start()
                 box.webServer = webServer
@@ -126,7 +126,7 @@ struct BridgedMain {
                 server.start()
                 box.host = host
                 box.server = server
-                BridgedLog.write("listening tcp/\(port) runtime=opencode")
+                BridgeLog.write("listening tcp/\(port) runtime=opencode")
                 let webServer = WebStaticServer(httpPort: httpPort, wsPort: port, pairing: pairing)
                 webServer.start()
                 box.webServer = webServer
@@ -182,7 +182,7 @@ final class HostBox: @unchecked Sendable {
 /// opening an authenticated websocket. Atomic write (`.tmp` + rename)
 /// so a reader never sees a half-flushed JSON. peerCount stays 0 in
 /// this iteration; wiring it to `BridgeServer` lives in v1.x.
-enum BridgedHeartbeat {
+enum BridgeHeartbeat {
     private static let interval: TimeInterval = 2.0
 
     static func start(port: UInt16, hostBox: HostBox) {
@@ -235,7 +235,7 @@ enum BridgedHeartbeat {
                 try? FileManager.default.removeItem(at: target)
                 try FileManager.default.moveItem(at: tmp, to: target)
             } catch {
-                BridgedLog.write("heartbeat write failed: \(error)")
+                BridgeLog.write("heartbeat write failed: \(error)")
             }
         }
     }
@@ -254,10 +254,10 @@ final class TimerBox: @unchecked Sendable {
     var timer: DispatchSourceTimer?
 }
 
-enum BridgedLog {
+enum BridgeLog {
     static func write(_ message: String) {
         let safe = redact(message)
-        FileHandle.standardError.write(Data(("[clawix-bridged] \(safe)\n").utf8))
+        FileHandle.standardError.write(Data(("[clawix-bridge] \(safe)\n").utf8))
     }
 
     private static func redact(_ s: String) -> String {
@@ -278,7 +278,7 @@ struct BackendBinary {
     let path: URL
 
     static func resolve(environment: [String: String]) -> BackendBinary? {
-        if let override = environment["CLAWIX_BRIDGED_BACKEND_PATH"], !override.isEmpty {
+        if let override = environment["CLAWIX_BRIDGE_BACKEND_PATH"], !override.isEmpty {
             let url = URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
             if FileManager.default.isExecutableFile(atPath: url.path) {
                 return BackendBinary(path: url)
@@ -342,9 +342,9 @@ final class DaemonEngineHost: EngineHost {
         self.backend = BackendClient(binary: binary)
         self.pairing = pairing
         let env = ProcessInfo.processInfo.environment
-        self.initialRequestTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGED_INITIAL_TIMEOUT_SECONDS"], default: 12)
-        self.threadListTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGED_THREAD_LIST_TIMEOUT_SECONDS"], default: 10)
-        self.rateLimitsTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGED_RATE_LIMITS_TIMEOUT_SECONDS"], default: 4)
+        self.initialRequestTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGE_INITIAL_TIMEOUT_SECONDS"], default: 12)
+        self.threadListTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGE_THREAD_LIST_TIMEOUT_SECONDS"], default: 10)
+        self.rateLimitsTimeoutSeconds = Self.timeout(from: env["CLAWIX_BRIDGE_RATE_LIMITS_TIMEOUT_SECONDS"], default: 4)
     }
 
     private static func timeout(from raw: String?, default fallback: TimeInterval) -> TimeInterval {
@@ -368,7 +368,7 @@ final class DaemonEngineHost: EngineHost {
     }
 
     func bootstrap() async {
-        BridgedLog.write("bootstrap-start")
+        BridgeLog.write("bootstrap-start")
         stateSubject.send(.syncing)
         do {
             try await backend.start()
@@ -376,20 +376,20 @@ final class DaemonEngineHost: EngineHost {
             _ = try await backend.send(
                 method: "initialize",
                 params: InitializeParams(
-                    clientInfo: InitializeClientInfo(name: "Clawix Bridged", title: "Clawix", version: "1"),
+                    clientInfo: InitializeClientInfo(name: "Clawix Bridge", title: "Clawix", version: "1"),
                     capabilities: InitializeCapabilities(experimentalApi: true, optOutNotificationMethods: nil)
                 ),
                 timeoutSeconds: initialRequestTimeoutSeconds
             )
             try await backend.notify(method: "initialized", params: EmptyObject())
-            BridgedLog.write("backend-initialized")
+            BridgeLog.write("backend-initialized")
             let didLoadThreads = await reloadThreads()
             await refreshRateLimits()
             if didLoadThreads {
                 stateSubject.send(.ready)
             }
         } catch {
-            BridgedLog.write("bootstrap failed \(error)")
+            BridgeLog.write("bootstrap failed \(error)")
             stateSubject.send(.error(shortReason(error)))
         }
     }
@@ -413,9 +413,9 @@ final class DaemonEngineHost: EngineHost {
                 snapshot: wireSnapshot(from: response.rateLimits),
                 byLimitId: wireByLimitId(from: response.rateLimitsByLimitId)
             ))
-            BridgedLog.write("rate-limits-read ok buckets=\(response.rateLimitsByLimitId?.count ?? 0)")
+            BridgeLog.write("rate-limits-read ok buckets=\(response.rateLimitsByLimitId?.count ?? 0)")
         } catch {
-            BridgedLog.write("rate-limits-read failed \(error)")
+            BridgeLog.write("rate-limits-read failed \(error)")
         }
     }
 
@@ -460,12 +460,12 @@ final class DaemonEngineHost: EngineHost {
         return String(trimmed.prefix(160))
     }
 
-    func handleHydrateHistory(chatId: UUID) {
-        hydrate(chatId: chatId.uuidString)
+    func handleHydrateHistory(sessionId: UUID) {
+        hydrate(chatId: sessionId.uuidString)
     }
 
-    func handleSendPrompt(chatId: UUID, text: String, attachments: [WireAttachment]) {
-        let chatIdString = chatId.uuidString
+    func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment]) {
+        let chatIdString = sessionId.uuidString
         // Split image vs audio attachments. Images go to Codex as
         // `localImage` items; audio is transcribed via Whisper, stored
         // for future replay, and the transcript becomes (or augments)
@@ -480,7 +480,7 @@ final class DaemonEngineHost: EngineHost {
                 let imagePaths = AttachmentSpooler.write(
                     attachments: imageAttachments,
                     scope: threadId,
-                    log: { BridgedLog.write($0) }
+                    log: { BridgeLog.write($0) }
                 )
                 // Transcribe + persist each audio attachment in order.
                 // The user message ID is minted up-front so the audio
@@ -576,7 +576,7 @@ final class DaemonEngineHost: EngineHost {
         let normalizedTranscript = providedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         var fallbackTranscript: String? = nil
         if normalizedTranscript.isEmpty {
-            let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGED_DEFAULTS_SUITE"]
+            let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DEFAULTS_SUITE"]
             let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
             let activeRaw = defaults.string(forKey: DictationModelManager.activeModelDefaultsKey) ?? ""
             let model = DictationModel(rawValue: activeRaw) ?? .default
@@ -605,7 +605,7 @@ final class DaemonEngineHost: EngineHost {
         var lastEntry: AudioStoreEntry?
         for attachment in attachments {
             guard let data = Data(base64Encoded: attachment.dataBase64) else {
-                BridgedLog.write("audio attachment decode failed id=\(attachment.id)")
+                BridgeLog.write("audio attachment decode failed id=\(attachment.id)")
                 continue
             }
             let entry = try await AudioMessageStore.shared.ingest(
@@ -636,12 +636,12 @@ final class DaemonEngineHost: EngineHost {
         return trimmed.isEmpty ? label : "\(label) \(text)"
     }
 
-    func handleNewChat(chatId: UUID, text: String, attachments: [WireAttachment]) {
+    func handleNewSession(sessionId: UUID, text: String, attachments: [WireAttachment]) {
         // The iPhone composer treats the first prompt of a chat as a
-        // `newChat` frame so the daemon can mint the thread with the
+        // `newSession` frame so the daemon can mint the thread with the
         // chat's pre-allocated UUID. The actual run path is identical
         // to a regular send: ensureThread creates the thread on demand.
-        handleSendPrompt(chatId: chatId, text: text, attachments: attachments)
+        handleSendPrompt(sessionId: sessionId, text: text, attachments: attachments)
     }
 
     func handleRequestAudio(
@@ -697,7 +697,7 @@ final class DaemonEngineHost: EngineHost {
     private static var audioCatalogTokenDir: URL {
         let env = ProcessInfo.processInfo.environment
         let root: URL
-        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAWJS_ROOT"], !custom.isEmpty {
+        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAW_ROOT"], !custom.isEmpty {
             root = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
             root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -705,7 +705,7 @@ final class DaemonEngineHost: EngineHost {
         }
         return root
             .appendingPathComponent("workspace", isDirectory: true)
-            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent(".claw", isDirectory: true)
             .appendingPathComponent("audio", isDirectory: true)
     }
 
@@ -721,7 +721,7 @@ final class DaemonEngineHost: EngineHost {
         // bridge frame because the WebSocket transport is text-only.
         // Spool to a per-request file in the same /tmp tree the image
         // attachment path uses, then hand the file to WhisperKit.
-        let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGED_DEFAULTS_SUITE"]
+        let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DEFAULTS_SUITE"]
         let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
         let activeRaw = defaults.string(forKey: DictationModelManager.activeModelDefaultsKey) ?? ""
         let model = DictationModel(rawValue: activeRaw) ?? .default
@@ -758,8 +758,8 @@ final class DaemonEngineHost: EngineHost {
         #endif
     }
 
-    func handleInterruptTurn(chatId: UUID) {
-        let chatIdString = chatId.uuidString
+    func handleInterruptTurn(sessionId: UUID) {
+        let chatIdString = sessionId.uuidString
         guard let threadId = threadByChat[chatIdString],
               let turnId = activeTurnByThread[threadId]
         else { return }
@@ -797,13 +797,13 @@ final class DaemonEngineHost: EngineHost {
                     expecting: EmptyResponse.self
                 )
             } catch {
-                BridgedLog.write("turn/interrupt failed \(error)")
+                BridgeLog.write("turn/interrupt failed \(error)")
             }
         }
     }
 
-    func handleArchiveChat(chatId: UUID, archived: Bool) {
-        let chatIdString = chatId.uuidString
+    func handleArchiveSession(sessionId: UUID, archived: Bool) {
+        let chatIdString = sessionId.uuidString
         guard let threadId = threadByChat[chatIdString] else { return }
         Task { @MainActor in
             do {
@@ -830,10 +830,10 @@ final class DaemonEngineHost: EngineHost {
         }
     }
 
-    func handleRenameChat(chatId: UUID, title: String) {
+    func handleRenameSession(sessionId: UUID, title: String) {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let chatIdString = chatId.uuidString
+        let chatIdString = sessionId.uuidString
         guard let threadId = threadByChat[chatIdString] else { return }
         // Optimistic local update so any client subscribed to this
         // session sees the new title before the runtime ack lands. The
@@ -957,7 +957,7 @@ final class DaemonEngineHost: EngineHost {
                     expecting: EmptyResponse.self
                 )
             } catch {
-                BridgedLog.write("mesh job cancel failed \(error)")
+                BridgeLog.write("mesh job cancel failed \(error)")
             }
             updateChat(chatId: chatId) {
                 $0.hasActiveTurn = false
@@ -1005,12 +1005,12 @@ final class DaemonEngineHost: EngineHost {
             } while cursor != nil && page < maxPages
 
             let runtimeSnapshots = collected.map(snapshot(from:))
-            BridgedLog.write("thread-list ok count=\(runtimeSnapshots.count) source=runtime pages=\(page)")
+            BridgeLog.write("thread-list ok count=\(runtimeSnapshots.count) source=runtime pages=\(page)")
             chatsSubject.send(runtimeSnapshots)
             lastChatsPublishedAt = Date()
             return true
         } catch {
-            BridgedLog.write("thread-list failed \(error)")
+            BridgeLog.write("thread-list failed \(error)")
             // Surface to peers as an error state rather than silently
             // leaving them on `syncing` forever. The bootstrap caller
             // will move us to `.ready` only on success, so on failure
@@ -1482,7 +1482,7 @@ actor BackendClient {
                 return
             }
             if let text = String(data: data, encoding: .utf8), !text.isEmpty {
-                BridgedLog.write("backend stderr \(text.trimmingCharacters(in: .whitespacesAndNewlines))")
+                BridgeLog.write("backend stderr \(text.trimmingCharacters(in: .whitespacesAndNewlines))")
             }
         }
     }
@@ -1525,7 +1525,7 @@ actor BackendClient {
 
     private func timeoutPending(id: Int, method: String, seconds: TimeInterval) {
         guard let continuation = pending.removeValue(forKey: id) else { return }
-        BridgedLog.write("backend request timeout method=\(method) seconds=\(seconds)")
+        BridgeLog.write("backend request timeout method=\(method) seconds=\(seconds)")
         continuation.resume(throwing: BackendError.timeout(method, seconds))
     }
 

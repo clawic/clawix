@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BIN = ROOT / ".build" / "debug" / "clawix-bridged"
+BIN = ROOT / ".build" / "debug" / "clawix-bridge"
 
 
 def build():
@@ -94,7 +94,7 @@ def wait_http(port: int):
     deadline = time.time() + 8
     while time.time() < deadline:
         try:
-            return get(port, "/mesh/identity")
+            return get(port, "/v1/mesh/identity")
         except Exception:
             time.sleep(0.05)
     raise AssertionError(f"http port {port} did not become ready")
@@ -105,12 +105,12 @@ def start_daemon(home: Path, label: str, ws_port: int, http_port: int, token: st
     env = os.environ.copy()
     env.update(
         {
-            "CLAWIX_BRIDGED_BACKEND_PATH": str(backend),
-            "CLAWIX_BRIDGED_PORT": str(ws_port),
-            "CLAWIX_BRIDGED_HTTP_PORT": str(http_port),
-            "CLAWIX_BRIDGED_BEARER": token,
-            "CLAWIX_BRIDGED_DISABLE_BONJOUR": "1",
-            "CLAWIX_BRIDGED_DEFAULTS_SUITE": f"clawix.mesh.e2e.{label}.{os.getpid()}",
+            "CLAWIX_BRIDGE_BACKEND_PATH": str(backend),
+            "CLAWIX_BRIDGE_PORT": str(ws_port),
+            "CLAWIX_BRIDGE_HTTP_PORT": str(http_port),
+            "CLAWIX_BRIDGE_BEARER": token,
+            "CLAWIX_BRIDGE_DISABLE_BONJOUR": "1",
+            "CLAWIX_BRIDGE_DEFAULTS_SUITE": f"clawix.mesh.e2e.{label}.{os.getpid()}",
             "CLAWIX_MESH_HOME": str(home / "mesh"),
             "HOME": str(home),
         }
@@ -142,15 +142,15 @@ def main():
 
             allowed_workspace = str(b_home / "project")
             Path(allowed_workspace).mkdir()
-            post(b_http, "/mesh/workspaces", {"path": allowed_workspace, "label": "Project B"})
+            post(b_http, "/v1/mesh/workspaces", {"path": allowed_workspace, "label": "Project B"})
 
-            linked = post(a_http, "/mesh/link", {"host": "127.0.0.1", "httpPort": b_http, "token": b_token})
+            linked = post(a_http, "/v1/mesh/link", {"host": "127.0.0.1", "httpPort": b_http, "token": b_token})
             assert linked["peer"]["nodeId"] == b_identity["nodeId"]
-            peers = get(a_http, "/mesh/peers")
+            peers = get(a_http, "/v1/mesh/peers")
             assert any(p["nodeId"] == b_identity["nodeId"] for p in peers["peers"])
 
             try:
-                post(a_http, "/mesh/remote-jobs", {
+                post(a_http, "/v1/mesh/remote-jobs", {
                     "peerId": b_identity["nodeId"],
                     "workspacePath": str(b_home / "denied"),
                     "prompt": "should fail",
@@ -159,7 +159,7 @@ def main():
             except urllib.error.HTTPError as exc:
                 assert exc.code == 400
 
-            started = post(a_http, "/mesh/remote-jobs", {
+            started = post(a_http, "/v1/mesh/remote-jobs", {
                 "peerId": b_identity["nodeId"],
                 "workspacePath": allowed_workspace,
                 "prompt": "run remotely",
@@ -170,7 +170,7 @@ def main():
             deadline = time.time() + 8
             last = None
             while time.time() < deadline:
-                last = get(b_http, f"/mesh/jobs/{job_id}")
+                last = get(b_http, f"/v1/mesh/jobs/{job_id}")
                 if last["job"] and last["job"]["status"] == "completed":
                     break
                 time.sleep(0.1)

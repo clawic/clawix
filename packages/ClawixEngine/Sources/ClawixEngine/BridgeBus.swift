@@ -115,7 +115,7 @@ public final class BridgeBus {
 
     /// Build the current `bridgeState` frame for a peer that just
     /// authenticated. Reads through to the host so the chat count is
-    /// always in sync with what `currentChats()` would return one
+    /// always in sync with what `currentSessions()` would return one
     /// instruction earlier.
     public func currentBridgeStateFrame() -> BridgeFrame {
         let count = host?.bridgeChatsCurrent.count ?? 0
@@ -162,16 +162,16 @@ public final class BridgeBus {
         )))
     }
 
-    /// Client called `openChat`. Returns the current snapshot of
+    /// Client called `openSession`. Returns the current snapshot of
     /// messages so the session can reply with `messagesSnapshot`.
     /// When `limit` is set, only the trailing N messages are returned
     /// alongside `hasMore: true` if there are older messages on the
     /// server's side. `limit == nil` preserves the legacy "ship the
     /// whole transcript" behaviour for old peers and produces
     /// `hasMore: false`.
-    public func subscribe(chatId: String, limit: Int? = nil) -> (messages: [WireMessage], hasMore: Bool) {
-        subscribedChatIds.insert(chatId)
-        let all = host?.bridgeChatsCurrent.first(where: { $0.id == chatId })?.messages ?? []
+    public func subscribe(sessionId: String, limit: Int? = nil) -> (messages: [WireMessage], hasMore: Bool) {
+        subscribedChatIds.insert(sessionId)
+        let all = host?.bridgeChatsCurrent.first(where: { $0.id == sessionId })?.messages ?? []
         guard let limit, limit > 0, all.count > limit else {
             return (all, false)
         }
@@ -185,9 +185,9 @@ public final class BridgeBus {
     /// (chat truncated by `editPrompt` between requests, message id
     /// from a stale view), the function returns `([], false)` so the
     /// client treats it as "nothing older".
-    public func page(chatId: String, before beforeMessageId: String, limit: Int) -> (messages: [WireMessage], hasMore: Bool) {
+    public func page(sessionId: String, before beforeMessageId: String, limit: Int) -> (messages: [WireMessage], hasMore: Bool) {
         guard limit > 0 else { return ([], false) }
-        let all = host?.bridgeChatsCurrent.first(where: { $0.id == chatId })?.messages ?? []
+        let all = host?.bridgeChatsCurrent.first(where: { $0.id == sessionId })?.messages ?? []
         guard let cursorIdx = all.firstIndex(where: { $0.id == beforeMessageId }) else {
             return ([], false)
         }
@@ -197,13 +197,13 @@ public final class BridgeBus {
         return (slice, hasMore)
     }
 
-    public func unsubscribe(chatId: String) {
-        subscribedChatIds.remove(chatId)
+    public func unsubscribe(sessionId: String) {
+        subscribedChatIds.remove(sessionId)
     }
 
-    /// Client called `listChats`. Returns the current chats list. The
-    /// session replies with `chatsSnapshot`.
-    public func currentChats() -> [WireChat] {
+    /// Client called `listSessions`. Returns the current chats list. The
+    /// session replies with `sessionsSnapshot`.
+    public func currentSessions() -> [WireChat] {
         host?.bridgeChatsCurrent.map(\.chat) ?? []
     }
 
@@ -239,7 +239,7 @@ public final class BridgeBus {
                         // atomically and keeps the scroll anchor at the
                         // tail on the first render.
                         emit(BridgeFrame(.messagesSnapshot(
-                            chatId: snap.id,
+                            sessionId: snap.id,
                             messages: snap.messages,
                             hasMore: nil
                         )))
@@ -247,7 +247,7 @@ public final class BridgeBus {
                         let added = snap.messages.suffix(delta)
                         for msg in added {
                             emit(BridgeFrame(.messageAppended(
-                                chatId: snap.id,
+                                sessionId: snap.id,
                                 message: msg
                             )))
                         }
@@ -258,7 +258,7 @@ public final class BridgeBus {
                     // `hasMore: nil` tells the iPhone "this is a whole
                     // transcript, reset any pagination state you held".
                     emit(BridgeFrame(.messagesSnapshot(
-                        chatId: snap.id,
+                        sessionId: snap.id,
                         messages: snap.messages,
                         hasMore: nil
                     )))
@@ -270,7 +270,7 @@ public final class BridgeBus {
                     || prev?.lastReasoning != proj.lastReasoning
                     || prev?.lastFinished != proj.lastFinished) {
                     emit(BridgeFrame(.messageStreaming(
-                        chatId: snap.id,
+                        sessionId: snap.id,
                         messageId: lastId,
                         content: proj.lastContent,
                         reasoningText: proj.lastReasoning,
@@ -291,7 +291,7 @@ public final class BridgeBus {
         }
 
         if listChanged {
-            emit(BridgeFrame(.chatsSnapshot(chats: chats.map(\.chat))))
+            emit(BridgeFrame(.sessionsSnapshot(sessions: chats.map(\.chat))))
         }
     }
 }

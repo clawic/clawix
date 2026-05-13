@@ -15,7 +15,7 @@ public sealed partial class GeneralPage : Page
             {
                 var exe = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Clawix", "clawix-bridged.exe");
+                    "Clawix", "clawix-bridge.exe");
                 App.Services.AutoStart.Enable(exe);
             }
             else App.Services.AutoStart.Disable();

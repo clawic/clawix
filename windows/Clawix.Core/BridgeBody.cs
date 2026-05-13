@@ -17,32 +17,32 @@ public abstract record BridgeBody
         public override string TypeTag => "auth";
     }
 
-    public sealed record ListChats : BridgeBody
+    public sealed record ListSessions : BridgeBody
     {
-        public override string TypeTag => "listChats";
+        public override string TypeTag => "listSessions";
     }
 
-    public sealed record OpenChat(string ChatId, int? Limit) : BridgeBody
+    public sealed record OpenSession(string SessionId, int? Limit) : BridgeBody
     {
-        public override string TypeTag => "openChat";
+        public override string TypeTag => "openSession";
     }
 
-    public sealed record LoadOlderMessages(string ChatId, string BeforeMessageId, int Limit) : BridgeBody
+    public sealed record LoadOlderMessages(string SessionId, string BeforeMessageId, int Limit) : BridgeBody
     {
         public override string TypeTag => "loadOlderMessages";
     }
 
-    public sealed record SendPrompt(string ChatId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
+    public sealed record SendPrompt(string SessionId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
     {
         public override string TypeTag => "sendPrompt";
     }
 
-    public sealed record NewChat(string ChatId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
+    public sealed record NewSession(string SessionId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
     {
-        public override string TypeTag => "newChat";
+        public override string TypeTag => "newSession";
     }
 
-    public sealed record InterruptTurn(string ChatId) : BridgeBody
+    public sealed record InterruptTurn(string SessionId) : BridgeBody
     {
         public override string TypeTag => "interruptTurn";
     }
@@ -64,9 +64,9 @@ public abstract record BridgeBody
         public override string TypeTag => "versionMismatch";
     }
 
-    public sealed record ChatsSnapshot(IReadOnlyList<WireChat> Chats) : BridgeBody
+    public sealed record SessionsSnapshot(IReadOnlyList<WireChat> Sessions) : BridgeBody
     {
-        public override string TypeTag => "chatsSnapshot";
+        public override string TypeTag => "sessionsSnapshot";
     }
 
     public sealed record ChatUpdated(WireChat Chat) : BridgeBody
@@ -74,22 +74,22 @@ public abstract record BridgeBody
         public override string TypeTag => "chatUpdated";
     }
 
-    public sealed record MessagesSnapshot(string ChatId, IReadOnlyList<WireMessage> Messages, bool? HasMore) : BridgeBody
+    public sealed record MessagesSnapshot(string SessionId, IReadOnlyList<WireMessage> Messages, bool? HasMore) : BridgeBody
     {
         public override string TypeTag => "messagesSnapshot";
     }
 
-    public sealed record MessagesPage(string ChatId, IReadOnlyList<WireMessage> Messages, bool HasMore) : BridgeBody
+    public sealed record MessagesPage(string SessionId, IReadOnlyList<WireMessage> Messages, bool HasMore) : BridgeBody
     {
         public override string TypeTag => "messagesPage";
     }
 
-    public sealed record MessageAppended(string ChatId, WireMessage Message) : BridgeBody
+    public sealed record MessageAppended(string SessionId, WireMessage Message) : BridgeBody
     {
         public override string TypeTag => "messageAppended";
     }
 
-    public sealed record MessageStreaming(string ChatId, string MessageId, string Content, string ReasoningText, bool Finished) : BridgeBody
+    public sealed record MessageStreaming(string SessionId, string MessageId, string Content, string ReasoningText, bool Finished) : BridgeBody
     {
         public override string TypeTag => "messageStreaming";
     }
@@ -101,34 +101,34 @@ public abstract record BridgeBody
 
     // ===== v2 outbound (desktop client -> daemon) =====
 
-    public sealed record EditPrompt(string ChatId, string MessageId, string Text) : BridgeBody
+    public sealed record EditPrompt(string SessionId, string MessageId, string Text) : BridgeBody
     {
         public override string TypeTag => "editPrompt";
     }
 
-    public sealed record ArchiveChat(string ChatId) : BridgeBody
+    public sealed record ArchiveSession(string SessionId) : BridgeBody
     {
-        public override string TypeTag => "archiveChat";
+        public override string TypeTag => "archiveSession";
     }
 
-    public sealed record UnarchiveChat(string ChatId) : BridgeBody
+    public sealed record UnarchiveSession(string SessionId) : BridgeBody
     {
-        public override string TypeTag => "unarchiveChat";
+        public override string TypeTag => "unarchiveSession";
     }
 
-    public sealed record PinChat(string ChatId) : BridgeBody
+    public sealed record PinSession(string SessionId) : BridgeBody
     {
-        public override string TypeTag => "pinChat";
+        public override string TypeTag => "pinSession";
     }
 
-    public sealed record UnpinChat(string ChatId) : BridgeBody
+    public sealed record UnpinSession(string SessionId) : BridgeBody
     {
-        public override string TypeTag => "unpinChat";
+        public override string TypeTag => "unpinSession";
     }
 
-    public sealed record RenameChat(string ChatId, string Title) : BridgeBody
+    public sealed record RenameSession(string SessionId, string Title) : BridgeBody
     {
-        public override string TypeTag => "renameChat";
+        public override string TypeTag => "renameSession";
     }
 
     public sealed record PairingStart : BridgeBody

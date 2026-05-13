@@ -1,5 +1,5 @@
 // Clawix Linux runtime entry. Wires Tauri plugins, mounts the system
-// tray, brings up the WebSocket bridge to the local `clawix-bridged`
+// tray, brings up the WebSocket bridge to the local `clawix-bridge`
 // daemon, and exposes Rust commands to the SolidJS frontend.
 
 mod chat_db;

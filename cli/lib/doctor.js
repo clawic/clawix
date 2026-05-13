@@ -45,13 +45,13 @@ function run() {
                 checks.push(check('heartbeat', 'fail', 'bridge-status.json is not valid JSON.', 'restart the daemon.'));
             }
         }
-        const localApp = path.join(process.env.LOCALAPPDATA || os.homedir(), 'Clawix', 'clawix-bridged.exe');
+        const localApp = path.join(process.env.LOCALAPPDATA || os.homedir(), 'Clawix', 'clawix-bridge.exe');
         if (!fs.existsSync(localApp)) {
-            checks.push(check('clawix-bridged-binary', 'warn',
-                `clawix-bridged.exe not found at ${localApp}.`,
+            checks.push(check('clawix-bridge-binary', 'warn',
+                `clawix-bridge.exe not found at ${localApp}.`,
                 'install via `clawix install` (downloads the signed MSIX).'));
         } else {
-            checks.push(check('clawix-bridged-binary', 'ok', `clawix-bridged.exe at ${localApp}`, null));
+            checks.push(check('clawix-bridge-binary', 'ok', `clawix-bridge.exe at ${localApp}`, null));
         }
         return checks;
     }
@@ -79,15 +79,15 @@ function run() {
 
     const bridgedSig = diag.verifyCodesign(bridgedPath);
     if (!bridgedSig.exists) {
-        checks.push(check('clawix-bridged-binary', 'fail',
-            `clawix-bridged not found at ${bridgedPath}.`,
+        checks.push(check('clawix-bridge-binary', 'fail',
+            `clawix-bridge not found at ${bridgedPath}.`,
             'reinstall with `npm install -g clawix --force` or rerun `bash scripts-dev/cli-link.sh` for dev.'));
     } else if (!bridgedSig.valid) {
-        checks.push(check('clawix-bridged-binary', 'fail',
-            `clawix-bridged failed codesign --verify at ${bridgedPath}.`,
+        checks.push(check('clawix-bridge-binary', 'fail',
+            `clawix-bridge failed codesign --verify at ${bridgedPath}.`,
             'reinstall to repair the signature.'));
     } else {
-        checks.push(check('clawix-bridged-binary', 'ok', `clawix-bridged signed (${bridgedPath})`, null));
+        checks.push(check('clawix-bridge-binary', 'ok', `clawix-bridge signed (${bridgedPath})`, null));
     }
 
     const menubarSig = diag.verifyCodesign(menubarPath);
@@ -113,18 +113,18 @@ function run() {
         // exact PID is ours. Falls back to a name prefix when the
         // heartbeat is missing (post-uninstall, pre-start). Note that
         // `lsof` truncates the command column to ~9 chars so we cannot
-        // match the full literal `clawix-bridged`.
+        // match the full literal `clawix-bridge`.
         const heartbeat = require('./daemon').readHeartbeat();
         const ourPid = heartbeat ? String(heartbeat.pid) : null;
         const isOurs = listeners.some((l) =>
             (ourPid && l.pid === ourPid) || /^clawix-?br/i.test(l.command || ''));
         if (isOurs) {
-            checks.push(check('port', 'ok', `clawix-bridged listening on port ${BRIDGE_PORT}`, null));
+            checks.push(check('port', 'ok', `clawix-bridge listening on port ${BRIDGE_PORT}`, null));
         } else {
             const other = listeners[0];
             checks.push(check('port', 'fail',
                 `port ${BRIDGE_PORT} is held by ${other.command} (pid ${other.pid}).`,
-                'stop that process; clawix needs port 7778 free.'));
+                'stop that process; clawix needs port 24080 free.'));
         }
     }
 
@@ -175,10 +175,10 @@ function run() {
         const fw = diag.firewallBlocked(bridgedPath);
         if (fw.applicable && fw.blocked === true) {
             checks.push(check('firewall', 'fail',
-                'macOS firewall is blocking incoming connections to clawix-bridged.',
-                'open System Settings → Network → Firewall → Options, find clawix-bridged and switch it to "Allow incoming connections".'));
+                'macOS firewall is blocking incoming connections to clawix-bridge.',
+                'open System Settings → Network → Firewall → Options, find clawix-bridge and switch it to "Allow incoming connections".'));
         } else if (fw.applicable && fw.blocked === false) {
-            checks.push(check('firewall', 'ok', 'macOS firewall allows clawix-bridged', null));
+            checks.push(check('firewall', 'ok', 'macOS firewall allows clawix-bridge', null));
         } else {
             checks.push(check('firewall', 'ok', 'firewall status unavailable (likely off)', null));
         }
@@ -212,7 +212,7 @@ function run() {
     if (!fs.existsSync(stateFile)) {
         checks.push(check('heartbeat', 'warn',
             'bridge-status.json missing.',
-            'this build of clawix-bridged predates heartbeat support, or the daemon never started.'));
+            'this build of clawix-bridge predates heartbeat support, or the daemon never started.'));
     } else {
         try {
             const j = JSON.parse(fs.readFileSync(stateFile, 'utf8'));

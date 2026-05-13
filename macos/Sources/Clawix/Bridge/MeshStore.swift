@@ -31,7 +31,7 @@ final class MeshStore: ObservableObject {
 
     /// Per-peer "remote workspace path" the user has typed in
     /// Settings. Stored in UserDefaults so it survives relaunches.
-    /// Sent verbatim as `workspacePath` in `/mesh/remote-jobs`. The
+    /// Sent verbatim as `workspacePath` in `/v1/mesh/remote-jobs`. The
     /// remote daemon validates it against its own allowlist; failure
     /// surfaces as a `workspaceDenied` error.
     @Published private(set) var defaultRemoteWorkspaces: [String: String] = [:]
@@ -62,7 +62,7 @@ final class MeshStore: ObservableObject {
     }
 
     /// `client` is overridable so the E2E suite can plug a fake daemon
-    /// running on a port other than 7779. Production code uses the
+    /// running on a port other than 24081. Production code uses the
     /// no-arg form.
     init(client: MeshClient = MeshClient()) {
         self.client = client
@@ -114,7 +114,7 @@ final class MeshStore: ObservableObject {
             let peer = try await client.link(host: host, httpPort: httpPort, token: token, profile: profile)
             // Optimistic update: drop in (or replace) the freshly
             // linked peer so the list refreshes immediately even
-            // before the next /mesh/peers fetch lands.
+            // before the next /v1/mesh/peers fetch lands.
             if let idx = peers.firstIndex(where: { $0.nodeId == peer.nodeId }) {
                 peers[idx] = peer
             } else {
@@ -135,7 +135,7 @@ final class MeshStore: ObservableObject {
     /// provided, persists it in its loopback SshSecretStore so future
     /// `ssh.*` jobs resolve the credential by id. Requires the Node
     /// bridge daemon (the legacy Swift bridge does not expose
-    /// `POST /mesh/hosts`).
+    /// `POST /v1/mesh/hosts`).
     func upsertSshHost(
         displayName: String,
         kind: HostKind,

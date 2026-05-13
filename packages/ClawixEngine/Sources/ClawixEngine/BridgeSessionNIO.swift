@@ -80,7 +80,7 @@ public final class BridgeSession: Identifiable {
         self.clientKind = clientKind ?? .ios
         let hostName = ProcessInfo.processInfo.hostName
         send(BridgeFrame(.authOk(macName: hostName)))
-        send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
+        send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
         send(bus.currentBridgeStateFrame())
         BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")
     }

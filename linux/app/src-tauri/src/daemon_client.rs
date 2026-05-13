@@ -1,5 +1,5 @@
-// WebSocket client to the local `clawix-bridged` daemon. Mirrors what
-// the Mac GUI's DaemonBridgeClient does: connects to ws://127.0.0.1:7778,
+// WebSocket client to the local `clawix-bridge` daemon. Mirrors what
+// the Mac GUI's DaemonBridgeClient does: connects to ws://127.0.0.1:24080,
 // sends the auth frame with the bearer token from
 // `~/.clawix/state/bridge-token`, and dispatches inbound frames as Tauri
 // events the SolidJS frontend subscribes to.
@@ -15,7 +15,7 @@ use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, info, warn};
 
-const DEFAULT_PORT: u16 = 7778;
+const DEFAULT_PORT: u16 = 24080;
 const RECONNECT_BACKOFF_MS: u64 = 1500;
 const FRAME_BATCH_WINDOW_MS: u64 = 16;
 
@@ -45,25 +45,25 @@ impl DaemonClient {
     }
 
     pub async fn get_chats(&self) -> Result<Vec<crate::commands::WireChatBrief>> {
-        self.send_intent(serde_json::json!({ "type": "listChats" })).await?;
+        self.send_intent(serde_json::json!({ "type": "listSessions" })).await?;
         Ok(Vec::new())
     }
 
     pub async fn open_chat(&self, chat_id: &str) -> Result<serde_json::Value> {
         self.send_intent(serde_json::json!({
-            "type": "openChat",
-            "chatId": chat_id,
+            "type": "openSession",
+            "sessionId": chat_id,
         }))
         .await
     }
 
     pub async fn send_prompt(&self, chat_id: Option<&str>, text: &str) -> Result<serde_json::Value> {
         let body = if let Some(id) = chat_id {
-            serde_json::json!({ "type": "sendPrompt", "chatId": id, "text": text })
+            serde_json::json!({ "type": "sendPrompt", "sessionId": id, "text": text })
         } else {
             serde_json::json!({
-                "type": "newChat",
-                "chatId": uuid_v4(),
+                "type": "newSession",
+                "sessionId": uuid_v4(),
                 "text": text
             })
         };
@@ -73,7 +73,7 @@ impl DaemonClient {
     pub async fn interrupt_turn(&self, chat_id: &str) -> Result<()> {
         self.send_intent(serde_json::json!({
             "type": "interruptTurn",
-            "chatId": chat_id
+            "sessionId": chat_id
         }))
         .await?;
         Ok(())

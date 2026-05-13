@@ -29,16 +29,16 @@ describe("frames", () => {
     expect(decodeFrame(raw)).toMatchObject({ type: "authOk", macName: "Mac" });
   });
 
-  it("decodes a chatsSnapshot with empty array", () => {
-    const raw = JSON.stringify({ schemaVersion: 5, type: "chatsSnapshot", chats: [] });
-    expect(decodeFrame(raw)).toMatchObject({ type: "chatsSnapshot", chats: [] });
+  it("decodes a sessionsSnapshot with empty array", () => {
+    const raw = JSON.stringify({ schemaVersion: 5, type: "sessionsSnapshot", sessions: [] });
+    expect(decodeFrame(raw)).toMatchObject({ type: "sessionsSnapshot", sessions: [] });
   });
 
   it("decodes a messagesSnapshot with messages", () => {
     const raw = JSON.stringify({
       schemaVersion: 5,
       type: "messagesSnapshot",
-      chatId: "c1",
+      sessionId: "c1",
       messages: [
         {
           id: "m1",

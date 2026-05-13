@@ -24,9 +24,9 @@ if ! command -v cargo >/dev/null 2>&1; then
 fi
 
 # 1) Build the daemon (debug, fast iteration)
-echo "[dev] building clawix-bridged…"
+echo "[dev] building clawix-bridge…"
 ( cd "$DAEMON_DIR" && swift build )
-DAEMON_BIN="$DAEMON_DIR/.build/debug/clawix-bridged"
+DAEMON_BIN="$DAEMON_DIR/.build/debug/clawix-bridge"
 
 # 2) Make sure the systemd unit points at the freshly built binary by
 #    forcing an env var override (the GUI's service_manager honours

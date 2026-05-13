@@ -11,57 +11,57 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
         deviceName = obj.optString("deviceName"),
         clientKind = obj.optString("clientKind")?.let(ClientKind::valueOf),
     )
-    "listChats" -> BridgeBody.ListChats
-    "openChat" -> BridgeBody.OpenChat(obj.requireString("chatId"), obj.optInt("limit"))
+    "listSessions" -> BridgeBody.ListSessions
+    "openSession" -> BridgeBody.OpenSession(obj.requireString("sessionId"), obj.optInt("limit"))
     "loadOlderMessages" -> BridgeBody.LoadOlderMessages(
-        obj.requireString("chatId"),
+        obj.requireString("sessionId"),
         obj.requireString("beforeMessageId"),
         obj.requireInt("limit"),
     )
     "sendPrompt" -> BridgeBody.SendPrompt(
-        obj.requireString("chatId"),
+        obj.requireString("sessionId"),
         obj.requireString("text"),
         obj.optList("attachments", WireAttachment.listSerializer) ?: emptyList(),
     )
-    "newChat" -> BridgeBody.NewChat(
-        obj.requireString("chatId"),
+    "newSession" -> BridgeBody.NewSession(
+        obj.requireString("sessionId"),
         obj.requireString("text"),
         obj.optList("attachments", WireAttachment.listSerializer) ?: emptyList(),
     )
-    "interruptTurn" -> BridgeBody.InterruptTurn(obj.requireString("chatId"))
+    "interruptTurn" -> BridgeBody.InterruptTurn(obj.requireString("sessionId"))
     "authOk" -> BridgeBody.AuthOk(obj.optString("macName"))
     "authFailed" -> BridgeBody.AuthFailed(obj.requireString("reason"))
     "versionMismatch" -> BridgeBody.VersionMismatch(obj.requireInt("serverVersion"))
-    "chatsSnapshot" -> BridgeBody.ChatsSnapshot(obj.requireList("chats", WireChat.listSerializer))
+    "sessionsSnapshot" -> BridgeBody.SessionsSnapshot(obj.requireList("sessions", WireChat.listSerializer))
     "chatUpdated" -> BridgeBody.ChatUpdated(obj.requireObj("chat", WireChat.serializer()))
     "messagesSnapshot" -> BridgeBody.MessagesSnapshot(
-        obj.requireString("chatId"),
+        obj.requireString("sessionId"),
         obj.requireList("messages", WireMessage.listSerializer),
         obj.optBool("hasMore"),
     )
     "messagesPage" -> BridgeBody.MessagesPage(
-        obj.requireString("chatId"),
+        obj.requireString("sessionId"),
         obj.requireList("messages", WireMessage.listSerializer),
         obj.requireBool("hasMore"),
     )
     "messageAppended" -> BridgeBody.MessageAppended(
-        obj.requireString("chatId"),
+        obj.requireString("sessionId"),
         obj.requireObj("message", WireMessage.serializer()),
     )
     "messageStreaming" -> BridgeBody.MessageStreaming(
-        obj.requireString("chatId"),
+        obj.requireString("sessionId"),
         obj.requireString("messageId"),
         obj.optString("content") ?: "",
         obj.optString("reasoningText") ?: "",
         obj.requireBool("finished"),
     )
     "errorEvent" -> BridgeBody.ErrorEvent(obj.requireString("code"), obj.requireString("message"))
-    "editPrompt" -> BridgeBody.EditPrompt(obj.requireString("chatId"), obj.requireString("messageId"), obj.requireString("text"))
-    "archiveChat" -> BridgeBody.ArchiveChat(obj.requireString("chatId"))
-    "unarchiveChat" -> BridgeBody.UnarchiveChat(obj.requireString("chatId"))
-    "pinChat" -> BridgeBody.PinChat(obj.requireString("chatId"))
-    "unpinChat" -> BridgeBody.UnpinChat(obj.requireString("chatId"))
-    "renameChat" -> BridgeBody.RenameChat(obj.requireString("chatId"), obj.requireString("title"))
+    "editPrompt" -> BridgeBody.EditPrompt(obj.requireString("sessionId"), obj.requireString("messageId"), obj.requireString("text"))
+    "archiveSession" -> BridgeBody.ArchiveSession(obj.requireString("sessionId"))
+    "unarchiveSession" -> BridgeBody.UnarchiveSession(obj.requireString("sessionId"))
+    "pinSession" -> BridgeBody.PinSession(obj.requireString("sessionId"))
+    "unpinSession" -> BridgeBody.UnpinSession(obj.requireString("sessionId"))
+    "renameSession" -> BridgeBody.RenameSession(obj.requireString("sessionId"), obj.requireString("title"))
     "pairingStart" -> BridgeBody.PairingStart
     "listProjects" -> BridgeBody.ListProjects
     "readFile" -> BridgeBody.ReadFile(obj.requireString("path"))

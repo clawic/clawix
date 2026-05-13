@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace Clawix.App.Services;
 
 /// <summary>
-/// Detects whether <c>clawix-bridged.exe</c> is alive by reading the
+/// Detects whether <c>clawix-bridge.exe</c> is alive by reading the
 /// heartbeat file at <c>%USERPROFILE%\.clawix\state\bridge-status.json</c>.
 /// Mirrors macOS <c>BackgroundBridgeService</c>.
 /// </summary>

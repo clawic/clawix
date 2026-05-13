@@ -31,8 +31,8 @@ mkdir -p \
 
 echo "[deb] building daemon (release)…"
 ( cd "$DAEMON_DIR" && swift build --configuration release )
-cp "$DAEMON_DIR/.build/release/clawix-bridged" "$PKG_ROOT/opt/clawix/clawix-bridged"
-chmod +x "$PKG_ROOT/opt/clawix/clawix-bridged"
+cp "$DAEMON_DIR/.build/release/clawix-bridge" "$PKG_ROOT/opt/clawix/clawix-bridge"
+chmod +x "$PKG_ROOT/opt/clawix/clawix-bridge"
 
 echo "[deb] building frontend + shell…"
 ( cd "$APP_DIR" && npm install --silent && npm run build && npx tauri build --bundles "" )

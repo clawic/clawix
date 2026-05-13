@@ -25,7 +25,7 @@ Starts the bridge, attaches the menu bar icon, prints a pairing QR + a typeable 
 ```
 clawix bridge ready
 
-  on lan       192.168.1.42:7778
+  on lan       192.168.1.42:24080
   on tailscale 100.64.x.x
 
 scan with the Clawix iOS app
@@ -78,7 +78,7 @@ It checks the things that go wrong in real life:
 
 - macOS version (must be 14+)
 - `codex` CLI on PATH
-- Port `7778` free or held by our daemon (not by something else)
+- Port `24080` free or held by our daemon (not by something else)
 - Both binaries present and codesigned
 - Launchd agent loaded and running
 - Plist file syntactically valid
@@ -101,14 +101,14 @@ The CLI does not require the GUI, and the GUI does not require the CLI.
 ## Files this package manages
 
 ```
-~/.clawix/bin/clawix-bridged                     bridge daemon (signed)
+~/.clawix/bin/clawix-bridge                     bridge daemon (signed)
 ~/.clawix/bin/clawix-menubar                     menu bar icon (signed)
 ~/.clawix/bin/manifest.json                      install metadata
 ~/.clawix/state/bridge-status.json               daemon heartbeat
 ~/Library/LaunchAgents/clawix.bridge.plist       daemon registration
 ~/Library/LaunchAgents/clawix.menubar.plist      menu bar registration
 ~/Library/Preferences/clawix.bridge.plist        pairing bearer + short code (shared with the GUI)
-/tmp/clawix-bridged.{out,err}                    daemon logs
+/tmp/clawix-bridge.{out,err}                    daemon logs
 ```
 
 `clawix uninstall` cleans everything except the pairing bearer; `--purge` also wipes that.

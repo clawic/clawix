@@ -5,7 +5,7 @@ namespace Clawix.App.Services;
 /// <summary>
 /// Localized strings accessor. Wraps the WindowsAppSDK
 /// <c>ResourceLoader</c> so view-models can do
-/// <c>Loc.Get("Sidebar.NewChat")</c>.
+/// <c>Loc.Get("Sidebar.NewSession")</c>.
 /// </summary>
 public static class Loc
 {

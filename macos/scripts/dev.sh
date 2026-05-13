@@ -154,14 +154,14 @@ if [[ ! -f "$PROJECT_DIR/.build/debug/${APP_NAME}" ]]; then
 fi
 
 # 1.4) Build the web SPA (clawix/web/) and stage it inside the daemon's
-#      SwiftPM resource directory so `clawix-bridged` ships with the web
+#      SwiftPM resource directory so `clawix-bridge` ships with the web
 #      client embedded. The daemon serves it on its HTTP listener
-#      (port 7779 by default). When pnpm or node is missing we skip with
+#      (port 24081 by default). When pnpm or node is missing we skip with
 #      a warning so the macOS dev loop stays unblocked; the daemon then
 #      serves a 404 for the SPA but iOS keeps working untouched.
 WEB_PKG="$PROJECT_DIR/../web"
 WEB_DIST_SRC="$WEB_PKG/dist"
-WEB_DIST_DEST="$PROJECT_DIR/Helpers/Bridged/Sources/clawix-bridged/Resources/web-dist"
+WEB_DIST_DEST="$PROJECT_DIR/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist"
 if [[ -f "$WEB_PKG/package.json" ]] && command -v pnpm >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
     echo "==> Building clawix/web/ SPA…"
     (cd "$WEB_PKG" && pnpm install --silent && pnpm --silent build) || {
@@ -218,25 +218,25 @@ else
     echo "==> Skipping iot dev pointer (clawjs/iot not found or npm missing)"
 fi
 
-# 1.5) Build the bridge daemon (clawix-bridged). Lives in a sibling SPM
+# 1.5) Build the bridge daemon (clawix-bridge). Lives in a sibling SPM
 #      package under Helpers/Bridged/. The daemon shares ClawixEngine
 #      with the GUI but is its own executable target so it can be
 #      registered as a LaunchAgent later (SMAppService.agent), keeping
 #      the iPhone bridge alive across Cmd+Q / GUI crashes.
 #
 #      The dev build embeds the daemon binary at
-#      Contents/Helpers/clawix-bridged so the eventual SMAppService
+#      Contents/Helpers/clawix-bridge so the eventual SMAppService
 #      registration finds it at the conventional path. The daemon is
 #      NOT auto-registered or auto-started here — that requires a
 #      Settings UI toggle which lands in a later phase.
 BRIDGED_PKG="$PROJECT_DIR/Helpers/Bridged"
 BRIDGED_BIN_BUILT=""
 if [[ -f "$BRIDGED_PKG/Package.swift" ]]; then
-    echo "==> Building clawix-bridged daemon…"
+    echo "==> Building clawix-bridge daemon…"
     (cd "$BRIDGED_PKG" && swift build 2>&1)
-    BRIDGED_BIN_BUILT="$BRIDGED_PKG/.build/debug/clawix-bridged"
+    BRIDGED_BIN_BUILT="$BRIDGED_PKG/.build/debug/clawix-bridge"
     if [[ ! -f "$BRIDGED_BIN_BUILT" ]]; then
-        echo "WARN: clawix-bridged binary not produced; bundle will ship without daemon" >&2
+        echo "WARN: clawix-bridge binary not produced; bundle will ship without daemon" >&2
         BRIDGED_BIN_BUILT=""
     fi
 fi
@@ -336,7 +336,7 @@ PLIST
 done
 shopt -u nullglob
 
-# 3.1) Embed the bridge daemon under Contents/Helpers/clawix-bridged.
+# 3.1) Embed the bridge daemon under Contents/Helpers/clawix-bridge.
 #      SMAppService.agent expects the helper to live next to the .app
 #      it ships with so the LaunchAgent plist's `ProgramArguments` can
 #      use a path relative to the bundle. Even though SMAppService is
@@ -352,8 +352,8 @@ shopt -u nullglob
 #      the GUI's PairingService and the daemon.
 if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
     mkdir -p "$BUNDLE/Contents/Helpers" "$BUNDLE/Contents/Library/LaunchAgents"
-    cp "$BRIDGED_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-bridged"
-    chmod +x "$BUNDLE/Contents/Helpers/clawix-bridged"
+    cp "$BRIDGED_BIN_BUILT" "$BUNDLE/Contents/Helpers/clawix-bridge"
+    chmod +x "$BUNDLE/Contents/Helpers/clawix-bridge"
 
     AGENT_LABEL="clawix.bridge"
     AGENT_PLIST="$BUNDLE/Contents/Library/LaunchAgents/${AGENT_LABEL}.plist"
@@ -364,16 +364,16 @@ if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
 <plist version="1.0">
 <dict>
     <key>Label</key>                       <string>${AGENT_LABEL}</string>
-    <key>BundleProgram</key>               <string>Contents/Helpers/clawix-bridged</string>
+    <key>BundleProgram</key>               <string>Contents/Helpers/clawix-bridge</string>
     <key>RunAtLoad</key>                   <true/>
     <key>KeepAlive</key>                   <true/>
     <key>EnvironmentVariables</key>
     <dict>
-        <key>CLAWIX_BRIDGED_PORT</key>     <string>7778</string>
-        <key>CLAWIX_BRIDGED_DEFAULTS_SUITE</key> <string>clawix.bridge</string>
+        <key>CLAWIX_BRIDGE_PORT</key>     <string>24080</string>
+        <key>CLAWIX_BRIDGE_DEFAULTS_SUITE</key> <string>clawix.bridge</string>
     </dict>
-    <key>StandardOutPath</key>             <string>/tmp/clawix-bridged.out</string>
-    <key>StandardErrorPath</key>           <string>/tmp/clawix-bridged.err</string>
+    <key>StandardOutPath</key>             <string>/tmp/clawix-bridge.out</string>
+    <key>StandardErrorPath</key>           <string>/tmp/clawix-bridge.err</string>
 </dict>
 </plist>
 AGENTPLIST
@@ -556,19 +556,19 @@ sign_one() {
 # The helper carries the public identifier `clawix.bridge` (matching
 # the LaunchAgent Label) so launchd / SMAppService can address it
 # independently of the GUI's bundle id.
-HELPER_BIN="$BUNDLE/Contents/Helpers/clawix-bridged"
+HELPER_BIN="$BUNDLE/Contents/Helpers/clawix-bridge"
 if [[ -f "$HELPER_BIN" ]]; then
     if ! codesign --force --sign "$SIGN_IDENTITY" \
                   --identifier "clawix.bridge" \
                   --timestamp=none \
-                  "$HELPER_BIN" 2>/tmp/clawix-bridged-sign.err; then
+                  "$HELPER_BIN" 2>/tmp/clawix-bridge-sign.err; then
         if [[ "$REQUIRE_STABLE_SIGNING" == "1" ]]; then
-            echo "ERROR: codesign for clawix-bridged failed:" >&2
-            cat /tmp/clawix-bridged-sign.err >&2
+            echo "ERROR: codesign for clawix-bridge failed:" >&2
+            cat /tmp/clawix-bridge-sign.err >&2
             exit 1
         fi
-        echo "WARN: codesign for clawix-bridged with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
-        cat /tmp/clawix-bridged-sign.err >&2
+        echo "WARN: codesign for clawix-bridge with $SIGN_IDENTITY failed, falling back to ad-hoc:" >&2
+        cat /tmp/clawix-bridge-sign.err >&2
         codesign --force --sign - --identifier "clawix.bridge" "$HELPER_BIN"
     fi
 fi

@@ -39,7 +39,7 @@ public final class PairingService {
 
     /// Wires the singleton to a process-specific UserDefaults suite.
     /// Call this once at startup from the host (the GUI .app today,
-    /// the `clawix-bridged` daemon tomorrow) so the bearer survives
+    /// the `clawix-bridge` daemon tomorrow) so the bearer survives
     /// rebuilds without leaking across forks built with different
     /// bundle ids.
     public static func bootstrapShared(defaultsSuiteName: String) {

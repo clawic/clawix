@@ -20,7 +20,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "dotnet build failed" }
 
     $appExe = Join-Path $ROOT "Clawix.App\bin\$Platform\$Configuration\net8.0-windows10.0.19041.0\Clawix.exe"
-    $bridgedExe = Join-Path $ROOT "Clawix.Bridged\bin\$Configuration\net8.0\clawix-bridged.exe"
+    $bridgedExe = Join-Path $ROOT "Clawix.Bridged\bin\$Configuration\net8.0\clawix-bridge.exe"
 
     if ($Sign.IsPresent) {
         $thumb = $env:WIN_SIGN_THUMBPRINT

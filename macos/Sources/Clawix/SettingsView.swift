@@ -23,7 +23,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case databaseWorkbench
     case secrets
     case identity
-    case clawjs
+    case claw
     case telegram
     case apps
 
@@ -51,7 +51,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .databaseWorkbench: return "Database Workbench"
         case .secrets:          return "Secrets"
         case .identity:         return "Identity"
-        case .clawjs:           return "ClawJS"
+        case .claw:           return "ClawJS"
         case .telegram:         return "Telegram"
         case .apps:             return "Apps"
         }
@@ -79,7 +79,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .databaseWorkbench: return "cylinder.split.1x2"
         case .secrets:          return "lock.shield"
         case .identity:         return "fingerprint"
-        case .clawjs:           return "shippingbox"
+        case .claw:           return "shippingbox"
         case .telegram:         return "paperplane.fill"
         case .apps:             return "square.grid.2x2"
         }
@@ -100,7 +100,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .macUtilities:     return .macUtilities
         case .databaseWorkbench: return .databaseWorkbench
         case .identity:         return .identity
-        case .clawjs:           return .clawjs
+        case .claw:           return .claw
         case .telegram:         return .telegram
         case .apps:             return .apps
         default:                return nil
@@ -286,7 +286,7 @@ struct SettingsContent: View {
                     case .machines:        HostsPage()
                     case .secrets:         SecretsSettingsPage()
                     case .identity:        IdentitySettingsPage()
-                    case .clawjs:          ClawJSSettingsPage()
+                    case .claw:          ClawJSSettingsPage()
                     case .telegram:        TelegramSettingsPage()
                     case .apps:            AppsSettingsPage()
                     }

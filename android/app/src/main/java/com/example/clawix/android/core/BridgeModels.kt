@@ -30,7 +30,7 @@ enum class WireAttachmentKind {
     @SerialName("audio") audio,
 }
 
-/** Inline attachment piggy-backing on `sendPrompt` / `newChat`. Bytes
+/** Inline attachment piggy-backing on `sendPrompt` / `newSession`. Bytes
  *  travel base64-encoded inline; daemon writes to a turn-scoped temp
  *  file and forwards the path to Codex (image) or runs Whisper on it
  *  (audio). */

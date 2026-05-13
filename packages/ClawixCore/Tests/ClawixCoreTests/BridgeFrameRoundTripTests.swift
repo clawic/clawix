@@ -18,14 +18,14 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testEditPrompt() throws {
-        try roundTrip(.editPrompt(chatId: "uuid-1", messageId: "m2", text: "rewritten"))
+        try roundTrip(.editPrompt(sessionId: "uuid-1", messageId: "m2", text: "rewritten"))
     }
 
-    func testArchiveChatToggles() throws {
-        try roundTrip(.archiveChat(chatId: "uuid-1"))
-        try roundTrip(.unarchiveChat(chatId: "uuid-1"))
-        try roundTrip(.pinChat(chatId: "uuid-1"))
-        try roundTrip(.unpinChat(chatId: "uuid-1"))
+    func testArchiveSessionToggles() throws {
+        try roundTrip(.archiveSession(sessionId: "uuid-1"))
+        try roundTrip(.unarchiveSession(sessionId: "uuid-1"))
+        try roundTrip(.pinSession(sessionId: "uuid-1"))
+        try roundTrip(.unpinSession(sessionId: "uuid-1"))
     }
 
     func testPairingHandshake() throws {
@@ -47,27 +47,27 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.projectsSnapshot(projects: []))
     }
 
-    func testListChats() throws {
-        try roundTrip(.listChats)
+    func testListSessions() throws {
+        try roundTrip(.listSessions)
     }
 
-    func testOpenChat() throws {
-        try roundTrip(.openChat(chatId: "AB-123", limit: nil))
-        try roundTrip(.openChat(chatId: "AB-123", limit: 60))
+    func testOpenSession() throws {
+        try roundTrip(.openSession(sessionId: "AB-123", limit: nil))
+        try roundTrip(.openSession(sessionId: "AB-123", limit: 60))
     }
 
     func testLoadOlderMessages() throws {
         try roundTrip(.loadOlderMessages(
-            chatId: "AB-123",
+            sessionId: "AB-123",
             beforeMessageId: "msg-oldest-known",
             limit: 40
         ))
     }
 
     func testSendPrompt() throws {
-        try roundTrip(.sendPrompt(chatId: "AB-123", text: "hello world\nwith newline", attachments: []))
+        try roundTrip(.sendPrompt(sessionId: "AB-123", text: "hello world\nwith newline", attachments: []))
         try roundTrip(.sendPrompt(
-            chatId: "AB-123",
+            sessionId: "AB-123",
             text: "look at this",
             attachments: [
                 WireAttachment(
@@ -80,8 +80,8 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         ))
     }
 
-    func testNewChat() throws {
-        try roundTrip(.newChat(chatId: "DE-456", text: "first message from the iPhone FAB", attachments: []))
+    func testNewSession() throws {
+        try roundTrip(.newSession(sessionId: "DE-456", text: "first message from the iPhone FAB", attachments: []))
     }
 
     func testAuthOk() throws {
@@ -97,7 +97,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.versionMismatch(serverVersion: 7))
     }
 
-    func testChatsSnapshot() throws {
+    func testSessionsSnapshot() throws {
         let chat = WireChat(
             id: "uuid-1",
             title: "First chat",
@@ -110,8 +110,8 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             branch: "main",
             cwd: "/Users/me/proj"
         )
-        try roundTrip(.chatsSnapshot(chats: [chat]))
-        try roundTrip(.chatsSnapshot(chats: []))
+        try roundTrip(.sessionsSnapshot(sessions: [chat]))
+        try roundTrip(.sessionsSnapshot(sessions: []))
     }
 
     func testChatUpdated() throws {
@@ -135,9 +135,9 @@ final class BridgeFrameRoundTripTests: XCTestCase {
                 timestamp: .init(timeIntervalSince1970: 1_700_000_020)
             )
         ]
-        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs, hasMore: nil))
-        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs, hasMore: true))
-        try roundTrip(.messagesSnapshot(chatId: "uuid-1", messages: msgs, hasMore: false))
+        try roundTrip(.messagesSnapshot(sessionId: "uuid-1", messages: msgs, hasMore: nil))
+        try roundTrip(.messagesSnapshot(sessionId: "uuid-1", messages: msgs, hasMore: true))
+        try roundTrip(.messagesSnapshot(sessionId: "uuid-1", messages: msgs, hasMore: false))
     }
 
     func testMessagesPage() throws {
@@ -145,54 +145,54 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             WireMessage(id: "old-1", role: .user, content: "older", timestamp: .init(timeIntervalSince1970: 1_700_000_005)),
             WireMessage(id: "old-2", role: .assistant, content: "older reply", streamingFinished: true, timestamp: .init(timeIntervalSince1970: 1_700_000_006))
         ]
-        try roundTrip(.messagesPage(chatId: "uuid-1", messages: msgs, hasMore: true))
-        try roundTrip(.messagesPage(chatId: "uuid-1", messages: [], hasMore: false))
+        try roundTrip(.messagesPage(sessionId: "uuid-1", messages: msgs, hasMore: true))
+        try roundTrip(.messagesPage(sessionId: "uuid-1", messages: [], hasMore: false))
     }
 
-    /// Old peers (clients without paginated `openChat`) MUST keep
+    /// Old peers (clients without paginated `openSession`) MUST keep
     /// decoding cleanly under the current schema: `limit` is missing,
     /// the field defaults to nil, and the server treats it as "send
     /// the whole transcript". Same story for `messagesSnapshot`
     /// missing `hasMore` — decodes as nil, the iPhone treats it as
     /// "no scroll-up available".
-    func testLegacyOpenChatDecodesWithoutLimit() throws {
+    func testOpenSessionDecodesWithoutLimit() throws {
         let data = """
-        {"schemaVersion":\(bridgeSchemaVersion),"type":"openChat","chatId":"abc"}
+        {"schemaVersion":\(bridgeSchemaVersion),"type":"openSession","sessionId":"abc"}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
-        XCTAssertEqual(frame.body, .openChat(chatId: "abc", limit: nil))
+        XCTAssertEqual(frame.body, .openSession(sessionId: "abc", limit: nil))
     }
 
     func testLegacyMessagesSnapshotDecodesWithoutHasMore() throws {
         let data = """
-        {"schemaVersion":\(bridgeSchemaVersion),"type":"messagesSnapshot","chatId":"abc","messages":[]}
+        {"schemaVersion":\(bridgeSchemaVersion),"type":"messagesSnapshot","sessionId":"abc","messages":[]}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
-        XCTAssertEqual(frame.body, .messagesSnapshot(chatId: "abc", messages: [], hasMore: nil))
+        XCTAssertEqual(frame.body, .messagesSnapshot(sessionId: "abc", messages: [], hasMore: nil))
     }
 
     func testMessageAppended() throws {
         let msg = WireMessage(id: "m3", role: .user, content: "new", timestamp: .init(timeIntervalSince1970: 1_700_000_030))
-        try roundTrip(.messageAppended(chatId: "uuid-1", message: msg))
+        try roundTrip(.messageAppended(sessionId: "uuid-1", message: msg))
     }
 
     func testMessageStreaming() throws {
         try roundTrip(.messageStreaming(
-            chatId: "uuid-1",
+            sessionId: "uuid-1",
             messageId: "m4",
             content: "hello",
             reasoningText: "",
             finished: false
         ))
         try roundTrip(.messageStreaming(
-            chatId: "uuid-1",
+            sessionId: "uuid-1",
             messageId: "m4",
             content: "hello world",
             reasoningText: "thinking about it...",
             finished: false
         ))
         try roundTrip(.messageStreaming(
-            chatId: "uuid-1",
+            sessionId: "uuid-1",
             messageId: "m4",
             content: "hello world. done.",
             reasoningText: "thinking about it...",
@@ -259,7 +259,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             filename: "voice.m4a",
             dataBase64: "AAAAAA=="
         )
-        try roundTrip(.sendPrompt(chatId: "uuid-1", text: "hello", attachments: [audio]))
+        try roundTrip(.sendPrompt(sessionId: "uuid-1", text: "hello", attachments: [audio]))
     }
 
     func testWireMessageCarriesAudioRef() throws {
@@ -270,7 +270,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             timestamp: .init(timeIntervalSince1970: 1_700_000_400),
             audioRef: WireAudioRef(id: "audio-abc", mimeType: "audio/m4a", durationMs: 3200)
         )
-        try roundTrip(.messageAppended(chatId: "uuid-1", message: msg))
+        try roundTrip(.messageAppended(sessionId: "uuid-1", message: msg))
     }
 
     /// Old peers without `kind` should decode as image attachments so
@@ -287,12 +287,12 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testWireFormatIsFlat() throws {
-        let frame = BridgeFrame(.sendPrompt(chatId: "abc", text: "hello", attachments: []))
+        let frame = BridgeFrame(.sendPrompt(sessionId: "abc", text: "hello", attachments: []))
         let data = try BridgeCoder.encode(frame)
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
         XCTAssertTrue(json.contains("\"schemaVersion\":\(bridgeSchemaVersion)"))
         XCTAssertTrue(json.contains("\"type\":\"sendPrompt\""))
-        XCTAssertTrue(json.contains("\"chatId\":\"abc\""))
+        XCTAssertTrue(json.contains("\"sessionId\":\"abc\""))
         XCTAssertTrue(json.contains("\"text\":\"hello\""))
         XCTAssertFalse(json.contains("\"attachments\""))
         XCTAssertFalse(json.contains("\"payload\""))
@@ -300,10 +300,10 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     func testLegacyPromptFramesDecodeWithoutAttachments() throws {
         let data = """
-        {"schemaVersion":2,"type":"sendPrompt","chatId":"abc","text":"hello"}
+        {"schemaVersion":2,"type":"sendPrompt","sessionId":"abc","text":"hello"}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
-        XCTAssertEqual(frame.body, .sendPrompt(chatId: "abc", text: "hello", attachments: []))
+        XCTAssertEqual(frame.body, .sendPrompt(sessionId: "abc", text: "hello", attachments: []))
     }
 
     /// v1 frames (no `clientKind` on `auth`) decode cleanly into v2.

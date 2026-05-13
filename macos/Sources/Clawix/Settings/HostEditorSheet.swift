@@ -9,7 +9,7 @@ struct HostEditorSheet: View {
 
     // Pair-a-Mac state
     @State private var pairingHost: String = ""
-    @State private var pairingPort: String = "7779"
+    @State private var pairingPort: String = "24081"
     @State private var pairingToken: String = ""
     @State private var pairingProfile: PeerPermissionProfile = .scoped
     @State private var pairingInFlight = false
@@ -134,7 +134,7 @@ struct HostEditorSheet: View {
         }
         EditorCard {
             EditorFieldLabel("HTTP port")
-            EditorTextField(placeholder: "7779", text: $pairingPort)
+            EditorTextField(placeholder: "24081", text: $pairingPort)
         }
         EditorCard {
             EditorFieldLabel("Pairing token")
@@ -297,7 +297,7 @@ struct HostEditorSheet: View {
         defer { pairingInFlight = false }
         let host = pairingHost.trimmingCharacters(in: .whitespaces)
         let token = pairingToken.trimmingCharacters(in: .whitespaces)
-        let port = Int(pairingPort) ?? 7779
+        let port = Int(pairingPort) ?? 24081
         await store.pair(host: host, httpPort: port, token: token, profile: pairingProfile)
         if case .success(let name) = store.lastPairingResult {
             pairingSuccessName = name

@@ -4,5 +4,5 @@
 HERE="$(dirname "$(readlink -f "${0}")")"
 export PATH="$HERE/usr/bin:$HERE/usr/lib/clawix:$PATH"
 export LD_LIBRARY_PATH="$HERE/usr/lib:$HERE/usr/lib/clawix:${LD_LIBRARY_PATH:-}"
-export CLAWIX_BRIDGE_BIN="$HERE/usr/lib/clawix/clawix-bridged"
+export CLAWIX_BRIDGE_BIN="$HERE/usr/lib/clawix/clawix-bridge"
 exec "$HERE/usr/bin/clawix" "$@"

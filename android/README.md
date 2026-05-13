@@ -1,6 +1,6 @@
 # Clawix · Android client
 
-Companion app for the Clawix bridge daemon (`clawix-bridged`) that runs on macOS. Pair via QR or short code, then chat with Codex from your phone over LAN or Tailscale.
+Companion app for the Clawix bridge daemon (`clawix-bridge`) that runs on macOS. Pair via QR or short code, then chat with Codex from your phone over LAN or Tailscale.
 
 100% functional + visual parity with the iOS app (`clawix/ios/`).
 

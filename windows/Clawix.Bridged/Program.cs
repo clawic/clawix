@@ -14,12 +14,12 @@ Paths.EnsureDirectories();
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
-    .WriteTo.File(Path.Combine(Paths.ClawixLogs, "clawix-bridged-.log"),
+    .WriteTo.File(Path.Combine(Paths.ClawixLogs, "clawix-bridge-.log"),
         rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
     .CreateLogger();
 
-var port = ushort.TryParse(Environment.GetEnvironmentVariable("CLAWIX_BRIDGED_PORT"), out var p) ? p : (ushort)7777;
-var bonjourDisabled = Environment.GetEnvironmentVariable("CLAWIX_BRIDGED_DISABLE_BONJOUR") == "1";
+var port = ushort.TryParse(Environment.GetEnvironmentVariable("CLAWIX_BRIDGE_PORT"), out var p) ? p : (ushort)7777;
+var bonjourDisabled = Environment.GetEnvironmentVariable("CLAWIX_BRIDGE_DISABLE_BONJOUR") == "1";
 
 using var builder = Host.CreateDefaultBuilder(args)
     .UseSerilog()
@@ -38,7 +38,7 @@ var bonjour = bonjourDisabled ? null : builder.Services.GetService<BonjourPublis
 var binary = BackendBinaryResolver.Resolve();
 if (binary is null)
 {
-    Log.Error("Codex CLI not found. Install via 'npm install -g codex' or set CLAWIX_BRIDGED_BACKEND_PATH.");
+    Log.Error("Codex CLI not found. Install via 'npm install -g codex' or set CLAWIX_BRIDGE_BACKEND_PATH.");
     return 2;
 }
 Log.Information("Using Codex binary: {Path}", binary);
@@ -55,7 +55,7 @@ var heartbeat = new Heartbeat(() => new HeartbeatState
     Port = port,
     BoundAt = DateTimeOffset.UtcNow,
     State = host.BridgeStateCurrent.WireTag,
-    ChatCount = host.BridgeChatsCurrent.Count,
+    ChatCount = host.BridgeSessionsCurrent.Count,
     LastError = host.BridgeStateCurrent.ErrorMessage,
 }, loggerFactory.CreateLogger<Heartbeat>());
 
@@ -68,7 +68,7 @@ await backend.StartAsync();
 await host.BootstrapAsync(CancellationToken.None);
 await server.StartAsync();
 
-Log.Information("clawix-bridged ready on 127.0.0.1:{Port}", port);
+Log.Information("clawix-bridge ready on 127.0.0.1:{Port}", port);
 Log.Information("Pairing short code: {Code}", pairing.ShortCode);
 
 var stopSignal = new TaskCompletionSource();
@@ -76,7 +76,7 @@ Console.CancelKeyPress += (_, e) => { e.Cancel = true; stopSignal.TrySetResult()
 AppDomain.CurrentDomain.ProcessExit += (_, _) => stopSignal.TrySetResult();
 await stopSignal.Task;
 
-Log.Information("clawix-bridged shutting down");
+Log.Information("clawix-bridge shutting down");
 await server.StopAsync();
 await heartbeat.DisposeAsync();
 pinned.Dispose();

@@ -247,7 +247,7 @@ final class BridgeStore {
                 }
             }
         }
-        client?.openChat(chatId)
+        client?.openSession(chatId)
     }
 
     /// Drop the soft-blue unread dot for `chatId`. Called when the user
@@ -459,7 +459,7 @@ final class BridgeStore {
             pendingNewChatCwds.removeValue(forKey: chatId)
             let connected = (client != nil)
             bridgeDbg.notice("dispatchPrompt NEWCHAT id=\(chatId, privacy: .public) clientAttached=\(connected, privacy: .public)")
-            client?.sendNewChat(chatId: chatId, text: trimmed, attachments: attachments)
+            client?.sendNewSession(sessionId: chatId, text: trimmed, attachments: attachments)
         } else {
             bridgeDbg.notice("dispatchPrompt SEND id=\(chatId, privacy: .public)")
             client?.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
@@ -715,7 +715,7 @@ final class BridgeStore {
         if let idx = chats.firstIndex(where: { $0.id == chatId }) {
             chats[idx].title = trimmed
         }
-        client?.renameChat(chatId: chatId, title: trimmed)
+        client?.renameSession(sessionId: chatId, title: trimmed)
     }
 
     /// Archive a chat from iOS. Hide it optimistically so the current
@@ -729,7 +729,7 @@ final class BridgeStore {
         if openChatId == chatId {
             openChatId = nil
         }
-        client?.archiveChat(chatId: chatId)
+        client?.archiveSession(sessionId: chatId)
         persistSnapshotDebounced()
     }
 
@@ -794,7 +794,7 @@ final class BridgeStore {
     ///
     ///   1. iOS calls `beginPendingTurn` and the user message lands in
     ///      `messagesByChat[id]` with a `local-…` id.
-    ///   2. iOS dispatches `sendNewChat` to the Mac.
+    ///   2. iOS dispatches `sendNewSession` to the Mac.
     ///   3. The Mac processes it and republishes; the bus emits a
     ///      `chatsSnapshot` containing the new chat.
     ///
@@ -1101,7 +1101,7 @@ final class BridgeStore {
         }
         // Override the long-thread chat with the trailing window of
         // its synthesized 150-message transcript so the iPhone shows
-        // exactly what a real `openChat(limit:)` reply would deliver.
+        // exactly what a real `openSession(limit:)` reply would deliver.
         let longTail = Array(MockData.longMessages.suffix(bridgeInitialPageLimit))
         seeded[MockData.longChatId] = longTail
         s.messagesByChat = seeded

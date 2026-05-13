@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Clawix web client. Third bridge client (after macOS GUI and iOS) that talks to clawix-bridged via WebSocket.",
+  "description": "Clawix web client. Third bridge client (after macOS GUI and iOS) that talks to clawix-bridge via WebSocket.",
   "license": "MIT",
   "scripts": {
     "dev": "vite",

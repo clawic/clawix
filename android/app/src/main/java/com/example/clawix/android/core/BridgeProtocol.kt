@@ -12,7 +12,7 @@ import kotlinx.serialization.json.JsonObject
  * v5 (2026-05): rate limits, generated images inline, voice notes, etc.
  * v1..v4 frames decode cleanly because every new field is optional.
  */
-const val BRIDGE_SCHEMA_VERSION: Int = 5
+const val BRIDGE_SCHEMA_VERSION: Int = 8
 
 const val BRIDGE_INITIAL_PAGE_LIMIT: Int = 60
 const val BRIDGE_OLDER_PAGE_LIMIT: Int = 40
@@ -48,20 +48,20 @@ sealed class BridgeBody {
     data class Auth(val token: String, val deviceName: String?, val clientKind: ClientKind?) : BridgeBody() {
         override val typeTag = "auth"
     }
-    data object ListChats : BridgeBody() { override val typeTag = "listChats" }
-    data class OpenChat(val chatId: String, val limit: Int?) : BridgeBody() {
-        override val typeTag = "openChat"
+    data object ListSessions : BridgeBody() { override val typeTag = "listSessions" }
+    data class OpenSession(val sessionId: String, val limit: Int?) : BridgeBody() {
+        override val typeTag = "openSession"
     }
-    data class LoadOlderMessages(val chatId: String, val beforeMessageId: String, val limit: Int) : BridgeBody() {
+    data class LoadOlderMessages(val sessionId: String, val beforeMessageId: String, val limit: Int) : BridgeBody() {
         override val typeTag = "loadOlderMessages"
     }
-    data class SendPrompt(val chatId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
+    data class SendPrompt(val sessionId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
         override val typeTag = "sendPrompt"
     }
-    data class NewChat(val chatId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
-        override val typeTag = "newChat"
+    data class NewSession(val sessionId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
+        override val typeTag = "newSession"
     }
-    data class InterruptTurn(val chatId: String) : BridgeBody() {
+    data class InterruptTurn(val sessionId: String) : BridgeBody() {
         override val typeTag = "interruptTurn"
     }
 
@@ -69,19 +69,19 @@ sealed class BridgeBody {
     data class AuthOk(val macName: String?) : BridgeBody() { override val typeTag = "authOk" }
     data class AuthFailed(val reason: String) : BridgeBody() { override val typeTag = "authFailed" }
     data class VersionMismatch(val serverVersion: Int) : BridgeBody() { override val typeTag = "versionMismatch" }
-    data class ChatsSnapshot(val chats: List<WireChat>) : BridgeBody() { override val typeTag = "chatsSnapshot" }
+    data class SessionsSnapshot(val sessions: List<WireChat>) : BridgeBody() { override val typeTag = "sessionsSnapshot" }
     data class ChatUpdated(val chat: WireChat) : BridgeBody() { override val typeTag = "chatUpdated" }
-    data class MessagesSnapshot(val chatId: String, val messages: List<WireMessage>, val hasMore: Boolean?) : BridgeBody() {
+    data class MessagesSnapshot(val sessionId: String, val messages: List<WireMessage>, val hasMore: Boolean?) : BridgeBody() {
         override val typeTag = "messagesSnapshot"
     }
-    data class MessagesPage(val chatId: String, val messages: List<WireMessage>, val hasMore: Boolean) : BridgeBody() {
+    data class MessagesPage(val sessionId: String, val messages: List<WireMessage>, val hasMore: Boolean) : BridgeBody() {
         override val typeTag = "messagesPage"
     }
-    data class MessageAppended(val chatId: String, val message: WireMessage) : BridgeBody() {
+    data class MessageAppended(val sessionId: String, val message: WireMessage) : BridgeBody() {
         override val typeTag = "messageAppended"
     }
     data class MessageStreaming(
-        val chatId: String,
+        val sessionId: String,
         val messageId: String,
         val content: String,
         val reasoningText: String,
@@ -92,12 +92,12 @@ sealed class BridgeBody {
     data class ErrorEvent(val code: String, val message: String) : BridgeBody() { override val typeTag = "errorEvent" }
 
     // MARK: - v2 desktop-only outbound (kept for completeness; mobile won't emit)
-    data class EditPrompt(val chatId: String, val messageId: String, val text: String) : BridgeBody() { override val typeTag = "editPrompt" }
-    data class ArchiveChat(val chatId: String) : BridgeBody() { override val typeTag = "archiveChat" }
-    data class UnarchiveChat(val chatId: String) : BridgeBody() { override val typeTag = "unarchiveChat" }
-    data class PinChat(val chatId: String) : BridgeBody() { override val typeTag = "pinChat" }
-    data class UnpinChat(val chatId: String) : BridgeBody() { override val typeTag = "unpinChat" }
-    data class RenameChat(val chatId: String, val title: String) : BridgeBody() { override val typeTag = "renameChat" }
+    data class EditPrompt(val sessionId: String, val messageId: String, val text: String) : BridgeBody() { override val typeTag = "editPrompt" }
+    data class ArchiveSession(val sessionId: String) : BridgeBody() { override val typeTag = "archiveSession" }
+    data class UnarchiveSession(val sessionId: String) : BridgeBody() { override val typeTag = "unarchiveSession" }
+    data class PinSession(val sessionId: String) : BridgeBody() { override val typeTag = "pinSession" }
+    data class UnpinSession(val sessionId: String) : BridgeBody() { override val typeTag = "unpinSession" }
+    data class RenameSession(val sessionId: String, val title: String) : BridgeBody() { override val typeTag = "renameSession" }
     data object PairingStart : BridgeBody() { override val typeTag = "pairingStart" }
     data object ListProjects : BridgeBody() { override val typeTag = "listProjects" }
     data class ReadFile(val path: String) : BridgeBody() { override val typeTag = "readFile" }

@@ -129,7 +129,7 @@ class BridgeClient(
 
     fun openChat(chatId: String) {
         store.setOpenChat(chatId)
-        send(BridgeBody.OpenChat(chatId, BRIDGE_INITIAL_PAGE_LIMIT))
+        send(BridgeBody.OpenSession(chatId, BRIDGE_INITIAL_PAGE_LIMIT))
     }
 
     fun closeChat() {
@@ -146,7 +146,7 @@ class BridgeClient(
 
     fun newChat(chatId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
         store.registerPendingNewChat(chatId)
-        send(BridgeBody.NewChat(chatId, text, attachments))
+        send(BridgeBody.NewSession(chatId, text, attachments))
     }
 
     fun interruptTurn(chatId: String) {
@@ -155,27 +155,27 @@ class BridgeClient(
 
     fun archiveChat(chatId: String) {
         store.applyOptimisticArchive(chatId, archived = true)
-        send(BridgeBody.ArchiveChat(chatId))
+        send(BridgeBody.ArchiveSession(chatId))
     }
 
     fun unarchiveChat(chatId: String) {
         store.applyOptimisticArchive(chatId, archived = false)
-        send(BridgeBody.UnarchiveChat(chatId))
+        send(BridgeBody.UnarchiveSession(chatId))
     }
 
     fun pinChat(chatId: String) {
         store.applyOptimisticPin(chatId, pinned = true)
-        send(BridgeBody.PinChat(chatId))
+        send(BridgeBody.PinSession(chatId))
     }
 
     fun unpinChat(chatId: String) {
         store.applyOptimisticPin(chatId, pinned = false)
-        send(BridgeBody.UnpinChat(chatId))
+        send(BridgeBody.UnpinSession(chatId))
     }
 
     fun renameChat(chatId: String, title: String) {
         store.applyOptimisticRename(chatId, title)
-        send(BridgeBody.RenameChat(chatId, title))
+        send(BridgeBody.RenameSession(chatId, title))
     }
 
     fun listProjects() {
@@ -394,7 +394,7 @@ class WinnerListener : WebSocketListener() {
                 store?.setConnection(ConnectionState.VersionMismatch(body.serverVersion))
                 webSocket.close(1000, "version mismatch")
             }
-            is BridgeBody.ChatsSnapshot -> store?.applyChatsSnapshot(body.chats)
+            is BridgeBody.SessionsSnapshot -> store?.applyChatsSnapshot(body.chats)
             is BridgeBody.ChatUpdated -> store?.applyChatUpdated(body.chat)
             is BridgeBody.MessagesSnapshot -> store?.applyMessagesSnapshot(body.chatId, body.messages, body.hasMore)
             is BridgeBody.MessagesPage -> store?.applyMessagesPage(body.chatId, body.messages, body.hasMore)

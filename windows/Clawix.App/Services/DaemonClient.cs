@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Clawix.App.Services;
 
 /// <summary>
-/// Loopback WebSocket client to <c>clawix-bridged</c>. Mirrors macOS
+/// Loopback WebSocket client to <c>clawix-bridge</c>. Mirrors macOS
 /// <c>DaemonBridgeClient</c>. Reconnects on drop with exponential
 /// backoff capped at 5 seconds (LAN is always close).
 /// </summary>

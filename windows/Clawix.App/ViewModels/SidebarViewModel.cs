@@ -7,7 +7,7 @@ namespace Clawix.App.ViewModels;
 
 public sealed partial class SidebarViewModel : ObservableObject
 {
-    public ObservableCollection<WireChat> Chats { get; } = new();
+    public ObservableCollection<WireChat> Sessions { get; } = new();
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -20,15 +20,15 @@ public sealed partial class SidebarViewModel : ObservableObject
         var state = App.Services.State;
         state.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(state.Chats))
-                ReplaceChats(state.Chats);
+            if (args.PropertyName == nameof(state.Sessions))
+                ReplaceChats(state.Sessions);
         };
     }
 
     private void ReplaceChats(IEnumerable<WireChat> chats)
     {
-        Chats.Clear();
-        foreach (var c in chats) Chats.Add(c);
+        Sessions.Clear();
+        foreach (var c in chats) Sessions.Add(c);
     }
 
     [RelayCommand]
@@ -39,7 +39,7 @@ public sealed partial class SidebarViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void NewChat()
+    private void NewSession()
     {
         // Open ProjectEditorSheet then send `newChat`. Wired in Phase 4.
     }

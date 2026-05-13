@@ -1,7 +1,7 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-// `clawix-bridged` is the bridge daemon shared between Apple platforms
+// `clawix-bridge` is the bridge daemon shared between Apple platforms
 // (where launchd hosts it via `SMAppService.agent(plistName:)`) and
 // Linux (where systemd hosts it via a user unit at
 // `~/.config/systemd/user/clawix-bridge.service`). The same Swift source
@@ -9,9 +9,9 @@ import PackageDescription
 // `#if canImport(...)`.
 //
 // On Apple platforms the daemon ships embedded inside `Clawix.app/Contents/Helpers/`
-// and survives Cmd+Q of the GUI. On Linux it ships at `/usr/lib/clawix/clawix-bridged`
-// (.deb), `~/.clawix/bin/clawix-bridged` (npm postinstall), or inside the
-// AppDir of the AppImage (`AppDir/usr/lib/clawix/clawix-bridged`).
+// and survives Cmd+Q of the GUI. On Linux it ships at `/usr/lib/clawix/clawix-bridge`
+// (.deb), `~/.clawix/bin/clawix-bridge` (npm postinstall), or inside the
+// AppDir of the AppImage (`AppDir/usr/lib/clawix/clawix-bridge`).
 //
 // The daemon is a thin shell over `ClawixEngine`: it instantiates a
 // `BridgeServer` (NWListener on Apple, SwiftNIO on Linux), plugs in an
@@ -22,12 +22,12 @@ import PackageDescription
 // from `clawix/web/`). The build pipeline (`clawix/macos/scripts/dev.sh`
 // and `clawix/scripts-dev/release.sh`) runs `pnpm --filter @clawix/web
 // build` and copies `clawix/web/dist/` into
-// `Sources/clawix-bridged/Resources/web-dist/` before `swift build`,
+// `Sources/clawix-bridge/Resources/web-dist/` before `swift build`,
 // so the resulting binary serves the SPA on its HTTP listener
-// (port 7779 by default) without needing a separate hosting layer.
+// (port 24081 by default) without needing a separate hosting layer.
 
 let package = Package(
-    name: "clawix-bridged",
+    name: "clawix-bridge",
     platforms: [
         .macOS(.v14)
     ],
@@ -44,7 +44,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "clawix-bridged",
+            name: "clawix-bridge",
             dependencies: [
                 .product(name: "ClawixCore", package: "ClawixCore"),
                 .product(name: "ClawixEngine", package: "ClawixEngine"),
@@ -52,7 +52,7 @@ let package = Package(
                 .product(name: "OpenCombine", package: "OpenCombine", condition: .when(platforms: [.linux])),
                 .product(name: "OpenCombineFoundation", package: "OpenCombine", condition: .when(platforms: [.linux]))
             ],
-            path: "Sources/clawix-bridged",
+            path: "Sources/clawix-bridge",
             resources: [
                 // The web SPA bundle. Empty placeholder (`.gitkeep`) when
                 // the developer has not yet run `pnpm --filter @clawix/web

@@ -3,8 +3,8 @@
 const fs = require('node:fs');
 const { spawn } = require('node:child_process');
 
-const OUT = '/tmp/clawix-bridged.out';
-const ERR = '/tmp/clawix-bridged.err';
+const OUT = '/tmp/clawix-bridge.out';
+const ERR = '/tmp/clawix-bridge.err';
 
 function tail({ follow = false } = {}) {
   const present = [OUT, ERR].filter((p) => fs.existsSync(p));

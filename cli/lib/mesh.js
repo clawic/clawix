@@ -65,13 +65,13 @@ async function run(args, { json = false } = {}) {
   }
 
   if (cmd === 'identity') {
-    const out = await request('GET', '/mesh/identity');
+    const out = await request('GET', '/v1/mesh/identity');
     print(out, json);
     return;
   }
 
   if (cmd === 'peers') {
-    const out = await request('GET', '/mesh/peers');
+    const out = await request('GET', '/v1/mesh/peers');
     if (json) return print(out, true);
     for (const peer of out.peers || []) {
       const status = peer.revokedAt ? 'revoked' : 'paired';
@@ -83,9 +83,9 @@ async function run(args, { json = false } = {}) {
   if (cmd === 'link') {
     const host = value(args, '--host');
     const token = value(args, '--token');
-    const httpPort = Number(value(args, '--http-port', '7779'));
+    const httpPort = Number(value(args, '--http-port', '24081'));
     if (!host || !token) throw new Error('mesh link requires --host and --token');
-    const out = await request('POST', '/mesh/link', { host, httpPort, token });
+    const out = await request('POST', '/v1/mesh/link', { host, httpPort, token });
     if (json) return print(out, true);
     process.stdout.write(`linked ${out.peer.displayName} (${out.peer.nodeId})\n`);
     return;
@@ -95,14 +95,14 @@ async function run(args, { json = false } = {}) {
     const path = value(args, '--path');
     const label = value(args, '--label');
     if (!path) throw new Error('mesh allow requires --path');
-    const out = await request('POST', '/mesh/workspaces', { path, label });
+    const out = await request('POST', '/v1/mesh/workspaces', { path, label });
     if (json) return print(out, true);
     process.stdout.write(`allowed ${out.workspace.path}\n`);
     return;
   }
 
   if (cmd === 'workspaces') {
-    const out = await request('GET', '/mesh/workspaces');
+    const out = await request('GET', '/v1/mesh/workspaces');
     if (json) return print(out, true);
     for (const workspace of out.workspaces || []) {
       process.stdout.write(`${workspace.path}  ${workspace.label}\n`);
@@ -117,7 +117,7 @@ async function run(args, { json = false } = {}) {
     if (!peerId || !workspacePath || !prompt) {
       throw new Error('mesh start-job requires --peer, --workspace, and --prompt');
     }
-    const out = await request('POST', '/mesh/remote-jobs', { peerId, workspacePath, prompt });
+    const out = await request('POST', '/v1/mesh/remote-jobs', { peerId, workspacePath, prompt });
     if (json) return print(out, true);
     process.stdout.write(`started remote job ${out.job.id} on ${peerId}\n`);
     return;
@@ -126,7 +126,7 @@ async function run(args, { json = false } = {}) {
   if (cmd === 'job') {
     const id = value(args, '--id');
     if (!id) throw new Error('mesh job requires --id');
-    const out = await request('GET', `/mesh/jobs/${encodeURIComponent(id)}`);
+    const out = await request('GET', `/v1/mesh/jobs/${encodeURIComponent(id)}`);
     if (json) return print(out, true);
     if (!out.job) {
       process.stdout.write('job not found\n');

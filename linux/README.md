@@ -1,6 +1,6 @@
 # Clawix · Linux desktop
 
-Tauri 2 (Rust shell + SolidJS frontend) talking to the same `clawix-bridged`
+Tauri 2 (Rust shell + SolidJS frontend) talking to the same `clawix-bridge`
 Swift daemon the macOS and iOS apps use. AppImage is the primary
 distribution channel; .deb is the secondary channel for Debian/Ubuntu.
 

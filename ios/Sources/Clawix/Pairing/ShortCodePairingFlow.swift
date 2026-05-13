@@ -175,7 +175,7 @@ final class ShortCodePairingFlow {
                 case .authOk(let macName):
                     let creds = Credentials(
                         host: "",
-                        port: 7778,
+                        port: 24080,
                         token: code,
                         macName: macName ?? mac.name,
                         tailscaleHost: nil

@@ -14,92 +14,92 @@ public enum BridgeIntent {
         session: BridgeSession
     ) {
         switch body {
-        case .listChats:
-            session.send(BridgeFrame(.chatsSnapshot(chats: bus.currentChats())))
+        case .listSessions:
+            session.send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
 
-        case .openChat(let chatIdString, let limit):
-            guard let uuid = UUID(uuidString: chatIdString) else {
-                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+        case .openSession(let sessionIdString, let limit):
+            guard let uuid = UUID(uuidString: sessionIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
             // Mirror what selecting a chat in the Mac UI does: pull
             // the rollout file off disk so `chat.messages` is populated
             // before we hand it to the bridge subscriber. Without this
             // every `notLoaded` thread shows up empty on the iPhone.
-            host?.handleHydrateHistory(chatId: uuid)
-            let page = bus.subscribe(chatId: chatIdString, limit: limit)
+            host?.handleHydrateHistory(sessionId: uuid)
+            let page = bus.subscribe(sessionId: sessionIdString, limit: limit)
             // `hasMore: nil` for legacy callers (no `limit`) so iOS
             // clients on the old code path behave identically.
             session.send(BridgeFrame(.messagesSnapshot(
-                chatId: chatIdString,
+                sessionId: sessionIdString,
                 messages: page.messages,
                 hasMore: limit == nil ? nil : page.hasMore
             )))
 
-        case .loadOlderMessages(let chatIdString, let before, let limit):
-            guard UUID(uuidString: chatIdString) != nil else {
-                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+        case .loadOlderMessages(let sessionIdString, let before, let limit):
+            guard UUID(uuidString: sessionIdString) != nil else {
+                session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
-            let page = bus.page(chatId: chatIdString, before: before, limit: limit)
+            let page = bus.page(sessionId: sessionIdString, before: before, limit: limit)
             session.send(BridgeFrame(.messagesPage(
-                chatId: chatIdString,
+                sessionId: sessionIdString,
                 messages: page.messages,
                 hasMore: page.hasMore
             )))
 
-        case .sendPrompt(let chatIdString, let text, let attachments):
-            guard let uuid = UUID(uuidString: chatIdString) else {
-                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+        case .sendPrompt(let sessionIdString, let text, let attachments):
+            guard let uuid = UUID(uuidString: sessionIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
-            host?.handleSendPrompt(chatId: uuid, text: text, attachments: attachments)
+            host?.handleSendPrompt(sessionId: uuid, text: text, attachments: attachments)
 
-        case .newChat(let chatIdString, let text, let attachments):
-            guard let uuid = UUID(uuidString: chatIdString) else {
-                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+        case .newSession(let sessionIdString, let text, let attachments):
+            guard let uuid = UUID(uuidString: sessionIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
             // Auto-subscribe so the bus pushes message-level deltas for
-            // the freshly created chat without an extra `openChat` round
+            // the freshly created chat without an extra `openSession` round
             // trip from the client.
-            _ = bus.subscribe(chatId: chatIdString)
-            host?.handleNewChat(chatId: uuid, text: text, attachments: attachments)
+            _ = bus.subscribe(sessionId: sessionIdString)
+            host?.handleNewSession(sessionId: uuid, text: text, attachments: attachments)
 
-        case .interruptTurn(let chatIdString):
-            guard let uuid = UUID(uuidString: chatIdString) else {
-                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+        case .interruptTurn(let sessionIdString):
+            guard let uuid = UUID(uuidString: sessionIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
-            host?.handleInterruptTurn(chatId: uuid)
+            host?.handleInterruptTurn(sessionId: uuid)
 
-        case .editPrompt(let chatIdString, let messageIdString, let text):
-            guard let chatUuid = UUID(uuidString: chatIdString),
+        case .editPrompt(let sessionIdString, let messageIdString, let text):
+            guard let chatUuid = UUID(uuidString: sessionIdString),
                   let msgUuid = UUID(uuidString: messageIdString) else {
-                session.send(BridgeFrame(.errorEvent(code: "badId", message: chatIdString)))
+                session.send(BridgeFrame(.errorEvent(code: "badId", message: sessionIdString)))
                 return
             }
-            host?.handleEditPrompt(chatId: chatUuid, messageId: msgUuid, text: text)
+            host?.handleEditPrompt(sessionId: chatUuid, messageId: msgUuid, text: text)
 
-        case .archiveChat(let chatIdString):
-            guard let uuid = UUID(uuidString: chatIdString) else { return }
-            host?.handleArchiveChat(chatId: uuid, archived: true)
-        case .unarchiveChat(let chatIdString):
-            guard let uuid = UUID(uuidString: chatIdString) else { return }
-            host?.handleArchiveChat(chatId: uuid, archived: false)
-        case .pinChat(let chatIdString):
-            guard let uuid = UUID(uuidString: chatIdString) else { return }
-            host?.handlePinChat(chatId: uuid, pinned: true)
-        case .unpinChat(let chatIdString):
-            guard let uuid = UUID(uuidString: chatIdString) else { return }
-            host?.handlePinChat(chatId: uuid, pinned: false)
+        case .archiveSession(let sessionIdString):
+            guard let uuid = UUID(uuidString: sessionIdString) else { return }
+            host?.handleArchiveSession(sessionId: uuid, archived: true)
+        case .unarchiveSession(let sessionIdString):
+            guard let uuid = UUID(uuidString: sessionIdString) else { return }
+            host?.handleArchiveSession(sessionId: uuid, archived: false)
+        case .pinSession(let sessionIdString):
+            guard let uuid = UUID(uuidString: sessionIdString) else { return }
+            host?.handlePinSession(sessionId: uuid, pinned: true)
+        case .unpinSession(let sessionIdString):
+            guard let uuid = UUID(uuidString: sessionIdString) else { return }
+            host?.handlePinSession(sessionId: uuid, pinned: false)
 
-        case .renameChat(let chatIdString, let title):
-            guard let uuid = UUID(uuidString: chatIdString) else {
-                session.send(BridgeFrame(.errorEvent(code: "badChatId", message: chatIdString)))
+        case .renameSession(let sessionIdString, let title):
+            guard let uuid = UUID(uuidString: sessionIdString) else {
+                session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
-            host?.handleRenameChat(chatId: uuid, title: title)
+            host?.handleRenameSession(sessionId: uuid, title: title)
 
         case .pairingStart:
             if let payload = host?.handlePairingStart() {
@@ -249,7 +249,7 @@ public enum BridgeIntent {
             )
 
         case .auth, .authOk, .authFailed, .versionMismatch,
-             .chatsSnapshot, .chatUpdated, .messagesSnapshot,
+             .sessionsSnapshot, .chatUpdated, .messagesSnapshot,
              .messagesPage,
              .messageAppended, .messageStreaming, .errorEvent,
              .pairingPayload, .projectsSnapshot, .fileSnapshot,

@@ -42,23 +42,23 @@ public sealed class BridgeProtocolTests
     }
 
     [Fact]
-    public void ListChats_HasNoPayload()
+    public void ListSessions_HasNoPayload()
     {
-        var frame = new BridgeFrame(new BridgeBody.ListChats());
+        var frame = new BridgeFrame(new BridgeBody.ListSessions());
         var json = BridgeCoder.Encode(frame);
-        Assert.Equal("{\"schemaVersion\":5,\"type\":\"listChats\"}", json);
+        Assert.Equal("{\"schemaVersion\":5,\"type\":\"listSessions\"}", json);
         var decoded = BridgeCoder.Decode(json);
-        Assert.IsType<BridgeBody.ListChats>(decoded.Body);
+        Assert.IsType<BridgeBody.ListSessions>(decoded.Body);
     }
 
     [Fact]
-    public void OpenChat_OmitsLimitWhenNull()
+    public void OpenSession_OmitsLimitWhenNull()
     {
-        var noLimit = new BridgeFrame(new BridgeBody.OpenChat("chat-1", null));
+        var noLimit = new BridgeFrame(new BridgeBody.OpenSession("chat-1", null));
         var jsonA = BridgeCoder.Encode(noLimit);
         Assert.DoesNotContain("\"limit\"", jsonA);
 
-        var withLimit = new BridgeFrame(new BridgeBody.OpenChat("chat-1", 60));
+        var withLimit = new BridgeFrame(new BridgeBody.OpenSession("chat-1", 60));
         var jsonB = BridgeCoder.Encode(withLimit);
         Assert.Contains("\"limit\":60", jsonB);
     }
@@ -79,7 +79,7 @@ public sealed class BridgeProtocolTests
     }
 
     [Fact]
-    public void ChatsSnapshot_RoundTrip()
+    public void SessionsSnapshot_RoundTrip()
     {
         var chat = new WireChat
         {
@@ -89,10 +89,10 @@ public sealed class BridgeProtocolTests
             HasActiveTurn = true,
             LastMessagePreview = "ping",
         };
-        var frame = new BridgeFrame(new BridgeBody.ChatsSnapshot([chat]));
+        var frame = new BridgeFrame(new BridgeBody.SessionsSnapshot([chat]));
         var json = BridgeCoder.Encode(frame);
         var decoded = BridgeCoder.Decode(json);
-        Assert.IsType<BridgeBody.ChatsSnapshot>(decoded.Body);
+        Assert.IsType<BridgeBody.SessionsSnapshot>(decoded.Body);
         Assert.Equal(frame, decoded);
     }
 
@@ -116,12 +116,12 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void Unknown_Type_Throws()
     {
-        var json = "{\"schemaVersion\":5,\"type\":\"someUnknownThing\",\"chatId\":\"x\"}";
+        var json = "{\"schemaVersion\":5,\"type\":\"someUnknownThing\",\"sessionId\":\"x\"}";
         Assert.ThrowsAny<Exception>(() => BridgeCoder.Decode(json));
     }
 
     [Theory]
-    [InlineData("listChats")]
+    [InlineData("listSessions")]
     [InlineData("pairingStart")]
     [InlineData("listProjects")]
     [InlineData("requestRateLimits")]

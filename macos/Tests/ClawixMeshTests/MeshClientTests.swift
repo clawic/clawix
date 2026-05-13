@@ -25,7 +25,7 @@ final class MeshClientTests: XCTestCase {
         let identity = MeshTestFixtures.nodeIdentity()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("GET", "/mesh/identity"):
+            case ("GET", "/v1/mesh/identity"):
                 return try! .json(identity)
             default:
                 return .text("not found", status: 404)
@@ -42,7 +42,7 @@ final class MeshClientTests: XCTestCase {
         let peer = MeshTestFixtures.peer()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("GET", "/mesh/peers"):
+            case ("GET", "/v1/mesh/peers"):
                 return try! .json(["peers": [peer]])
             default:
                 return .text("not found", status: 404)
@@ -58,7 +58,7 @@ final class MeshClientTests: XCTestCase {
         let ws = MeshTestFixtures.workspace()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("GET", "/mesh/workspaces"):
+            case ("GET", "/v1/mesh/workspaces"):
                 return try! .json(["workspaces": [ws]])
             default:
                 return .text("not found", status: 404)
@@ -76,14 +76,14 @@ final class MeshClientTests: XCTestCase {
         var sawLinkBody: Data?
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/mesh/link"):
+            case ("POST", "/v1/mesh/link"):
                 sawLinkBody = req.body
                 return try! .json(["peer": peer])
             default:
                 return .text("not found", status: 404)
             }
         }
-        let result = try await makeClient().link(host: "192.168.1.20", httpPort: 7779, token: "TOKEN-1", profile: .scoped)
+        let result = try await makeClient().link(host: "192.168.1.20", httpPort: 24081, token: "TOKEN-1", profile: .scoped)
         XCTAssertEqual(result.nodeId, "node-linked")
         XCTAssertNotNil(sawLinkBody)
         let echoed = try JSONDecoder().decode([String: AnyCodable].self, from: sawLinkBody!)
@@ -97,7 +97,7 @@ final class MeshClientTests: XCTestCase {
         let added = MeshTestFixtures.workspace(path: "/tmp/foo", label: "scratch")
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/mesh/workspaces"):
+            case ("POST", "/v1/mesh/workspaces"):
                 return try! .json(["workspace": added])
             default:
                 return .text("not found", status: 404)
@@ -131,9 +131,9 @@ final class MeshClientTests: XCTestCase {
         let stage = AtomicCounter()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/mesh/remote-jobs"):
+            case ("POST", "/v1/mesh/remote-jobs"):
                 return try! .json(["job": initialJob])
-            case ("GET", "/mesh/jobs/job-1"):
+            case ("GET", "/v1/mesh/jobs/job-1"):
                 let calls = stage.incrementAndGet()
                 if calls == 1 {
                     return try! .json(JobSnapshot(job: initialJob, events: [evt]))
@@ -178,7 +178,7 @@ final class MeshClientTests: XCTestCase {
     func test_workspaceDenied_isMappedToTypedError() async throws {
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/mesh/remote-jobs"):
+            case ("POST", "/v1/mesh/remote-jobs"):
                 return .text("workspace is denied on this host", status: 400)
             default:
                 return .text("not found", status: 404)
@@ -307,7 +307,7 @@ struct AnyCodable: Codable {
     }
 }
 
-/// Server-side shape of GET /mesh/jobs/<id>. Mirrors
+/// Server-side shape of GET /v1/mesh/jobs/<id>. Mirrors
 /// `RemoteMeshHTTPController.JobOutput` so the fake daemon can
 /// produce a structurally identical body without depending on the
 /// real type.

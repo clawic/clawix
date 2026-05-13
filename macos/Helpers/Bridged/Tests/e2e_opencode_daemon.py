@@ -321,9 +321,9 @@ def main():
                 "CLAWIX_AGENT_RUNTIME": "opencode",
                 "CLAWIX_EXPERIMENTAL_FEATURES": "1",
                 "CLAWIX_OPENCODE_BASE_URL": f"http://127.0.0.1:{http_port}",
-                "CLAWIX_BRIDGED_PORT": str(ws_port),
-                "CLAWIX_BRIDGED_BEARER": token,
-                "CLAWIX_BRIDGED_DISABLE_BONJOUR": "1",
+                "CLAWIX_BRIDGE_PORT": str(ws_port),
+                "CLAWIX_BRIDGE_BEARER": token,
+                "CLAWIX_BRIDGE_DISABLE_BONJOUR": "1",
                 "HOME": raw,
             }
         )
@@ -343,20 +343,20 @@ def main():
 
             ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E", "clientKind": "ios"})
             ws.recv_until(lambda f: f["type"] == "authOk")
-            snapshot = ws.recv_until(lambda f: f["type"] == "chatsSnapshot" and f["chats"])
-            chat_id = snapshot["chats"][0]["id"]
-            assert snapshot["chats"][0]["threadId"] == "oc-existing"
+            snapshot = ws.recv_until(lambda f: f["type"] == "sessionsSnapshot" and f["sessions"])
+            chat_id = snapshot["sessions"][0]["id"]
+            assert snapshot["sessions"][0]["threadId"] == "oc-existing"
 
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": chat_id})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": chat_id})
             ws.recv_until(
                 lambda f: (
                     f["type"] == "messagesSnapshot"
-                    and f["chatId"] == chat_id
+                    and f["sessionId"] == chat_id
                     and any(m["content"] == "existing answer" for m in f["messages"])
                 )
                 or (
                     f["type"] == "messageAppended"
-                    and f["chatId"] == chat_id
+                    and f["sessionId"] == chat_id
                     and f["message"]["content"] == "existing answer"
                 )
             )
@@ -369,14 +369,14 @@ def main():
             )
             assert fake.event_connected.wait(5), "OpenCode event stream was not opened"
 
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "chatId": chat_id, "text": "new prompt"})
+            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": chat_id, "text": "new prompt"})
             time.sleep(0.2)
             assert fake.permission_replied.wait(5), "permission request was not rejected"
 
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": chat_id})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": chat_id})
             hydrated = ws.recv_until(
                 lambda f: f["type"] == "messagesSnapshot"
-                and f["chatId"] == chat_id
+                and f["sessionId"] == chat_id
                 and any(m["content"] == "hello from opencode" for m in f["messages"])
                 and any(m.get("workSummary") for m in f["messages"] if m["role"] == "assistant")
             )
@@ -385,11 +385,11 @@ def main():
             assert {"command", "fileChange"}.issubset(kinds), assistant
 
             image_chat = "11111111-2222-4333-8444-555555555555"
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": image_chat})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": image_chat})
             ws.send_json({
                 "schemaVersion": 2,
                 "type": "sendPrompt",
-                "chatId": image_chat,
+                "sessionId": image_chat,
                 "text": "describe this",
                 "attachments": [{
                     "id": "image-e2e",
@@ -400,18 +400,18 @@ def main():
                 }],
             })
             time.sleep(0.1)
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": image_chat})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": image_chat})
             ws.recv_until(
                 lambda f: f["type"] == "messagesSnapshot"
-                and f["chatId"] == image_chat
+                and f["sessionId"] == image_chat
                 and any(m["role"] == "user" and "[image fallback]" in m["content"] and m["attachments"] for m in f["messages"])
             )
 
             slow_chat = "22222222-2222-4333-8444-555555555555"
-            ws.send_json({"schemaVersion": 2, "type": "openChat", "chatId": slow_chat})
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "chatId": slow_chat, "text": "slow turn"})
+            ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": slow_chat})
+            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": slow_chat, "text": "slow turn"})
             time.sleep(0.1)
-            ws.send_json({"schemaVersion": 2, "type": "interruptTurn", "chatId": slow_chat})
+            ws.send_json({"schemaVersion": 2, "type": "interruptTurn", "sessionId": slow_chat})
             ws.recv_until(
                 lambda f: f["type"] == "chatUpdated"
                 and f["chat"]["id"] == slow_chat
@@ -419,9 +419,9 @@ def main():
             )
             assert fake.abort_seen.wait(5), "abort endpoint was not called"
 
-            ws.send_json({"schemaVersion": 2, "type": "archiveChat", "chatId": image_chat})
+            ws.send_json({"schemaVersion": 2, "type": "archiveSession", "sessionId": image_chat})
             ws.recv_until(lambda f: f["type"] == "chatUpdated" and f["chat"]["id"] == image_chat and f["chat"]["isArchived"] is True)
-            ws.send_json({"schemaVersion": 2, "type": "unarchiveChat", "chatId": image_chat})
+            ws.send_json({"schemaVersion": 2, "type": "unarchiveSession", "sessionId": image_chat})
             ws.recv_until(lambda f: f["type"] == "chatUpdated" and f["chat"]["id"] == image_chat and f["chat"]["isArchived"] is False)
             ws.close()
         finally:
