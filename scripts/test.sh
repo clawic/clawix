@@ -191,18 +191,42 @@ fast() {
   web_tests "$@"
 }
 
+integration() {
+  fast "$@"
+  mapfile -t packages < <(integration_swift_packages)
+  swift_package_tests "${packages[@]}"
+  bridge_fixture_tests
+}
+
+changed() {
+  local base
+  base="$(git -C "$ROOT_DIR" merge-base HEAD origin/main 2>/dev/null || true)"
+  [[ -n "$base" ]] || base="HEAD~1"
+
+  local changed_files
+  changed_files="$(git -C "$ROOT_DIR" diff --name-only "$base" -- 2>/dev/null || true)"
+  if [[ -z "$changed_files" ]]; then
+    fast "$@"
+    return
+  fi
+
+  if grep -Eq '^(macos/Helpers|macos/scripts/e2e_|packages/(SecretsCrypto|SecretsPersistence|SecretsVault|ClawixEngine)|macos/)' <<< "$changed_files"; then
+    integration "$@"
+    return
+  fi
+
+  fast "$@"
+}
+
 case "$LANE" in
   fast)
     fast "$@"
     ;;
   changed)
-    fast "$@"
+    changed "$@"
     ;;
   integration)
-    fast "$@"
-    mapfile -t packages < <(integration_swift_packages)
-    swift_package_tests "${packages[@]}"
-    bridge_fixture_tests
+    integration "$@"
     ;;
   e2e)
     bridge_fixture_tests
@@ -217,8 +241,7 @@ case "$LANE" in
     live_tests
     ;;
   release)
-    fast "$@"
-    bridge_fixture_tests
+    integration "$@"
     device_tests
     host_tests
     ;;
