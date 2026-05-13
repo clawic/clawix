@@ -6,6 +6,7 @@ LANE="${1:-fast}"
 shift || true
 SCRATCH_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/clawix-test.XXXXXX")"
 trap 'rm -rf "$SCRATCH_ROOT"' EXIT
+export CLANG_MODULE_CACHE_PATH="$SCRATCH_ROOT/clang-module-cache"
 
 run() {
   echo "+ $*" >&2
@@ -63,7 +64,7 @@ swift_package_tests() {
   for package in "$@"; do
     [[ -f "$package/Package.swift" ]] || continue
     [[ -d "$package/Tests" ]] || continue
-    run swift test --package-path "$package" --scratch-path "$SCRATCH_ROOT/$(basename "$package")"
+    run swift test --disable-sandbox --package-path "$package" --scratch-path "$SCRATCH_ROOT/$(basename "$package")"
   done
 }
 
