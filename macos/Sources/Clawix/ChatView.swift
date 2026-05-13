@@ -59,10 +59,10 @@ struct ChatView: View {
     /// the iPhone client (`ChatDetailView.loadOlderThreshold`). Firing
     /// at 80pt from the top gives the daemon a chance to deliver the
     /// next page before the user sees the gap.
-    private static let loadOlderThreshold: CGFloat = 80
-    private static let initialVisibleMessageLimit = 14
-    private static let visibleMessagePageSize = 6
-    private static let localRevealThrottle: TimeInterval = 0.5
+    static let loadOlderThreshold: CGFloat = 80
+    static let initialVisibleMessageLimit = 14
+    static let visibleMessagePageSize = 6
+    static let localRevealThrottle: TimeInterval = 0.5
 
     var body: some View {
         RenderProbe.tick("ChatView")
@@ -71,155 +71,19 @@ struct ChatView: View {
                 let visibleMessages: [ChatMessage] = Array(chat.messages.suffix(visibleMessageLimit))
                 let hiddenLocalMessageCount = max(0, chat.messages.count - visibleMessages.count)
                 let _ = PerfSignpost.uiChat.event("messages.visible", visibleMessages.count)
-                let prewarmKey = ChatMarkdownPrewarmKey(
-                    chatId: chat.id,
-                    visibleMessageCount: visibleMessages.count,
-                    firstMessageId: visibleMessages.first?.id,
-                    lastMessageId: visibleMessages.last?.id,
-                    lastTimelineCount: visibleMessages.last?.timeline.count ?? 0
-                )
-                let bottomScrollBinding = Binding<String?>(
-                    get: { bottomId },
-                    set: { newValue in
-                        let normalized = newValue == chatTailId ? chatTailId : nil
-                        if bottomId != normalized {
-                            bottomId = normalized
-                        }
-                    }
-                )
                 VStack(spacing: 0) {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 44) {
-                                // Spinner that surfaces while a
-                                // `loadOlderMessages` round trip is in
-                                // flight. Sits above the messages so
-                                // the user gets feedback the moment
-                                // the scroll-up sentinel fires;
-                                // collapses to zero height when idle
-                                // so the layout doesn't reserve dead
-                                // space.
-                                if appState.messagesPaginationByChat[chatId]?.loadingOlder == true {
-                                    HStack {
-                                        Spacer()
-                                        ProgressView()
-                                            .controlSize(.small)
-                                        Spacer()
-                                    }
-                                    .frame(height: 28)
-                                    .transition(.opacity)
-                                }
-                                let lastUserMessageId = lastUserMessageId(in: chat.messages)
-                                let lastAssistantMessageId = lastCompletedAssistantMessageId(in: chat.messages)
-                                let responseStreaming = isResponseStreaming(chat)
-                                let activeFindQuery = appState.isFindBarOpen ? appState.findQuery : ""
-                                ForEach(visibleMessages) { (msg: ChatMessage) in
-                                    ChatMessageEntryView(
-                                        appState: appState,
-                                        chat: chat,
-                                        message: msg,
-                                        lastUserMessageId: lastUserMessageId,
-                                        lastAssistantMessageId: lastAssistantMessageId,
-                                        responseStreaming: responseStreaming,
-                                        activeFindQuery: activeFindQuery,
-                                        publishingReady: publishingReady,
-                                        proxy: proxy
-                                    )
-                                }
-                                // Trailing sentinel for `scrollPosition`.
-                                // Pairing this with `defaultScrollAnchor
-                                // (.bottom, for: .initialOffset)` is what
-                                // makes the chat appear with the latest
-                                // message visible from the very first
-                                // frame, no animated scroll-to-bottom on
-                                // mount.
-                                Color.clear
-                                    .frame(height: 1)
-                                    .id(chatTailId)
-                            }
-                            .frame(maxWidth: chatRailMaxWidth)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.horizontal, 24)
-                            .padding(.top, 24)
-                            .padding(.bottom, 12)
-                            .background(ThinScrollerInstaller(style: .legacy).allowsHitTesting(false))
-                        }
-                        // Declarative scroll positioning. The
-                        // `scrollPosition(id:anchor:)` binding tells
-                        // SwiftUI which row should sit at the bottom
-                        // edge: when `bottomId` equals `chatTailId`
-                        // the viewport pins to the trailing sentinel,
-                        // and SwiftUI keeps it glued there while the
-                        // content size changes (streaming, prepended
-                        // pages). When the user scrolls up the
-                        // binding flips to whichever id sits at the
-                        // bottom of the viewport, so we don't fight
-                        // their position.
-                        //
-                        // On macOS 15 we layer the
-                        // `defaultScrollAnchor(_:for:)` triplet that
-                        // matches the iPhone (`.top` for alignment,
-                        // `.bottom` for initial offset and size
-                        // changes) so the very first frame already
-                        // lands at the tail without an animated
-                        // scroll the user can see. On macOS 14 the
-                        // `scrollPosition` binding alone, paired with
-                        // the snapshot cache prepopulating the chat
-                        // and the bridge's `bridgeInitialPageLimit`
-                        // payload, gets us 90% of the same feel.
-                        .scrollPosition(id: bottomScrollBinding, anchor: .bottom)
-                        .modifier(ChatScrollDeclarativeAnchors())
-                        // Scroll-up sentinel for `loadOlderMessages`.
-                        // Fires whenever `offsetY` crosses the
-                        // threshold AND the content actually overflows
-                        // the viewport. The store dedupes via
-                        // `loadingOlderByChat`, so the callback is
-                        // safe to fire on every geometry update.
-                        // macOS 15+ only; macOS 14 keeps the initial
-                        // page (`bridgeInitialPageLimit` messages)
-                        // and falls back gracefully when the user
-                        // scrolls past it.
-                        .modifier(ChatScrollUpSentinel(
-                            threshold: Self.loadOlderThreshold,
-                            onTrigger: {
-                                handleScrollUpTrigger(
-                                    chat: chat,
-                                    visibleMessages: visibleMessages,
-                                    hiddenLocalMessageCount: hiddenLocalMessageCount,
-                                    proxy: proxy
-                                )
-                            }
-                        ))
-                        .onAppear {
-                            appState.ensureSelectedChat()
-                            // Re-arm `bottomId` so a switch back into
-                            // a chat the user previously scrolled up
-                            // in still pins to the latest message on
-                            // reentry.
-                            visibleMessageLimit = Self.initialVisibleMessageLimit
-                            lastLocalRevealAt = .distantPast
-                            bottomId = chatTailId
-                        }
-                        .onChange(of: chatId) { _, _ in
-                            appState.ensureSelectedChat()
-                            appState.requestComposerFocus()
-                            visibleMessageLimit = Self.initialVisibleMessageLimit
-                            lastLocalRevealAt = .distantPast
-                            bottomId = chatTailId
-                        }
-                        .onChange(of: appState.currentFindIndex) { _, _ in
-                            scrollToCurrentFindMatch(proxy: proxy)
-                        }
-                        .onChange(of: appState.findMatches.count) { _, _ in
-                            scrollToCurrentFindMatch(proxy: proxy)
-                        }
-                        .task(id: prewarmKey) {
-                            await ChatMarkdownPrewarmer.prewarm(
-                                messages: visibleMessages,
-                                timelineEntryLimit: MessageRow.initialTimelineEntryLimit
-                            )
-                        }
-                    }
+                    ChatTranscriptScrollerView(
+                        appState: appState,
+                        chatId: chatId,
+                        chat: chat,
+                        visibleMessages: visibleMessages,
+                        hiddenLocalMessageCount: hiddenLocalMessageCount,
+                        visibleMessageLimit: $visibleMessageLimit,
+                        lastLocalRevealAt: $lastLocalRevealAt,
+                        bottomId: $bottomId,
+                        chatTailId: chatTailId,
+                        publishingReady: publishingReady
+                    )
 
                     VStack(spacing: 14) {
                         let activeRemoteJobs = flags.isVisible(.remoteMesh)
@@ -399,6 +263,109 @@ struct ChatView: View {
             }
         } else {
             appState.requestOlderIfNeeded(chatId: chatId)
+        }
+    }
+
+    @ViewBuilder
+    private func transcriptScroller(
+        chat: Chat,
+        visibleMessages: [ChatMessage],
+        hiddenLocalMessageCount: Int,
+        bottomScrollBinding: Binding<String?>,
+        prewarmKey: ChatMarkdownPrewarmKey
+    ) -> some View {
+        ScrollViewReader { proxy in
+            transcriptScrollView(
+                chat: chat,
+                visibleMessages: visibleMessages,
+                proxy: proxy
+            )
+            .scrollPosition(id: bottomScrollBinding, anchor: .bottom)
+            .modifier(ChatScrollDeclarativeAnchors())
+            .modifier(ChatScrollUpSentinel(
+                threshold: Self.loadOlderThreshold,
+                onTrigger: {
+                    handleScrollUpTrigger(
+                        chat: chat,
+                        visibleMessages: visibleMessages,
+                        hiddenLocalMessageCount: hiddenLocalMessageCount,
+                        proxy: proxy
+                    )
+                }
+            ))
+            .onAppear {
+                appState.ensureSelectedChat()
+                visibleMessageLimit = Self.initialVisibleMessageLimit
+                lastLocalRevealAt = .distantPast
+                bottomId = chatTailId
+            }
+            .onChange(of: chatId) { _, _ in
+                appState.ensureSelectedChat()
+                appState.requestComposerFocus()
+                visibleMessageLimit = Self.initialVisibleMessageLimit
+                lastLocalRevealAt = .distantPast
+                bottomId = chatTailId
+            }
+            .onChange(of: appState.currentFindIndex) { _, _ in
+                scrollToCurrentFindMatch(proxy: proxy)
+            }
+            .onChange(of: appState.findMatches.count) { _, _ in
+                scrollToCurrentFindMatch(proxy: proxy)
+            }
+            .task(id: prewarmKey) {
+                await ChatMarkdownPrewarmer.prewarm(
+                    messages: visibleMessages,
+                    timelineEntryLimit: MessageRow.initialTimelineEntryLimit
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func transcriptScrollView(
+        chat: Chat,
+        visibleMessages: [ChatMessage],
+        proxy: ScrollViewProxy
+    ) -> some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 44) {
+                if appState.messagesPaginationByChat[chatId]?.loadingOlder == true {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .controlSize(.small)
+                        Spacer()
+                    }
+                    .frame(height: 28)
+                    .transition(.opacity)
+                }
+                let lastUserMessageId = lastUserMessageId(in: chat.messages)
+                let lastAssistantMessageId = lastCompletedAssistantMessageId(in: chat.messages)
+                let responseStreaming = isResponseStreaming(chat)
+                let activeFindQuery = appState.isFindBarOpen ? appState.findQuery : ""
+                ForEach(visibleMessages) { (msg: ChatMessage) in
+                    ChatMessageEntryView(
+                        appState: appState,
+                        chat: chat,
+                        message: msg,
+                        lastUserMessageId: lastUserMessageId,
+                        lastAssistantMessageId: lastAssistantMessageId,
+                        responseStreaming: responseStreaming,
+                        activeFindQuery: activeFindQuery,
+                        publishingReady: publishingReady,
+                        proxy: proxy
+                    )
+                }
+                Color.clear
+                    .frame(height: 1)
+                    .id(chatTailId)
+            }
+            .frame(maxWidth: chatRailMaxWidth)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 12)
+            .background(ThinScrollerInstaller(style: .legacy).allowsHitTesting(false))
         }
     }
 
