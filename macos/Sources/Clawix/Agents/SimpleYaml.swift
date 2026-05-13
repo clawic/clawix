@@ -1,7 +1,7 @@
 import Foundation
 
 /// Minimal YAML emitter / parser used to persist agent / personality /
-/// skill-collection / connection records under `~/.clawjs/`. Only
+/// skill-collection / connection records under `~/.claw/`. Only
 /// supports the flat shape this project actually uses:
 ///
 /// ```yaml
@@ -18,7 +18,7 @@ import Foundation
 /// `SimpleYaml` is intentionally NOT a general-purpose YAML library: it
 /// trades coverage for predictability and zero dependencies. Anything
 /// the project needs that does not fit the grammar above goes into its
-/// own file (see the per-record layout under `~/.clawjs/agents/<id>/`),
+/// own file (see the per-record layout under `~/.claw/agents/<id>/`),
 /// not into nested YAML.
 enum SimpleYaml {
 

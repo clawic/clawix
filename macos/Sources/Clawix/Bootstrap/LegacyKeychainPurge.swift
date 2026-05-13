@@ -22,8 +22,8 @@ enum LegacyKeychainPurge {
     private static var legacyServices: [String] {
         let appServicePrefix = Bundle.main.bundleIdentifier ?? "com.example.clawix.desktop"
         return [
-            "\(appServicePrefix).clawjs-database-admin",
-            "\(appServicePrefix).clawjs-drive-admin",
+            "\(appServicePrefix).claw-database-admin",
+            "\(appServicePrefix).claw-drive-admin",
             // Enhancement: namespaced per provider; keep in sync with
             // `EnhancementProviderID`.
             "com.clawix.enhancement.openai",

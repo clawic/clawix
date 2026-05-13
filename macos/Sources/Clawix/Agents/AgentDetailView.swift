@@ -74,7 +74,7 @@ struct AgentDetailView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }, message: {
-                Text("Removes ~/.clawjs/agents/\(agent.id)/ from disk. Chats started with this agent stay; they fall back to the default Codex agent.")
+                Text("Removes ~/.claw/agents/\(agent.id)/ from disk. Chats started with this agent stay; they fall back to the default Codex agent.")
             })
         } else {
             VStack(spacing: 12) {

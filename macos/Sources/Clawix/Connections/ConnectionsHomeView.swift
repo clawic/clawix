@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Catalog of third-party connections (Telegram bot, Slack workspace,
 /// etc.). The auth material (bot token, OAuth refresh token) is stored
-/// in `~/.clawjs/connections/<id>/auth.encrypted`; the editor here lets
+/// in `~/.claw/connections/<id>/auth.encrypted`; the editor here lets
 /// the user paste/replace it. Agent-level routing happens via
 /// `AgentIntegrationBinding` on the agent record.
 struct ConnectionsHomeView: View {
@@ -37,7 +37,7 @@ struct ConnectionsHomeView: View {
                 Text("Connections")
                     .font(BodyFont.system(size: 16, wght: 600))
                     .foregroundColor(Palette.textPrimary)
-                Text("\(store.connections.count) connection\(store.connections.count == 1 ? "" : "s") · ~/.clawjs/connections/")
+                Text("\(store.connections.count) connection\(store.connections.count == 1 ? "" : "s") · ~/.claw/connections/")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
@@ -328,7 +328,7 @@ struct ConnectionEditorSheet: View {
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 10).padding(.vertical, 7)
                             .background(fieldBg)
-                        Text("Stored XOR-obfuscated under ~/.clawjs/connections/\(draft.id)/auth.encrypted. Replace anytime.")
+                        Text("Stored XOR-obfuscated under ~/.claw/connections/\(draft.id)/auth.encrypted. Replace anytime.")
                             .font(BodyFont.system(size: 10.5, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                     }

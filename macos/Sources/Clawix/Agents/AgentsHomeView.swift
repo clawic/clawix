@@ -34,7 +34,7 @@ struct AgentsHomeView: View {
                       allowedContentTypes: [.zip],
                       allowsMultipleSelection: false) { result in
             // Importer is wired in as a stub: the on-disk layout per
-            // `~/.clawjs/agents/<id>/` is already a directory we can zip
+            // `~/.claw/agents/<id>/` is already a directory we can zip
             // and unzip with the OS. Wiring this end-to-end (zip parse,
             // id collision resolution, re-derive defaults) is part of
             // MVP step 7 — fileImporter handles the file selection so
@@ -51,7 +51,7 @@ struct AgentsHomeView: View {
                 Text("Agents")
                     .font(BodyFont.system(size: 16, wght: 600))
                     .foregroundColor(Palette.textPrimary)
-                Text("\(store.agents.count) agent\(store.agents.count == 1 ? "" : "s") · filesystem-backed at ~/.clawjs/agents/")
+                Text("\(store.agents.count) agent\(store.agents.count == 1 ? "" : "s") · filesystem-backed at ~/.claw/agents/")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }

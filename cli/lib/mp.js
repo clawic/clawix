@@ -27,14 +27,14 @@ const INDEX_HOST = '127.0.0.1';
 const INDEX_PORT = 7796;
 
 function workspaceRoot() {
-    if (process.env.CLAWIX_DUMMY_MODE === '1' && process.env.CLAWIX_CLAWJS_ROOT) {
-        return process.env.CLAWIX_CLAWJS_ROOT;
+    if (process.env.CLAWIX_DUMMY_MODE === '1' && process.env.CLAWIX_CLAW_ROOT) {
+        return process.env.CLAWIX_CLAW_ROOT;
     }
     return path.join(os.homedir(), 'Library/Application Support/Clawix/clawjs');
 }
 
 function indexDataDir() {
-    return path.join(workspaceRoot(), 'workspace/.clawjs/index');
+    return path.join(workspaceRoot(), 'workspace/.claw/index');
 }
 
 function readAdminToken() {

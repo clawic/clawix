@@ -140,7 +140,7 @@ struct SkillsSettingsPage: View {
             VStack(alignment: .leading, spacing: 6) {
                 externalDirRow(path: "~/.codex/skills", agent: "Codex CLI")
                 externalDirRow(path: "~/.hermes/skills", agent: "HermesAgent")
-                Text("Add custom dirs by editing ~/.clawjs/config.yaml — UI for arbitrary dirs ships in the next iteration.")
+                Text("Add custom dirs by editing ~/.claw/config.yaml — UI for arbitrary dirs ships in the next iteration.")
                     .font(.system(size: 10.5))
                     .foregroundColor(.secondary)
                     .padding(.top, 4)

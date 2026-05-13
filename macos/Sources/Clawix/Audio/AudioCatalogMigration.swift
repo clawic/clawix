@@ -103,7 +103,7 @@ enum AudioCatalogMigration {
     static func defaultMarkerURL() -> URL {
         let env = ProcessInfo.processInfo.environment
         let root: URL
-        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAWJS_ROOT"], !custom.isEmpty {
+        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAW_ROOT"], !custom.isEmpty {
             root = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
             root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -111,7 +111,7 @@ enum AudioCatalogMigration {
         }
         return root
             .appendingPathComponent("workspace", isDirectory: true)
-            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent(".claw", isDirectory: true)
             .appendingPathComponent("audio", isDirectory: true)
             .appendingPathComponent(".migrated_clawix_v1", isDirectory: false)
     }

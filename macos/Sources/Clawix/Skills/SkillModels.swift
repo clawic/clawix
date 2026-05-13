@@ -3,9 +3,9 @@ import Foundation
 // MARK: - Kind / Scope / SyncMode
 
 /// Subtype of a skill, surfaced as a filter chip and as an icon in the
-/// catalog grid. Maps to `metadata.clawjs.kind` in the SKILL.md
+/// catalog grid. Maps to `metadata.claw.kind` in the SKILL.md
 /// frontmatter (agentskills.io standard) and to the directory under
-/// `~/.clawjs/skills/<kind>/<slug>/SKILL.md` where the file lives.
+/// `~/.claw/skills/<kind>/<slug>/SKILL.md` where the file lives.
 enum SkillKind: String, Codable, CaseIterable, Identifiable {
     /// "How the agent thinks/talks/decides." Replaces ClawJS Soul.
     /// Only one is meaningfully active at the top of the system prompt;
@@ -185,7 +185,7 @@ struct SkillInstanceRef: Codable, Equatable, Hashable {
 /// disk so the params form can render the same sliders / dropdowns the
 /// ClawJS Soul UI uses. The body of the SKILL.md is the compiled prose
 /// version (what `clawjs soul compile` already produces). On disk this
-/// is just YAML inside `metadata.clawjs.soul`.
+/// is just YAML inside `metadata.claw.soul`.
 struct SkillSoulModules: Codable, Equatable, Hashable {
     /// Which preset (engineer, executive, tutor, ...) this personality
     /// was forked from, if any.

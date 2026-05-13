@@ -36,7 +36,7 @@ enum AppFeature: Equatable {
     case life
     case skills
     case skillCollections
-    case clawjs
+    case claw
     case identity
     case telegram
     case screenTools
@@ -68,7 +68,7 @@ enum AppFeature: Equatable {
         case .life:               return .experimental
         case .skills:             return .experimental
         case .skillCollections:   return .experimental
-        case .clawjs:             return .experimental
+        case .claw:             return .experimental
         case .identity:           return .experimental
         case .telegram:           return .experimental
         case .screenTools:        return .experimental

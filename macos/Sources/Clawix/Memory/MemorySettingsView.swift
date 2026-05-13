@@ -153,7 +153,7 @@ struct MemorySettingsView: View {
 
     private func openDataFolder() {
         let folder = ClawJSServiceManager.workspaceURL
-            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent(".claw", isDirectory: true)
             .appendingPathComponent("memory", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         NSWorkspace.shared.activateFileViewerSelecting([folder])

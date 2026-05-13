@@ -3,7 +3,7 @@ import Combine
 
 /// Owns the catalog of skills exposed in the Skills page and the active
 /// set per scope. Source of truth lives in ClawJS (single central
-/// library at `~/.clawjs/skills/<kind>/<slug>/SKILL.md`), but Clawix
+/// library at `~/.claw/skills/<kind>/<slug>/SKILL.md`), but Clawix
 /// holds a hot copy here so the UI stays responsive and reflects edits
 /// the moment the user makes them.
 ///
@@ -472,7 +472,7 @@ enum SkillsSeedCatalog {
     static let builtins: [SkillSpec] = [
         // ── Personalities (3 of the 14 ClawJS presets, the rest seed in
         // the same shape once ClawJS skills-v2 lands and ships them
-        // properly under ~/.clawjs/skills/personality/_builtin/).
+        // properly under ~/.claw/skills/personality/_builtin/).
         SkillSpec(
             slug: "ceo-pragmatic",
             name: "CEO · Pragmatic",

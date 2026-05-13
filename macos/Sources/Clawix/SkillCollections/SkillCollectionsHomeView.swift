@@ -3,7 +3,7 @@ import SwiftUI
 /// Catalog of tag-based skill collections. A collection expands at
 /// agent-resolve time to every skill whose frontmatter `tags` matches
 /// one of `includedTags`. Today the runtime side reads the existing
-/// `~/.clawjs/skills/<id>/SKILL.md` corpus; the editor here only
+/// `~/.claw/skills/<id>/SKILL.md` corpus; the editor here only
 /// manages the collection definitions.
 struct SkillCollectionsHomeView: View {
     @EnvironmentObject private var store: AgentStore
@@ -34,7 +34,7 @@ struct SkillCollectionsHomeView: View {
                 Text("Skill Collections")
                     .font(BodyFont.system(size: 16, wght: 600))
                     .foregroundColor(Palette.textPrimary)
-                Text("\(store.skillCollections.count) collection\(store.skillCollections.count == 1 ? "" : "s") · ~/.clawjs/skill-collections/")
+                Text("\(store.skillCollections.count) collection\(store.skillCollections.count == 1 ? "" : "s") · ~/.claw/skill-collections/")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }

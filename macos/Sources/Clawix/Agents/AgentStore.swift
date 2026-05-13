@@ -3,12 +3,12 @@ import SwiftUI
 import Combine
 
 /// Filesystem source-of-truth for agent / personality / skill-collection
-/// / connection records. All state lives under `~/.clawjs/` (overridable
-/// via `CLAWIX_CLAWJS_HOME` for tests) per the layout documented in the
+/// / connection records. All state lives under `~/.claw/` (overridable
+/// via `CLAWIX_CLAW_HOME` for tests) per the layout documented in the
 /// workspace plan:
 ///
 /// ```
-/// ~/.clawjs/
+/// ~/.claw/
 /// ├── agents/<id>/agent.yaml + instructions.md + ...
 /// ├── personalities/<id>/personality.yaml + prompt.md
 /// ├── skill-collections/<id>/collection.yaml
@@ -50,12 +50,12 @@ final class AgentStore: ObservableObject {
     private let home: URL
 
     private static func defaultHome() -> URL {
-        if let override = ProcessInfo.processInfo.environment["CLAWIX_CLAWJS_HOME"],
+        if let override = ProcessInfo.processInfo.environment["CLAWIX_CLAW_HOME"],
            !override.isEmpty {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
         }
         let url = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent(".claw", isDirectory: true)
         return url
     }
 
@@ -638,7 +638,7 @@ final class AgentStore: ObservableObject {
     }
 
     /// Audit-log entry. Append-only file under
-    /// `~/.clawjs/agents/<id>/audit.log`. Each line is JSON for grep /
+    /// `~/.claw/agents/<id>/audit.log`. Each line is JSON for grep /
     /// jq friendliness.
     func appendAudit(_ entry: AgentAuditEntry, on agentId: String) {
         let folder = dir(forAgent: agentId)

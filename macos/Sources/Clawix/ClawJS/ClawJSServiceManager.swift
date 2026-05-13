@@ -639,7 +639,7 @@ final class ClawJSServiceManager: ObservableObject {
 
     static var applicationSupportRoot: URL {
         let env = ProcessInfo.processInfo.environment
-        if env["CLAWIX_DUMMY_MODE"] == "1", let root = env["CLAWIX_CLAWJS_ROOT"], !root.isEmpty {
+        if env["CLAWIX_DUMMY_MODE"] == "1", let root = env["CLAWIX_CLAW_ROOT"], !root.isEmpty {
             return URL(fileURLWithPath: root, isDirectory: true)
         }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -699,10 +699,10 @@ final class ClawJSServiceManager: ObservableObject {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAWJS_WORKSPACE"] = workspaceURL.path
-        env["CLAWJS_MAIN_DATA_DIR"] = mainDataDirectoryURL.path
-        env["CLAWIX_CLAWJS_DATA_DIR"] = mainDataDirectoryURL.path
-        env["CLAWJS_MAIN_DB_PATH"] = mainDatabaseURL.path
-        env["CLAWJS_MAIN_FILES_DIR"] = mainFilesDirectoryURL.path
+        env["CLAW_DATA_DIR"] = mainDataDirectoryURL.path
+        env["CLAWIX_CLAW_DATA_DIR"] = mainDataDirectoryURL.path
+        env["CLAW_DB_PATH"] = mainDatabaseURL.path
+        env["CLAW_FILES_DIR"] = mainFilesDirectoryURL.path
         env["CLAWJS_PORT"] = String(service.port)
         env["CLAWJS_SERVICE"] = service.rawValue
         env["CLAWJS_SECRETS_PROXY_PATH"] = FileManager.default.homeDirectoryForCurrentUser
@@ -862,7 +862,7 @@ final class ClawJSServiceManager: ObservableObject {
             return mainDataDirectoryURL
         }
         return workspaceURL
-            .appendingPathComponent(".clawjs", isDirectory: true)
+            .appendingPathComponent(".claw", isDirectory: true)
             .appendingPathComponent(service.rawValue, isDirectory: true)
     }
 

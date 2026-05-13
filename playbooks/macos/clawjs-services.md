@@ -1,5 +1,5 @@
 ---
-id: macos.clawjs-services
+id: macos.claw-services
 platform: macos
 surface: settings
 status: ready

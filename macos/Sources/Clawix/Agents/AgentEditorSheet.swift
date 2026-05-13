@@ -66,7 +66,7 @@ struct AgentEditorSheet: View {
                 Text(headerTitle)
                     .font(BodyFont.system(size: 15, wght: 600))
                     .foregroundColor(Palette.textPrimary)
-                Text("Stored at ~/.clawjs/agents/\(draft.id)/")
+                Text("Stored at ~/.claw/agents/\(draft.id)/")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }

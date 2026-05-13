@@ -33,7 +33,7 @@ struct PersonalitiesHomeView: View {
                 Text("Personalities")
                     .font(BodyFont.system(size: 16, wght: 600))
                     .foregroundColor(Palette.textPrimary)
-                Text("\(store.personalities.count) personalit\(store.personalities.count == 1 ? "y" : "ies") · ~/.clawjs/personalities/")
+                Text("\(store.personalities.count) personalit\(store.personalities.count == 1 ? "y" : "ies") · ~/.claw/personalities/")
                     .font(BodyFont.system(size: 11, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
