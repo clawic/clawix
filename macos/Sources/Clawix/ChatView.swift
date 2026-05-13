@@ -182,30 +182,12 @@ struct ChatView: View {
                         .modifier(ChatScrollUpSentinel(
                             threshold: Self.loadOlderThreshold,
                             onTrigger: {
-                                if hiddenLocalMessageCount > 0 {
-                                    let now = Date()
-                                    guard now.timeIntervalSince(lastLocalRevealAt) >= Self.localRevealThrottle else {
-                                        return
-                                    }
-                                    lastLocalRevealAt = now
-                                    let anchorId = visibleMessages.first?.id
-                                    bottomId = nil
-                                    visibleMessageLimit = min(
-                                        chat.messages.count,
-                                        visibleMessageLimit + Self.visibleMessagePageSize
-                                    )
-                                    if let anchorId {
-                                        DispatchQueue.main.async {
-                                            var transaction = Transaction()
-                                            transaction.disablesAnimations = true
-                                            withTransaction(transaction) {
-                                                proxy.scrollTo(anchorId, anchor: .top)
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    appState.requestOlderIfNeeded(chatId: chatId)
-                                }
+                                handleScrollUpTrigger(
+                                    chat: chat,
+                                    visibleMessages: visibleMessages,
+                                    hiddenLocalMessageCount: hiddenLocalMessageCount,
+                                    proxy: proxy
+                                )
                             }
                         ))
                         .onAppear {
@@ -385,6 +367,38 @@ struct ChatView: View {
               let match = appState.currentFindMatch else { return }
         withAnimation(.easeOut(duration: 0.20)) {
             proxy.scrollTo(match.messageId, anchor: .center)
+        }
+    }
+
+    private func handleScrollUpTrigger(
+        chat: Chat,
+        visibleMessages: [ChatMessage],
+        hiddenLocalMessageCount: Int,
+        proxy: ScrollViewProxy
+    ) {
+        if hiddenLocalMessageCount > 0 {
+            let now = Date()
+            guard now.timeIntervalSince(lastLocalRevealAt) >= Self.localRevealThrottle else {
+                return
+            }
+            lastLocalRevealAt = now
+            let anchorId = visibleMessages.first?.id
+            bottomId = nil
+            visibleMessageLimit = min(
+                chat.messages.count,
+                visibleMessageLimit + Self.visibleMessagePageSize
+            )
+            if let anchorId {
+                DispatchQueue.main.async {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        proxy.scrollTo(anchorId, anchor: .top)
+                    }
+                }
+            }
+        } else {
+            appState.requestOlderIfNeeded(chatId: chatId)
         }
     }
 
