@@ -121,7 +121,7 @@ struct MessageRow: View, Equatable {
 
     private var isUser: Bool { message.role == .user }
     private var exposeMessageAccessibility: Bool { NSWorkspace.shared.isVoiceOverEnabled }
-    fileprivate static let initialTimelineEntryLimit = 8
+    static let initialTimelineEntryLimit = 8
     private static let timelineEntryPageSize = 8
     private static let timelineRevealThrottle: TimeInterval = 0.15
 
