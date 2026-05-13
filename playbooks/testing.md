@@ -12,10 +12,11 @@ Run the public-safe lane runner from the repo root:
 bash scripts/test.sh changed
 ```
 
-- `fast`: public hygiene, Swift package logic tests, and web unit tests when
-  dependencies are installed.
+- `fast`: public hygiene, small Swift logic/package tests, and web unit tests
+  when dependencies are installed.
 - `changed`: normal blocking gate for a focused change.
-- `integration`: daemon, bridge, and fixture checks that remain local.
+- `integration`: heavier Swift packages, macOS package tests, daemon, bridge,
+  and fixture checks that remain local.
 - `e2e`: local app/bridge fixture E2E checks that do not require private
   signing values.
 - `host`: signed-host validation. Uses private hooks only when configured.
