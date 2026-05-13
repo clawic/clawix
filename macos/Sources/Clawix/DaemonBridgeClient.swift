@@ -49,15 +49,15 @@ final class DaemonBridgeClient {
         isAuthenticated = false
     }
 
-    func openChat(_ chatId: UUID) {
+    func openSession(_ sessionId: UUID) {
         // Always opt into pagination, same as the iPhone client. The
         // initial paint only needs the trailing window
         // (`bridgeInitialPageLimit`); older history streams in via
         // `loadOlderMessages` if the user scrolls up. Pulling the full
-        // transcript on every chat tap was the dominant cost behind
+        // transcript on every session tap was the dominant cost behind
         // the "transcript reanchors visibly while building from the
         // top" symptom on Mac, even over loopback.
-        send(.openSession(sessionId: chatId.uuidString, limit: bridgeInitialPageLimit))
+        send(.openSession(sessionId: sessionId.uuidString, limit: bridgeInitialPageLimit))
     }
 
     /// Fetch the next page of older messages for `chatId`. The cursor
