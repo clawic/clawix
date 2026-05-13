@@ -1,6 +1,13 @@
 # Clawix
 
-Monorepo for the Clawix project. Native clients for the [`codex`](https://github.com/openai/codex) CLI. The repo hosts platform clients at the top level, with shared Swift packages under `packages/`.
+Monorepo for the Clawix project. Clawix is the native human interface and
+embedded signed host for ClawJS/Claw. It is not the canonical framework store
+and new work must not treat it as a direct Codex-only client.
+
+For framework, host, storage, CLI, permissions, grants, approvals, audit, and
+domain ownership decisions, read [`docs/host-ownership.md`](docs/host-ownership.md)
+and [`docs/adr/0001-claw-framework-host-boundary.md`](docs/adr/0001-claw-framework-host-boundary.md)
+before editing.
 
 ## Repository layout
 
@@ -8,10 +15,15 @@ Monorepo for the Clawix project. Native clients for the [`codex`](https://github
 macos/          # macOS client (SwiftUI).
 ios/            # iOS client.
 packages/       # Shared Swift packages.
-cli/            # npm CLI surface.
+cli/            # Legacy/transitional npm CLI surface, not new public Claw CLI.
+docs/           # Architecture docs and ADRs.
 ```
 
-Each app is autonomous: its own `Package.swift` (or Xcode project), its own scripts, its own bundle id. The only repo-wide assets are the brand, this `CLAUDE.md`, and the hygiene gate run before publishing.
+Each app has its own build entrypoint and platform scripts. Public repository
+files must contain only safe placeholders for bundle ids, signing identities,
+Team IDs, launch labels, Mach services, and host branding. The shared
+architecture boundary lives in `docs/host-ownership.md`; do not encode a second
+ownership model in target-specific notes.
 
 ## Build (macOS app)
 
@@ -89,12 +101,20 @@ If you need to expose a new piece of local config (another identifier, another f
 
 # macOS app · `macos/`
 
-Native macOS client (SwiftUI) for the `codex` CLI. The visible app is a frontend. Runtime ownership is split by mode:
+Native macOS Clawix app. It is the human UI and the Clawix-signed embedded host
+for ClawJS/Claw. Clawix owns native UI, visual state, approvals, and host
+identity; ClawJS/Claw owns canonical framework contracts, storage, domain APIs,
+and the public `claw` CLI.
 
-- Normal in-process mode: the app reads `~/.codex/auth.json`, runs the `codex` binary for login/logout, and connects to the JSON-RPC app-server the CLI exposes for threads, messages and events.
-- Background bridge mode: a bundled `clawix-bridged` helper owns the Codex app-server connection and the local bridge. The Mac app connects back to that daemon over loopback instead of starting its own backend/bridge. iOS scans the daemon QR/token and talks to the same daemon, so Mac and iOS share one runtime owner.
+Current bridge compatibility still supports Codex-backed runtime flows, but
+Codex data is an external read-only source by default. `~/.codex` may be read,
+mirrored, or indexed; it must not be deleted, moved, overwritten, recursively
+chmodded, or used as a write target. `AGENTS.md` writes into Codex-owned sources
+require explicit reversible opt-in.
 
-Do not reintroduce a second GUI-owned bridge/backend when background bridge mode is enabled. Any iOS-visible runtime feature should be implemented on the daemon bridge surface first, then consumed by the Mac app and iOS clients.
+Do not reintroduce a second GUI-owned bridge/backend when background bridge mode
+is enabled. Any iOS-visible runtime feature should be implemented on the daemon
+or host contract surface first, then consumed by the Mac app and iOS clients.
 
 ## Layout
 
@@ -349,7 +369,9 @@ When migrating existing scroll views:
 
 # CLI · `cli/`
 
-Top-level npm package, name `clawix`, distributed at https://www.npmjs.com/package/clawix. Source lives in `cli/`, ships to npm with `bin/`, `lib/`, `README.md`, `LICENSE`. The package is **macOS-only** (`os: ["darwin"]`, `cpu: ["arm64", "x64"]`); the postinstall no-ops on other platforms with a helpful message.
+Top-level npm package, name `clawix`, distributed at https://www.npmjs.com/package/clawix. This is a legacy/transitional Clawix distribution surface. New public framework commands belong to the single `claw` CLI owned by ClawJS/Claw, not to a new `clawix` CLI surface.
+
+Source lives in `cli/`, ships to npm with `bin/`, `lib/`, `README.md`, `LICENSE`. The package is **macOS-only** (`os: ["darwin"]`, `cpu: ["arm64", "x64"]`); the postinstall no-ops on other platforms with a helpful message.
 
 The CLI is a thin Node.js wrapper around two pre-built, pre-signed Swift binaries:
 

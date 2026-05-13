@@ -2,15 +2,16 @@
 
 This file is the macOS-specific anchor for any agent (Claude Code,
 another Claude, a human contributor) working under
-`macos/`. The repo-root `clawix/CLAUDE.md` owns project-wide
-conventions; this one only adds what is specific to the macOS target.
+`macos/`. The repo-root `AGENTS.md` owns project-wide conventions and
+`docs/host-ownership.md` owns the ClawJS/Claw/Clawix boundary; this file only
+adds what is specific to the macOS target.
 
 ## Scope
 
 - The macOS target lives at `macos/`. Sources at
   `macos/Sources/Clawix/`. Build via `bash dev.sh` from the repo
   root (or workspace root when developing locally — see the workspace
-  `CLAUDE.md` for the wrapper that injects `SIGN_IDENTITY` and
+  `AGENTS.md` for the wrapper that injects `SIGN_IDENTITY` and
   `BUNDLE_ID`).
 - Cross-platform code shared with iOS lives at
   `packages/`. Edit there only when the change applies to both

@@ -1,8 +1,10 @@
 # Clawix Linux Context
 
 These notes are public repository guidance for agents touching
-`clawix/linux/`. Private local workspace rules still take precedence
-for local-only preferences, signing, secrets, and launcher behavior.
+`clawix/linux/`. Repo-root `AGENTS.md` owns project-wide conventions,
+`docs/host-ownership.md` owns the ClawJS/Claw/Clawix boundary, and private local
+workspace rules still take precedence for local-only preferences, signing,
+secrets, and launcher behavior.
 
 ## Stack
 

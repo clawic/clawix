@@ -27,7 +27,7 @@ windows/
 └── BUILD_NUMBER            ← monotonic build number
 ```
 
-## Hard Rules Inherited From `<workspace>/CLAUDE.md`
+## Hard Rules Inherited From `<workspace>/AGENTS.md`
 
 - **Literal blacklist**: the real Team ID, real bundle id (`BUNDLE_ID` in `.signing.env`), SKU (`APP_SKU`), and Authenticode certificate thumbprint (`WIN_SIGN_THUMBPRINT`) never appear in code under `clawix/windows/`. They are read from environment variables at runtime.
 - **Signed build**: run `pwsh scripts/build-app.ps1` from the workspace root. The script reads `.signing.env` and signs with `signtool.exe` using `WIN_SIGN_THUMBPRINT`. Without stable signing, SmartScreen blocks the binary.

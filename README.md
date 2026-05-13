@@ -11,7 +11,7 @@
 >
 > Use it only for local evaluation, ideally on an isolated machine, VM, or sandboxed environment. Assume things can fail, data can break, and migrations may not exist yet.
 
-Clawix is a native client for the [`codex`](https://github.com/openai/codex) CLI. It reads `~/.codex/auth.json`, drives `codex login` / `logout`, and connects to the JSON-RPC app-server the CLI exposes for threads, messages, and events. The macOS app ships today, with an iOS companion on the way.
+Clawix is the native human interface and embedded signed host for ClawJS/Claw. It owns the app UI, visual projections, approvals, and host identity, while ClawJS/Claw owns canonical framework contracts, storage, domain APIs, and the public `claw` CLI. Codex data can be mirrored as an external read-only source, but it is not Clawix's canonical storage model. The macOS app ships today, with an iOS companion on the way.
 
 This repository is a monorepo. Platform clients live at the root under `macos/` and `ios/`, with shared Swift packages under `packages/`.
 
@@ -78,11 +78,11 @@ The marketing version lives in [`macos/VERSION`](./macos/VERSION). It is the sin
 
 ## Privacy guarantee for contributors
 
-This repository never contains the maintainer's real codesign identity, Apple Team ID, or bundle id. They live in a `.signing.env` file kept outside the public tree. The hygiene gate (`macos/scripts/public_hygiene_check.sh`) blocks publishing if any of those values, or a `.signing.env`, leak into the public source. See [`CLAUDE.md`](./CLAUDE.md) for the full set of rules contributors are expected to follow.
+This repository never contains the maintainer's real codesign identity, Apple Team ID, or bundle id. They live in a `.signing.env` file kept outside the public tree. The hygiene gate (`macos/scripts/public_hygiene_check.sh`) blocks publishing if any of those values, or a `.signing.env`, leak into the public source. See [`AGENTS.md`](./AGENTS.md) and [`docs/host-ownership.md`](./docs/host-ownership.md) for the full set of rules contributors are expected to follow.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md). The repository conventions (corner-radius canon, dropdown style, hygiene gate, signing rules) live in [`CLAUDE.md`](./CLAUDE.md).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md). The repository conventions (corner-radius canon, dropdown style, hygiene gate, signing rules) live in [`AGENTS.md`](./AGENTS.md), with framework/host ownership in [`docs/host-ownership.md`](./docs/host-ownership.md).
 
 ## License
 
