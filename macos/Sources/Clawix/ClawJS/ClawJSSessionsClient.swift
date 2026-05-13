@@ -136,6 +136,19 @@ struct ClawJSSessionsClient {
         let session: SessionRecord
     }
 
+    struct ImportCodexResponse: Decodable {
+        struct Item: Decodable {
+            let filePath: String
+            let sessionId: String?
+            let messagesImported: Int
+            let skipped: Bool?
+            let reason: String?
+        }
+
+        let scanned: Int
+        let imported: [Item]
+    }
+
     struct CreateProjectRequest: Encodable {
         let displayName: String?
         let path: String
@@ -233,6 +246,18 @@ struct ClawJSSessionsClient {
     func listMessages(sessionId: String) async throws -> [MessageRecord] {
         let response: MessagesResponse = try await request("/v1/sessions/\(sessionId)/messages")
         return response.items
+    }
+
+    @discardableResult
+    func importCodex(forceReimport: Bool = false) async throws -> ImportCodexResponse {
+        struct Body: Encodable {
+            let forceReimport: Bool?
+        }
+        return try await request(
+            "/v1/sessions/import/codex",
+            method: "POST",
+            body: Body(forceReimport: forceReimport ? true : nil)
+        )
     }
 
     @discardableResult

@@ -98,6 +98,17 @@ final class TerminalTabsRepository {
             // Persistence failures are non-fatal: the live state is
             // still in memory; the next save attempt may succeed.
         }
+        ClawJSAppStateClient.upsertTerminalTab(
+            id: tab.id.uuidString,
+            title: tab.label,
+            cwd: tab.initialCwd,
+            sortOrder: tab.position,
+            metadata: [
+                "chatId": tab.chatId.uuidString,
+                "layoutJson": layoutString,
+                "focusedLeaf": tab.focusedLeafId?.uuidString ?? "",
+            ]
+        )
     }
 
     func delete(tabId: UUID) {
@@ -105,14 +116,25 @@ final class TerminalTabsRepository {
         try? dbQueue.write { db in
             _ = try TerminalTabRecord.deleteOne(db, key: key)
         }
+        ClawJSAppStateClient.deleteTerminalTab(id: key)
     }
 
     func deleteAllForChat(_ chatId: UUID) {
+        let tabIds = (try? dbQueue.read { db in
+            try String.fetchAll(
+                db,
+                sql: "SELECT id FROM terminal_tabs WHERE chat_id = ?",
+                arguments: [chatId.uuidString]
+            )
+        }) ?? []
         let key = chatId.uuidString
         try? dbQueue.write { db in
             try TerminalTabRecord
                 .filter(Column("chat_id") == key)
                 .deleteAll(db)
+        }
+        for tabId in tabIds {
+            ClawJSAppStateClient.deleteTerminalTab(id: tabId)
         }
     }
 }

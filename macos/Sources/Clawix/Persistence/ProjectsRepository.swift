@@ -27,17 +27,25 @@ final class ProjectsRepository {
                              path: project.path,
                              createdAt: createdAt)
         try? db.write { try row.upsert($0) }
+        ClawJSAppStateClient.upsertProject(
+            id: project.id.uuidString,
+            name: project.name,
+            path: project.path
+        )
     }
 
     func delete(id: UUID) {
         try? db.write { _ = try ProjectRecord.deleteOne($0, key: id.uuidString) }
+        ClawJSAppStateClient.deleteProject(id: id.uuidString)
     }
 
     func rename(id: UUID, to name: String) {
+        let path = (try? db.read { try ProjectRecord.fetchOne($0, key: id.uuidString)?.path }) ?? ""
         try? db.write { db in
             try db.execute(sql: "UPDATE projects SET name = ? WHERE id = ?",
                            arguments: [name, id.uuidString])
         }
+        ClawJSAppStateClient.upsertProject(id: id.uuidString, name: name, path: path)
     }
 }
 

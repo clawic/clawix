@@ -1456,6 +1456,10 @@ final class AppState: ObservableObject {
             // ScrollView while the daemon's `messagesSnapshot` races
             // back. Idempotent / silent if the file is missing.
             loadCachedSnapshot()
+            Task { @MainActor in
+                await ClawJSAppStateCacheSync.refreshFromCanonicalStore()
+                applySnapshotForFirstPaint()
+            }
         }
         loadHostFavicons()
         loadChatSidebars()
@@ -1879,6 +1883,7 @@ final class AppState: ObservableObject {
         let client = ClawJSSessionsClient.local()
         do {
             _ = try await client.probeHealth()
+            _ = try? await client.importCodex()
             let canonicalProjects = try await client.listProjects(hidden: false, archived: false)
             let nextProjects = canonicalProjects.map { project in
                 Project(
@@ -3724,7 +3729,9 @@ final class AppState: ObservableObject {
                 scheduleGitInspection(chatId: chatId, cwd: cwd)
             }
         }
-        if let path = chat.rolloutPath {
+        if let threadId = chat.clawixThreadId {
+            hydrateHistoryFromClawJSSessions(threadId: threadId, chatId: chatId, blocking: blocking)
+        } else if let path = chat.rolloutPath {
             // Mac UI path (`blocking == false`): read off the main
             // actor AND only the trailing window of the JSONL so a
             // multi-hundred-MB rollout doesn't stall hydration. The
@@ -3751,8 +3758,6 @@ final class AppState: ObservableObject {
                     }
                 }
             }
-        } else if let threadId = chat.clawixThreadId {
-            hydrateHistoryFromClawJSSessions(threadId: threadId, chatId: chatId, blocking: blocking)
         }
         if let threadId = chat.clawixThreadId, let clawix {
             Task { @MainActor in

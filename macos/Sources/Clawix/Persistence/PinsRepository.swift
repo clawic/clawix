@@ -26,6 +26,7 @@ final class PinsRepository {
     }
 
     func setPinned(_ threadId: String, atEnd: Bool = true) {
+        var mirroredOrder: Int64?
         try? db.write { db in
             if try PinnedThreadRow.fetchOne(db, key: threadId) != nil { return }
             let now = Int64(Date().timeIntervalSince1970)
@@ -38,11 +39,16 @@ final class PinsRepository {
                                       sortOrder: newOrder,
                                       pinnedAt: now)
             try row.upsert(db)
+            mirroredOrder = newOrder
+        }
+        if let mirroredOrder {
+            ClawJSAppStateClient.upsertPin(threadId: threadId, sortOrder: mirroredOrder)
         }
     }
 
     func unpin(_ threadId: String) {
         try? db.write { _ = try PinnedThreadRow.deleteOne($0, key: threadId) }
+        ClawJSAppStateClient.deletePin(threadId: threadId)
     }
 
     /// Append every id in `threadIds` that is not already pinned, in the
@@ -51,6 +57,7 @@ final class PinsRepository {
     @discardableResult
     func addIfMissing(_ threadIds: [String]) -> Int {
         guard !threadIds.isEmpty else { return 0 }
+        var mirroredOrder: [String] = []
         return (try? db.write { db in
             let existing = Set(try PinnedThreadRow.fetchAll(db).map(\.threadId))
             let toAdd = threadIds.filter { !existing.contains($0) }
@@ -65,8 +72,17 @@ final class PinsRepository {
                                           pinnedAt: now)
                 try row.insert(db)
             }
+            mirroredOrder = try PinnedThreadRow
+                .order(Column("sort_order"))
+                .fetchAll(db)
+                .map(\.threadId)
             return toAdd.count
-        }) ?? 0
+        }).map { count in
+            if !mirroredOrder.isEmpty {
+                ClawJSAppStateClient.setPinOrder(mirroredOrder)
+            }
+            return count
+        } ?? 0
     }
 
     /// Replace the full pinned order with the given list, preserving
@@ -84,5 +100,6 @@ final class PinsRepository {
                 try row.insert(db)
             }
         }
+        ClawJSAppStateClient.setPinOrder(threadIds)
     }
 }

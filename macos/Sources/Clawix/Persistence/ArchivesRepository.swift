@@ -28,10 +28,12 @@ final class ArchivesRepository {
             if try LocalArchiveRecord.fetchOne(db, key: threadId) != nil { return }
             try LocalArchiveRecord(threadId: threadId, archivedAt: now).insert(db)
         }
+        ClawJSAppStateClient.archive(threadId: threadId)
     }
 
     func unarchive(_ threadId: String) {
         try? db.write { _ = try LocalArchiveRecord.deleteOne($0, key: threadId) }
+        ClawJSAppStateClient.unarchive(threadId: threadId)
     }
 
     func bulkArchive(_ threadIds: [String]) {
@@ -43,6 +45,9 @@ final class ArchivesRepository {
                 try LocalArchiveRecord(threadId: threadId, archivedAt: now).insert(db)
             }
         }
+        for threadId in threadIds {
+            ClawJSAppStateClient.archive(threadId: threadId)
+        }
     }
 
     func bulkUnarchive(_ threadIds: [String]) {
@@ -51,6 +56,9 @@ final class ArchivesRepository {
             for threadId in threadIds {
                 _ = try LocalArchiveRecord.deleteOne(db, key: threadId)
             }
+        }
+        for threadId in threadIds {
+            ClawJSAppStateClient.unarchive(threadId: threadId)
         }
     }
 }

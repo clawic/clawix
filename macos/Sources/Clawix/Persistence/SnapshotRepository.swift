@@ -81,6 +81,23 @@ final class SnapshotRepository: @unchecked Sendable {
                 try row.insert(db)
             }
         }
+        let snapshots = rows.map {
+            ClawJSAppStateSidebarSnapshot(
+                threadId: $0.threadId,
+                chatUuid: $0.chatUuid,
+                title: $0.title,
+                cwd: $0.cwd,
+                projectPath: $0.projectPath,
+                updatedAt: ISO8601DateFormatter().string(
+                    from: Date(timeIntervalSince1970: TimeInterval($0.updatedAt))
+                ),
+                archived: $0.archived != 0,
+                pinned: $0.pinned != 0
+            )
+        }
+        Task { @MainActor in
+            ClawJSAppStateClient.replaceSidebarSnapshots(snapshots)
+        }
     }
 
     /// Returns every persisted per-project row, ordered so each

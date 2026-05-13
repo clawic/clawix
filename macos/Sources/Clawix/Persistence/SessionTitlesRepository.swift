@@ -72,5 +72,6 @@ final class SessionTitlesRepository {
                                    title: trimmed,
                                    updatedAt: now,
                                    source: source)
+        ClawJSAppStateClient.upsertTitle(threadId: threadId, title: trimmed, source: source)
     }
 }

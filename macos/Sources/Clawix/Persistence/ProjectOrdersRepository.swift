@@ -26,5 +26,6 @@ final class ProjectOrdersRepository {
                 try row.insert(db)
             }
         }
+        ClawJSAppStateClient.setProjectOrder(projectIds.map(\.uuidString))
     }
 }

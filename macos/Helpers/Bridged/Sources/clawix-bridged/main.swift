@@ -333,29 +333,10 @@ final class DaemonEngineHost: EngineHost {
     private(set) var lastChatsPublishedAt: Date?
     private var chatByThread: [String: String] = [:]
     private var threadByChat: [String: String] = [:]
-    private var rolloutPathByThread: [String: String] = [:]
     private var activeAssistantIdByThread: [String: String] = [:]
     private var activeTurnByThread: [String: String] = [:]
     private let meshStore = RemoteMeshStore()
     private var remoteJobByThread: [String: String] = [:]
-    /// Set of Codex thread ids the user has pinned, sourced from
-    /// `~/.codex/.codex-global-state.json` (`pinned-thread-ids`).
-    /// Refreshed on bootstrap and again at the top of every
-    /// `reloadThreads`. Without this the daemon would emit every chat
-    /// with `isPinned = false`, the GUI's Pinned section would stay
-    /// empty even when Codex's global state has pins, and the iPhone
-    /// would lose the affordance entirely. Mirror of what
-    /// `BackendStateReader` does in the GUI process.
-    private var pinnedThreadIds: Set<String> = []
-    /// File watcher on `~/.codex/.codex-global-state.json`. When the
-    /// user pins / unpins a chat from another Codex surface (CLI, the
-    /// Electron app, etc.) the file gets rewritten; the watcher fires
-    /// `reloadThreads` so the iPhone and any desktop client see the
-    /// new pin set without having to relaunch the daemon. Held as a
-    /// strong reference so the source isn't deallocated while we want
-    /// it watching. nil until the file exists for the first time.
-    private var pinnedStateWatcher: DispatchSourceFileSystemObject?
-    private var pinnedStateFD: Int32 = -1
 
     init(binary: BackendBinary, pairing: PairingService) {
         self.backend = BackendClient(binary: binary)
@@ -369,99 +350,6 @@ final class DaemonEngineHost: EngineHost {
     private static func timeout(from raw: String?, default fallback: TimeInterval) -> TimeInterval {
         guard let raw, let value = TimeInterval(raw), value > 0 else { return fallback }
         return value
-    }
-
-    /// Codex's global state file. Same path the GUI's
-    /// `BackendStateReader` opens; the file is owned by Codex itself
-    /// (the in-process backend writes it on every pin / unpin), so
-    /// both processes always agree on the canonical pin set.
-    private static var globalStateURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex/.codex-global-state.json")
-    }
-
-    /// Read `pinned-thread-ids` from Codex's global state file. Silent
-    /// on every failure path (file missing, malformed JSON, schema
-    /// surprise): the daemon keeps whatever pin set it had so a
-    /// transient read failure does not blank the Pinned section on
-    /// every connected client.
-    private func refreshPinnedThreadIds() {
-        let url = Self.globalStateURL
-        guard
-            let data = try? Data(contentsOf: url),
-            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let raw = json["pinned-thread-ids"] as? [String]
-        else { return }
-        pinnedThreadIds = Set(raw.filter { !$0.isEmpty })
-    }
-
-    /// Set up a one-time DispatchSource watcher on the global state
-    /// file so external pin / unpin actions (Codex CLI, Electron app)
-    /// trigger a republish without waiting for the next reload tick.
-    /// No-op when the file does not exist yet (Codex creates it on
-    /// first launch); we'll re-attempt the next bootstrap. Idempotent.
-    private func installPinnedStateWatcher() {
-        guard pinnedStateWatcher == nil else { return }
-        let path = Self.globalStateURL.path
-        guard FileManager.default.fileExists(atPath: path) else { return }
-        let fd = open(path, O_EVTONLY)
-        guard fd >= 0 else { return }
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .extend, .rename, .delete],
-            queue: DispatchQueue.main
-        )
-        source.setEventHandler { [weak self] in
-            guard let self else { return }
-            // `rename` / `delete` mean the file was atomically
-            // replaced (the typical write pattern). Rebuild the
-            // watcher against the new inode and re-read in one shot.
-            let mask = source.data
-            if mask.contains(.rename) || mask.contains(.delete) {
-                self.tearDownPinnedStateWatcher()
-                self.refreshPinnedThreadIds()
-                self.installPinnedStateWatcher()
-            } else {
-                self.refreshPinnedThreadIds()
-            }
-            // Republish the current chat snapshots with refreshed
-            // `isPinned` values so connected clients see the pin
-            // change without waiting for the next reloadThreads().
-            self.republishChatsWithCurrentPins()
-        }
-        source.setCancelHandler {
-            close(fd)
-        }
-        pinnedStateFD = fd
-        pinnedStateWatcher = source
-        source.resume()
-    }
-
-    private func tearDownPinnedStateWatcher() {
-        pinnedStateWatcher?.cancel()
-        pinnedStateWatcher = nil
-        pinnedStateFD = -1
-    }
-
-    /// Recompute `isPinned` for every chat snapshot in memory using the
-    /// current `pinnedThreadIds` set and republish. Called from the
-    /// state-file watcher when pins change without a thread-list refresh.
-    private func republishChatsWithCurrentPins() {
-        var snapshots = bridgeChatsCurrent
-        var changed = false
-        for index in snapshots.indices {
-            let threadId = threadByChat[snapshots[index].id]
-            let nextPinned = threadId.map { pinnedThreadIds.contains($0) } ?? false
-            if snapshots[index].chat.isPinned != nextPinned {
-                var mutable = MutableSnapshot(snapshots[index])
-                mutable.chat.isPinned = nextPinned
-                snapshots[index] = mutable.snapshot
-                changed = true
-            }
-        }
-        if changed {
-            chatsSubject.send(snapshots)
-        }
     }
 
     var bridgeChatsCurrent: [BridgeChatSnapshot] { chatsSubject.value }
@@ -495,12 +383,6 @@ final class DaemonEngineHost: EngineHost {
             )
             try await backend.notify(method: "initialized", params: EmptyObject())
             BridgedLog.write("backend-initialized")
-            // Read the canonical pin set BEFORE the first thread-list
-            // publish so the very first `chatsSnapshot` carries the
-            // correct `isPinned` flags (the GUI's first paint and the
-            // iPhone's onboard arrival both consume that snapshot).
-            refreshPinnedThreadIds()
-            installPinnedStateWatcher()
             let didLoadThreads = await reloadThreads()
             await refreshRateLimits()
             if didLoadThreads {
@@ -1089,14 +971,6 @@ final class DaemonEngineHost: EngineHost {
     }
 
     private func reloadThreads() async -> Bool {
-        // Re-read pins right before the publish: even with the
-        // file-watcher in place, this catches the case where the
-        // watcher hasn't been installed yet (state file didn't exist
-        // at boot but does now) and also pays a cheap one-shot cost
-        // to keep the pin set fresh on every reload triggered from
-        // user interaction.
-        refreshPinnedThreadIds()
-        installPinnedStateWatcher()
         do {
             let pageSize = 160
             let maxPages = 10
@@ -1118,7 +992,7 @@ final class DaemonEngineHost: EngineHost {
                         sortDirection: "desc",
                         sortKey: "updated_at",
                         sourceKinds: nil,
-                        useStateDbOnly: true
+                        useStateDbOnly: nil
                     ),
                     expecting: ThreadListResponse.self,
                     timeoutSeconds: threadListTimeoutSeconds
@@ -1131,30 +1005,12 @@ final class DaemonEngineHost: EngineHost {
             } while cursor != nil && page < maxPages
 
             let runtimeSnapshots = collected.map(snapshot(from:))
-            let stateSnapshots = loadCodexStateSnapshots(limit: 1_200)
-            let useStateSnapshots = shouldPreferCodexStateSnapshots(runtime: runtimeSnapshots, state: stateSnapshots)
-            let snapshots = useStateSnapshots ? stateSnapshots : runtimeSnapshots
-            let source = useStateSnapshots ? "state-db" : "runtime"
-            BridgedLog.write("thread-list ok count=\(snapshots.count) source=\(source) pages=\(page) pinned=\(pinnedThreadIds.count)")
-            chatsSubject.send(snapshots)
+            BridgedLog.write("thread-list ok count=\(runtimeSnapshots.count) source=runtime pages=\(page)")
+            chatsSubject.send(runtimeSnapshots)
             lastChatsPublishedAt = Date()
             return true
         } catch {
             BridgedLog.write("thread-list failed \(error)")
-            let stateFallback = loadCodexStateSnapshots(limit: 1_200)
-            if !stateFallback.isEmpty {
-                BridgedLog.write("thread-list fallback from state-db count=\(stateFallback.count)")
-                chatsSubject.send(stateFallback)
-                lastChatsPublishedAt = Date()
-                return true
-            }
-            let fallback = loadRolloutFallbackSnapshots(limit: 1_200)
-            if !fallback.isEmpty {
-                BridgedLog.write("thread-list fallback from rollouts count=\(fallback.count)")
-                chatsSubject.send(fallback)
-                lastChatsPublishedAt = Date()
-                return true
-            }
             // Surface to peers as an error state rather than silently
             // leaving them on `syncing` forever. The bootstrap caller
             // will move us to `.ready` only on success, so on failure
@@ -1162,71 +1018,6 @@ final class DaemonEngineHost: EngineHost {
             // perpetual spinner.
             stateSubject.send(.error("Couldn't load chats: \(shortReason(error))"))
             return false
-        }
-    }
-
-    private func shouldPreferCodexStateSnapshots(
-        runtime: [BridgeChatSnapshot],
-        state: [BridgeChatSnapshot]
-    ) -> Bool {
-        guard !state.isEmpty else { return false }
-        guard !runtime.isEmpty else { return true }
-        let runtimePins = runtime.reduce(0) { $0 + ($1.chat.isPinned ? 1 : 0) }
-        let statePins = state.reduce(0) { $0 + ($1.chat.isPinned ? 1 : 0) }
-        if statePins > runtimePins { return true }
-        if state.count > runtime.count * 2 { return true }
-        if runtime.count < min(100, state.count) { return true }
-        return false
-    }
-
-    private func loadCodexStateSnapshots(limit: Int) -> [BridgeChatSnapshot] {
-        refreshPinnedThreadIds()
-        guard let threads = CodexStateThreadLoader.load(limit: limit, pinnedThreadIds: pinnedThreadIds) else {
-            return []
-        }
-        return threads.map(snapshot(from:))
-    }
-
-    private func loadRolloutFallbackSnapshots(limit: Int) -> [BridgeChatSnapshot] {
-        refreshPinnedThreadIds()
-        let files = RolloutHistory.localRolloutFiles(limit: max(limit * 2, limit))
-        guard !files.isEmpty else { return [] }
-        var snapshots: [BridgeChatSnapshot] = []
-        var seen = Set<String>()
-        for file in files {
-            guard snapshots.count < limit,
-                  let threadId = RolloutHistory.threadId(from: file),
-                  seen.insert(threadId).inserted else { continue }
-            let meta = RolloutHistory.metadata(path: file)
-            let chatId = chatByThread[threadId] ?? UUID().uuidString
-            chatByThread[threadId] = chatId
-            threadByChat[chatId] = threadId
-            rolloutPathByThread[threadId] = file.path
-
-            let fileDate = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
-            let tail: (messages: [WireMessage], lastTurnInterrupted: Bool) = ([], false)
-            let createdAt = meta.startedAt ?? tail.messages.first?.timestamp ?? fileDate
-            let last = tail.messages.last
-            let title = title(fromFirstUserMessage: meta.firstUserMessage, fallback: file.deletingPathExtension().lastPathComponent)
-            snapshots.append(BridgeChatSnapshot(
-                chat: WireChat(
-                    id: chatId,
-                    title: title,
-                    createdAt: createdAt,
-                    isPinned: pinnedThreadIds.contains(threadId),
-                    isArchived: false,
-                    hasActiveTurn: false,
-                    lastMessageAt: last?.timestamp ?? createdAt,
-                    lastMessagePreview: last.map { String($0.content.prefix(140)) },
-                    cwd: meta.cwd,
-                    lastTurnInterrupted: tail.lastTurnInterrupted,
-                    threadId: threadId
-                ),
-                messages: tail.messages
-            ))
-        }
-        return snapshots.sorted {
-            ($0.chat.lastMessageAt ?? $0.chat.createdAt) > ($1.chat.lastMessageAt ?? $1.chat.createdAt)
         }
     }
 
@@ -1243,19 +1034,13 @@ final class DaemonEngineHost: EngineHost {
         let chatId = chatByThread[thread.id] ?? UUID().uuidString
         chatByThread[thread.id] = chatId
         threadByChat[chatId] = thread.id
-        if let path = thread.path { rolloutPathByThread[thread.id] = path }
         let archived = thread.archived ?? false
-        // Pinned chats stay pinned while archived in Codex's data
-        // model, but the GUI hides the pin badge for archived rows
-        // (mirroring `chatFromThread` in `AppState.swift`). Clamp
-        // here so connected clients don't have to repeat that rule.
-        let isPinned = !archived && pinnedThreadIds.contains(thread.id)
         return BridgeChatSnapshot(
             chat: WireChat(
                 id: chatId,
                 title: title(for: thread),
                 createdAt: thread.updatedDate,
-                isPinned: isPinned,
+                isPinned: false,
                 isArchived: archived,
                 hasActiveTurn: activeTurnByThread[thread.id] != nil,
                 lastMessageAt: thread.updatedDate,
@@ -1332,64 +1117,7 @@ final class DaemonEngineHost: EngineHost {
     }
 
     private func hydrate(chatId: String) {
-        guard let threadId = threadByChat[chatId],
-              let path = rolloutPathByThread[threadId]
-        else { return }
-        let existing = existingMessages(chatId: chatId)
-        let result = RolloutHistory.readTail(path: URL(fileURLWithPath: path))
-        guard !result.messages.isEmpty || result.lastTurnInterrupted else { return }
-        // Apply the canonical messages synchronously before returning so
-        // the imminent `bus.subscribe(chatId)` call in
-        // `BridgeIntent.dispatch` reads the full transcript out of
-        // `bridgeChatsCurrent` and the first frame the client gets is a
-        // populated `messagesSnapshot`. Wrapping the apply in a Task (as
-        // before) made the snapshot ship empty and the publisher tick
-        // that landed after the Task ran emitted N `messageAppended`
-        // frames in a row, which the client paints one row per render.
-        updateSnapshot(chatId: chatId) { snap in
-            snap.messages = preserveUserAttachments(existing: existing, incoming: result.messages)
-            snap.chat.lastTurnInterrupted = result.lastTurnInterrupted
-            if let last = snap.messages.last {
-                snap.chat.lastMessageAt = last.timestamp
-                snap.chat.lastMessagePreview = String(last.content.prefix(140))
-            }
-        }
-        // Audio refs from previous sessions live in the AudioMessageStore.
-        // Rollout rebuild mints fresh message ids so we can't key by id;
-        // instead we walk audio entries (chronological) and pair them up
-        // with rebuilt user_messages, prefering content-equality and
-        // breaking ties by ordinal. Missing entries decay gracefully:
-        // the user message just shows without a bubble, the bytes are
-        // still on disk and `requestAudio` still works if a client knows
-        // the audioId from another route.
-        //
-        // Done after the message apply because `AudioMessageStore.entries`
-        // is actor-isolated (async). Patching `audioRef` doesn't change
-        // `messageCount` nor the last message's content/reasoning, so the
-        // follow-up publisher tick doesn't trigger any spurious
-        // `messageAppended` / `messageStreaming` frame from `BridgeBus`.
-        Task { @MainActor in
-            let audioEntries = await AudioMessageStore.shared.entries(forThread: threadId)
-            guard !audioEntries.isEmpty else { return }
-            self.updateSnapshot(chatId: chatId) { snap in
-                var unmatched = audioEntries
-                for idx in snap.messages.indices
-                    where snap.messages[idx].role == .user
-                       && snap.messages[idx].audioRef == nil {
-                    let content = snap.messages[idx].content
-                    let pickIdx: Int? = {
-                        if let exact = unmatched.firstIndex(where: { $0.transcript == content }) {
-                            return exact
-                        }
-                        return unmatched.indices.first
-                    }()
-                    if let pickIdx {
-                        snap.messages[idx].audioRef = unmatched[pickIdx].wireRef
-                        unmatched.remove(at: pickIdx)
-                    }
-                }
-            }
-        }
+        _ = chatId
     }
 
     private func startEvents() {
@@ -2153,103 +1881,6 @@ struct ThreadListResponse: Decodable {
     }
 }
 
-enum CodexStateThreadLoader {
-    private static var defaultURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex/state_5.sqlite")
-    }
-
-    static func load(limit: Int, pinnedThreadIds: Set<String>) -> [AgentThreadSummary]? {
-        let env = ProcessInfo.processInfo.environment
-        let dbURL = env["CLAWIX_CODEX_STATE_DB"]
-            .map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
-            ?? defaultURL
-        guard FileManager.default.fileExists(atPath: dbURL.path) else { return nil }
-        let boundedLimit = max(1, min(limit, 5_000))
-        let query = stateQuery(limit: boundedLimit, pinnedThreadIds: pinnedThreadIds)
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
-        process.arguments = ["-readonly", "-json", dbURL.path, query]
-
-        let output = Pipe()
-        let error = Pipe()
-        process.standardOutput = output
-        process.standardError = error
-
-        do {
-            try process.run()
-        } catch {
-            BridgedLog.write("state-db read failed \(error)")
-            return nil
-        }
-
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = error.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        if process.terminationStatus != 0 {
-            let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-            BridgedLog.write("state-db sqlite failed \(stderr.trimmingCharacters(in: .whitespacesAndNewlines))")
-            return nil
-        }
-        guard !data.isEmpty else { return [] }
-        do {
-            return try JSONDecoder().decode([AgentThreadSummary].self, from: data)
-        } catch {
-            BridgedLog.write("state-db decode failed \(error)")
-            return nil
-        }
-    }
-
-    private static func stateQuery(limit: Int, pinnedThreadIds: Set<String>) -> String {
-        let selectedColumns = """
-        id,
-        NULLIF(cwd, '') AS cwd,
-        NULLIF(title, '') AS name,
-        COALESCE(first_user_message, '') AS preview,
-        NULLIF(rollout_path, '') AS path,
-        CASE
-            WHEN created_at_ms IS NOT NULL AND created_at_ms > 0 THEN created_at_ms / 1000
-            ELSE created_at
-        END AS createdAt,
-        CASE
-            WHEN updated_at_ms IS NOT NULL AND updated_at_ms > 0 THEN updated_at_ms / 1000
-            ELSE updated_at
-        END AS updatedAt,
-        archived
-        """
-        let pinnedPredicate: String
-        if pinnedThreadIds.isEmpty {
-            pinnedPredicate = "0"
-        } else {
-            let quoted = pinnedThreadIds
-                .map { "'\($0.replacingOccurrences(of: "'", with: "''"))'" }
-                .sorted()
-                .joined(separator: ",")
-            pinnedPredicate = "id IN (\(quoted))"
-        }
-        return """
-        WITH recent AS (
-            SELECT \(selectedColumns)
-            FROM threads
-            WHERE archived = 0
-            ORDER BY updated_at DESC
-            LIMIT \(limit)
-        ),
-        pinned AS (
-            SELECT \(selectedColumns)
-            FROM threads
-            WHERE archived = 0 AND \(pinnedPredicate)
-        )
-        SELECT * FROM recent
-        UNION
-        SELECT * FROM pinned
-        ORDER BY updatedAt DESC
-        LIMIT \(limit + pinnedThreadIds.count);
-        """
-    }
-}
-
 private struct LossyAgentThreadSummary: Decodable {
     let value: AgentThreadSummary?
 
@@ -2620,35 +2251,6 @@ enum RolloutHistory {
             }
         }
         return meta
-    }
-
-    static func localRolloutFiles(limit: Int) -> [URL] {
-        let fm = FileManager.default
-        var urls: [URL] = []
-        let roots = [
-            fm.homeDirectoryForCurrentUser.appendingPathComponent(".codex/sessions"),
-            fm.homeDirectoryForCurrentUser.appendingPathComponent(".codex/archived_sessions")
-        ]
-        for root in roots where fm.fileExists(atPath: root.path) {
-            guard let enumerator = fm.enumerator(
-                at: root,
-                includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
-                options: [.skipsHiddenFiles]
-            ) else { continue }
-            for case let file as URL in enumerator {
-                guard file.lastPathComponent.hasPrefix("rollout-"),
-                      file.pathExtension == "jsonl",
-                      (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
-                else { continue }
-                urls.append(file)
-            }
-        }
-        urls.sort {
-            let lhs = (try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            let rhs = (try? $1.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            return lhs > rhs
-        }
-        return Array(urls.prefix(limit))
     }
 
     static func threadId(from url: URL) -> String? {
