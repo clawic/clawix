@@ -5,6 +5,9 @@
 - Treat the published surface (UI, scripts, hygiene gate) as product surface.
 - Do not merge changes that leave `swift build`, `bash macos/scripts/public_hygiene_check.sh`, or `bash macos/scripts/e2e_validate.sh` failing.
 - Prefer additive, well-scoped changes. If a change alters public behavior, update docs in the same patch.
+- For architecture, storage, naming, host, validation, release, or privacy
+  decisions, start from [docs/decision-map.md](docs/decision-map.md). It points
+  to the canonical source and the guardrail expected for each decision.
 
 ## Local setup
 

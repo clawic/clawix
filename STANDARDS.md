@@ -351,6 +351,9 @@ sentence the user can act on.
 **The rule.** A release build ships only stable surfaces. Dev-only
 surfaces are unreachable.
 
+For the canonical source and guardrail for each release, privacy, storage,
+host, and naming decision, start from [`docs/decision-map.md`](docs/decision-map.md).
+
 - `[macOS]` `swift build -c release` and the notarization path produce a
   binary where every `#if DEBUG` panel is absent. The "Feature previews"
   card in Settings → General is not rendered.

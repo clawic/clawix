@@ -8,6 +8,7 @@ For framework, host, storage, CLI, permissions, grants, approvals, audit,
 naming style, public packages, ports, routes, protocol vocabulary, and domain
 ownership decisions, read [`docs/host-ownership.md`](docs/host-ownership.md),
 [`docs/data-storage-boundary.md`](docs/data-storage-boundary.md),
+[`docs/decision-map.md`](docs/decision-map.md),
 [`docs/naming-style-guide.md`](docs/naming-style-guide.md),
 [`docs/adr/0001-claw-framework-host-boundary.md`](docs/adr/0001-claw-framework-host-boundary.md),
 and [`docs/adr/0002-naming-and-stability-surfaces.md`](docs/adr/0002-naming-and-stability-surfaces.md)

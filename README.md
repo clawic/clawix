@@ -45,6 +45,9 @@ contracts, and the `claw` CLI. Clawix is the experience on top: pairing,
 native permissions, approvals, previews, and visual state. The macOS app
 ships today, with iOS, Android, Windows, and Web on the way.
 
+Long-lived architecture, storage, naming, validation, release, and privacy
+decisions are indexed in [`docs/decision-map.md`](./docs/decision-map.md).
+
 ## macOS app
 
 <p align="center">
