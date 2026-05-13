@@ -26,6 +26,12 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
             "CLAWJS_MAIN_DATA_DIR",
             "CLAWJS_MAIN_FILES_DIR",
             "CLAWIX_CLAWJS_DATA_DIR",
+            "state_5.sqlite",
+            ".codex/session_index.jsonl",
+            ".codex/sessions",
+            "archived_sessions",
+            ".codex/.codex-global-state.json",
+            "CodexConfigToml",
         ]
 
         let enumerator = try XCTUnwrap(FileManager.default.enumerator(

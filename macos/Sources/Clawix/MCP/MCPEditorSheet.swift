@@ -92,7 +92,7 @@ struct MCPEditorSheet: View {
                 onClose()
             }
         } message: {
-            Text("It will be removed from ~/.codex/config.toml. Codex sessions started afterwards won't see it.")
+            Text("It will be removed through the ClawJS MCP adapter. Codex sessions started afterwards won't see it.")
         }
     }
 

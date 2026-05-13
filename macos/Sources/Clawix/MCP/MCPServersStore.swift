@@ -1,9 +1,9 @@
 import Foundation
 import Combine
 
-/// Single source of truth for the MCP page. Reads `~/.codex/config.toml`
-/// at init, watches the file so external edits show up live, and writes
-/// back through `CodexConfigToml`.
+/// Single source of truth for the MCP page. The UI talks to ClawJS over
+/// the stable `claw mcp ... --json` adapter; Clawix never parses or
+/// mutates Codex-owned TOML directly.
 @MainActor
 final class MCPServersStore: ObservableObject {
     static let shared = MCPServersStore()
@@ -11,25 +11,26 @@ final class MCPServersStore: ObservableObject {
     @Published private(set) var servers: [MCPServerConfig] = []
     @Published private(set) var lastError: String? = nil
 
-    private var fileSource: DispatchSourceFileSystemObject?
-    private var fileDescriptor: Int32 = -1
-    private var suppressReloadUntil: Date = .distantPast
+    private let persistence: MCPServersPersistence
 
-    private init() {
-        reload()
-        startWatching()
+    convenience init() {
+        self.init(persistence: ClawJSMCPClient())
     }
 
-    deinit {
-        fileSource?.cancel()
-        if fileDescriptor >= 0 { close(fileDescriptor) }
+    init(persistence: MCPServersPersistence) {
+        self.persistence = persistence
+        reload()
     }
 
     // MARK: - Mutations
 
     func reload() {
-        servers = CodexConfigToml.loadServers()
-        lastError = nil
+        do {
+            servers = try persistence.loadServers()
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
     }
 
     func toggleEnabled(_ server: MCPServerConfig, isOn: Bool) {
@@ -62,47 +63,10 @@ final class MCPServersStore: ObservableObject {
 
     private func persist() {
         do {
-            // Suppress the file-watcher reload that our own write will
-            // trigger so we don't fight ourselves with an inflight save.
-            suppressReloadUntil = Date().addingTimeInterval(0.5)
-            try CodexConfigToml.saveServers(servers)
+            try persistence.saveServers(servers)
             lastError = nil
         } catch {
             lastError = error.localizedDescription
         }
-    }
-
-    // MARK: - File watching
-
-    private func startWatching() {
-        let url = CodexConfigToml.configURL
-        if !FileManager.default.fileExists(atPath: url.path) {
-            // Nothing to watch yet. Codex creates the file on first run;
-            // we'll restart watching at next reload().
-            return
-        }
-        let fd = open(url.path, O_EVTONLY)
-        guard fd >= 0 else { return }
-        fileDescriptor = fd
-        let queue = DispatchQueue.main
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .extend, .delete, .rename],
-            queue: queue
-        )
-        source.setEventHandler { [weak self] in
-            guard let self else { return }
-            if Date() < self.suppressReloadUntil { return }
-            self.reload()
-        }
-        source.setCancelHandler { [weak self] in
-            guard let self else { return }
-            if self.fileDescriptor >= 0 {
-                close(self.fileDescriptor)
-                self.fileDescriptor = -1
-            }
-        }
-        source.resume()
-        fileSource = source
     }
 }

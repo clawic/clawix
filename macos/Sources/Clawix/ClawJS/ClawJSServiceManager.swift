@@ -691,6 +691,10 @@ final class ClawJSServiceManager: ObservableObject {
         )
     }
 
+    static func cliEnvironment() -> [String: String] {
+        environment(for: .database, adminToken: nil)
+    }
+
     private static func environment(for service: ClawJSService, adminToken: String?) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path

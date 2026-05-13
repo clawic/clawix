@@ -326,7 +326,8 @@ private enum SettingsUtilities {
             url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
                 .appendingPathComponent(".codex/config.toml", isDirectory: false)
         } else {
-            url = CodexConfigToml.configURL
+            url = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".codex/config.toml", isDirectory: false)
         }
 
         guard FileManager.default.fileExists(atPath: url.path) else {
