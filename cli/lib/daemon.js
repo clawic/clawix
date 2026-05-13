@@ -41,10 +41,17 @@ function start() {
     );
   }
   if (launchctl.isLoaded(BRIDGE_LABEL)) {
-    // Already running; nothing to do. The plist may have been written
-    // by a previous `clawix start` or by Clawix.app: either way the
-    // daemon is up and serving the same loopback port.
-    return { reused: true, binary };
+    const loaded = launchctl.describe(BRIDGE_LABEL) || '';
+    const stale =
+      loaded.includes('clawix-bridged') ||
+      loaded.includes('CLAWIX_BRIDGED_') ||
+      !loaded.includes(binary) ||
+      !loaded.includes(`CLAWIX_BRIDGE_PORT`) ||
+      !loaded.includes(String(BRIDGE_PORT));
+    if (!stale) {
+      return { reused: true, binary };
+    }
+    launchctl.bootout(BRIDGE_LABEL);
   }
   launchctl.writePlist(BRIDGE_LABEL, launchctl.bridgePlist(binary));
   const code = launchctl.bootstrap(BRIDGE_LABEL);
@@ -59,12 +66,8 @@ function stop() {
 }
 
 function restart() {
-  if (launchctl.isLoaded(BRIDGE_LABEL)) {
-    launchctl.kickstart(BRIDGE_LABEL);
-  } else {
-    return start();
-  }
-  return { kicked: true };
+  launchctl.bootout(BRIDGE_LABEL);
+  return start();
 }
 
 async function status() {

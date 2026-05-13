@@ -75,9 +75,16 @@ function bootstrap(label) {
 }
 
 function bootout(label) {
-  return spawnSync('/bin/launchctl', ['bootout', `${userDomain()}/${label}`], {
+  const service = spawnSync('/bin/launchctl', ['bootout', `${userDomain()}/${label}`], {
     stdio: 'ignore'
   }).status;
+  const plist = spawnSync('/bin/launchctl', ['bootout', userDomain(), plistPath(label)], {
+    stdio: 'ignore'
+  }).status;
+  const removed = spawnSync('/bin/launchctl', ['remove', label], {
+    stdio: 'ignore'
+  }).status;
+  return service === 0 || plist === 0 || removed === 0 ? 0 : service;
 }
 
 function kickstart(label) {
