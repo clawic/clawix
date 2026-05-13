@@ -186,10 +186,10 @@ class BridgeFrameRoundtripTest {
     @Test fun chat_decodes_with_legacy_payload_missing_optional_fields() {
         val raw = """
             {"schemaVersion":5,"type":"sessionsSnapshot",
-             "chats":[{"id":"c-1","title":"t","createdAt":"2026-05-01T12:00:00Z"}]}
+             "sessions":[{"id":"c-1","title":"t","createdAt":"2026-05-01T12:00:00Z"}]}
         """.trimIndent()
         val decoded = BridgeCoder.decode(raw)
-        val chats = (decoded.body as BridgeBody.SessionsSnapshot).chats
+        val chats = (decoded.body as BridgeBody.SessionsSnapshot).sessions
         assertEquals(1, chats.size)
         val c = chats.first()
         assertEquals(false, c.isPinned)

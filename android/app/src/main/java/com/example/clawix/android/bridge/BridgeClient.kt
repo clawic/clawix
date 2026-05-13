@@ -394,7 +394,7 @@ class WinnerListener : WebSocketListener() {
                 store?.setConnection(ConnectionState.VersionMismatch(body.serverVersion))
                 webSocket.close(1000, "version mismatch")
             }
-            is BridgeBody.SessionsSnapshot -> store?.applySessionsSnapshot(body.chats)
+            is BridgeBody.SessionsSnapshot -> store?.applySessionsSnapshot(body.sessions)
             is BridgeBody.ChatUpdated -> store?.applyChatUpdated(body.chat)
             is BridgeBody.MessagesSnapshot -> store?.applyMessagesSnapshot(body.sessionId, body.messages, body.hasMore)
             is BridgeBody.MessagesPage -> store?.applyMessagesPage(body.sessionId, body.messages, body.hasMore)
