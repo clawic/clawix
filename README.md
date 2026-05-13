@@ -11,27 +11,46 @@
 >
 > Use it only for local evaluation, ideally on an isolated machine, VM, or sandboxed environment. Assume things can fail, data can break, and migrations may not exist yet.
 
-Clawix is the native human interface and embedded signed host for ClawJS/Claw. It owns the app UI, visual projections, approvals, and host identity, while ClawJS/Claw owns canonical framework contracts, storage, domain APIs, and the public `claw` CLI. Codex data can be mirrored as an external read-only source, but it is not Clawix's canonical storage model. The macOS app ships today, with an iOS companion on the way.
+Clawix is a native agent app for Mac, iPhone, Android, Windows, and Web.
+Bring your own model (Claude, GPT, Gemini, DeepSeek, or run one locally),
+talk to it, give it skills and memory, let it drive your browser and your
+Mac, and pick the thread back up on whatever device you have to hand.
 
-This repository is a monorepo. Platform clients live at the root under `macos/` and `ios/`, with shared Swift packages under `packages/`.
+This repository is a monorepo. Platform clients live at the root under
+`macos/`, `ios/`, `android/`, `windows/`, `web/`, and `linux/`, with shared
+Swift packages under `packages/`.
 
-## What Clawix Adds
-
-Clawix turns local agent work into an app you can see, approve, and carry
-between devices.
+## What you get
 
 ```mermaid
 flowchart LR
-  work["Agent work"] --> clawix["Clawix"]
-  clawix --> see["See"]
-  clawix --> approve["Approve"]
-  clawix --> continue["Continue"]
-  continue -.-> phone["iPhone"]
-  continue -.-> mac["Mac"]
+  mac["Mac"] -.-> clawix
+  iphone["iPhone"] -.-> clawix
+  android["Android"] -.-> clawix
+  windows["Windows"] -.-> clawix
+  web["Web"] -.-> clawix
+  clawix(["Clawix"]) --> tools(["Tools"])
+  clawix --> agents(["Agents"])
+  tools --> voice["Voice to Text"]
+  tools --> browser["Browser"]
+  tools --> screen["Screen tools"]
+  tools --> macu["Mac Utilities"]
+  tools --> quick["QuickAsk"]
+  agents --> skills["Skills"]
+  agents --> memory["Memory"]
+  agents --> models(["Models"])
+  models --> local["Local"]
+  models --> claude["Claude"]
+  models --> gpt["GPT"]
+  models --> gemini["Gemini"]
+  models --> deepseek["DeepSeek"]
+  models --> more["Groq · xAI · Mistral"]
 ```
 
-ClawJS owns the framework. Clawix owns the experience: pairing, native
-permissions, previews, visual state, and host identity.
+Under the hood, Clawix runs on ClawJS, the framework that owns storage,
+contracts, and the `claw` CLI. Clawix is the experience on top: pairing,
+native permissions, approvals, previews, and visual state. The macOS app
+ships today, with iOS, Android, Windows, and Web on the way.
 
 ## macOS app
 
