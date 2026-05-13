@@ -40,8 +40,8 @@ class BridgeStore(
         val payload = snapshotCache.load() ?: return
         _state.update {
             it.copy(
-                chats = payload.chats,
-                messagesByChat = payload.messagesByChat,
+                chats = payload.sessions,
+                messagesBySession = payload.messagesBySession,
             )
         }
     }
@@ -54,7 +54,7 @@ class BridgeStore(
         _state.update { it.copy(runtime = state) }
     }
 
-    fun applyChatsSnapshot(chats: List<WireChat>) {
+    fun applySessionsSnapshot(chats: List<WireChat>) {
         _state.update { it.copy(chats = chats) }
         persistAsync()
     }
@@ -98,38 +98,38 @@ class BridgeStore(
         mutateChat(chatId) { it.copy(title = title) }
     }
 
-    fun applyMessagesSnapshot(chatId: String, messages: List<WireMessage>, hasMore: Boolean?) {
+    fun applyMessagesSnapshot(sessionId: String, messages: List<WireMessage>, hasMore: Boolean?) {
         _state.update { current ->
-            val map = current.messagesByChat.toMutableMap()
-            map[chatId] = messages
-            val more = current.hasMoreByChat.toMutableMap()
-            if (hasMore != null) more[chatId] = hasMore else more.remove(chatId)
-            current.copy(messagesByChat = map, hasMoreByChat = more)
+            val map = current.messagesBySession.toMutableMap()
+            map[sessionId] = messages
+            val more = current.hasMoreBySession.toMutableMap()
+            if (hasMore != null) more[sessionId] = hasMore else more.remove(sessionId)
+            current.copy(messagesBySession = map, hasMoreBySession = more)
         }
         persistAsync()
     }
 
-    fun applyMessagesPage(chatId: String, older: List<WireMessage>, hasMore: Boolean) {
+    fun applyMessagesPage(sessionId: String, older: List<WireMessage>, hasMore: Boolean) {
         _state.update { current ->
-            val existing = current.messagesByChat[chatId] ?: emptyList()
+            val existing = current.messagesBySession[sessionId] ?: emptyList()
             val merged = (older + existing).distinctBy { it.id }
-            val map = current.messagesByChat.toMutableMap().apply { put(chatId, merged) }
-            val more = current.hasMoreByChat.toMutableMap().apply { put(chatId, hasMore) }
-            current.copy(messagesByChat = map, hasMoreByChat = more)
+            val map = current.messagesBySession.toMutableMap().apply { put(sessionId, merged) }
+            val more = current.hasMoreBySession.toMutableMap().apply { put(sessionId, hasMore) }
+            current.copy(messagesBySession = map, hasMoreBySession = more)
         }
         persistAsync()
     }
 
-    fun applyMessageAppended(chatId: String, message: WireMessage) {
+    fun applyMessageAppended(sessionId: String, message: WireMessage) {
         _state.update { current ->
-            val existing = current.messagesByChat[chatId] ?: emptyList()
-            val map = current.messagesByChat.toMutableMap().apply {
-                put(chatId, existing + message)
+            val existing = current.messagesBySession[sessionId] ?: emptyList()
+            val map = current.messagesBySession.toMutableMap().apply {
+                put(sessionId, existing + message)
             }
-            current.copy(messagesByChat = map)
+            current.copy(messagesBySession = map)
         }
-        if (message.role == com.example.clawix.android.core.WireRole.assistant && _state.value.openChatId != chatId) {
-            unreadCache.mark(chatId)
+        if (message.role == com.example.clawix.android.core.WireRole.assistant && _state.value.openSessionId != sessionId) {
+            unreadCache.mark(sessionId)
         }
         persistAsync()
     }
@@ -143,9 +143,9 @@ class BridgeStore(
     fun applyStreamingBatch(batch: Map<String, PendingStreamUpdate>) {
         if (batch.isEmpty()) return
         _state.update { current ->
-            val updatedChats = current.messagesByChat.toMutableMap()
+            val updatedChats = current.messagesBySession.toMutableMap()
             for ((messageId, upd) in batch) {
-                val list = updatedChats[upd.chatId] ?: continue
+                val list = updatedChats[upd.sessionId] ?: continue
                 val idx = list.indexOfFirst { it.id == messageId }
                 if (idx < 0) continue
                 val newList = list.toMutableList()
@@ -155,9 +155,9 @@ class BridgeStore(
                     reasoningText = upd.reasoningText,
                     streamingFinished = upd.finished,
                 )
-                updatedChats[upd.chatId] = newList
+                updatedChats[upd.sessionId] = newList
             }
-            current.copy(messagesByChat = updatedChats)
+            current.copy(messagesBySession = updatedChats)
         }
     }
 
@@ -182,20 +182,20 @@ class BridgeStore(
         }
     }
 
-    fun setOpenChat(id: String?) {
-        _state.update { it.copy(openChatId = id) }
+    fun setOpenSession(id: String?) {
+        _state.update { it.copy(openSessionId = id) }
         if (id != null) unreadCache.clear(id)
     }
 
-    fun registerPendingNewChat(chatId: String) {
+    fun registerPendingNewSession(sessionId: String) {
         _state.update {
-            it.copy(pendingNewChats = it.pendingNewChats + chatId)
+            it.copy(pendingNewSessions = it.pendingNewSessions + sessionId)
         }
     }
 
-    fun unregisterPendingNewChat(chatId: String) {
+    fun unregisterPendingNewSession(sessionId: String) {
         _state.update {
-            it.copy(pendingNewChats = it.pendingNewChats - chatId)
+            it.copy(pendingNewSessions = it.pendingNewSessions - sessionId)
         }
     }
 
@@ -225,7 +225,7 @@ class BridgeStore(
         scope.launch(Dispatchers.IO) {
             cacheMutex.withLock {
                 val s = _state.value
-                snapshotCache.save(s.chats, s.messagesByChat)
+                snapshotCache.save(s.chats, s.messagesBySession)
             }
         }
     }

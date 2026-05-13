@@ -127,55 +127,55 @@ class BridgeClient(
         ws.send(BridgeCoder.encode(BridgeFrame(body = body)))
     }
 
-    fun openChat(chatId: String) {
-        store.setOpenChat(chatId)
-        send(BridgeBody.OpenSession(chatId, BRIDGE_INITIAL_PAGE_LIMIT))
+    fun openSession(sessionId: String) {
+        store.setOpenSession(sessionId)
+        send(BridgeBody.OpenSession(sessionId, BRIDGE_INITIAL_PAGE_LIMIT))
     }
 
-    fun closeChat() {
-        store.setOpenChat(null)
+    fun closeSession() {
+        store.setOpenSession(null)
     }
 
-    fun loadOlderMessages(chatId: String, beforeMessageId: String) {
-        send(BridgeBody.LoadOlderMessages(chatId, beforeMessageId, BRIDGE_OLDER_PAGE_LIMIT))
+    fun loadOlderMessages(sessionId: String, beforeMessageId: String) {
+        send(BridgeBody.LoadOlderMessages(sessionId, beforeMessageId, BRIDGE_OLDER_PAGE_LIMIT))
     }
 
-    fun sendPrompt(chatId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
-        send(BridgeBody.SendPrompt(chatId, text, attachments))
+    fun sendPrompt(sessionId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
+        send(BridgeBody.SendPrompt(sessionId, text, attachments))
     }
 
-    fun newChat(chatId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
-        store.registerPendingNewChat(chatId)
-        send(BridgeBody.NewSession(chatId, text, attachments))
+    fun newSession(sessionId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
+        store.registerPendingNewSession(sessionId)
+        send(BridgeBody.NewSession(sessionId, text, attachments))
     }
 
-    fun interruptTurn(chatId: String) {
-        send(BridgeBody.InterruptTurn(chatId))
+    fun interruptTurn(sessionId: String) {
+        send(BridgeBody.InterruptTurn(sessionId))
     }
 
-    fun archiveChat(chatId: String) {
-        store.applyOptimisticArchive(chatId, archived = true)
-        send(BridgeBody.ArchiveSession(chatId))
+    fun archiveSession(sessionId: String) {
+        store.applyOptimisticArchive(sessionId, archived = true)
+        send(BridgeBody.ArchiveSession(sessionId))
     }
 
-    fun unarchiveChat(chatId: String) {
-        store.applyOptimisticArchive(chatId, archived = false)
-        send(BridgeBody.UnarchiveSession(chatId))
+    fun unarchiveSession(sessionId: String) {
+        store.applyOptimisticArchive(sessionId, archived = false)
+        send(BridgeBody.UnarchiveSession(sessionId))
     }
 
-    fun pinChat(chatId: String) {
-        store.applyOptimisticPin(chatId, pinned = true)
-        send(BridgeBody.PinSession(chatId))
+    fun pinSession(sessionId: String) {
+        store.applyOptimisticPin(sessionId, pinned = true)
+        send(BridgeBody.PinSession(sessionId))
     }
 
-    fun unpinChat(chatId: String) {
-        store.applyOptimisticPin(chatId, pinned = false)
-        send(BridgeBody.UnpinSession(chatId))
+    fun unpinSession(sessionId: String) {
+        store.applyOptimisticPin(sessionId, pinned = false)
+        send(BridgeBody.UnpinSession(sessionId))
     }
 
-    fun renameChat(chatId: String, title: String) {
-        store.applyOptimisticRename(chatId, title)
-        send(BridgeBody.RenameSession(chatId, title))
+    fun renameSession(sessionId: String, title: String) {
+        store.applyOptimisticRename(sessionId, title)
+        send(BridgeBody.RenameSession(sessionId, title))
     }
 
     fun listProjects() {
@@ -194,8 +194,8 @@ class BridgeClient(
         send(BridgeBody.RequestAudio(audioId))
     }
 
-    fun transcribeAudio(requestId: String, chatId: String, audioBase64: String, mimeType: String, language: String?) {
-        store.registerPendingTranscription(requestId, chatId)
+    fun transcribeAudio(requestId: String, sessionId: String, audioBase64: String, mimeType: String, language: String?) {
+        store.registerPendingTranscription(requestId, sessionId)
         send(BridgeBody.TranscribeAudio(requestId, audioBase64, mimeType, language))
     }
 
@@ -343,7 +343,7 @@ class BridgeClient(
     private fun replayPendingNewChats() {
         // The store keeps the original NewChat frames? In our minimal
         // implementation we mark the chat ids; the daemon replays the
-        // turn for any chat id we have in `pendingNewChats` because the
+        // turn for any chat id we have in `pendingNewSessions` because the
         // NewChat frame was already sent before the disconnect. Nothing
         // extra to do here for now.
     }
@@ -394,17 +394,17 @@ class WinnerListener : WebSocketListener() {
                 store?.setConnection(ConnectionState.VersionMismatch(body.serverVersion))
                 webSocket.close(1000, "version mismatch")
             }
-            is BridgeBody.SessionsSnapshot -> store?.applyChatsSnapshot(body.chats)
+            is BridgeBody.SessionsSnapshot -> store?.applySessionsSnapshot(body.chats)
             is BridgeBody.ChatUpdated -> store?.applyChatUpdated(body.chat)
-            is BridgeBody.MessagesSnapshot -> store?.applyMessagesSnapshot(body.chatId, body.messages, body.hasMore)
-            is BridgeBody.MessagesPage -> store?.applyMessagesPage(body.chatId, body.messages, body.hasMore)
-            is BridgeBody.MessageAppended -> store?.applyMessageAppended(body.chatId, body.message)
+            is BridgeBody.MessagesSnapshot -> store?.applyMessagesSnapshot(body.sessionId, body.messages, body.hasMore)
+            is BridgeBody.MessagesPage -> store?.applyMessagesPage(body.sessionId, body.messages, body.hasMore)
+            is BridgeBody.MessageAppended -> store?.applyMessageAppended(body.sessionId, body.message)
             is BridgeBody.MessageStreaming -> {
                 val coa = coalescer ?: return
                 streamScope.launch {
                     coa.enqueue(
                         PendingStreamUpdate(
-                            chatId = body.chatId,
+                            sessionId = body.sessionId,
                             messageId = body.messageId,
                             content = body.content,
                             reasoningText = body.reasoningText,

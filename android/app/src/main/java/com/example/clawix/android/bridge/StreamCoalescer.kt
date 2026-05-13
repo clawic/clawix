@@ -13,7 +13,7 @@ import kotlinx.coroutines.sync.withLock
  * messageId is enough.
  */
 data class PendingStreamUpdate(
-    val chatId: String,
+    val sessionId: String,
     val messageId: String,
     val content: String,
     val reasoningText: String,

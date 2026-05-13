@@ -59,30 +59,30 @@ class ChatListViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setQuery(q: String) { _query.value = q }
 
-    fun newChat(initialText: String? = null): String {
+    fun newSession(initialText: String? = null): String {
         val id = UUID.randomUUID().toString()
         if (initialText != null && initialText.isNotBlank()) {
-            container.bridgeClient.newChat(id, initialText, emptyList())
+            container.bridgeClient.newSession(id, initialText, emptyList())
         } else {
-            container.bridgeStore.registerPendingNewChat(id)
+            container.bridgeStore.registerPendingNewSession(id)
         }
         return id
     }
 
     fun togglePin(chat: WireChat) {
-        if (chat.isPinned) container.bridgeClient.unpinChat(chat.id)
-        else container.bridgeClient.pinChat(chat.id)
+        if (chat.isPinned) container.bridgeClient.unpinSession(chat.id)
+        else container.bridgeClient.pinSession(chat.id)
     }
 
     fun toggleArchive(chat: WireChat) {
-        if (chat.isArchived) container.bridgeClient.unarchiveChat(chat.id)
-        else container.bridgeClient.archiveChat(chat.id)
+        if (chat.isArchived) container.bridgeClient.unarchiveSession(chat.id)
+        else container.bridgeClient.archiveSession(chat.id)
     }
 
     fun rename(chat: WireChat, newTitle: String) {
         val trimmed = newTitle.trim()
         if (trimmed.isEmpty()) return
-        container.bridgeClient.renameChat(chat.id, trimmed)
+        container.bridgeClient.renameSession(chat.id, trimmed)
     }
 
     fun refreshConnection() {

@@ -243,7 +243,7 @@ fun ChatListScreen(
         NewChatFAB(
             onClick = {
                 Haptics.tap(view)
-                val id = vm.newChat()
+                val id = vm.newSession()
                 onOpenChat(id)
             },
             modifier = Modifier
