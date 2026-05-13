@@ -4,6 +4,12 @@ ios/.build-test/
 macos/.build/
 macos/build/
 macos/artifacts/
+test-results/
+test-results-*/
+artifacts/
+coverage/
+.tmp/
+.tmp-*/
 packages/*/.build/
 *.app/
 *.xcodeproj/

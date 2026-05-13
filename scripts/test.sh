@@ -12,6 +12,52 @@ run() {
   "$@"
 }
 
+policy_guard() {
+  for required in \
+    "$ROOT_DIR/docs/adr/0003-testing-architecture.md" \
+    "$ROOT_DIR/playbooks/testing.md" \
+    "$ROOT_DIR/playbooks/testing-matrix.md" \
+    "$ROOT_DIR/qa/quarantine.json" \
+    "$ROOT_DIR/qa/scenarios/signed-host-validation.md"
+  do
+    if [[ ! -e "$required" ]]; then
+      echo "testing policy failed: missing ${required#$ROOT_DIR/}" >&2
+      exit 1
+    fi
+  done
+
+  for ignored in 'test-results/' 'artifacts/' 'coverage/' '.tmp/'; do
+    if ! grep -Fqx "$ignored" "$ROOT_DIR/.gitignore"; then
+      echo "testing policy failed: .gitignore must include $ignored" >&2
+      exit 1
+    fi
+  done
+
+  node - "$ROOT_DIR/qa/quarantine.json" <<'NODE'
+const fs = require("fs");
+const file = process.argv[2];
+const today = new Date().toISOString().slice(0, 10);
+const quarantine = JSON.parse(fs.readFileSync(file, "utf8"));
+if (!Array.isArray(quarantine.entries)) {
+  console.error("testing policy failed: qa/quarantine.json must contain entries");
+  process.exit(1);
+}
+for (const entry of quarantine.entries) {
+  for (const field of ["id", "owner", "reason", "repair", "expires"]) {
+    if (!entry[field]) {
+      console.error(`testing policy failed: quarantine entry is missing ${field}`);
+      process.exit(1);
+    }
+  }
+  if (entry.expires < today) {
+    console.error(`testing policy failed: quarantine entry ${entry.id} expired on ${entry.expires}`);
+    process.exit(1);
+  }
+}
+console.error("testing policy passed");
+NODE
+}
+
 swift_package_tests() {
   local package
   for package in "$@"; do
@@ -90,6 +136,7 @@ live_tests() {
 
 fast() {
   run bash "$ROOT_DIR/macos/scripts/public_hygiene_check.sh"
+  policy_guard
   mapfile -t packages < <(fast_swift_packages)
   swift_package_tests "${packages[@]}"
   web_tests "$@"
