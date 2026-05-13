@@ -2,18 +2,18 @@ import SwiftUI
 
 /// Lists every channel family the registry knows about, grouped by
 /// `ChannelGroup`. Families with a real adapter (`bluesky`, `mastodon`,
-/// `devnull`) expose a "Connect" CTA that opens `BadgerConnectSheet`;
+/// `devnull`) expose a "Connect" CTA that opens `PublishingConnectSheet`;
 /// skeleton families are marked "Coming soon" and are non-interactive.
-/// Connected accounts surface a "Connected · @handle" badge on the right;
+/// Connected accounts surface a "Connected - @handle" badge on the right;
 /// the menu on that badge offers "Probe" and "Disconnect".
-struct BadgerChannelsView: View {
+struct PublishingChannelsView: View {
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var manager: BadgerManager
-    @State private var connectFamily: ClawJSBadgerClient.Family?
+    @EnvironmentObject private var manager: PublishingManager
+    @State private var connectFamily: ClawJSPublishingClient.Family?
 
     private static let connectableFamilies: Set<String> = ["bluesky", "mastodon", "devnull"]
 
-    private var grouped: [(group: String, families: [ClawJSBadgerClient.Family])] {
+    private var grouped: [(group: String, families: [ClawJSPublishingClient.Family])] {
         let order = [
             "social", "chat", "long_form", "forum", "forum_federated",
             "feed", "email", "video", "audio", "event", "dev", "doc", "generic",
@@ -31,7 +31,7 @@ struct BadgerChannelsView: View {
             case .ready:
                 content
             case .bootstrapping, .idle:
-                placeholder("Loading channels…")
+                placeholder("Loading channels...")
             case .unavailable(let reason):
                 placeholder(reason)
             }
@@ -39,7 +39,7 @@ struct BadgerChannelsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.background)
         .sheet(item: $connectFamily) { family in
-            BadgerConnectSheet(family: family) { connectFamily = nil }
+            PublishingConnectSheet(family: family) { connectFamily = nil }
         }
     }
 
@@ -76,7 +76,7 @@ struct BadgerChannelsView: View {
     }
 
     @ViewBuilder
-    private func row(for family: ClawJSBadgerClient.Family) -> some View {
+    private func row(for family: ClawJSPublishingClient.Family) -> some View {
         let connectedAccount = manager.channels.first { $0.familyId == family.id }
         let canConnect = Self.connectableFamilies.contains(family.id)
         HStack(alignment: .center, spacing: 12) {
@@ -152,7 +152,7 @@ struct BadgerChannelsView: View {
     }
 
     @ViewBuilder
-    private func connectedBadge(account: ClawJSBadgerClient.ChannelAccount) -> some View {
+    private func connectedBadge(account: ClawJSPublishingClient.ChannelAccount) -> some View {
         Menu {
             Button("Probe health") {
                 Task { await manager.probe(account: account) }
@@ -182,11 +182,11 @@ struct BadgerChannelsView: View {
         .fixedSize()
     }
 
-    private func handleLabel(_ account: ClawJSBadgerClient.ChannelAccount) -> String {
+    private func handleLabel(_ account: ClawJSPublishingClient.ChannelAccount) -> String {
         if let handle = account.handle, !handle.isEmpty {
-            return "Connected · @\(handle)"
+            return "Connected - @\(handle)"
         }
-        return "Connected · \(account.displayName)"
+        return "Connected - \(account.displayName)"
     }
 
     private func groupName(_ raw: String) -> String {
@@ -220,7 +220,7 @@ struct BadgerChannelsView: View {
             if case .unavailable = manager.state {
                 Button("Retry") {
                     Task { @MainActor in
-                        await ClawJSServiceManager.shared.restart(.badger)
+                        await ClawJSServiceManager.shared.restart(.publishing)
                     }
                 }
                 .buttonStyle(.borderless)

@@ -1,17 +1,17 @@
 import SwiftUI
 
 /// Full-bleed composer panel. Three sections (Accounts / Variants /
-/// Schedule). Submits a single-variant `PostSpec` to badger and navigates
-/// back to `.badgerHome` on success. The `prefillBody` argument is set
+/// Schedule). Submits a single-variant `PostSpec` to publishing and navigates
+/// back to `.publishingHome` on success. The `prefillBody` argument is set
 /// when the user pushes an assistant message into the composer via
-/// `AssistantMessageBubble`'s "Push to badger" button.
-struct BadgerComposerView: View {
+/// `AssistantMessageBubble`'s "Push to publishing" button.
+struct PublishingComposerView: View {
     enum ScheduleKind: String, CaseIterable { case now, datetime, draft }
 
     let prefillBody: String?
 
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var manager: BadgerManager
+    @EnvironmentObject private var manager: PublishingManager
     @State private var draft: String = ""
     @State private var selectedAccountIds: Set<String> = []
     @State private var scheduleKind: ScheduleKind = .datetime
@@ -19,11 +19,11 @@ struct BadgerComposerView: View {
     @State private var submitting = false
     @State private var errorMessage: String?
 
-    private var authorizedAccounts: [ClawJSBadgerClient.ChannelAccount] {
+    private var authorizedAccounts: [ClawJSPublishingClient.ChannelAccount] {
         manager.channels.filter { $0.authorized }
     }
 
-    private var familiesById: [String: ClawJSBadgerClient.Family] {
+    private var familiesById: [String: ClawJSPublishingClient.Family] {
         Dictionary(uniqueKeysWithValues: manager.families.map { ($0.id, $0) })
     }
 
@@ -70,7 +70,7 @@ struct BadgerComposerView: View {
     private var header: some View {
         HStack(spacing: 14) {
             Button {
-                appState.navigate(to: .badgerHome)
+                appState.navigate(to: .publishingHome)
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "chevron.left").font(.system(size: 11, weight: .semibold))
@@ -105,7 +105,7 @@ struct BadgerComposerView: View {
                     .font(BodyFont.system(size: 12.5, weight: .medium))
                     .foregroundColor(Palette.textSecondary)
                 Button {
-                    appState.navigate(to: .badgerChannels)
+                    appState.navigate(to: .publishingChannels)
                 } label: {
                     Text(verbatim: "Connect a channel")
                         .font(BodyFont.system(size: 11.5, weight: .medium))
@@ -135,7 +135,7 @@ struct BadgerComposerView: View {
     }
 
     @ViewBuilder
-    private func accountChip(_ account: ClawJSBadgerClient.ChannelAccount) -> some View {
+    private func accountChip(_ account: ClawJSPublishingClient.ChannelAccount) -> some View {
         let selected = selectedAccountIds.contains(account.id)
         Button {
             if selected { selectedAccountIds.remove(account.id) }
@@ -279,7 +279,7 @@ struct BadgerComposerView: View {
     }
 
     private var submitLabel: String {
-        if submitting { return "Submitting…" }
+        if submitting { return "Submitting..." }
         switch scheduleKind {
         case .now: return "Publish now"
         case .datetime: return "Schedule"
@@ -304,20 +304,20 @@ struct BadgerComposerView: View {
         errorMessage = nil
         Task { @MainActor in
             defer { submitting = false }
-            let schedule: ClawJSBadgerClient.PostSpec.Schedule
+            let schedule: ClawJSPublishingClient.PostSpec.Schedule
             let editorial: String
             switch kind {
             case .now:
                 schedule = .now()
                 editorial = "ready"
             case .datetime:
-                schedule = .datetime(ClawJSBadgerClient.iso8601(scheduledDate))
+                schedule = .datetime(ClawJSPublishingClient.iso8601(scheduledDate))
                 editorial = "ready"
             case .draft:
                 schedule = .unscheduled
                 editorial = "drafting"
             }
-            let spec = ClawJSBadgerClient.PostSpec(
+            let spec = ClawJSPublishingClient.PostSpec(
                 accounts: accountIds,
                 editorialStatus: editorial,
                 schedule: schedule,
@@ -331,7 +331,7 @@ struct BadgerComposerView: View {
             )
             do {
                 _ = try await manager.createPost(spec: spec)
-                appState.navigate(to: .badgerHome)
+                appState.navigate(to: .publishingHome)
             } catch {
                 errorMessage = error.localizedDescription
             }

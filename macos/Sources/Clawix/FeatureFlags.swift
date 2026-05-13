@@ -30,7 +30,7 @@ enum AppFeature: Equatable {
     case browserUsage
     case git
     case remoteMesh
-    case badger
+    case publishing
     case apps
     case design
     case life
@@ -62,7 +62,7 @@ enum AppFeature: Equatable {
         case .browserUsage:       return .experimental
         case .git:                return .experimental
         case .remoteMesh:         return .experimental
-        case .badger:             return .experimental
+        case .publishing:             return .experimental
         case .apps:               return .experimental
         case .design:             return .experimental
         case .life:               return .experimental

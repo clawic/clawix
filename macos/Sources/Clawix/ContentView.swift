@@ -136,7 +136,7 @@ struct ContentView: View {
              .agentsHome, .agentDetail, .personalitiesHome, .personalityDetail,
              .skillCollectionsHome, .skillCollectionDetail,
              .connectionsHome, .connectionDetail,
-             .badgerHome, .badgerComposer, .badgerChannels,
+             .publishingHome, .publishingComposer, .publishingChannels,
              .lifeHome, .lifeVertical, .lifeSettings:
             return false
         }
@@ -185,10 +185,10 @@ struct ContentView: View {
         case .skillCollectionDetail(let id): return "skill-collection-detail-\(id)"
         case .connectionsHome: return "connections-home"
         case .connectionDetail(let id): return "connection-detail-\(id)"
-        case .badgerHome: return "badger-home"
-        case .badgerComposer(let prefill):
-            return "badger-composer-\(prefill?.hashValue ?? 0)"
-        case .badgerChannels: return "badger-channels"
+        case .publishingHome: return "publishing-home"
+        case .publishingComposer(let prefill):
+            return "publishing-composer-\(prefill?.hashValue ?? 0)"
+        case .publishingChannels: return "publishing-channels"
         case .lifeHome: return "life-home"
         case .lifeVertical(let id): return "life-\(id)"
         case .lifeSettings: return "life-settings"
@@ -307,9 +307,9 @@ struct ContentView: View {
                             case .skillCollectionDetail(let id): SkillCollectionDetailView(collectionId: id)
                             case .connectionsHome:            ConnectionsHomeView()
                             case .connectionDetail(let id):   ConnectionDetailView(connectionId: id)
-                            case .badgerHome:                 BadgerHomeView()
-                            case .badgerComposer(let prefill): BadgerComposerView(prefillBody: prefill)
-                            case .badgerChannels:             BadgerChannelsView()
+                            case .publishingHome:                 PublishingHomeView()
+                            case .publishingComposer(let prefill): PublishingComposerView(prefillBody: prefill)
+                            case .publishingChannels:             PublishingChannelsView()
                             case .lifeHome:                   LifeHomeScreen()
                             case .lifeVertical(let id):       LifeVerticalScreen(verticalId: id)
                             case .lifeSettings:               LifeSettingsView()

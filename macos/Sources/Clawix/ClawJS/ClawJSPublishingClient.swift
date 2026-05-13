@@ -1,11 +1,11 @@
 import Foundation
 
-/// HTTP client for the bundled `clawjs/badger` service. Mirrors the wire
-/// shape of `clawjs/badger/src/server/routes/v1/index.ts` and the types in
-/// `clawjs/badger/src/shared/types.ts`. Follows the same pattern as
+/// HTTP client for the bundled `clawjs/publishing` service. Mirrors the wire
+/// shape of `clawjs/publishing/src/server/routes/v1/index.ts` and the types in
+/// `clawjs/publishing/src/shared/types.ts`. Follows the same pattern as
 /// `ClawJSDriveClient`: per-request URLSession wrapper, bearer-token auth,
 /// typed Codable responses.
-final class ClawJSBadgerClient {
+final class ClawJSPublishingClient {
 
     enum Error: Swift.Error, LocalizedError {
         case serviceNotReady
@@ -16,11 +16,11 @@ final class ClawJSBadgerClient {
 
         var errorDescription: String? {
             switch self {
-            case .serviceNotReady: return "Badger service is not running."
-            case .invalidURL:      return "Could not build a URL for the badger service."
-            case .http(let status, let body): return "Badger returned HTTP \(status)" + (body.map { ": \($0)" } ?? "")
-            case .decoding(let error):  return "Could not decode badger response: \(error.localizedDescription)"
-            case .transport(let error): return "Could not reach badger service: \(error.localizedDescription)"
+            case .serviceNotReady: return "Publishing service is not running."
+            case .invalidURL:      return "Could not build a URL for the publishing service."
+            case .http(let status, let body): return "Publishing returned HTTP \(status)" + (body.map { ": \($0)" } ?? "")
+            case .decoding(let error):  return "Could not decode publishing response: \(error.localizedDescription)"
+            case .transport(let error): return "Could not reach publishing service: \(error.localizedDescription)"
             }
         }
     }
@@ -28,7 +28,7 @@ final class ClawJSBadgerClient {
     private let session: URLSession
     private let origin: URL
     var bearerToken: String?
-    /// Optional workspace id sent as `X-Badger-Workspace`. The badger
+    /// Optional workspace id sent as `X-Publishing-Workspace`. The publishing
     /// daemon uses it to scope the ephemeral admin principal to a specific
     /// workspace; the rest of the routes already take the workspace id in
     /// their path, so the header is only honoured for unscoped calls.
@@ -44,8 +44,8 @@ final class ClawJSBadgerClient {
     init(
         bearerToken: String? = nil,
         workspaceId: String? = nil,
-        origin: URL = URL(string: "http://127.0.0.1:\(ClawJSService.badger.port)")!,
-        session: URLSession = ClawJSBadgerClient.defaultSession
+        origin: URL = URL(string: "http://127.0.0.1:\(ClawJSService.publishing.port)")!,
+        session: URLSession = ClawJSPublishingClient.defaultSession
     ) {
         self.bearerToken = bearerToken
         self.workspaceId = workspaceId
@@ -113,8 +113,8 @@ final class ClawJSBadgerClient {
     struct ChannelAccountListResponse: Decodable { let accounts: [ChannelAccount] }
     struct ChannelAccountCreateResponse: Decodable { let account: ChannelAccount }
 
-    /// Mirrors `PostRow` from `clawjs/badger/src/server/domain/posts.ts`.
-    /// Timestamps land as epoch milliseconds (badger uses `Date.now()`),
+    /// Mirrors `PostRow` from `clawjs/publishing/src/server/domain/posts.ts`.
+    /// Timestamps land as epoch milliseconds (publishing uses `Date.now()`),
     /// so they come through as `Double` and the caller converts.
     struct Post: Codable, Identifiable, Hashable {
         let id: String
@@ -151,7 +151,7 @@ final class ClawJSBadgerClient {
     struct PostScheduleResponse: Decodable { let post: Post }
 
     /// Spec the composer hands to `createPost`. Mirrors `PostSpec` from
-    /// `clawjs/badger/src/shared/types.ts`, narrowed to the fields the v1
+    /// `clawjs/publishing/src/shared/types.ts`, narrowed to the fields the v1
     /// composer needs (single original variant; per-account variant
     /// override goes through a separate `variants` endpoint in v2).
     struct PostSpec: Encodable {
@@ -267,8 +267,8 @@ final class ClawJSBadgerClient {
     ) async throws -> [Post] {
         var components = URLComponents(string: "/v1/ws/\(workspaceId)/posts")!
         var items: [URLQueryItem] = []
-        if let from { items.append(URLQueryItem(name: "from", value: ClawJSBadgerClient.iso8601(from))) }
-        if let to   { items.append(URLQueryItem(name: "to",   value: ClawJSBadgerClient.iso8601(to))) }
+        if let from { items.append(URLQueryItem(name: "from", value: ClawJSPublishingClient.iso8601(from))) }
+        if let to   { items.append(URLQueryItem(name: "to",   value: ClawJSPublishingClient.iso8601(to))) }
         if let status { items.append(URLQueryItem(name: "status", value: status)) }
         if let limit  { items.append(URLQueryItem(name: "limit",  value: String(limit))) }
         if !items.isEmpty { components.queryItems = items }
@@ -287,7 +287,7 @@ final class ClawJSBadgerClient {
     func schedulePost(workspaceId: String, postId: String, at date: Date) async throws -> Post {
         let response: PostScheduleResponse = try await post(
             "/v1/ws/\(workspaceId)/posts/\(postId)/schedule",
-            body: ["at": ClawJSBadgerClient.iso8601(date)]
+            body: ["at": ClawJSPublishingClient.iso8601(date)]
         )
         return response.post
     }
@@ -326,7 +326,7 @@ final class ClawJSBadgerClient {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         if let workspaceId, !workspaceId.isEmpty {
-            request.setValue(workspaceId, forHTTPHeaderField: "X-Badger-Workspace")
+            request.setValue(workspaceId, forHTTPHeaderField: "X-Publishing-Workspace")
         }
         if let body = body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -358,7 +358,7 @@ final class ClawJSBadgerClient {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         if let workspaceId, !workspaceId.isEmpty {
-            request.setValue(workspaceId, forHTTPHeaderField: "X-Badger-Workspace")
+            request.setValue(workspaceId, forHTTPHeaderField: "X-Publishing-Workspace")
         }
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let encoder = JSONEncoder()

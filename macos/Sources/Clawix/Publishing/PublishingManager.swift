@@ -2,13 +2,13 @@ import Foundation
 import SwiftUI
 import Combine
 
-/// Top-level `@MainActor` observable for the Badger UI. Wraps the typed
+/// Top-level `@MainActor` observable for the Publishing UI. Wraps the typed
 /// HTTP client and watches `ClawJSServiceManager` for liveness transitions
 /// so views can react when the helper crashes / restarts. Mirrors the
 /// philosophy of `DriveManager` / `SecretsManager`: one state machine, no
 /// hidden globals, all mutations flow through this object.
 @MainActor
-final class BadgerManager: ObservableObject {
+final class PublishingManager: ObservableObject {
 
     enum State: Equatable {
         case idle
@@ -19,20 +19,20 @@ final class BadgerManager: ObservableObject {
 
     @Published private(set) var state: State = .idle
     @Published private(set) var workspaceId: String?
-    @Published private(set) var families: [ClawJSBadgerClient.Family] = []
-    @Published private(set) var channels: [ClawJSBadgerClient.ChannelAccount] = []
-    @Published private(set) var posts: [ClawJSBadgerClient.Post] = []
+    @Published private(set) var families: [ClawJSPublishingClient.Family] = []
+    @Published private(set) var channels: [ClawJSPublishingClient.ChannelAccount] = []
+    @Published private(set) var posts: [ClawJSPublishingClient.Post] = []
     @Published private(set) var lastError: String?
 
-    let client: ClawJSBadgerClient
+    let client: ClawJSPublishingClient
 
-    private static let workspaceKey = "clawix.badger.workspaceId.v1"
+    private static let workspaceKey = "clawix.publishing.workspaceId.v1"
 
     private var bootstrapTask: Task<Void, Never>?
     private var supervisorObserver: AnyCancellable?
 
-    init(client: ClawJSBadgerClient? = nil) {
-        self.client = client ?? ClawJSBadgerClient()
+    init(client: ClawJSPublishingClient? = nil) {
+        self.client = client ?? ClawJSPublishingClient()
         let stored = UserDefaults.standard.string(forKey: Self.workspaceKey)
         self.workspaceId = (stored?.isEmpty == false) ? stored : nil
         self.client.workspaceId = self.workspaceId
@@ -46,9 +46,9 @@ final class BadgerManager: ObservableObject {
     /// while a bootstrap is in flight is a no-op.
     func bootstrap() {
         guard bootstrapTask == nil else { return }
-        let snapshot = ClawJSServiceManager.shared.snapshots[.badger]
+        let snapshot = ClawJSServiceManager.shared.snapshots[.publishing]
         guard snapshot?.state.isReady == true else {
-            state = .unavailable(snapshot?.state.unavailableReason ?? "Badger service is not running.")
+            state = .unavailable(snapshot?.state.unavailableReason ?? "Publishing service is not running.")
             return
         }
         state = .bootstrapping
@@ -56,7 +56,7 @@ final class BadgerManager: ObservableObject {
             guard let self else { return }
             defer { self.bootstrapTask = nil }
             do {
-                let token = try ClawJSServiceManager.adminTokenFromDataDir(for: .badger)
+                let token = try ClawJSServiceManager.adminTokenFromDataDir(for: .publishing)
                 self.client.bearerToken = token
                 try await self.ensureDefaultWorkspace()
                 async let families = self.client.listFamilies()
@@ -93,7 +93,7 @@ final class BadgerManager: ObservableObject {
             if workspaces.contains(where: { $0.id == id }) { return }
         }
         let workspaces = try await client.listWorkspaces()
-        let resolved: ClawJSBadgerClient.Workspace
+        let resolved: ClawJSPublishingClient.Workspace
         if let existing = workspaces.first {
             resolved = existing
         } else {
@@ -138,8 +138,8 @@ final class BadgerManager: ObservableObject {
 
     // MARK: - Mutations
 
-    func connect(familyId: String, payload: [String: String]) async throws -> ClawJSBadgerClient.ChannelAccount {
-        guard let workspaceId else { throw ClawJSBadgerClient.Error.serviceNotReady }
+    func connect(familyId: String, payload: [String: String]) async throws -> ClawJSPublishingClient.ChannelAccount {
+        guard let workspaceId else { throw ClawJSPublishingClient.Error.serviceNotReady }
         let account = try await client.connectChannel(
             workspaceId: workspaceId,
             familyId: familyId,
@@ -149,7 +149,7 @@ final class BadgerManager: ObservableObject {
         return account
     }
 
-    func disconnect(account: ClawJSBadgerClient.ChannelAccount) async {
+    func disconnect(account: ClawJSPublishingClient.ChannelAccount) async {
         guard let workspaceId else { return }
         do {
             _ = try await client.disconnectChannel(workspaceId: workspaceId, accountId: account.id)
@@ -159,7 +159,7 @@ final class BadgerManager: ObservableObject {
         }
     }
 
-    func probe(account: ClawJSBadgerClient.ChannelAccount) async {
+    func probe(account: ClawJSPublishingClient.ChannelAccount) async {
         guard let workspaceId else { return }
         do {
             _ = try await client.probeChannel(workspaceId: workspaceId, accountId: account.id)
@@ -169,8 +169,8 @@ final class BadgerManager: ObservableObject {
     }
 
     @discardableResult
-    func createPost(spec: ClawJSBadgerClient.PostSpec) async throws -> ClawJSBadgerClient.Post {
-        guard let workspaceId else { throw ClawJSBadgerClient.Error.serviceNotReady }
+    func createPost(spec: ClawJSPublishingClient.PostSpec) async throws -> ClawJSPublishingClient.Post {
+        guard let workspaceId else { throw ClawJSPublishingClient.Error.serviceNotReady }
         let post = try await client.createPost(workspaceId: workspaceId, spec: spec)
         posts.append(post)
         return post
@@ -180,7 +180,7 @@ final class BadgerManager: ObservableObject {
 
     private func attachSupervisorObserver() {
         supervisorObserver = ClawJSServiceManager.shared.$snapshots.sink { [weak self] snapshots in
-            guard let self, let snap = snapshots[.badger] else { return }
+            guard let self, let snap = snapshots[.publishing] else { return }
             switch snap.state {
             case .ready, .readyFromDaemon:
                 if self.state == .idle || self.state == .bootstrapping {
@@ -189,10 +189,10 @@ final class BadgerManager: ObservableObject {
                     self.bootstrap()
                 }
             case .blocked, .crashed, .daemonUnavailable:
-                self.reset(reason: snap.state.unavailableReason ?? "Badger service is unavailable.")
+                self.reset(reason: snap.state.unavailableReason ?? "Publishing service is unavailable.")
             case .idle:
                 if self.state != .idle {
-                    self.reset(reason: "Badger service has not started yet.")
+                    self.reset(reason: "Publishing service has not started yet.")
                 }
             case .starting:
                 if case .ready = self.state {

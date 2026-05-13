@@ -4,14 +4,14 @@ import SwiftUI
 /// and a stack of chip-style entries for the posts scheduled that day.
 /// Clicking an empty cell opens the composer pre-filled with that day at
 /// 09:00; clicking a chip opens a detail popover (post detail UI lands in
-/// v2). The view polls `BadgerManager.refreshCalendar` every 30s while
-/// visible — realtime WebSocket can replace it later without UI changes.
-struct BadgerCalendarView: View {
+/// v2). The view polls `PublishingManager.refreshCalendar` every 30s while
+/// visible; realtime WebSocket can replace it later without UI changes.
+struct PublishingCalendarView: View {
     enum CalendarMode: String, CaseIterable { case month, week }
 
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var manager: BadgerManager
-    @AppStorage("clawix.badger.calendarMode.v1") private var modeRaw: String = CalendarMode.month.rawValue
+    @EnvironmentObject private var manager: PublishingManager
+    @AppStorage("clawix.publishing.calendarMode.v1") private var modeRaw: String = CalendarMode.month.rawValue
     @State private var anchorDate: Date = Date()
     @State private var pollerTask: Task<Void, Never>?
 
@@ -53,7 +53,7 @@ struct BadgerCalendarView: View {
             case .ready:
                 grid
             case .bootstrapping, .idle:
-                placeholder("Loading badger calendar…")
+                placeholder("Loading publishing calendar...")
             case .unavailable(let reason):
                 placeholder(reason)
             }
@@ -214,7 +214,7 @@ struct BadgerCalendarView: View {
     }
 
     @ViewBuilder
-    private func postChip(_ post: ClawJSBadgerClient.Post) -> some View {
+    private func postChip(_ post: ClawJSPublishingClient.Post) -> some View {
         let isPublished = post.publishStatus == "published"
         Text(verbatim: postLabel(post))
             .font(BodyFont.system(size: 10, weight: .medium))
@@ -229,16 +229,16 @@ struct BadgerCalendarView: View {
             )
     }
 
-    private func postLabel(_ post: ClawJSBadgerClient.Post) -> String {
+    private func postLabel(_ post: ClawJSPublishingClient.Post) -> String {
         if let scheduled = post.scheduledDate {
             let formatter = DateFormatter()
             formatter.dateFormat = "HH:mm"
-            return "\(formatter.string(from: scheduled)) · \(post.publishStatus)"
+            return "\(formatter.string(from: scheduled)) - \(post.publishStatus)"
         }
         return post.publishStatus
     }
 
-    private func posts(on date: Date) -> [ClawJSBadgerClient.Post] {
+    private func posts(on date: Date) -> [ClawJSPublishingClient.Post] {
         manager.posts.filter { post in
             guard let scheduled = post.scheduledDate ?? post.publishedDate else { return false }
             return calendar.isDate(scheduled, inSameDayAs: date)
@@ -250,7 +250,7 @@ struct BadgerCalendarView: View {
         // composer currently exposes a date+time picker that the user can
         // overwrite; pre-populating it is a v1.1 nicety.
         _ = date
-        appState.navigate(to: .badgerComposer(prefillBody: nil))
+        appState.navigate(to: .publishingComposer(prefillBody: nil))
     }
 
     private func reload() async {
@@ -288,7 +288,7 @@ struct BadgerCalendarView: View {
             if case .unavailable = manager.state {
                 Button("Retry") {
                     Task { @MainActor in
-                        await ClawJSServiceManager.shared.restart(.badger)
+                        await ClawJSServiceManager.shared.restart(.publishing)
                     }
                 }
                 .buttonStyle(.borderless)

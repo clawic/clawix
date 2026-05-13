@@ -51,10 +51,10 @@ final class ClawJSServiceManager: ObservableObject {
     /// (memory, telegram) are simply absent. The audio service
     /// re-uses the same mechanism: the shared secret is the admin token.
     private static let adminTokenEnvVar: [ClawJSService: String] = [
-        .database: "CLAWJS_DATABASE_ADMIN_TOKEN",
-        .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
-        .secrets: "SECRETS_ADMIN_TOKEN",
-        .audio: "AUDIO_SHARED_SECRET",
+        .database: "CLAW_DATABASE_ADMIN_TOKEN",
+        .drive: "CLAW_DRIVE_ADMIN_TOKEN",
+        .secrets: "CLAW_SECRETS_ADMIN_TOKEN",
+        .audio: "CLAW_AUDIO_SHARED_SECRET",
         .index: "CLAW_SEARCH_ADMIN_TOKEN",
         .sessions: "CLAW_SESSIONS_SHARED_SECRET",
     ]
@@ -410,13 +410,13 @@ final class ClawJSServiceManager: ObservableObject {
         // path owns its argv. Returning nil here keeps the existing
         // `commandLine(for:) != nil` guard a no-op for IoT.
         if service == .iot { return nil }
-        // Badger lives at `node_modules/badger/dist/server.js`; it has no
+        // Publishing lives at `node_modules/publishing/dist/server.js`; it has no
         // launcher under `@clawjs/cli/bin/`. Spawn the server entry directly
         // with the bundled node binary so the rest of the supervisor (env,
         // logs, healthz) keeps working as-is.
-        if service == .badger {
+        if service == .publishing {
             let serverJs = ClawJSRuntime.bundleRootURL
-                .appendingPathComponent("node_modules/badger/dist/server.js", isDirectory: false)
+                .appendingPathComponent("node_modules/publishing/dist/server.js", isDirectory: false)
             guard FileManager.default.fileExists(atPath: serverJs.path) else { return nil }
             return [serverJs.path]
         }
@@ -464,7 +464,7 @@ final class ClawJSServiceManager: ObservableObject {
                     .appendingPathComponent("index.sqlite", isDirectory: false).path,
             ]
             return arguments
-        case .iot, .badger:
+        case .iot, .publishing:
             // Unreachable: both are guarded above with dedicated launch
             // paths. Kept for switch exhaustiveness.
             return nil
@@ -710,26 +710,26 @@ final class ClawJSServiceManager: ObservableObject {
             .path
         env["PORT"] = String(service.port)
         env["HOST"] = "127.0.0.1"
-        env["DATABASE_HOST"] = "127.0.0.1"
-        env["DATABASE_PORT"] = String(ClawJSService.database.port)
-        env["DATABASE_DATA_DIR"] = mainDataDirectoryURL.path
-        env["DATABASE_DB_PATH"] = mainDatabaseURL.path
-        env["DATABASE_FILES_DIR"] = mainFilesDirectoryURL.path
-        env["DRIVE_HOST"] = "127.0.0.1"
-        env["DRIVE_PORT"] = String(ClawJSService.drive.port)
-        env["DRIVE_DATA_DIR"] = dataDirectoryURL(for: .drive).path
+        env["CLAW_DATABASE_HOST"] = "127.0.0.1"
+        env["CLAW_DATABASE_PORT"] = String(ClawJSService.database.port)
+        env["CLAW_DATABASE_DATA_DIR"] = mainDataDirectoryURL.path
+        env["CLAW_DATABASE_DB_PATH"] = mainDatabaseURL.path
+        env["CLAW_DATABASE_FILES_DIR"] = mainFilesDirectoryURL.path
+        env["CLAW_DRIVE_HOST"] = "127.0.0.1"
+        env["CLAW_DRIVE_PORT"] = String(ClawJSService.drive.port)
+        env["CLAW_DRIVE_DATA_DIR"] = dataDirectoryURL(for: .drive).path
         env["CLAW_SESSIONS_HOST"] = "127.0.0.1"
         env["CLAW_SESSIONS_PORT"] = String(ClawJSService.sessions.port)
         env["CLAW_SESSIONS_DATA_DIR"] = dataDirectoryURL(for: .sessions).path
         env["CLAW_SESSIONS_DB_PATH"] = dataDirectoryURL(for: .sessions)
             .appendingPathComponent("sessions.sqlite", isDirectory: false).path
-        env["SECRETS_HOST"] = "127.0.0.1"
-        env["SECRETS_PORT"] = String(ClawJSService.secrets.port)
-        env["SECRETS_DATA_DIR"] = dataDirectoryURL(for: .secrets).path
-        env["SECRETS_DB_PATH"] = dataDirectoryURL(for: .secrets)
+        env["CLAW_SECRETS_HOST"] = "127.0.0.1"
+        env["CLAW_SECRETS_PORT"] = String(ClawJSService.secrets.port)
+        env["CLAW_SECRETS_DATA_DIR"] = dataDirectoryURL(for: .secrets).path
+        env["CLAW_SECRETS_DB_PATH"] = dataDirectoryURL(for: .secrets)
             .appendingPathComponent("secrets.sqlite", isDirectory: false).path
-        env["SECRETS_BASE_URL"] = "http://127.0.0.1:\(ClawJSService.secrets.port)"
-        env["SECRETS_TENANT_ID"] = ClawJSSecretsClient.defaultTenantId
+        env["CLAW_SECRETS_BASE_URL"] = "http://127.0.0.1:\(ClawJSService.secrets.port)"
+        env["CLAW_SECRETS_TENANT_ID"] = ClawJSSecretsClient.defaultTenantId
         // The Telegram surface reads its own variables (the CLI normally
         // sets these, but pin them here too so a hand-launched `npm start`
         // lines up with what the Swift client expects).
@@ -739,11 +739,11 @@ final class ClawJSServiceManager: ObservableObject {
         }
         // Publishing reads its own CLAW_PUBLISHING_* env vars; its admin token lives
         // alongside the data dir in `.admin-token` so the Swift client can
-        // read it via `adminTokenFromDataDir(for: .badger)`. The dataDir
+        // read it via `adminTokenFromDataDir(for: .publishing)`. The dataDir
         // doubles as the SQLite location (publishing uses `core.sqlite`
         // inside it on first boot).
-        if service == .badger {
-            let publishingData = dataDirectoryURL(for: .badger).path
+        if service == .publishing {
+            let publishingData = dataDirectoryURL(for: .publishing).path
             env["CLAW_PUBLISHING_HOST"] = "127.0.0.1"
             env["CLAW_PUBLISHING_PORT"] = String(service.port)
             env["CLAW_PUBLISHING_DATA_DIR"] = publishingData
@@ -753,7 +753,7 @@ final class ClawJSServiceManager: ObservableObject {
         if let adminToken, let envVar = adminTokenEnvVar[service] {
             env[envVar] = adminToken
             if service == .secrets {
-                env["SECRETS_TOKEN"] = adminToken
+                env["CLAW_SECRETS_TOKEN"] = adminToken
             }
         }
         return env

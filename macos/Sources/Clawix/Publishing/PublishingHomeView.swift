@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// Landing for the Badger sidebar entry. Hosts a sliding segmented control
+/// Landing for the Publishing sidebar entry. Hosts a sliding segmented control
 /// (Calendar / Channels) and delegates the body to the active tab. The
 /// composer is reached from Calendar's "+ New post" button or by clicking
-/// a day cell; it lives on its own route (`.badgerComposer`), not as a tab.
-struct BadgerHomeView: View {
+/// a day cell; it lives on its own route (`.publishingComposer`), not as a tab.
+struct PublishingHomeView: View {
     enum HomeTab: String, CaseIterable { case calendar, channels }
 
     @EnvironmentObject private var appState: AppState
-    @EnvironmentObject private var manager: BadgerManager
-    @AppStorage("clawix.badger.homeTab.v1") private var tabRaw: String = HomeTab.calendar.rawValue
+    @EnvironmentObject private var manager: PublishingManager
+    @AppStorage("clawix.publishing.homeTab.v1") private var tabRaw: String = HomeTab.calendar.rawValue
 
     private var tab: Binding<HomeTab> {
         Binding(
@@ -25,8 +25,8 @@ struct BadgerHomeView: View {
                 .background(Color.white.opacity(0.06))
             Group {
                 switch tab.wrappedValue {
-                case .calendar: BadgerCalendarView()
-                case .channels: BadgerChannelsView()
+                case .calendar: PublishingCalendarView()
+                case .channels: PublishingChannelsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -39,7 +39,7 @@ struct BadgerHomeView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Text(verbatim: "Badger")
+            Text(verbatim: "Publishing")
                 .font(BodyFont.system(size: 18, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
             Spacer(minLength: 12)
@@ -55,7 +55,7 @@ struct BadgerHomeView: View {
             .frame(width: 220)
             if tab.wrappedValue == .calendar {
                 Button {
-                    appState.navigate(to: .badgerComposer(prefillBody: nil))
+                    appState.navigate(to: .publishingComposer(prefillBody: nil))
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")

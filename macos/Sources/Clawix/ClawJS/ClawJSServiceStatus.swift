@@ -13,7 +13,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     case audio
     case iot
     case index
-    case badger
+    case publishing
     case sessions
 
     var id: String { rawValue }
@@ -28,7 +28,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .drive:    return 24104
         case .memory:   return 24105
         case .index:    return 24106
-        case .badger:   return 24111
+        case .publishing:   return 24111
         case .telegram: return 24150
         case .audio:    return 24151
         case .iot:      return 24152
@@ -45,7 +45,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         case .audio:    return "Audio"
         case .iot:      return "IoT"
         case .index:    return "Index"
-        case .badger:   return "Badger"
+        case .publishing:   return "Publishing"
         case .sessions: return "Sessions"
         }
     }
@@ -53,11 +53,11 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     /// Path the supervisor probes to confirm liveness. Database and Drive
     /// both expose `/v1/health`; Memory does not yet expose a health
     /// route in the source, so we fall back to the same path on the
-    /// expectation that ClawJS will normalize. Badger publishes `/healthz`
+    /// expectation that ClawJS will normalize. Publishing publishes `/healthz`
     /// directly (it does not yet share the `/v1/health` convention).
     var healthPath: String {
         switch self {
-        case .badger: return "/healthz"
+        case .publishing: return "/healthz"
         default:      return "/v1/health"
         }
     }

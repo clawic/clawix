@@ -404,23 +404,23 @@ PY
             rm -rf "$CLAWJS_DEST/node_modules/drive/node_modules/better-sqlite3"
         fi
     fi
-    # Badger surface: bundled as a plain dependency under
-    # node_modules/badger/, mirroring the drive/vault/memory layout. The
-    # supervisor spawns `node node_modules/badger/dist/server.js` directly.
-    OVERLAY_BADGER="$CLAWJS_DEV_OVERLAY/badger"
-    if [[ -d "$OVERLAY_BADGER" ]]; then
-        build_overlay_package "$OVERLAY_BADGER"
-        echo "==> Dev overlay: copying $OVERLAY_BADGER/dist → $CLAWJS_DEST/node_modules/badger/dist"
-        rm -rf "$CLAWJS_DEST/node_modules/badger/dist"
-        mkdir -p "$CLAWJS_DEST/node_modules/badger"
-        cp -R "$OVERLAY_BADGER/dist" "$CLAWJS_DEST/node_modules/badger/dist"
-        if [[ -f "$OVERLAY_BADGER/package.json" ]]; then
-            cp "$OVERLAY_BADGER/package.json" "$CLAWJS_DEST/node_modules/badger/package.json"
+    # Publishing surface: bundled as a plain dependency under
+    # node_modules/publishing/, mirroring the drive/vault/memory layout. The
+    # supervisor spawns `node node_modules/publishing/dist/server.js` directly.
+    OVERLAY_PUBLISHING="$CLAWJS_DEV_OVERLAY/publishing"
+    if [[ -d "$OVERLAY_PUBLISHING" ]]; then
+        build_overlay_package "$OVERLAY_PUBLISHING"
+        echo "==> Dev overlay: copying $OVERLAY_PUBLISHING/dist → $CLAWJS_DEST/node_modules/publishing/dist"
+        rm -rf "$CLAWJS_DEST/node_modules/publishing/dist"
+        mkdir -p "$CLAWJS_DEST/node_modules/publishing"
+        cp -R "$OVERLAY_PUBLISHING/dist" "$CLAWJS_DEST/node_modules/publishing/dist"
+        if [[ -f "$OVERLAY_PUBLISHING/package.json" ]]; then
+            cp "$OVERLAY_PUBLISHING/package.json" "$CLAWJS_DEST/node_modules/publishing/package.json"
         fi
-        if [[ -d "$OVERLAY_BADGER/node_modules" ]]; then
-            rm -rf "$CLAWJS_DEST/node_modules/badger/node_modules"
-            cp -R "$OVERLAY_BADGER/node_modules" "$CLAWJS_DEST/node_modules/badger/node_modules"
-            rm -rf "$CLAWJS_DEST/node_modules/badger/node_modules/better-sqlite3"
+        if [[ -d "$OVERLAY_PUBLISHING/node_modules" ]]; then
+            rm -rf "$CLAWJS_DEST/node_modules/publishing/node_modules"
+            cp -R "$OVERLAY_PUBLISHING/node_modules" "$CLAWJS_DEST/node_modules/publishing/node_modules"
+            rm -rf "$CLAWJS_DEST/node_modules/publishing/node_modules/better-sqlite3"
         fi
     fi
     # Telegram surface: launcher tries

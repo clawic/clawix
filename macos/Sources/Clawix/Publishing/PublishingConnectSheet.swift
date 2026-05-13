@@ -2,14 +2,14 @@ import SwiftUI
 
 /// Modal form for connecting a channel account against one of the
 /// concrete adapters (`bluesky`, `mastodon`, `devnull`). The fields and
-/// their validation are derived from the family id; the rest of badger's
+/// their validation are derived from the family id; the rest of publishing's
 /// 56 skeleton families do not surface this sheet (the Channels list
 /// shows "Coming soon" for them).
-struct BadgerConnectSheet: View {
-    let family: ClawJSBadgerClient.Family
+struct PublishingConnectSheet: View {
+    let family: ClawJSPublishingClient.Family
     let onClose: () -> Void
 
-    @EnvironmentObject private var manager: BadgerManager
+    @EnvironmentObject private var manager: PublishingManager
     @State private var fields: [String: String] = [:]
     @State private var submitting = false
     @State private var errorMessage: String?
@@ -78,10 +78,6 @@ struct BadgerConnectSheet: View {
     }
 
     private var validates: Bool {
-        for field in spec where !field.placeholder.contains("optional") {
-            // Treat fields whose label ends with "(optional)" as optional. The
-            // simpler check uses the placeholder copy embedding "optional".
-        }
         for field in spec {
             if field.label.contains("optional") { continue }
             let value = fields[field.key] ?? ""
