@@ -19,6 +19,7 @@ policy_guard() {
     "$ROOT_DIR/playbooks/testing.md" \
     "$ROOT_DIR/playbooks/testing-matrix.md" \
     "$ROOT_DIR/qa/quarantine.json" \
+    "$ROOT_DIR/qa/scenarios/external-pending.md" \
     "$ROOT_DIR/qa/scenarios/signed-host-validation.md"
   do
     if [[ ! -e "$required" ]]; then
