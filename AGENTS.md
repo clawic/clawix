@@ -4,10 +4,13 @@ Monorepo for the Clawix project. Clawix is the native human interface and
 embedded signed host for ClawJS/Claw. It is not the canonical framework store
 and new work must not treat it as a direct Codex-only client.
 
-For framework, host, storage, CLI, permissions, grants, approvals, audit, and
-domain ownership decisions, read [`docs/host-ownership.md`](docs/host-ownership.md)
-[`docs/data-storage-boundary.md`](docs/data-storage-boundary.md), and
-[`docs/adr/0001-claw-framework-host-boundary.md`](docs/adr/0001-claw-framework-host-boundary.md)
+For framework, host, storage, CLI, permissions, grants, approvals, audit,
+naming style, public packages, ports, routes, protocol vocabulary, and domain
+ownership decisions, read [`docs/host-ownership.md`](docs/host-ownership.md),
+[`docs/data-storage-boundary.md`](docs/data-storage-boundary.md),
+[`docs/naming-style-guide.md`](docs/naming-style-guide.md),
+[`docs/adr/0001-claw-framework-host-boundary.md`](docs/adr/0001-claw-framework-host-boundary.md),
+and [`docs/adr/0002-naming-and-stability-surfaces.md`](docs/adr/0002-naming-and-stability-surfaces.md)
 before editing.
 
 ## Repository layout

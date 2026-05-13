@@ -26,7 +26,9 @@ for file in \
   "CLAUDE.md" \
   "docs/host-ownership.md" \
   "docs/data-storage-boundary.md" \
-  "docs/adr/0001-claw-framework-host-boundary.md"
+  "docs/naming-style-guide.md" \
+  "docs/adr/0001-claw-framework-host-boundary.md" \
+  "docs/adr/0002-naming-and-stability-surfaces.md"
 do
   require_file "$file"
 done
@@ -57,6 +59,26 @@ for snippet in \
   "Plaintext secrets never live"
 do
   require_snippet "docs/data-storage-boundary.md" "$snippet"
+done
+
+for snippet in \
+  "Clawix host env vars use \`CLAWIX_*\`" \
+  "The bridge service is \`clawix-bridge\`" \
+  "The stable bridge port is \`24080\`" \
+  "Use \`sessionId\`, not stable \`chatId\`" \
+  "Clawix operational home is \`~/.clawix/\`"
+do
+  require_snippet "docs/naming-style-guide.md" "$snippet"
+done
+
+for snippet in \
+  "Status: accepted" \
+  "The host bridge service is named \`clawix-bridge\`" \
+  "\`24080\` is the stable Clawix host/bridge entrypoint" \
+  "Protocol documents and new frames use \`sessionId\`, not \`chatId\`" \
+  "Real bundle IDs, Team IDs, signing identities, SKUs, release credentials"
+do
+  require_snippet "docs/adr/0002-naming-and-stability-surfaces.md" "$snippet"
 done
 
 DOC_TARGETS=(
