@@ -65,7 +65,7 @@ enum SidebarRoute: Equatable {
     /// Index home (Catalog / Searches / Monitors / Runs / Alerts tabs).
     case indexHome
     /// Marketplace home (My Offers / My Wants / Prospects / Receipts / Inbox).
-    /// Surfaces the mp/1.0.0 peer-to-peer protocol state.
+    /// Surfaces the marketplace/1.0.0 peer-to-peer protocol state.
     case marketplaceHome
     /// Drive admin (full hierarchical browser).
     case driveAdmin

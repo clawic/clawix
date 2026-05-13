@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// mp/2.0.0 marketplace surface. Replaces the legacy `/v1/mp/intents` view
+/// marketplace/2.0.0 marketplace surface. Replaces the legacy `/v1/marketplace/intents` view
 /// with the new `/v1/marketplace/discovered-intents` and `/v1/profile/blocks`
 /// flows. The legacy `MarketplaceScreen` is kept available behind a
 /// settings toggle while users migrate.

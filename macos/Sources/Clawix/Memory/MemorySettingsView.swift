@@ -139,7 +139,7 @@ struct MemorySettingsView: View {
                     )
             }
             .buttonStyle(.plain)
-            Text("The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it.")
+            Text("The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it.")
                 .font(BodyFont.system(size: 11, wght: 400))
                 .foregroundColor(.white.opacity(0.55))
         }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Bottom-tabbed container for the mp/2.0.0 Profile / Feed / Chats /
+/// Bottom-tabbed container for the marketplace/2.0.0 Profile / Feed / Chats /
 /// Marketplace surfaces. Instantiated by `RootView` once a daemon credential
 /// is available.
 struct ProfileTabContainer: View {

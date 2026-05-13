@@ -40,7 +40,7 @@ final class ClawJSDriveClient {
 
     init(
         bearerToken: String? = nil,
-        origin: URL = URL(string: "http://127.0.0.1:7792")!,
+        origin: URL = URL(string: "http://127.0.0.1:\(ClawJSService.drive.port)")!,
         session: URLSession = ClawJSDriveClient.defaultSession
     ) {
         self.bearerToken = bearerToken

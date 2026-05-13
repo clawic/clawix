@@ -44,7 +44,7 @@ final class ClawJSBadgerClient {
     init(
         bearerToken: String? = nil,
         workspaceId: String? = nil,
-        origin: URL = URL(string: "http://127.0.0.1:7797")!,
+        origin: URL = URL(string: "http://127.0.0.1:\(ClawJSService.badger.port)")!,
         session: URLSession = ClawJSBadgerClient.defaultSession
     ) {
         self.bearerToken = bearerToken

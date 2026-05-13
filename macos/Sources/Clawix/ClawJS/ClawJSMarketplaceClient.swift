@@ -1,10 +1,10 @@
 import Foundation
 
-/// Thin client for the mp/1.0.0 endpoints exposed by `@clawjs/index`.
+/// Thin client for the marketplace/1.0.0 endpoints exposed by `@clawjs/index`.
 /// Cryptographic work (key generation, signing, sealed-box) is owned by the
-/// daemon-side `@clawjs/mp` package; this client only ferries blobs already
+/// daemon-side `@clawjs/marketplace` package; this client only ferries blobs already
 /// produced there.
-struct ClawJSMpClient {
+struct ClawJSMarketplaceClient {
 
     var indexClient: ClawJSIndexClient
 
@@ -41,21 +41,21 @@ struct ClawJSMpClient {
 
     func listRoots() async throws -> [RootKey] {
         struct R: Decodable { let roots: [RootKey] }
-        let resp: R = try await indexClient.send("/v1/mp/identity/roots", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/identity/roots", method: "GET")
         return resp.roots
     }
 
     func listDevices(rootKeyId: String? = nil) async throws -> [DeviceKey] {
         struct R: Decodable { let devices: [DeviceKey] }
         let suffix = queryString(["rootKeyId": rootKeyId])
-        let resp: R = try await indexClient.send("/v1/mp/identity/devices\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/identity/devices\(suffix)", method: "GET")
         return resp.devices
     }
 
     func listRoles(rootKeyId: String? = nil, vertical: String? = nil) async throws -> [RoleKey] {
         struct R: Decodable { let roles: [RoleKey] }
         let suffix = queryString(["rootKeyId": rootKeyId, "vertical": vertical])
-        let resp: R = try await indexClient.send("/v1/mp/identity/roles\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/identity/roles\(suffix)", method: "GET")
         return resp.roles
     }
 
@@ -88,7 +88,7 @@ struct ClawJSMpClient {
             "provenance": filter.provenance,
             "roleKeyId": filter.roleKeyId,
         ])
-        let resp: R = try await indexClient.send("/v1/mp/intents\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/intents\(suffix)", method: "GET")
         return resp.intents
     }
 
@@ -102,7 +102,7 @@ struct ClawJSMpClient {
 
     func updateIntentStatus(id: String, status: String) async throws {
         let body: [String: AnyJSON] = ["status": .string(status)]
-        let _: EmptyResponse = try await indexClient.send("/v1/mp/intents/\(id)/status", method: "PATCH", body: body)
+        let _: EmptyResponse = try await indexClient.send("/v1/marketplace/intents/\(id)/status", method: "PATCH", body: body)
     }
 
     // MARK: - Match receipts
@@ -126,7 +126,7 @@ struct ClawJSMpClient {
     func listMatchReceipts(myRoleKeyId: String? = nil, status: String? = nil) async throws -> [MatchReceipt] {
         struct R: Decodable { let receipts: [MatchReceipt] }
         let suffix = queryString(["myRoleKeyId": myRoleKeyId, "status": status])
-        let resp: R = try await indexClient.send("/v1/mp/match-receipts\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/match-receipts\(suffix)", method: "GET")
         return resp.receipts
     }
 
@@ -147,12 +147,12 @@ struct ClawJSMpClient {
     func listInbound(recipientRoleKeyId: String? = nil) async throws -> [InboundMessage] {
         struct R: Decodable { let messages: [InboundMessage] }
         let suffix = queryString(["recipientRoleKeyId": recipientRoleKeyId])
-        let resp: R = try await indexClient.send("/v1/mp/mailbox/inbound\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/mailbox/inbound\(suffix)", method: "GET")
         return resp.messages
     }
 
     func markRead(messageId: String) async throws {
-        let _: EmptyResponse = try await indexClient.send("/v1/mp/mailbox/inbound/\(messageId)/read", method: "POST")
+        let _: EmptyResponse = try await indexClient.send("/v1/marketplace/mailbox/inbound/\(messageId)/read", method: "POST")
     }
 
     // MARK: - Peer levels
@@ -170,7 +170,7 @@ struct ClawJSMpClient {
     func listPeerLevels(myRoleKeyId: String? = nil) async throws -> [PeerLevel] {
         struct R: Decodable { let peers: [PeerLevel] }
         let suffix = queryString(["myRoleKeyId": myRoleKeyId])
-        let resp: R = try await indexClient.send("/v1/mp/peer-levels\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/peer-levels\(suffix)", method: "GET")
         return resp.peers
     }
 
@@ -188,7 +188,7 @@ struct ClawJSMpClient {
     func listBrokers(vertical: String? = nil) async throws -> [Broker] {
         struct R: Decodable { let brokers: [Broker] }
         let suffix = queryString(["vertical": vertical])
-        let resp: R = try await indexClient.send("/v1/mp/brokers\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("/v1/marketplace/brokers\(suffix)", method: "GET")
         return resp.brokers
     }
 

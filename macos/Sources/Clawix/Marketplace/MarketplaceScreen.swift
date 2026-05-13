@@ -253,7 +253,7 @@ private struct InboxTab: View {
 private enum IntentRoleHint { case offer, want }
 
 private struct IntentListView: View {
-    let intents: [ClawJSMpClient.Intent]
+    let intents: [ClawJSMarketplaceClient.Intent]
     let role: IntentRoleHint
     var body: some View {
         if intents.isEmpty {
@@ -279,7 +279,7 @@ private struct IntentListView: View {
 }
 
 private struct IntentRow: View {
-    let intent: ClawJSMpClient.Intent
+    let intent: ClawJSMarketplaceClient.Intent
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
@@ -336,7 +336,7 @@ private struct IntentRow: View {
 }
 
 private struct ProspectRow: View {
-    let peer: ClawJSMpClient.PeerLevel
+    let peer: ClawJSMarketplaceClient.PeerLevel
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
@@ -368,7 +368,7 @@ private struct ProspectRow: View {
 }
 
 private struct ReceiptRow: View {
-    let receipt: ClawJSMpClient.MatchReceipt
+    let receipt: ClawJSMarketplaceClient.MatchReceipt
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             LucideIcon.auto("scroll", size: 16)
@@ -414,7 +414,7 @@ private struct ReceiptRow: View {
 }
 
 private struct InboundRow: View {
-    let message: ClawJSMpClient.InboundMessage
+    let message: ClawJSMarketplaceClient.InboundMessage
     let onTapRead: () -> Void
     var body: some View {
         HStack(alignment: .top, spacing: 10) {

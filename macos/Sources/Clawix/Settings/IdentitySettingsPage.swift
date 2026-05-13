@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings page for the mp/1.0.0 multi-key identity. Mirrors the
+/// Settings page for the marketplace/1.0.0 multi-key identity. Mirrors the
 /// terminology rules in the protocol spec: never expose the words
 /// "RootKey", "DeviceKey", "RoleKey" or "mnemonic" in the default copy.
 struct IdentitySettingsPage: View {

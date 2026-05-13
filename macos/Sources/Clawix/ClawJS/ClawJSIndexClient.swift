@@ -1,6 +1,6 @@
 import Foundation
 
-/// HTTP client for `@clawjs/index` running on `127.0.0.1:7796`. Mirrors
+/// HTTP client for `@clawjs/index` running on the registered search port. Mirrors
 /// `ClawJSDatabaseClient` and talks to the routes documented in
 /// `packages/clawjs-index/src/app.ts`.
 struct ClawJSIndexClient {

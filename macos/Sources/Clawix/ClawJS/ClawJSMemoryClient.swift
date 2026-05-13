@@ -1,7 +1,7 @@
 import Foundation
 
 /// Minimal HTTP client for the `@clawjs/memory` service that
-/// `ClawJSServiceManager` spawns on `127.0.0.1:7791`. Mirrors the
+/// `ClawJSServiceManager` spawns on the registered memory port. Mirrors the
 /// endpoints exposed in `clawjs/memory/src/server.ts`.
 ///
 /// Memory is unauthenticated on loopback today (same as Database). The

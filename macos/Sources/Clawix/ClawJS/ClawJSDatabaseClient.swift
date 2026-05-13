@@ -1,7 +1,7 @@
 import Foundation
 
 /// Minimal HTTP client for the `@clawjs/database` service that Phase 2's
-/// supervisor will spawn on `127.0.0.1:7790` once `ClawJSServiceManager`
+/// supervisor will spawn on the registered database port once `ClawJSServiceManager`
 /// gets a non-nil `commandLine(for:)`. The endpoint paths and request
 /// shapes mirror what `@clawjs/database@\(ClawJSRuntime.expectedVersion)`
 /// exposes in `packages/clawjs-database/src/app.ts`.

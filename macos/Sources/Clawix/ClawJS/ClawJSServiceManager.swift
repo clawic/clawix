@@ -55,8 +55,8 @@ final class ClawJSServiceManager: ObservableObject {
         .drive: "CLAWJS_DRIVE_ADMIN_TOKEN",
         .secrets: "SECRETS_ADMIN_TOKEN",
         .audio: "AUDIO_SHARED_SECRET",
-        .index: "CLAWJS_INDEX_ADMIN_TOKEN",
-        .sessions: "SESSIONS_SHARED_SECRET",
+        .index: "CLAW_SEARCH_ADMIN_TOKEN",
+        .sessions: "CLAW_SESSIONS_SHARED_SECRET",
     ]
 
     private let bridgeService: BackgroundBridgeService
@@ -718,10 +718,10 @@ final class ClawJSServiceManager: ObservableObject {
         env["DRIVE_HOST"] = "127.0.0.1"
         env["DRIVE_PORT"] = String(ClawJSService.drive.port)
         env["DRIVE_DATA_DIR"] = dataDirectoryURL(for: .drive).path
-        env["SESSIONS_HOST"] = "127.0.0.1"
-        env["SESSIONS_PORT"] = String(ClawJSService.sessions.port)
-        env["SESSIONS_DATA_DIR"] = dataDirectoryURL(for: .sessions).path
-        env["SESSIONS_DB_PATH"] = dataDirectoryURL(for: .sessions)
+        env["CLAW_SESSIONS_HOST"] = "127.0.0.1"
+        env["CLAW_SESSIONS_PORT"] = String(ClawJSService.sessions.port)
+        env["CLAW_SESSIONS_DATA_DIR"] = dataDirectoryURL(for: .sessions).path
+        env["CLAW_SESSIONS_DB_PATH"] = dataDirectoryURL(for: .sessions)
             .appendingPathComponent("sessions.sqlite", isDirectory: false).path
         env["SECRETS_HOST"] = "127.0.0.1"
         env["SECRETS_PORT"] = String(ClawJSService.secrets.port)
@@ -734,20 +734,20 @@ final class ClawJSServiceManager: ObservableObject {
         // sets these, but pin them here too so a hand-launched `npm start`
         // lines up with what the Swift client expects).
         if service == .telegram {
-            env["CLAWJS_TELEGRAM_PORT"] = String(service.port)
-            env["CLAWJS_TELEGRAM_WORKSPACE"] = workspaceURL.path
+            env["CLAW_TELEGRAM_PORT"] = String(service.port)
+            env["CLAW_TELEGRAM_WORKSPACE"] = workspaceURL.path
         }
-        // Badger reads its own BADGER_* env vars; its admin token lives
+        // Publishing reads its own CLAW_PUBLISHING_* env vars; its admin token lives
         // alongside the data dir in `.admin-token` so the Swift client can
         // read it via `adminTokenFromDataDir(for: .badger)`. The dataDir
-        // doubles as the SQLite location (badger creates `badger.sqlite`
+        // doubles as the SQLite location (publishing uses `core.sqlite`
         // inside it on first boot).
         if service == .badger {
-            let badgerData = dataDirectoryURL(for: .badger).path
-            env["BADGER_HOST"] = "127.0.0.1"
-            env["BADGER_PORT"] = String(service.port)
-            env["BADGER_DATA_DIR"] = badgerData
-            env["BADGER_TOKEN_STORE"] = (badgerData as NSString)
+            let publishingData = dataDirectoryURL(for: .badger).path
+            env["CLAW_PUBLISHING_HOST"] = "127.0.0.1"
+            env["CLAW_PUBLISHING_PORT"] = String(service.port)
+            env["CLAW_PUBLISHING_DATA_DIR"] = publishingData
+            env["CLAW_PUBLISHING_TOKEN_STORE"] = (publishingData as NSString)
                 .appendingPathComponent(".admin-token")
         }
         if let adminToken, let envVar = adminTokenEnvVar[service] {

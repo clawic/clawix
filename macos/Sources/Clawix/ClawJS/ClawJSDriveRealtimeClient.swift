@@ -50,7 +50,7 @@ final class ClawJSDriveRealtimeClient {
     var onDisconnect: ((Swift.Error?) -> Void)?
 
     init(
-        origin: URL = URL(string: "ws://127.0.0.1:7792")!,
+        origin: URL = URL(string: "ws://127.0.0.1:\(ClawJSService.drive.port)")!,
         session: URLSession = URLSession(configuration: .default)
     ) {
         self.origin = origin

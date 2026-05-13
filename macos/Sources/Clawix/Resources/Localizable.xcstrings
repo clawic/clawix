@@ -66717,67 +66717,67 @@
         }
       }
     },
-    "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it.": {
+    "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:7791/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
+            "value": "The Memory daemon serves a D3 force-directed graph view at http://127.0.0.1:24105/. The macOS app keeps the simpler list browser; the graph stays one click away when you want it."
           }
         }
       }

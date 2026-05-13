@@ -32,7 +32,7 @@ final class ClawJSSecretsClient {
     }
 
     /// Convenience: connects to the local Secrets service supervised by
-    /// `ClawJSServiceManager` (port `7793`).
+    /// `ClawJSServiceManager`.
     static func local(bearerToken: String? = nil) -> ClawJSSecretsClient {
         let token = bearerToken
             ?? ClawJSServiceManager.shared.adminTokenIfSpawned(for: .secrets)

@@ -3,7 +3,7 @@ import Foundation
 /// Wire types matching `clawjs/telegram/src/server/state.ts` and the
 /// envelope returned by every action route in `app.ts` (`runClawCli`).
 /// Everything here is decoded from the Telegram surface running on
-/// `127.0.0.1:CLAWJS_TELEGRAM_PORT`.
+/// `127.0.0.1:CLAW_TELEGRAM_PORT`.
 
 struct TelegramBot: Decodable, Identifiable, Equatable {
     let id: String
