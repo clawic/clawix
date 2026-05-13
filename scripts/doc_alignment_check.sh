@@ -102,11 +102,28 @@ scan_forbidden() {
   fi
 }
 
+scan_forbidden_file() {
+  local file="$1"
+  local label="$2"
+  local pattern="$3"
+  local output
+  set +e
+  output="$(rg -n --fixed-strings "$pattern" "$ROOT_DIR/$file" 2>/dev/null)"
+  local status=$?
+  set -e
+  if [[ "$status" -eq 0 && -n "$output" ]]; then
+    fail "$label"
+    echo "$output" >&2
+  fi
+}
+
 scan_forbidden "stale Clawix-as-Codex-only description" "Native clients for the [\`codex\`](https://github.com/openai/codex) CLI"
 scan_forbidden "stale macOS Codex-only description" "Native macOS client (SwiftUI) for the \`codex\` CLI"
 scan_forbidden "stale framework storage root" "~/Library/Application Support/Clawix/clawjs"
 scan_forbidden "stale framework global root" "~/Library/Application Support/Claw"
 scan_forbidden "stale main database name" "claw.sqlite"
+scan_forbidden_file "AGENTS.md" "stale helper binary name in agent instructions" "clawix-bridged"
+scan_forbidden_file "AGENTS.md" "stale bridged env prefix in agent instructions" "CLAWIX_BRIDGED"
 
 if [[ "$FAIL" -ne 0 ]]; then
   exit 1

@@ -379,7 +379,7 @@ Source lives in `cli/`, ships to npm with `bin/`, `lib/`, `README.md`, `LICENSE`
 
 The CLI is a thin Node.js wrapper around two pre-built, pre-signed Swift binaries:
 
-- `clawix-bridged`: the same daemon `Clawix.app` ships under `Contents/Helpers/clawix-bridged`, sourced from `macos/Helpers/Bridged/`. Owns the `codex app-server` subprocess and the bridge's WebSocket listener.
+- `clawix-bridge`: the same daemon `Clawix.app` ships under `Contents/Helpers/clawix-bridge`, sourced from `macos/Helpers/Bridge/`. Owns the `codex app-server` subprocess and the bridge's WebSocket listener.
 - `clawix-menubar`: a tiny accessory app (NSStatusItem, no Dock, no main window) sourced from `macos/Helpers/Menubar/`. Polls the daemon, exposes the pairing QR, offers "Install Clawix.app…" as a one-click install hop.
 
 `postinstall` downloads `clawix-cli-darwin-universal.tar.gz` from the GitHub release whose tag matches the npm package version, verifies SHA-256 against `cli/lib/checksums.json` (committed alongside the npm version bump), and unpacks both binaries into `~/.clawix/bin/` with `codesign --verify --strict` as the last gate. Nothing is built on the user's machine.
@@ -401,13 +401,13 @@ clawix uninstall    remove ~/.clawix/bin/, bootout LaunchAgents  (--purge to dro
 ## Files the CLI manages
 
 ```
-~/.clawix/bin/clawix-bridged                   universal binary, signed
+~/.clawix/bin/clawix-bridge                    universal binary, signed
 ~/.clawix/bin/clawix-menubar                   universal binary, signed
 ~/.clawix/bin/manifest.json                    install metadata
 ~/Library/LaunchAgents/clawix.bridge.plist     daemon registration
 ~/Library/LaunchAgents/clawix.menubar.plist    menu bar registration
 ~/Library/Preferences/clawix.bridge.plist      pairing bearer (shared with GUI)
-/tmp/clawix-bridged.{out,err}                  daemon logs
+/tmp/clawix-bridge.{out,err}                   daemon logs
 ```
 
 ## Coexistence with `Clawix.app`
@@ -416,7 +416,7 @@ Both surfaces register the same LaunchAgent **label** (`clawix.bridge`) and read
 
 - A user with only the CLI pairs an iPhone, then runs `clawix install-app`. The GUI takes over the daemon slot on next launch; the iPhone keeps working with no re-pair.
 - A user with only the GUI later runs `npm install -g clawix` (e.g. to script automation). The CLI's `daemon.start()` detects the existing label loaded from `/Applications/Clawix.app/...`, defers, and just reports status.
-- `clawix-bridged` resolution prefers `/Applications/Clawix.app/Contents/Helpers/clawix-bridged` over the npm-shipped copy whenever the GUI is installed, so both surfaces drive a single binary.
+- `clawix-bridge` resolution prefers `/Applications/Clawix.app/Contents/Helpers/clawix-bridge` over the npm-shipped copy whenever the GUI is installed, so both surfaces drive a single binary.
 
 There is exactly one daemon process at any time.
 
