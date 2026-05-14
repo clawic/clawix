@@ -241,7 +241,7 @@ enum CloudTranscriptionSecrets {
         case .deepgram:
             return ["api.deepgram.com"]
         case .custom:
-            guard let raw = UserDefaults.standard.string(forKey: "\(CloudTranscriptionProvider.baseURLKeyPrefix).\(provider.rawValue)"),
+            guard let raw = UserDefaults.standard.string(forKey: CloudTranscriptionProvider.baseURLKey(for: provider.rawValue)),
                   let host = URL(string: raw)?.host,
                   !host.isEmpty else { return [] }
             return [host]
