@@ -44,7 +44,7 @@ struct ClawJSIndexClient {
     }
 
     func probeHealth() async throws -> HealthResponse {
-        try await request("/v1/health", method: "GET", body: nil, authenticated: false)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health", method: "GET", body: nil, authenticated: false)
     }
 
     // MARK: - Types
@@ -78,14 +78,14 @@ struct ClawJSIndexClient {
 
     func listTypes() async throws -> [EntityType] {
         struct Response: Decodable { let types: [EntityType] }
-        let response: Response = try await request("/v1/types")
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/types")
         return response.types
     }
 
     @discardableResult
     func declareType(payload: [String: AnyJSON]) async throws -> EntityType {
         struct Response: Decodable { let type: EntityType }
-        let response: Response = try await request("/v1/types", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/types", method: "POST", body: payload)
         return response.type
     }
 
@@ -141,12 +141,12 @@ struct ClawJSIndexClient {
 
     func listEntities(payload: [String: AnyJSON]) async throws -> [Entity] {
         struct Response: Decodable { let entities: [Entity] }
-        let response: Response = try await request("/v1/entities/query", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/entities/query", method: "POST", body: payload)
         return response.entities
     }
 
     func getEntity(id: String) async throws -> EntityDetailResponse {
-        try await request("/v1/entities/\(id)", method: "GET", body: nil)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/entities/\(id)", method: "GET", body: nil)
     }
 
     struct CountsResponse: Decodable, Equatable {
@@ -158,7 +158,7 @@ struct ClawJSIndexClient {
     }
 
     func countsByType() async throws -> CountsResponse {
-        try await request("/v1/entities/counts")
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/entities/counts")
     }
 
     struct HistoryPoint: Decodable, Equatable, Hashable {
@@ -171,7 +171,7 @@ struct ClawJSIndexClient {
     func history(entityId: String, field: String) async throws -> [HistoryPoint] {
         struct Response: Decodable { let history: [HistoryPoint] }
         let response: Response = try await request(
-            "/v1/entities/\(entityId)/history?field=\(field.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? field)"
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/entities/\(entityId)/history?field=\(field.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? field)"
         )
         return response.history
     }
@@ -181,7 +181,7 @@ struct ClawJSIndexClient {
         struct Response: Decodable { let entity: Entity; let isNew: Bool; let changedFields: [String] }
         var payload: [String: AnyJSON] = ["type": .string(type), "data": .object(data)]
         if let sourceUrl { payload["sourceUrl"] = .string(sourceUrl) }
-        let response: Response = try await request("/v1/entities/upsert", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/entities/upsert", method: "POST", body: payload)
         return response.entity
     }
 
@@ -199,26 +199,26 @@ struct ClawJSIndexClient {
 
     func listSearches() async throws -> [Search] {
         struct Response: Decodable { let searches: [Search] }
-        let response: Response = try await request("/v1/searches")
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/searches")
         return response.searches
     }
 
     @discardableResult
     func createSearch(payload: [String: AnyJSON]) async throws -> Search {
         struct Response: Decodable { let search: Search }
-        let response: Response = try await request("/v1/searches", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/searches", method: "POST", body: payload)
         return response.search
     }
 
     @discardableResult
     func updateSearch(id: String, payload: [String: AnyJSON]) async throws -> Search {
         struct Response: Decodable { let search: Search }
-        let response: Response = try await request("/v1/searches/\(id)", method: "PATCH", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/searches/\(id)", method: "PATCH", body: payload)
         return response.search
     }
 
     func deleteSearch(id: String) async throws {
-        let _: Empty = try await request("/v1/searches/\(id)", method: "DELETE", body: nil)
+        let _: Empty = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/searches/\(id)", method: "DELETE", body: nil)
     }
 
     @discardableResult
@@ -226,7 +226,7 @@ struct ClawJSIndexClient {
         struct Response: Decodable { let run: Run }
         var payload: [String: AnyJSON] = [:]
         if let prompt { payload["prompt"] = .string(prompt) }
-        let response: Response = try await request("/v1/searches/\(id)/run", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/searches/\(id)/run", method: "POST", body: payload)
         return response.run
     }
 
@@ -257,32 +257,32 @@ struct ClawJSIndexClient {
 
     func listMonitors() async throws -> [Monitor] {
         struct Response: Decodable { let monitors: [Monitor] }
-        let response: Response = try await request("/v1/monitors")
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/monitors")
         return response.monitors
     }
 
     @discardableResult
     func createMonitor(payload: [String: AnyJSON]) async throws -> Monitor {
         struct Response: Decodable { let monitor: Monitor }
-        let response: Response = try await request("/v1/monitors", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/monitors", method: "POST", body: payload)
         return response.monitor
     }
 
     @discardableResult
     func updateMonitor(id: String, payload: [String: AnyJSON]) async throws -> Monitor {
         struct Response: Decodable { let monitor: Monitor }
-        let response: Response = try await request("/v1/monitors/\(id)", method: "PATCH", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/monitors/\(id)", method: "PATCH", body: payload)
         return response.monitor
     }
 
     func deleteMonitor(id: String) async throws {
-        let _: Empty = try await request("/v1/monitors/\(id)", method: "DELETE", body: nil)
+        let _: Empty = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/monitors/\(id)", method: "DELETE", body: nil)
     }
 
     @discardableResult
     func fireMonitor(id: String) async throws -> Run {
         struct Response: Decodable { let run: Run }
-        let response: Response = try await request("/v1/monitors/\(id)/fire", method: "POST", body: nil)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/monitors/\(id)/fire", method: "POST", body: nil)
         return response.run
     }
 
@@ -309,7 +309,7 @@ struct ClawJSIndexClient {
 
     func listRuns(monitorId: String? = nil) async throws -> [Run] {
         struct Response: Decodable { let runs: [Run] }
-        let path = monitorId.map { "/v1/runs?monitorId=\($0)" } ?? "/v1/runs"
+        let path = monitorId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/runs?monitorId=\($0)" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/runs"
         let response: Response = try await request(path)
         return response.runs
     }
@@ -320,7 +320,7 @@ struct ClawJSIndexClient {
     }
 
     func getRun(id: String) async throws -> RunDetail {
-        try await request("/v1/runs/\(id)")
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/runs/\(id)")
     }
 
     // MARK: - Alerts
@@ -343,11 +343,11 @@ struct ClawJSIndexClient {
     }
 
     func listAlerts() async throws -> AlertsResponse {
-        try await request("/v1/alerts")
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/alerts")
     }
 
     func ackAlert(id: String) async throws {
-        let _: Empty = try await request("/v1/alerts/\(id)/ack", method: "POST", body: nil)
+        let _: Empty = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/alerts/\(id)/ack", method: "POST", body: nil)
     }
 
     // MARK: - Tags + Collections
@@ -360,7 +360,7 @@ struct ClawJSIndexClient {
 
     func listTags() async throws -> [Tag] {
         struct Response: Decodable { let tags: [Tag] }
-        let response: Response = try await request("/v1/tags")
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tags")
         return response.tags
     }
 
@@ -369,7 +369,7 @@ struct ClawJSIndexClient {
         struct Response: Decodable { let tag: Tag }
         var payload: [String: AnyJSON] = ["entityId": .string(entityId), "name": .string(name)]
         if let color { payload["color"] = .string(color) }
-        let response: Response = try await request("/v1/tags/apply", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tags/apply", method: "POST", body: payload)
         return response.tag
     }
 
@@ -384,7 +384,7 @@ struct ClawJSIndexClient {
 
     func listCollections() async throws -> [Collection] {
         struct Response: Decodable { let collections: [Collection] }
-        let response: Response = try await request("/v1/collections")
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/collections")
         return response.collections
     }
 
@@ -393,14 +393,14 @@ struct ClawJSIndexClient {
         struct Response: Decodable { let collection: Collection }
         var payload: [String: AnyJSON] = ["name": .string(name)]
         if let description { payload["description"] = .string(description) }
-        let response: Response = try await request("/v1/collections", method: "POST", body: payload)
+        let response: Response = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/collections", method: "POST", body: payload)
         return response.collection
     }
 
     func addToCollection(collectionId: String, entityId: String) async throws {
         let payload: [String: AnyJSON] = ["entityId": .string(entityId)]
         let _: Empty = try await request(
-            "/v1/collections/\(collectionId)/add",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/collections/\(collectionId)/add",
             method: "POST",
             body: payload
         )
