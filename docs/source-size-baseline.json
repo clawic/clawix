@@ -12,7 +12,7 @@
       "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
     },
     "macos/Helpers/Bridged/Sources/clawix-bridge/main.swift": {
-      "lines": 2371,
+      "lines": 1384,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "macos/Sources/Clawix/ScreenTools/ScreenToolService.swift": {
