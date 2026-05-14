@@ -447,7 +447,7 @@ final class ClawJSServiceManager: ObservableObject {
             if service == .sessions {
                 arguments += [
                     "--db-path", Self.dataDirectoryURL(for: service)
-                        .appendingPathComponent("sessions.sqlite", isDirectory: false).path,
+                        .appendingPathComponent(ClawixPersistentSurfacePaths.components.sessionsDatabase, isDirectory: false).path,
                 ]
             }
             return arguments
@@ -455,14 +455,14 @@ final class ClawJSServiceManager: ObservableObject {
             arguments += [
                 "--data-dir", Self.dataDirectoryURL(for: service).path,
                 "--blobs-dir", Self.dataDirectoryURL(for: service)
-                    .appendingPathComponent("blobs", isDirectory: true).path,
+                    .appendingPathComponent(ClawixPersistentSurfacePaths.components.blobs, isDirectory: true).path,
             ]
             return arguments
         case .index:
             arguments += [
                 "--data-dir", Self.dataDirectoryURL(for: service).path,
                 "--db-path", Self.dataDirectoryURL(for: service)
-                    .appendingPathComponent("index.sqlite", isDirectory: false).path,
+                    .appendingPathComponent(ClawixPersistentSurfacePaths.components.indexDatabase, isDirectory: false).path,
             ]
             return arguments
         case .iot, .publishing:
@@ -649,7 +649,8 @@ final class ClawJSServiceManager: ObservableObject {
             return URL(fileURLWithPath: root, isDirectory: true)
         }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Clawix/clawjs", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawjs, isDirectory: true)
     }
 
     static var mainDataDirectoryURL: URL {
@@ -657,11 +658,11 @@ final class ClawJSServiceManager: ObservableObject {
     }
 
     static var mainDatabaseURL: URL {
-        mainDataDirectoryURL.appendingPathComponent("clawjs.sqlite", isDirectory: false)
+        mainDataDirectoryURL.appendingPathComponent(ClawixPersistentSurfacePaths.components.clawjsDatabase, isDirectory: false)
     }
 
     static var mainFilesDirectoryURL: URL {
-        mainDataDirectoryURL.appendingPathComponent("files", isDirectory: true)
+        mainDataDirectoryURL.appendingPathComponent(ClawixPersistentSurfacePaths.components.files, isDirectory: true)
     }
 
     private static var frameworkGlobalRootURL: URL {
@@ -670,7 +671,7 @@ final class ClawJSServiceManager: ObservableObject {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath, isDirectory: true)
         }
         return FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claw", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
     }
 
     private static var frameworkSecretsDirectoryURL: URL {
@@ -680,13 +681,14 @@ final class ClawJSServiceManager: ObservableObject {
 
     static func logFileURL(for service: ClawJSService) -> URL {
         let logs = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Logs/Clawix", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.logs, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
         return logs.appendingPathComponent("clawjs-\(service.rawValue).log", isDirectory: false)
     }
 
     static func statusFileURL(for service: ClawJSService) -> URL {
         applicationSupportRoot
-            .appendingPathComponent("status", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.status, isDirectory: true)
             .appendingPathComponent("\(service.rawValue).json", isDirectory: false)
     }
 
@@ -754,12 +756,12 @@ final class ClawJSServiceManager: ObservableObject {
         env["CLAW_SESSIONS_PORT"] = String(ClawJSService.sessions.port)
         env["CLAW_SESSIONS_DATA_DIR"] = dataDirectoryURL(for: .sessions).path
         env["CLAW_SESSIONS_DB_PATH"] = dataDirectoryURL(for: .sessions)
-            .appendingPathComponent("sessions.sqlite", isDirectory: false).path
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.sessionsDatabase, isDirectory: false).path
         env["CLAW_SECRETS_HOST"] = "127.0.0.1"
         env["CLAW_SECRETS_PORT"] = String(ClawJSService.secrets.port)
         env["CLAW_SECRETS_DATA_DIR"] = dataDirectoryURL(for: .secrets).path
         env["CLAW_SECRETS_DB_PATH"] = dataDirectoryURL(for: .secrets)
-            .appendingPathComponent("secrets.sqlite", isDirectory: false).path
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.secretsDatabase, isDirectory: false).path
         env["CLAW_SECRETS_BASE_URL"] = "http://127.0.0.1:\(ClawJSService.secrets.port)"
         env["CLAW_SECRETS_TENANT_ID"] = ClawJSSecretsClient.defaultTenantId
         // The Telegram surface reads its own variables (the CLI normally
@@ -933,7 +935,7 @@ final class ClawJSServiceManager: ObservableObject {
             return frameworkSecretsDirectoryURL
         }
         return workspaceURL
-            .appendingPathComponent(".claw", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
             .appendingPathComponent(service.rawValue, isDirectory: true)
     }
 
@@ -941,7 +943,7 @@ final class ClawJSServiceManager: ObservableObject {
         [
             dataDirectoryURL(for: .secrets),
             workspaceURL
-                .appendingPathComponent(".claw", isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
                 .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
             workspaceURL
                 .appendingPathComponent(".clawjs", isDirectory: true)
@@ -1062,7 +1064,7 @@ final class ClawJSServiceManager: ObservableObject {
         env["IOT_PORT"] = String(ClawJSService.iot.port)
         let dataDir = dataDirectoryURL(for: .iot)
         env["IOT_DATA_DIR"] = dataDir.path
-        env["IOT_DB_PATH"] = dataDir.appendingPathComponent("iot.sqlite", isDirectory: false).path
+        env["IOT_DB_PATH"] = dataDir.appendingPathComponent(ClawixPersistentSurfacePaths.components.iotDatabase, isDirectory: false).path
         return env
     }
 }

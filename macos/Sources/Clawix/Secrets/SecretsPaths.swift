@@ -20,7 +20,7 @@ enum SecretsPaths {
     }
 
     static var databaseFile: URL {
-        directory.appendingPathComponent("secrets.sqlite")
+        directory.appendingPathComponent(ClawixPersistentSurfacePaths.components.secretsDatabase)
     }
 
     static var proxySocketFile: URL {

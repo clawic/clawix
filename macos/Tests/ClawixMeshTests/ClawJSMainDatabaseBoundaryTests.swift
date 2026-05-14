@@ -1,4 +1,5 @@
 import XCTest
+@testable import Clawix
 
 final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
     func testClawixDoesNotReferenceClawJSDataStoresOutsideSupervisor() throws {
@@ -7,8 +8,14 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let sourceRoots = [
-            macosRoot.appendingPathComponent("Sources/Clawix", isDirectory: true),
-            macosRoot.appendingPathComponent("Helpers/Bridged/Sources/clawix-bridge", isDirectory: true),
+            macosRoot
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.sources, isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true),
+            macosRoot
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.helpers, isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.bridged, isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.sources, isDirectory: true)
+                .appendingPathComponent("clawix-bridge", isDirectory: true),
         ]
 
         let allowedSuffixes: Set<String> = [

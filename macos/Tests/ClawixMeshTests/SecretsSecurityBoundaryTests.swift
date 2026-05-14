@@ -1,4 +1,5 @@
 import XCTest
+@testable import Clawix
 
 final class SecretsSecurityBoundaryTests: XCTestCase {
     func testSecretsServiceDoesNotUseDiskAdminTokenFallback() throws {
@@ -53,7 +54,8 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("Sources/Clawix", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.sources, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
         return try String(
             contentsOf: root.appendingPathComponent(relativePath, isDirectory: false),
             encoding: .utf8
