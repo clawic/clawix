@@ -487,12 +487,17 @@ final class ClawJSServiceManager: ObservableObject {
             if let adminToken {
                 try Self.writeAdminToken(adminToken, for: service)
             }
+            let signedHostToken = ensureSignedHostToken(for: service)
 
             let process = Process()
             process.executableURL = ClawJSRuntime.nodeBinaryURL
             process.arguments = extraArgs
             process.currentDirectoryURL = Self.workspaceURL
-            process.environment = Self.environment(for: service, adminToken: adminToken)
+            process.environment = Self.environment(
+                for: service,
+                adminToken: adminToken,
+                signedHostToken: signedHostToken
+            )
 
             let logURL = Self.logFileURL(for: service)
             if !FileManager.default.fileExists(atPath: logURL.path) {
@@ -708,10 +713,14 @@ final class ClawJSServiceManager: ObservableObject {
     }
 
     static func cliEnvironment() -> [String: String] {
-        environment(for: .database, adminToken: nil)
+        environment(for: .database, adminToken: nil, signedHostToken: nil)
     }
 
-    private static func environment(for service: ClawJSService, adminToken: String?) -> [String: String] {
+    private static func environment(
+        for service: ClawJSService,
+        adminToken: String?,
+        signedHostToken: String?
+    ) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAW_WORKSPACE"] = workspaceURL.path
@@ -774,7 +783,7 @@ final class ClawJSServiceManager: ObservableObject {
                 env["CLAW_SECRETS_TOKEN"] = adminToken
             }
         }
-        if service == .secrets, let signedHostToken = ensureSignedHostToken(for: service) {
+        if service == .secrets, let signedHostToken {
             env["CLAW_SECRETS_SIGNED_HOST_TOKEN"] = signedHostToken
         }
         return env
@@ -1020,7 +1029,7 @@ final class ClawJSServiceManager: ObservableObject {
     /// Environment for the spawned IoT daemon. Pins host+port+data dir
     /// so the supervisor's health probe and downstream clients agree on
     /// the same loopback endpoint. Mirrors the per-service env wiring
-    /// `environment(for:adminToken:)` does for the @clawjs/cli surface
+    /// `environment(for:adminToken:signedHostToken:)` does for the @clawjs/cli surface
     /// without inheriting workspace-flavoured variables that IoT does
     /// not consume.
     private static func iotEnvironment() -> [String: String] {
