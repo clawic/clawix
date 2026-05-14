@@ -9,6 +9,7 @@ import SwiftUI
 /// rather than picking a different model on the fly.
 enum AgentRuntimeKind: String, CaseIterable, Identifiable, Codable {
     case codex
+    case openclaude
     case hermes
     case claw
     case demo
@@ -18,6 +19,7 @@ enum AgentRuntimeKind: String, CaseIterable, Identifiable, Codable {
     var label: String {
         switch self {
         case .codex:      return "Codex"
+        case .openclaude: return "OpenClaude"
         case .hermes:     return "Hermes"
         case .claw:       return "Claw"
         case .demo:       return "Demo"
@@ -25,12 +27,13 @@ enum AgentRuntimeKind: String, CaseIterable, Identifiable, Codable {
     }
 
     /// Default model slug the editor pre-fills for a brand-new agent
-    /// using this runtime. The actual resolution against runtime
-    /// workspace/config files is performed by the framework's
+    /// using this runtime. The actual resolution against `~/.codex/`,
+    /// `~/.openclaude.json`, etc. is performed by the framework's
     /// `RuntimeAdapter` at thread-start time.
     var defaultModel: String {
         switch self {
         case .codex:      return "gpt-5.1"
+        case .openclaude: return "claude-opus-4-7"
         case .hermes:     return "hermes-4-7"
         case .claw:       return "claw-default"
         case .demo:       return "demo"

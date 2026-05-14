@@ -422,6 +422,14 @@ final class SkillsStore: ObservableObject {
                 lastError: nil
             ),
             SkillSyncTarget(
+                id: "openclaude",
+                label: "OpenClaude",
+                home: NSString("~/.openclaude/skills").expandingTildeInPath,
+                mode: .symlink,
+                lastSyncedAt: nil,
+                lastError: nil
+            ),
+            SkillSyncTarget(
                 id: "cursor",
                 label: "Cursor",
                 home: NSString("~/.cursor/skills").expandingTildeInPath,
