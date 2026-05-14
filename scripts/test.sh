@@ -154,6 +154,10 @@ bridge_fixture_tests() {
   run bash "$ROOT_DIR/macos/scripts/e2e_validate.sh"
 }
 
+e2e_tests() {
+  bridge_fixture_tests
+}
+
 host_tests() {
   if [[ -n "${CLAWIX_HOST_TEST_COMMAND:-}" ]]; then
     run bash -lc "$CLAWIX_HOST_TEST_COMMAND"
@@ -196,7 +200,6 @@ integration() {
   fast "$@"
   mapfile -t packages < <(integration_swift_packages)
   swift_package_tests "${packages[@]}"
-  bridge_fixture_tests
 }
 
 changed() {
@@ -230,7 +233,7 @@ case "$LANE" in
     integration "$@"
     ;;
   e2e)
-    bridge_fixture_tests
+    e2e_tests
     ;;
   host)
     host_tests
@@ -243,6 +246,7 @@ case "$LANE" in
     ;;
   release)
     integration "$@"
+    e2e_tests
     device_tests
     host_tests
     ;;
