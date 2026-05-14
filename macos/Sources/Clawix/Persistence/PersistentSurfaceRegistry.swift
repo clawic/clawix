@@ -443,6 +443,7 @@ enum ClawixPersistentSurfacePaths {
         static let dictationSounds = "dictation-sounds"
         static let captures = "Clawix-Captures"
         static let appStorageFile = ".clawix-storage.json"
+        static let bundleName = "Clawix_Clawix.bundle"
         static let bridgeStatusFile = "bridge-status.json"
         static let sqlite = "clawix.sqlite"
     }
