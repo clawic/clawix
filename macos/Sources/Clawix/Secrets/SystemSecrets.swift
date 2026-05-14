@@ -70,24 +70,6 @@ enum SystemSecrets {
         )
     }
 
-    /// Reads the cleartext secret stored under `internalName`. Returns
-    /// nil when Secrets is locked or the secret does not exist.
-    static func read(internalName: String) async -> String? {
-        guard let store = SecretsManager.shared.store else { return nil }
-        do {
-            guard let secret = try store.fetchSecret(byInternalName: internalName) else {
-                return nil
-            }
-            if secret.trashedAt != nil { return nil }
-            let fields = try store.fetchFields(forSecret: secret.id, version: secret.currentVersionId)
-            guard let field = fields.first(where: { $0.fieldName == "value" }) else { return nil }
-            let revealed = try store.revealField(field, purpose: .reveal)
-            return revealed.value
-        } catch {
-            return nil
-        }
-    }
-
     /// True iff Secrets is unlocked AND a non-trashed secret exists at
     /// `internalName`. Does not reveal the value.
     static func has(internalName: String) async -> Bool {
@@ -172,10 +154,6 @@ enum EnhancementSecrets {
         )
     }
 
-    static func apiKey(for provider: EnhancementProviderID) async -> String? {
-        await SystemSecrets.read(internalName: internalName(for: provider))
-    }
-
     static func hasAPIKey(for provider: EnhancementProviderID) async -> Bool {
         await SystemSecrets.has(internalName: internalName(for: provider))
     }
@@ -220,10 +198,6 @@ enum CloudTranscriptionSecrets {
             value: key,
             allowedHosts: allowedHosts(for: provider)
         )
-    }
-
-    static func apiKey(for provider: CloudTranscriptionProvider) async -> String? {
-        await SystemSecrets.read(internalName: internalName(for: provider))
     }
 
     static func hasAPIKey(for provider: CloudTranscriptionProvider) async -> Bool {

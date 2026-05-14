@@ -74,6 +74,35 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         XCTAssertFalse(body.contains("return (try?"))
     }
 
+    func testSystemProviderSecretsDoNotExposePlaintextReadHelpers() throws {
+        let source = try readSource("Secrets/SystemSecrets.swift")
+
+        XCTAssertFalse(
+            source.contains("static func read(internalName:"),
+            "System-owned provider secrets must be used through brokerHttp, not generic plaintext reads."
+        )
+        XCTAssertFalse(
+            source.contains("static func apiKey(for provider:"),
+            "Provider-specific API key helpers must not return plaintext to provider code."
+        )
+    }
+
+    func testAIAccountCredentialRevealFailsClosed() throws {
+        let source = try readSource("Providers/AIAccountSecretsStore.swift")
+        let body = try extractFunctionBody(
+            named: "func revealCredentials(accountId: UUID) throws -> AIAccountCredentials",
+            from: source,
+            until: "    nonisolated func credentialExpiresAt"
+        )
+
+        XCTAssertTrue(
+            body.contains("throw AIAccountStoreError.credentialMissing"),
+            "The legacy revealCredentials protocol method must fail closed."
+        )
+        XCTAssertFalse(body.contains("store.revealField"))
+        XCTAssertFalse(body.contains("revealCredentialsRaw"))
+        XCTAssertFalse(body.contains("return credentials"))
+    }
     private func readSource(_ relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let root = testFile

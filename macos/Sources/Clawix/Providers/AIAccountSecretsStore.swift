@@ -282,23 +282,11 @@ final class AIAccountSecretsStore: AIAccountStore {
         try store.trashSecret(id: secret.id)
     }
 
-    // MARK: - Reveal credentials
+    // MARK: - Plaintext reveal compatibility
 
     nonisolated func revealCredentials(accountId: UUID) throws -> AIAccountCredentials {
-        try perform { try self._revealOnMain(accountId: accountId) }
-    }
-
-    @MainActor
-    private func _revealOnMain(accountId: UUID) throws -> AIAccountCredentials {
-        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
-        guard let (_, secret, fields) = try findAccount(id: accountId, store: store) else {
-            throw AIAccountStoreError.accountNotFound
-        }
-        let credentials = revealCredentialsRaw(secret: secret, fields: fields, store: store, emitAudit: true)
-        if credentials.isEmpty {
-            throw AIAccountStoreError.credentialMissing
-        }
-        return credentials
+        _ = accountId
+        throw AIAccountStoreError.credentialMissing
     }
 
     nonisolated func credentialExpiresAt(accountId: UUID) throws -> Date? {
@@ -420,45 +408,6 @@ final class AIAccountSecretsStore: AIAccountStore {
             lastUsedAt: lastUsedAt,
             values: values
         )
-    }
-
-    /// Reveal helper used internally (and on the public `reveal` path).
-    /// `emitAudit` is left to the public path; internal refreshes don't
-    /// double-log a reveal that the caller already audited.
-    @MainActor
-    private func revealCredentialsRaw(
-        secret: SecretRecord,
-        fields: [SecretFieldRecord],
-        store: ClawJSSecretsStore,
-        emitAudit: Bool = false
-    ) -> AIAccountCredentials {
-        var creds = AIAccountCredentials()
-        for field in fields where field.isSecret {
-            let revealed: String?
-            if emitAudit {
-                revealed = (try? store.revealField(field, purpose: .reveal))?.value
-            } else {
-                revealed = (try? store.revealField(field, purpose: .reveal))?.value
-            }
-            switch field.fieldName {
-            case "value": creds.apiKey = revealed
-            case "access_token": creds.accessToken = revealed
-            case "refresh_token": creds.refreshToken = revealed
-            default: break
-            }
-        }
-        for field in fields where !field.isSecret {
-            switch field.fieldName {
-            case "expires_at":
-                if let str = field.publicValue, let date = ISO8601.parse(str) {
-                    creds.expiresAt = date
-                }
-            case "scope":
-                creds.scope = field.publicValue
-            default: break
-            }
-        }
-        return creds
     }
 
     nonisolated private func perform<T>(_ work: @MainActor () throws -> T) throws -> T {
