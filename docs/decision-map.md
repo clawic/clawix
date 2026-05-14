@@ -40,6 +40,12 @@ The contract format is decision -> document -> validation.
 | Performance work starts with reproduction and instrumentation before optimization. | [`macos/PERF.md`](../macos/PERF.md) | Capture traces, logs, CPU/RAM samples, or host diagnostics before assigning cause. Separate confirmed, probable, and discarded causes. |
 | Android and Web are launched through central launcher flows in the private workspace. | Private workspace operating instructions, public platform READMEs | PENDING GUARDRAIL: mirror the public, non-private launcher contract into platform docs or add public script wrappers when those surfaces become supported. |
 
+## Source file boundaries
+
+| Decision | Canonical document | Guardrail or validation |
+| --- | --- | --- |
+| Hand-authored source files stay responsibility-scoped; new 1200+ line files require a split plan or baseline exception, and 2000+ line files must not grow except for extraction or explicit architecture approval. | [`docs/adr/0004-source-file-boundaries.md`](adr/0004-source-file-boundaries.md), [`docs/source-size-baseline.json`](source-size-baseline.json) | `node scripts/source-size-check.mjs` warns at 800 lines, fails unbaselined 1200+ line files, and blocks growth above the recorded baseline. The fast test lane runs it. |
+
 ## Naming, release, privacy, and commits
 
 | Decision | Canonical document | Guardrail or validation |

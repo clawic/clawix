@@ -29,7 +29,8 @@ for file in \
   "docs/decision-map.md" \
   "docs/naming-style-guide.md" \
   "docs/adr/0001-claw-framework-host-boundary.md" \
-  "docs/adr/0002-naming-and-stability-surfaces.md"
+  "docs/adr/0002-naming-and-stability-surfaces.md" \
+  "docs/adr/0004-source-file-boundaries.md"
 do
   require_file "$file"
 done
@@ -40,6 +41,7 @@ require_snippet "CLAUDE.md" "docs/data-storage-boundary.md"
 require_snippet "CLAUDE.md" "docs/decision-map.md"
 require_snippet "CLAUDE.md" "docs/adr/0001-claw-framework-host-boundary.md"
 require_snippet "AGENTS.md" "docs/decision-map.md"
+require_snippet "AGENTS.md" "docs/adr/0004-source-file-boundaries.md"
 require_snippet "CONTRIBUTING.md" "docs/decision-map.md"
 require_snippet "STANDARDS.md" "docs/decision-map.md"
 require_snippet "playbooks/README.md" "docs/decision-map.md"
@@ -49,9 +51,21 @@ for snippet in \
   "ClawJS/Claw owns framework contracts" \
   "New workspace-local framework writes use \`.claw/\`" \
   "Sensitive native permissions" \
+  "Source file boundaries" \
   "PENDING GUARDRAIL"
 do
   require_snippet "docs/decision-map.md" "$snippet"
+done
+
+for snippet in \
+  "Status: accepted" \
+  "\`1200-2000\` lines" \
+  "\`>2000\` lines" \
+  "Clawix app views split root layout" \
+  "scripts/source-size-check.mjs" \
+  "docs/source-size-baseline.json"
+do
+  require_snippet "docs/adr/0004-source-file-boundaries.md" "$snippet"
 done
 
 for snippet in \

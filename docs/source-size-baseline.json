@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "warningLines": 800,
+  "maxNewFileLines": 1200,
+  "files": {
+    "macos/Sources/Clawix/AppState.swift": {
+      "lines": 5398,
+      "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
+    },
+    "macos/Sources/Clawix/ComposerView.swift": {
+      "lines": 2559,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "macos/Sources/Clawix/ContentView.swift": {
+      "lines": 2528,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "macos/Helpers/Bridged/Sources/clawix-bridge/main.swift": {
+      "lines": 2371,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "macos/Sources/Clawix/ScreenTools/ScreenToolService.swift": {
+      "lines": 2226,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/SecretsCrypto/Sources/SecretsCrypto/BIP39Wordlist.swift": {
+      "lines": 2066,
+      "reason": "Existing embedded generated-like wordlist data; do not expand by hand."
+    },
+    "macos/Sources/Clawix/SidebarView.swift": {
+      "lines": 1941,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "macos/Sources/Clawix/DictationSettingsPage.swift": {
+      "lines": 1845,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "macos/Sources/Clawix/Sidebar/SidebarView+DragDrop.swift": {
+      "lines": 1500,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift": {
+      "lines": 1404,
+      "reason": "Existing canonical contract/schema surface; split codecs, fixtures, and docs before expanding."
+    },
+    "web/src/screens/pomodoro/pomodoro-view.tsx": {
+      "lines": 1403,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "macos/Sources/Clawix/QuickAsk/QuickAskView.swift": {
+      "lines": 1338,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    },
+    "macos/Sources/Clawix/Dictation/DictationCoordinator.swift": {
+      "lines": 1330,
+      "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
+    },
+    "ios/Sources/Clawix/ChatDetail/ChatDetailView.swift": {
+      "lines": 1285,
+      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
+    }
+  }
+}

@@ -185,6 +185,7 @@ live_tests() {
 
 fast() {
   run bash "$ROOT_DIR/macos/scripts/public_hygiene_check.sh"
+  run node "$ROOT_DIR/scripts/source-size-check.mjs"
   policy_guard
   mapfile -t packages < <(fast_swift_packages)
   swift_package_tests "${packages[@]}"

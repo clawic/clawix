@@ -11,7 +11,8 @@ ownership decisions, read [`docs/host-ownership.md`](docs/host-ownership.md),
 [`docs/decision-map.md`](docs/decision-map.md),
 [`docs/naming-style-guide.md`](docs/naming-style-guide.md),
 [`docs/adr/0001-claw-framework-host-boundary.md`](docs/adr/0001-claw-framework-host-boundary.md),
-and [`docs/adr/0002-naming-and-stability-surfaces.md`](docs/adr/0002-naming-and-stability-surfaces.md)
+[`docs/adr/0002-naming-and-stability-surfaces.md`](docs/adr/0002-naming-and-stability-surfaces.md),
+and [`docs/adr/0004-source-file-boundaries.md`](docs/adr/0004-source-file-boundaries.md)
 before editing.
 
 ## Repository layout
@@ -29,6 +30,12 @@ files must contain only safe placeholders for bundle ids, signing identities,
 Team IDs, launch labels, Mach services, and host branding. The shared
 architecture boundary lives in `docs/host-ownership.md`; do not encode a second
 ownership model in target-specific notes.
+
+Before adding large app, bridge, protocol, runtime, state, CLI, or UI surfaces,
+read `docs/adr/0004-source-file-boundaries.md`. New hand-authored files at
+1200+ lines need a split plan or a baseline exception; files above 2000 lines
+must not grow except for mechanical extraction or explicit architecture
+approval.
 
 ## Build (macOS app)
 
