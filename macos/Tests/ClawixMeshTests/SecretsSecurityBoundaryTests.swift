@@ -48,6 +48,7 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         let root = testFile
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+            .deletingLastPathComponent()
             .appendingPathComponent("Sources/Clawix", isDirectory: true)
         return try String(
             contentsOf: root.appendingPathComponent(relativePath, isDirectory: false),
