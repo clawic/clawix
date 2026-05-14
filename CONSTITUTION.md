@@ -99,6 +99,20 @@ should not need to read framework source files to learn what the framework can
 do; source remains evidence, while CLI inspection and search are the canonical
 agent-facing view.
 
+**I.6 Capabilities are complete only when dual-surfaced.** Persistent user
+value outlives any one model, provider, session, device, or app. Every
+important capability therefore has at least one human surface and at least one
+programmatic surface. The SDK is the canonical build-on-top surface for apps
+and services; the CLI is the shell-native surface for agents, humans, scripts,
+automation, inspection, and validation; service APIs are process and network
+contracts; MCP is the model-native surface for LLM hosts through tools,
+resources, and prompts; Relay carries remote-safe APIs beyond the local
+machine; and the filesystem or SQLite layer is the durable portability
+contract, not the preferred action API. Clawix is the reference human app and
+embedded host, not the privileged only interface. If a capability exists only
+as UI, only as SDK/API, only as CLI, or only as MCP, it is incomplete until an
+explicit ADR classifies the gap as temporary, blocked, or not applicable.
+
 ### II. Sovereignty
 
 **II.1 Local-first by construction.** The user's data lives on the user's
@@ -148,6 +162,24 @@ APIs) is the user's, paid through credentials the user owns. Bring-your-own
 key is the canonical model. If we ever offer hosted inference, it is one
 option among many and never the only path; the user can plug a self-hosted
 model or a different provider without losing anything they accumulated.
+
+**II.8 Accumulated state outlives intelligence.** Models, runtimes,
+providers, and external tools are replaceable. The user's accumulated state
+is not. Instructions, memories, skills, decisions, relationships, workflows,
+history, preferences, secrets, connections, and structured data belong to the
+user as durable state, not to the intelligence layer that happens to operate
+on them today.
+
+The framework's job is to keep that state local-first, portable, structured,
+and usable across agents, hosts, runtimes, providers, and applications. Claw
+may reference, mirror, or coordinate external services, but it must not
+fragment the user's life into provider-shaped islands or trap learned context
+inside a model-specific blob. Closed external systems enter the user's open
+world as sources, adapters, and permissioned action surfaces; they do not
+become the organizing authority. Integration exists to reduce the human's
+translation burden: the user should not have to remember where each piece of
+context lives, repeat themselves across tools, or rebuild accumulated
+understanding when switching intelligence providers.
 
 ### III. Openness
 
