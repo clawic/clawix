@@ -1,4 +1,5 @@
 import AppKit
+import ClawixEngine
 import SwiftUI
 
 extension AppState {
