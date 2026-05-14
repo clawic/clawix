@@ -58,7 +58,9 @@ final class BackgroundBridgeService: ObservableObject {
     }
 
     private static func computeDaemonReachable() -> Bool {
-        let url = ClawixPersistentSurfacePaths.homeChild(ClawixPersistentSurfacePaths.components.bridgeStatusFile, isDirectory: false)
+        let url = ClawixPersistentSurfacePaths
+            .homeChild(ClawixPersistentSurfacePaths.components.bridgeState, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.bridgeStatusFile, isDirectory: false)
         guard let data = try? Data(contentsOf: url),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let pid = obj["pid"] as? Int,
