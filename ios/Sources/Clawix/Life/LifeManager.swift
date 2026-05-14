@@ -1,6 +1,13 @@
 import Foundation
 import Combine
 
+private enum LifePersistentKeys {
+    static let enabledVerticalsDefaultsKey = "LifeEnabledVerticals"
+    static let hiddenVerticalsDefaultsKey = "LifeHiddenVerticals"
+    static let bridgeBearerDefaultsKey = "ClawixBridge.Bearer.v1"
+    static let bridgeHostDefaultsKey = "ClawixBridge.Host.v1"
+}
+
 @MainActor
 final class LifeManager: ObservableObject {
     static let shared = LifeManager()
@@ -42,14 +49,14 @@ final class LifeManager: ObservableObject {
 
     func setEnabled(_ ids: [String]) {
         enabledVerticalIds = ids
-        UserDefaults.standard.set(ids, forKey: "LifeEnabledVerticals")
+        UserDefaults.standard.set(ids, forKey: LifePersistentKeys.enabledVerticalsDefaultsKey)
     }
 
     func setHidden(id: String, hidden: Bool) {
         if hidden { hiddenVerticalIds.insert(id) } else { hiddenVerticalIds.remove(id) }
         UserDefaults.standard.set(
             Array(hiddenVerticalIds),
-            forKey: "LifeHiddenVerticals"
+            forKey: LifePersistentKeys.hiddenVerticalsDefaultsKey
         )
     }
 
@@ -171,7 +178,7 @@ final class LifeManager: ObservableObject {
     }
 
     nonisolated private static func loadEnabledIds() -> [String] {
-        if let stored = UserDefaults.standard.stringArray(forKey: "LifeEnabledVerticals"),
+        if let stored = UserDefaults.standard.stringArray(forKey: LifePersistentKeys.enabledVerticalsDefaultsKey),
            !stored.isEmpty {
             return stored
         }
@@ -182,15 +189,15 @@ final class LifeManager: ObservableObject {
     }
 
     nonisolated private static func loadHiddenIds() -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: "LifeHiddenVerticals") ?? [])
+        Set(UserDefaults.standard.stringArray(forKey: LifePersistentKeys.hiddenVerticalsDefaultsKey) ?? [])
     }
 
     nonisolated static func defaultToken() -> String? {
-        UserDefaults.standard.string(forKey: "ClawixBridge.Bearer.v1")
+        UserDefaults.standard.string(forKey: LifePersistentKeys.bridgeBearerDefaultsKey)
     }
 
     nonisolated static func defaultHost() -> String? {
-        UserDefaults.standard.string(forKey: "ClawixBridge.Host.v1")
+        UserDefaults.standard.string(forKey: LifePersistentKeys.bridgeHostDefaultsKey)
     }
 }
 
