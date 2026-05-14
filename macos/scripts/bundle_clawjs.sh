@@ -288,6 +288,7 @@ PY
         cp -R "$OVERLAY_BIN/." "$CLAWJS_DEST/node_modules/@clawjs/cli/bin/"
     fi
     copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/core"
+    copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/clawjs-node" "$CLAWJS_DEST/node_modules/@clawjs/claw"
     OVERLAY_DB="$CLAWJS_DEV_OVERLAY/packages/clawjs-database"
     if [[ -d "$OVERLAY_DB" ]]; then
         build_overlay_package "$OVERLAY_DB"
