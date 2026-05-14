@@ -10,6 +10,7 @@ struct EnhancementOpenAICompatibleClient {
     let baseURL: URL
     let extraHeaders: [String: String]
     let apiKey: String?
+    let apiKeySecretName: String?
     /// Ollama and a few self-hosted endpoints expose
     /// `/v1/chat/completions` as well; `endpointPath` lets the same
     /// client target either OpenAI-style (`/chat/completions`) or
@@ -19,11 +20,13 @@ struct EnhancementOpenAICompatibleClient {
     init(
         baseURL: URL,
         apiKey: String?,
+        apiKeySecretName: String? = nil,
         extraHeaders: [String: String] = [:],
         endpointPath: String = "/chat/completions"
     ) {
         self.baseURL = baseURL
         self.apiKey = apiKey
+        self.apiKeySecretName = apiKeySecretName
         self.extraHeaders = extraHeaders
         self.endpointPath = endpointPath
     }
@@ -38,17 +41,6 @@ struct EnhancementOpenAICompatibleClient {
         composeUser: (String, String, EnhancementContext?) -> String
     ) async throws -> String {
         let url = baseURL.appendingPathComponent(endpointPath)
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let apiKey, !apiKey.isEmpty {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        }
-        for (k, v) in extraHeaders {
-            request.setValue(v, forHTTPHeaderField: k)
-        }
-        request.timeoutInterval = TimeInterval(max(3, min(120, timeoutSeconds)))
-
         let userMessage = composeUser(text, userPrompt, context)
         let body: [String: Any] = [
             "model": model,
@@ -58,12 +50,52 @@ struct EnhancementOpenAICompatibleClient {
                 ["role": "user", "content": userMessage]
             ]
         ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
+        guard let requestBody = String(data: bodyData, encoding: .utf8) else {
+            throw EnhancementError.decoding("Unable to encode request body.")
+        }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw EnhancementError.http(http.statusCode, bodyText)
+        let data: Data
+        if let apiKeySecretName {
+            var headers = extraHeaders
+            headers["Content-Type"] = "application/json"
+            headers["Authorization"] = "Bearer {{\(apiKeySecretName).value}}"
+            let response = try await SystemSecrets.brokerHttp(
+                internalName: apiKeySecretName,
+                method: "POST",
+                url: url,
+                headers: headers,
+                body: requestBody,
+                agent: "clawix-enhancement",
+                riskTier: "cost",
+                approvalSatisfied: true,
+                timeoutMs: max(3, min(120, timeoutSeconds)) * 1000
+            )
+            guard response.ok else {
+                throw EnhancementError.http(response.status ?? 0, response.bodyText ?? "")
+            }
+            guard let responseBody = response.bodyText, let responseData = responseBody.data(using: .utf8) else {
+                throw EnhancementError.decoding("Empty broker response.")
+            }
+            data = responseData
+        } else {
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            if let apiKey, !apiKey.isEmpty {
+                request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            }
+            for (k, v) in extraHeaders {
+                request.setValue(v, forHTTPHeaderField: k)
+            }
+            request.timeoutInterval = TimeInterval(max(3, min(120, timeoutSeconds)))
+            request.httpBody = bodyData
+            let (responseData, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                let bodyText = String(data: responseData, encoding: .utf8) ?? ""
+                throw EnhancementError.http(http.statusCode, bodyText)
+            }
+            data = responseData
         }
 
         struct CompletionResponse: Decodable {
@@ -94,12 +126,13 @@ struct GroqEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = await EnhancementSecrets.apiKey(for: id) else {
+        guard await EnhancementSecrets.hasAPIKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://api.groq.com/openai/v1")!,
-            apiKey: key
+            apiKey: nil,
+            apiKeySecretName: EnhancementSecrets.internalName(for: id)
         )
         return try await client.enhance(
             text: text,
@@ -128,12 +161,13 @@ struct MistralEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = await EnhancementSecrets.apiKey(for: id) else {
+        guard await EnhancementSecrets.hasAPIKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://api.mistral.ai/v1")!,
-            apiKey: key
+            apiKey: nil,
+            apiKeySecretName: EnhancementSecrets.internalName(for: id)
         )
         return try await client.enhance(
             text: text,
@@ -162,12 +196,13 @@ struct XAIEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = await EnhancementSecrets.apiKey(for: id) else {
+        guard await EnhancementSecrets.hasAPIKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://api.x.ai/v1")!,
-            apiKey: key
+            apiKey: nil,
+            apiKeySecretName: EnhancementSecrets.internalName(for: id)
         )
         return try await client.enhance(
             text: text,
@@ -196,14 +231,15 @@ struct OpenRouterEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = await EnhancementSecrets.apiKey(for: id) else {
+        guard await EnhancementSecrets.hasAPIKey(for: id) else {
             throw EnhancementError.notConfigured
         }
         // OpenRouter recommends a referer + title for analytics; we
         // identify Clawix so the dashboard doesn't show "unknown".
         let client = EnhancementOpenAICompatibleClient(
             baseURL: URL(string: "https://openrouter.ai/api/v1")!,
-            apiKey: key,
+            apiKey: nil,
+            apiKeySecretName: EnhancementSecrets.internalName(for: id),
             extraHeaders: [
                 "HTTP-Referer": "https://github.com/clawic/clawix",
                 "X-Title": "Clawix"
@@ -251,8 +287,14 @@ struct CustomEnhancementProvider: EnhancementProvider {
         guard let baseURL = URL(string: raw) else {
             throw EnhancementError.notConfigured
         }
-        let key = await EnhancementSecrets.apiKey(for: id) // may be nil
-        let client = EnhancementOpenAICompatibleClient(baseURL: baseURL, apiKey: key)
+        let secretName = (await EnhancementSecrets.hasAPIKey(for: id))
+            ? EnhancementSecrets.internalName(for: id)
+            : nil
+        let client = EnhancementOpenAICompatibleClient(
+            baseURL: baseURL,
+            apiKey: nil,
+            apiKeySecretName: secretName
+        )
         return try await client.enhance(
             text: text,
             systemPrompt: systemPrompt,

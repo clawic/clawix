@@ -23,7 +23,12 @@ enum SystemSecrets {
     /// Replaces (or removes, if `value` is empty) the secret stored under
     /// `internalName` inside the system container. Throws when Secrets
     /// is not unlocked.
-    static func set(internalName: String, title: String, value: String) async throws {
+    static func set(
+        internalName: String,
+        title: String,
+        value: String,
+        allowedHosts: [String] = []
+    ) async throws {
         guard let store = SecretsManager.shared.store else {
             throw SecretsManager.Error.notUnlocked
         }
@@ -49,7 +54,20 @@ enum SystemSecrets {
                 )
             ]
         )
-        _ = try store.createSecret(in: container, draft: draft)
+        let created = try store.createSecret(in: container, draft: draft)
+        _ = try store.updateGovernance(
+            secretId: created.id,
+            to: Governance(
+                allowedHosts: allowedHosts,
+                allowedHeaders: ["Authorization", "x-api-key"],
+                allowInUrl: false,
+                allowInBody: false,
+                allowInEnv: false,
+                allowInsecureTransport: false,
+                allowLocalNetwork: false,
+                approvalMode: .auto
+            )
+        )
     }
 
     /// Reads the cleartext secret stored under `internalName`. Returns
@@ -78,6 +96,56 @@ enum SystemSecrets {
         return secret.trashedAt == nil
     }
 
+    /// Performs an outbound HTTP request through the Secrets broker. The
+    /// `value` field is injected inside the broker, so callers never receive
+    /// the API key as a Swift string.
+    static func brokerHttp(
+        internalName: String,
+        method: String,
+        url: URL,
+        headers: [String: String],
+        body: String?,
+        agent: String,
+        riskTier: String,
+        approvalSatisfied: Bool,
+        timeoutMs: Int? = nil
+    ) async throws -> ClawJSSecretsClient.BrokerHTTPResponse {
+        guard await has(internalName: internalName) else {
+            throw SecretsManager.Error.notUnlocked
+        }
+        if let host = url.host,
+           let store = SecretsManager.shared.store,
+           let secret = try? store.fetchSecret(byInternalName: internalName),
+           secret.governance.allowedHosts.isEmpty {
+            _ = try? store.updateGovernance(
+                secretId: secret.id,
+                to: Governance(
+                    allowedHosts: [host],
+                    allowedHeaders: ["Authorization", "x-api-key"],
+                    allowInUrl: false,
+                    allowInBody: false,
+                    allowInEnv: false,
+                    allowInsecureTransport: false,
+                    allowLocalNetwork: false,
+                    approvalMode: .auto
+                )
+            )
+        }
+        return try await ClawJSSecretsClient.local().brokerHttp(
+            method: method,
+            url: url,
+            headers: headers,
+            body: body,
+            agent: agent,
+            riskTier: riskTier,
+            declaredFields: [
+                .init(secretName: internalName, fieldName: "value", placement: "header")
+            ],
+            approvalSatisfied: approvalSatisfied,
+            timeoutMs: timeoutMs
+        )
+    }
+
     // MARK: - Container
 
     private static func ensureContainer(in store: ClawJSSecretsStore) throws -> VaultRecord {
@@ -97,7 +165,8 @@ enum EnhancementSecrets {
         try await SystemSecrets.set(
             internalName: internalName(for: provider),
             title: "Enhancement - \(provider.rawValue)",
-            value: key
+            value: key,
+            allowedHosts: allowedHosts(for: provider)
         )
     }
 
@@ -109,8 +178,32 @@ enum EnhancementSecrets {
         await SystemSecrets.has(internalName: internalName(for: provider))
     }
 
-    private static func internalName(for provider: EnhancementProviderID) -> String {
+    static func internalName(for provider: EnhancementProviderID) -> String {
         "enhancement.\(provider.rawValue)"
+    }
+
+    private static func allowedHosts(for provider: EnhancementProviderID) -> [String] {
+        switch provider {
+        case .openai:
+            return ["api.openai.com"]
+        case .anthropic:
+            return ["api.anthropic.com"]
+        case .groq:
+            return ["api.groq.com"]
+        case .mistral:
+            return ["api.mistral.ai"]
+        case .xai:
+            return ["api.x.ai"]
+        case .openrouter:
+            return ["openrouter.ai"]
+        case .custom:
+            guard let raw = UserDefaults.standard.string(forKey: EnhancementSettings.baseURLKey(for: provider.rawValue)),
+                  let host = URL(string: raw)?.host,
+                  !host.isEmpty else { return [] }
+            return [host]
+        case .ollama:
+            return ["localhost", "127.0.0.1"]
+        }
     }
 }
 
@@ -122,7 +215,8 @@ enum CloudTranscriptionSecrets {
         try await SystemSecrets.set(
             internalName: internalName(for: provider),
             title: "Transcription - \(provider.rawValue)",
-            value: key
+            value: key,
+            allowedHosts: allowedHosts(for: provider)
         )
     }
 
@@ -134,7 +228,21 @@ enum CloudTranscriptionSecrets {
         await SystemSecrets.has(internalName: internalName(for: provider))
     }
 
-    private static func internalName(for provider: CloudTranscriptionProvider) -> String {
+    static func internalName(for provider: CloudTranscriptionProvider) -> String {
         "transcription.\(provider.rawValue)"
+    }
+
+    private static func allowedHosts(for provider: CloudTranscriptionProvider) -> [String] {
+        switch provider {
+        case .groq:
+            return ["api.groq.com"]
+        case .deepgram:
+            return ["api.deepgram.com"]
+        case .custom:
+            guard let raw = UserDefaults.standard.string(forKey: "\(CloudTranscriptionProvider.baseURLKeyPrefix).\(provider.rawValue)"),
+                  let host = URL(string: raw)?.host,
+                  !host.isEmpty else { return [] }
+            return [host]
+        }
     }
 }

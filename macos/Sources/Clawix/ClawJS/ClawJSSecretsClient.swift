@@ -367,7 +367,54 @@ final class ClawJSSecretsClient {
         return envelope["value"]!
     }
 
-    // MARK: - Brokered execute
+    // MARK: - Brokered HTTP
+
+    struct BrokerHTTPDeclaredField {
+        let secretName: String
+        let fieldName: String
+        let placement: String
+    }
+
+    struct BrokerHTTPResponse: Codable {
+        let ok: Bool
+        let status: Int?
+        let headers: [String: String]?
+        let bodyText: String?
+    }
+
+    func brokerHttp(
+        method: String,
+        url: URL,
+        headers: [String: String],
+        body: String?,
+        agent: String,
+        riskTier: String,
+        declaredFields: [BrokerHTTPDeclaredField],
+        approvalSatisfied: Bool = false,
+        timeoutMs: Int? = nil
+    ) async throws -> BrokerHTTPResponse {
+        var payload: [String: Any] = [
+            "method": method,
+            "url": url.absoluteString,
+            "headers": headers,
+            "capability": "broker.http",
+            "agent": agent,
+            "riskTier": riskTier,
+            "declaredFields": declaredFields.map {
+                [
+                    "secretName": $0.secretName,
+                    "fieldName": $0.fieldName,
+                    "placement": $0.placement
+                ]
+            },
+            "approvalSatisfied": approvalSatisfied
+        ]
+        if let body { payload["body"] = body }
+        if let timeoutMs { payload["timeoutMs"] = timeoutMs }
+        return try await post("/v1/tenants/\(tenantId)/broker/http", body: payload)
+    }
+
+    // MARK: - Legacy brokered execute
 
     struct ExecutorOutput: Codable {
         let ok: Bool

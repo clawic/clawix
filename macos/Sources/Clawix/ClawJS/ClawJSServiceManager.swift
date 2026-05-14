@@ -658,6 +658,20 @@ final class ClawJSServiceManager: ObservableObject {
         mainDataDirectoryURL.appendingPathComponent("files", isDirectory: true)
     }
 
+    private static var frameworkGlobalRootURL: URL {
+        let env = ProcessInfo.processInfo.environment
+        if let override = env["CLAWIX_CLAW_HOME"], !override.isEmpty {
+            return URL(fileURLWithPath: (override as NSString).expandingTildeInPath, isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claw", isDirectory: true)
+    }
+
+    private static var frameworkSecretsDirectoryURL: URL {
+        frameworkGlobalRootURL
+            .appendingPathComponent("secrets", isDirectory: true)
+    }
+
     static func logFileURL(for service: ClawJSService) -> URL {
         let logs = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Logs/Clawix", isDirectory: true)
@@ -699,6 +713,8 @@ final class ClawJSServiceManager: ObservableObject {
         var env = ProcessInfo.processInfo.environment
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAW_WORKSPACE"] = workspaceURL.path
+        env["CLAW_HOME"] = frameworkGlobalRootURL.path
+        env["CLAWIX_CLAW_HOME"] = frameworkGlobalRootURL.path
         env["CLAW_DATA_DIR"] = mainDataDirectoryURL.path
         env["CLAWIX_CLAW_DATA_DIR"] = mainDataDirectoryURL.path
         env["CLAW_DB_PATH"] = mainDatabaseURL.path
@@ -860,6 +876,9 @@ final class ClawJSServiceManager: ObservableObject {
     private static func dataDirectoryURL(for service: ClawJSService) -> URL {
         if service == .database {
             return mainDataDirectoryURL
+        }
+        if service == .secrets {
+            return frameworkSecretsDirectoryURL
         }
         return workspaceURL
             .appendingPathComponent(".claw", isDirectory: true)

@@ -20,18 +20,11 @@ struct AnthropicEnhancementProvider: EnhancementProvider {
         context: EnhancementContext?,
         timeoutSeconds: Int
     ) async throws -> String {
-        guard let key = await EnhancementSecrets.apiKey(for: id) else {
+        guard await EnhancementSecrets.hasAPIKey(for: id) else {
             throw EnhancementError.notConfigured
         }
 
         let url = URL(string: "https://api.anthropic.com/v1/messages")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(key, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.timeoutInterval = TimeInterval(max(3, min(120, timeoutSeconds)))
-
         let userMessage = composeUserMessage(text: text, prompt: userPrompt, context: context)
         let body: [String: Any] = [
             "model": model,
@@ -42,12 +35,31 @@ struct AnthropicEnhancementProvider: EnhancementProvider {
                 ["role": "user", "content": userMessage]
             ]
         ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let bodyData = try JSONSerialization.data(withJSONObject: body)
+        guard let bodyText = String(data: bodyData, encoding: .utf8) else {
+            throw EnhancementError.decoding("Unable to encode request body.")
+        }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw EnhancementError.http(http.statusCode, bodyText)
+        let response = try await SystemSecrets.brokerHttp(
+            internalName: EnhancementSecrets.internalName(for: id),
+            method: "POST",
+            url: url,
+            headers: [
+                "Content-Type": "application/json",
+                "x-api-key": "{{\(EnhancementSecrets.internalName(for: id)).value}}",
+                "anthropic-version": "2023-06-01"
+            ],
+            body: bodyText,
+            agent: "clawix-enhancement",
+            riskTier: "cost",
+            approvalSatisfied: true,
+            timeoutMs: max(3, min(120, timeoutSeconds)) * 1000
+        )
+        guard response.ok else {
+            throw EnhancementError.http(response.status ?? 0, response.bodyText ?? "")
+        }
+        guard let responseBody = response.bodyText, let data = responseBody.data(using: .utf8) else {
+            throw EnhancementError.decoding("Empty broker response.")
         }
 
         struct MessagesResponse: Decodable {

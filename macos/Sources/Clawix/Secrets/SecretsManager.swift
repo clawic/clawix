@@ -10,8 +10,8 @@ import SecretsProxyCore
 /// consume (`store`, `audit`, `grants`, `vaults`, `secrets`, ...) so the
 /// migration to ClawJS Vault is invisible to them.
 ///
-/// Auth model: a process-wide bearer token is unused (the local Vault
-/// trusts loopback callers). Future remote consumers can plug in a token.
+/// Auth model: Clawix uses the per-session bearer token minted by the
+/// signed host supervisor. Loopback alone is not trusted for Secrets.
 @MainActor
 final class PendingApprovalRequest: ObservableObject, Identifiable {
     nonisolated let id = UUID()
