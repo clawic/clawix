@@ -351,6 +351,10 @@ final class AppState: ObservableObject {
     /// so the render log can attribute every `AppState.willChange` to a
     /// specific source.
     private var publishProbes: [AnyCancellable] = []
+    /// Most recent auto-reload time. Used to debounce the focus-driven
+    /// reload to at most one trigger per second.
+    var lastAutoReloadAt: Date?
+    var focusReloadObserver: NSObjectProtocol?
 
     /// Local-network WS server that exposes this AppState to the iOS
     /// companion. Lazily created so the property doesn't take a

@@ -94,11 +94,6 @@ extension AppState {
         }
     }
 
-    /// Most recent auto-reload time. Used to debounce the focus-driven
-    /// reload to at most one trigger per second.
-    var lastAutoReloadAt: Date?
-    var focusReloadObserver: NSObjectProtocol?
-
     func handleAppDidBecomeActive() {
         guard SyncSettings.autoReloadOnFocus else { return }
         guard let clawix, case .ready = clawix.status else { return }
