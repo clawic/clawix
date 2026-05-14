@@ -6,7 +6,7 @@ struct CatalogTabView: View {
     @ObservedObject var manager: IndexManager
     @State private var displayMode: DisplayMode = .grid
     @State private var selectedEntityId: String?
-    @AppStorage("clawix.index.catalog.displayMode") private var storedDisplayMode: String = DisplayMode.grid.rawValue
+    @AppStorage(ClawixPersistentSurfaceKeys.indexCatalogDisplayMode) private var storedDisplayMode: String = DisplayMode.grid.rawValue
 
     enum DisplayMode: String, Hashable {
         case grid

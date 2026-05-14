@@ -7,7 +7,7 @@ struct LifeSidebarSection: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var manager = LifeManager.shared
 
-    @AppStorage("SidebarLifeExpanded", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarLifeExpanded, store: SidebarPrefs.store)
     private var expanded: Bool = true
 
     var body: some View {

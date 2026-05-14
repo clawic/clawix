@@ -326,8 +326,8 @@ actor ClawixClient {
     }
 
     private func openStderrLog() {
-        let logsDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Logs/Clawix", isDirectory: true)
+        let logsDir = (try? ClawixPersistentSurfacePaths.logsRoot())
+            ?? FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
         try? FileManager.default.createDirectory(at: logsDir, withIntermediateDirectories: true)
         let logURL = logsDir.appendingPathComponent("clawix-app-server.log")
         if !FileManager.default.fileExists(atPath: logURL.path) {

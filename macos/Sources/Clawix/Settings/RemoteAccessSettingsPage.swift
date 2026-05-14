@@ -11,10 +11,10 @@ import ClawixEngine
 /// exactly as before (LAN + Bonjour + Tailscale).
 struct RemoteAccessSettingsPage: View {
 
-    @AppStorage("clawix.remote.coordinatorUrl") private var coordinatorUrlString: String = ""
-    @AppStorage("clawix.remote.email") private var email: String = ""
-    @AppStorage("clawix.remote.deviceId") private var savedDeviceId: String = ""
-    @AppStorage("clawix.remote.tenantId") private var savedTenantId: String = ""
+    @AppStorage(ClawixPersistentSurfaceKeys.remoteCoordinatorUrl) private var coordinatorUrlString: String = ""
+    @AppStorage(ClawixPersistentSurfaceKeys.remoteEmail) private var email: String = ""
+    @AppStorage(ClawixPersistentSurfaceKeys.remoteDeviceId) private var savedDeviceId: String = ""
+    @AppStorage(ClawixPersistentSurfaceKeys.remoteTenantId) private var savedTenantId: String = ""
 
     @State private var pasteToken: String = ""
     @State private var status: Status = .idle

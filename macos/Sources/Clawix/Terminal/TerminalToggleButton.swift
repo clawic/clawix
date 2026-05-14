@@ -5,7 +5,7 @@ import SwiftUI
 /// next to the file/editor opener: a "developer tools" group on the
 /// trailing edge of the chat chrome.
 struct TerminalToggleButton: View {
-    @AppStorage("TerminalPanelOpen", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.terminalPanelOpen, store: SidebarPrefs.store)
     private var open: Bool = false
     @State private var hovered: Bool = false
 

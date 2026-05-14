@@ -18,10 +18,10 @@ struct ContentView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject private var flags: FeatureFlags
 
-    @AppStorage("LeftSidebarWidth", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.leftSidebarWidth, store: SidebarPrefs.store)
     private var leftSidebarWidthRaw: Double = Double(sidebarDefaultWidth)
 
-    @AppStorage("RightSidebarWidth", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.rightSidebarWidth, store: SidebarPrefs.store)
     private var rightSidebarWidthRaw: Double = Double(rightSidebarDefaultWidth)
 
     @State private var sidebarResizeHovered = false

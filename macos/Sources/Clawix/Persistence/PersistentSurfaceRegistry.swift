@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 
 enum PersistentSurfaceKind: String, Codable {
     case root
@@ -96,6 +97,18 @@ enum ClawixPersistentSurface {
         node(id: id, kind: kind, name: name, key: key, storageClass: "nativeAppData", notes: notes)
     }
 
+    static func file(id: String, name: String, path: String, parentId: String? = nil, storageClass: String = "nativeAppData") -> PersistentSurfaceNode {
+        node(id: id, kind: .file, name: name, path: path, storageClass: storageClass, parentId: parentId)
+    }
+
+    static func cache(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
+        node(id: id, kind: .cache, name: name, path: path, storageClass: "cache", parentId: parentId, canonicality: "cache", lifecycle: "rebuildable")
+    }
+
+    static func persistentTemp(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
+        node(id: id, kind: .persistentTemp, name: name, path: path, storageClass: "nativeAppData", parentId: parentId, canonicality: "generated")
+    }
+
     private static func node(
         id: String,
         kind: PersistentSurfaceKind,
@@ -177,10 +190,70 @@ enum ClawixPersistentSurfaceRegistry {
                 parentId: "clawix.applicationSupport"
             ),
             ClawixPersistentSurface.folder(
+                id: "clawix.apps",
+                name: "Apps",
+                path: "~/Library/Application Support/Clawix/Apps",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.design",
+                name: "Design",
+                path: "~/Library/Application Support/Clawix/Design",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.clawjs",
+                name: "Embedded ClawJS",
+                path: "~/Library/Application Support/Clawix/clawjs",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.secrets",
+                name: "Secrets",
+                path: "~/Library/Application Support/Clawix/secrets",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.localModels",
+                name: "Local models",
+                path: "~/Library/Application Support/Clawix/local-models",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.dictationSounds",
+                name: "Dictation sounds",
+                path: "~/Library/Application Support/Clawix/dictation-sounds",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.captures",
+                name: "Quick Ask captures",
+                path: "~/Pictures/Clawix-Captures",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.cache(
+                id: "clawix.devCache",
+                name: "Development cache",
+                path: "~/Library/Caches/Clawix-Dev"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.logs",
+                name: "Logs",
+                path: "~/Library/Logs/Clawix",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
                 id: "clawix.bridgeState",
                 name: "Bridge state",
                 path: "~/.clawix/state",
                 parentId: "clawix.home",
+                storageClass: "hostOperational"
+            ),
+            ClawixPersistentSurface.file(
+                id: "clawix.bridgeStatus",
+                name: "Bridge status",
+                path: "~/.clawix/state/bridge-status.json",
+                parentId: "clawix.bridgeState",
                 storageClass: "hostOperational"
             ),
             ClawixPersistentSurface.folder(
@@ -208,7 +281,44 @@ enum ClawixPersistentSurfaceRegistry {
                 key: "clawix.feed.displayMode",
                 kind: .appStorageKey
             ),
-        ] + databaseSurfaceNodes
+        ] + preferenceSurfaceNodes + databaseSurfaceNodes
+    }
+
+    private static var preferenceSurfaceNodes: [PersistentSurfaceNode] {
+        [
+            ("clawix.prefs.sidebar.pinnedFilterDisabled", "Sidebar pinned filter disabled", ClawixPersistentSurfaceKeys.sidebarPinnedFilterDisabled, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.sidebar.chronoFilterDisabled", "Sidebar chrono filter disabled", ClawixPersistentSurfaceKeys.sidebarChronoFilterDisabled, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.sidebar.appsFeatureEnabled", "Apps feature enabled", ClawixPersistentSurfaceKeys.appsFeatureEnabled, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.sidebar.toolsOrder", "Sidebar tools order", ClawixPersistentSurfaceKeys.sidebarToolsOrder, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.sidebar.toolsHidden", "Sidebar tools hidden", ClawixPersistentSurfaceKeys.sidebarToolsHidden, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.terminal.panelOpen", "Terminal panel open", ClawixPersistentSurfaceKeys.terminalPanelOpen, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.terminal.panelHeight", "Terminal panel height", ClawixPersistentSurfaceKeys.terminalPanelHeight, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.apps.expanded", "Apps sidebar expanded", ClawixPersistentSurfaceKeys.sidebarAppsExpanded, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.apps.defaultInternetAllowed", "Apps default internet allowed", ClawixPersistentSurfaceKeys.appsDefaultInternetAllowed, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.apps.defaultCallAgent", "Apps default call agent", ClawixPersistentSurfaceKeys.appsDefaultCallAgent, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.design.expanded", "Design sidebar expanded", ClawixPersistentSurfaceKeys.sidebarDesignExpanded, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.life.expanded", "Life sidebar expanded", ClawixPersistentSurfaceKeys.sidebarLifeExpanded, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.content.leftSidebarWidth", "Left sidebar width", ClawixPersistentSurfaceKeys.leftSidebarWidth, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.content.rightSidebarWidth", "Right sidebar width", ClawixPersistentSurfaceKeys.rightSidebarWidth, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.secrets.advancedExpanded", "Secrets advanced expanded", ClawixPersistentSurfaceKeys.secretsAdvancedExpanded, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.advancedExpanded", "Dictation advanced expanded", ClawixPersistentSurfaceKeys.dictationAdvancedExpanded, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.remote.coordinatorUrl", "Remote coordinator URL", ClawixPersistentSurfaceKeys.remoteCoordinatorUrl, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.remote.email", "Remote email", ClawixPersistentSurfaceKeys.remoteEmail, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.remote.deviceId", "Remote device id", ClawixPersistentSurfaceKeys.remoteDeviceId, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.remote.tenantId", "Remote tenant id", ClawixPersistentSurfaceKeys.remoteTenantId, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.browser.historyApproval", "Browser history approval", ClawixPersistentSurfaceKeys.browserHistoryApproval, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.settings.usageDisplayMode", "Usage display mode", ClawixPersistentSurfaceKeys.usageDisplayMode, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.skills.autoImport", "Skills auto import", ClawixPersistentSurfaceKeys.skillsAutoImport, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.index.catalogDisplayMode", "Index catalog display mode", ClawixPersistentSurfaceKeys.indexCatalogDisplayMode, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.iot.tab", "IoT tab", ClawixPersistentSurfaceKeys.iotTab, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.publishing.calendarMode", "Publishing calendar mode", ClawixPersistentSurfaceKeys.publishingCalendarMode, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.publishing.homeTab", "Publishing home tab", ClawixPersistentSurfaceKeys.publishingHomeTab, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.binary.path", "Clawix binary path", ClawixPersistentSurfaceKeys.binaryPath, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.backgroundBridge.wasEnabled", "Background bridge was enabled", ClawixPersistentSurfaceKeys.backgroundBridgeWasEnabled, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.appleLanguages", "Apple languages", ClawixPersistentSurfaceKeys.appleLanguages, PersistentSurfaceKind.preferenceKey),
+        ].map { id, name, key, kind in
+            ClawixPersistentSurface.preference(id: id, name: name, key: key, kind: kind)
+        }
     }
 
     private static var databaseSurfaceNodes: [PersistentSurfaceNode] {
@@ -236,5 +346,103 @@ enum ClawixPersistentSurfaceRegistry {
                 }
                 + indexes.map { ClawixPersistentSurface.index($0, tableId: table.id, databaseId: localDatabaseId) }
         }
+    }
+}
+
+enum ClawixPersistentSurfaceKeys {
+    static let sidebarViewMode = "SidebarViewMode"
+    static let projectSortMode = "ProjectSortMode"
+    static let sidebarPinnedFilterDisabled = "SidebarPinnedFilterDisabled"
+    static let sidebarChronoFilterDisabled = "SidebarChronoFilterDisabled"
+    static let appsFeatureEnabled = "AppsFeatureEnabled"
+    static let sidebarToolsOrder = "SidebarToolsOrder"
+    static let sidebarToolsHidden = "SidebarToolsHidden"
+    static let terminalPanelOpen = "TerminalPanelOpen"
+    static let terminalPanelHeight = "TerminalPanelHeight"
+    static let sidebarAppsExpanded = "SidebarAppsExpanded"
+    static let appsDefaultInternetAllowed = "AppsDefaultInternetAllowed"
+    static let appsDefaultCallAgent = "AppsDefaultCallAgent"
+    static let sidebarDesignExpanded = "SidebarDesignExpanded"
+    static let sidebarLifeExpanded = "SidebarLifeExpanded"
+    static let leftSidebarWidth = "LeftSidebarWidth"
+    static let rightSidebarWidth = "RightSidebarWidth"
+    static let secretsAdvancedExpanded = "secrets.advancedExpanded"
+    static let dictationAdvancedExpanded = "dictation.advancedExpanded"
+    static let remoteCoordinatorUrl = "clawix.remote.coordinatorUrl"
+    static let remoteEmail = "clawix.remote.email"
+    static let remoteDeviceId = "clawix.remote.deviceId"
+    static let remoteTenantId = "clawix.remote.tenantId"
+    static let browserHistoryApproval = "clawix.browser.historyApproval"
+    static let usageDisplayMode = "clawix.settings.usage.displayMode"
+    static let skillsAutoImport = "ClawixSkillsAutoImport"
+    static let indexCatalogDisplayMode = "clawix.index.catalog.displayMode"
+    static let iotTab = "clawix.iot.tab"
+    static let publishingCalendarMode = "clawix.publishing.calendarMode.v1"
+    static let publishingHomeTab = "clawix.publishing.homeTab.v1"
+    static let feedDisplayMode = "clawix.feed.displayMode"
+    static let binaryPath = "ClawixBinaryPath"
+    static let backgroundBridgeWasEnabled = "clawix.backgroundBridge.wasEnabled"
+    static let appleLanguages = "AppleLanguages"
+}
+
+enum ClawixPersistentSurfacePaths {
+    static func applicationSupportRoot() throws -> URL {
+        try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent(components.clawix, isDirectory: true)
+    }
+
+    static func applicationSupportChild(_ child: String, isDirectory: Bool = true) throws -> URL {
+        try applicationSupportRoot().appendingPathComponent(child, isDirectory: isDirectory)
+    }
+
+    static func homeChild(_ child: String, isDirectory: Bool = true) -> URL {
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent(components.clawixHome, isDirectory: true)
+            .appendingPathComponent(child, isDirectory: isDirectory)
+    }
+
+    static func logsRoot() throws -> URL {
+        try FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent(components.logs, isDirectory: true)
+            .appendingPathComponent(components.clawix, isDirectory: true)
+    }
+
+    static func cacheRoot() throws -> URL {
+        try FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent(components.devCache, isDirectory: true)
+    }
+
+    static func picturesChild(_ child: String, isDirectory: Bool = true) -> URL {
+        FileManager.default.urls(for: .picturesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(child, isDirectory: isDirectory)
+    }
+
+    enum components {
+        static let clawix = "Clawix"
+        static let clawixHome = ".clawix"
+        static let clawWorkspace = ".claw"
+        static let logs = "Logs"
+        static let devCache = "Clawix-Dev"
+        static let apps = "Apps"
+        static let design = "Design"
+        static let clawjs = "clawjs"
+        static let secrets = "secrets"
+        static let localModels = "local-models"
+        static let dictationAudio = "dictation-audio"
+        static let dictationAudioDebug = "dictation-audio-debug"
+        static let dictationSounds = "dictation-sounds"
+        static let captures = "Clawix-Captures"
+        static let bridgeStatusFile = "bridge-status.json"
+        static let sqlite = "clawix.sqlite"
+    }
+}
+
+enum ClawixRegisteredDatabaseQueue {
+    static func open(path: String, configuration: Configuration = Configuration()) throws -> DatabaseQueue {
+        try DatabaseQueue(path: path, configuration: configuration)
+    }
+
+    static func open(url: URL, configuration: Configuration = Configuration()) throws -> DatabaseQueue {
+        try open(path: url.path, configuration: configuration)
     }
 }

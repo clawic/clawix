@@ -194,9 +194,9 @@ struct SidebarView: View {
     @State private var projectsHeaderHovered: Bool = false
     @State private var newProjectMenuOpen: Bool = false
     @State private var organizeMenuOpen: Bool = false
-    @AppStorage("SidebarViewMode", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarViewMode, store: SidebarPrefs.store)
     private var viewModeRaw: String = SidebarViewMode.grouped.rawValue
-    @AppStorage("ProjectSortMode", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.projectSortMode, store: SidebarPrefs.store)
     private var projectSortModeRaw: String = ProjectSortMode.recent.rawValue
     @State private var pinnedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarPinnedExpanded", default: true)
     @State private var pinnedFilterMenuOpen: Bool = false
@@ -204,12 +204,12 @@ struct SidebarView: View {
     /// projects; the literal `__none__` represents the implicit "no project"
     /// bucket. Persisted as a single string so the existing `SidebarPrefs`
     /// `UserDefaults` suite can hold it without a custom codec.
-    @AppStorage("SidebarPinnedFilterDisabled", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarPinnedFilterDisabled, store: SidebarPrefs.store)
     private var pinnedFilterDisabledRaw: String = ""
     /// Mirror of `pinnedFilterDisabledRaw` for the chronological "All chats"
     /// list. Same comma-separated UUID + `__none__` sentinel format. Edited
     /// from inside the Organize popup's "Filter > By project" submenu.
-    @AppStorage("SidebarChronoFilterDisabled", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarChronoFilterDisabled, store: SidebarPrefs.store)
     private var chronoFilterDisabledRaw: String = ""
     @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarChronoExpanded", default: true)
     @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
@@ -218,19 +218,19 @@ struct SidebarView: View {
     @State private var toolsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarToolsExpanded", default: true)
     /// Master switch for the Apps surface. Mirrors the Settings toggle
     /// that lives on `SidebarPrefs.store`; defaults on for new users.
-    @AppStorage("AppsFeatureEnabled", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.appsFeatureEnabled, store: SidebarPrefs.store)
     private var appsFeatureEnabled: Bool = true
     /// Custom order of tools, persisted as a comma-separated list of
     /// catalog ids. Empty string means "use the catalog's natural order".
     /// New tools added to the catalog in future releases append at the
     /// end of the saved order on first launch.
-    @AppStorage("SidebarToolsOrder", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarToolsOrder, store: SidebarPrefs.store)
     private var toolsOrderRaw: String = ""
     /// Hidden tools, persisted as a comma-separated list of catalog ids.
     /// Toggled from the section's filter popup; tools in this set are
     /// dropped from the rendered list but stay in the saved order so
     /// re-enabling them restores their previous position.
-    @AppStorage("SidebarToolsHidden", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarToolsHidden, store: SidebarPrefs.store)
     private var toolsHiddenRaw: String = ""
     @State private var toolsFilterMenuOpen: Bool = false
     @State private var chronoLimit: Int = 100

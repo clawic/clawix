@@ -23,7 +23,7 @@ struct SecretsSettingsPage: View {
     @State private var showBackupSheet = false
     @State private var showRestoreSheet = false
     @State private var pendingBackupData: Data?
-    @AppStorage("secrets.advancedExpanded") private var advancedExpanded = false
+    @AppStorage(ClawixPersistentSurfaceKeys.secretsAdvancedExpanded) private var advancedExpanded = false
 
     var body: some View {
         ScrollView {

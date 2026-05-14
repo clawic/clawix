@@ -7,7 +7,7 @@ import KeyboardShortcuts
 /// `AppDelegate.applicationDidFinishLaunching`. Mirrors the pattern of
 /// `DictationShortcutsInstaller`.
 ///
-/// The toggle handler only flips the `@AppStorage("TerminalPanelOpen")`
+/// The toggle handler only flips the registered terminal-panel-open preference
 /// flag. Whether the panel actually renders is decided downstream by
 /// `ContentBodyWithTerminal`, which gates on the current route — so
 /// pressing the shortcut on a non-chat screen does nothing visible

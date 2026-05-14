@@ -8,7 +8,7 @@ struct DesignSidebarSection: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var store: DesignStore = .shared
 
-    @AppStorage("SidebarDesignExpanded", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarDesignExpanded, store: SidebarPrefs.store)
     private var expanded: Bool = true
 
     var body: some View {

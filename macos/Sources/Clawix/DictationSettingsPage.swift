@@ -44,7 +44,7 @@ struct DictationSettingsPage: View {
 
     @AppStorage(DictationOverlay.styleKey) private var recorderStyle = DictationRecorderStyle.mini.rawValue
 
-    @AppStorage("dictation.advancedExpanded") private var advancedExpanded = false
+    @AppStorage(ClawixPersistentSurfaceKeys.dictationAdvancedExpanded) private var advancedExpanded = false
 
     @StateObject private var replacementStore = DictationReplacementStore.shared
     @StateObject private var vocabulary = VocabularyManager.shared

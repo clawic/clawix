@@ -305,9 +305,9 @@ struct ContentBodyWithTerminal<Content: View>: View {
     let windowHeight: CGFloat
     let content: () -> Content
 
-    @AppStorage("TerminalPanelOpen", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.terminalPanelOpen, store: SidebarPrefs.store)
     private var panelOpenRaw: Bool = false
-    @AppStorage("TerminalPanelHeight", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.terminalPanelHeight, store: SidebarPrefs.store)
     private var panelHeightRaw: Double = Double(TerminalPanelMetrics.defaultHeight)
     @State private var resizeHovered: Bool = false
 

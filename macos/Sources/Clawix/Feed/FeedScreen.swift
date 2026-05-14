@@ -16,7 +16,7 @@ enum FeedDisplayMode: String, CaseIterable, RawRepresentable {
 
 struct FeedScreen: View {
     @ObservedObject var manager: ProfileManager
-    @AppStorage("clawix.feed.displayMode") private var rawMode: String = FeedDisplayMode.list.rawValue
+    @AppStorage(ClawixPersistentSurfaceKeys.feedDisplayMode) private var rawMode: String = FeedDisplayMode.list.rawValue
     @State private var verticalFilter: String?
 
     private var mode: FeedDisplayMode {

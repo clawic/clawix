@@ -11,7 +11,7 @@ struct AppsSidebarSection: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var appsStore: AppsStore = .shared
 
-    @AppStorage("SidebarAppsExpanded", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.sidebarAppsExpanded, store: SidebarPrefs.store)
     private var expanded: Bool = true
     @State private var pendingDelete: AppRecord?
 

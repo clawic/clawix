@@ -32,8 +32,8 @@ final class EditorStore: ObservableObject {
             create: true
         )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
         return support
-            .appendingPathComponent("Clawix")
-            .appendingPathComponent("Design")
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.design, isDirectory: true)
             .appendingPathComponent("documents")
     }
 

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrowserUsagePage: View {
     @AppStorage(BrowserPermissionPolicy.approvalStorageKey) private var approval: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
-    @AppStorage("clawix.browser.historyApproval") private var history: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
+    @AppStorage(ClawixPersistentSurfaceKeys.browserHistoryApproval) private var history: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
     @State private var browsingData: BrowserPermissionPolicy.BrowsingDataKind = .all
     @State private var clearStatus: String?
     @State private var clearingBrowsingData = false

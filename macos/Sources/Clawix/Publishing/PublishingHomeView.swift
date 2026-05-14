@@ -9,7 +9,7 @@ struct PublishingHomeView: View {
 
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var manager: PublishingManager
-    @AppStorage("clawix.publishing.homeTab.v1") private var tabRaw: String = HomeTab.calendar.rawValue
+    @AppStorage(ClawixPersistentSurfaceKeys.publishingHomeTab) private var tabRaw: String = HomeTab.calendar.rawValue
 
     private var tab: Binding<HomeTab> {
         Binding(

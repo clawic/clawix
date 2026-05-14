@@ -54,7 +54,9 @@ final class AppsStore: ObservableObject {
             appropriateFor: nil,
             create: true
         )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        return support.appendingPathComponent("Clawix").appendingPathComponent("Apps")
+        return support
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.apps, isDirectory: true)
     }
 
     /// Bring `apps` in sync with whatever currently lives on disk. Cheap

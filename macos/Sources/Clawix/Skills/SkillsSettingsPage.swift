@@ -10,7 +10,7 @@ import SwiftUI
 /// - "Re-sync all" action.
 struct SkillsSettingsPage: View {
     @EnvironmentObject var appState: AppState
-    @AppStorage("ClawixSkillsAutoImport") private var autoImportEnabled: Bool = true
+    @AppStorage(ClawixPersistentSurfaceKeys.skillsAutoImport) private var autoImportEnabled: Bool = true
 
     @State private var newTargetLabel: String = ""
     @State private var newTargetHome: String = ""

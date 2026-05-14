@@ -11,7 +11,7 @@ struct PublishingCalendarView: View {
 
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var manager: PublishingManager
-    @AppStorage("clawix.publishing.calendarMode.v1") private var modeRaw: String = CalendarMode.month.rawValue
+    @AppStorage(ClawixPersistentSurfaceKeys.publishingCalendarMode) private var modeRaw: String = CalendarMode.month.rawValue
     @State private var anchorDate: Date = Date()
     @State private var pollerTask: Task<Void, Never>?
 

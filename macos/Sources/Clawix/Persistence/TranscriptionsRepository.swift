@@ -254,7 +254,9 @@ enum DictationAudioStorage {
             appropriateFor: nil,
             create: true
         )
-        let dir = support.appendingPathComponent("Clawix/dictation-audio", isDirectory: true)
+        let dir = support
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.dictationAudio, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -273,7 +275,9 @@ enum DictationAudioStorage {
             appropriateFor: nil,
             create: true
         )
-        let dir = support.appendingPathComponent("Clawix/dictation-audio-debug", isDirectory: true)
+        let dir = support
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.dictationAudioDebug, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }

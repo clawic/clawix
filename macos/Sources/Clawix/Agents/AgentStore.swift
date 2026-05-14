@@ -57,7 +57,7 @@ final class AgentStore: ObservableObject {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
         }
         let url = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claw", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
         return url
     }
 

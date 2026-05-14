@@ -17,7 +17,7 @@ struct IoTScreen: View {
     }
 
     @EnvironmentObject private var manager: IoTManager
-    @AppStorage("clawix.iot.tab") private var tabRaw: String = Tab.devices.rawValue
+    @AppStorage(ClawixPersistentSurfaceKeys.iotTab) private var tabRaw: String = Tab.devices.rawValue
     @State private var catastrophicApproval: ApprovalRecord?
 
     private var selectedTab: Binding<Tab> {

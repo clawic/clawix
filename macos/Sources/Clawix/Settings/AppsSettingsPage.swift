@@ -9,11 +9,11 @@ struct AppsSettingsPage: View {
     @ObservedObject private var appsStore: AppsStore = .shared
     @EnvironmentObject var appState: AppState
 
-    @AppStorage("AppsFeatureEnabled", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.appsFeatureEnabled, store: SidebarPrefs.store)
     private var appsFeatureEnabled: Bool = true
-    @AppStorage("AppsDefaultInternetAllowed", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.appsDefaultInternetAllowed, store: SidebarPrefs.store)
     private var defaultInternetAllowed: Bool = false
-    @AppStorage("AppsDefaultCallAgent", store: SidebarPrefs.store)
+    @AppStorage(ClawixPersistentSurfaceKeys.appsDefaultCallAgent, store: SidebarPrefs.store)
     private var defaultCallAgent: Bool = true
 
     @State private var pendingDelete: AppRecord?

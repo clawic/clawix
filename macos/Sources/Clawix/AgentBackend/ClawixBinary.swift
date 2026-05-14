@@ -31,11 +31,11 @@ enum ClawixBinary {
     /// UserDefaults so the next launch can reuse it.
     static var manualOverride: URL? {
         get {
-            UserDefaults.standard.string(forKey: "ClawixBinaryPath")
+            UserDefaults.standard.string(forKey: ClawixPersistentSurfaceKeys.binaryPath)
                 .flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
         }
         set {
-            UserDefaults.standard.set(newValue?.path, forKey: "ClawixBinaryPath")
+            UserDefaults.standard.set(newValue?.path, forKey: ClawixPersistentSurfaceKeys.binaryPath)
         }
     }
 

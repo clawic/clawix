@@ -30,7 +30,7 @@ enum UsageDisplayMode: String, CaseIterable {
 
 struct UsagePage: View {
     @EnvironmentObject var appState: AppState
-    @AppStorage("clawix.settings.usage.displayMode") private var displayMode: UsageDisplayMode = .used
+    @AppStorage(ClawixPersistentSurfaceKeys.usageDisplayMode) private var displayMode: UsageDisplayMode = .used
 
     /// Per-bucket entries other than the base "codex" id (which mirrors
     /// the general snapshot we already render at the top). Sorted by
