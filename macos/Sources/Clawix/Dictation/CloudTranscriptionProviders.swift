@@ -107,7 +107,7 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         if !response.ok {
             throw CloudError.http(response.status ?? 0, response.bodyText ?? "")
         }
-        let data = brokerData(response)
+        let data = try brokerData(response)
         struct DeepgramResponse: Decodable {
             struct Result: Decodable {
                 struct Channel: Decodable {

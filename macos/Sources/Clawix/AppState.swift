@@ -7,7 +7,7 @@ import ClawixEngine
 
 private let daemonBridgePort: UInt16 = 24080
 
-private func rolloutChatMessages(from result: RolloutReader.ReadResult) -> [ChatMessage] {
+func rolloutChatMessages(from result: RolloutReader.ReadResult) -> [ChatMessage] {
     result.entries.map { e in
         ChatMessage(
             role: e.role == .user ? .user : .assistant,
@@ -431,7 +431,7 @@ final class AppState: ObservableObject {
     private var persistTask: Task<Void, Never>?
     /// Per-chat git probes. `git status` can block on large repos or
     /// filesystem state, so chat navigation must never wait on it.
-    private var gitInspectionTasks: [UUID: Task<Void, Never>] = [:]
+    var gitInspectionTasks: [UUID: Task<Void, Never>] = [:]
 
     init() {
         // Mesh store has to be wired before any other stored-property
