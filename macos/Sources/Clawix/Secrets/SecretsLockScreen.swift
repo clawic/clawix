@@ -9,6 +9,7 @@ struct SecretsLockScreen: View {
     @State private var shakeCount: CGFloat = 0
     @State private var recoveryHovered: Bool = false
     @State private var showPassword: Bool = false
+    @State private var canUseBiometricUnlock: Bool = false
     @FocusState private var passwordFocused: Bool
 
     private let columnWidth: CGFloat = 380
@@ -75,6 +76,17 @@ struct SecretsLockScreen: View {
                 .padding(.bottom, 14)
                 .animation(.easeOut(duration: 0.18), value: canUnlock)
 
+                if canUseBiometricUnlock {
+                    Button(action: unlockWithBiometrics) {
+                        Text("Unlock with Touch ID")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(SecretsUnlockButtonStyle(enabled: !isUnlocking))
+                    .frame(width: columnWidth)
+                    .disabled(isUnlocking)
+                    .padding(.bottom, 14)
+                }
+
                 Button {
                     showRecovery = true
                 } label: {
@@ -94,6 +106,7 @@ struct SecretsLockScreen: View {
             RecoveryPhraseSheet(isPresented: $showRecovery)
         }
         .onAppear {
+            canUseBiometricUnlock = SecretsReauthentication.canUseBiometricUnlock()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 passwordFocused = true
             }
@@ -122,6 +135,27 @@ struct SecretsLockScreen: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                         passwordFocused = true
                     }
+                }
+            }
+        }
+    }
+
+    private func unlockWithBiometrics() {
+        guard !isUnlocking else { return }
+        withAnimation(.easeOut(duration: 0.18)) { error = nil }
+        isWorking = true
+        Task {
+            defer { isWorking = false }
+            do {
+                try await vault.unlockWithBiometrics()
+                password = ""
+            } catch {
+                withAnimation(.easeOut(duration: 0.18)) {
+                    self.error = "Could not unlock locally. Use your master password."
+                }
+                await MainActor.run {
+                    NSHapticFeedbackManager.defaultPerformer
+                        .perform(.generic, performanceTime: .now)
                 }
             }
         }

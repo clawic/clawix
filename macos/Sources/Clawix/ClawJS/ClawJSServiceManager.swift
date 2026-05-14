@@ -46,6 +46,7 @@ final class ClawJSServiceManager: ObservableObject {
     /// admin password so the app never touches the system Keychain.
     private var sessionAdminTokens: [ClawJSService: String] = [:]
     private var sessionSignedHostTokens: [ClawJSService: String] = [:]
+    private var sessionHostAssertionKeys: [ClawJSService: String] = [:]
 
     /// Services that need a per-session bearer/shared token. The token is
     /// bootstrapped over anonymous stdin, never process environment or disk.
@@ -496,6 +497,7 @@ final class ClawJSServiceManager: ObservableObject {
 
             let adminToken = ensureAdminToken(for: service)
             let signedHostToken = ensureSignedHostToken(for: service)
+            let hostAssertionKey = ensureHostAssertionKey(for: service)
 
             let process = Process()
             process.executableURL = ClawJSRuntime.nodeBinaryURL
@@ -513,6 +515,7 @@ final class ClawJSServiceManager: ObservableObject {
                 bootstrapData = try Self.secretsBootstrapData(
                     adminToken: adminToken,
                     signedHostToken: signedHostToken,
+                    hostAssertionKeyBase64: hostAssertionKey,
                     platformKey: try SecretsPlatformKey.loadOrCreate()
                 )
                 process.standardInput = bootstrapPipe
@@ -764,6 +767,7 @@ final class ClawJSServiceManager: ObservableObject {
         }
         env.removeValue(forKey: "CLAW_SECRETS_TOKEN")
         env.removeValue(forKey: "CLAW_SECRETS_KEK_BASE64")
+        env.removeValue(forKey: "CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64")
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAW_WORKSPACE"] = workspaceURL.path
         env["CLAW_HOME"] = frameworkGlobalRootURL.path
@@ -828,13 +832,21 @@ final class ClawJSServiceManager: ObservableObject {
         return env
     }
 
-    private static func secretsBootstrapData(adminToken: String?, signedHostToken: String?, platformKey: Data?) throws -> Data {
+    private static func secretsBootstrapData(
+        adminToken: String?,
+        signedHostToken: String?,
+        hostAssertionKeyBase64: String?,
+        platformKey: Data?
+    ) throws -> Data {
         var payload: [String: String] = [:]
         if let adminToken {
             payload["adminToken"] = adminToken
         }
         if let signedHostToken {
             payload["signedHostToken"] = signedHostToken
+        }
+        if let hostAssertionKeyBase64 {
+            payload["hostAssertionKeyBase64"] = hostAssertionKeyBase64
         }
         if let platformKey {
             payload["kekBase64"] = platformKey.base64EncodedString()
@@ -863,6 +875,10 @@ final class ClawJSServiceManager: ObservableObject {
         sessionSignedHostTokens[service]
     }
 
+    func hostAssertionKeyIfSpawned(for service: ClawJSService) -> String? {
+        sessionHostAssertionKeys[service]
+    }
+
     /// Returns the existing per-session token or generates a fresh one and
     /// stores it. `nil` for services that don't authenticate admin via token.
     private func ensureAdminToken(for service: ClawJSService) -> String? {
@@ -885,6 +901,14 @@ final class ClawJSServiceManager: ObservableObject {
             .replacingOccurrences(of: "=", with: "")
         sessionSignedHostTokens[service] = token
         return token
+    }
+
+    private func ensureHostAssertionKey(for service: ClawJSService) -> String? {
+        guard service == .secrets else { return nil }
+        if let existing = sessionHostAssertionKeys[service] { return existing }
+        let key = SecureRandom.bytes(32).base64EncodedString()
+        sessionHostAssertionKeys[service] = key
+        return key
     }
 
     /// Filesystem fallback only for legacy services that still own a token

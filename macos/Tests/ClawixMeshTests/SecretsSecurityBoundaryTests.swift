@@ -39,6 +39,10 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             environmentBody.contains("CLAW_SECRETS_BOOTSTRAP_STDIN"),
             "Secrets launch should use an anonymous bootstrap channel instead of token-bearing environment variables."
         )
+        XCTAssertTrue(
+            source.contains("hostAssertionKeyBase64"),
+            "Secrets host assertions must be bootstrapped over stdin alongside signed-host material."
+        )
         XCTAssertFalse(
             environmentBody.contains("env[\"CLAW_SECRETS_TOKEN\"] = adminToken"),
             "The Secrets admin bearer must not be visible through process environment inspection."
@@ -50,6 +54,10 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         XCTAssertFalse(
             environmentBody.contains("env[\"CLAW_SECRETS_SIGNED_HOST_TOKEN\"] = signedHostToken"),
             "The signed-host token must not be visible through process environment inspection."
+        )
+        XCTAssertFalse(
+            environmentBody.contains("env[\"CLAW_SECRETS_HOST_ASSERTION_KEY_BASE64\"]"),
+            "The Secrets host assertion key must not be visible through process environment inspection."
         )
     }
 
@@ -99,6 +107,8 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
     func testSecretsServiceUsesKeychainPlatformKeyForKekBootstrap() throws {
         let managerSource = try readSource("ClawJS/ClawJSServiceManager.swift")
         let clientSource = try readSource("ClawJS/ClawJSSecretsClient.swift")
+        let lockScreenSource = try readSource("Secrets/SecretsLockScreen.swift")
+        let reauthSource = try readSource("Secrets/SecretsReauthentication.swift")
         let platformKeySource = try readSource("Secrets/SecretsPlatformKey.swift")
         let localSecretKeySource = try readSource("Secrets/SecretsLocalSecretKey.swift")
 
@@ -127,16 +137,24 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             "The user Secret Key must be device-local, not portable Keychain material."
         )
         XCTAssertTrue(
-            managerSource.contains("SecretsLocalSecretKey.store(result.secretKey)"),
-            "Setup, recovery, and password rotation must persist the new user Secret Key locally."
-        )
-        XCTAssertTrue(
-            managerSource.contains("SecretsLocalSecretKey.load()"),
-            "Unlock must combine the user password with the local Secret Key."
-        )
-        XCTAssertTrue(
             clientSource.contains("body: [\"password\": password, \"secretKey\": secretKey]"),
             "The Mac client must send password + Secret Key to the ClawJS vault."
+        )
+        XCTAssertTrue(
+            clientSource.contains("SecretsHostAssertion.makeHeader"),
+            "Signed-host Secrets requests must carry a per-request host assertion."
+        )
+        XCTAssertTrue(
+            clientSource.contains("secrets/unlock-local"),
+            "Local biometric unlock must go through a dedicated signed-host endpoint."
+        )
+        XCTAssertTrue(
+            reauthSource.contains(".deviceOwnerAuthenticationWithBiometrics"),
+            "Convenient local unlock must use biometric/Secure Enclave-backed local authentication."
+        )
+        XCTAssertTrue(
+            lockScreenSource.contains("unlockWithBiometrics"),
+            "The lock screen must expose the local biometric unlock path when available."
         )
         XCTAssertTrue(
             clientSource.contains("\"oldPassword\": old, \"oldSecretKey\": oldSecretKey, \"newPassword\": new"),

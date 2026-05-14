@@ -20,18 +20,21 @@ final class ClawJSSecretsClient {
     private let tenantId: String
     private var bearerToken: String?
     private var signedHostToken: String?
+    private var hostAssertionKeyBase64: String?
     private let session: URLSession
 
     init(
         baseURL: URL,
         tenantId: String = ClawJSSecretsClient.defaultTenantId,
         bearerToken: String? = nil,
-        signedHostToken: String? = nil
+        signedHostToken: String? = nil,
+        hostAssertionKeyBase64: String? = nil
     ) {
         self.baseURL = baseURL
         self.tenantId = tenantId
         self.bearerToken = bearerToken
         self.signedHostToken = signedHostToken
+        self.hostAssertionKeyBase64 = hostAssertionKeyBase64
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
@@ -44,10 +47,12 @@ final class ClawJSSecretsClient {
         let token = bearerToken
             ?? ClawJSServiceManager.shared.adminTokenIfSpawned(for: .secrets)
         let signedHostToken = ClawJSServiceManager.shared.signedHostTokenIfSpawned(for: .secrets)
+        let hostAssertionKeyBase64 = ClawJSServiceManager.shared.hostAssertionKeyIfSpawned(for: .secrets)
         return ClawJSSecretsClient(
             baseURL: URL(string: "http://127.0.0.1:\(ClawJSService.secrets.port)")!,
             bearerToken: token,
-            signedHostToken: signedHostToken
+            signedHostToken: signedHostToken,
+            hostAssertionKeyBase64: hostAssertionKeyBase64
         )
     }
 
@@ -57,6 +62,10 @@ final class ClawJSSecretsClient {
 
     func setSignedHostToken(_ token: String?) {
         self.signedHostToken = token
+    }
+
+    func setHostAssertionKey(_ keyBase64: String?) {
+        self.hostAssertionKeyBase64 = keyBase64
     }
 
     // MARK: - Secrets lifecycle
@@ -91,6 +100,13 @@ final class ClawJSSecretsClient {
         let _: [String: AnyCodable] = try await post(
             "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/unlock",
             body: ["password": password, "secretKey": secretKey]
+        )
+    }
+
+    func unlockLocal(reauthSatisfied: Bool) async throws {
+        let _: [String: AnyCodable] = try await post(
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/unlock-local",
+            body: ["reauthSatisfied": reauthSatisfied]
         )
     }
 
@@ -658,6 +674,12 @@ final class ClawJSSecretsClient {
         }
         if let signedHostToken {
             request.setValue(signedHostToken, forHTTPHeaderField: "x-claw-signed-host-token")
+        }
+        if signedHostToken != nil, let hostAssertionKeyBase64 {
+            request.setValue(
+                try SecretsHostAssertion.makeHeader(keyBase64: hostAssertionKeyBase64, method: method, path: path),
+                forHTTPHeaderField: "x-claw-secrets-host-assertion"
+            )
         }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {

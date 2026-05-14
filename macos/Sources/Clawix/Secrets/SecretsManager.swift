@@ -209,6 +209,24 @@ final class SecretsManager: ObservableObject {
         }
     }
 
+    func unlockWithBiometrics() async throws {
+        guard state == .locked else { throw Error.invalidState }
+        state = .unlocking
+        do {
+            try await SecretsReauthentication.requireBiometricUnlock(reason: "Unlock Secrets locally in Clawix.")
+            try await client.unlockLocal(reauthSatisfied: true)
+            try await mountStores(seedDefaultVault: false)
+            state = .unlocked
+            scheduleAutoLock()
+            Task { await AnomalyNotifier.requestAuthorizationIfNeeded() }
+            _ = runAnomalyDetector()
+        } catch {
+            state = .locked
+            lastError = Self.userFacingError(error)
+            throw error
+        }
+    }
+
     func recover(phrase: [String], newPassword: String) async throws -> EmergencyKit {
         let joined = phrase.map { $0.lowercased() }.joined(separator: " ")
         let result = try await client.recover(phrase: joined, newPassword: newPassword)
