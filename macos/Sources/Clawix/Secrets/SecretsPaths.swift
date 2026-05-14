@@ -14,7 +14,9 @@ enum SecretsPaths {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first!
-        return base.appendingPathComponent("Clawix/secrets", isDirectory: true)
+        return base
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.secrets, isDirectory: true)
     }
 
     static var databaseFile: URL {
