@@ -288,7 +288,18 @@ PY
         cp -R "$OVERLAY_BIN/." "$CLAWJS_DEST/node_modules/@clawjs/cli/bin/"
     fi
     copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/core"
-    copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/clawjs-node" "$CLAWJS_DEST/node_modules/@clawjs/claw"
+    OVERLAY_CLAW="$CLAWJS_DEV_OVERLAY/packages/clawjs-node"
+    if [[ -d "$OVERLAY_CLAW" ]]; then
+        copy_overlay_package "$OVERLAY_CLAW" "$CLAWJS_DEST/node_modules/@clawjs/claw"
+        (
+            cd "$CLAWJS_DEST/node_modules/@clawjs/claw"
+            npm_config_arch=arm64 \
+            npm_config_target_arch=arm64 \
+            npm_config_target_platform=darwin \
+            run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
+        )
+        copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/claw/node_modules/@clawjs/core"
+    fi
     OVERLAY_DB="$CLAWJS_DEV_OVERLAY/packages/clawjs-database"
     if [[ -d "$OVERLAY_DB" ]]; then
         build_overlay_package "$OVERLAY_DB"
