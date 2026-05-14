@@ -12,7 +12,7 @@ let rightSidebarDefaultWidth: CGFloat = 720
 let rightSidebarMaxWidth: CGFloat = 1080
 let rightSidebarMinVisibleWidth: CGFloat = 380
 let rightSidebarCloseThreshold: CGFloat = 320
-private let contentCornerRadius: CGFloat = 14
+let contentCornerRadius: CGFloat = 14
 
 struct ContentView: View {
     @EnvironmentObject var appState: AppState

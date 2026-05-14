@@ -7,10 +7,6 @@
       "lines": 1991,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
-    "macos/Sources/Clawix/ComposerView.swift": {
-      "lines": 2559,
-      "reason": "Existing large UI surface; extract subviews, interactions, adapters, and state projections before expanding."
-    },
     "macos/Helpers/Bridged/Sources/clawix-bridge/main.swift": {
       "lines": 1384,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
