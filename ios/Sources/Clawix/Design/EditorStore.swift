@@ -9,6 +9,10 @@ import UIKit
 @MainActor
 final class EditorStore: ObservableObject {
     static let shared = EditorStore()
+    private static let fallbackApplicationSupportPath = "Library/Application Support"
+    private static let appSupportRootName = "Clawix"
+    private static let designRootName = "Design"
+    private static let documentsRootName = "documents"
 
     @Published private(set) var documents: [EditorDocument] = []
 
@@ -28,11 +32,11 @@ final class EditorStore: ObservableObject {
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(fallbackApplicationSupportPath)
         return support
-            .appendingPathComponent("Clawix")
-            .appendingPathComponent("Design")
-            .appendingPathComponent("documents")
+            .appendingPathComponent(appSupportRootName)
+            .appendingPathComponent(designRootName)
+            .appendingPathComponent(documentsRootName)
     }
 
     func documentDir(for id: String) -> URL { rootURL.appendingPathComponent(id) }

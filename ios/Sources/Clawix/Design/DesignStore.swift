@@ -18,6 +18,9 @@ import Foundation
 @MainActor
 final class DesignStore: ObservableObject {
     static let shared = DesignStore()
+    private static let fallbackApplicationSupportPath = "Library/Application Support"
+    private static let appSupportRootName = "Clawix"
+    private static let designRootName = "Design"
 
     @Published private(set) var styles: [StyleManifest] = []
     @Published private(set) var templates: [TemplateManifest] = []
@@ -46,10 +49,10 @@ final class DesignStore: ObservableObject {
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(fallbackApplicationSupportPath)
         return support
-            .appendingPathComponent("Clawix")
-            .appendingPathComponent("Design")
+            .appendingPathComponent(appSupportRootName)
+            .appendingPathComponent(designRootName)
     }
 
     var stylesRootURL: URL { rootURL.appendingPathComponent("styles") }
