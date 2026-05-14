@@ -161,7 +161,7 @@ enum AgentRuntimeChoice: String, CaseIterable, Identifiable {
         }()
         for defaults in [
             UserDefaults(suiteName: appPrefsSuite) ?? .standard,
-            UserDefaults(suiteName: "clawix.bridge") ?? .standard
+            UserDefaults(suiteName: ClawixPersistentSurfaceKeys.bridgeDefaultsSuite) ?? .standard
         ] {
             defaults.set(resolvedRuntime.rawValue, forKey: runtimeKey)
             defaults.set(openCodeModel, forKey: openCodeModelKey)

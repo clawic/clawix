@@ -11,7 +11,7 @@ final class FeatureFlagsTests: XCTestCase {
         let flags = FeatureFlags.shared
         let previousExperimental = flags.experimental
         let appDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
-        let bridgeDefaults = UserDefaults(suiteName: "clawix.bridge") ?? .standard
+        let bridgeDefaults = UserDefaults(suiteName: ClawixPersistentSurfaceKeys.bridgeDefaultsSuite) ?? .standard
         let previousRuntime = appDefaults.object(forKey: AgentRuntimeChoice.runtimeKey)
         let previousBridgeRuntime = bridgeDefaults.object(forKey: AgentRuntimeChoice.runtimeKey)
 

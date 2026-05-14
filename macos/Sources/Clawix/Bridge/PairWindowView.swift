@@ -14,7 +14,7 @@ struct PairWindowView: View {
 
     private var pairing: PairingService {
         if backgroundBridge.isActive {
-            return PairingService(defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
+            return PairingService(defaults: UserDefaults(suiteName: ClawixPersistentSurfaceKeys.bridgeDefaultsSuite) ?? .standard,
                                   port: daemonBridgePort)
         }
         return PairingService.shared

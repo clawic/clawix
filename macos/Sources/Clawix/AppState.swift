@@ -692,7 +692,7 @@ final class AppState: ObservableObject {
             // public `clawix.bridge` suite so the daemon (started with
             // CLAWIX_BRIDGE_DEFAULTS_SUITE=clawix.bridge) and a future
             // standalone CLI surface share the same bearer.
-            let pairing = PairingService(defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
+            let pairing = PairingService(defaults: UserDefaults(suiteName: ClawixPersistentSurfaceKeys.bridgeDefaultsSuite) ?? .standard,
                                          port: daemonBridgePort)
             let client = DaemonBridgeClient(appState: self, pairing: pairing)
             daemonBridgeClient = client
