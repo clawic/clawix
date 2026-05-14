@@ -280,10 +280,9 @@ PY
     }
 
     copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/core"
-    OVERLAY_CLI="$CLAWJS_DEV_OVERLAY/packages/clawjs"
-    if [[ -d "$OVERLAY_CLI" ]]; then
-        copy_overlay_package "$OVERLAY_CLI" "$CLAWJS_DEST/node_modules/@clawjs/cli"
-        copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/cli/node_modules/@clawjs/core"
+    OVERLAY_SANDBOX="$CLAWJS_DEV_OVERLAY/packages/clawjs-sandbox"
+    if [[ -d "$OVERLAY_SANDBOX" ]]; then
+        copy_overlay_package "$OVERLAY_SANDBOX" "$CLAWJS_DEST/node_modules/@clawjs/sandbox"
     fi
     OVERLAY_CLAW="$CLAWJS_DEV_OVERLAY/packages/clawjs-node"
     if [[ -d "$OVERLAY_CLAW" ]]; then
@@ -296,6 +295,15 @@ PY
             run_npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-bin-links 2>&1 | tail -3
         )
         copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/claw/node_modules/@clawjs/core"
+    fi
+    OVERLAY_WORKSPACE="$CLAWJS_DEV_OVERLAY/packages/clawjs-workspace"
+    if [[ -d "$OVERLAY_WORKSPACE" ]]; then
+        copy_overlay_package "$OVERLAY_WORKSPACE" "$CLAWJS_DEST/node_modules/@clawjs/workspace"
+    fi
+    OVERLAY_CLI="$CLAWJS_DEV_OVERLAY/packages/clawjs"
+    if [[ -d "$OVERLAY_CLI" ]]; then
+        copy_overlay_package "$OVERLAY_CLI" "$CLAWJS_DEST/node_modules/@clawjs/cli"
+        copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/cli/node_modules/@clawjs/core"
     fi
     OVERLAY_DB="$CLAWJS_DEV_OVERLAY/packages/clawjs-database"
     if [[ -d "$OVERLAY_DB" ]]; then
@@ -316,13 +324,13 @@ PY
     fi
     OVERLAY_INDEX="$CLAWJS_DEV_OVERLAY/packages/clawjs-index"
     if [[ -d "$OVERLAY_INDEX" ]]; then
+        copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/marketplace" "$CLAWJS_DEST/node_modules/@clawjs/marketplace"
+        copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/clawjs-profile" "$CLAWJS_DEST/node_modules/@clawjs/profile"
         build_overlay_package "$OVERLAY_INDEX"
         echo "==> Dev overlay: copying $OVERLAY_INDEX → $CLAWJS_DEST/node_modules/@clawjs/index"
         rm -rf "$CLAWJS_DEST/node_modules/@clawjs/index"
         mkdir -p "$CLAWJS_DEST/node_modules/@clawjs"
         cp -R "$OVERLAY_INDEX" "$CLAWJS_DEST/node_modules/@clawjs/index"
-        copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/marketplace" "$CLAWJS_DEST/node_modules/@clawjs/marketplace"
-        copy_overlay_package "$CLAWJS_DEV_OVERLAY/packages/clawjs-profile" "$CLAWJS_DEST/node_modules/@clawjs/profile"
         rewrite_index_local_overlay_dependencies "$CLAWJS_DEST/node_modules/@clawjs/index/package.json"
         (
             cd "$CLAWJS_DEST/node_modules/@clawjs/index"
