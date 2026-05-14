@@ -41,21 +41,21 @@ struct ClawJSMarketplaceClient {
 
     func listRoots() async throws -> [RootKey] {
         struct R: Decodable { let roots: [RootKey] }
-        let resp: R = try await indexClient.send("/v1/marketplace/identity/roots", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/identity/roots", method: "GET")
         return resp.roots
     }
 
     func listDevices(rootKeyId: String? = nil) async throws -> [DeviceKey] {
         struct R: Decodable { let devices: [DeviceKey] }
         let suffix = queryString(["rootKeyId": rootKeyId])
-        let resp: R = try await indexClient.send("/v1/marketplace/identity/devices\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/identity/devices\(suffix)", method: "GET")
         return resp.devices
     }
 
     func listRoles(rootKeyId: String? = nil, vertical: String? = nil) async throws -> [RoleKey] {
         struct R: Decodable { let roles: [RoleKey] }
         let suffix = queryString(["rootKeyId": rootKeyId, "vertical": vertical])
-        let resp: R = try await indexClient.send("/v1/marketplace/identity/roles\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/identity/roles\(suffix)", method: "GET")
         return resp.roles
     }
 
@@ -88,7 +88,7 @@ struct ClawJSMarketplaceClient {
             "provenance": filter.provenance,
             "roleKeyId": filter.roleKeyId,
         ])
-        let resp: R = try await indexClient.send("/v1/marketplace/intents\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/intents\(suffix)", method: "GET")
         return resp.intents
     }
 
@@ -102,7 +102,7 @@ struct ClawJSMarketplaceClient {
 
     func updateIntentStatus(id: String, status: String) async throws {
         let body: [String: AnyJSON] = ["status": .string(status)]
-        let _: EmptyResponse = try await indexClient.send("/v1/marketplace/intents/\(id)/status", method: "PATCH", body: body)
+        let _: EmptyResponse = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/intents/\(id)/status", method: "PATCH", body: body)
     }
 
     // MARK: - Match receipts
@@ -126,7 +126,7 @@ struct ClawJSMarketplaceClient {
     func listMatchReceipts(myRoleKeyId: String? = nil, status: String? = nil) async throws -> [MatchReceipt] {
         struct R: Decodable { let receipts: [MatchReceipt] }
         let suffix = queryString(["myRoleKeyId": myRoleKeyId, "status": status])
-        let resp: R = try await indexClient.send("/v1/marketplace/match-receipts\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/match-receipts\(suffix)", method: "GET")
         return resp.receipts
     }
 
@@ -147,12 +147,12 @@ struct ClawJSMarketplaceClient {
     func listInbound(recipientRoleKeyId: String? = nil) async throws -> [InboundMessage] {
         struct R: Decodable { let messages: [InboundMessage] }
         let suffix = queryString(["recipientRoleKeyId": recipientRoleKeyId])
-        let resp: R = try await indexClient.send("/v1/marketplace/mailbox/inbound\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/mailbox/inbound\(suffix)", method: "GET")
         return resp.messages
     }
 
     func markRead(messageId: String) async throws {
-        let _: EmptyResponse = try await indexClient.send("/v1/marketplace/mailbox/inbound/\(messageId)/read", method: "POST")
+        let _: EmptyResponse = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/mailbox/inbound/\(messageId)/read", method: "POST")
     }
 
     // MARK: - Peer levels
@@ -170,7 +170,7 @@ struct ClawJSMarketplaceClient {
     func listPeerLevels(myRoleKeyId: String? = nil) async throws -> [PeerLevel] {
         struct R: Decodable { let peers: [PeerLevel] }
         let suffix = queryString(["myRoleKeyId": myRoleKeyId])
-        let resp: R = try await indexClient.send("/v1/marketplace/peer-levels\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/peer-levels\(suffix)", method: "GET")
         return resp.peers
     }
 
@@ -188,7 +188,7 @@ struct ClawJSMarketplaceClient {
     func listBrokers(vertical: String? = nil) async throws -> [Broker] {
         struct R: Decodable { let brokers: [Broker] }
         let suffix = queryString(["vertical": vertical])
-        let resp: R = try await indexClient.send("/v1/marketplace/brokers\(suffix)", method: "GET")
+        let resp: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/brokers\(suffix)", method: "GET")
         return resp.brokers
     }
 

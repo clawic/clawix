@@ -58,12 +58,12 @@ struct ClawJSProfileClient {
         var body: [String: AnyJSON] = ["alias": .string(alias)]
         if let mnemonic = mnemonic { body["mnemonic"] = .string(mnemonic) }
         if let passphrase = passphrase { body["passphrase"] = .string(passphrase) }
-        return try await indexClient.send("/v1/profile/init", method: "POST", body: body)
+        return try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/init", method: "POST", body: body)
     }
 
     func me() async throws -> Profile? {
         struct R: Decodable { let profile: Profile? }
-        let r: R = try await indexClient.send("/v1/profile/me", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/me", method: "GET")
         return r.profile
     }
 
@@ -71,7 +71,7 @@ struct ClawJSProfileClient {
     func setHandle(alias: String) async throws -> Profile {
         struct R: Decodable { let profile: Profile }
         let body: [String: AnyJSON] = ["alias": .string(alias)]
-        let r: R = try await indexClient.send("/v1/profile/handle", method: "POST", body: body)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/handle", method: "POST", body: body)
         return r.profile
     }
 
@@ -125,32 +125,32 @@ struct ClawJSProfileClient {
     func listBlocks(vertical: String? = nil) async throws -> [Block] {
         struct R: Decodable { let blocks: [Block] }
         let suffix = queryString(["vertical": vertical])
-        let r: R = try await indexClient.send("/v1/profile/blocks\(suffix)", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/blocks\(suffix)", method: "GET")
         return r.blocks
     }
 
     @discardableResult
     func createBlock(_ input: CreateBlockInput) async throws -> Block {
         struct R: Decodable { let block: Block }
-        let r: R = try await indexClient.send("/v1/profile/blocks", method: "POST", body: input)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/blocks", method: "POST", body: input)
         return r.block
     }
 
     func getBlock(_ blockId: String) async throws -> Block? {
         struct R: Decodable { let block: Block? }
-        let r: R = try await indexClient.send("/v1/profile/blocks/\(blockId)", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/blocks/\(blockId)", method: "GET")
         return r.block
     }
 
     func deleteBlock(_ blockId: String) async throws {
-        let _: ProfileEmptyResponse = try await indexClient.send("/v1/profile/blocks/\(blockId)", method: "DELETE")
+        let _: ProfileEmptyResponse = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/blocks/\(blockId)", method: "DELETE")
     }
 
     // MARK: - Groups
 
     func listGroups() async throws -> [Group] {
         struct R: Decodable { let groups: [Group] }
-        let r: R = try await indexClient.send("/v1/profile/groups", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/groups", method: "GET")
         return r.groups
     }
 
@@ -159,7 +159,7 @@ struct ClawJSProfileClient {
         struct R: Decodable { let group: Group }
         var body: [String: AnyJSON] = ["id": .string(id)]
         if let label = label { body["label"] = .string(label) }
-        let r: R = try await indexClient.send("/v1/profile/groups", method: "POST", body: body)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/groups", method: "POST", body: body)
         return r.group
     }
 
@@ -167,14 +167,14 @@ struct ClawJSProfileClient {
     func addMember(groupId: String, rootPubkeyHex: String) async throws -> Group {
         struct R: Decodable { let group: Group }
         let body: [String: AnyJSON] = ["rootPubkey": .string(rootPubkeyHex)]
-        let r: R = try await indexClient.send("/v1/profile/groups/\(groupId)/members", method: "POST", body: body)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/groups/\(groupId)/members", method: "POST", body: body)
         return r.group
     }
 
     @discardableResult
     func removeMember(groupId: String, rootPubkeyHex: String) async throws -> Group {
         struct R: Decodable { let group: Group }
-        let r: R = try await indexClient.send("/v1/profile/groups/\(groupId)/members/\(rootPubkeyHex)", method: "DELETE")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/groups/\(groupId)/members/\(rootPubkeyHex)", method: "DELETE")
         return r.group
     }
 
@@ -186,7 +186,7 @@ struct ClawJSProfileClient {
         var body: [String: AnyJSON] = [:]
         if let ttl = ttlSeconds { body["ttlSeconds"] = .number(Double(ttl)) }
         if let max = maxUses { body["maxUses"] = .number(Double(max)) }
-        let r: InviteLinkResponse = try await indexClient.send("/v1/profile/groups/\(groupId)/invite-link", method: "POST", body: body)
+        let r: InviteLinkResponse = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/groups/\(groupId)/invite-link", method: "POST", body: body)
         return r.link
     }
 
@@ -209,7 +209,7 @@ struct ClawJSProfileClient {
         var body: [String: AnyJSON] = ["blockId": .string(blockId), "level": .string(level)]
         if let issuedToHex = issuedToHex { body["issuedToHex"] = .string(issuedToHex) }
         if let ttl = ttlSeconds { body["ttlSeconds"] = .number(Double(ttl)) }
-        let r: R = try await indexClient.send("/v1/profile/capabilities/issue", method: "POST", body: body)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/profile/capabilities/issue", method: "POST", body: body)
         return r.capability
     }
 
@@ -224,7 +224,7 @@ struct ClawJSProfileClient {
 
     func listPeers() async throws -> [PeerDirectoryEntry] {
         struct R: Decodable { let peers: [PeerDirectoryEntry] }
-        let r: R = try await indexClient.send("/v1/peers/directory", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/peers/directory", method: "GET")
         return r.peers
     }
 
@@ -232,7 +232,7 @@ struct ClawJSProfileClient {
     func pairByFingerprint(pairingLink: String) async throws -> Handle {
         struct R: Decodable { let handle: Handle }
         let body: [String: AnyJSON] = ["pairingLink": .string(pairingLink)]
-        let r: R = try await indexClient.send("/v1/peers/pair-by-fingerprint", method: "POST", body: body)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/peers/pair-by-fingerprint", method: "POST", body: body)
         return r.handle
     }
 
@@ -259,7 +259,7 @@ struct ClawJSProfileClient {
             "vertical": vertical, "groupId": groupId, "keywords": keywords,
             "limit": String(limit),
         ])
-        let r: R = try await indexClient.send("/v1/feed\(suffix)", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/feed\(suffix)", method: "GET")
         return r.entries
     }
 
@@ -289,7 +289,7 @@ struct ClawJSProfileClient {
 
     func listChats() async throws -> [ChatThread] {
         struct R: Decodable { let threads: [ChatThread] }
-        let r: R = try await indexClient.send("/v1/chats", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/chats", method: "GET")
         return r.threads
     }
 
@@ -297,7 +297,7 @@ struct ClawJSProfileClient {
         struct R: Decodable { let messages: [ChatMessage] }
         var pairs: [String: String?] = ["limit": String(limit)]
         if let b = before { pairs["before"] = String(b) }
-        let r: R = try await indexClient.send("/v1/chats/\(peer)/messages\(queryString(pairs))", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/chats/\(peer)/messages\(queryString(pairs))", method: "GET")
         return r.messages
     }
 
@@ -305,12 +305,12 @@ struct ClawJSProfileClient {
     func sendMessage(peer: String, body: String) async throws -> ChatMessage {
         struct R: Decodable { let message: ChatMessage }
         let payload: [String: AnyJSON] = ["body": .string(body)]
-        let r: R = try await indexClient.send("/v1/chats/\(peer)/messages", method: "POST", body: payload)
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/chats/\(peer)/messages", method: "POST", body: payload)
         return r.message
     }
 
     func markRead(peer: String) async throws {
-        let _: ProfileEmptyResponse = try await indexClient.send("/v1/chats/\(peer)/read", method: "POST")
+        let _: ProfileEmptyResponse = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/chats/\(peer)/read", method: "POST")
     }
 
     // MARK: - Marketplace
@@ -341,7 +341,7 @@ struct ClawJSProfileClient {
             "limit": String(limit),
         ]
         if let band = priceBand { pairs["priceBand"] = String(band) }
-        let r: R = try await indexClient.send("/v1/marketplace/discovered-intents\(queryString(pairs))", method: "GET")
+        let r: R = try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/discovered-intents\(queryString(pairs))", method: "GET")
         return r.intents
     }
 
@@ -349,7 +349,7 @@ struct ClawJSProfileClient {
     func expressInterest(intentId: String, template: String? = nil) async throws -> ExpressInterestResult {
         var body: [String: AnyJSON] = ["intentId": .string(intentId)]
         if let template = template { body["bodyTemplate"] = .string(template) }
-        return try await indexClient.send("/v1/marketplace/express-interest", method: "POST", body: body)
+        return try await indexClient.send("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/marketplace/express-interest", method: "POST", body: body)
     }
 
     // MARK: - Helpers
