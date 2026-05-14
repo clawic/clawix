@@ -102,11 +102,11 @@ enum ClawixPersistentSurface {
     }
 
     static func cache(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
-        node(id: id, kind: .cache, name: name, path: path, storageClass: "cache", parentId: parentId, canonicality: "cache", lifecycle: "rebuildable")
+        node(id: id, kind: .cache, name: name, path: path, storageClass: "cache", canonicality: "cache", lifecycle: "rebuildable", parentId: parentId)
     }
 
     static func persistentTemp(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
-        node(id: id, kind: .persistentTemp, name: name, path: path, storageClass: "nativeAppData", parentId: parentId, canonicality: "generated")
+        node(id: id, kind: .persistentTemp, name: name, path: path, storageClass: "nativeAppData", canonicality: "generated", parentId: parentId)
     }
 
     private static func node(
