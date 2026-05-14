@@ -13,6 +13,8 @@ API matrix and connector harness remain framework-owned.
 ## Required Evidence
 
 - ClawJS Telegram official API matrix and hermetic package tests.
+- ClawJS Telegram validation report with decision audit, requirement mapping,
+  validation runs, and `EXTERNAL PENDING` rows.
 - Signed-host approval path for any live credential lease.
 - Explicit operator approval for public webhook, payment, destructive,
   uploaded-asset, phone/account-role, game, Passport, or managed-bot-token

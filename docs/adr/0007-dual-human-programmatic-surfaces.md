@@ -34,7 +34,7 @@ The surfaces have distinct roles:
 - **Service API**: HTTP/event/process contract for cross-language,
   cross-process, native, web, and device clients. "API" in ClawJS docs means
   this service contract unless explicitly qualified.
-- **MCP**: first-class model-native surface for LLM hosts. ClawJS MCP servers
+- **MCP**: MCP is the model-native surface for LLM hosts. ClawJS MCP servers
   expose tools for model-invoked actions, resources for context/data, and
   prompts for user-invoked workflows. MCP derives from the same framework
   contracts as the SDK and service APIs; it is not a separate source of truth.

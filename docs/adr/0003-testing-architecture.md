@@ -72,6 +72,9 @@ A domain is considered fully tested only when:
 - the right real boundary is covered;
 - hermetic/local tests protect the normal changed gate;
 - public docs and fixtures explain the behavior;
+- important capabilities have at least one human-path validation and one
+  programmatic-path validation, or an explicit `PARTIAL`, `EXTERNAL PENDING`,
+  `blocked`, or `not applicable` surface gap;
 - non-automatable checks have QA scenarios;
 - any physical dependency is explicitly marked `EXTERNAL PENDING`; and
 - no expired quarantine remains.
@@ -80,6 +83,6 @@ A domain is considered fully tested only when:
 
 Adding behavior without tests means adding the missing lane coverage in the
 same change. Adding a new public surface requires a CLI/API or UI test, a
-fixture when data is involved, and release-lane coverage. Adding host behavior
-requires either a real signed-host scenario or an `EXTERNAL PENDING` record with
-clear missing physical prerequisites.
+fixture when data is involved, surface-parity evidence, and release-lane
+coverage. Adding host behavior requires either a real signed-host scenario or
+an `EXTERNAL PENDING` record with clear missing physical prerequisites.

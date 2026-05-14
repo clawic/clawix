@@ -30,7 +30,9 @@ for file in \
   "docs/naming-style-guide.md" \
   "docs/adr/0001-claw-framework-host-boundary.md" \
   "docs/adr/0002-naming-and-stability-surfaces.md" \
-  "docs/adr/0004-source-file-boundaries.md"
+  "docs/adr/0004-source-file-boundaries.md" \
+  "docs/adr/0007-dual-human-programmatic-surfaces.md" \
+  "docs/adr/TEMPLATE.md"
 do
   require_file "$file"
 done
@@ -42,6 +44,9 @@ require_snippet "CLAUDE.md" "docs/decision-map.md"
 require_snippet "CLAUDE.md" "docs/adr/0001-claw-framework-host-boundary.md"
 require_snippet "AGENTS.md" "docs/decision-map.md"
 require_snippet "AGENTS.md" "docs/adr/0004-source-file-boundaries.md"
+require_snippet "CONSTITUTION.md" "Capabilities are complete only when dual-surfaced"
+require_snippet "docs/adr/TEMPLATE.md" "## Surface Parity"
+require_snippet "docs/adr/0007-dual-human-programmatic-surfaces.md" "MCP is the model-native surface"
 require_snippet "CONTRIBUTING.md" "docs/decision-map.md"
 require_snippet "STANDARDS.md" "docs/decision-map.md"
 require_snippet "playbooks/README.md" "docs/decision-map.md"

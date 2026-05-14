@@ -17,6 +17,8 @@ policy_guard() {
   for required in \
     "$ROOT_DIR/docs/adr/0003-testing-architecture.md" \
     "$ROOT_DIR/docs/adr/0005-integration-qa-lab.md" \
+    "$ROOT_DIR/docs/adr/0007-dual-human-programmatic-surfaces.md" \
+    "$ROOT_DIR/docs/adr/TEMPLATE.md" \
     "$ROOT_DIR/playbooks/testing.md" \
     "$ROOT_DIR/playbooks/testing-matrix.md" \
     "$ROOT_DIR/qa/coverage-budgets.json" \
