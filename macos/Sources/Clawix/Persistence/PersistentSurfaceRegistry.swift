@@ -430,6 +430,8 @@ enum ClawixPersistentSurfacePaths {
         static let clawix = "Clawix"
         static let clawixHome = ".clawix"
         static let clawWorkspace = ".claw"
+        static let bridgeState = "state"
+        static let workspace = "workspace"
         static let logs = "Logs"
         static let devCache = "Clawix-Dev"
         static let apps = "Apps"
@@ -446,6 +448,18 @@ enum ClawixPersistentSurfacePaths {
         static let bundleName = "Clawix_Clawix.bundle"
         static let bridgeStatusFile = "bridge-status.json"
         static let sqlite = "clawix.sqlite"
+        static let sqliteExtension = "sqlite"
+        static let clawjsDatabase = "clawjs.sqlite"
+        static let sessionsDatabase = "sessions.sqlite"
+        static let indexDatabase = "index.sqlite"
+        static let secretsDatabase = "secrets.sqlite"
+        static let iotDatabase = "iot.sqlite"
+        static let files = "files"
+        static let blobs = "blobs"
+        static let status = "status"
+        static let sources = "Sources"
+        static let helpers = "Helpers"
+        static let bridged = "Bridged"
     }
 }
 
