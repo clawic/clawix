@@ -46,7 +46,7 @@ final class LifeManager: ObservableObject {
     /// Replaces the persisted enabled-set. Caller decides the new order.
     func setEnabled(_ ids: [String]) {
         enabledVerticalIds = ids
-        UserDefaults(suiteName: appPrefsSuite)?.set(ids, forKey: "LifeEnabledVerticals")
+        UserDefaults(suiteName: appPrefsSuite)?.set(ids, forKey: ClawixPersistentSurfaceKeys.lifeEnabledVerticals)
     }
 
     /// Toggle whether a vertical is hidden from the sidebar (but still
@@ -59,7 +59,7 @@ final class LifeManager: ObservableObject {
         }
         UserDefaults(suiteName: appPrefsSuite)?.set(
             Array(hiddenVerticalIds),
-            forKey: "LifeHiddenVerticals"
+            forKey: ClawixPersistentSurfaceKeys.lifeHiddenVerticals
         )
     }
 
@@ -196,7 +196,7 @@ final class LifeManager: ObservableObject {
 
     nonisolated private static func loadEnabledIds() -> [String] {
         if let stored = UserDefaults(suiteName: appPrefsSuiteName)?.stringArray(
-            forKey: "LifeEnabledVerticals"
+            forKey: ClawixPersistentSurfaceKeys.lifeEnabledVerticals
         ), !stored.isEmpty {
             return stored
         }
@@ -210,12 +210,13 @@ final class LifeManager: ObservableObject {
 
     nonisolated private static func loadHiddenIds() -> Set<String> {
         let array = UserDefaults(suiteName: appPrefsSuiteName)?
-            .stringArray(forKey: "LifeHiddenVerticals") ?? []
+            .stringArray(forKey: ClawixPersistentSurfaceKeys.lifeHiddenVerticals) ?? []
         return Set(array)
     }
 
     nonisolated static func defaultToken() -> String? {
-        UserDefaults(suiteName: "clawix.bridge")?.string(forKey: "ClawixBridge.Bearer.v1")
+        UserDefaults(suiteName: ClawixPersistentSurfaceKeys.bridgeDefaultsSuite)?
+            .string(forKey: ClawixPersistentSurfaceKeys.bridgeBearer)
     }
 }
 

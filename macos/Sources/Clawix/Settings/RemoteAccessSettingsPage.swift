@@ -215,6 +215,6 @@ private enum RelayCredentialStore {
     /// point is intentionally lightweight so the settings page can be
     /// built without pulling in the keychain.
     static func storeRefreshToken(_ token: String, forDeviceId deviceId: String) {
-        UserDefaults.standard.set(token, forKey: "clawix.relay.refresh.\(deviceId)")
+        UserDefaults.standard.set(token, forKey: ClawixPersistentSurfaceKeys.relayRefreshKey(for: deviceId))
     }
 }
