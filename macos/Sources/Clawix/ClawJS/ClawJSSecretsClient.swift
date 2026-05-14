@@ -316,10 +316,16 @@ final class ClawJSSecretsClient {
         return envelope["secret"]!
     }
 
-    func updateSecret(name: String, title: String? = nil, governance: [String: Any]? = nil) async throws -> DescribedSecret? {
+    func updateSecret(
+        name: String,
+        title: String? = nil,
+        governance: [String: Any]? = nil,
+        metadata: [String: Any]? = nil
+    ) async throws -> DescribedSecret? {
         var body: [String: Any] = [:]
         if let title { body["title"] = title }
         if let governance { body["governance"] = governance }
+        if let metadata { body["metadata"] = metadata }
         let envelope: [String: DescribedSecret?] = try await patch(
             "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))",
             body: body

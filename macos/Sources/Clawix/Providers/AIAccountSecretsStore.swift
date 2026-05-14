@@ -14,11 +14,10 @@ import SecretsVault
 /// - Credentials (apiKey, access_token, refresh_token, expires_at,
 ///   scope) — `isSecret: true, isConcealed: true`.
 ///
-/// The vault has no field-level edit API; mutations are done by
-/// trashing the old secret and creating a new one carrying the same
-/// `accountId`. The audit trail still tells the right story because
-/// the trash event names the account, and the new secret carries the
-/// same `internalName`.
+/// Credential mutations still replace the secret because the account
+/// store never keeps revealed credential values in memory. Plain
+/// metadata mutations use the host API so editing labels or usage
+/// timestamps does not reveal credential fields.
 @MainActor
 final class AIAccountSecretsStore: AIAccountStore {
 
@@ -153,7 +152,7 @@ final class AIAccountSecretsStore: AIAccountStore {
         accountEmail: String??
     ) throws -> ProviderAccount {
         guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
-        guard let (existing, secret, fields) = try findAccount(id: id, store: store) else {
+        guard let (existing, secret, _) = try findAccount(id: id, store: store) else {
             throw AIAccountStoreError.accountNotFound
         }
 
@@ -168,22 +167,19 @@ final class AIAccountSecretsStore: AIAccountStore {
         let newBaseURL: URL? = baseURLOverride.map { $0 } ?? existing.baseURLOverride
         let newEmail: String? = accountEmail.map { $0 } ?? existing.accountEmail
 
-        let credentials = revealCredentialsRaw(secret: secret, fields: fields, store: store)
-        try replaceSecret(
+        let providerName = ProviderCatalog.definition(for: existing.providerId)?.displayName ?? existing.providerId.rawValue
+        let title = "\(providerName) · \(newLabel)"
+        try updatePlainMetadata(
             store: store,
-            existing: existing,
             secret: secret,
-            label: newLabel,
-            isEnabled: newEnabled,
-            createdAt: existing.createdAt,
+            title: title,
             lastUsedAt: existing.lastUsedAt,
-            accountEmail: newEmail,
-            baseURLOverride: newBaseURL,
-            apiKey: credentials.apiKey,
-            accessToken: credentials.accessToken,
-            refreshToken: credentials.refreshToken,
-            expiresAt: credentials.expiresAt,
-            scope: credentials.scope
+            values: [
+                "label": newLabel,
+                "isEnabled": newEnabled ? "true" : "false",
+                "accountEmail": newEmail,
+                "baseURL": newBaseURL?.absoluteString
+            ]
         )
         return ProviderAccount(
             id: id,
@@ -260,23 +256,14 @@ final class AIAccountSecretsStore: AIAccountStore {
     @MainActor
     private func _touchOnMain(accountId: UUID) throws {
         guard let store = SecretsManager.shared.store else { return }
-        guard let (existing, secret, fields) = try findAccount(id: accountId, store: store) else { return }
-        let credentials = revealCredentialsRaw(secret: secret, fields: fields, store: store)
-        try replaceSecret(
+        guard let (_, secret, _) = try findAccount(id: accountId, store: store) else { return }
+        let now = Date()
+        try updatePlainMetadata(
             store: store,
-            existing: existing,
             secret: secret,
-            label: existing.label,
-            isEnabled: existing.isEnabled,
-            createdAt: existing.createdAt,
-            lastUsedAt: Date(),
-            accountEmail: existing.accountEmail,
-            baseURLOverride: existing.baseURLOverride,
-            apiKey: credentials.apiKey,
-            accessToken: credentials.accessToken,
-            refreshToken: credentials.refreshToken,
-            expiresAt: credentials.expiresAt,
-            scope: credentials.scope
+            title: secret.title,
+            lastUsedAt: now,
+            values: ["lastUsedAt": ISO8601.format(now)]
         )
     }
 
@@ -417,6 +404,22 @@ final class AIAccountSecretsStore: AIAccountStore {
             fields: fields
         )
         _ = try store.createSecret(in: container, draft: draft)
+    }
+
+    @MainActor
+    private func updatePlainMetadata(
+        store: ClawJSSecretsStore,
+        secret: SecretRecord,
+        title: String,
+        lastUsedAt: Date?,
+        values: [String: String?]
+    ) throws {
+        try store.updatePlainMetadata(
+            secretId: secret.id,
+            title: title,
+            lastUsedAt: lastUsedAt,
+            values: values
+        )
     }
 
     /// Reveal helper used internally (and on the public `reveal` path).

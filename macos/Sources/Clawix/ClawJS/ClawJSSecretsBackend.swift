@@ -310,6 +310,34 @@ final class ClawJSSecretsStore {
         return ClawJSMapper.mapDescribedSecret(described)
     }
 
+    @discardableResult
+    func updatePlainMetadata(
+        secretId: EntityID,
+        title: String,
+        lastUsedAt: Date?,
+        values: [String: String?]
+    ) throws -> SecretRecord {
+        guard let secret = try fetchSecretById(secretId) else { throw ClawJSBackendError.notFound }
+        var encodedValues: [String: Any] = [:]
+        for (key, value) in values {
+            encodedValues[key] = value ?? NSNull()
+        }
+        var metadata: [String: Any] = [
+            "title": title,
+            "values": encodedValues
+        ]
+        if let lastUsedAt {
+            metadata["lastUsedAt"] = ISO8601DateFormatter().string(from: lastUsedAt)
+        } else {
+            metadata["lastUsedAt"] = NSNull()
+        }
+        let described = try runSync {
+            try await self.client.updateSecret(name: secret.internalName, metadata: metadata)
+        }
+        guard let described else { throw ClawJSBackendError.notFound }
+        return ClawJSMapper.mapDescribedSecret(described)
+    }
+
     func purgeTrashed(olderThan: Timestamp) throws -> Int {
         // The HTTP server has no explicit purge endpoint yet; mirroring
         // the legacy behavior we treat this as a no-op and return 0.
