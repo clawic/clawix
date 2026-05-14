@@ -20,6 +20,30 @@ enum PersistentSurfaceKind: String, Codable {
     case persistentTemp
     case legacyPath
     case externalReadOnlySource
+    case apiRoute
+    case apiMethod
+    case apiParameter
+    case webhook
+    case webhookEvent
+    case eventTopic
+    case queueTopic
+    case jsonSchema
+    case jsonField
+    case enumValue
+    case errorCode
+    case cliCommand
+    case cliFlag
+    case cliOutputField
+    case `protocol`
+    case protocolFrame
+    case protocolField
+    case idNamespace
+    case idPrefix
+    case deepLink
+    case hostname
+    case port
+    case externalDependency
+    case externalMapping
 }
 
 struct PersistentSurfaceNode: Codable, Equatable {
@@ -38,6 +62,21 @@ struct PersistentSurfaceNode: Codable, Equatable {
     var lifecycle: String
     var parentId: String?
     var databaseId: String?
+    var surfaceClass: String?
+    var stability: String?
+    var direction: String?
+    var version: String?
+    var value: String?
+    var method: String?
+    var route: String?
+    var schemaId: String?
+    var fieldPath: String?
+    var enumType: String?
+    var idPattern: String?
+    var externalProvider: String?
+    var replacement: String?
+    var introducedIn: String?
+    var deprecatedIn: String?
     var dataType: String?
     var nullable: Bool?
     var notes: String?
@@ -117,6 +156,49 @@ enum ClawixPersistentSurface {
         node(id: id, kind: .legacyPath, name: name, path: path, storageClass: "workspace", canonicality: "legacyReadOnly", lifecycle: "legacy", warnings: warnings)
     }
 
+    static func contract(
+        id: String,
+        kind: PersistentSurfaceKind,
+        name: String,
+        parentId: String? = nil,
+        project: String = "core",
+        surfaceClass: String,
+        value: String? = nil,
+        method: String? = nil,
+        route: String? = nil,
+        key: String? = nil,
+        fieldPath: String? = nil,
+        schemaId: String? = nil,
+        enumType: String? = nil,
+        version: String? = nil,
+        direction: String = "bidirectional",
+        notes: String? = nil
+    ) -> PersistentSurfaceNode {
+        node(
+            id: id,
+            kind: kind,
+            name: name,
+            key: key,
+            storageClass: "external",
+            canonicality: "hostOnly",
+            privacy: "public",
+            lifecycle: "durable",
+            parentId: parentId,
+            project: project,
+            surfaceClass: surfaceClass,
+            stability: "v1",
+            direction: direction,
+            version: version,
+            value: value,
+            method: method,
+            route: route,
+            schemaId: schemaId,
+            fieldPath: fieldPath,
+            enumType: enumType,
+            notes: notes
+        )
+    }
+
     private static func node(
         id: String,
         kind: PersistentSurfaceKind,
@@ -128,7 +210,23 @@ enum ClawixPersistentSurface {
         privacy: String = "userData",
         lifecycle: String = "durable",
         parentId: String? = nil,
+        project: String = "macos",
         databaseId: String? = nil,
+        surfaceClass: String? = nil,
+        stability: String? = nil,
+        direction: String? = nil,
+        version: String? = nil,
+        value: String? = nil,
+        method: String? = nil,
+        route: String? = nil,
+        schemaId: String? = nil,
+        fieldPath: String? = nil,
+        enumType: String? = nil,
+        idPattern: String? = nil,
+        externalProvider: String? = nil,
+        replacement: String? = nil,
+        introducedIn: String? = nil,
+        deprecatedIn: String? = nil,
         dataType: String? = nil,
         nullable: Bool? = nil,
         notes: String? = nil,
@@ -139,7 +237,7 @@ enum ClawixPersistentSurface {
             kind: kind,
             owner: "clawix",
             repo: "Clawix",
-            project: "macos",
+            project: project,
             language: "swift",
             name: name,
             path: path,
@@ -150,6 +248,21 @@ enum ClawixPersistentSurface {
             lifecycle: lifecycle,
             parentId: parentId,
             databaseId: databaseId,
+            surfaceClass: surfaceClass,
+            stability: stability,
+            direction: direction,
+            version: version,
+            value: value,
+            method: method,
+            route: route,
+            schemaId: schemaId,
+            fieldPath: fieldPath,
+            enumType: enumType,
+            idPattern: idPattern,
+            externalProvider: externalProvider,
+            replacement: replacement,
+            introducedIn: introducedIn,
+            deprecatedIn: deprecatedIn,
             dataType: dataType,
             nullable: nullable,
             notes: notes,
@@ -304,7 +417,124 @@ enum ClawixPersistentSurfaceRegistry {
                 key: ClawixPersistentSurfaceKeys.feedDisplayMode,
                 kind: .appStorageKey
             ),
-        ] + preferenceSurfaceNodes + databaseSurfaceNodes
+        ] + contractSurfaceNodes + preferenceSurfaceNodes + databaseSurfaceNodes
+    }
+
+    private static var contractSurfaceNodes: [PersistentSurfaceNode] {
+        let bridgeProtocol = ClawixPersistentSurface.contract(
+            id: "clawix.protocol.bridge",
+            kind: .`protocol`,
+            name: "Clawix bridge protocol",
+            parentId: "claw.contracts.protocol",
+            project: "core",
+            surfaceClass: "protocol",
+            value: "clawix-bridge",
+            version: "8",
+            direction: "bidirectional",
+            notes: "Shared JSON frame protocol consumed by macOS, iOS, Android, Linux, Windows and web clients."
+        )
+        let bridgeFields = ["schemaVersion", "type", "clientKind", "platform", "sessionId", "threadId", "requestId"].map { field in
+            ClawixPersistentSurface.contract(
+                id: "clawix.protocol.bridge.field.\(field)",
+                kind: .protocolField,
+                name: field,
+                parentId: bridgeProtocol.id,
+                project: "core",
+                surfaceClass: "protocol",
+                key: field,
+                fieldPath: field,
+                schemaId: "clawix-bridge",
+                direction: "bidirectional"
+            )
+        }
+        let frameTypes = [
+            "versionMismatch",
+            "sessionsSnapshot",
+            "openSession",
+            "sendMessage",
+            "sessionDelta",
+            "skillsSnapshot",
+            "remoteJobSnapshot",
+        ].map { type in
+            ClawixPersistentSurface.contract(
+                id: "clawix.protocol.bridge.frame.\(type)",
+                kind: .protocolFrame,
+                name: type,
+                parentId: bridgeProtocol.id,
+                project: "core",
+                surfaceClass: "protocol",
+                value: type,
+                schemaId: "clawix-bridge",
+                direction: "bidirectional"
+            )
+        }
+        let meshRoutes: [(String, String, String)] = [
+            ("GET", "/v1/mesh/identity", "Mesh identity"),
+            ("GET", "/v1/mesh/peers", "Mesh peers"),
+            ("GET", "/v1/mesh/workspaces", "Mesh workspaces"),
+            ("GET", "/v1/mesh/jobs/{jobId}", "Mesh job output"),
+            ("POST", "/v1/mesh/workspaces", "Create mesh workspace"),
+            ("POST", "/v1/mesh/peers", "Register mesh peer"),
+            ("POST", "/v1/mesh/link", "Link mesh peer"),
+            ("POST", "/v1/mesh/pair", "Pair mesh peer"),
+            ("POST", "/v1/mesh/jobs", "Start mesh job"),
+            ("POST", "/v1/mesh/jobs/cancel", "Cancel mesh job"),
+            ("POST", "/v1/mesh/jobs/events", "Read mesh job events"),
+        ]
+        let routeNodes = meshRoutes.map { method, route, name in
+            let routeId = String(route.dropFirst(4))
+                .replacingOccurrences(of: "/", with: ".")
+                .replacingOccurrences(of: "{", with: "")
+                .replacingOccurrences(of: "}", with: "")
+            return ClawixPersistentSurface.contract(
+                id: "clawix.api.mesh.\(method.lowercased()).\(routeId)",
+                kind: .apiRoute,
+                name: name,
+                parentId: "claw.contracts.api",
+                project: "core",
+                surfaceClass: "api",
+                value: "\(method) \(route)",
+                method: method,
+                route: route,
+                direction: "inbound"
+            )
+        }
+        let remoteJobEvents = ["accepted", "threadStarted", "turnStarted", "delta", "completed", "failed", "cancelled"].map { event in
+            ClawixPersistentSurface.contract(
+                id: "clawix.event.remoteJob.\(event)",
+                kind: .eventTopic,
+                name: event,
+                parentId: "claw.contracts.events",
+                project: "core",
+                surfaceClass: "event",
+                value: event,
+                direction: "generated"
+            )
+        }
+        let webStorage = ClawixPersistentSurface.contract(
+            id: "clawix.web.storage.currentRoute",
+            kind: .browserStorageKey,
+            name: "Current web route",
+            parentId: "claw.contracts.schemas",
+            project: "web",
+            surfaceClass: "persistent",
+            value: "ui.route",
+            key: "ui.route",
+            direction: "local"
+        )
+        let deepLinks = ["clawix://auth/callback/{provider}", "clawix://pair/{token}", "clawix://session/{sessionId}", "clawix://settings/{section}"].map { link in
+            ClawixPersistentSurface.contract(
+                id: "clawix.deeplink.\(link.replacingOccurrences(of: "://", with: ".").replacingOccurrences(of: "/", with: ".").replacingOccurrences(of: "{", with: "").replacingOccurrences(of: "}", with: ""))",
+                kind: .deepLink,
+                name: link,
+                parentId: "claw.contracts.api",
+                project: "core",
+                surfaceClass: "config",
+                value: link,
+                direction: "inbound"
+            )
+        }
+        return [bridgeProtocol] + bridgeFields + frameTypes + routeNodes + remoteJobEvents + [webStorage] + deepLinks
     }
 
     private static var preferenceSurfaceNodes: [PersistentSurfaceNode] {
