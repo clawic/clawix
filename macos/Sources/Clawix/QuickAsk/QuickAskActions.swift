@@ -177,7 +177,7 @@ enum QuickAskActions {
         let dir = FileManager.default
             .urls(for: .cachesDirectory, in: .userDomainMask)
             .first!
-            .appendingPathComponent("Clawix-Captures", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.captures, isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let stamp = Int(Date().timeIntervalSince1970)
         return dir.appendingPathComponent("\(prefix)-\(stamp).png")

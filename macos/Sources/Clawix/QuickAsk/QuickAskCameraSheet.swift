@@ -204,7 +204,7 @@ private final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegat
             let dir = FileManager.default
                 .urls(for: .cachesDirectory, in: .userDomainMask)
                 .first?
-                .appendingPathComponent("Clawix-Captures", isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.captures, isDirectory: true)
             guard let dir else {
                 completion(nil)
                 return
