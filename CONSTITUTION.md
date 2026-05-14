@@ -717,6 +717,27 @@ separation policy on unsharing, residency rules across jurisdictions)
 live in a sibling standards document published per III.2. The
 constitution stays stable as those semantics evolve.
 
+**X.6 The physical world is addressable.** A personal agent does not live
+only in software. The user's world includes homes, rooms, vehicles, devices,
+documents, objects, sensors, appliances, keys, supplies, and other physical
+things that can matter to work, safety, health, memory, or daily life. When a
+physical thing benefits from durable representation, it can become a
+canonical entity, a participant in the mesh, or a referenced source with
+typed relationships and permissions. The framework does not require every
+object to be modeled, but it must not assume that agent work ends at the
+screen.
+
+**X.7 The mesh expands through controlled extensions.** Local and accessible
+is the preferred operating base: the framework should keep data and
+capabilities close to the user's trusted hosts when that is practical. But a
+user's work often needs to extend outward: to another computer, a home
+server, a rented host, a private network, a device, an API, a sensor, a
+physical system, or an external service. The mesh provides controlled
+extensions for that reach. Nothing installs, pairs, replicates, controls
+hardware, persists credentials, or exposes a service without explicit user
+consent, scoped permissions, and audit. Infrastructure should amplify the
+user's agents, not stand between the user and their world.
+
 ## Red lines
 
 These are the constitution's non-negotiables. No version of Clawix or ClawJS
@@ -848,6 +869,8 @@ together; an amendment is incomplete until both repositories carry it.
 - **Concept**: a node within the knowledge graph that Notes supports. Has
   hierarchy, links, and queryable levels of detail (overview vs. exhaustive
   recall on the same node).
+- **Controlled extension**: a permissioned extension of the user's mesh
+  toward another device, server, network, physical system, API, or service.
 - **Custom database**: a user-defined typed collection for niche entities
   that do not earn canonical status. First-class in the framework.
 - **Feed**: a canonical surface producing a selection of content with
