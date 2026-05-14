@@ -65,8 +65,8 @@ enum BodyFont {
         let fontNames = ["Manrope.ttf", "lucide.ttf"]
         let roots = [
             Bundle.main.resourceURL,
-            Bundle.main.resourceURL?.appendingPathComponent("Clawix_Clawix.bundle", isDirectory: true),
-            executableDirectory?.appendingPathComponent("Clawix_Clawix.bundle", isDirectory: true),
+            Bundle.main.resourceURL?.appendingPathComponent(ClawixPersistentSurfacePaths.components.bundleName, isDirectory: true),
+            executableDirectory?.appendingPathComponent(ClawixPersistentSurfacePaths.components.bundleName, isDirectory: true),
         ] as [URL?]
         let urls = roots.flatMap { root in
             fontNames.map { name in root?.appendingPathComponent(name, isDirectory: false) }
