@@ -178,7 +178,7 @@ enum EnhancementSecrets {
         await SystemSecrets.has(internalName: internalName(for: provider))
     }
 
-    static func internalName(for provider: EnhancementProviderID) -> String {
+    nonisolated static func internalName(for provider: EnhancementProviderID) -> String {
         "enhancement.\(provider.rawValue)"
     }
 
@@ -228,7 +228,7 @@ enum CloudTranscriptionSecrets {
         await SystemSecrets.has(internalName: internalName(for: provider))
     }
 
-    static func internalName(for provider: CloudTranscriptionProvider) -> String {
+    nonisolated static func internalName(for provider: CloudTranscriptionProvider) -> String {
         "transcription.\(provider.rawValue)"
     }
 
