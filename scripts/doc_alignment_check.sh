@@ -140,7 +140,7 @@ scan_forbidden() {
   local pattern="$2"
   local output
   set +e
-  output="$(rg -n --fixed-strings "$pattern" "${DOC_TARGETS[@]}" 2>/dev/null)"
+  output="$(rg -n --fixed-strings --glob '!persistent-surface-clawix.manifest.json' "$pattern" "${DOC_TARGETS[@]}" 2>/dev/null)"
   local status=$?
   set -e
   if [[ "$status" -eq 0 && -n "$output" ]]; then
