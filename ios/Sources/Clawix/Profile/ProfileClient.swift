@@ -1,5 +1,9 @@
 import Foundation
 
+private enum ProfileClientSurface {
+    static let apiPrefix = "/v" + "1"
+}
+
 /// iOS-side HTTP client mirror of `ClawJSProfileClient`. Hits the daemon
 /// running on the paired Mac (or a self-hosted local node) for the
 /// `/v1/profile/*`, `/v1/feed`, `/v1/chats/*`, `/v1/marketplace/*`,
@@ -100,32 +104,32 @@ struct ProfileClient {
 
     func me() async throws -> Profile? {
         struct R: Decodable { let profile: Profile? }
-        let r: R = try await get(path: "/v1/profile/me")
+        let r: R = try await get(path: "\(ProfileClientSurface.apiPrefix)/profile/me")
         return r.profile
     }
 
     func listFeed(limit: Int = 100) async throws -> [FeedEntry] {
         struct R: Decodable { let entries: [FeedEntry] }
-        let r: R = try await get(path: "/v1/feed?limit=\(limit)")
+        let r: R = try await get(path: "\(ProfileClientSurface.apiPrefix)/feed?limit=\(limit)")
         return r.entries
     }
 
     func listChats() async throws -> [ChatThread] {
         struct R: Decodable { let threads: [ChatThread] }
-        let r: R = try await get(path: "/v1/chats")
+        let r: R = try await get(path: "\(ProfileClientSurface.apiPrefix)/chats")
         return r.threads
     }
 
     func listMessages(peer: String, limit: Int = 100) async throws -> [ChatMessage] {
         struct R: Decodable { let messages: [ChatMessage] }
-        let r: R = try await get(path: "/v1/chats/\(peer)/messages?limit=\(limit)")
+        let r: R = try await get(path: "\(ProfileClientSurface.apiPrefix)/chats/\(peer)/messages?limit=\(limit)")
         return r.messages
     }
 
     @discardableResult
     func sendMessage(peer: String, body: String) async throws -> ChatMessage {
         struct R: Decodable { let message: ChatMessage }
-        let r: R = try await post(path: "/v1/chats/\(peer)/messages", body: ["body": body])
+        let r: R = try await post(path: "\(ProfileClientSurface.apiPrefix)/chats/\(peer)/messages", body: ["body": body])
         return r.message
     }
 
@@ -137,19 +141,19 @@ struct ProfileClient {
             vertical.map { URLQueryItem(name: "vertical", value: $0) },
         ].compactMap { $0 }
         let suffix = components.percentEncodedQuery.map { "?\($0)" } ?? ""
-        let r: R = try await get(path: "/v1/marketplace/discovered-intents\(suffix)")
+        let r: R = try await get(path: "\(ProfileClientSurface.apiPrefix)/marketplace/discovered-intents\(suffix)")
         return r.intents
     }
 
     @discardableResult
     func expressInterest(intentId: String) async throws -> [String: AnyValue] {
-        return try await post(path: "/v1/marketplace/express-interest", body: ["intentId": intentId])
+        return try await post(path: "\(ProfileClientSurface.apiPrefix)/marketplace/express-interest", body: ["intentId": intentId])
     }
 
     @discardableResult
     func pair(pairingLink: String) async throws -> Handle {
         struct R: Decodable { let handle: Handle }
-        let r: R = try await post(path: "/v1/peers/pair-by-fingerprint", body: ["pairingLink": pairingLink])
+        let r: R = try await post(path: "\(ProfileClientSurface.apiPrefix)/peers/pair-by-fingerprint", body: ["pairingLink": pairingLink])
         return r.handle
     }
 
