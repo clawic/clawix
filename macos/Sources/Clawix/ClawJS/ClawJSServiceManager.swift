@@ -707,7 +707,9 @@ final class ClawJSServiceManager: ObservableObject {
         )
         try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectoryURL(for: service).path)
         if service == .secrets {
-            try? fm.removeItem(at: dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false))
+            for tokenURL in staleSecretsAdminTokenURLs() {
+                try? fm.removeItem(at: tokenURL)
+            }
         }
         try fm.createDirectory(
             at: mainFilesDirectoryURL,
@@ -933,6 +935,18 @@ final class ClawJSServiceManager: ObservableObject {
         return workspaceURL
             .appendingPathComponent(".claw", isDirectory: true)
             .appendingPathComponent(service.rawValue, isDirectory: true)
+    }
+
+    private static func staleSecretsAdminTokenURLs() -> [URL] {
+        [
+            dataDirectoryURL(for: .secrets),
+            workspaceURL
+                .appendingPathComponent(".claw", isDirectory: true)
+                .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
+            workspaceURL
+                .appendingPathComponent(".clawjs", isDirectory: true)
+                .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
+        ].map { $0.appendingPathComponent(".admin-token", isDirectory: false) }
     }
 
     private static func bundledLauncherScript(for service: ClawJSService) -> URL? {

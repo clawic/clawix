@@ -13,8 +13,12 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             "The supervisor must not write a Secrets .admin-token file."
         )
         XCTAssertTrue(
-            source.contains("if service == .secrets {\n            try? fm.removeItem"),
-            "Launching Secrets must remove stale .admin-token files."
+            source.contains("for tokenURL in staleSecretsAdminTokenURLs()"),
+            "Launching Secrets must remove every known stale .admin-token file."
+        )
+        XCTAssertTrue(
+            source.contains(".appendingPathComponent(\".clawjs\", isDirectory: true)"),
+            "Secrets launch cleanup must include legacy .clawjs sidecar token paths."
         )
         XCTAssertTrue(
             source.contains("if service == .secrets { return false }"),
