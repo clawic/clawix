@@ -4,7 +4,7 @@
   "maxNewFileLines": 1200,
   "files": {
     "macos/Sources/Clawix/AppState.swift": {
-      "lines": 5398,
+      "lines": 4857,
       "reason": "Existing large state/runtime implementation; split models, persistence, actions, effects, and projections before expanding."
     },
     "macos/Sources/Clawix/ComposerView.swift": {
