@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 extension AppState {
     // MARK: - Branch switching (footer pill)

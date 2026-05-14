@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 extension AppState {
     func sendMessage() {
@@ -26,7 +27,7 @@ extension AppState {
         } else {
             // Create a new chat from home screen — inherits the project
             // currently selected in the composer pill (if any).
-            let titleSeed = trimmed.isEmpty ? (attachments.first?.filename ?? "Adjuntos") : trimmed
+            let titleSeed = trimmed.isEmpty ? (attachments.first?.filename ?? "Attachments") : trimmed
             let newChat = Chat(
                 id: UUID(),
                 title: String(titleSeed.prefix(40)),
@@ -163,7 +164,7 @@ extension AppState {
         }
     }
 
-    private func wireAttachments(from attachments: [ComposerAttachment]) -> [WireAttachment] {
+    func wireAttachments(from attachments: [ComposerAttachment]) -> [WireAttachment] {
         attachments.compactMap { attachment in
             guard attachment.isImage,
                   let data = try? Data(contentsOf: attachment.url)

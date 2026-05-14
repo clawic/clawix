@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 extension AppState {
     // MARK: - Clawix bridge helpers
@@ -90,7 +91,7 @@ extension AppState {
         }
     }
 
-    private func hydrateHistoryIfNeeded(chatId: UUID, blocking: Bool = false) {
+    func hydrateHistoryIfNeeded(chatId: UUID, blocking: Bool = false) {
         guard let chat = chat(byId: chatId), shouldHydrateHistory(chat) else { return }
         if FeatureFlags.shared.isVisible(.git), !chat.hasGitRepo, let cwd = chat.cwd {
             if blocking {
@@ -706,7 +707,7 @@ extension AppState {
         )
     }
 
-    private func chatMessage(from wire: WireMessage, fallbackingTo old: ChatMessage? = nil) -> ChatMessage? {
+    func chatMessage(from wire: WireMessage, fallbackingTo old: ChatMessage? = nil) -> ChatMessage? {
         guard let id = UUID(uuidString: wire.id) else { return nil }
         // Daemon-bridge mode: the helper's `RolloutHistory` reader does
         // not populate `timeline` / `workSummary` / `attachments` on the
