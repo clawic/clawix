@@ -221,11 +221,11 @@ final class ClawJSDriveClient {
     // MARK: - Health & auth
 
     func health() async throws -> HealthResponse {
-        try await get("/v1/health")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health")
     }
 
     func login(email: String, password: String) async throws -> AdminLoginResponse {
-        let response: AdminLoginResponse = try await post("/v1/auth/admin/login", body: ["email": email, "password": password])
+        let response: AdminLoginResponse = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/auth/admin/login", body: ["email": email, "password": password])
         self.bearerToken = response.accessToken
         return response
     }
@@ -233,11 +233,11 @@ final class ClawJSDriveClient {
     // MARK: - Items
 
     func bootstrap() async throws -> BootstrapResponse {
-        try await get("/v1/bootstrap")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bootstrap")
     }
 
     func listItems(view: String = "my-drive", parentId: String? = nil, query: String? = nil) async throws -> ListItemsResponse {
-        var components = URLComponents(string: "/v1/items")!
+        var components = URLComponents(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items")!
         var items: [URLQueryItem] = [URLQueryItem(name: "view", value: view)]
         if let parentId = parentId { items.append(URLQueryItem(name: "parentId", value: parentId)) }
         if let query = query, !query.isEmpty { items.append(URLQueryItem(name: "q", value: query)) }
@@ -246,16 +246,16 @@ final class ClawJSDriveClient {
     }
 
     func getItem(_ id: String) async throws -> DriveItemDetail {
-        try await get("/v1/items/\(id)")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)")
     }
 
     func markViewed(_ id: String) async throws {
         struct R: Decodable { let ok: Bool }
-        let _: R = try await post("/v1/items/\(id)/view", body: nil)
+        let _: R = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/view", body: nil)
     }
 
     func createFolder(name: String, parentId: String?) async throws -> DriveItemDetail {
-        try await post("/v1/items", body: ["kind": "folder", "name": name, "parentId": parentId as Any])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items", body: ["kind": "folder", "name": name, "parentId": parentId as Any])
     }
 
     func updateItem(_ id: String, name: String? = nil, starred: Bool? = nil, parentId: String? = nil) async throws -> DriveItemDetail {
@@ -263,29 +263,29 @@ final class ClawJSDriveClient {
         if let name { body["name"] = name }
         if let starred { body["starred"] = starred }
         if let parentId { body["parentId"] = parentId }
-        return try await patch("/v1/items/\(id)", body: body)
+        return try await patch("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)", body: body)
     }
 
     func moveItem(_ id: String, parentId: String?) async throws -> DriveItemDetail {
-        try await post("/v1/items/\(id)/move", body: ["parentId": parentId as Any])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/move", body: ["parentId": parentId as Any])
     }
 
     func copyItem(_ id: String, parentId: String?) async throws -> DriveItemDetail {
-        try await post("/v1/items/\(id)/copy", body: ["parentId": parentId as Any])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/copy", body: ["parentId": parentId as Any])
     }
 
     func trashItem(_ id: String) async throws -> DriveItemDetail {
-        try await post("/v1/items/\(id)/trash", body: nil)
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/trash", body: nil)
     }
 
     func restoreItem(_ id: String) async throws -> DriveItemDetail {
-        try await post("/v1/items/\(id)/restore", body: nil)
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/restore", body: nil)
     }
 
     @discardableResult
     func deleteItem(_ id: String) async throws -> Bool {
         struct R: Decodable { let ok: Bool }
-        let r: R = try await delete("/v1/items/\(id)")
+        let r: R = try await delete("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)")
         return r.ok
     }
 
@@ -295,7 +295,7 @@ final class ClawJSDriveClient {
     /// the server respond with HTTP 409 if the SHA256 already exists.
     func upload(filePath: URL, parentId: String?, duplicatePolicy: String? = nil) async throws -> DriveItemDetail {
         let boundary = "Boundary-\(UUID().uuidString)"
-        var pathString = "/v1/uploads"
+        var pathString = "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/uploads"
         if let policy = duplicatePolicy {
             pathString += "?duplicatePolicy=\(policy)"
         }
@@ -349,7 +349,7 @@ final class ClawJSDriveClient {
     // MARK: - Downloads & thumbnails
 
     func downloadItem(_ id: String, to destination: URL) async throws {
-        guard let url = URL(string: "/v1/items/\(id)/download", relativeTo: origin) else { throw Error.invalidURL }
+        guard let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/download", relativeTo: origin) else { throw Error.invalidURL }
         var request = URLRequest(url: url)
         if let token = bearerToken { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         let (tempURL, response) = try await session.download(for: request)
@@ -361,7 +361,7 @@ final class ClawJSDriveClient {
     }
 
     func thumbnailData(_ id: String, size: Int = 256) async throws -> Data {
-        guard let url = URL(string: "/v1/items/\(id)/thumbnail?size=\(size)", relativeTo: origin) else { throw Error.invalidURL }
+        guard let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/thumbnail?size=\(size)", relativeTo: origin) else { throw Error.invalidURL }
         var request = URLRequest(url: url)
         if let token = bearerToken { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         let (data, response) = try await session.data(for: request)
@@ -372,7 +372,7 @@ final class ClawJSDriveClient {
     }
 
     func getExif(_ id: String) async throws -> ExifRecord? {
-        do { return try await get("/v1/items/\(id)/exif") }
+        do { return try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/exif") }
         catch Error.http(404, _) { return nil }
     }
 
@@ -380,34 +380,34 @@ final class ClawJSDriveClient {
 
     func searchText(_ query: String) async throws -> [DriveItem] {
         struct Response: Decodable { let items: [DriveItem] }
-        let response: Response = try await get("/v1/search?q=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")
+        let response: Response = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/search?q=\(query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")
         return response.items
     }
 
     func searchSemantic(_ query: String, limit: Int = 20) async throws -> [SemanticResult] {
-        let response: SemanticSearchResponse = try await post("/v1/search/semantic", body: ["query": query, "limit": limit])
+        let response: SemanticSearchResponse = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/search/semantic", body: ["query": query, "limit": limit])
         return response.items
     }
 
     // MARK: - Sharing
 
     func listAllShares(_ itemId: String) async throws -> AllSharesResponse {
-        try await get("/v1/items/\(itemId)/shares/all")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(itemId)/shares/all")
     }
 
     func createReadShare(_ itemId: String, label: String) async throws -> CreateReadShareResponse {
-        try await post("/v1/items/\(itemId)/shares", body: ["mode": "read", "label": label])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(itemId)/shares", body: ["mode": "read", "label": label])
     }
 
     func createTailnetShare(_ itemId: String) async throws -> TailnetShareRecord {
         struct Response: Decodable { let mode: String; let record: TailnetShareRecord }
-        let r: Response = try await post("/v1/items/\(itemId)/shares", body: ["mode": "tailnet"])
+        let r: Response = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(itemId)/shares", body: ["mode": "tailnet"])
         return r.record
     }
 
     func createTunnelShare(_ itemId: String) async throws -> TunnelShareRecord {
         struct Response: Decodable { let mode: String; let record: TunnelShareRecord }
-        let r: Response = try await post("/v1/items/\(itemId)/shares", body: ["mode": "public_tunnel"])
+        let r: Response = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(itemId)/shares", body: ["mode": "public_tunnel"])
         return r.record
     }
 
@@ -419,20 +419,20 @@ final class ClawJSDriveClient {
             "agentName": agentName,
         ]
         if let reason = reason { body["reason"] = reason }
-        return try await post("/v1/items/\(itemId)/shares", body: body)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(itemId)/shares", body: body)
     }
 
     @discardableResult
     func revokeShare(_ itemId: String, _ shareId: String) async throws -> Bool {
         struct R: Decodable { let ok: Bool }
-        let r: R = try await post("/v1/items/\(itemId)/shares/\(shareId)/revoke", body: nil)
+        let r: R = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(itemId)/shares/\(shareId)/revoke", body: nil)
         return r.ok
     }
 
     // MARK: - Audit & encrypted folders
 
     func queryAudit(kinds: [String]? = nil, itemId: String? = nil, limit: Int = 200) async throws -> [AuditEvent] {
-        var components = URLComponents(string: "/v1/audit")!
+        var components = URLComponents(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/audit")!
         var items: [URLQueryItem] = [URLQueryItem(name: "limit", value: String(limit))]
         if let kinds = kinds, !kinds.isEmpty { items.append(URLQueryItem(name: "kinds", value: kinds.joined(separator: ","))) }
         if let itemId { items.append(URLQueryItem(name: "itemId", value: itemId)) }
@@ -443,14 +443,14 @@ final class ClawJSDriveClient {
 
     func setEncryptedFolder(_ folderId: String, enabled: Bool) async throws {
         struct R: Decodable { let ok: Bool }
-        let _: R = try await post("/v1/encrypted-folders", body: ["folderId": folderId, "enabled": enabled])
+        let _: R = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/encrypted-folders", body: ["folderId": folderId, "enabled": enabled])
     }
 
     // MARK: - Project folder ensure (Clawix auto-routing entry point)
 
     func ensureProjectFolder(slug: String) async throws -> String {
         struct R: Decodable { let folderId: String }
-        let r: R = try await post("/v1/projects/\(slug)/ensure-folder", body: nil)
+        let r: R = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/projects/\(slug)/ensure-folder", body: nil)
         return r.folderId
     }
 
