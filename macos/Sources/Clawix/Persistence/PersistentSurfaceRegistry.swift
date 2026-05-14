@@ -275,19 +275,19 @@ enum ClawixPersistentSurfaceRegistry {
             ClawixPersistentSurface.preference(
                 id: "clawix.prefs.sidebar.viewMode",
                 name: "Sidebar view mode",
-                key: "SidebarViewMode",
+                key: ClawixPersistentSurfaceKeys.sidebarViewMode,
                 kind: .appStorageKey
             ),
             ClawixPersistentSurface.preference(
                 id: "clawix.prefs.sidebar.projectSortMode",
                 name: "Sidebar project sort mode",
-                key: "ProjectSortMode",
+                key: ClawixPersistentSurfaceKeys.projectSortMode,
                 kind: .appStorageKey
             ),
             ClawixPersistentSurface.preference(
                 id: "clawix.prefs.feed.displayMode",
                 name: "Feed display mode",
-                key: "clawix.feed.displayMode",
+                key: ClawixPersistentSurfaceKeys.feedDisplayMode,
                 kind: .appStorageKey
             ),
         ] + preferenceSurfaceNodes + databaseSurfaceNodes
@@ -295,6 +295,12 @@ enum ClawixPersistentSurfaceRegistry {
 
     private static var preferenceSurfaceNodes: [PersistentSurfaceNode] {
         [
+            ("clawix.prefs.sidebar.pinnedExpanded", "Pinned section expanded", ClawixPersistentSurfaceKeys.sidebarPinnedExpanded, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.sidebar.chronoExpanded", "Chronological section expanded", ClawixPersistentSurfaceKeys.sidebarChronoExpanded, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.sidebar.noProjectExpanded", "No project section expanded", ClawixPersistentSurfaceKeys.sidebarNoProjectExpanded, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.sidebar.projectsExpanded", "Projects section expanded", ClawixPersistentSurfaceKeys.sidebarProjectsExpanded, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.sidebar.archivedExpanded", "Archived section expanded", ClawixPersistentSurfaceKeys.sidebarArchivedExpanded, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.sidebar.toolsExpanded", "Tools section expanded", ClawixPersistentSurfaceKeys.sidebarToolsExpanded, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.sidebar.pinnedFilterDisabled", "Sidebar pinned filter disabled", ClawixPersistentSurfaceKeys.sidebarPinnedFilterDisabled, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.sidebar.chronoFilterDisabled", "Sidebar chrono filter disabled", ClawixPersistentSurfaceKeys.sidebarChronoFilterDisabled, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.sidebar.appsFeatureEnabled", "Apps feature enabled", ClawixPersistentSurfaceKeys.appsFeatureEnabled, PersistentSurfaceKind.appStorageKey),
@@ -322,6 +328,16 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.iot.tab", "IoT tab", ClawixPersistentSurfaceKeys.iotTab, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.publishing.calendarMode", "Publishing calendar mode", ClawixPersistentSurfaceKeys.publishingCalendarMode, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.publishing.homeTab", "Publishing home tab", ClawixPersistentSurfaceKeys.publishingHomeTab, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.featureFlags.beta", "Beta feature flag", ClawixPersistentSurfaceKeys.featureFlagsBeta, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.featureFlags.experimental", "Experimental feature flag", ClawixPersistentSurfaceKeys.featureFlagsExperimental, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.life.enabledVerticals", "Life enabled verticals", ClawixPersistentSurfaceKeys.lifeEnabledVerticals, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.life.hiddenVerticals", "Life hidden verticals", ClawixPersistentSurfaceKeys.lifeHiddenVerticals, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.relay.refresh", "Relay refresh token pattern", ClawixPersistentSurfaceKeys.relayRefreshPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.customBaseUrl", "Custom transcription base URL", ClawixPersistentSurfaceKeys.dictationCustomBaseURL, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.customModel", "Custom transcription model", ClawixPersistentSurfaceKeys.dictationCustomModel, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.useAppleScriptPaste", "AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPaste, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.useAppleScriptPasteLegacy", "Legacy AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.bridge.bearer", "Bridge bearer token reference", ClawixPersistentSurfaceKeys.bridgeBearer, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.binary.path", "Clawix binary path", ClawixPersistentSurfaceKeys.binaryPath, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.backgroundBridge.wasEnabled", "Background bridge was enabled", ClawixPersistentSurfaceKeys.backgroundBridgeWasEnabled, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.appleLanguages", "Apple languages", ClawixPersistentSurfaceKeys.appleLanguages, PersistentSurfaceKind.preferenceKey),
@@ -361,6 +377,12 @@ enum ClawixPersistentSurfaceRegistry {
 enum ClawixPersistentSurfaceKeys {
     static let sidebarViewMode = "SidebarViewMode"
     static let projectSortMode = "ProjectSortMode"
+    static let sidebarPinnedExpanded = "SidebarPinnedExpanded"
+    static let sidebarChronoExpanded = "SidebarChronoExpanded"
+    static let sidebarNoProjectExpanded = "SidebarNoProjectExpanded"
+    static let sidebarProjectsExpanded = "SidebarProjectsExpanded"
+    static let sidebarArchivedExpanded = "SidebarArchivedExpanded"
+    static let sidebarToolsExpanded = "SidebarToolsExpanded"
     static let sidebarPinnedFilterDisabled = "SidebarPinnedFilterDisabled"
     static let sidebarChronoFilterDisabled = "SidebarChronoFilterDisabled"
     static let appsFeatureEnabled = "AppsFeatureEnabled"
@@ -389,6 +411,19 @@ enum ClawixPersistentSurfaceKeys {
     static let publishingCalendarMode = "clawix.publishing.calendarMode.v1"
     static let publishingHomeTab = "clawix.publishing.homeTab.v1"
     static let feedDisplayMode = "clawix.feed.displayMode"
+    static let featureFlagsBeta = "FeatureFlags.beta"
+    static let featureFlagsExperimental = "FeatureFlags.experimental"
+    static let lifeEnabledVerticals = "LifeEnabledVerticals"
+    static let lifeHiddenVerticals = "LifeHiddenVerticals"
+    static let relayRefreshPrefix = "clawix.relay.refresh"
+    static let relayRefreshPattern = "clawix.relay.refresh.<deviceId>"
+    static func relayRefreshKey(for deviceId: String) -> String { "\(relayRefreshPrefix).\(deviceId)" }
+    static let dictationCustomBaseURL = "dictation.transcription.baseURL.custom"
+    static let dictationCustomModel = "dictation.transcription.model.custom"
+    static let useAppleScriptPaste = "useAppleScriptPaste"
+    static let useAppleScriptPasteLegacy = "UseAppleScriptPaste"
+    static let bridgeDefaultsSuite = "clawix.bridge"
+    static let bridgeBearer = "ClawixBridge.Bearer.v1"
     static let binaryPath = "ClawixBinaryPath"
     static let backgroundBridgeWasEnabled = "clawix.backgroundBridge.wasEnabled"
     static let appleLanguages = "AppleLanguages"
