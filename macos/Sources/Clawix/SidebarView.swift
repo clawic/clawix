@@ -198,7 +198,7 @@ struct SidebarView: View {
     private var viewModeRaw: String = SidebarViewMode.grouped.rawValue
     @AppStorage(ClawixPersistentSurfaceKeys.projectSortMode, store: SidebarPrefs.store)
     private var projectSortModeRaw: String = ProjectSortMode.recent.rawValue
-    @State private var pinnedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarPinnedExpanded", default: true)
+    @State private var pinnedExpanded: Bool = SidebarPrefs.bool(forKey: ClawixPersistentSurfaceKeys.sidebarPinnedExpanded, default: true)
     @State private var pinnedFilterMenuOpen: Bool = false
     /// Comma-separated list of disabled pinned-filter tokens. UUIDs identify
     /// projects; the literal `__none__` represents the implicit "no project"
@@ -211,11 +211,11 @@ struct SidebarView: View {
     /// from inside the Organize popup's "Filter > By project" submenu.
     @AppStorage(ClawixPersistentSurfaceKeys.sidebarChronoFilterDisabled, store: SidebarPrefs.store)
     private var chronoFilterDisabledRaw: String = ""
-    @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarChronoExpanded", default: true)
-    @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarNoProjectExpanded", default: true)
-    @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarProjectsExpanded", default: true)
-    @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarArchivedExpanded", default: false)
-    @State private var toolsExpanded: Bool = SidebarPrefs.bool(forKey: "SidebarToolsExpanded", default: true)
+    @State private var chronoExpanded: Bool = SidebarPrefs.bool(forKey: ClawixPersistentSurfaceKeys.sidebarChronoExpanded, default: true)
+    @State private var noProjectExpanded: Bool = SidebarPrefs.bool(forKey: ClawixPersistentSurfaceKeys.sidebarNoProjectExpanded, default: true)
+    @State private var projectsExpanded: Bool = SidebarPrefs.bool(forKey: ClawixPersistentSurfaceKeys.sidebarProjectsExpanded, default: true)
+    @State private var archivedExpanded: Bool = SidebarPrefs.bool(forKey: ClawixPersistentSurfaceKeys.sidebarArchivedExpanded, default: false)
+    @State private var toolsExpanded: Bool = SidebarPrefs.bool(forKey: ClawixPersistentSurfaceKeys.sidebarToolsExpanded, default: true)
     /// Master switch for the Apps surface. Mirrors the Settings toggle
     /// that lives on `SidebarPrefs.store`; defaults on for new users.
     @AppStorage(ClawixPersistentSurfaceKeys.appsFeatureEnabled, store: SidebarPrefs.store)
@@ -651,15 +651,15 @@ struct SidebarView: View {
             archivedSection
         }
         .padding(.bottom, 10)
-        .onChange(of: pinnedExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarPinnedExpanded") }
-        .onChange(of: chronoExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarChronoExpanded") }
-        .onChange(of: noProjectExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarNoProjectExpanded") }
-        .onChange(of: projectsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarProjectsExpanded") }
+        .onChange(of: pinnedExpanded) { _, v in SidebarPrefs.store.set(v, forKey: ClawixPersistentSurfaceKeys.sidebarPinnedExpanded) }
+        .onChange(of: chronoExpanded) { _, v in SidebarPrefs.store.set(v, forKey: ClawixPersistentSurfaceKeys.sidebarChronoExpanded) }
+        .onChange(of: noProjectExpanded) { _, v in SidebarPrefs.store.set(v, forKey: ClawixPersistentSurfaceKeys.sidebarNoProjectExpanded) }
+        .onChange(of: projectsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: ClawixPersistentSurfaceKeys.sidebarProjectsExpanded) }
         .onChange(of: archivedExpanded) { _, v in
-            SidebarPrefs.store.set(v, forKey: "SidebarArchivedExpanded")
+            SidebarPrefs.store.set(v, forKey: ClawixPersistentSurfaceKeys.sidebarArchivedExpanded)
             if v { Task { await appState.loadArchivedChats() } }
         }
-        .onChange(of: toolsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: "SidebarToolsExpanded") }
+        .onChange(of: toolsExpanded) { _, v in SidebarPrefs.store.set(v, forKey: ClawixPersistentSurfaceKeys.sidebarToolsExpanded) }
         .task {
             if archivedExpanded { await appState.loadArchivedChats() }
         }
