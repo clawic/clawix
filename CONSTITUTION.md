@@ -90,6 +90,15 @@ and rigorous for technical consumers (developers and agents). The app
 shields the human from that complexity; the framework does not pretend to
 be friendly to non-technical readers at its own level.
 
+**I.5 The CLI is the agent interface to the framework.** `claw` is the default
+way agents discover, inspect, validate, and execute framework capabilities.
+If a stable framework contract, collection, connector, schema, route, event,
+permission, decision record, or codebase fact matters to an agent, the CLI
+must expose it through a registered, documented, testable surface. Agents
+should not need to read framework source files to learn what the framework can
+do; source remains evidence, while CLI inspection and search are the canonical
+agent-facing view.
+
 ### II. Sovereignty
 
 **II.1 Local-first by construction.** The user's data lives on the user's
