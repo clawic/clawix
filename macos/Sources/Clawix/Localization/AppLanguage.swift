@@ -182,7 +182,7 @@ extension AppLanguage {
         // L10n helpers (those go through `AppLocale.bundle` directly)
         // but keeps `Locale.current` and any system framework that
         // sniffs `AppleLanguages` in sync with the user's choice.
-        UserDefaults.standard.set([lang.rawValue], forKey: "AppleLanguages")
+        UserDefaults.standard.set([lang.rawValue], forKey: ClawixPersistentSurfaceKeys.appleLanguages)
         AppLocale.current = lang.locale
         AppLocale.bundle = lang.bundle
     }
