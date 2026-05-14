@@ -22,7 +22,7 @@ enum TerminalShortcutsInstaller {
         installed = true
 
         KeyboardShortcuts.onKeyDown(for: .terminalToggle) {
-            let key = "TerminalPanelOpen"
+            let key = ClawixPersistentSurfaceKeys.terminalPanelOpen
             let current = SidebarPrefs.store.bool(forKey: key)
             SidebarPrefs.store.set(!current, forKey: key)
         }
@@ -33,7 +33,7 @@ enum TerminalShortcutsInstaller {
             let cwd = TerminalShortcutsInstaller.cwdForChat(chatId, store: store)
             store.createTab(chatId: chatId, cwd: cwd)
             // Auto-open the panel if it was closed.
-            SidebarPrefs.store.set(true, forKey: "TerminalPanelOpen")
+            SidebarPrefs.store.set(true, forKey: ClawixPersistentSurfaceKeys.terminalPanelOpen)
         }
 
         KeyboardShortcuts.onKeyDown(for: .terminalCloseTab) {

@@ -31,7 +31,7 @@ struct ViewMenuCommands: View {
         }
         .keyboardShortcut("b", modifiers: .command)
         Button("Toggle Terminal") {
-            let key = "TerminalPanelOpen"
+            let key = ClawixPersistentSurfaceKeys.terminalPanelOpen
             let current = SidebarPrefs.store.bool(forKey: key)
             SidebarPrefs.store.set(!current, forKey: key)
         }
@@ -113,7 +113,7 @@ struct ViewMenuCommands: View {
             ?? appState.chat(byId: currentChatId)?.cwd
             ?? NSHomeDirectory()
         terminalStore.createTab(chatId: currentChatId, cwd: cwd)
-        SidebarPrefs.store.set(true, forKey: "TerminalPanelOpen")
+        SidebarPrefs.store.set(true, forKey: ClawixPersistentSurfaceKeys.terminalPanelOpen)
     }
 
     private func closeActiveTerminalTab() {
