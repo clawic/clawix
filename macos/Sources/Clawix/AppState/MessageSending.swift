@@ -1,5 +1,6 @@
 import Foundation
 import ClawixCore
+import ClawixEngine
 
 extension AppState {
     func sendMessage() {

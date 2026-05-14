@@ -117,7 +117,7 @@ final class AppState: ObservableObject {
     /// this session, so re-expanding the section doesn't re-hit the
     /// runtime. `unarchiveChat` triggers a refetch when the active list
     /// reload completes.
-    private var archivedLoaded: Bool = false
+    var archivedLoaded: Bool = false
     /// Cap applied to the sidebar's archived section. The settings page
     /// can surface a larger list if we ever wire it up; the sidebar is
     /// for browsing recent archives, not exhaustive history.
@@ -360,21 +360,21 @@ final class AppState: ObservableObject {
     /// companion. Lazily created so the property doesn't take a
     /// reference to `self` before init finishes.
     private var bridgeServer: BridgeServer?
-    private var daemonBridgeClient: DaemonBridgeClient?
+    var daemonBridgeClient: DaemonBridgeClient?
 
-    private let projectsRepo = ProjectsRepository()
-    private let projectOrdersRepo = ProjectOrdersRepository()
-    private let pinsRepo = PinsRepository()
-    private let chatProjectsRepo = ChatProjectsRepository()
-    private let metaRepo = MetaRepository()
-    private let archivesRepo = ArchivesRepository()
-    private let hiddenRootsRepo = HiddenRootsRepository()
-    private var clawJSSessionsCanonicalActive = false
+    let projectsRepo = ProjectsRepository()
+    let projectOrdersRepo = ProjectOrdersRepository()
+    let pinsRepo = PinsRepository()
+    let chatProjectsRepo = ChatProjectsRepository()
+    let metaRepo = MetaRepository()
+    let archivesRepo = ArchivesRepository()
+    let hiddenRootsRepo = HiddenRootsRepository()
+    var clawJSSessionsCanonicalActive = false
     /// Persistent cache of the sidebar's last applied state. Used to
     /// paint Pinned + chat list instantly at launch from local SQLite,
     /// before the runtime bootstraps and paginates the real thread list.
     /// Rewritten at the end of every applyThreads / mergeThreads.
-    private let snapshotRepo = SnapshotRepository()
+    let snapshotRepo = SnapshotRepository()
     private static let launchRouteKindKey = "LaunchRouteKind"
     private static let launchRouteChatUuidKey = "LaunchRouteChatUuid"
     private static let launchRouteThreadIdKey = "LaunchRouteThreadId"
@@ -389,7 +389,7 @@ final class AppState: ObservableObject {
 
     /// Resolves user renames and generated titles persisted by Clawix.
     /// Runtime titles arrive from the ClawJS sessions adapter.
-    private let titlesRepo = SessionTitlesRepository()
+    let titlesRepo = SessionTitlesRepository()
     /// Available only when ClawixBinary.resolve() returned a path. If
     /// nil, automatic title generation is silently disabled and
     /// historic sessions without an entry in titlesRepo keep their
@@ -397,7 +397,7 @@ final class AppState: ObservableObject {
     private let titleGenerator: TitleGenerator?
     /// Chats already considered for post-turn title generation. Prevents
     /// re-firing on every turn of the same chat.
-    private var titledChatIds: Set<UUID> = []
+    var titledChatIds: Set<UUID> = []
 
     /// Per-chat pagination state for the bridge's `loadOlderMessages`
     /// flow. Mirrors the iOS `BridgeStore` model: `oldestKnownId` is the
@@ -420,15 +420,15 @@ final class AppState: ObservableObject {
     /// Updated by every `applyDaemon*` and `appendDaemonMessage` path.
     /// Streaming partials are deliberately NOT mirrored here: the on-
     /// disk snapshot only holds settled messages, matching iOS.
-    private var cachedWireChats: [WireChat] = []
-    private var cachedWireMessagesByChat: [String: [WireMessage]] = [:]
-    private var optimisticUserMessageIdsByChat: [UUID: Set<UUID>] = [:]
+    var cachedWireChats: [WireChat] = []
+    var cachedWireMessagesByChat: [String: [WireMessage]] = [:]
+    var optimisticUserMessageIdsByChat: [UUID: Set<UUID>] = [:]
     /// Drives `SnapshotCache.save` after a quiet 500ms window. Each
     /// call cancels the previous in-flight task; streaming bursts and
     /// rapid chat updates collapse into a single write. The actual IO
     /// runs on a background priority Task so the main thread stays out
     /// of the file-system path entirely.
-    private var persistTask: Task<Void, Never>?
+    var persistTask: Task<Void, Never>?
     /// Per-chat git probes. `git status` can block on large repos or
     /// filesystem state, so chat navigation must never wait on it.
     var gitInspectionTasks: [UUID: Task<Void, Never>] = [:]
@@ -1018,7 +1018,7 @@ final class AppState: ObservableObject {
     /// saturates the loopback RPC pipe.
     private static let preWarmConcurrency = 3
 
-    private func mergedProjects() -> [Project] {
+    func mergedProjects() -> [Project] {
         let localPaths = Set(projectsRepo.all().map(\.path).filter { !$0.isEmpty })
         let hidden = Set(hiddenRootsRepo.allHidden())
         // Drop Codex roots the user explicitly hid. Local projects with the
@@ -1413,7 +1413,7 @@ final class AppState: ObservableObject {
         persistSidebarSnapshot()
     }
 
-    private func chatFromThread(_ thread: AgentThreadSummary,
+    func chatFromThread(_ thread: AgentThreadSummary,
                                 old: Chat?,
                                 projectByPath: [String: Project],
                                 pinnedSet: Set<String>) -> Chat {
@@ -1470,7 +1470,7 @@ final class AppState: ObservableObject {
     /// Returns nil when the
     /// thread id is missing (legacy daemons that don't emit it yet),
     /// preserving the previous "stay in flat list" behaviour.
-    private func rootPath(threadId: String?, cwd: String?, projectByPath: [String: Project]) -> String? {
+    func rootPath(threadId: String?, cwd: String?, projectByPath: [String: Project]) -> String? {
         if let threadId {
             if chatProjectsRepo.isProjectless(threadId) {
                 return nil
@@ -1507,7 +1507,7 @@ final class AppState: ObservableObject {
         return "Conversation"
     }
 
-    private func appendRuntimeStatusError(_ message: String) {
+    func appendRuntimeStatusError(_ message: String) {
         guard case let .chat(chatId) = currentRoute else { return }
         appendErrorBubble(chatId: chatId, message: message)
     }
@@ -1783,7 +1783,7 @@ final class AppState: ObservableObject {
     /// the daemon hands us the canonical content (`applyDaemonStreaming`,
     /// `appendDaemonMessage`) so we don't double-append after the
     /// authoritative replace.
-    private func dropPendingAssistantText(chatId: UUID) {
+    func dropPendingAssistantText(chatId: UUID) {
         pendingAssistantTextBuffers.removeValue(forKey: chatId)
     }
 
