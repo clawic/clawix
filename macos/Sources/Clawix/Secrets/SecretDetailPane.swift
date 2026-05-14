@@ -348,59 +348,65 @@ struct SecretDetailPane: View {
     }
 
     private func toggleReveal(_ field: SecretFieldRecord) {
-        guard let store = vault.store else { return }
         if revealed[field.fieldName] != nil {
             withAnimation(.easeOut(duration: 0.18)) {
                 revealed[field.fieldName] = nil
             }
             return
         }
-        do {
-            let r = try store.revealField(field, purpose: .reveal)
-            withAnimation(.easeOut(duration: 0.18)) {
-                revealed[field.fieldName] = r.value
+        Task { @MainActor in
+            do {
+                try await SecretsReauthentication.require(reason: "Reveal this secret value in Clawix.")
+                guard let store = vault.store else { return }
+                let r = try store.revealField(field, purpose: .reveal)
+                withAnimation(.easeOut(duration: 0.18)) {
+                    revealed[field.fieldName] = r.value
+                }
+                reloadEvents()
+            } catch {
+                self.error = String(describing: error)
             }
-            reloadEvents()
-        } catch {
-            self.error = String(describing: error)
         }
     }
 
     private func copyValue(_ field: SecretFieldRecord) {
-        guard let store = vault.store else { return }
-        do {
-            let r = try store.revealField(field, purpose: .copy)
-            guard let value = r.value else { return }
-            reloadEvents()
-            let pb = NSPasteboard.general
-            pb.clearContents()
-            pb.setString(value, forType: .string)
-            withAnimation(.easeOut(duration: 0.15)) {
-                copiedField = field.fieldName
-            }
-            let fieldName = field.fieldName
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 700_000_000)
-                if copiedField == fieldName {
-                    withAnimation(.easeOut(duration: 0.25)) {
-                        copiedField = nil
-                    }
+        Task { @MainActor in
+            do {
+                try await SecretsReauthentication.require(reason: "Copy this secret value from Clawix.")
+                guard let store = vault.store else { return }
+                let r = try store.revealField(field, purpose: .copy)
+                guard let value = r.value else { return }
+                reloadEvents()
+                let pb = NSPasteboard.general
+                pb.clearContents()
+                pb.setString(value, forType: .string)
+                withAnimation(.easeOut(duration: 0.15)) {
+                    copiedField = field.fieldName
                 }
-            }
-            // Auto-clear after the secret's clipboard window.
-            let seconds = max(secret.clipboardClearSeconds, 0)
-            if seconds > 0 {
-                let pasteboardString = value
+                let fieldName = field.fieldName
                 Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
-                    let pb = NSPasteboard.general
-                    if pb.string(forType: .string) == pasteboardString {
-                        pb.clearContents()
+                    try? await Task.sleep(nanoseconds: 700_000_000)
+                    if copiedField == fieldName {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            copiedField = nil
+                        }
                     }
                 }
+                // Auto-clear after the secret's clipboard window.
+                let seconds = max(secret.clipboardClearSeconds, 0)
+                if seconds > 0 {
+                    let pasteboardString = value
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: UInt64(seconds) * 1_000_000_000)
+                        let pb = NSPasteboard.general
+                        if pb.string(forType: .string) == pasteboardString {
+                            pb.clearContents()
+                        }
+                    }
+                }
+            } catch {
+                self.error = String(describing: error)
             }
-        } catch {
-            self.error = String(describing: error)
         }
     }
 
