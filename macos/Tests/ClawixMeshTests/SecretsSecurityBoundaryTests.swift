@@ -103,6 +103,28 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         XCTAssertFalse(body.contains("revealCredentialsRaw"))
         XCTAssertFalse(body.contains("return credentials"))
     }
+
+    func testEncryptedBackupRequiresNativeReauthentication() throws {
+        let source = try readSource("Secrets/SecretsSettingsPage.swift")
+
+        XCTAssertTrue(
+            source.contains("SecretsReauthentication.require(reason: \"Export an encrypted Secrets backup from Clawix.\")"),
+            "Backup export must reauthenticate in the signed host before calling the Secrets backend."
+        )
+        XCTAssertTrue(
+            source.contains("exportEncryptedBackup(passphrase: passphrase, reauthSatisfied: true)"),
+            "Backup export must pass explicit reauthSatisfied evidence to the backend."
+        )
+        XCTAssertTrue(
+            source.contains("SecretsReauthentication.require(reason: \"Restore an encrypted Secrets backup in Clawix.\")"),
+            "Backup restore must reauthenticate in the signed host before calling the Secrets backend."
+        )
+        XCTAssertTrue(
+            source.contains("importEncryptedBackup(data, passphrase: passphrase, reauthSatisfied: true)"),
+            "Backup restore must pass explicit reauthSatisfied evidence to the backend."
+        )
+    }
+
     private func readSource(_ relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let root = testFile

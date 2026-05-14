@@ -296,13 +296,13 @@ final class SecretsManager: ObservableObject {
         return preview
     }
 
-    func exportEncryptedBackup(passphrase: String) async throws -> Data {
-        try await client.exportBackup(passphrase: passphrase)
+    func exportEncryptedBackup(passphrase: String, reauthSatisfied: Bool = false) async throws -> Data {
+        try await client.exportBackup(passphrase: passphrase, reauthSatisfied: reauthSatisfied)
     }
 
     @discardableResult
-    func importEncryptedBackup(_ data: Data, passphrase: String) async throws -> (created: Int, skipped: Int) {
-        let response = try await client.importBackup(data: data, passphrase: passphrase)
+    func importEncryptedBackup(_ data: Data, passphrase: String, reauthSatisfied: Bool = false) async throws -> (created: Int, skipped: Int) {
+        let response = try await client.importBackup(data: data, passphrase: passphrase, reauthSatisfied: reauthSatisfied)
         let imported = response.imported
         let created = (imported["secrets"]?.value as? Int) ?? 0
         Task { await self.load() }

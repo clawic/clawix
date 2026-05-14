@@ -120,15 +120,15 @@ final class ClawJSSecretsClient {
         let imported: [String: AnyCodable]
     }
 
-    func exportBackup(passphrase: String) async throws -> Data {
+    func exportBackup(passphrase: String, reauthSatisfied: Bool = false) async throws -> Data {
         let response: BackupExportResponse = try await post(
             "/v1/secrets/backup/export",
-            body: ["passphrase": passphrase]
+            body: ["passphrase": passphrase, "reauthSatisfied": reauthSatisfied]
         )
         return try JSONEncoder().encode(response.backup)
     }
 
-    func importBackup(data: Data, passphrase: String) async throws -> BackupImportResponse {
+    func importBackup(data: Data, passphrase: String, reauthSatisfied: Bool = false) async throws -> BackupImportResponse {
         let object = try JSONSerialization.jsonObject(with: data)
         guard let backup = object as? [String: Any],
               backup["format"] as? String == "clawix-secrets-backup-v1" else {
@@ -136,7 +136,7 @@ final class ClawJSSecretsClient {
         }
         return try await post(
             "/v1/secrets/backup/import",
-            body: ["passphrase": passphrase, "backup": backup]
+            body: ["passphrase": passphrase, "backup": backup, "reauthSatisfied": reauthSatisfied]
         )
     }
 

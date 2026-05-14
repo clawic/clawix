@@ -455,7 +455,8 @@ private struct BackupExportSheet: View {
         Task {
             defer { isWorking = false }
             do {
-                let data = try await vault.exportEncryptedBackup(passphrase: passphrase)
+                try await SecretsReauthentication.require(reason: "Export an encrypted Secrets backup from Clawix.")
+                let data = try await vault.exportEncryptedBackup(passphrase: passphrase, reauthSatisfied: true)
                 let panel = NSSavePanel()
                 panel.title = "Save Secrets backup"
                 panel.nameFieldStringValue = "clawix.clawixsecrets"
@@ -528,7 +529,8 @@ private struct BackupImportSheet: View {
         Task {
             defer { isWorking = false }
             do {
-                let result = try await vault.importEncryptedBackup(data, passphrase: passphrase)
+                try await SecretsReauthentication.require(reason: "Restore an encrypted Secrets backup in Clawix.")
+                let result = try await vault.importEncryptedBackup(data, passphrase: passphrase, reauthSatisfied: true)
                 resultText = "Restored \(result.created) secret\(result.created == 1 ? "" : "s"); \(result.skipped) skipped as duplicates."
                 error = nil
             } catch {
