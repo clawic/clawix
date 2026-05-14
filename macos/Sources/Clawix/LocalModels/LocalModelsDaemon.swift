@@ -58,7 +58,9 @@ final class LocalModelsDaemon: ObservableObject {
         let logs = FileManager.default.urls(
             for: .libraryDirectory,
             in: .userDomainMask
-        )[0].appendingPathComponent("Logs/Clawix", isDirectory: true)
+        )[0]
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.logs, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
         return logs.appendingPathComponent("local-models.log", isDirectory: false)
     }
 

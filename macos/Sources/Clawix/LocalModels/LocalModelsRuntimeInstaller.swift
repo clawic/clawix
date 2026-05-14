@@ -128,7 +128,9 @@ final class LocalModelsRuntimeInstaller: NSObject, ObservableObject {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         )[0]
-        return base.appendingPathComponent("Clawix/local-models", isDirectory: true)
+        return base
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.localModels, isDirectory: true)
     }
 
     private nonisolated static func prepareParentDirectory() throws {
