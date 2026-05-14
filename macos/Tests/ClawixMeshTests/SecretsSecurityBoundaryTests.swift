@@ -161,6 +161,10 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             "The Secrets XPC service must verify the caller code signature before issuing assertions."
         )
         XCTAssertTrue(
+            xpcServiceSource.contains("kSecCodeInfoTeamIdentifier"),
+            "The Secrets XPC service must compare caller TeamIdentifier against the signed service, not just bundle identifier text."
+        )
+        XCTAssertTrue(
             xpcServiceSource.contains("CLXAllowedCallerIdentifier"),
             "The Secrets XPC service must pin the allowed caller to the enclosing Clawix bundle identifier."
         )

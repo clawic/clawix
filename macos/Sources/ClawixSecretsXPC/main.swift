@@ -70,20 +70,39 @@ final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
     private static func verifyCaller(_ connection: NSXPCConnection) -> Bool {
         guard let expected = Bundle.main.object(forInfoDictionaryKey: "CLXAllowedCallerIdentifier") as? String,
               !expected.isEmpty,
-              let actual = signingIdentifier(pid: connection.processIdentifier) else {
+              let caller = signingInfo(pid: connection.processIdentifier),
+              let ownTeamIdentifier = ownSigningInfo()?.teamIdentifier,
+              !ownTeamIdentifier.isEmpty else {
             return false
         }
-        return actual == expected
+        return caller.identifier == expected && caller.teamIdentifier == ownTeamIdentifier
     }
 
-    private static func signingIdentifier(pid: pid_t) -> String? {
+    private struct SigningInfo {
+        let identifier: String
+        let teamIdentifier: String?
+    }
+
+    private static func signingInfo(pid: pid_t) -> SigningInfo? {
         let attributes = [kSecGuestAttributePid as String: NSNumber(value: pid)] as CFDictionary
         var code: SecCode?
         guard SecCodeCopyGuestWithAttributes(nil, attributes, SecCSFlags(), &code) == errSecSuccess,
               let code else {
             return nil
         }
+        return signingInfo(code: code)
+    }
 
+    private static func ownSigningInfo() -> SigningInfo? {
+        var code: SecCode?
+        guard SecCodeCopySelf(SecCSFlags(), &code) == errSecSuccess,
+              let code else {
+            return nil
+        }
+        return signingInfo(code: code)
+    }
+
+    private static func signingInfo(code: SecCode) -> SigningInfo? {
         var staticCode: SecStaticCode?
         guard SecCodeCopyStaticCode(code, SecCSFlags(), &staticCode) == errSecSuccess,
               let staticCode else {
@@ -96,7 +115,10 @@ final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
               let identifier = info[kSecCodeInfoIdentifier as String] as? String else {
             return nil
         }
-        return identifier
+        return SigningInfo(
+            identifier: identifier,
+            teamIdentifier: info[kSecCodeInfoTeamIdentifier as String] as? String
+        )
     }
 }
 
