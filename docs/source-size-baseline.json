@@ -16,7 +16,7 @@
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "macos/Sources/Clawix/ScreenTools/ScreenToolService.swift": {
-      "lines": 2226,
+      "lines": 1410,
       "reason": "Existing oversized source tracked by source file boundary contract; split before expanding."
     },
     "packages/SecretsCrypto/Sources/SecretsCrypto/BIP39Wordlist.swift": {
