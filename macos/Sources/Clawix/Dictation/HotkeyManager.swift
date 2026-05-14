@@ -104,6 +104,7 @@ final class HotkeyManager {
 
     nonisolated static let modeDefaultsKey = "dictation.hotkeyMode"
     nonisolated static let triggerDefaultsKey = "dictation.hotkeyTrigger"
+    nonisolated static let migratedV2Key = "dictation.hotkey.migratedV2"
     /// Second-binding keys. `.off` by default so existing users see
     /// no behavior change unless they opt in.
     nonisolated static let mode2DefaultsKey = "dictation.hotkey2Mode"
@@ -149,7 +150,7 @@ final class HotkeyManager {
         // like a runaway. Force the trigger to `.off` once so the
         // user has to opt in from Settings; subsequent launches honor
         // whatever they pick.
-        let migrationKey = "dictation.hotkey.migratedV2"
+        let migrationKey = Self.migratedV2Key
         if !defaults.bool(forKey: migrationKey) {
             defaults.set(DictationHotkeyTrigger.off.rawValue, forKey: Self.triggerDefaultsKey)
             defaults.set(true, forKey: migrationKey)

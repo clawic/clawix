@@ -451,6 +451,20 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.binary.path", "Clawix binary path", ClawixPersistentSurfaceKeys.binaryPath, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.backgroundBridge.wasEnabled", "Background bridge was enabled", ClawixPersistentSurfaceKeys.backgroundBridgeWasEnabled, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.appleLanguages", "Apple languages", ClawixPersistentSurfaceKeys.appleLanguages, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.legacyKeychainPurged", "Legacy keychain purge gate", "clawix.legacyKeychainPurged.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.database.filterStates", "Database filter states", "clawix.database.filterStates.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.operationInputPath", "Database workbench operation input path", "clawix.databaseWorkbench.operationInputPath.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.operationOutputPath", "Database workbench operation output path", "clawix.databaseWorkbench.operationOutputPath.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.operationObjectName", "Database workbench operation object name", "clawix.databaseWorkbench.operationObjectName.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.operationSearchTerm", "Database workbench operation search term", "clawix.databaseWorkbench.operationSearchTerm.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.operationPluginScript", "Database workbench operation plugin script", "clawix.databaseWorkbench.operationPluginScript.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.operationRecords", "Database workbench operation records", "clawix.databaseWorkbench.operationRecords.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.activeSQL", "Database workbench active SQL", "clawix.databaseWorkbench.activeSQL.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.selectedProfile", "Database workbench selected profile", "clawix.databaseWorkbench.selectedProfile.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.queryDrafts", "Database workbench query drafts", "clawix.databaseWorkbench.queryDrafts.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.history", "Database workbench history", "clawix.databaseWorkbench.history.v1", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.databaseWorkbench.completeKey", "Database workbench completion key", "clawix.databaseWorkbench.completeKey", PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.hotkeyMigratedV2", "Dictation hotkey migrated v2", HotkeyManager.migratedV2Key, PersistentSurfaceKind.preferenceKey),
         ].map { id, name, key, kind in
             ClawixPersistentSurface.preference(id: id, name: name, key: key, kind: kind)
         }
