@@ -28,7 +28,7 @@ final class QuickAskSlashCommandsStore: ObservableObject {
 
     @Published private(set) var customCommands: [QuickAskSlashCommand] = []
 
-    private let defaultsKey = "quickAsk.slashCommandsCustom"
+    static let defaultsKey = "quickAsk.slashCommandsCustom"
 
     static let builtIn: [QuickAskSlashCommand] = [
         QuickAskSlashCommand(trigger: "/search",   description: "Search the web"),
@@ -65,7 +65,7 @@ final class QuickAskSlashCommandsStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else { return }
+        guard let data = UserDefaults.standard.data(forKey: Self.defaultsKey) else { return }
         if let decoded = try? JSONDecoder().decode([QuickAskSlashCommand].self, from: data) {
             customCommands = decoded
         }
@@ -73,6 +73,6 @@ final class QuickAskSlashCommandsStore: ObservableObject {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(customCommands) else { return }
-        UserDefaults.standard.set(data, forKey: defaultsKey)
+        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
     }
 }

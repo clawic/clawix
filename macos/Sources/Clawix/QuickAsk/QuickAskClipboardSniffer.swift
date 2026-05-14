@@ -21,8 +21,8 @@ enum QuickAskClipboardSniffer {
     /// clipboard we already turned into a chip. Lets us avoid
     /// re-suggesting the same payload every time the user reopens the
     /// panel without copying anything new.
-    private static let lastSeenKey = "quickAsk.clipboardLastSeenChangeCount"
-    private static let lastSeenAtKey = "quickAsk.clipboardLastSeenAt"
+    static let lastSeenKey = "quickAsk.clipboardLastSeenChangeCount"
+    static let lastSeenAtKey = "quickAsk.clipboardLastSeenAt"
 
     static func capture() -> Payload? {
         let pb = NSPasteboard.general

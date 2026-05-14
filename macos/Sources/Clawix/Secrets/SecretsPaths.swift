@@ -1,6 +1,8 @@
 import Foundation
 
 enum SecretsPaths {
+    static let deviceIdKey = "clawix.secrets.deviceId"
+
     /// Secrets directory. Honors `CLAWIX_SECRETS_DIR` so dummy mode (and tests)
     /// can sandbox Secrets away from the user's real Application Support
     /// folder. Without it the real production location is used.
@@ -36,7 +38,7 @@ enum SecretsPaths {
     }
 
     static func deviceId() -> String {
-        let key = "clawix.secrets.deviceId"
+        let key = deviceIdKey
         if let existing = UserDefaults.standard.string(forKey: key) {
             return existing
         }

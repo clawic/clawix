@@ -67,14 +67,14 @@ final class MicrophonePreferences: ObservableObject {
     @Published private(set) var preferredUIDs: [String] = []
 
     private let defaults: UserDefaults
-    private let preferredKey = "dictation.microphone.preferred"
+    static let preferredKey = "dictation.microphone.preferred"
     private let maxPreferred = 3
 
     private var listenersInstalled = false
 
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        self.preferredUIDs = (defaults.stringArray(forKey: preferredKey) ?? [])
+        self.preferredUIDs = (defaults.stringArray(forKey: Self.preferredKey) ?? [])
             .filter { !$0.isEmpty }
         if preferredUIDs.count > maxPreferred {
             preferredUIDs = Array(preferredUIDs.prefix(maxPreferred))
@@ -93,7 +93,7 @@ final class MicrophonePreferences: ObservableObject {
             list = Array(list.prefix(maxPreferred))
         }
         preferredUIDs = list
-        defaults.set(list, forKey: preferredKey)
+        defaults.set(list, forKey: Self.preferredKey)
         refresh()
     }
 

@@ -58,9 +58,9 @@ final class LocalModelsService: ObservableObject {
 
     // MARK: - Persistence keys
 
-    private static let defaultModelKey = "Clawix.LocalModels.defaultModel.v1"
-    private static let keepAliveKey = "Clawix.LocalModels.keepAlive.v1"
-    private static let contextLengthKey = "Clawix.LocalModels.numCtx.v1"
+    static let defaultModelKey = "Clawix.LocalModels.defaultModel.v1"
+    static let keepAliveKey = "Clawix.LocalModels.keepAlive.v1"
+    static let contextLengthKey = "Clawix.LocalModels.numCtx.v1"
 
     // MARK: - Init
 

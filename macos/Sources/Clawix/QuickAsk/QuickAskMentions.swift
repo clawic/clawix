@@ -63,7 +63,7 @@ final class QuickAskMentionsStore: ObservableObject {
 
     @Published private(set) var customPrompts: [QuickAskMentionPrompt] = []
 
-    private let defaultsKey = "quickAsk.mentionPromptsCustom"
+    static let defaultsKey = "quickAsk.mentionPromptsCustom"
 
     private init() {
         load()
@@ -143,7 +143,7 @@ final class QuickAskMentionsStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else { return }
+        guard let data = UserDefaults.standard.data(forKey: Self.defaultsKey) else { return }
         if let decoded = try? JSONDecoder().decode([QuickAskMentionPrompt].self, from: data) {
             customPrompts = decoded
         }
@@ -151,6 +151,6 @@ final class QuickAskMentionsStore: ObservableObject {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(customPrompts) else { return }
-        UserDefaults.standard.set(data, forKey: defaultsKey)
+        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
     }
 }

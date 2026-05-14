@@ -261,8 +261,8 @@ final class SkillsStore: ObservableObject {
 
     // MARK: - Persistence (local UserDefaults until bridge is wired)
 
-    private static let activeKey = "ClawixSkillsActiveByScope"
-    private static let userCatalogKey = "ClawixSkillsUserCatalog"
+    static let activeKey = "ClawixSkillsActiveByScope"
+    static let userCatalogKey = "ClawixSkillsUserCatalog"
 
     private func loadUserCatalogFromDefaults() {
         guard let data = UserDefaults.standard.data(forKey: Self.userCatalogKey),
