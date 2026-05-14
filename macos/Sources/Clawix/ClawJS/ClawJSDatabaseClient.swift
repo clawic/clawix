@@ -67,7 +67,7 @@ struct ClawJSDatabaseClient {
     /// `GET /v1/health`. Unauthenticated. Returns the service's reported
     /// host/port so we can confirm we're hitting the right process.
     func probeHealth() async throws -> HealthResponse {
-        try await get("/v1/health", authenticated: false)
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health", authenticated: false)
     }
 
     // MARK: - Namespaces
@@ -84,7 +84,7 @@ struct ClawJSDatabaseClient {
 
     /// `GET /v1/namespaces`. Requires bearer auth.
     func listNamespaces() async throws -> [Namespace] {
-        let response: NamespacesResponse = try await get("/v1/namespaces")
+        let response: NamespacesResponse = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces")
         return response.namespaces
     }
 
@@ -111,7 +111,7 @@ struct ClawJSDatabaseClient {
         namespaceId: String,
         collection: String
     ) async throws -> [Record] {
-        let path = "/v1/namespaces/\(namespaceId)/collections/\(collection)/records"
+        let path = "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(collection)/records"
         let response: RecordsResponse = try await get(path)
         return response.records
     }

@@ -44,7 +44,7 @@ final class DatabaseRealtimeClient: ObservableObject {
 
         var components = URLComponents(url: origin, resolvingAgainstBaseURL: false) ?? URLComponents()
         components.scheme = origin.scheme == "https" ? "wss" : "ws"
-        components.path = "/v1/realtime"
+        components.path = "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/realtime"
         components.queryItems = [URLQueryItem(name: "token", value: bearer)]
         guard let url = components.url else { return }
 

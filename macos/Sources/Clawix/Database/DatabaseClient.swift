@@ -55,7 +55,7 @@ struct DatabaseClient {
     }
 
     func probeHealth() async throws -> HealthResponse {
-        try await get("/v1/health", authenticated: false)
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health", authenticated: false)
     }
 
     // MARK: - Auth
@@ -80,14 +80,14 @@ struct DatabaseClient {
     /// a fresh JWT for the same credential. 401 if the email exists with
     /// a different password.
     func bootstrapAdmin(email: String, password: String) async throws -> BootstrapResponse {
-        try await post("/v1/auth/admin/bootstrap", body: [
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/auth/admin/bootstrap", body: [
             "email": email,
             "password": password,
         ], authenticated: false)
     }
 
     func loginAdmin(email: String, password: String) async throws -> LoginResponse {
-        try await post("/v1/auth/admin/login", body: [
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/auth/admin/login", body: [
             "email": email,
             "password": password,
         ], authenticated: false)
@@ -100,7 +100,7 @@ struct DatabaseClient {
     }
 
     func listNamespaces() async throws -> [DBNamespace] {
-        let env: NamespacesEnvelope = try await get("/v1/namespaces")
+        let env: NamespacesEnvelope = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces")
         return env.items
     }
 
@@ -110,7 +110,7 @@ struct DatabaseClient {
     func ensureNamespace(id: String, displayName: String? = nil) async throws -> DBNamespace {
         try await request(
             method: "PUT",
-            path: "/v1/namespaces/\(id)",
+            path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(id)",
             body: ["displayName": displayName ?? id]
         )
     }
@@ -122,12 +122,12 @@ struct DatabaseClient {
     }
 
     func listCollections(namespaceId: String) async throws -> [DBCollection] {
-        let env: CollectionsEnvelope = try await get("/v1/namespaces/\(namespaceId)/collections")
+        let env: CollectionsEnvelope = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections")
         return env.items
     }
 
     func getCollection(namespaceId: String, name: String) async throws -> DBCollection {
-        try await get("/v1/namespaces/\(namespaceId)/collections/\(name)")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(name)")
     }
 
     func updateCollection(
@@ -139,7 +139,7 @@ struct DatabaseClient {
     ) async throws -> DBCollection {
         try await request(
             method: "PATCH",
-            path: "/v1/namespaces/\(namespaceId)/collections/\(name)",
+            path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(name)",
             body: [
                 "displayName": displayName,
                 "fields": fields.map(Self.fieldBody),
@@ -159,7 +159,7 @@ struct DatabaseClient {
         offset: Int? = 0
     ) async throws -> DBListResponse<DBRecord> {
         var components = URLComponents()
-        components.path = "/v1/namespaces/\(namespaceId)/collections/\(collection)/records"
+        components.path = "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(collection)/records"
         var items: [URLQueryItem] = []
         if let filter, let data = try? JSONSerialization.data(withJSONObject: filter),
            let str = String(data: data, encoding: .utf8) {
@@ -175,7 +175,7 @@ struct DatabaseClient {
     }
 
     func getRecord(namespaceId: String, collection: String, id: String) async throws -> DBRecord {
-        try await get("/v1/namespaces/\(namespaceId)/collections/\(collection)/records/\(id)")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(collection)/records/\(id)")
     }
 
     func createRecord(
@@ -185,7 +185,7 @@ struct DatabaseClient {
     ) async throws -> DBRecord {
         let body: [String: Any] = data.mapValues { $0.foundationValue }
         return try await post(
-            "/v1/namespaces/\(namespaceId)/collections/\(collection)/records",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(collection)/records",
             body: body
         )
     }
@@ -199,7 +199,7 @@ struct DatabaseClient {
         let body: [String: Any] = data.mapValues { $0.foundationValue }
         return try await request(
             method: "PATCH",
-            path: "/v1/namespaces/\(namespaceId)/collections/\(collection)/records/\(id)",
+            path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(collection)/records/\(id)",
             body: body
         )
     }
@@ -208,7 +208,7 @@ struct DatabaseClient {
     func deleteRecord(namespaceId: String, collection: String, id: String) async throws -> Bool {
         let env: OkEnvelope = try await request(
             method: "DELETE",
-            path: "/v1/namespaces/\(namespaceId)/collections/\(collection)/records/\(id)",
+            path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/collections/\(collection)/records/\(id)",
             body: nil
         )
         return env.ok
@@ -220,7 +220,7 @@ struct DatabaseClient {
     private struct OkEnvelope: Codable { let ok: Bool }
 
     func listFiles(namespaceId: String) async throws -> [DBFileAsset] {
-        let env: FilesEnvelope = try await get("/v1/namespaces/\(namespaceId)/files")
+        let env: FilesEnvelope = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/files")
         return env.items
     }
 
@@ -233,7 +233,7 @@ struct DatabaseClient {
         data: Data
     ) async throws -> DBFileAsset {
         guard let token = bearerToken else { throw Error.missingToken }
-        let url = URL(string: "/v1/files", relativeTo: origin)!.absoluteURL
+        let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/files", relativeTo: origin)!.absoluteURL
         let boundary = "----DatabaseClientBoundary\(UUID().uuidString)"
         var body = Data()
         func append(_ string: String) {
@@ -265,7 +265,7 @@ struct DatabaseClient {
 
     func downloadFile(fileId: String) async throws -> Data {
         guard let token = bearerToken else { throw Error.missingToken }
-        let url = URL(string: "/v1/files/\(fileId)", relativeTo: origin)!.absoluteURL
+        let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/files/\(fileId)", relativeTo: origin)!.absoluteURL
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let (data, response) = try await dataTask(request)
@@ -275,7 +275,7 @@ struct DatabaseClient {
 
     @discardableResult
     func deleteFile(fileId: String) async throws -> Bool {
-        let env: OkEnvelope = try await request(method: "DELETE", path: "/v1/files/\(fileId)", body: nil)
+        let env: OkEnvelope = try await request(method: "DELETE", path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/files/\(fileId)", body: nil)
         return env.ok
     }
 
@@ -284,7 +284,7 @@ struct DatabaseClient {
     private struct TokensEnvelope: Codable { let items: [DBScopedToken] }
 
     func listScopedTokens(namespaceId: String) async throws -> [DBScopedToken] {
-        let env: TokensEnvelope = try await get("/v1/namespaces/\(namespaceId)/tokens")
+        let env: TokensEnvelope = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/namespaces/\(namespaceId)/tokens")
         return env.items
     }
 
