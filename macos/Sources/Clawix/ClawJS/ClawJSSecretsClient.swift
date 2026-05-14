@@ -62,7 +62,7 @@ final class ClawJSSecretsClient {
     // MARK: - Secrets lifecycle
 
     func health() async throws -> [String: AnyCodable] {
-        try await get("/v1/health")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health")
     }
 
     struct SecretsStateInfo: Codable {
@@ -73,7 +73,7 @@ final class ClawJSSecretsClient {
     }
 
     func state() async throws -> SecretsStateInfo {
-        try await get("/v1/secrets/state")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/state")
     }
 
     struct SetupResult: Codable {
@@ -83,19 +83,19 @@ final class ClawJSSecretsClient {
     }
 
     func setup(password: String, appVersion: String? = nil) async throws -> SetupResult {
-        try await post("/v1/secrets/setup", body: ["password": password, "appVersion": appVersion as Any])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/setup", body: ["password": password, "appVersion": appVersion as Any])
     }
 
     func unlock(password: String) async throws {
-        let _: [String: AnyCodable] = try await post("/v1/secrets/unlock", body: ["password": password])
+        let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/unlock", body: ["password": password])
     }
 
     func lock() async throws {
-        let _: [String: AnyCodable] = try await post("/v1/secrets/lock", body: [String: Any]())
+        let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/lock", body: [String: Any]())
     }
 
     func recover(phrase: String) async throws {
-        let _: [String: AnyCodable] = try await post("/v1/secrets/recover", body: ["phrase": phrase])
+        let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/recover", body: ["phrase": phrase])
     }
 
     struct ChangePasswordResult: Codable {
@@ -104,7 +104,7 @@ final class ClawJSSecretsClient {
     }
 
     func changePassword(old: String, new: String) async throws -> ChangePasswordResult {
-        try await post("/v1/secrets/change-password", body: ["oldPassword": old, "newPassword": new])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/change-password", body: ["oldPassword": old, "newPassword": new])
     }
 
     struct BackupExportResponse: Codable {
@@ -122,7 +122,7 @@ final class ClawJSSecretsClient {
 
     func exportBackup(passphrase: String, reauthSatisfied: Bool = false) async throws -> Data {
         let response: BackupExportResponse = try await post(
-            "/v1/secrets/backup/export",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/backup/export",
             body: ["passphrase": passphrase, "reauthSatisfied": reauthSatisfied]
         )
         return try JSONEncoder().encode(response.backup)
@@ -135,7 +135,7 @@ final class ClawJSSecretsClient {
             throw ClawJSSecretsError.server(status: 400, message: "Not a valid .clawixsecrets file")
         }
         return try await post(
-            "/v1/secrets/backup/import",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/backup/import",
             body: ["passphrase": passphrase, "backup": backup, "reauthSatisfied": reauthSatisfied]
         )
     }
@@ -143,15 +143,15 @@ final class ClawJSSecretsClient {
     // MARK: - Doctor + plugins
 
     func doctor() async throws -> [String: AnyCodable] {
-        try await get("/v1/secrets/doctor")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/doctor")
     }
 
     func plugins() async throws -> [String: AnyCodable] {
-        try await get("/v1/plugins")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/plugins")
     }
 
     func secretTypes() async throws -> [SecretTypeDescriptor] {
-        let envelope: [String: [SecretTypeDescriptor]] = try await get("/v1/secret-types")
+        let envelope: [String: [SecretTypeDescriptor]] = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secret-types")
         return envelope["types"] ?? []
     }
 
@@ -171,7 +171,7 @@ final class ClawJSSecretsClient {
 
     func listContainers(includeTrashed: Bool = false) async throws -> [Folder] {
         let envelope: [String: [Folder]] = try await get(
-            "/v1/tenants/\(tenantId)/folders?includeTrashed=\(includeTrashed)"
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/folders?includeTrashed=\(includeTrashed)"
         )
         return envelope["folders"] ?? []
     }
@@ -181,17 +181,17 @@ final class ClawJSSecretsClient {
         if let icon { body["icon"] = icon }
         if let color { body["color"] = color }
         if let sortOrder { body["sortOrder"] = sortOrder }
-        let envelope: [String: Folder] = try await post("/v1/tenants/\(tenantId)/folders", body: body)
+        let envelope: [String: Folder] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/folders", body: body)
         return envelope["folder"]!
     }
 
     func renameContainer(id: String, to name: String) async throws -> Folder? {
-        let envelope: [String: Folder?] = try await patch("/v1/tenants/\(tenantId)/folders/\(id)", body: ["name": name])
+        let envelope: [String: Folder?] = try await patch("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/folders/\(id)", body: ["name": name])
         return envelope["folder"] ?? nil
     }
 
     func trashContainer(id: String) async throws {
-        let _: [String: AnyCodable] = try await delete("/v1/tenants/\(tenantId)/folders/\(id)")
+        let _: [String: AnyCodable] = try await delete("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/folders/\(id)")
     }
 
     // MARK: - Secrets
@@ -319,20 +319,20 @@ final class ClawJSSecretsClient {
         if includeArchived { components.queryItems?.append(URLQueryItem(name: "includeArchived", value: "true")) }
         if includePublicValues { components.queryItems?.append(URLQueryItem(name: "includePublicValues", value: "true")) }
         let qs = components.percentEncodedQuery ?? ""
-        let envelope: [String: [DescribedSecret]] = try await get("/v1/tenants/\(tenantId)/secrets?\(qs)")
+        let envelope: [String: [DescribedSecret]] = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets?\(qs)")
         return envelope["secrets"] ?? []
     }
 
     func describeSecret(name: String, includePublicValues: Bool = false) async throws -> DescribedSecret? {
         let suffix = includePublicValues ? "?includePublicValues=true" : ""
         let envelope: [String: DescribedSecret?] = try await get(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))\(suffix)"
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(name))\(suffix)"
         )
         return envelope["secret"] ?? nil
     }
 
     func createSecret(draft: [String: Any]) async throws -> DescribedSecret {
-        let envelope: [String: DescribedSecret] = try await post("/v1/tenants/\(tenantId)/secrets", body: ["draft": draft])
+        let envelope: [String: DescribedSecret] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets", body: ["draft": draft])
         return envelope["secret"]!
     }
 
@@ -347,7 +347,7 @@ final class ClawJSSecretsClient {
         if let governance { body["governance"] = governance }
         if let metadata { body["metadata"] = metadata }
         let envelope: [String: DescribedSecret?] = try await patch(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(name))",
             body: body
         )
         return envelope["secret"] ?? nil
@@ -355,27 +355,27 @@ final class ClawJSSecretsClient {
 
     func archiveSecret(name: String, archived: Bool) async throws {
         let _: [String: AnyCodable] = try await post(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))/archive",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(name))/archive",
             body: ["archived": archived]
         )
     }
 
     func compromiseSecret(name: String, compromised: Bool = true, reason: String? = nil) async throws {
         let _: [String: AnyCodable] = try await post(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))/compromise",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(name))/compromise",
             body: ["compromised": compromised, "reason": reason as Any]
         )
     }
 
     func trashSecret(name: String) async throws {
         let _: [String: AnyCodable] = try await delete(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))"
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(name))"
         )
     }
 
     func restoreSecret(name: String) async throws {
         let _: [String: AnyCodable] = try await post(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))/restore",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(name))/restore",
             body: [String: Any]()
         )
     }
@@ -387,7 +387,7 @@ final class ClawJSSecretsClient {
 
     func revealField(secretName: String, fieldName: String, purpose: String = "uiReveal") async throws -> RevealedField {
         let envelope: [String: RevealedField] = try await post(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/reveal-field",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/reveal-field",
             body: ["field": fieldName, "purpose": purpose]
         )
         return envelope["value"]!
@@ -440,7 +440,7 @@ final class ClawJSSecretsClient {
         if let body { payload["body"] = body }
         if let bodyBase64 { payload["bodyBase64"] = bodyBase64 }
         if let timeoutMs { payload["timeoutMs"] = timeoutMs }
-        return try await post("/v1/tenants/\(tenantId)/broker/http", body: payload)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/broker/http", body: payload)
     }
 
     // MARK: - Legacy brokered execute
@@ -456,14 +456,14 @@ final class ClawJSSecretsClient {
         var body: [String: Any] = ["args": args]
         if let ctx { body["ctx"] = ctx }
         return try await post(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/execute/\(percentEncode(executorId))",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/execute/\(percentEncode(executorId))",
             body: body
         )
     }
 
     func syncBrand(secretName: String) async throws -> [String: AnyCodable] {
         try await post(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/sync",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/sync",
             body: [String: Any]()
         )
     }
@@ -509,16 +509,16 @@ final class ClawJSSecretsClient {
             "reason": reason,
             "durationMinutes": durationMinutes,
         ]
-        return try await post("/v1/tenants/\(tenantId)/grants", body: body)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/grants", body: body)
     }
 
     func listGrants() async throws -> [AgentGrantSummary] {
-        let envelope: [String: [AgentGrantSummary]] = try await get("/v1/tenants/\(tenantId)/grants")
+        let envelope: [String: [AgentGrantSummary]] = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/grants")
         return envelope["grants"] ?? []
     }
 
     func revokeGrant(id: String) async throws -> AgentGrantSummary? {
-        let envelope: [String: AgentGrantSummary?] = try await delete("/v1/tenants/\(tenantId)/grants/\(id)")
+        let envelope: [String: AgentGrantSummary?] = try await delete("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/grants/\(id)")
         return envelope["grant"] ?? nil
     }
 
@@ -547,16 +547,16 @@ final class ClawJSSecretsClient {
             "durationMinutes": durationMinutes,
         ]
         if let context { body["context"] = context }
-        return try await post("/v1/tenants/\(tenantId)/leases", body: body)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/leases", body: body)
     }
 
     func listLeases() async throws -> [LeaseSummary] {
-        let envelope: [String: [LeaseSummary]] = try await get("/v1/tenants/\(tenantId)/leases")
+        let envelope: [String: [LeaseSummary]] = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/leases")
         return envelope["leases"] ?? []
     }
 
     func revokeLease(id: String) async throws {
-        let _: [String: AnyCodable] = try await post("/v1/tenants/\(tenantId)/leases/\(id)/revoke", body: [String: Any]())
+        let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/leases/\(id)/revoke", body: [String: Any]())
     }
 
     // MARK: - Audit
@@ -584,7 +584,7 @@ final class ClawJSSecretsClient {
         if let since { components.queryItems?.append(URLQueryItem(name: "since", value: since)) }
         if let limit { components.queryItems?.append(URLQueryItem(name: "limit", value: String(limit))) }
         let qs = components.percentEncodedQuery ?? ""
-        let envelope: [String: [AuditEvent]] = try await get("/v1/tenants/\(tenantId)/audit?\(qs)")
+        let envelope: [String: [AuditEvent]] = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/audit?\(qs)")
         return envelope["events"] ?? []
     }
 
@@ -602,7 +602,7 @@ final class ClawJSSecretsClient {
 
     func verifyAuditIntegrity() async throws -> AuditIntegrityReport {
         let envelope: [String: AuditIntegrityReport] = try await post(
-            "/v1/tenants/\(tenantId)/audit/verify-integrity",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/audit/verify-integrity",
             body: [String: Any]()
         )
         return envelope["report"]!
