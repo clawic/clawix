@@ -1,8 +1,10 @@
 import SwiftUI
 
+private let feedDisplayModeStorageKey = "clawix.feed.displayMode"
+
 struct FeedView: View {
     @ObservedObject var store: ProfileStore
-    @AppStorage("clawix.feed.displayMode") private var rawMode: String = "list"
+    @AppStorage(feedDisplayModeStorageKey) private var rawMode: String = "list"
 
     enum Mode: String, CaseIterable, Identifiable {
         case list, grid, story
