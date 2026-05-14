@@ -1,6 +1,8 @@
 import Foundation
 import SwiftUI
 import Combine
+import SecretsModels
+import SecretsVault
 
 /// Filesystem source-of-truth for agent / personality / skill-collection
 /// / connection records. All state lives under `~/.claw/` (overridable
@@ -12,7 +14,7 @@ import Combine
 /// ├── agents/<id>/agent.yaml + instructions.md + ...
 /// ├── personalities/<id>/personality.yaml + prompt.md
 /// ├── skill-collections/<id>/collection.yaml
-/// ├── connections/<id>/connection.yaml + auth.encrypted
+/// ├── connections/<id>/connection.yaml
 /// ├── memory/                  # public, shared
 /// └── presets/                 # builtins
 /// ```
@@ -535,25 +537,85 @@ final class AgentStore: ObservableObject {
     }
 
     /// Persist the secret material for a connection (bot token, OAuth
-    /// refresh token, etc.). Today the file is written XOR-obfuscated
-    /// with a per-connection key derived from the connection id; a
-    /// follow-up will plumb the macOS keychain (`SecAddItem`). This is
-    /// sufficient to keep the bytes from being readable by `cat`, but
-    /// the file is NOT cryptographically secure on its own; do not
-    /// rely on it for anything that escapes the Mac filesystem.
+    /// refresh token, etc.) in the canonical encrypted Secrets vault.
+    /// Legacy `auth.encrypted` files are removed after a successful write.
     func writeConnectionAuth(connectionId: String, secret: String) {
+        guard let store = SecretsManager.shared.store else { return }
         let folder = dir(forConnection: connectionId)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let key = Array(connectionId.utf8)
-        guard !key.isEmpty else { return }
-        let bytes = Array(secret.utf8)
-        let xored: [UInt8] = bytes.enumerated().map { idx, byte in
-            byte ^ key[idx % key.count]
+        let internalName = connectionAuthInternalName(connectionId)
+        if let existing = try? store.fetchSecret(byInternalName: internalName) {
+            try? store.trashSecret(id: existing.id)
         }
-        try? Data(xored).write(to: folder.appendingPathComponent("auth.encrypted"))
+        let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            let container = try ensureSecretsContainer(in: store)
+            let draft = DraftSecret(
+                kind: .apiKey,
+                internalName: internalName,
+                title: "Connection Auth - \(connectionId)",
+                fields: [
+                    DraftField(
+                        name: "value",
+                        fieldKind: .password,
+                        placement: .header,
+                        isSecret: true,
+                        isConcealed: true,
+                        secretValue: trimmed,
+                        sortOrder: 0
+                    )
+                ]
+            )
+            let created = try store.createSecret(in: container, draft: draft)
+            _ = try store.updateGovernance(
+                secretId: created.id,
+                to: Governance(
+                    allowedHosts: [],
+                    allowedHeaders: ["Authorization"],
+                    allowInUrl: false,
+                    allowInBody: false,
+                    allowInEnv: false,
+                    allowInsecureTransport: false,
+                    allowLocalNetwork: false,
+                    approvalMode: .everyUse
+                )
+            )
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent("auth.encrypted"))
+        } catch {
+            return
+        }
     }
 
     func readConnectionAuth(connectionId: String) -> String? {
+        guard let store = SecretsManager.shared.store else { return nil }
+        let internalName = connectionAuthInternalName(connectionId)
+        if let secret = try? store.fetchSecret(byInternalName: internalName),
+           secret.trashedAt == nil,
+           let fields = try? store.fetchFields(forSecret: secret.id, version: secret.currentVersionId),
+           let field = fields.first(where: { $0.fieldName == "value" }) {
+            return (try? store.revealField(field, purpose: .reveal))?.value
+        }
+        guard let legacy = readLegacyConnectionAuth(connectionId: connectionId) else { return nil }
+        writeConnectionAuth(connectionId: connectionId, secret: legacy)
+        return legacy
+    }
+
+    func hasConnectionAuth(connectionId: String) -> Bool {
+        guard let store = SecretsManager.shared.store else {
+            return legacyConnectionAuthURL(connectionId: connectionId).flatMap { FileManager.default.fileExists(atPath: $0.path) } ?? false
+        }
+        let internalName = connectionAuthInternalName(connectionId)
+        if let secret = try? store.fetchSecret(byInternalName: internalName), secret.trashedAt == nil {
+            return true
+        }
+        if readLegacyConnectionAuth(connectionId: connectionId) != nil {
+            return (try? store.fetchSecret(byInternalName: internalName))?.trashedAt == nil
+        }
+        return false
+    }
+
+    private func readLegacyConnectionAuth(connectionId: String) -> String? {
         let folder = dir(forConnection: connectionId)
         guard let data = try? Data(contentsOf: folder.appendingPathComponent("auth.encrypted")) else { return nil }
         let key = Array(connectionId.utf8)
@@ -563,6 +625,22 @@ final class AgentStore: ObservableObject {
             byte ^ key[idx % key.count]
         }
         return String(bytes: xored, encoding: .utf8)
+    }
+
+    private func legacyConnectionAuthURL(connectionId: String) -> URL? {
+        dir(forConnection: connectionId).appendingPathComponent("auth.encrypted")
+    }
+
+    private func connectionAuthInternalName(_ connectionId: String) -> String {
+        "connection.\(connectionId).auth"
+    }
+
+    private func ensureSecretsContainer(in store: ClawJSSecretsStore) throws -> VaultRecord {
+        let containers = try store.listVaults()
+        if let existing = containers.first(where: { $0.name == SystemSecrets.containerName }) {
+            return existing
+        }
+        return try store.createVault(name: SystemSecrets.containerName)
     }
 
     func deleteConnection(id: String) {

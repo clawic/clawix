@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Catalog of third-party connections (Telegram bot, Slack workspace,
 /// etc.). The auth material (bot token, OAuth refresh token) is stored
-/// in `~/.claw/connections/<id>/auth.encrypted`; the editor here lets
-/// the user paste/replace it. Agent-level routing happens via
+/// in the encrypted Secrets vault; the editor here lets the user
+/// paste/replace it. Agent-level routing happens via
 /// `AgentIntegrationBinding` on the agent record.
 struct ConnectionsHomeView: View {
     @EnvironmentObject private var store: AgentStore
@@ -192,14 +192,14 @@ struct ConnectionDetailView: View {
                             Text("AUTH")
                                 .font(BodyFont.system(size: 10.5, wght: 600))
                                 .foregroundColor(Palette.textSecondary)
-                            let hasSecret = store.readConnectionAuth(connectionId: connection.id) != nil
+                            let hasSecret = store.hasConnectionAuth(connectionId: connection.id)
                             HStack(spacing: 8) {
                                 Image(systemName: hasSecret ? "lock.fill" : "lock.open")
                                     .foregroundColor(hasSecret ?
                                                      Color(red: 0.34, green: 0.78, blue: 0.55) :
                                                      Color(red: 1.0, green: 0.78, blue: 0.34))
                                 Text(hasSecret ?
-                                     "Encrypted token on disk." :
+                                     "Encrypted token in Secrets." :
                                      "No token stored. Edit the connection to add one.")
                                     .font(BodyFont.system(size: 12, wght: 500))
                                     .foregroundColor(Palette.textPrimary)
@@ -277,8 +277,8 @@ struct ConnectionEditorSheet: View {
     let initial: Connection
     @Binding var isPresented: Bool
     /// `(savedConnection, secretMaterial?)` — the secret is nil when
-    /// the user did not type a new token, so the caller knows to keep
-    /// the existing `auth.encrypted` untouched.
+    /// the user did not type a new token, so the caller keeps the
+    /// existing vault credential untouched.
     let onSave: (Connection, String?) -> Void
 
     @State private var draft: Connection
@@ -328,7 +328,7 @@ struct ConnectionEditorSheet: View {
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 10).padding(.vertical, 7)
                             .background(fieldBg)
-                        Text("Stored XOR-obfuscated under ~/.claw/connections/\(draft.id)/auth.encrypted. Replace anytime.")
+                        Text("Stored in encrypted Secrets. Replace anytime.")
                             .font(BodyFont.system(size: 10.5, wght: 500))
                             .foregroundColor(Palette.textSecondary)
                     }
