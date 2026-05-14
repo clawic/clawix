@@ -27,6 +27,32 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         )
     }
 
+    func testSecretsServiceDoesNotExposeTokensInEnvironment() throws {
+        let source = try readSource("ClawJS/ClawJSServiceManager.swift")
+        let environmentBody = try extractFunctionBody(
+            named: "private static func environment(",
+            from: source,
+            until: "    private static func secretsBootstrapData"
+        )
+
+        XCTAssertTrue(
+            environmentBody.contains("CLAW_SECRETS_BOOTSTRAP_STDIN"),
+            "Secrets launch should use an anonymous bootstrap channel instead of token-bearing environment variables."
+        )
+        XCTAssertFalse(
+            environmentBody.contains("env[\"CLAW_SECRETS_TOKEN\"] = adminToken"),
+            "The Secrets admin bearer must not be visible through process environment inspection."
+        )
+        XCTAssertFalse(
+            environmentBody.contains("env[\"CLAW_SECRETS_ADMIN_TOKEN\"] = adminToken"),
+            "The Secrets admin bearer must not be visible through process environment inspection."
+        )
+        XCTAssertFalse(
+            environmentBody.contains("env[\"CLAW_SECRETS_SIGNED_HOST_TOKEN\"] = signedHostToken"),
+            "The signed-host token must not be visible through process environment inspection."
+        )
+    }
+
     func testConnectionAuthReadDoesNotReturnPlaintext() throws {
         let source = try readSource("Agents/AgentStore.swift")
         let body = try extractFunctionBody(

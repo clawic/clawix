@@ -510,6 +510,19 @@ final class ClawJSServiceManager: ObservableObject {
                 adminToken: adminToken,
                 signedHostToken: signedHostToken
             )
+            let bootstrapPipe: Pipe?
+            let bootstrapData: Data?
+            if service == .secrets {
+                bootstrapPipe = Pipe()
+                bootstrapData = try Self.secretsBootstrapData(
+                    adminToken: adminToken,
+                    signedHostToken: signedHostToken
+                )
+                process.standardInput = bootstrapPipe
+            } else {
+                bootstrapPipe = nil
+                bootstrapData = nil
+            }
 
             let logURL = Self.logFileURL(for: service)
             if !FileManager.default.fileExists(atPath: logURL.path) {
@@ -528,6 +541,10 @@ final class ClawJSServiceManager: ObservableObject {
             }
 
             try process.run()
+            if let bootstrapPipe, let bootstrapData {
+                bootstrapPipe.fileHandleForWriting.write(bootstrapData)
+                try? bootstrapPipe.fileHandleForWriting.close()
+            }
             processes[service] = process
 
             // Healthz poller flips state to `.ready` once the service
@@ -797,15 +814,28 @@ final class ClawJSServiceManager: ObservableObject {
                 .appendingPathComponent(".admin-token")
         }
         if let adminToken, let envVar = adminTokenEnvVar[service] {
-            env[envVar] = adminToken
             if service == .secrets {
-                env["CLAW_SECRETS_TOKEN"] = adminToken
+                env["CLAW_SECRETS_BOOTSTRAP_STDIN"] = "1"
+            } else {
+                env[envVar] = adminToken
             }
         }
-        if service == .secrets, let signedHostToken {
-            env["CLAW_SECRETS_SIGNED_HOST_TOKEN"] = signedHostToken
+        if service == .secrets, signedHostToken != nil {
+            env["CLAW_SECRETS_BOOTSTRAP_STDIN"] = "1"
         }
         return env
+    }
+
+    private static func secretsBootstrapData(adminToken: String?, signedHostToken: String?) throws -> Data {
+        var payload: [String: String] = [:]
+        if let adminToken {
+            payload["adminToken"] = adminToken
+        }
+        if let signedHostToken {
+            payload["signedHostToken"] = signedHostToken
+        }
+        return try JSONSerialization.data(withJSONObject: payload, options: [])
+            + Data([0x0a])
     }
 
     /// Per-session admin token for `service` if this manager spawned the
