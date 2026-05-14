@@ -161,8 +161,8 @@ else
     pass "Swift UI source has no accidental Spanish labels"
 fi
 
-if grep -Fq 'func openBrowser(initialURL: URL = URL(string: "about:blank")!)' "$PROJECT_DIR/Sources/Clawix/AppState.swift" \
-   && grep -Fq 'func newBrowserTab(url: URL = URL(string: "about:blank")!)' "$PROJECT_DIR/Sources/Clawix/AppState.swift"; then
+if grep -R -Fq 'func openBrowser(initialURL: URL = URL(string: "about:blank")!)' "$PROJECT_DIR/Sources/Clawix" --include='*.swift' \
+   && grep -R -Fq 'func newBrowserTab(url: URL = URL(string: "about:blank")!)' "$PROJECT_DIR/Sources/Clawix" --include='*.swift'; then
     pass "Browser opens blank tabs by default"
 else
     fail "Browser default tab still performs external navigation"
