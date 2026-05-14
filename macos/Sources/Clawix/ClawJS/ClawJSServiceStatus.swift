@@ -58,7 +58,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     var healthPath: String {
         switch self {
         case .publishing: return "/healthz"
-        default:      return "/v1/health"
+        default:      return "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health"
         }
     }
 }

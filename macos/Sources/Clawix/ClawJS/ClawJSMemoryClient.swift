@@ -49,7 +49,7 @@ struct ClawJSMemoryClient {
     }
 
     func probeHealth() async throws -> HealthResponse {
-        try await get("/v1/health")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health")
     }
 
     // MARK: - Notes
