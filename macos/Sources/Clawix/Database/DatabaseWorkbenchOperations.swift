@@ -407,7 +407,7 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
             guard !sql.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return .init(kind: .importSQLDump, status: .blocked, message: "SQL dump import failed: SQL file is empty.")
             }
-            let queue = try DatabaseQueue(path: databasePath)
+            let queue = try ClawixRegisteredDatabaseQueue.open(path: databasePath)
             try queue.write { db in
                 try db.execute(sql: sql)
             }
