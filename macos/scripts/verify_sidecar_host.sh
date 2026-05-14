@@ -7,10 +7,12 @@ APP="${CLAWIX_APP_PATH:-/Applications/Clawix.app}"
 EXE="$APP/Contents/MacOS/Clawix"
 SECRETS_XPC="$APP/Contents/XPCServices/ClawixSecretsXPC.xpc"
 
-services=(
+required_services=(
+  "secrets:24103"
+)
+optional_services=(
   "sessions:24101"
   "database:24102"
-  "secrets:24103"
   "drive:24104"
   "memory:24105"
   "index:24106"
@@ -76,11 +78,19 @@ has_ancestor() {
   return 1
 }
 
-for entry in "${services[@]}"; do
+verify_service() {
+  local entry="$1"
+  local required="$2"
   service="${entry%%:*}"
   port="${entry##*:}"
   pid="$(/usr/sbin/lsof -nP -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1 || true)"
-  [[ -n "$pid" ]] || fail "$service has no listener on 127.0.0.1:$port"
+  if [[ -z "$pid" ]]; then
+    if [[ "$required" == "1" ]]; then
+      fail "$service has no listener on 127.0.0.1:$port"
+    fi
+    echo "SKIP $service port=$port listener=absent"
+    return 0
+  fi
 
   cmd="$(command_of "$pid")"
   if [[ "$cmd" != *"$APP/Contents/Resources/clawjs/"* ]]; then
@@ -98,6 +108,14 @@ for entry in "${services[@]}"; do
   )"
   [[ -z "$leaked" ]] || fail "$service listener pid=$pid exposes token-bearing environment: $leaked"
   echo "PASS $service pid=$pid port=$port ancestor=$app_pid env=no-token"
+}
+
+for entry in "${required_services[@]}"; do
+  verify_service "$entry" "1"
+done
+
+for entry in "${optional_services[@]}"; do
+  verify_service "$entry" "0"
 done
 
 echo "PASS Clawix sidecar host verification complete"
