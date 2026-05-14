@@ -95,7 +95,7 @@ struct CloudBackendsSheet: View {
                             .onChange(of: customBaseURL) { _, new in
                                 UserDefaults.standard.set(
                                     new,
-                                    forKey: "\(CloudTranscriptionProvider.baseURLKeyPrefix).custom"
+                                    forKey: ClawixPersistentSurfaceKeys.dictationCustomBaseURL
                                 )
                             }
                         TextField("Model id (default: whisper-1)", text: $customModel)
@@ -108,7 +108,7 @@ struct CloudBackendsSheet: View {
                             .onChange(of: customModel) { _, new in
                                 UserDefaults.standard.set(
                                     new,
-                                    forKey: "\(CloudTranscriptionProvider.modelKeyPrefix).custom"
+                                    forKey: ClawixPersistentSurfaceKeys.dictationCustomModel
                                 )
                             }
                         keyRow(
@@ -191,10 +191,10 @@ struct CloudBackendsSheet: View {
         deepgramKey = ""
         customKey = ""
         customBaseURL = UserDefaults.standard.string(
-            forKey: "\(CloudTranscriptionProvider.baseURLKeyPrefix).custom"
+            forKey: ClawixPersistentSurfaceKeys.dictationCustomBaseURL
         ) ?? ""
         customModel = UserDefaults.standard.string(
-            forKey: "\(CloudTranscriptionProvider.modelKeyPrefix).custom"
+            forKey: ClawixPersistentSurfaceKeys.dictationCustomModel
         ) ?? "whisper-1"
     }
 }

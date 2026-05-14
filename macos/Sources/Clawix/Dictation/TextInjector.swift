@@ -106,11 +106,11 @@ enum TextInjector {
 
     private static var shouldUseAppleScriptPaste: Bool {
         let defaults = UserDefaults.standard
-        if defaults.object(forKey: "useAppleScriptPaste") != nil {
-            return defaults.bool(forKey: "useAppleScriptPaste")
+        if defaults.object(forKey: ClawixPersistentSurfaceKeys.useAppleScriptPaste) != nil {
+            return defaults.bool(forKey: ClawixPersistentSurfaceKeys.useAppleScriptPaste)
         }
-        if defaults.object(forKey: "UseAppleScriptPaste") != nil {
-            return defaults.bool(forKey: "UseAppleScriptPaste")
+        if defaults.object(forKey: ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy) != nil {
+            return defaults.bool(forKey: ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy)
         }
         return false
     }
