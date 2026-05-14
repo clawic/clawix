@@ -52,7 +52,7 @@ struct IoTClient {
     }
 
     func health() async -> Bool {
-        guard let url = URL(string: "/v1/health", relativeTo: origin) else { return false }
+        guard let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health", relativeTo: origin) else { return false }
         var req = URLRequest(url: url)
         req.timeoutInterval = 1
         do {
@@ -64,13 +64,13 @@ struct IoTClient {
     }
 
     func listTools() async throws -> RemoteToolCatalog {
-        try await getJSON(path: "/v1/tools/list", as: RemoteToolCatalog.self)
+        try await getJSON(path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tools/list", as: RemoteToolCatalog.self)
     }
 
     func invokeTool(id: String, arguments: [String: Any]) async throws -> RemoteToolInvocationResult {
         let body: [String: Any] = ["arguments": arguments]
         return try await postJSON(
-            path: "/v1/tools/\(id)/invoke",
+            path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tools/\(id)/invoke",
             body: body,
             as: RemoteToolInvocationResult.self
         )
@@ -79,73 +79,73 @@ struct IoTClient {
     // MARK: - Typed REST accessors
 
     func listHomes() async throws -> [HomeRecord] {
-        try await getJSON(path: "/v1/homes", as: HomesResponse.self).homes
+        try await getJSON(path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes", as: HomesResponse.self).homes
     }
 
     func listThings(homeId: String? = nil) async throws -> [ThingRecord] {
-        let path = homeId.map { "/v1/homes/\($0)/things" } ?? "/v1/things"
+        let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/things" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/things"
         return try await getJSON(path: path, as: ThingsResponse.self).things
     }
 
     func listAreas(homeId: String? = nil) async throws -> [AreaRecord] {
-        let path = homeId.map { "/v1/homes/\($0)/areas" } ?? "/v1/areas"
+        let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/areas" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/areas"
         return try await getJSON(path: path, as: AreasResponse.self).areas
     }
 
     func listScenes(homeId: String? = nil) async throws -> [SceneRecord] {
-        let path = homeId.map { "/v1/homes/\($0)/scenes" } ?? "/v1/scenes"
+        let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/scenes" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/scenes"
         return try await getJSON(path: path, as: ScenesResponse.self).scenes
     }
 
     func listAutomations(homeId: String? = nil) async throws -> [AutomationRecord] {
-        let path = homeId.map { "/v1/homes/\($0)/automations" } ?? "/v1/automations"
+        let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/automations" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/automations"
         return try await getJSON(path: path, as: AutomationsResponse.self).automations
     }
 
     func listApprovals(homeId: String? = nil) async throws -> [ApprovalRecord] {
-        let path = homeId.map { "/v1/homes/\($0)/approvals" } ?? "/v1/approvals"
+        let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/approvals" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/approvals"
         return try await getJSON(path: path, as: ApprovalsResponse.self).approvals
     }
 
     func runAction(_ request: IoTActionRequest, homeId: String? = nil) async throws -> IoTActionResult {
-        let path = homeId.map { "/v1/homes/\($0)/actions" } ?? "/v1/actions"
+        let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/actions" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/actions"
         let body = try encode(request)
         return try await postJSON(path: path, body: body, as: ActionResponse.self).result
     }
 
     func activateScene(sceneId: String, homeId: String? = nil) async throws -> IoTActionResult {
         let path = homeId
-            .map { "/v1/homes/\($0)/scenes/\(sceneId)/activate" }
-            ?? "/v1/scenes/\(sceneId)/activate"
+            .map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/scenes/\(sceneId)/activate" }
+            ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/scenes/\(sceneId)/activate"
         return try await postJSON(path: path, body: [:], as: ActionResponse.self).result
     }
 
     func setAutomationEnabled(automationId: String, enabled: Bool, homeId: String? = nil) async throws -> AutomationRecord {
         let suffix = enabled ? "enable" : "disable"
         let path = homeId
-            .map { "/v1/homes/\($0)/automations/\(automationId)/\(suffix)" }
-            ?? "/v1/automations/\(automationId)/\(suffix)"
+            .map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/automations/\(automationId)/\(suffix)" }
+            ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/automations/\(automationId)/\(suffix)"
         return try await postJSON(path: path, body: [:], as: AutomationResponse.self).automation
     }
 
     func runAutomation(automationId: String, homeId: String? = nil) async throws -> IoTActionResult {
         let path = homeId
-            .map { "/v1/homes/\($0)/automations/\(automationId)/run" }
-            ?? "/v1/automations/\(automationId)/run"
+            .map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/automations/\(automationId)/run" }
+            ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/automations/\(automationId)/run"
         return try await postJSON(path: path, body: [:], as: ActionResponse.self).result
     }
 
     func approveApproval(approvalId: String, homeId: String? = nil) async throws -> IoTActionResult {
         let path = homeId
-            .map { "/v1/homes/\($0)/approvals/\(approvalId)/approve" }
-            ?? "/v1/approvals/\(approvalId)/approve"
+            .map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/approvals/\(approvalId)/approve" }
+            ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/approvals/\(approvalId)/approve"
         return try await postJSON(path: path, body: [:], as: ActionResponse.self).result
     }
 
     func denyApproval(approvalId: String, homeId: String? = nil) async throws -> ApprovalRecord {
         let path = homeId
-            .map { "/v1/homes/\($0)/approvals/\(approvalId)/deny" }
-            ?? "/v1/approvals/\(approvalId)/deny"
+            .map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/approvals/\(approvalId)/deny" }
+            ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/approvals/\(approvalId)/deny"
         return try await postJSON(path: path, body: [:], as: ApprovalDenyResponse.self).approval
     }
 

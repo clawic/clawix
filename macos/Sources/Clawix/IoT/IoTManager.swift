@@ -337,7 +337,7 @@ final class IoTManager: NSObject, ObservableObject {
 
     private func connectSSE() {
         guard sseTask == nil else { return }
-        guard let url = URL(string: "/v1/events/stream", relativeTo: client.origin) else { return }
+        guard let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/events/stream", relativeTo: client.origin) else { return }
         var request = URLRequest(url: url)
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         request.timeoutInterval = TimeInterval.infinity
