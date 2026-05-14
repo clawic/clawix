@@ -148,7 +148,8 @@ final class AppBridgeMessageHandler: NSObject, WKScriptMessageHandler {
     // MARK: - Storage
 
     private var storageURL: URL {
-        appsStore.directory(forSlug: slug).appendingPathComponent(".clawix-storage.json")
+        appsStore.directory(forSlug: slug)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.appStorageFile, isDirectory: false)
     }
 
     private func ensureStorageLoaded() {

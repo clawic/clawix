@@ -225,11 +225,20 @@ enum ClawixPersistentSurfaceRegistry {
                 path: "~/Library/Application Support/Clawix/dictation-sounds",
                 parentId: "clawix.applicationSupport"
             ),
-            ClawixPersistentSurface.folder(
+            ClawixPersistentSurface.cache(
                 id: "clawix.captures",
                 name: "Quick Ask captures",
-                path: "~/Pictures/Clawix-Captures",
-                parentId: "clawix.applicationSupport"
+                path: "~/Library/Caches/Clawix-Captures"
+            ),
+            ClawixPersistentSurface.cache(
+                id: "clawix.favicons",
+                name: "Browser favicons",
+                path: "~/Library/Caches/Clawix/Favicons"
+            ),
+            ClawixPersistentSurface.cache(
+                id: "clawix.localModelsCache",
+                name: "Local models cache",
+                path: "~/Library/Caches/Clawix/local-models"
             ),
             ClawixPersistentSurface.cache(
                 id: "clawix.devCache",
@@ -428,10 +437,12 @@ enum ClawixPersistentSurfacePaths {
         static let clawjs = "clawjs"
         static let secrets = "secrets"
         static let localModels = "local-models"
+        static let favicons = "Favicons"
         static let dictationAudio = "dictation-audio"
         static let dictationAudioDebug = "dictation-audio-debug"
         static let dictationSounds = "dictation-sounds"
         static let captures = "Clawix-Captures"
+        static let appStorageFile = ".clawix-storage.json"
         static let bridgeStatusFile = "bridge-status.json"
         static let sqlite = "clawix.sqlite"
     }

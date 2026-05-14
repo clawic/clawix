@@ -533,8 +533,7 @@ extension AppState {
     static func publishPairingForDevMenu(_ pairing: PairingService) {
         let payload = pairing.qrPayload()
         guard let data = payload.data(using: .utf8) else { return }
-        let dir = (NSHomeDirectory() as NSString)
-            .appendingPathComponent("Library/Caches/Clawix-Dev")
+        let dir = ((try? ClawixPersistentSurfacePaths.cacheRoot()) ?? FileManager.default.temporaryDirectory).path
         let path = (dir as NSString).appendingPathComponent("pairing.json")
         do {
             try FileManager.default.createDirectory(
