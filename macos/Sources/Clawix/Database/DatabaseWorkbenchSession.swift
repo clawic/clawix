@@ -325,7 +325,7 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
         }
         var config = Configuration()
         config.readonly = true
-        let queue = try DatabaseQueue(path: path, configuration: config)
+        let queue = try ClawixRegisteredDatabaseQueue.open(path: path, configuration: config)
         return try queue.read { db in
             let rows = try Row.fetchAll(db, sql: sql)
             let limited = Array(rows.prefix(max(1, rowLimit)))

@@ -377,7 +377,7 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
                 return .init(kind: .importCSV, status: .blocked, message: "SQLite import failed: database file does not exist.")
             }
 
-            let queue = try DatabaseQueue(path: databasePath)
+            let queue = try ClawixRegisteredDatabaseQueue.open(path: databasePath)
             try queue.write { db in
                 let placeholders = Array(repeating: "?", count: columns.count).joined(separator: ", ")
                 let sql = "INSERT INTO \(table) (\(columns.joined(separator: ", "))) VALUES (\(placeholders))"

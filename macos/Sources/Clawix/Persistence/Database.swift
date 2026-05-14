@@ -33,15 +33,14 @@ final class Database {
                                                     withIntermediateDirectories: true)
             var config = Configuration()
             config.foreignKeysEnabled = true
-            return try DatabaseQueue(path: url.path, configuration: config)
+            return try ClawixRegisteredDatabaseQueue.open(url: url, configuration: config)
         }
-        let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Clawix", isDirectory: true)
+        let supportDir = try ClawixPersistentSurfacePaths.applicationSupportRoot()
         try FileManager.default.createDirectory(at: supportDir, withIntermediateDirectories: true)
-        let url = supportDir.appendingPathComponent("clawix.sqlite")
+        let url = supportDir.appendingPathComponent(ClawixPersistentSurfacePaths.components.sqlite)
         var config = Configuration()
         config.foreignKeysEnabled = true
-        return try DatabaseQueue(path: url.path, configuration: config)
+        return try ClawixRegisteredDatabaseQueue.open(url: url, configuration: config)
     }
 
     struct LocalOverrideCounts {
