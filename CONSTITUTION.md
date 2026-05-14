@@ -504,6 +504,33 @@ escalate only with the user's permission. A runaway agent is a
 constitutional bug, not a fact of life; the framework provides the
 breakers.
 
+**VII.12 The system is the multiplier.** As model intelligence grows, the
+limiting factor becomes the system around the intelligence: structure,
+memory, tools, permissions, coordination, retrieval, and governance. The
+framework exists to turn inference into durable capability. Typed data,
+relationships, workflows, CLI and API surfaces, inspectors, and other
+programmatic rails guide agents more reliably than ever-longer instructions.
+Inference remains essential, but it scales through system design, not around
+it.
+
+**VII.13 Agentic work accumulates capital.** Meaningful agent work should
+leave the system more capable than it found it. A run may produce an output,
+but it should also preserve reusable gains when they exist: better
+instructions, better defaults, better data, better workflows, better
+knowledge of the user, better validation, or better recovery paths. An agent
+that only answers and forgets wastes structure. The framework treats these
+reusable gains as agentic capital and gives agents durable places to store,
+revise, inspect, and reuse them.
+
+**VII.14 Agent autonomy is organized over a lifecycle.** Autonomy at scale
+is organized, not improvised. The system must remain legible like a city:
+agents, responsibilities, permissions, routes, owned resources, outputs, and
+dependencies can be mapped and inspected. More autonomy is not merely more
+permission. It requires coordination, optional hierarchy, delegation,
+supervision, substitution, retirement, and withdrawal of trust. The user
+should be able to understand which agents exist, what they do, what they
+own, what paths they use, what they may access, and what they produced.
+
 ### VIII. Sub-apps and modularity
 
 **VIII.1 Sub-apps are the same species, regardless of origin.** Whether
@@ -795,6 +822,9 @@ together; an amendment is incomplete until both repositories carry it.
 - **Agent**: a composition of skills, secrets, connections, and
   instructions, executed by a runtime, acting on the user's behalf within
   granted permissions.
+- **Agentic capital**: reusable capability accumulated by agent work:
+  instructions, defaults, data, relationships, workflows, decisions,
+  validations, and knowledge that make future work better.
 - **Automation**: an agent-authored sequence of triggers, conditions, and
   actions that runs deterministically and is audited like any other agent
   activity. Can call inference as a step but is not itself an LLM loop.
