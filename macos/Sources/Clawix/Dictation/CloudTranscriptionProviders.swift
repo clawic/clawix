@@ -27,6 +27,8 @@ enum CloudTranscriptionProvider: String, CaseIterable {
 
     static let baseURLKeyPrefix = "dictation.transcription.baseURL"
     static let modelKeyPrefix = "dictation.transcription.model"
+    static func baseURLKey(for provider: String) -> String { "\(baseURLKeyPrefix).\(provider)" }
+    static func modelKey(for provider: String) -> String { "\(modelKeyPrefix).\(provider)" }
 
     /// Transcribe a PCM Float32 buffer @ 16 kHz mono. Throws on
     /// network / decoding errors so the coordinator can fall back
@@ -48,7 +50,7 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         guard await CloudTranscriptionSecrets.hasAPIKey(for: .groq) else {
             throw CloudError.notConfigured
         }
-        let model = UserDefaults.standard.string(forKey: "\(Self.modelKeyPrefix).\(rawValue)")
+        let model = UserDefaults.standard.string(forKey: Self.modelKey(for: rawValue))
             ?? "whisper-large-v3"
         let url = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
         let multipart = makeMultipartBody(
@@ -129,11 +131,11 @@ enum CloudTranscriptionProvider: String, CaseIterable {
     // MARK: - Custom (OpenAI-compatible)
 
     private func transcribeCustom(samples: [Float], language: String?, prompt: String?) async throws -> String {
-        guard let raw = UserDefaults.standard.string(forKey: "\(Self.baseURLKeyPrefix).\(rawValue)"),
+        guard let raw = UserDefaults.standard.string(forKey: Self.baseURLKey(for: rawValue)),
               let baseURL = URL(string: raw) else {
             throw CloudError.notConfigured
         }
-        let model = UserDefaults.standard.string(forKey: "\(Self.modelKeyPrefix).\(rawValue)")
+        let model = UserDefaults.standard.string(forKey: Self.modelKey(for: rawValue))
             ?? "whisper-1"
         let endpoint = baseURL.appendingPathComponent("/audio/transcriptions")
         let multipart = makeMultipartBody(
