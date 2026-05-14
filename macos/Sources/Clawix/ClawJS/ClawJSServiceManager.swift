@@ -386,20 +386,32 @@ final class ClawJSServiceManager: ObservableObject {
 
     private nonisolated static func reclaimOrphanedSidecarIfPossible(_ service: ClawJSService) async -> Bool {
         guard let pid = Self.listenerPID(on: service.port),
-              Self.isClawixSidecar(pid: pid),
-              Self.parentPID(of: pid) == 1 else {
+              Self.isClawixSidecar(pid: pid) else {
             return false
         }
 
-        kill(pid, SIGTERM)
+        let targets: [pid_t]
+        if Self.parentPID(of: pid) == 1 {
+            targets = [pid]
+        } else if let parent = Self.parentPID(of: pid),
+                  Self.isClawixSidecar(pid: parent),
+                  Self.parentPID(of: parent) == 1 {
+            targets = [pid, parent]
+        } else {
+            return false
+        }
+
+        for target in Self.uniquePIDs(targets) {
+            kill(target, SIGTERM)
+        }
         let deadline = Date().addingTimeInterval(2)
-        while Date() < deadline, Self.isRunning(pid: pid) {
+        while Date() < deadline, Self.uniquePIDs(targets).contains(where: { Self.isRunning(pid: $0) }) {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
-        if Self.isRunning(pid: pid) {
-            kill(pid, SIGKILL)
-            try? await Task.sleep(nanoseconds: 200_000_000)
+        for target in Self.uniquePIDs(targets) where Self.isRunning(pid: target) {
+            kill(target, SIGKILL)
         }
+        try? await Task.sleep(nanoseconds: 200_000_000)
         return true
     }
 
@@ -925,6 +937,11 @@ final class ClawJSServiceManager: ObservableObject {
 
     private nonisolated static func isRunning(pid: pid_t) -> Bool {
         kill(pid, 0) == 0
+    }
+
+    private nonisolated static func uniquePIDs(_ pids: [pid_t]) -> [pid_t] {
+        var seen = Set<pid_t>()
+        return pids.filter { seen.insert($0).inserted }
     }
 
     private static func dataDirectoryURL(for service: ClawJSService) -> URL {
