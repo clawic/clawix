@@ -101,13 +101,13 @@ final class FeatureFlags: ObservableObject {
     }
 
     private let store: UserDefaults = UserDefaults(suiteName: appPrefsSuite) ?? .standard
-    private let betaKey = "FeatureFlags.beta"
-    private let experimentalKey = "FeatureFlags.experimental"
+    private let betaKey = ClawixPersistentSurfaceKeys.featureFlagsBeta
+    private let experimentalKey = ClawixPersistentSurfaceKeys.featureFlagsExperimental
 
     private init() {
         let s = UserDefaults(suiteName: appPrefsSuite) ?? .standard
-        self.beta = s.object(forKey: "FeatureFlags.beta") as? Bool ?? false
-        self.experimental = s.object(forKey: "FeatureFlags.experimental") as? Bool ?? false
+        self.beta = s.object(forKey: ClawixPersistentSurfaceKeys.featureFlagsBeta) as? Bool ?? false
+        self.experimental = s.object(forKey: ClawixPersistentSurfaceKeys.featureFlagsExperimental) as? Bool ?? false
     }
 #else
     let beta: Bool = false
