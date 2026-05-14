@@ -105,6 +105,7 @@ enum SystemSecrets {
         url: URL,
         headers: [String: String],
         body: String?,
+        bodyData: Data? = nil,
         agent: String,
         riskTier: String,
         approvalSatisfied: Bool,
@@ -136,6 +137,7 @@ enum SystemSecrets {
             url: url,
             headers: headers,
             body: body,
+            bodyBase64: bodyData?.base64EncodedString(),
             agent: agent,
             riskTier: riskTier,
             declaredFields: [

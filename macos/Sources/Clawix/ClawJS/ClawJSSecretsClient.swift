@@ -387,6 +387,7 @@ final class ClawJSSecretsClient {
         url: URL,
         headers: [String: String],
         body: String?,
+        bodyBase64: String? = nil,
         agent: String,
         riskTier: String,
         declaredFields: [BrokerHTTPDeclaredField],
@@ -410,6 +411,7 @@ final class ClawJSSecretsClient {
             "approvalSatisfied": approvalSatisfied
         ]
         if let body { payload["body"] = body }
+        if let bodyBase64 { payload["bodyBase64"] = bodyBase64 }
         if let timeoutMs { payload["timeoutMs"] = timeoutMs }
         return try await post("/v1/tenants/\(tenantId)/broker/http", body: payload)
     }
