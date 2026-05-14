@@ -69,7 +69,7 @@ struct GitPage: View {
                 title: "Commit instructions",
                 detail: "Added to the prompts that generate commit messages",
                 placeholder: "Add a guideline for the commit message...",
-                storageKey: "clawix.git.commitInstructions"
+                storageKey: ClawixPersistentSurfaceKeys.gitCommitInstructions
             )
             .padding(.top, 28)
 

@@ -13,8 +13,12 @@ enum PersistentSurfaceKind: String, Codable {
     case statusFile
     case preferenceKey
     case appStorageKey
+    case browserStorageKey
+    case envOverride
     case cache
+    case fixture
     case persistentTemp
+    case legacyPath
     case externalReadOnlySource
 }
 
@@ -328,13 +332,119 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.iot.tab", "IoT tab", ClawixPersistentSurfaceKeys.iotTab, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.publishing.calendarMode", "Publishing calendar mode", ClawixPersistentSurfaceKeys.publishingCalendarMode, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.publishing.homeTab", "Publishing home tab", ClawixPersistentSurfaceKeys.publishingHomeTab, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.publishing.workspace", "Publishing workspace", PublishingManager.workspaceKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.git.commitInstructions", "Git commit instructions", ClawixPersistentSurfaceKeys.gitCommitInstructions, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.featureFlags.beta", "Beta feature flag", ClawixPersistentSurfaceKeys.featureFlagsBeta, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.featureFlags.experimental", "Experimental feature flag", ClawixPersistentSurfaceKeys.featureFlagsExperimental, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.life.enabledVerticals", "Life enabled verticals", ClawixPersistentSurfaceKeys.lifeEnabledVerticals, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.life.hiddenVerticals", "Life hidden verticals", ClawixPersistentSurfaceKeys.lifeHiddenVerticals, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.relay.refresh", "Relay refresh token pattern", ClawixPersistentSurfaceKeys.relayRefreshPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.browser.websiteApproval", "Browser website approval", BrowserPermissionPolicy.approvalStorageKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.browser.blockedDomains", "Browser blocked domains", BrowserPermissionPolicy.blockedDomainsStorageKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.browser.allowedDomains", "Browser allowed domains", BrowserPermissionPolicy.allowedDomainsStorageKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.mesh.httpPort", "Mesh HTTP port override", MeshClient.httpPortDefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.mesh.remoteWorkspaces", "Mesh remote workspaces", MeshStore.workspacesDefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.localModels.defaultModel", "Local models default model", LocalModelsService.defaultModelKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.localModels.keepAlive", "Local models keep alive", LocalModelsService.keepAliveKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.localModels.contextLength", "Local models context length", LocalModelsService.contextLengthKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.updater.pendingBuild", "Pending update build", UpdaterController.pendingBuildKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.updater.pendingDisplay", "Pending update display", UpdaterController.pendingDisplayKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.quickAsk.slashCommands", "Quick Ask custom slash commands", QuickAskSlashCommandsStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.quickAsk.mentionPrompts", "Quick Ask custom mention prompts", QuickAskMentionsStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.quickAsk.hotkey", "Quick Ask hotkey", QuickAskHotkeyManager.defaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.quickAsk.clipboardLastSeen", "Quick Ask clipboard last seen", QuickAskClipboardSniffer.lastSeenKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.quickAsk.clipboardLastSeenAt", "Quick Ask clipboard last seen at", QuickAskClipboardSniffer.lastSeenAtKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.skills.activeByScope", "Active skills by scope", SkillsStore.activeKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.skills.userCatalog", "User skills catalog", SkillsStore.userCatalogKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.provider.featureAccount", "Provider account selection pattern", ClawixPersistentSurfaceKeys.featureProviderAccountPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.provider.featureModel", "Provider model selection pattern", ClawixPersistentSurfaceKeys.featureProviderModelPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.provider.enabled", "Provider enabled pattern", ClawixPersistentSurfaceKeys.providerEnabledPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.secrets.deviceId", "Secrets device id", SecretsPaths.deviceIdKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.customBaseUrl", "Custom transcription base URL", ClawixPersistentSurfaceKeys.dictationCustomBaseURL, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.customModel", "Custom transcription model", ClawixPersistentSurfaceKeys.dictationCustomModel, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.injectText", "Dictation inject text", DictationCoordinator.injectDefaultsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.restoreClipboard", "Dictation restore clipboard", DictationCoordinator.restoreClipboardDefaultsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.autoEnter", "Dictation auto enter", DictationCoordinator.autoEnterDefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.autoSendKey", "Dictation auto send key", DictationCoordinator.autoSendKeyDefaultsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.language", "Dictation language", DictationCoordinator.languageDefaultsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.restoreClipboardDelayMs", "Dictation restore clipboard delay", DictationCoordinator.restoreClipboardDelayMsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.addSpaceBeforePaste", "Dictation add space before paste", DictationCoordinator.addSpaceBeforeKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.autoFormatParagraphs", "Dictation auto-format paragraphs", DictationCoordinator.autoFormatParagraphsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.prewarmOnLaunch", "Dictation prewarm on launch", DictationCoordinator.prewarmOnLaunchKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.vadEnabled", "Dictation VAD enabled", DictationCoordinator.vadEnabledKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.backend", "Dictation transcription backend", DictationCoordinator.backendKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.livePreview", "Dictation live preview", DictationCoordinator.livePreviewEnabledKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.soundFeedback", "Dictation sound feedback", SoundManager.defaultsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.playStartSound", "Dictation play start sound", SoundManager.playStartKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.playStopSound", "Dictation play stop sound", SoundManager.playStopKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.customStartSound", "Dictation custom start sound", SoundManager.customStartURLKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.customStopSound", "Dictation custom stop sound", SoundManager.customStopURLKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.muteAudio", "Dictation mute audio", MediaController.enabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.muteResumeDelay", "Dictation mute resume delay", MediaController.resumeDelayKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.pauseMedia", "Dictation pause media", PlaybackController.enabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.pauseResumeDelay", "Dictation pause resume delay", PlaybackController.resumeDelayKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.fillerWordsEnabled", "Dictation filler words enabled", FillerWordsManager.enabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.fillerWordsList", "Dictation filler words list", FillerWordsManager.listKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.cleanupTranscriptsEnabled", "Dictation cleanup transcripts enabled", CleanupScheduler.transcriptsEnabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.cleanupTranscriptsTTL", "Dictation cleanup transcripts TTL", CleanupScheduler.transcriptsTTLKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.cleanupAudioFilesEnabled", "Dictation cleanup audio files enabled", CleanupScheduler.audioFilesEnabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.cleanupAudioFilesTTL", "Dictation cleanup audio files TTL", CleanupScheduler.audioFilesTTLKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.hotkeyMode", "Dictation hotkey mode", HotkeyManager.modeDefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.hotkeyTrigger", "Dictation hotkey trigger", HotkeyManager.triggerDefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.hotkey2Mode", "Dictation second hotkey mode", HotkeyManager.mode2DefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.hotkey2Trigger", "Dictation second hotkey trigger", HotkeyManager.trigger2DefaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.vocabulary", "Dictation vocabulary", VocabularyManager.defaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.whisperPrompts", "Dictation Whisper prompts", WhisperPromptStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.powerModeEnabled", "Dictation power mode enabled", PowerModeManager.enabledKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.powerModeConfigs", "Dictation power mode configs", PowerModeManager.configsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.microphoneMode", "Dictation microphone mode", MicrophonePreferences.modeKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.microphonePreferred", "Dictation preferred microphones", MicrophonePreferences.preferredKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.onboardingCompleted", "Dictation onboarding completed", DictationOnboardingTrigger.completedKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.recorderStyle", "Dictation recorder style", DictationOverlay.styleKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.accessibilityRequested", "Dictation accessibility requested", DictationPermissions.hasRequestedAccessibilityKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.replacements", "Dictation replacements", DictationReplacementStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.enhancement.enabled", "Enhancement enabled", EnhancementSettings.enabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.provider", "Enhancement provider", EnhancementSettings.providerKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.activePrompt", "Enhancement active prompt", EnhancementSettings.activePromptKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.enhancement.skipShortEnabled", "Enhancement skip short enabled", EnhancementSettings.skipShortEnabledKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.skipShortMinWords", "Enhancement skip short minimum words", EnhancementSettings.skipShortMinWordsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.timeoutSeconds", "Enhancement timeout seconds", EnhancementSettings.timeoutSecondsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.timeoutPolicy", "Enhancement timeout policy", EnhancementSettings.timeoutPolicyKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.clipboardContext", "Enhancement clipboard context", EnhancementSettings.clipboardContextKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.screenContext", "Enhancement screen context", EnhancementSettings.screenContextKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.enhancement.customPrompts", "Enhancement custom prompts", PromptLibrary.customPromptsKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.enhancement.model", "Enhancement model pattern", ClawixPersistentSurfaceKeys.enhancementModelPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.enhancement.baseUrl", "Enhancement base URL pattern", ClawixPersistentSurfaceKeys.enhancementBaseURLPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.cloudModel", "Cloud transcription model pattern", ClawixPersistentSurfaceKeys.cloudTranscriptionModelPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.dictation.cloudBaseUrl", "Cloud transcription base URL pattern", ClawixPersistentSurfaceKeys.cloudTranscriptionBaseURLPattern, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.screenTools.exportDirectory", "Screen tools export directory", ScreenToolSettings.exportDirectoryKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.afterCaptureAction", "Screen tools after capture action", ScreenToolSettings.afterCaptureActionKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.imageFormat", "Screen tools image format", ScreenToolSettings.imageFormatKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.selfTimerSeconds", "Screen tools self timer", ScreenToolSettings.selfTimerSecondsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.playSounds", "Screen tools play sounds", ScreenToolSettings.playSoundsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.includeCursor", "Screen tools include cursor", ScreenToolSettings.includeCursorKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.captureWindowShadow", "Screen tools capture window shadow", ScreenToolSettings.captureWindowShadowKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.scaleRetinaScreenshots", "Screen tools scale retina screenshots", ScreenToolSettings.scaleRetinaScreenshotsTo1xKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.convertScreenshotsToSRGB", "Screen tools convert screenshots to sRGB", ScreenToolSettings.convertScreenshotsToSRGBKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.addOnePixelBorder", "Screen tools one-pixel border", ScreenToolSettings.addOnePixelBorderKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.freezeScreenOnCapture", "Screen tools freeze screen", ScreenToolSettings.freezeScreenOnCaptureKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.backgroundPreset", "Screen tools background preset", ScreenToolSettings.backgroundPresetKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.crosshairMode", "Screen tools crosshair mode", ScreenToolSettings.crosshairModeKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.showCrosshairMagnifier", "Screen tools crosshair magnifier", ScreenToolSettings.showCrosshairMagnifierKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.showRecordingCursor", "Screen tools recording cursor", ScreenToolSettings.showRecordingCursorKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.showRecordingControls", "Screen tools recording controls", ScreenToolSettings.showRecordingControlsKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.highlightRecordingClicks", "Screen tools recording click highlights", ScreenToolSettings.highlightRecordingClicksKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.recordRecordingAudio", "Screen tools record audio", ScreenToolSettings.recordRecordingAudioKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.displayRecordingTime", "Screen tools display recording time", ScreenToolSettings.displayRecordingTimeKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.showRecordingCountdown", "Screen tools recording countdown", ScreenToolSettings.showRecordingCountdownKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.recordingMaxResolution", "Screen tools recording max resolution", ScreenToolSettings.recordingMaxResolutionKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.recordingVideoFPS", "Screen tools recording FPS", ScreenToolSettings.recordingVideoFPSKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.scaleRetinaRecordings", "Screen tools scale retina recordings", ScreenToolSettings.scaleRetinaRecordingsTo1xKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.recordRecordingAudioInMono", "Screen tools mono recording audio", ScreenToolSettings.recordRecordingAudioInMonoKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.openRecordingEditor", "Screen tools open recording editor", ScreenToolSettings.openRecordingEditorAfterRecordingKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.keepTextLineBreaks", "Screen tools keep text line breaks", ScreenToolSettings.keepTextLineBreaksKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.autoDetectTextLanguage", "Screen tools auto detect text language", ScreenToolSettings.autoDetectTextLanguageKey, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.screenTools.previousAreaRect", "Screen tools previous area rect", ScreenToolSettings.previousAreaRectKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.useAppleScriptPaste", "AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPaste, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.useAppleScriptPasteLegacy", "Legacy AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.bearer", "Bridge bearer token reference", ClawixPersistentSurfaceKeys.bridgeBearer, PersistentSurfaceKind.preferenceKey),
@@ -411,6 +521,7 @@ enum ClawixPersistentSurfaceKeys {
     static let publishingCalendarMode = "clawix.publishing.calendarMode.v1"
     static let publishingHomeTab = "clawix.publishing.homeTab.v1"
     static let feedDisplayMode = "clawix.feed.displayMode"
+    static let gitCommitInstructions = "clawix.git.commitInstructions"
     static let featureFlagsBeta = "FeatureFlags.beta"
     static let featureFlagsExperimental = "FeatureFlags.experimental"
     static let lifeEnabledVerticals = "LifeEnabledVerticals"
@@ -424,6 +535,13 @@ enum ClawixPersistentSurfaceKeys {
     static let useAppleScriptPasteLegacy = "UseAppleScriptPaste"
     static let bridgeDefaultsSuite = "clawix.bridge"
     static let bridgeBearer = "ClawixBridge.Bearer.v1"
+    static let featureProviderAccountPattern = "feature.<feature>.providerAccountId"
+    static let featureProviderModelPattern = "feature.<feature>.modelId"
+    static let providerEnabledPattern = "provider.<provider>.enabled"
+    static let enhancementModelPattern = "dictation.enhancement.model.<provider>"
+    static let enhancementBaseURLPattern = "dictation.enhancement.baseURL.<provider>"
+    static let cloudTranscriptionModelPattern = "dictation.transcription.model.<provider>"
+    static let cloudTranscriptionBaseURLPattern = "dictation.transcription.baseURL.<provider>"
     static let binaryPath = "ClawixBinaryPath"
     static let backgroundBridgeWasEnabled = "clawix.backgroundBridge.wasEnabled"
     static let appleLanguages = "AppleLanguages"
