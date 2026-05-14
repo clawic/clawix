@@ -113,6 +113,10 @@ enum ClawixPersistentSurface {
         node(id: id, kind: .persistentTemp, name: name, path: path, storageClass: "nativeAppData", canonicality: "generated", parentId: parentId)
     }
 
+    static func legacyPath(id: String, name: String, path: String, warnings: [String]) -> PersistentSurfaceNode {
+        node(id: id, kind: .legacyPath, name: name, path: path, storageClass: "workspace", canonicality: "legacyReadOnly", lifecycle: "legacy", warnings: warnings)
+    }
+
     private static func node(
         id: String,
         kind: PersistentSurfaceKind,
@@ -174,6 +178,12 @@ enum ClawixPersistentSurfaceRegistry {
                 name: "Clawix home",
                 path: "~/.clawix",
                 storageClass: "hostOperational"
+            ),
+            ClawixPersistentSurface.legacyPath(
+                id: "clawix.legacy.workspace.clawjs",
+                name: "Legacy ClawJS workspace root",
+                path: ClawixPersistentSurfacePaths.components.legacyClawWorkspace,
+                warnings: ["Read only for stale token cleanup and compatibility checks."]
             ),
             ClawixPersistentSurface.database(
                 id: localDatabaseId,
@@ -597,6 +607,7 @@ enum ClawixPersistentSurfacePaths {
         static let clawix = "Clawix"
         static let clawixHome = ".clawix"
         static let clawWorkspace = ".claw"
+        static let legacyClawWorkspace = ".clawjs"
         static let bridgeState = "state"
         static let workspace = "workspace"
         static let logs = "Logs"

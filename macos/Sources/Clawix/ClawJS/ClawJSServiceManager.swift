@@ -946,7 +946,7 @@ final class ClawJSServiceManager: ObservableObject {
                 .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
                 .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
             workspaceURL
-                .appendingPathComponent(".clawjs", isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.legacyClawWorkspace, isDirectory: true)
                 .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
         ].map { $0.appendingPathComponent(".admin-token", isDirectory: false) }
     }

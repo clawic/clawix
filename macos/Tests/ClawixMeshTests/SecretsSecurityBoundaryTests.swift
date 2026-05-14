@@ -18,7 +18,7 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             "Launching Secrets must remove every known stale .admin-token file."
         )
         XCTAssertTrue(
-            source.contains(".appendingPathComponent(\".clawjs\", isDirectory: true)"),
+            source.contains(".appendingPathComponent(ClawixPersistentSurfacePaths.components.legacyClawWorkspace, isDirectory: true)"),
             "Secrets launch cleanup must include legacy .clawjs sidecar token paths."
         )
         XCTAssertTrue(
