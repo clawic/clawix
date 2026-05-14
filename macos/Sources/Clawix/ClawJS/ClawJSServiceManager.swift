@@ -47,10 +47,8 @@ final class ClawJSServiceManager: ObservableObject {
     private var sessionAdminTokens: [ClawJSService: String] = [:]
     private var sessionSignedHostTokens: [ClawJSService: String] = [:]
 
-    /// Maps each service to the env var name its daemon reads to recognise
-    /// the per-session admin token. Services that don't use admin tokens
-    /// (memory, telegram) are simply absent. The audio service
-    /// re-uses the same mechanism: the shared secret is the admin token.
+    /// Services that need a per-session bearer/shared token. The token is
+    /// bootstrapped over anonymous stdin, never process environment or disk.
     private static let adminTokenEnvVar: [ClawJSService: String] = [
         .database: "CLAW_DATABASE_ADMIN_TOKEN",
         .drive: "CLAW_DRIVE_ADMIN_TOKEN",
@@ -58,6 +56,7 @@ final class ClawJSServiceManager: ObservableObject {
         .audio: "CLAW_AUDIO_SHARED_SECRET",
         .index: "CLAW_SEARCH_ADMIN_TOKEN",
         .sessions: "CLAW_SESSIONS_SHARED_SECRET",
+        .publishing: "CLAW_PUBLISHING_TOKEN",
     ]
 
     private let bridgeService: BackgroundBridgeService
@@ -496,9 +495,6 @@ final class ClawJSServiceManager: ObservableObject {
             try Self.prepareDirectories(for: service)
 
             let adminToken = ensureAdminToken(for: service)
-            if let adminToken, service != .secrets {
-                try Self.writeAdminToken(adminToken, for: service)
-            }
             let signedHostToken = ensureSignedHostToken(for: service)
 
             let process = Process()
@@ -519,6 +515,10 @@ final class ClawJSServiceManager: ObservableObject {
                     signedHostToken: signedHostToken,
                     platformKey: try SecretsPlatformKey.loadOrCreate()
                 )
+                process.standardInput = bootstrapPipe
+            } else if let adminToken {
+                bootstrapPipe = Pipe()
+                bootstrapData = try Self.localAdminBootstrapData(adminToken: adminToken)
                 process.standardInput = bootstrapPipe
             } else {
                 bootstrapPipe = nil
@@ -738,8 +738,8 @@ final class ClawJSServiceManager: ObservableObject {
             withIntermediateDirectories: true
         )
         try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectoryURL(for: service).path)
-        if service == .secrets {
-            for tokenURL in staleSecretsAdminTokenURLs() {
+        if Self.adminTokenEnvVar[service] != nil {
+            for tokenURL in staleAdminTokenURLs(for: service) {
                 try? fm.removeItem(at: tokenURL)
             }
         }
@@ -759,6 +759,11 @@ final class ClawJSServiceManager: ObservableObject {
         signedHostToken: String?
     ) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
+        for tokenEnvVar in adminTokenEnvVar.values {
+            env.removeValue(forKey: tokenEnvVar)
+        }
+        env.removeValue(forKey: "CLAW_SECRETS_TOKEN")
+        env.removeValue(forKey: "CLAW_SECRETS_KEK_BASE64")
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAW_WORKSPACE"] = workspaceURL.path
         env["CLAW_HOME"] = frameworkGlobalRootURL.path
@@ -801,24 +806,20 @@ final class ClawJSServiceManager: ObservableObject {
             env["CLAW_TELEGRAM_PORT"] = String(service.port)
             env["CLAW_TELEGRAM_WORKSPACE"] = workspaceURL.path
         }
-        // Publishing reads its own CLAW_PUBLISHING_* env vars; its admin token lives
-        // alongside the data dir in `.admin-token` so the Swift client can
-        // read it via `adminTokenFromDataDir(for: .publishing)`. The dataDir
-        // doubles as the SQLite location (publishing uses `core.sqlite`
-        // inside it on first boot).
+        // Publishing reads its own CLAW_PUBLISHING_* env vars. The admin token
+        // follows the same stdin bootstrap path as other local services.
         if service == .publishing {
             let publishingData = dataDirectoryURL(for: .publishing).path
             env["CLAW_PUBLISHING_HOST"] = "127.0.0.1"
             env["CLAW_PUBLISHING_PORT"] = String(service.port)
             env["CLAW_PUBLISHING_DATA_DIR"] = publishingData
-            env["CLAW_PUBLISHING_TOKEN_STORE"] = (publishingData as NSString)
-                .appendingPathComponent(".admin-token")
+            env["CLAW_PUBLISHING_STATUS_FILE"] = statusFileURL(for: service).path
         }
-        if let adminToken, let envVar = adminTokenEnvVar[service] {
+        if adminToken != nil, adminTokenEnvVar[service] != nil {
             if service == .secrets {
                 env["CLAW_SECRETS_BOOTSTRAP_STDIN"] = "1"
             } else {
-                env[envVar] = adminToken
+                env["CLAW_LOCAL_ADMIN_BOOTSTRAP_STDIN"] = "1"
             }
         }
         if service == .secrets, signedHostToken != nil {
@@ -839,6 +840,11 @@ final class ClawJSServiceManager: ObservableObject {
             payload["kekBase64"] = platformKey.base64EncodedString()
         }
         return try JSONSerialization.data(withJSONObject: payload, options: [])
+            + Data([0x0a])
+    }
+
+    private static func localAdminBootstrapData(adminToken: String) throws -> Data {
+        try JSONSerialization.data(withJSONObject: ["adminToken": adminToken], options: [])
             + Data([0x0a])
     }
 
@@ -881,14 +887,14 @@ final class ClawJSServiceManager: ObservableObject {
         return token
     }
 
-    /// Filesystem fallback for non-Secrets admin tokens, used when the GUI is
-    /// not the daemon owner (background bridge has the daemon alive). Secrets
-    /// deliberately has no disk fallback: same-user local processes can read
-    /// owner files, so V1 host identity must stay in-memory/native.
+    /// Filesystem fallback only for legacy services that still own a token
+    /// store. Services in `adminTokenEnvVar` deliberately have no disk
+    /// fallback: same-user local processes can read owner files, so V1 host
+    /// identity must stay in-memory/native.
     static func adminTokenFromDataDir(for service: ClawJSService) throws -> String {
-        if service == .secrets {
+        if adminTokenEnvVar[service] != nil {
             throw NSError(domain: "ClawJSServiceManager", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "Secrets admin token is host-session only and is never read from disk."
+                NSLocalizedDescriptionKey: "\(service.displayName) admin token is host-session only and is never read from disk."
             ])
         }
         let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
@@ -909,20 +915,9 @@ final class ClawJSServiceManager: ObservableObject {
         return raw
     }
 
-    /// Persists non-Secrets per-session admin tokens for sibling processes
-    /// such as the Tasks mini-app. Secrets tokens are never persisted because
-    /// the Secrets V1 threat model includes hostile same-user local processes.
-    private static func writeAdminToken(_ token: String, for service: ClawJSService) throws {
-        if service == .secrets { return }
-        let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
-        try Data(token.utf8).write(to: url, options: [.atomic])
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
-    }
-
     private static func canAdoptExistingService(_ service: ClawJSService) -> Bool {
-        if service == .secrets { return false }
-        guard adminTokenEnvVar[service] != nil else { return true }
-        return (try? adminTokenFromDataDir(for: service)).map { !$0.isEmpty } ?? false
+        if adminTokenEnvVar[service] != nil { return false }
+        return true
     }
 
     private nonisolated static func listenerPID(on port: UInt16) -> pid_t? {
@@ -990,15 +985,15 @@ final class ClawJSServiceManager: ObservableObject {
             .appendingPathComponent(service.rawValue, isDirectory: true)
     }
 
-    private static func staleSecretsAdminTokenURLs() -> [URL] {
+    private static func staleAdminTokenURLs(for service: ClawJSService) -> [URL] {
         [
-            dataDirectoryURL(for: .secrets),
+            dataDirectoryURL(for: service),
             workspaceURL
                 .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
-                .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
+                .appendingPathComponent(service.rawValue, isDirectory: true),
             workspaceURL
                 .appendingPathComponent(ClawixPersistentSurfacePaths.components.legacyClawWorkspace, isDirectory: true)
-                .appendingPathComponent(ClawJSService.secrets.rawValue, isDirectory: true),
+                .appendingPathComponent(service.rawValue, isDirectory: true),
         ].map { $0.appendingPathComponent(".admin-token", isDirectory: false) }
     }
 

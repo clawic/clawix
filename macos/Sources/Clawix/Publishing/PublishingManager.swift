@@ -41,9 +41,9 @@ final class PublishingManager: ObservableObject {
 
     // MARK: - Lifecycle
 
-    /// Loads the admin token from the daemon's `.admin-token` file and
-    /// resolves (or creates) the "Default" workspace. Idempotent: re-entry
-    /// while a bootstrap is in flight is a no-op.
+    /// Loads the host-session admin token and resolves (or creates) the
+    /// "Default" workspace. Idempotent: re-entry while a bootstrap is in
+    /// flight is a no-op.
     func bootstrap() {
         guard bootstrapTask == nil else { return }
         let snapshot = ClawJSServiceManager.shared.snapshots[.publishing]
@@ -56,7 +56,11 @@ final class PublishingManager: ObservableObject {
             guard let self else { return }
             defer { self.bootstrapTask = nil }
             do {
-                let token = try ClawJSServiceManager.adminTokenFromDataDir(for: .publishing)
+                guard let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .publishing) else {
+                    throw NSError(domain: "PublishingManager", code: 1, userInfo: [
+                        NSLocalizedDescriptionKey: "Publishing admin token is available only to the host process that launched the service."
+                    ])
+                }
                 self.client.bearerToken = token
                 try await self.ensureDefaultWorkspace()
                 async let families = self.client.listFamilies()

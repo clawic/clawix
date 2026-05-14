@@ -9,21 +9,21 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             source.contains("adminTokenFromDataDir(for: .secrets)"),
             "Secrets clients must not recover bearer/admin tokens from disk."
         )
-        XCTAssertTrue(
-            source.contains("if let adminToken, service != .secrets"),
-            "The supervisor must not write a Secrets .admin-token file."
+        XCTAssertFalse(
+            source.contains("writeAdminToken"),
+            "The supervisor must not write per-session admin tokens to .admin-token files."
         )
         XCTAssertTrue(
-            source.contains("for tokenURL in staleSecretsAdminTokenURLs()"),
-            "Launching Secrets must remove every known stale .admin-token file."
+            source.contains("for tokenURL in staleAdminTokenURLs(for: service)"),
+            "Launching token-authenticated services must remove known stale .admin-token files."
         )
         XCTAssertTrue(
             source.contains(".appendingPathComponent(ClawixPersistentSurfacePaths.components.legacyClawWorkspace, isDirectory: true)"),
             "Secrets launch cleanup must include legacy .clawjs sidecar token paths."
         )
         XCTAssertTrue(
-            source.contains("if service == .secrets { return false }"),
-            "Secrets must not adopt an existing local sidecar through a disk bearer token."
+            source.contains("if adminTokenEnvVar[service] != nil { return false }"),
+            "Token-authenticated services must not adopt an existing local sidecar through a disk bearer token."
         )
     }
 
@@ -50,6 +50,49 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         XCTAssertFalse(
             environmentBody.contains("env[\"CLAW_SECRETS_SIGNED_HOST_TOKEN\"] = signedHostToken"),
             "The signed-host token must not be visible through process environment inspection."
+        )
+    }
+
+    func testIntegratedServiceTokensUseStdinBootstrapNotEnvironmentOrDisk() throws {
+        let source = try readSource("ClawJS/ClawJSServiceManager.swift")
+        let environmentBody = try extractFunctionBody(
+            named: "private static func environment(",
+            from: source,
+            until: "    private static func secretsBootstrapData"
+        )
+
+        XCTAssertTrue(
+            source.contains("localAdminBootstrapData(adminToken: adminToken)"),
+            "Database, Drive, Index, Audio, Sessions, and Publishing tokens must be sent through anonymous stdin bootstrap."
+        )
+        XCTAssertTrue(
+            environmentBody.contains("CLAW_LOCAL_ADMIN_BOOTSTRAP_STDIN"),
+            "Integrated services should receive only a non-secret bootstrap flag in the environment."
+        )
+        for tokenEnv in [
+            "CLAW_DATABASE_ADMIN_TOKEN",
+            "CLAW_DRIVE_ADMIN_TOKEN",
+            "CLAW_SEARCH_ADMIN_TOKEN",
+            "CLAW_AUDIO_SHARED_SECRET",
+            "CLAW_SESSIONS_SHARED_SECRET",
+            "CLAW_PUBLISHING_TOKEN",
+        ] {
+            XCTAssertFalse(
+                environmentBody.contains("env[\"\(tokenEnv)\"] = adminToken"),
+                "\(tokenEnv) must not be visible through process environment inspection."
+            )
+        }
+        XCTAssertTrue(
+            source.contains("env.removeValue(forKey: \"CLAW_SECRETS_KEK_BASE64\")"),
+            "Host bootstrapping should scrub inherited token/KEK environment variables before spawning services."
+        )
+        XCTAssertFalse(
+            source.contains(".appendingPathComponent(\".admin-token\", isDirectory: false)\n        try Data(token.utf8).write"),
+            "Integrated service tokens must not be persisted to .admin-token files."
+        )
+        XCTAssertFalse(
+            environmentBody.contains("CLAW_PUBLISHING_TOKEN_STORE"),
+            "Clawix-owned Publishing must not use a disk token store for its host-session admin token."
         )
     }
 
