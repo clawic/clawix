@@ -341,7 +341,7 @@ final class AIAccountSecretsStore: AIAccountStore {
             throw AIAccountStoreError.accountNotFound
         }
         return fields.first(where: { (field: SecretFieldRecord) in
-            field.isSecret && field.fieldName == fieldName && field.hasCiphertext
+            field.isSecret && field.fieldName == fieldName && field.valueCiphertext != nil
         }) != nil
     }
 

@@ -95,8 +95,7 @@ enum AIClientFactory {
         case .googleGemini:
             return GoogleGeminiClient(account: account, model: model)
         case .ollama:
-            let credentials = (try? accountStore.revealCredentials(accountId: account.id)) ?? AIAccountCredentials()
-            return OllamaClient(account: account, model: model, credentials: credentials)
+            return OllamaClient(account: account, model: model, credentials: AIAccountCredentials())
         case .githubCopilot:
             return GitHubCopilotClient(account: account, model: model, credentials: AIAccountCredentials())
         case .cursor:
