@@ -234,7 +234,8 @@ final class ClawJSSecretsStore {
                 search: nil,
                 folderId: nil,
                 includeTrashed: includeTrashed,
-                includeArchived: false
+                includeArchived: false,
+                includePublicValues: true
             )
         }
         return described.map(ClawJSMapper.mapDescribedSecret)
@@ -248,13 +249,13 @@ final class ClawJSSecretsStore {
     }
 
     func fetchSecret(byInternalName name: String) throws -> SecretRecord? {
-        let described = try runSync { try await self.client.describeSecret(name: name) }
+        let described = try runSync { try await self.client.describeSecret(name: name, includePublicValues: true) }
         return described.map(ClawJSMapper.mapDescribedSecret)
     }
 
     func fetchFields(forSecret secretId: EntityID, version: EntityID) throws -> [SecretFieldRecord] {
         guard let secret = try fetchSecretById(secretId) else { return [] }
-        let described = try runSync { try await self.client.describeSecret(name: secret.internalName) }
+        let described = try runSync { try await self.client.describeSecret(name: secret.internalName, includePublicValues: true) }
         guard let described else { return [] }
         return described.fields.map { ClawJSMapper.mapField($0, secretId: secretId, versionId: version) }
     }

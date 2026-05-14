@@ -45,6 +45,7 @@ final class ClawJSServiceManager: ObservableObject {
     /// time the GUI spawns each daemon. Replaces the previous Keychain-backed
     /// admin password so the app never touches the system Keychain.
     private var sessionAdminTokens: [ClawJSService: String] = [:]
+    private var sessionSignedHostTokens: [ClawJSService: String] = [:]
 
     /// Maps each service to the env var name its daemon reads to recognise
     /// the per-session admin token. Services that don't use admin tokens
@@ -773,6 +774,9 @@ final class ClawJSServiceManager: ObservableObject {
                 env["CLAW_SECRETS_TOKEN"] = adminToken
             }
         }
+        if service == .secrets, let signedHostToken = ensureSignedHostToken(for: service) {
+            env["CLAW_SECRETS_SIGNED_HOST_TOKEN"] = signedHostToken
+        }
         return env
     }
 
@@ -781,6 +785,14 @@ final class ClawJSServiceManager: ObservableObject {
     /// not the daemon owner (e.g., background bridge mode).
     func adminTokenIfSpawned(for service: ClawJSService) -> String? {
         sessionAdminTokens[service]
+    }
+
+    /// Signed-host token for the Secrets service only when this Clawix
+    /// process spawned it. This token is intentionally never written to the
+    /// `.admin-token` fallback, because sibling local processes must not gain
+    /// host-only lifecycle, reveal, or metadata privileges by reading disk.
+    func signedHostTokenIfSpawned(for service: ClawJSService) -> String? {
+        sessionSignedHostTokens[service]
     }
 
     /// Returns the existing per-session token or generates a fresh one and
@@ -793,6 +805,17 @@ final class ClawJSServiceManager: ObservableObject {
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
         sessionAdminTokens[service] = token
+        return token
+    }
+
+    private func ensureSignedHostToken(for service: ClawJSService) -> String? {
+        guard service == .secrets else { return nil }
+        if let existing = sessionSignedHostTokens[service] { return existing }
+        let token = SecureRandom.bytes(32).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        sessionSignedHostTokens[service] = token
         return token
     }
 

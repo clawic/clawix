@@ -19,12 +19,19 @@ final class ClawJSSecretsClient {
     private let baseURL: URL
     private let tenantId: String
     private var bearerToken: String?
+    private var signedHostToken: String?
     private let session: URLSession
 
-    init(baseURL: URL, tenantId: String = ClawJSSecretsClient.defaultTenantId, bearerToken: String? = nil) {
+    init(
+        baseURL: URL,
+        tenantId: String = ClawJSSecretsClient.defaultTenantId,
+        bearerToken: String? = nil,
+        signedHostToken: String? = nil
+    ) {
         self.baseURL = baseURL
         self.tenantId = tenantId
         self.bearerToken = bearerToken
+        self.signedHostToken = signedHostToken
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
@@ -37,14 +44,20 @@ final class ClawJSSecretsClient {
         let token = bearerToken
             ?? ClawJSServiceManager.shared.adminTokenIfSpawned(for: .secrets)
             ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .secrets))
+        let signedHostToken = ClawJSServiceManager.shared.signedHostTokenIfSpawned(for: .secrets)
         return ClawJSSecretsClient(
             baseURL: URL(string: "http://127.0.0.1:\(ClawJSService.secrets.port)")!,
-            bearerToken: token
+            bearerToken: token,
+            signedHostToken: signedHostToken
         )
     }
 
     func setBearerToken(_ token: String?) {
         self.bearerToken = token
+    }
+
+    func setSignedHostToken(_ token: String?) {
+        self.signedHostToken = token
     }
 
     // MARK: - Secrets lifecycle
@@ -292,21 +305,29 @@ final class ClawJSSecretsClient {
         }
     }
 
-    func listSecrets(search: String? = nil, folderId: String? = nil, includeTrashed: Bool = false, includeArchived: Bool = false) async throws -> [DescribedSecret] {
+    func listSecrets(
+        search: String? = nil,
+        folderId: String? = nil,
+        includeTrashed: Bool = false,
+        includeArchived: Bool = false,
+        includePublicValues: Bool = false
+    ) async throws -> [DescribedSecret] {
         var components = URLComponents()
         components.queryItems = []
         if let search { components.queryItems?.append(URLQueryItem(name: "search", value: search)) }
         if let folderId { components.queryItems?.append(URLQueryItem(name: "folderId", value: folderId)) }
         if includeTrashed { components.queryItems?.append(URLQueryItem(name: "includeTrashed", value: "true")) }
         if includeArchived { components.queryItems?.append(URLQueryItem(name: "includeArchived", value: "true")) }
+        if includePublicValues { components.queryItems?.append(URLQueryItem(name: "includePublicValues", value: "true")) }
         let qs = components.percentEncodedQuery ?? ""
         let envelope: [String: [DescribedSecret]] = try await get("/v1/tenants/\(tenantId)/secrets?\(qs)")
         return envelope["secrets"] ?? []
     }
 
-    func describeSecret(name: String) async throws -> DescribedSecret? {
+    func describeSecret(name: String, includePublicValues: Bool = false) async throws -> DescribedSecret? {
+        let suffix = includePublicValues ? "?includePublicValues=true" : ""
         let envelope: [String: DescribedSecret?] = try await get(
-            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))"
+            "/v1/tenants/\(tenantId)/secrets/\(percentEncode(name))\(suffix)"
         )
         return envelope["secret"] ?? nil
     }
@@ -607,7 +628,9 @@ final class ClawJSSecretsClient {
     }
 
     private func call<T: Decodable>(path: String, method: String, body: [String: Any]?) async throws -> T {
-        let url = baseURL.appendingPathComponent(path)
+        guard let url = URL(string: path, relativeTo: baseURL)?.absoluteURL else {
+            throw ClawJSSecretsError.invalidResponse
+        }
         var request = URLRequest(url: url)
         request.httpMethod = method
         if let body {
@@ -616,6 +639,9 @@ final class ClawJSSecretsClient {
         }
         if let bearerToken {
             request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
+        if let signedHostToken {
+            request.setValue(signedHostToken, forHTTPHeaderField: "x-claw-signed-host-token")
         }
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else {
