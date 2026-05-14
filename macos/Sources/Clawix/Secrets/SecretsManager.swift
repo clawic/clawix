@@ -320,7 +320,7 @@ final class SecretsManager: ObservableObject {
     @discardableResult
     func installCliSymlink() -> URL? {
         let bundledCLI = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Resources/clawjs/node_modules/@clawjs/cli/bin/clawjs.mjs")
+            .appendingPathComponent("Contents/Resources/clawjs/node_modules/@clawjs/cli/bin/claw.mjs")
         guard FileManager.default.fileExists(atPath: bundledCLI.path) else {
             lastError = "Bundled claw CLI not found in the app bundle."
             return nil

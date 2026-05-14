@@ -29,7 +29,7 @@ enum ClawJSRuntime {
     /// stays pinned to the version this Clawix build was tested with.
     static var cliScriptURL: URL {
         bundleRootURL
-            .appendingPathComponent("node_modules/@clawjs/cli/bin/clawjs.mjs", isDirectory: false)
+            .appendingPathComponent("node_modules/@clawjs/cli/bin/claw.mjs", isDirectory: false)
     }
 
     /// True only when both the Node binary and the CLI entrypoint are

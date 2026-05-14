@@ -279,15 +279,12 @@ if changed:
 PY
     }
 
-    OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/packages/clawjs/bin"
-    if [[ ! -d "$OVERLAY_BIN" && -d "$CLAWJS_DEV_OVERLAY/bin" ]]; then
-        OVERLAY_BIN="$CLAWJS_DEV_OVERLAY/bin"
-    fi
-    if [[ -d "$OVERLAY_BIN" ]]; then
-        echo "==> Dev overlay: copying $OVERLAY_BIN → $CLAWJS_DEST/node_modules/@clawjs/cli/bin"
-        cp -R "$OVERLAY_BIN/." "$CLAWJS_DEST/node_modules/@clawjs/cli/bin/"
-    fi
     copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/core"
+    OVERLAY_CLI="$CLAWJS_DEV_OVERLAY/packages/clawjs"
+    if [[ -d "$OVERLAY_CLI" ]]; then
+        copy_overlay_package "$OVERLAY_CLI" "$CLAWJS_DEST/node_modules/@clawjs/cli"
+        copy_overlay_core "$CLAWJS_DEST/node_modules/@clawjs/cli/node_modules/@clawjs/core"
+    fi
     OVERLAY_CLAW="$CLAWJS_DEV_OVERLAY/packages/clawjs-node"
     if [[ -d "$OVERLAY_CLAW" ]]; then
         copy_overlay_package "$OVERLAY_CLAW" "$CLAWJS_DEST/node_modules/@clawjs/claw"
