@@ -8,7 +8,13 @@ import Foundation
 struct CursorClient: AIClient {
     let account: ProviderAccount
     let model: ModelDefinition
-    let credentials: AIAccountCredentials
+    let credentials: AIAccountCredentials?
+
+    init(account: ProviderAccount, model: ModelDefinition, credentials: AIAccountCredentials? = nil) {
+        self.account = account
+        self.model = model
+        self.credentials = credentials
+    }
 
     private var baseURL: URL {
         account.baseURLOverride
@@ -17,33 +23,48 @@ struct CursorClient: AIClient {
     }
 
     func testConnection() async throws {
-        guard let key = credentials.apiKey, !key.isEmpty else {
-            throw AIClientError.missingCredentials
+        if let key = credentials?.apiKey, !key.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("models"))
+            req.httpMethod = "GET"
+            req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+            return
         }
-        var req = URLRequest(url: baseURL.appendingPathComponent("models"))
-        req.httpMethod = "GET"
-        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+        _ = try await AIAccountBroker.send(
+            account: account,
+            method: "GET",
+            url: baseURL.appendingPathComponent("models"),
+            headers: ["Authorization": "Bearer {{\(AIAccountBroker.secretName(for: account)).value}}"],
+            body: nil,
+            agent: "clawix.ai.cursor",
+            riskTier: "read",
+            timeoutSeconds: 10
+        )
     }
 
     func chat(_ request: ChatRequest) async throws -> String {
         guard model.capabilities.contains(.chat) else {
             throw AIClientError.capabilityNotSupported(.chat)
         }
-        guard let key = credentials.apiKey, !key.isEmpty else {
-            throw AIClientError.missingCredentials
-        }
-        var req = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
-        req.httpMethod = "POST"
-        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try AIHTTP.encode(OpenAIChatBody(
+        let body = try AIHTTP.encode(OpenAIChatBody(
             model: model.id,
             messages: request.messages.map { OpenAIMessage(role: $0.role.rawValue, content: $0.content) },
             temperature: request.temperature,
             max_tokens: request.maxTokens
         ))
-        let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+        let (data, _) = try await AIAccountBroker.send(
+            account: account,
+            method: "POST",
+            url: baseURL.appendingPathComponent("chat/completions"),
+            headers: [
+                "Authorization": "Bearer {{\(AIAccountBroker.secretName(for: account)).value}}",
+                "Content-Type": "application/json"
+            ],
+            body: String(data: body, encoding: .utf8),
+            agent: "clawix.ai.cursor",
+            riskTier: "write",
+            timeoutSeconds: request.timeoutSeconds
+        )
         let response = try AIHTTP.decode(OpenAIChatResponse.self, from: data)
         return response.choices.first?.message.content ?? ""
     }

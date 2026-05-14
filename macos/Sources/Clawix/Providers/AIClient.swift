@@ -87,23 +87,27 @@ enum AIClientFactory {
         model: ModelDefinition,
         accountStore: AIAccountStore = AIAccountSecretsStore.shared
     ) async throws -> any AIClient {
-        let credentials = try accountStore.revealCredentials(accountId: account.id)
         switch account.providerId {
         case .openai:
-            return OpenAIClient(account: account, model: model, credentials: credentials)
+            return OpenAIClient(account: account, model: model)
         case .anthropic:
+            let credentials = account.authMethod.isOAuth
+                ? try accountStore.revealCredentials(accountId: account.id)
+                : AIAccountCredentials()
             return AnthropicClient(account: account, model: model, credentials: credentials)
         case .googleGemini:
-            return GoogleGeminiClient(account: account, model: model, credentials: credentials)
+            return GoogleGeminiClient(account: account, model: model)
         case .ollama:
+            let credentials = (try? accountStore.revealCredentials(accountId: account.id)) ?? AIAccountCredentials()
             return OllamaClient(account: account, model: model, credentials: credentials)
         case .githubCopilot:
+            let credentials = try accountStore.revealCredentials(accountId: account.id)
             return GitHubCopilotClient(account: account, model: model, credentials: credentials)
         case .cursor:
-            return CursorClient(account: account, model: model, credentials: credentials)
+            return CursorClient(account: account, model: model)
         case .groq, .deepseek, .togetherAI, .glmZhipu, .xai, .mistral,
              .openrouter, .cerebras, .fireworks, .openAICompatibleCustom:
-            return OpenAICompatibleClient(account: account, model: model, credentials: credentials)
+            return OpenAICompatibleClient(account: account, model: model)
         }
     }
 
@@ -122,5 +126,12 @@ enum AIClientFactory {
             throw AIClientError.missingCredentials
         }
         return try await client(for: resolved.account, model: resolved.model, accountStore: accountStore)
+    }
+}
+
+private extension AuthMethod {
+    var isOAuth: Bool {
+        if case .oauth = self { return true }
+        return false
     }
 }

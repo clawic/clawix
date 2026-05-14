@@ -7,7 +7,13 @@ import Foundation
 struct GoogleGeminiClient: AIClient {
     let account: ProviderAccount
     let model: ModelDefinition
-    let credentials: AIAccountCredentials
+    let credentials: AIAccountCredentials?
+
+    init(account: ProviderAccount, model: ModelDefinition, credentials: AIAccountCredentials? = nil) {
+        self.account = account
+        self.model = model
+        self.credentials = credentials
+    }
 
     private var baseURL: URL {
         account.baseURLOverride
@@ -16,23 +22,28 @@ struct GoogleGeminiClient: AIClient {
     }
 
     func testConnection() async throws {
-        guard let key = credentials.apiKey, !key.isEmpty else {
-            throw AIClientError.missingCredentials
+        if let key = credentials?.apiKey, !key.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("models"))
+            req.httpMethod = "GET"
+            req.setValue(key, forHTTPHeaderField: "x-goog-api-key")
+            _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+            return
         }
-        var components = URLComponents(url: baseURL.appendingPathComponent("models"),
-                                       resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "key", value: key)]
-        var req = URLRequest(url: components.url!)
-        req.httpMethod = "GET"
-        _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+        _ = try await AIAccountBroker.send(
+            account: account,
+            method: "GET",
+            url: baseURL.appendingPathComponent("models"),
+            headers: ["x-goog-api-key": "{{\(AIAccountBroker.secretName(for: account)).value}}"],
+            body: nil,
+            agent: "clawix.ai.gemini",
+            riskTier: "read",
+            timeoutSeconds: 10
+        )
     }
 
     func chat(_ request: ChatRequest) async throws -> String {
         guard model.capabilities.contains(.chat) else {
             throw AIClientError.capabilityNotSupported(.chat)
-        }
-        guard let key = credentials.apiKey, !key.isEmpty else {
-            throw AIClientError.missingCredentials
         }
         var systemInstruction: GeminiContent?
         var contents: [GeminiContent] = []
@@ -48,13 +59,7 @@ struct GoogleGeminiClient: AIClient {
             }
         }
         let path = "models/\(model.id):generateContent"
-        var components = URLComponents(url: baseURL.appendingPathComponent(path),
-                                       resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "key", value: key)]
-        var req = URLRequest(url: components.url!)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try AIHTTP.encode(GeminiGenerateBody(
+        let body = try AIHTTP.encode(GeminiGenerateBody(
             contents: contents,
             systemInstruction: systemInstruction,
             generationConfig: GeminiGenerationConfig(
@@ -62,7 +67,19 @@ struct GoogleGeminiClient: AIClient {
                 maxOutputTokens: request.maxTokens
             )
         ))
-        let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+        let (data, _) = try await AIAccountBroker.send(
+            account: account,
+            method: "POST",
+            url: baseURL.appendingPathComponent(path),
+            headers: [
+                "x-goog-api-key": "{{\(AIAccountBroker.secretName(for: account)).value}}",
+                "Content-Type": "application/json"
+            ],
+            body: String(data: body, encoding: .utf8),
+            agent: "clawix.ai.gemini",
+            riskTier: "write",
+            timeoutSeconds: request.timeoutSeconds
+        )
         let response = try AIHTTP.decode(GeminiGenerateResponse.self, from: data)
         guard let text = response.candidates.first?.content.parts.first?.text else {
             throw AIClientError.decoding("no candidates in response")

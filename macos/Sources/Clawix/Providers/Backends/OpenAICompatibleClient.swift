@@ -13,7 +13,13 @@ import Foundation
 struct OpenAICompatibleClient: AIClient {
     let account: ProviderAccount
     let model: ModelDefinition
-    let credentials: AIAccountCredentials
+    let credentials: AIAccountCredentials?
+
+    init(account: ProviderAccount, model: ModelDefinition, credentials: AIAccountCredentials? = nil) {
+        self.account = account
+        self.model = model
+        self.credentials = credentials
+    }
 
     private var baseURL: URL {
         if let override = account.baseURLOverride {
@@ -27,33 +33,77 @@ struct OpenAICompatibleClient: AIClient {
     }
 
     func testConnection() async throws {
-        var req = URLRequest(url: baseURL.appendingPathComponent("models"))
-        req.httpMethod = "GET"
-        if let key = credentials.apiKey, !key.isEmpty {
+        if let key = credentials?.apiKey, !key.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("models"))
+            req.httpMethod = "GET"
             req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+            _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+            return
         }
-        _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+        let headers = account.providerId == .openAICompatibleCustom
+            ? optionalAuthorizationHeaders()
+            : authorizationHeaders()
+        if headers.isEmpty, account.providerId != .openAICompatibleCustom && account.providerId != .ollama {
+            throw AIClientError.missingCredentials
+        }
+        if headers.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("models"))
+            req.httpMethod = "GET"
+            _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+            return
+        }
+        _ = try await AIAccountBroker.send(
+            account: account,
+            method: "GET",
+            url: baseURL.appendingPathComponent("models"),
+            headers: headers,
+            body: nil,
+            agent: "clawix.ai.openai-compatible",
+            riskTier: "read",
+            timeoutSeconds: 10
+        )
     }
 
     func chat(_ request: ChatRequest) async throws -> String {
         guard model.capabilities.contains(.chat) else {
             throw AIClientError.capabilityNotSupported(.chat)
         }
-        var req = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
-        req.httpMethod = "POST"
-        if let key = credentials.apiKey, !key.isEmpty {
-            req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        } else if account.providerId != .openAICompatibleCustom && account.providerId != .ollama {
+        let authHeaders = account.providerId == .openAICompatibleCustom
+            ? optionalAuthorizationHeaders()
+            : authorizationHeaders()
+        if authHeaders.isEmpty, account.providerId != .openAICompatibleCustom && account.providerId != .ollama {
             throw AIClientError.missingCredentials
         }
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try AIHTTP.encode(OpenAIChatBody(
+        let body = try AIHTTP.encode(OpenAIChatBody(
             model: model.id,
             messages: request.messages.map { OpenAIMessage(role: $0.role.rawValue, content: $0.content) },
             temperature: request.temperature,
             max_tokens: request.maxTokens
         ))
-        let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+        if authHeaders.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = body
+            let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+            let response = try AIHTTP.decode(OpenAIChatResponse.self, from: data)
+            guard let content = response.choices.first?.message.content else {
+                throw AIClientError.decoding("no choices in response")
+            }
+            return content
+        }
+        var headers = authHeaders
+        headers["Content-Type"] = "application/json"
+        let (data, _) = try await AIAccountBroker.send(
+            account: account,
+            method: "POST",
+            url: baseURL.appendingPathComponent("chat/completions"),
+            headers: headers,
+            body: String(data: body, encoding: .utf8),
+            agent: "clawix.ai.openai-compatible",
+            riskTier: "write",
+            timeoutSeconds: request.timeoutSeconds
+        )
         let response = try AIHTTP.decode(OpenAIChatResponse.self, from: data)
         guard let content = response.choices.first?.message.content else {
             throw AIClientError.decoding("no choices in response")
@@ -73,15 +123,44 @@ struct OpenAICompatibleClient: AIClient {
         if let language = request.language {
             parts.append(.text(name: "language", value: language))
         }
-        var req = URLRequest(url: baseURL.appendingPathComponent("audio/transcriptions"))
-        req.httpMethod = "POST"
-        if let key = credentials.apiKey, !key.isEmpty {
-            req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        let dataBody = AIHTTP.multipart(boundary: boundary, parts: parts)
+        let authHeaders = account.providerId == .openAICompatibleCustom
+            ? optionalAuthorizationHeaders()
+            : authorizationHeaders()
+        if authHeaders.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("audio/transcriptions"))
+            req.httpMethod = "POST"
+            req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            req.httpBody = dataBody
+            let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+            let response = try AIHTTP.decode(OpenAITranscribeResponse.self, from: data)
+            return response.text
         }
-        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        req.httpBody = AIHTTP.multipart(boundary: boundary, parts: parts)
-        let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+        var headers = authHeaders
+        headers["Content-Type"] = "multipart/form-data; boundary=\(boundary)"
+        let (data, _) = try await AIAccountBroker.send(
+            account: account,
+            method: "POST",
+            url: baseURL.appendingPathComponent("audio/transcriptions"),
+            headers: headers,
+            body: nil,
+            bodyData: dataBody,
+            agent: "clawix.ai.openai-compatible",
+            riskTier: "write",
+            timeoutSeconds: request.timeoutSeconds
+        )
         let response = try AIHTTP.decode(OpenAITranscribeResponse.self, from: data)
         return response.text
+    }
+
+    private func authorizationHeaders() -> [String: String] {
+        if let key = credentials?.apiKey, !key.isEmpty {
+            return ["Authorization": "Bearer \(key)"]
+        }
+        return ["Authorization": "Bearer {{\(AIAccountBroker.secretName(for: account)).value}}"]
+    }
+
+    private func optionalAuthorizationHeaders() -> [String: String] {
+        account.authMethod == .apiKey ? authorizationHeaders() : [:]
     }
 }
