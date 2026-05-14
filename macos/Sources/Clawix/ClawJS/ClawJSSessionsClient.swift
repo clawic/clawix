@@ -182,29 +182,29 @@ struct ClawJSSessionsClient {
     }
 
     func probeHealth() async throws -> HealthResponse {
-        try await request("/v1/health", method: "GET", authenticated: false)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health", method: "GET", authenticated: false)
     }
 
     func listProjects(hidden: Bool? = nil, archived: Bool? = nil) async throws -> [Project] {
         var items: [URLQueryItem] = []
         if let hidden { items.append(URLQueryItem(name: "hidden", value: hidden ? "true" : "false")) }
         if let archived { items.append(URLQueryItem(name: "archived", value: archived ? "true" : "false")) }
-        let response: ListProjectsResponse = try await request("/v1/projects", queryItems: items)
+        let response: ListProjectsResponse = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/projects", queryItems: items)
         return response.items
     }
 
     @discardableResult
     func createProject(_ input: CreateProjectRequest) async throws -> Project {
-        try await request("/v1/projects", method: "POST", body: input)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/projects", method: "POST", body: input)
     }
 
     @discardableResult
     func updateProject(id: String, patch: [String: AnyJSON]) async throws -> Project {
-        try await request("/v1/projects/\(id)", method: "PATCH", body: patch)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/projects/\(id)", method: "PATCH", body: patch)
     }
 
     func deleteProject(id: String) async throws {
-        let _: EmptyResponse = try await request("/v1/projects/\(id)", method: "DELETE")
+        let _: EmptyResponse = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/projects/\(id)", method: "DELETE")
     }
 
     func listSessions(
@@ -220,31 +220,31 @@ struct ClawJSSessionsClient {
         if let pinned { items.append(URLQueryItem(name: "pinned", value: pinned ? "true" : "false")) }
         if let archived { items.append(URLQueryItem(name: "archived", value: archived ? "true" : "false")) }
         if let sidebarVisible { items.append(URLQueryItem(name: "sidebarVisible", value: sidebarVisible ? "true" : "false")) }
-        let response: ListSessionsResponse = try await request("/v1/sessions", queryItems: items)
+        let response: ListSessionsResponse = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions", queryItems: items)
         return response.items
     }
 
     func getSession(id: String, includeMessages: Bool = false) async throws -> SessionWithMessages {
         let query = includeMessages ? [URLQueryItem(name: "includeMessages", value: "true")] : []
         if includeMessages {
-            return try await request("/v1/sessions/\(id)", queryItems: query)
+            return try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/\(id)", queryItems: query)
         }
-        let session: SessionRecord = try await request("/v1/sessions/\(id)")
+        let session: SessionRecord = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/\(id)")
         return SessionWithMessages(session: session, messages: [])
     }
 
     @discardableResult
     func createSession(_ input: CreateSessionRequest) async throws -> SessionRecord {
-        try await request("/v1/sessions", method: "POST", body: input)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions", method: "POST", body: input)
     }
 
     @discardableResult
     func updateSession(id: String, patch: [String: AnyJSON]) async throws -> SessionRecord {
-        try await request("/v1/sessions/\(id)", method: "PATCH", body: patch)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/\(id)", method: "PATCH", body: patch)
     }
 
     func listMessages(sessionId: String) async throws -> [MessageRecord] {
-        let response: MessagesResponse = try await request("/v1/sessions/\(sessionId)/messages")
+        let response: MessagesResponse = try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/\(sessionId)/messages")
         return response.items
     }
 
@@ -254,7 +254,7 @@ struct ClawJSSessionsClient {
             let forceReimport: Bool?
         }
         return try await request(
-            "/v1/sessions/import/codex",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/import/codex",
             method: "POST",
             body: Body(forceReimport: forceReimport ? true : nil)
         )
@@ -262,12 +262,12 @@ struct ClawJSSessionsClient {
 
     @discardableResult
     func startTurn(sessionId: String, input: StartTurnRequest) async throws -> TurnResponse {
-        try await request("/v1/sessions/\(sessionId)/turns", method: "POST", body: input)
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/\(sessionId)/turns", method: "POST", body: input)
     }
 
     @discardableResult
     func interrupt(sessionId: String) async throws -> InterruptResponse {
-        try await request("/v1/sessions/\(sessionId)/interrupt", method: "POST", body: EmptyRequest())
+        try await request("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/sessions/\(sessionId)/interrupt", method: "POST", body: EmptyRequest())
     }
 
     private func request<T: Decodable>(
