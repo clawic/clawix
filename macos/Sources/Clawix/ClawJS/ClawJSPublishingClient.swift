@@ -199,13 +199,13 @@ final class ClawJSPublishingClient {
     // MARK: - Workspaces
 
     func listWorkspaces() async throws -> [Workspace] {
-        let response: WorkspaceListResponse = try await get("/v1/workspaces")
+        let response: WorkspaceListResponse = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/workspaces")
         return response.workspaces
     }
 
     func createWorkspace(name: String) async throws -> Workspace {
         let response: WorkspaceCreateResponse = try await post(
-            "/v1/workspaces",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/workspaces",
             body: ["name": name]
         )
         return response.workspace
@@ -214,7 +214,7 @@ final class ClawJSPublishingClient {
     // MARK: - Families
 
     func listFamilies() async throws -> [Family] {
-        let response: FamilyListResponse = try await get("/v1/families")
+        let response: FamilyListResponse = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/families")
         return response.families
     }
 
@@ -222,7 +222,7 @@ final class ClawJSPublishingClient {
 
     func listChannels(workspaceId: String) async throws -> [ChannelAccount] {
         let response: ChannelAccountListResponse = try await get(
-            "/v1/ws/\(workspaceId)/channels"
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/channels"
         )
         return response.accounts
     }
@@ -233,7 +233,7 @@ final class ClawJSPublishingClient {
         payload: [String: String]
     ) async throws -> ChannelAccount {
         let response: ChannelAccountCreateResponse = try await post(
-            "/v1/ws/\(workspaceId)/channels/connect/\(familyId)",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/channels/connect/\(familyId)",
             body: payload as [String: Any]
         )
         return response.account
@@ -242,7 +242,7 @@ final class ClawJSPublishingClient {
     @discardableResult
     func disconnectChannel(workspaceId: String, accountId: String) async throws -> Bool {
         struct R: Decodable { let ok: Bool }
-        let r: R = try await delete("/v1/ws/\(workspaceId)/channels/\(accountId)")
+        let r: R = try await delete("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/channels/\(accountId)")
         return r.ok
     }
 
@@ -250,7 +250,7 @@ final class ClawJSPublishingClient {
     func probeChannel(workspaceId: String, accountId: String) async throws -> Bool {
         struct R: Decodable { let ok: Bool }
         let r: R = try await post(
-            "/v1/ws/\(workspaceId)/channels/\(accountId)/probe",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/channels/\(accountId)/probe",
             body: nil
         )
         return r.ok
@@ -265,7 +265,7 @@ final class ClawJSPublishingClient {
         status: String? = nil,
         limit: Int? = nil
     ) async throws -> [Post] {
-        var components = URLComponents(string: "/v1/ws/\(workspaceId)/posts")!
+        var components = URLComponents(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/posts")!
         var items: [URLQueryItem] = []
         if let from { items.append(URLQueryItem(name: "from", value: ClawJSPublishingClient.iso8601(from))) }
         if let to   { items.append(URLQueryItem(name: "to",   value: ClawJSPublishingClient.iso8601(to))) }
@@ -278,7 +278,7 @@ final class ClawJSPublishingClient {
 
     func createPost(workspaceId: String, spec: PostSpec) async throws -> Post {
         let response: PostCreateResponse = try await postJSON(
-            "/v1/ws/\(workspaceId)/posts",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/posts",
             payload: spec
         )
         return response.post
@@ -286,7 +286,7 @@ final class ClawJSPublishingClient {
 
     func schedulePost(workspaceId: String, postId: String, at date: Date) async throws -> Post {
         let response: PostScheduleResponse = try await post(
-            "/v1/ws/\(workspaceId)/posts/\(postId)/schedule",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/ws/\(workspaceId)/posts/\(postId)/schedule",
             body: ["at": ClawJSPublishingClient.iso8601(date)]
         )
         return response.post
