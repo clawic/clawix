@@ -688,6 +688,7 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.useAppleScriptPaste", "AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPaste, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.useAppleScriptPasteLegacy", "Legacy AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.bearer", "Bridge bearer token reference", ClawixPersistentSurfaceKeys.bridgeBearer, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.bridge.host", "Bridge host override", ClawixPersistentSurfaceKeys.bridgeHost, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.binary.path", "Clawix binary path", ClawixPersistentSurfaceKeys.binaryPath, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.backgroundBridge.wasEnabled", "Background bridge was enabled", ClawixPersistentSurfaceKeys.backgroundBridgeWasEnabled, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.appleLanguages", "Apple languages", ClawixPersistentSurfaceKeys.appleLanguages, PersistentSurfaceKind.preferenceKey),
@@ -739,6 +740,7 @@ enum ClawixPersistentSurfaceRegistry {
 }
 
 enum ClawixPersistentSurfaceKeys {
+    static let publicApiPrefix = "/v1"
     static let sidebarViewMode = "SidebarViewMode"
     static let projectSortMode = "ProjectSortMode"
     static let sidebarPinnedExpanded = "SidebarPinnedExpanded"
@@ -789,6 +791,7 @@ enum ClawixPersistentSurfaceKeys {
     static let useAppleScriptPasteLegacy = "UseAppleScriptPaste"
     static let bridgeDefaultsSuite = "clawix.bridge"
     static let bridgeBearer = "ClawixBridge.Bearer.v1"
+    static let bridgeHost = "ClawixBridge.Host.v1"
     static let featureProviderAccountPattern = "feature.<feature>.providerAccountId"
     static let featureProviderModelPattern = "feature.<feature>.modelId"
     static let providerEnabledPattern = "provider.<provider>.enabled"

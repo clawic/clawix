@@ -3156,6 +3156,20 @@
     },
     {
       "canonicality" : "hostOnly",
+      "id" : "clawix.prefs.bridge.host",
+      "key" : "ClawixBridge.Host.v1",
+      "kind" : "preferenceKey",
+      "language" : "swift",
+      "lifecycle" : "durable",
+      "name" : "Bridge host override",
+      "owner" : "clawix",
+      "privacy" : "userData",
+      "project" : "macos",
+      "repo" : "Clawix",
+      "storageClass" : "nativeAppData"
+    },
+    {
+      "canonicality" : "hostOnly",
       "id" : "clawix.prefs.binary.path",
       "key" : "ClawixBinaryPath",
       "kind" : "preferenceKey",
