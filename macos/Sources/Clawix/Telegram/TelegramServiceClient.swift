@@ -41,7 +41,7 @@ struct TelegramServiceClient {
     // MARK: - Health & list
 
     func probeHealth() async throws -> TelegramHealth {
-        try await get("/v1/health")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health")
     }
 
     private struct BotsResponse: Decodable {
@@ -50,7 +50,7 @@ struct TelegramServiceClient {
     }
 
     func listBots() async throws -> [TelegramBot] {
-        let response: BotsResponse = try await get("/v1/bots")
+        let response: BotsResponse = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots")
         return response.bots
     }
 
@@ -68,13 +68,13 @@ struct TelegramServiceClient {
         var body: [String: Any] = ["secretName": secretName]
         if let accountId, !accountId.isEmpty { body["accountId"] = accountId }
         if let label, !label.isEmpty { body["label"] = label }
-        return try await post("/v1/bots", body: body)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots", body: body)
     }
 
     // MARK: - Per-bot actions
 
     func status(botId: String) async throws -> ClawCliResult {
-        try await get("/v1/bots/\(escape(botId))/status")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/status")
     }
 
     func startPolling(
@@ -87,11 +87,11 @@ struct TelegramServiceClient {
         if let limit { body["limit"] = limit }
         if let timeoutSeconds { body["timeoutSeconds"] = timeoutSeconds }
         if let dropPendingUpdates { body["dropPendingUpdates"] = dropPendingUpdates }
-        return try await post("/v1/bots/\(escape(botId))/polling/start", body: body)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/polling/start", body: body)
     }
 
     func stopPolling(botId: String) async throws -> ClawCliResult {
-        try await post("/v1/bots/\(escape(botId))/polling/stop", body: [:])
+        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/polling/stop", body: [:])
     }
 
     func setWebhook(
@@ -109,7 +109,7 @@ struct TelegramServiceClient {
         if let maxConnections { body["maxConnections"] = maxConnections }
         if let ipAddress, !ipAddress.isEmpty { body["ipAddress"] = ipAddress }
         if let dropPendingUpdates { body["dropPendingUpdates"] = dropPendingUpdates }
-        return try await post("/v1/bots/\(escape(botId))/webhook", body: body)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/webhook", body: body)
     }
 
     func clearWebhook(
@@ -118,11 +118,11 @@ struct TelegramServiceClient {
     ) async throws -> ClawCliResult {
         var body: [String: Any] = [:]
         if let dropPendingUpdates { body["dropPendingUpdates"] = dropPendingUpdates }
-        return try await delete("/v1/bots/\(escape(botId))/webhook", body: body)
+        return try await delete("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/webhook", body: body)
     }
 
     func getCommands(botId: String) async throws -> ClawCliResult {
-        try await get("/v1/bots/\(escape(botId))/commands")
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/commands")
     }
 
     func setCommands(
@@ -131,7 +131,7 @@ struct TelegramServiceClient {
     ) async throws -> ClawCliResult {
         let payload: [[String: String]] = commands.map { ["command": $0.command, "description": $0.description] }
         return try await post(
-            "/v1/bots/\(escape(botId))/commands",
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/commands",
             body: ["commands": payload]
         )
     }
@@ -140,7 +140,7 @@ struct TelegramServiceClient {
         botId: String,
         query: String? = nil
     ) async throws -> ClawCliResult {
-        var path = "/v1/bots/\(escape(botId))/chats"
+        var path = "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/chats"
         if let query, !query.isEmpty {
             let q = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
             path += "?q=\(q)"
@@ -171,7 +171,7 @@ struct TelegramServiceClient {
         }
         if let parseMode { payload["parseMode"] = parseMode }
         if let replyToMessageId { payload["replyToMessageId"] = replyToMessageId }
-        return try await post("/v1/bots/\(escape(botId))/messages", body: payload)
+        return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/bots/\(escape(botId))/messages", body: payload)
     }
 
     // MARK: - Transport
