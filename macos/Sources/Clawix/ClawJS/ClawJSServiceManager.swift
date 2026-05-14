@@ -699,6 +699,7 @@ final class ClawJSServiceManager: ObservableObject {
             at: dataDirectoryURL(for: service),
             withIntermediateDirectories: true
         )
+        try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectoryURL(for: service).path)
         try fm.createDirectory(
             at: mainFilesDirectoryURL,
             withIntermediateDirectories: true
@@ -800,6 +801,13 @@ final class ClawJSServiceManager: ObservableObject {
     /// daemon writes a 0600 file on its own first launch; we read it.
     static func adminTokenFromDataDir(for service: ClawJSService) throws -> String {
         let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
+        let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
+        if let mode = attrs[.posixPermissions] as? NSNumber,
+           mode.intValue & 0o077 != 0 {
+            throw NSError(domain: "ClawJSServiceManager", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "Admin token at \(url.path) must be readable only by the owner."
+            ])
+        }
         let raw = try String(contentsOf: url, encoding: .utf8)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard raw.count >= 32 else {
