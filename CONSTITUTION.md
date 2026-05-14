@@ -254,19 +254,27 @@ note, instruction, contact, event), that name draws a frontier. We do not
 smuggle other kinds of data inside it. Naming sloppiness destroys
 interoperability and reasoning.
 
-**VI.3 A type earns canonical status when it meets any of these:** (a) most
-humans, across the user's locale and culture, have or do it (universal),
-(b) it has been validated by markets (a dedicated app or SaaS with mass
-adoption already exists), (c) three or more skills or sub-apps would need
-it, or (d) any human, without technical context, recognizes the entity
-instantly. Promotion to canonical status follows a public process: anyone
-proposes a canonical type as an RFC, the proposal demonstrates at least
-one of the criteria above, and the maintainer signs off after community
-review. The detailed process lives in a sibling standards document; the
-constitution declares only that the process is public and signed off, not
-arbitrary.
+**VI.3 Canonical data aims for broad human coverage.** The framework's data
+catalog exists to represent the structured entities that humans recognize
+and that digital workflows have already made concrete: people, homes,
+events, messages, tasks, purchases, observations, feelings, documents,
+assets, places, relationships, and the many domain objects around them.
+Breadth alone is not enough. The same concept should converge on one
+standard name, one standard shape, and explicit relationships so data can
+move across agents, apps, exports, and hosts without translation by guess.
 
-**VI.4 Structured knowledge is a first-class capability, not a fallback.**
+**VI.4 A type earns canonical status when it meets any of these:** (a) most
+humans, across the user's locale and culture, have or do it (universal),
+(b) it has been validated by durable digital workflows or market use, (c)
+three or more skills or sub-apps would need it, or (d) any human, without
+technical context, recognizes the entity instantly. Promotion to canonical
+status follows a public process: anyone proposes a canonical type as an
+RFC, the proposal demonstrates at least one of the criteria above, and the
+maintainer signs off after community review. The detailed process lives in
+a sibling standards document; the constitution declares only that the
+process is public and signed off, not arbitrary.
+
+**VI.5 Structured knowledge is a first-class capability, not a fallback.**
 What does not earn canonical type status lives either as linked notes
 (free-form markdown with tree and links) or as a custom database
 (user-defined schema for niche needs). Both are first-class. Notes
@@ -276,7 +284,21 @@ recall on the same node). The framework treats the knowledge graph as a
 tool agents build over time as they learn; canonical types and the
 knowledge graph are complementary, not a hierarchy.
 
-**VI.5 Every canonical type has a canonical visual representation.** Every
+**VI.6 Canonical schemas are sparse by default.** Most fields are optional.
+Required fields exist only for identity, integrity, lifecycle, or relation
+integrity. If three domains use different words for the same value, the
+canonical schema chooses the clearest durable name and records the other
+words as aliases, not parallel fields. Raw JSON is a last resort after the
+structured field or relationship has been considered.
+
+**VI.7 Relationships are first-class data.** A reference between two records
+must say what it means: ownership, membership, participant, line item,
+attachment, source/import, location, observation, transaction, temporal
+event, or another explicit relationship. We do not hide meaningful
+relationships in notes, tags, or incidental text fields when a typed
+relationship would make the data portable and queryable.
+
+**VI.8 Every canonical type has a canonical visual representation.** Every
 typed entity (contact, event, recipe, task, message, etc.) ships with a
 card component renderable in chat with an agent, a list and detail view in
 any sub-app, and user-controlled visibility of fields. The UI gracefully
@@ -287,7 +309,7 @@ type proposal that lacks its card, list, and detail visuals does not
 become canonical. Schema and visual are versioned together as one
 artifact; they evolve as one.
 
-**VI.6 Every standardizable attribute of the user earns a standard form.**
+**VI.9 Every standardizable attribute of the user earns a standard form.**
 Preferences, style, history, professional context, learned defaults: when
 an attribute is recognizable across users (favored mobile framework,
 default measurement system, preferred reading depth, color affinity,
@@ -302,7 +324,7 @@ the agents' ability to serve the user. Attributes designed for market
 segmentation, advertising, or any third-party benefit are out of scope
 by construction, regardless of who proposes them.
 
-**VI.7 Schemas evolve conservatively.** Eighty percent of evolution is
+**VI.10 Schemas evolve conservatively.** Eighty percent of evolution is
 additive: optional fields, never breaking. Twenty percent is structural
 (rename, restructure) and requires automatic migration with a pre-migration
 snapshot in a known location. No framework update may ever cause the user
