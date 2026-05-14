@@ -58,7 +58,8 @@ struct CloudBackendsSheet: View {
                             value: $groqKey,
                             hidden: $groqHidden,
                             saveAction: {
-                                let key = groqKey
+                                let key = groqKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !key.isEmpty else { return }
                                 Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .groq) }
                             }
                         )
@@ -73,7 +74,8 @@ struct CloudBackendsSheet: View {
                             value: $deepgramKey,
                             hidden: $deepgramHidden,
                             saveAction: {
-                                let key = deepgramKey
+                                let key = deepgramKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !key.isEmpty else { return }
                                 Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .deepgram) }
                             }
                         )
@@ -114,7 +116,8 @@ struct CloudBackendsSheet: View {
                             value: $customKey,
                             hidden: $customHidden,
                             saveAction: {
-                                let key = customKey
+                                let key = customKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !key.isEmpty else { return }
                                 Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .custom) }
                             }
                         )
@@ -184,9 +187,9 @@ struct CloudBackendsSheet: View {
     }
 
     private func loadDrafts() async {
-        groqKey = (await CloudTranscriptionSecrets.apiKey(for: .groq)) ?? ""
-        deepgramKey = (await CloudTranscriptionSecrets.apiKey(for: .deepgram)) ?? ""
-        customKey = (await CloudTranscriptionSecrets.apiKey(for: .custom)) ?? ""
+        groqKey = ""
+        deepgramKey = ""
+        customKey = ""
         customBaseURL = UserDefaults.standard.string(
             forKey: "\(CloudTranscriptionProvider.baseURLKeyPrefix).custom"
         ) ?? ""
