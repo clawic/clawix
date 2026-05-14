@@ -94,7 +94,7 @@ enum AudioCatalogMigration {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
                 .appendingPathComponent("Library/Application Support", isDirectory: true)
-        return base.appendingPathComponent("Clawix", isDirectory: true)
+        return base.appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
     }
 
     /// Mirrors `ClawJSServiceManager.applicationSupportRoot` but is
@@ -107,11 +107,12 @@ enum AudioCatalogMigration {
             root = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
             root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Clawix/clawjs", isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+                .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawjs, isDirectory: true)
         }
         return root
             .appendingPathComponent("workspace", isDirectory: true)
-            .appendingPathComponent(".claw", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
             .appendingPathComponent("audio", isDirectory: true)
             .appendingPathComponent(".migrated_clawix_v1", isDirectory: false)
     }

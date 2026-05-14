@@ -34,8 +34,8 @@ final class FaviconCache: @unchecked Sendable {
             for: .cachesDirectory, in: .userDomainMask
         ).first ?? FileManager.default.temporaryDirectory
         directory = caches
-            .appendingPathComponent("Clawix", isDirectory: true)
-            .appendingPathComponent("Favicons", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.favicons, isDirectory: true)
         try? FileManager.default.createDirectory(
             at: directory, withIntermediateDirectories: true
         )
