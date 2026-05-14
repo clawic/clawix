@@ -18,8 +18,8 @@ final class FillerWordsManager: ObservableObject {
 
     static let shared = FillerWordsManager()
 
-    static let enabledKey = "dictation.fillerWords.enabled"
-    static let listKey = "dictation.fillerWords.list"
+    nonisolated static let enabledKey = "dictation.fillerWords.enabled"
+    nonisolated static let listKey = "dictation.fillerWords.list"
 
     @Published private(set) var enabled: Bool {
         didSet { defaults.set(enabled, forKey: Self.enabledKey) }

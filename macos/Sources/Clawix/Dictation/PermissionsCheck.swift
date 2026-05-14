@@ -60,7 +60,7 @@ enum DictationPermissions {
     /// explicit denial (where only "Open Settings" makes sense), we
     /// remember whether the OS prompt has ever been triggered for this
     /// process and treat the pre-prompt state as `.notDetermined`.
-    static let hasRequestedAccessibilityKey = "dictation.accessibility.hasRequested"
+    nonisolated static let hasRequestedAccessibilityKey = "dictation.accessibility.hasRequested"
 
     static func accessibility() -> Status {
         if AXIsProcessTrusted() { return .granted }

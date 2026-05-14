@@ -9,8 +9,8 @@ final class PowerModeManager: ObservableObject {
 
     static let shared = PowerModeManager()
 
-    static let enabledKey = "dictation.powerMode.enabled"
-    static let configsKey = "dictation.powerMode.configs"
+    nonisolated static let enabledKey = "dictation.powerMode.enabled"
+    nonisolated static let configsKey = "dictation.powerMode.configs"
     @Published private(set) var activeBundleId: String?
     @Published private(set) var activeURL: URL?
 

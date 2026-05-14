@@ -7,11 +7,11 @@ import SwiftUI
 final class SoundManager {
     static let shared = SoundManager()
 
-    static let defaultsKey = "dictation.soundFeedback"
-    static let playStartKey = "dictation.playStartSound"
-    static let playStopKey = "dictation.playStopSound"
-    static let customStartURLKey = "dictation.customStartSoundURL"
-    static let customStopURLKey = "dictation.customStopSoundURL"
+    nonisolated static let defaultsKey = "dictation.soundFeedback"
+    nonisolated static let playStartKey = "dictation.playStartSound"
+    nonisolated static let playStopKey = "dictation.playStopSound"
+    nonisolated static let customStartURLKey = "dictation.customStartSoundURL"
+    nonisolated static let customStopURLKey = "dictation.customStopSoundURL"
 
     private var startPlayer: AVAudioPlayer?
     private var stopPlayer: AVAudioPlayer?

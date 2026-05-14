@@ -14,7 +14,7 @@ final class VocabularyManager: ObservableObject {
 
     static let shared = VocabularyManager()
 
-    static let defaultsKey = "dictation.vocabulary"
+    nonisolated static let defaultsKey = "dictation.vocabulary"
 
     @Published private(set) var entries: [String] {
         didSet { persist() }

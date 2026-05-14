@@ -19,8 +19,8 @@ final class PlaybackController {
 
     static let shared = PlaybackController()
 
-    static let enabledKey = "dictation.pauseMediaWhileRecording"
-    static let resumeDelayKey = "dictation.pauseResumeDelaySeconds"
+    nonisolated static let enabledKey = "dictation.pauseMediaWhileRecording"
+    nonisolated static let resumeDelayKey = "dictation.pauseResumeDelaySeconds"
 
     private let defaults: UserDefaults
     private var resumeWorkItem: DispatchWorkItem?

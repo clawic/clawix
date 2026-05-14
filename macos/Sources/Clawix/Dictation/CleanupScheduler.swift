@@ -18,10 +18,10 @@ final class CleanupScheduler {
 
     static let shared = CleanupScheduler()
 
-    static let transcriptsEnabledKey = "dictation.cleanup.transcriptsEnabled"
-    static let transcriptsTTLKey = "dictation.cleanup.transcriptsTTL"
-    static let audioFilesEnabledKey = "dictation.cleanup.audioFilesEnabled"
-    static let audioFilesTTLKey = "dictation.cleanup.audioFilesTTL"
+    nonisolated static let transcriptsEnabledKey = "dictation.cleanup.transcriptsEnabled"
+    nonisolated static let transcriptsTTLKey = "dictation.cleanup.transcriptsTTL"
+    nonisolated static let audioFilesEnabledKey = "dictation.cleanup.audioFilesEnabled"
+    nonisolated static let audioFilesTTLKey = "dictation.cleanup.audioFilesTTL"
 
     enum TranscriptsTTL: String, CaseIterable {
         case immediate, h1, d1, d3, d7

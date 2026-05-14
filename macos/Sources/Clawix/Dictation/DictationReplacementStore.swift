@@ -28,7 +28,7 @@ final class DictationReplacementStore: ObservableObject {
 
     static let shared = DictationReplacementStore()
 
-    static let defaultsKey = "dictation.replacements"
+    nonisolated static let defaultsKey = "dictation.replacements"
 
     @Published private(set) var entries: [DictationReplacement]
 

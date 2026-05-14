@@ -40,7 +40,7 @@ final class DictationOverlay {
 
     /// Persisted in UserDefaults. Reading on every show keeps the
     /// switch live without a relaunch.
-    static let styleKey = "dictation.recorderStyle"
+    nonisolated static let styleKey = "dictation.recorderStyle"
 
     private var panel: NSPanel?
     private weak var coordinator: DictationCoordinator?

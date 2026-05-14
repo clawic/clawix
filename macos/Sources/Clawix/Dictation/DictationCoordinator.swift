@@ -140,29 +140,29 @@ final class DictationCoordinator: ObservableObject {
     /// Settings takes effect the next time the user dictates.
     /// `language` is the Whisper language code (e.g. "es", "en"); the
     /// sentinel `"auto"` means "let Whisper detect".
-    static let injectDefaultsKey = "dictation.injectText"
-    static let restoreClipboardDefaultsKey = "dictation.restoreClipboard"
-    static let autoEnterDefaultsKey = "dictation.autoEnter"
-    static let autoSendKeyDefaultsKey = "dictation.autoSendKey"
-    static let languageDefaultsKey = "dictation.language"
-    static let restoreClipboardDelayMsKey = "dictation.restoreClipboardDelayMs"
-    static let addSpaceBeforeKey = "dictation.addSpaceBeforePaste"
-    static let autoFormatParagraphsKey = "dictation.autoFormatParagraphs"
-    static let prewarmOnLaunchKey = "dictation.prewarmOnLaunch"
+    nonisolated static let injectDefaultsKey = "dictation.injectText"
+    nonisolated static let restoreClipboardDefaultsKey = "dictation.restoreClipboard"
+    nonisolated static let autoEnterDefaultsKey = "dictation.autoEnter"
+    nonisolated static let autoSendKeyDefaultsKey = "dictation.autoSendKey"
+    nonisolated static let languageDefaultsKey = "dictation.language"
+    nonisolated static let restoreClipboardDelayMsKey = "dictation.restoreClipboardDelayMs"
+    nonisolated static let addSpaceBeforeKey = "dictation.addSpaceBeforePaste"
+    nonisolated static let autoFormatParagraphsKey = "dictation.autoFormatParagraphs"
+    nonisolated static let prewarmOnLaunchKey = "dictation.prewarmOnLaunch"
     /// Voice Activity Detection on the local Whisper path. WhisperKit
     /// implements this via `chunkingStrategy = .vad`. Default ON.
-    static let vadEnabledKey = "dictation.vadEnabled"
+    nonisolated static let vadEnabledKey = "dictation.vadEnabled"
     /// Which transcription backend the coordinator routes to. Values
     /// are `DictationTranscriptionBackend.rawValue`. Default
     /// `whisperLocal` (the existing AUHAL → WhisperKit path); when
     /// set to `appleSpeech`, audio capture is handled inside
     /// `AppleSpeechRecorder` (its own AVAudioEngine) and partials
     /// stream into `partialTranscript` for the live preview.
-    static let backendKey = "dictation.transcriptionBackend"
+    nonisolated static let backendKey = "dictation.transcriptionBackend"
     /// Live preview toggle (#19). On: render Whisper / Apple Speech
     /// partials in the floating overlay so the user sees the words
     /// as they speak. Off: only the waveform shows.
-    static let livePreviewEnabledKey = "dictation.livePreviewEnabled"
+    nonisolated static let livePreviewEnabledKey = "dictation.livePreviewEnabled"
 
     private let defaults: UserDefaults
 

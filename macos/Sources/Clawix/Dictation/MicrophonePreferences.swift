@@ -52,7 +52,7 @@ final class MicrophonePreferences: ObservableObject {
 
     static let shared = MicrophonePreferences()
 
-    static let modeKey = "dictation.microphone.mode"
+    nonisolated static let modeKey = "dictation.microphone.mode"
 
     /// Input devices currently visible to Core Audio, ordered with
     /// preferred entries (most-recent first) and the rest below in
@@ -67,7 +67,7 @@ final class MicrophonePreferences: ObservableObject {
     @Published private(set) var preferredUIDs: [String] = []
 
     private let defaults: UserDefaults
-    static let preferredKey = "dictation.microphone.preferred"
+    nonisolated static let preferredKey = "dictation.microphone.preferred"
     private let maxPreferred = 3
 
     private var listenersInstalled = false

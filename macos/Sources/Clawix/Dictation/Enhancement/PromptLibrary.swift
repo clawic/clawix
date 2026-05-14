@@ -23,7 +23,7 @@ final class PromptLibrary: ObservableObject {
 
     static let shared = PromptLibrary()
 
-    static let customPromptsKey = "dictation.enhancement.customPrompts"
+    nonisolated static let customPromptsKey = "dictation.enhancement.customPrompts"
 
     @Published private(set) var prompts: [EnhancementPrompt]
 

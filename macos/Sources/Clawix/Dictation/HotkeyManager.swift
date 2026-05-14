@@ -102,12 +102,12 @@ final class HotkeyManager {
         }
     }
 
-    static let modeDefaultsKey = "dictation.hotkeyMode"
-    static let triggerDefaultsKey = "dictation.hotkeyTrigger"
+    nonisolated static let modeDefaultsKey = "dictation.hotkeyMode"
+    nonisolated static let triggerDefaultsKey = "dictation.hotkeyTrigger"
     /// Second-binding keys. `.off` by default so existing users see
     /// no behavior change unless they opt in.
-    static let mode2DefaultsKey = "dictation.hotkey2Mode"
-    static let trigger2DefaultsKey = "dictation.hotkey2Trigger"
+    nonisolated static let mode2DefaultsKey = "dictation.hotkey2Mode"
+    nonisolated static let trigger2DefaultsKey = "dictation.hotkey2Trigger"
 
     /// Threshold above which a press counts as "held" instead of
     /// "tapped" in `.hybrid` mode. 500 ms is comfortable: short enough

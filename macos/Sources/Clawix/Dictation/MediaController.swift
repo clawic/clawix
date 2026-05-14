@@ -24,11 +24,11 @@ final class MediaController {
     /// `true` when the toggle is enabled. Default ON: this is the
     /// behaviour 95% of users want and matches the reference dictation
     /// tools we benchmarked against.
-    static let enabledKey = "dictation.muteAudioWhileRecording"
+    nonisolated static let enabledKey = "dictation.muteAudioWhileRecording"
 
     /// Seconds to wait before unmuting after the session ends. 0 by
     /// default. Up to 5; values >5 land in Advanced settings UI.
-    static let resumeDelayKey = "dictation.muteResumeDelaySeconds"
+    nonisolated static let resumeDelayKey = "dictation.muteResumeDelaySeconds"
 
     private let defaults: UserDefaults
     private var resumeWorkItem: DispatchWorkItem?

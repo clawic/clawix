@@ -14,7 +14,7 @@ final class WhisperPromptStore: ObservableObject {
 
     static let shared = WhisperPromptStore()
 
-    static let defaultsKey = "dictation.whisperPrompts"
+    nonisolated static let defaultsKey = "dictation.whisperPrompts"
 
     @Published private(set) var prompts: [String: String] {
         didSet { persist() }
