@@ -43,7 +43,6 @@ final class ClawJSSecretsClient {
     static func local(bearerToken: String? = nil) -> ClawJSSecretsClient {
         let token = bearerToken
             ?? ClawJSServiceManager.shared.adminTokenIfSpawned(for: .secrets)
-            ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .secrets))
         let signedHostToken = ClawJSServiceManager.shared.signedHostTokenIfSpawned(for: .secrets)
         return ClawJSSecretsClient(
             baseURL: URL(string: "http://127.0.0.1:\(ClawJSService.secrets.port)")!,

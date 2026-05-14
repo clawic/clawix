@@ -484,7 +484,7 @@ final class ClawJSServiceManager: ObservableObject {
             try Self.prepareDirectories(for: service)
 
             let adminToken = ensureAdminToken(for: service)
-            if let adminToken {
+            if let adminToken, service != .secrets {
                 try Self.writeAdminToken(adminToken, for: service)
             }
             let signedHostToken = ensureSignedHostToken(for: service)
@@ -706,6 +706,9 @@ final class ClawJSServiceManager: ObservableObject {
             withIntermediateDirectories: true
         )
         try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dataDirectoryURL(for: service).path)
+        if service == .secrets {
+            try? fm.removeItem(at: dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false))
+        }
         try fm.createDirectory(
             at: mainFilesDirectoryURL,
             withIntermediateDirectories: true
@@ -828,10 +831,16 @@ final class ClawJSServiceManager: ObservableObject {
         return token
     }
 
-    /// Filesystem fallback for the admin token, used when the GUI is not
-    /// the daemon owner (background bridge has the daemon alive). The
-    /// daemon writes a 0600 file on its own first launch; we read it.
+    /// Filesystem fallback for non-Secrets admin tokens, used when the GUI is
+    /// not the daemon owner (background bridge has the daemon alive). Secrets
+    /// deliberately has no disk fallback: same-user local processes can read
+    /// owner files, so V1 host identity must stay in-memory/native.
     static func adminTokenFromDataDir(for service: ClawJSService) throws -> String {
+        if service == .secrets {
+            throw NSError(domain: "ClawJSServiceManager", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: "Secrets admin token is host-session only and is never read from disk."
+            ])
+        }
         let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
         let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
         if let mode = attrs[.posixPermissions] as? NSNumber,
@@ -850,17 +859,18 @@ final class ClawJSServiceManager: ObservableObject {
         return raw
     }
 
-    /// Persists the per-session admin token for sibling processes such as
-    /// the Tasks mini-app. The token stays under the private Clawix app
-    /// support data dir and is overwritten every time this process owns a
-    /// fresh sidecar launch.
+    /// Persists non-Secrets per-session admin tokens for sibling processes
+    /// such as the Tasks mini-app. Secrets tokens are never persisted because
+    /// the Secrets V1 threat model includes hostile same-user local processes.
     private static func writeAdminToken(_ token: String, for service: ClawJSService) throws {
+        if service == .secrets { return }
         let url = dataDirectoryURL(for: service).appendingPathComponent(".admin-token", isDirectory: false)
         try Data(token.utf8).write(to: url, options: [.atomic])
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
     private static func canAdoptExistingService(_ service: ClawJSService) -> Bool {
+        if service == .secrets { return false }
         guard adminTokenEnvVar[service] != nil else { return true }
         return (try? adminTokenFromDataDir(for: service)).map { !$0.isEmpty } ?? false
     }
