@@ -380,6 +380,7 @@ final class ClawJSSecretsClient {
         let status: Int?
         let headers: [String: String]?
         let bodyText: String?
+        let bodyBase64: String?
     }
 
     func brokerHttp(

@@ -45,28 +45,40 @@ enum CloudTranscriptionProvider: String, CaseIterable {
     // MARK: - Groq
 
     private func transcribeGroq(samples: [Float], language: String?, prompt: String?) async throws -> String {
-        guard let key = await CloudTranscriptionSecrets.apiKey(for: .groq), !key.isEmpty else {
+        guard await CloudTranscriptionSecrets.hasAPIKey(for: .groq) else {
             throw CloudError.notConfigured
         }
         let model = UserDefaults.standard.string(forKey: "\(Self.modelKeyPrefix).\(rawValue)")
             ?? "whisper-large-v3"
         let url = URL(string: "https://api.groq.com/openai/v1/audio/transcriptions")!
-        let wav = makeWAV(samples: samples)
-        let (data, response) = try await uploadMultipart(
-            url: url,
-            audio: wav,
+        let multipart = makeMultipartBody(
+            audio: makeWAV(samples: samples),
             model: model,
             language: language,
-            prompt: prompt,
-            apiKey: key
+            prompt: prompt
         )
-        return try parseOpenAIShape(data: data, response: response)
+        let response = try await SystemSecrets.brokerHttp(
+            internalName: CloudTranscriptionSecrets.internalName(for: .groq),
+            method: "POST",
+            url: url,
+            headers: [
+                "Content-Type": multipart.contentType,
+                "Authorization": "Bearer {{\(CloudTranscriptionSecrets.internalName(for: .groq)).value}}"
+            ],
+            body: nil,
+            bodyData: multipart.body,
+            agent: "clawix-transcription",
+            riskTier: "cost",
+            approvalSatisfied: true,
+            timeoutMs: 60_000
+        )
+        return try parseOpenAIShape(data: brokerData(response), status: response.status, errorBody: response.bodyText)
     }
 
     // MARK: - Deepgram
 
     private func transcribeDeepgram(samples: [Float], language: String?) async throws -> String {
-        guard let key = await CloudTranscriptionSecrets.apiKey(for: .deepgram), !key.isEmpty else {
+        guard await CloudTranscriptionSecrets.hasAPIKey(for: .deepgram) else {
             throw CloudError.notConfigured
         }
         var components = URLComponents(string: "https://api.deepgram.com/v1/listen")!
@@ -77,18 +89,25 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         queryItems.append(URLQueryItem(name: "smart_format", value: "true"))
         queryItems.append(URLQueryItem(name: "punctuate", value: "true"))
         components.queryItems = queryItems
-        var request = URLRequest(url: components.url!)
-        request.httpMethod = "POST"
-        request.setValue("Token \(key)", forHTTPHeaderField: "Authorization")
-        request.setValue("audio/wav", forHTTPHeaderField: "Content-Type")
-        request.httpBody = makeWAV(samples: samples)
-        request.timeoutInterval = 60
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            let bodyText = String(data: data, encoding: .utf8) ?? ""
-            throw CloudError.http(http.statusCode, bodyText)
+        let response = try await SystemSecrets.brokerHttp(
+            internalName: CloudTranscriptionSecrets.internalName(for: .deepgram),
+            method: "POST",
+            url: components.url!,
+            headers: [
+                "Authorization": "Token {{\(CloudTranscriptionSecrets.internalName(for: .deepgram)).value}}",
+                "Content-Type": "audio/wav"
+            ],
+            body: nil,
+            bodyData: makeWAV(samples: samples),
+            agent: "clawix-transcription",
+            riskTier: "cost",
+            approvalSatisfied: true,
+            timeoutMs: 60_000
+        )
+        if !response.ok {
+            throw CloudError.http(response.status ?? 0, response.bodyText ?? "")
         }
+        let data = brokerData(response)
         struct DeepgramResponse: Decodable {
             struct Result: Decodable {
                 struct Channel: Decodable {
@@ -116,39 +135,44 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         }
         let model = UserDefaults.standard.string(forKey: "\(Self.modelKeyPrefix).\(rawValue)")
             ?? "whisper-1"
-        let key = await CloudTranscriptionSecrets.apiKey(for: .custom) // optional
         let endpoint = baseURL.appendingPathComponent("/audio/transcriptions")
-        let wav = makeWAV(samples: samples)
-        let (data, response) = try await uploadMultipart(
-            url: endpoint,
-            audio: wav,
+        let multipart = makeMultipartBody(
+            audio: makeWAV(samples: samples),
             model: model,
             language: language,
-            prompt: prompt,
-            apiKey: key ?? ""
+            prompt: prompt
         )
+        if await CloudTranscriptionSecrets.hasAPIKey(for: .custom) {
+            let response = try await SystemSecrets.brokerHttp(
+                internalName: CloudTranscriptionSecrets.internalName(for: .custom),
+                method: "POST",
+                url: endpoint,
+                headers: [
+                    "Content-Type": multipart.contentType,
+                    "Authorization": "Bearer {{\(CloudTranscriptionSecrets.internalName(for: .custom)).value}}"
+                ],
+                body: nil,
+                bodyData: multipart.body,
+                agent: "clawix-transcription",
+                riskTier: "cost",
+                approvalSatisfied: true,
+                timeoutMs: 60_000
+            )
+            return try parseOpenAIShape(data: brokerData(response), status: response.status, errorBody: response.bodyText)
+        }
+        let (data, response) = try await uploadMultipart(url: endpoint, multipart: multipart)
         return try parseOpenAIShape(data: data, response: response)
     }
 
     // MARK: - Shared
 
-    private func uploadMultipart(
-        url: URL,
+    private func makeMultipartBody(
         audio: Data,
         model: String,
         language: String?,
-        prompt: String?,
-        apiKey: String
-    ) async throws -> (Data, URLResponse) {
+        prompt: String?
+    ) -> (body: Data, contentType: String) {
         let boundary = "clawix-\(UUID().uuidString)"
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        if !apiKey.isEmpty {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        }
-        request.timeoutInterval = 60
-
         var body = Data()
         func appendField(_ name: String, _ value: String) {
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
@@ -169,9 +193,36 @@ enum CloudTranscriptionProvider: String, CaseIterable {
         body.append(audio)
         body.append("\r\n".data(using: .utf8)!)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        request.httpBody = body
+        return (body, "multipart/form-data; boundary=\(boundary)")
+    }
 
+    private func uploadMultipart(
+        url: URL,
+        multipart: (body: Data, contentType: String)
+    ) async throws -> (Data, URLResponse) {
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(multipart.contentType, forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60
+        request.httpBody = multipart.body
         return try await URLSession.shared.data(for: request)
+    }
+
+    private func brokerData(_ response: ClawJSSecretsClient.BrokerHTTPResponse) throws -> Data {
+        if let bodyText = response.bodyText {
+            return Data(bodyText.utf8)
+        }
+        if let bodyBase64 = response.bodyBase64, let data = Data(base64Encoded: bodyBase64) {
+            return data
+        }
+        throw CloudError.decoding("Empty broker response.")
+    }
+
+    private func parseOpenAIShape(data: Data, status: Int?, errorBody: String?) throws -> String {
+        if let status, !(200...299).contains(status) {
+            throw CloudError.http(status, errorBody ?? String(data: data, encoding: .utf8) ?? "")
+        }
+        return try parseOpenAIShape(data: data)
     }
 
     private func parseOpenAIShape(data: Data, response: URLResponse) throws -> String {
@@ -179,6 +230,10 @@ enum CloudTranscriptionProvider: String, CaseIterable {
             let bodyText = String(data: data, encoding: .utf8) ?? ""
             throw CloudError.http(http.statusCode, bodyText)
         }
+        return try parseOpenAIShape(data: data)
+    }
+
+    private func parseOpenAIShape(data: Data) throws -> String {
         struct WhisperJSON: Decodable { let text: String }
         do {
             let decoded = try JSONDecoder().decode(WhisperJSON.self, from: data)
