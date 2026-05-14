@@ -16,12 +16,14 @@ run() {
 policy_guard() {
   for required in \
     "$ROOT_DIR/docs/adr/0003-testing-architecture.md" \
+    "$ROOT_DIR/docs/adr/0005-integration-qa-lab.md" \
     "$ROOT_DIR/playbooks/testing.md" \
     "$ROOT_DIR/playbooks/testing-matrix.md" \
     "$ROOT_DIR/qa/coverage-budgets.json" \
     "$ROOT_DIR/qa/quarantine.json" \
     "$ROOT_DIR/qa/scenarios/external-pending.md" \
-    "$ROOT_DIR/qa/scenarios/signed-host-validation.md"
+    "$ROOT_DIR/qa/scenarios/signed-host-validation.md" \
+    "$ROOT_DIR/qa/scenarios/telegram-integration-qa-lab.md"
   do
     if [[ ! -e "$required" ]]; then
       echo "testing policy failed: missing ${required#$ROOT_DIR/}" >&2
@@ -78,6 +80,7 @@ const requiredBoundaries = [
   "macos-host-app",
   "device-clients",
   "live-integrations",
+  "connector-qa-display-approval",
 ];
 const budgets = JSON.parse(fs.readFileSync(file, "utf8"));
 if (!Array.isArray(budgets.budgets)) {

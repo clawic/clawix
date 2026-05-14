@@ -49,6 +49,13 @@
       "metric": "scenario_coverage",
       "minimum": 1,
       "ratchet": false
+    },
+    {
+      "boundary": "connector-qa-display-approval",
+      "lane": "integration",
+      "metric": "scenario_coverage",
+      "minimum": 1,
+      "ratchet": true
     }
   ]
 }

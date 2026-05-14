@@ -153,6 +153,15 @@ published as an open, versioned specification that any third party can
 implement. We treat our own framework as one consumer of those standards,
 not as their owner.
 
+**III.3 Integration completeness is evidence, not intention.** An external
+integration is not complete because we selected a useful subset of actions.
+Completeness means the provider's official surface is mapped, classified,
+fixture-tested where safe, live-tested only through approved brokered leases,
+and marked `EXTERNAL PENDING` where physical setup, cost, destructive state,
+or provider-side approval is missing. The user must be able to tell the
+difference between implemented, fixture-only, live-smoked, manual-only,
+policy-blocked, and deprecated provider behavior.
+
 ### IV. Security and integrity
 
 **IV.1 Security is a positive guarantee, not an absence.** The framework

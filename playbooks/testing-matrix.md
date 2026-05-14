@@ -15,7 +15,8 @@ public runner policy guard.
 | Daemon and local bridge | `integration`, `e2e` | `release` | SwiftPM bridge/protocol tests in `integration`; app/bridge fixture scripts under `macos/scripts` in `e2e` |
 | macOS host/app | `host` | `release` | Private signed-host hook or `EXTERNAL PENDING` scenario |
 | Android/iOS device | `device` | `release` | Gradle unit tests plus private simulator/device hook |
-| Live integrations | `live` | opt-in only | Requires `CLAWIX_TEST_LIVE=1` and an approved live command |
+| Live integrations | `live` | opt-in only | Requires `CLAWIX_TEST_LIVE=1`, framework Integration QA Lab evidence, brokered credential leases, and an approved live command |
+| Connector QA display/approval | `fast`, `integration` | `release` | ClawJS coverage matrix fixture plus Clawix host approval scenario such as `qa/scenarios/telegram-integration-qa-lab.md` |
 
 ## Completion Rules
 
@@ -23,6 +24,8 @@ public runner policy guard.
 - `release` must include public hygiene, policy, fast, integration, local E2E, device state,
   and host state.
 - `live` is never part of default release.
+- Connector UI may report only the validation state backed by the framework
+  Integration QA Lab matrix and host-owned approval evidence.
 - `QUARANTINED` entries must live in `qa/quarantine.json` with owner, reason,
   repair path, and expiry.
 - Expired quarantines fail the public runner.
