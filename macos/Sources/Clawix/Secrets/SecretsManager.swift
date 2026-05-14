@@ -36,6 +36,10 @@ final class PendingApprovalRequest: ObservableObject, Identifiable {
 
 @MainActor
 final class SecretsManager: ObservableObject {
+    struct EmergencyKit: Equatable {
+        let recoveryPhrase: [String]
+        let secretKey: String
+    }
 
     /// Process-wide singleton. The SwiftUI root mounts this as a
     /// `@StateObject` (so views observe its `@Published` properties),
@@ -172,20 +176,27 @@ final class SecretsManager: ObservableObject {
     }
     #endif
 
-    func setUp(masterPassword: String) async throws -> [String] {
+    func setUp(masterPassword: String) async throws -> EmergencyKit {
         guard state == .uninitialized || state == .loading else { throw Error.invalidState }
         let result = try await client.setup(password: masterPassword, appVersion: Self.bundleAppVersion())
+        try SecretsLocalSecretKey.store(result.secretKey)
         try await mountStores(seedDefaultVault: true)
         state = .unlocked
         scheduleAutoLock()
-        return result.recoveryPhrase.split(separator: " ").map { String($0) }
+        return EmergencyKit(
+            recoveryPhrase: result.recoveryPhrase.split(separator: " ").map { String($0) },
+            secretKey: result.secretKey
+        )
     }
 
     func unlock(masterPassword: String) async throws {
         guard state == .locked else { throw Error.invalidState }
         state = .unlocking
         do {
-            try await client.unlock(password: masterPassword)
+            guard let secretKey = try SecretsLocalSecretKey.load() else {
+                throw Error.localSecretKeyMissing
+            }
+            try await client.unlock(password: masterPassword, secretKey: secretKey)
             try await mountStores(seedDefaultVault: false)
             state = .unlocked
             scheduleAutoLock()
@@ -198,15 +209,20 @@ final class SecretsManager: ObservableObject {
         }
     }
 
-    func recover(phrase: [String]) async throws {
+    func recover(phrase: [String], newPassword: String) async throws -> EmergencyKit {
         let joined = phrase.map { $0.lowercased() }.joined(separator: " ")
-        try await client.recover(phrase: joined)
+        let result = try await client.recover(phrase: joined, newPassword: newPassword)
+        try SecretsLocalSecretKey.store(result.secretKey)
         try await mountStores(seedDefaultVault: false)
         state = .unlocked
         scheduleAutoLock()
+        return EmergencyKit(
+            recoveryPhrase: result.recoveryPhrase.split(separator: " ").map { String($0) },
+            secretKey: result.secretKey
+        )
     }
 
-    func changePassword(newPassword: String) async throws -> [String] {
+    func changePassword(newPassword: String) async throws -> EmergencyKit {
         // We don't have the old password here; the HTTP server requires it.
         // For now we surface an error; the UI can collect both passwords
         // and call `changePassword(old:new:)` directly on the client.
@@ -214,10 +230,17 @@ final class SecretsManager: ObservableObject {
         throw Error.notUnlocked
     }
 
-    func changePassword(oldPassword: String, newPassword: String) async throws -> [String] {
+    func changePassword(oldPassword: String, newPassword: String) async throws -> EmergencyKit {
         guard state == .unlocked else { throw Error.notUnlocked }
-        let result = try await client.changePassword(old: oldPassword, new: newPassword)
-        return result.recoveryPhrase.split(separator: " ").map { String($0) }
+        guard let oldSecretKey = try SecretsLocalSecretKey.load() else {
+            throw Error.localSecretKeyMissing
+        }
+        let result = try await client.changePassword(old: oldPassword, oldSecretKey: oldSecretKey, new: newPassword)
+        try SecretsLocalSecretKey.store(result.secretKey)
+        return EmergencyKit(
+            recoveryPhrase: result.recoveryPhrase.split(separator: " ").map { String($0) },
+            secretKey: result.secretKey
+        )
     }
 
     func lock() {
@@ -483,12 +506,14 @@ extension SecretsManager {
         case invalidState
         case notSetUp
         case notUnlocked
+        case localSecretKeyMissing
 
         var description: String {
             switch self {
             case .invalidState: return "Secrets manager: invalid state for this operation"
             case .notSetUp: return "SecretsManager: Secrets has not been set up"
             case .notUnlocked: return "SecretsManager: Secrets is not unlocked"
+            case .localSecretKeyMissing: return "SecretsManager: local Secret Key is missing. Use the Emergency Kit recovery flow."
             }
         }
     }

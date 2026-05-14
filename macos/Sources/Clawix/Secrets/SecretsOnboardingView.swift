@@ -5,8 +5,8 @@ struct SecretsOnboardingView: View {
 
     enum Step: Equatable {
         case password
-        case showPhrase(phrase: [String])
-        case verifyPhrase(phrase: [String])
+        case showKit(SecretsManager.EmergencyKit)
+        case verifyPhrase(SecretsManager.EmergencyKit)
         case done
     }
 
@@ -22,10 +22,10 @@ struct SecretsOnboardingView: View {
                 switch step {
                 case .password:
                     passwordStep
-                case .showPhrase(let phrase):
-                    showPhraseStep(phrase)
-                case .verifyPhrase(let phrase):
-                    verifyPhraseStep(phrase)
+                case .showKit(let kit):
+                    showKitStep(kit)
+                case .verifyPhrase(let kit):
+                    verifyPhraseStep(kit)
                 case .done:
                     doneStep
                 }
@@ -98,9 +98,9 @@ struct SecretsOnboardingView: View {
         isWorking = true
         Task {
             do {
-                let phrase = try await vault.setUp(masterPassword: password)
+                let kit = try await vault.setUp(masterPassword: password)
                 isWorking = false
-                step = .showPhrase(phrase: phrase)
+                step = .showKit(kit)
             } catch {
                 isWorking = false
                 self.error = "Could not set up Secrets: \(error)"
@@ -108,15 +108,15 @@ struct SecretsOnboardingView: View {
         }
     }
 
-    // MARK: Step 2 - show recovery phrase
+    // MARK: Step 2 - show emergency kit
 
     @ViewBuilder
-    private func showPhraseStep(_ phrase: [String]) -> some View {
+    private func showKitStep(_ kit: SecretsManager.EmergencyKit) -> some View {
         VStack(spacing: 4) {
-            Text("Save your recovery phrase")
+            Text("Save your Emergency Kit")
                 .font(BodyFont.system(size: 17, wght: 600))
                 .foregroundColor(Palette.textPrimary)
-            Text("Write down these 24 words in order and keep them somewhere safe. They are the only way to recover Secrets if you forget your master password. Clawix will not show them again.")
+            Text("Write down the Secret Key and 24 recovery words in order. They are required to recover Secrets on this Mac. Clawix will not show them again.")
                 .font(BodyFont.system(size: 12))
                 .foregroundColor(Palette.textSecondary)
                 .multilineTextAlignment(.center)
@@ -124,24 +124,45 @@ struct SecretsOnboardingView: View {
 
         SecretsCard {
             VStack(alignment: .leading, spacing: 10) {
+                emergencySecretKeyRow(kit.secretKey)
+                Divider().background(Color.white.opacity(0.05))
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
                     spacing: 8
                 ) {
-                    ForEach(Array(phrase.enumerated()), id: \.offset) { idx, word in
+                    ForEach(Array(kit.recoveryPhrase.enumerated()), id: \.offset) { idx, word in
                         recoveryWordCell(index: idx + 1, word: word)
                     }
                 }
                 Divider().background(Color.white.opacity(0.05))
                 HStack(spacing: 10) {
                     SecretsSecondaryButton(title: "Copy to clipboard") {
-                        copyPhrase(phrase)
+                        copyEmergencyKit(kit)
                     }
                     SecretsPrimaryButton(title: "I've written it down") {
-                        step = .verifyPhrase(phrase: phrase)
+                        step = .verifyPhrase(kit)
                     }
                 }
             }
+        }
+    }
+
+    private func emergencySecretKeyRow(_ secretKey: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Secret Key")
+                .font(BodyFont.system(size: 11, wght: 600))
+                .foregroundColor(Palette.textSecondary)
+            Text(secretKey)
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundColor(Palette.textPrimary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.white.opacity(0.04))
+                )
         }
     }
 
@@ -164,20 +185,23 @@ struct SecretsOnboardingView: View {
         )
     }
 
-    private func copyPhrase(_ phrase: [String]) {
+    private func copyEmergencyKit(_ kit: SecretsManager.EmergencyKit) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(phrase.joined(separator: " "), forType: .string)
+        pasteboard.setString(
+            "Secret Key: \(kit.secretKey)\nRecovery phrase: \(kit.recoveryPhrase.joined(separator: " "))",
+            forType: .string
+        )
     }
 
     // MARK: Step 3 - verify a few words
 
     @ViewBuilder
-    private func verifyPhraseStep(_ phrase: [String]) -> some View {
+    private func verifyPhraseStep(_ kit: SecretsManager.EmergencyKit) -> some View {
         VerifyPhrasePanel(
-            phrase: phrase,
+            phrase: kit.recoveryPhrase,
             onSuccess: { step = .done },
-            onBack: { step = .showPhrase(phrase: phrase) }
+            onBack: { step = .showKit(kit) }
         )
     }
 

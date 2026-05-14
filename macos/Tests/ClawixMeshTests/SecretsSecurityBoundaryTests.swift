@@ -98,7 +98,9 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
 
     func testSecretsServiceUsesKeychainPlatformKeyForKekBootstrap() throws {
         let managerSource = try readSource("ClawJS/ClawJSServiceManager.swift")
+        let clientSource = try readSource("ClawJS/ClawJSSecretsClient.swift")
         let platformKeySource = try readSource("Secrets/SecretsPlatformKey.swift")
+        let localSecretKeySource = try readSource("Secrets/SecretsLocalSecretKey.swift")
 
         XCTAssertTrue(
             managerSource.contains("SecretsPlatformKey.loadOrCreate()"),
@@ -115,6 +117,30 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         XCTAssertTrue(
             platformKeySource.contains("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly"),
             "The Secrets platform KEK must be device-local, not portable Keychain material."
+        )
+        XCTAssertTrue(
+            localSecretKeySource.contains("SECRETS-SECRET-KEY-KEYCHAIN-OK"),
+            "Keychain use for the user Secret Key must be explicit and auditable."
+        )
+        XCTAssertTrue(
+            localSecretKeySource.contains("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly"),
+            "The user Secret Key must be device-local, not portable Keychain material."
+        )
+        XCTAssertTrue(
+            managerSource.contains("SecretsLocalSecretKey.store(result.secretKey)"),
+            "Setup, recovery, and password rotation must persist the new user Secret Key locally."
+        )
+        XCTAssertTrue(
+            managerSource.contains("SecretsLocalSecretKey.load()"),
+            "Unlock must combine the user password with the local Secret Key."
+        )
+        XCTAssertTrue(
+            clientSource.contains("body: [\"password\": password, \"secretKey\": secretKey]"),
+            "The Mac client must send password + Secret Key to the ClawJS vault."
+        )
+        XCTAssertTrue(
+            clientSource.contains("\"oldPassword\": old, \"oldSecretKey\": oldSecretKey, \"newPassword\": new"),
+            "Password changes must prove the previous password + Secret Key before rotation."
         )
     }
 

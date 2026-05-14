@@ -8,13 +8,14 @@ struct RecoveryPhraseSheet: View {
     enum Stage: Equatable {
         case enterPhrase
         case enterNewPassword
-        case done(newPhrase: [String])
+        case done(SecretsManager.EmergencyKit)
     }
 
     @State private var stage: Stage = .enterPhrase
     @State private var phraseText: String = ""
     @State private var newPassword: String = ""
     @State private var newPasswordConfirm: String = ""
+    @State private var pendingRecoveryPhrase: [String] = []
     @State private var error: String?
     @State private var isWorking: Bool = false
 
@@ -25,8 +26,8 @@ struct RecoveryPhraseSheet: View {
                 phraseStage
             case .enterNewPassword:
                 newPasswordStage
-            case .done(let newPhrase):
-                doneStage(newPhrase)
+            case .done(let kit):
+                doneStage(kit)
             }
         }
         .frame(width: 480)
@@ -95,7 +96,7 @@ struct RecoveryPhraseSheet: View {
                 Spacer()
                 closeButton
             }
-            Text("Recovery succeeded. Pick a new master password now. The next screen will give you a new recovery phrase; the old one will no longer work.")
+            Text("Pick a new master password now. The next screen will give you a new Emergency Kit; the old recovery phrase and Secret Key will no longer work.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,25 +119,39 @@ struct RecoveryPhraseSheet: View {
     }
 
     @ViewBuilder
-    private func doneStage(_ newPhrase: [String]) -> some View {
+    private func doneStage(_ kit: SecretsManager.EmergencyKit) -> some View {
         VStack(spacing: 14) {
             HStack {
                 SecretsIcon(size: 24, lineWidth: 1.4, color: Color.green.opacity(0.85), isLocked: false)
-                Text("Save your new recovery phrase")
+                Text("Save your new Emergency Kit")
                     .font(BodyFont.system(size: 15.5, wght: 600))
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 closeButton
             }
-            Text("Write these 24 words down. The previous phrase no longer works. Clawix will not show this again.")
+            Text("Write down the Secret Key and 24 recovery words. The previous Emergency Kit no longer works. Clawix will not show this again.")
                 .font(BodyFont.system(size: 11.5))
                 .foregroundColor(Palette.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             SecretsCard {
                 VStack(alignment: .leading, spacing: 10) {
+                    Text("Secret Key")
+                        .font(BodyFont.system(size: 11, wght: 600))
+                        .foregroundColor(Palette.textSecondary)
+                    Text(kit.secretKey)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundColor(Palette.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color.white.opacity(0.04))
+                        )
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                        ForEach(Array(newPhrase.enumerated()), id: \.offset) { idx, word in
+                        ForEach(Array(kit.recoveryPhrase.enumerated()), id: \.offset) { idx, word in
                             HStack(spacing: 6) {
                                 Text("\(idx + 1).")
                                     .font(BodyFont.system(size: 11, wght: 500))
@@ -159,7 +174,10 @@ struct RecoveryPhraseSheet: View {
                         SecretsSecondaryButton(title: "Copy to clipboard") {
                             let pb = NSPasteboard.general
                             pb.clearContents()
-                            pb.setString(newPhrase.joined(separator: " "), forType: .string)
+                            pb.setString(
+                                "Secret Key: \(kit.secretKey)\nRecovery phrase: \(kit.recoveryPhrase.joined(separator: " "))",
+                                forType: .string
+                            )
                         }
                         SecretsPrimaryButton(title: "Done") {
                             isPresented = false
@@ -189,16 +207,8 @@ struct RecoveryPhraseSheet: View {
             return
         }
         error = nil
-        isWorking = true
-        Task {
-            defer { isWorking = false }
-            do {
-                try await vault.recover(phrase: words)
-                stage = .enterNewPassword
-            } catch {
-                self.error = "Could not recover: \(error)"
-            }
-        }
+        pendingRecoveryPhrase = words
+        stage = .enterNewPassword
     }
 
     private func rotate() {
@@ -211,10 +221,10 @@ struct RecoveryPhraseSheet: View {
         Task {
             defer { isWorking = false }
             do {
-                let phrase = try await vault.changePassword(newPassword: newPassword)
-                stage = .done(newPhrase: phrase)
+                let kit = try await vault.recover(phrase: pendingRecoveryPhrase, newPassword: newPassword)
+                stage = .done(kit)
             } catch {
-                self.error = "Could not change password: \(error)"
+                self.error = "Could not recover: \(error)"
             }
         }
     }

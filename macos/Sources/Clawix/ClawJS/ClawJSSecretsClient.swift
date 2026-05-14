@@ -79,6 +79,7 @@ final class ClawJSSecretsClient {
     struct SetupResult: Codable {
         let ok: Bool
         let recoveryPhrase: String
+        let secretKey: String
         let deviceId: String
     }
 
@@ -86,25 +87,41 @@ final class ClawJSSecretsClient {
         try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/setup", body: ["password": password, "appVersion": appVersion as Any])
     }
 
-    func unlock(password: String) async throws {
-        let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/unlock", body: ["password": password])
+    func unlock(password: String, secretKey: String) async throws {
+        let _: [String: AnyCodable] = try await post(
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/unlock",
+            body: ["password": password, "secretKey": secretKey]
+        )
     }
 
     func lock() async throws {
         let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/lock", body: [String: Any]())
     }
 
-    func recover(phrase: String) async throws {
-        let _: [String: AnyCodable] = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/recover", body: ["phrase": phrase])
+    struct RecoverResult: Codable {
+        let ok: Bool
+        let recoveryPhrase: String
+        let secretKey: String
+    }
+
+    func recover(phrase: String, newPassword: String) async throws -> RecoverResult {
+        try await post(
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/recover",
+            body: ["phrase": phrase, "newPassword": newPassword]
+        )
     }
 
     struct ChangePasswordResult: Codable {
         let ok: Bool
         let recoveryPhrase: String
+        let secretKey: String
     }
 
-    func changePassword(old: String, new: String) async throws -> ChangePasswordResult {
-        try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/change-password", body: ["oldPassword": old, "newPassword": new])
+    func changePassword(old: String, oldSecretKey: String, new: String) async throws -> ChangePasswordResult {
+        try await post(
+            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/change-password",
+            body: ["oldPassword": old, "oldSecretKey": oldSecretKey, "newPassword": new]
+        )
     }
 
     struct BackupExportResponse: Codable {
