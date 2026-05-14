@@ -19,27 +19,25 @@ struct AnthropicClient: AIClient {
         // Anthropic doesn't ship a public auth-only endpoint; the
         // cheapest validation is a GET /v1/models. Returns 401 for a
         // bad key, which AIHTTP surfaces as `.http(401, ...)`.
-        if !account.authMethod.isOAuth {
-            _ = try await AIAccountBroker.send(
-                account: account,
-                method: "GET",
-                url: baseURL.appendingPathComponent("models"),
-                headers: [
-                    "x-api-key": "{{\(AIAccountBroker.secretName(for: account)).value}}",
-                    "anthropic-version": "2023-06-01"
-                ],
-                body: nil,
-                agent: "clawix.ai.anthropic",
-                riskTier: "read",
-                timeoutSeconds: 10
-            )
+        if let key = credentials.apiKey, !key.isEmpty {
+            var req = URLRequest(url: baseURL.appendingPathComponent("models"))
+            req.httpMethod = "GET"
+            req.setValue(key, forHTTPHeaderField: "x-api-key")
+            req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+            _ = try await AIHTTP.send(req, timeoutSeconds: 10)
             return
         }
-        var req = URLRequest(url: baseURL.appendingPathComponent("models"))
-        req.httpMethod = "GET"
-        applyAuth(to: &req)
-        req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        _ = try await AIHTTP.send(req, timeoutSeconds: 10)
+        _ = try await AIAccountBroker.send(
+            account: account,
+            fieldName: brokerFieldName,
+            method: "GET",
+            url: baseURL.appendingPathComponent("models"),
+            headers: brokerHeaders(contentType: nil),
+            body: nil,
+            agent: "clawix.ai.anthropic",
+            riskTier: "read",
+            timeoutSeconds: 10
+        )
     }
 
     func chat(_ request: ChatRequest) async throws -> String {
@@ -56,10 +54,6 @@ struct AnthropicClient: AIClient {
                 userAssistant.append(AnthropicMessage(role: message.role.rawValue, content: message.content))
             }
         }
-        var req = URLRequest(url: baseURL.appendingPathComponent("messages"))
-        req.httpMethod = "POST"
-        req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body = try AIHTTP.encode(AnthropicMessagesBody(
             model: model.id,
             max_tokens: request.maxTokens ?? 4096,
@@ -67,30 +61,17 @@ struct AnthropicClient: AIClient {
             messages: userAssistant,
             temperature: request.temperature
         ))
-        if !account.authMethod.isOAuth {
-            let (data, _) = try await AIAccountBroker.send(
-                account: account,
-                method: "POST",
-                url: baseURL.appendingPathComponent("messages"),
-                headers: [
-                    "x-api-key": "{{\(AIAccountBroker.secretName(for: account)).value}}",
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json"
-                ],
-                body: String(data: body, encoding: .utf8),
-                agent: "clawix.ai.anthropic",
-                riskTier: "write",
-                timeoutSeconds: request.timeoutSeconds
-            )
-            let response = try AIHTTP.decode(AnthropicMessagesResponse.self, from: data)
-            guard let block = response.content.first(where: { $0.type == "text" }) else {
-                throw AIClientError.decoding("no text block in response")
-            }
-            return block.text ?? ""
-        }
-        applyAuth(to: &req)
-        req.httpBody = body
-        let (data, _) = try await AIHTTP.send(req, timeoutSeconds: request.timeoutSeconds)
+        let (data, _) = try await AIAccountBroker.send(
+            account: account,
+            fieldName: brokerFieldName,
+            method: "POST",
+            url: baseURL.appendingPathComponent("messages"),
+            headers: brokerHeaders(contentType: "application/json"),
+            body: String(data: body, encoding: .utf8),
+            agent: "clawix.ai.anthropic",
+            riskTier: "write",
+            timeoutSeconds: request.timeoutSeconds
+        )
         let response = try AIHTTP.decode(AnthropicMessagesResponse.self, from: data)
         guard let block = response.content.first(where: { $0.type == "text" }) else {
             throw AIClientError.decoding("no text block in response")
@@ -98,17 +79,22 @@ struct AnthropicClient: AIClient {
         return block.text ?? ""
     }
 
-    private func applyAuth(to req: inout URLRequest) {
-        switch account.authMethod {
-        case .oauth:
-            if let token = credentials.accessToken, !token.isEmpty {
-                req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            }
-        default:
-            if let key = credentials.apiKey, !key.isEmpty {
-                req.setValue(key, forHTTPHeaderField: "x-api-key")
-            }
+    private var brokerFieldName: String {
+        account.authMethod.isOAuth ? "access_token" : "value"
+    }
+
+    private func brokerHeaders(contentType: String?) -> [String: String] {
+        var headers: [String: String]
+        if account.authMethod.isOAuth {
+            headers = ["Authorization": "Bearer {{\(AIAccountBroker.secretName(for: account)).access_token}}"]
+        } else {
+            headers = ["x-api-key": "{{\(AIAccountBroker.secretName(for: account)).value}}"]
         }
+        headers["anthropic-version"] = "2023-06-01"
+        if let contentType {
+            headers["Content-Type"] = contentType
+        }
+        return headers
     }
 }
 

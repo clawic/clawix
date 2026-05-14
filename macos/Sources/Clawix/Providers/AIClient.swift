@@ -91,18 +91,14 @@ enum AIClientFactory {
         case .openai:
             return OpenAIClient(account: account, model: model)
         case .anthropic:
-            let credentials = account.authMethod.isOAuth
-                ? try accountStore.revealCredentials(accountId: account.id)
-                : AIAccountCredentials()
-            return AnthropicClient(account: account, model: model, credentials: credentials)
+            return AnthropicClient(account: account, model: model, credentials: AIAccountCredentials())
         case .googleGemini:
             return GoogleGeminiClient(account: account, model: model)
         case .ollama:
             let credentials = (try? accountStore.revealCredentials(accountId: account.id)) ?? AIAccountCredentials()
             return OllamaClient(account: account, model: model, credentials: credentials)
         case .githubCopilot:
-            let credentials = try accountStore.revealCredentials(accountId: account.id)
-            return GitHubCopilotClient(account: account, model: model, credentials: credentials)
+            return GitHubCopilotClient(account: account, model: model, credentials: AIAccountCredentials())
         case .cursor:
             return CursorClient(account: account, model: model)
         case .groq, .deepseek, .togetherAI, .glmZhipu, .xai, .mistral,

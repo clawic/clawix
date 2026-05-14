@@ -51,15 +51,31 @@ struct GitHubCopilotClient: AIClient {
     /// `api.github.com/copilot_internal/v2/token` is the same one the
     /// official Copilot extensions hit — it returns `{ token, expires_at, ... }`.
     private func fetchCopilotToken() async throws -> String {
-        guard let github = credentials.accessToken, !github.isEmpty else {
-            throw AIClientError.missingCredentials
+        let data: Data
+        if let github = credentials.accessToken, !github.isEmpty {
+            var req = URLRequest(url: URL(string: "https://api.github.com/copilot_internal/v2/token")!)
+            req.httpMethod = "GET"
+            req.setValue("token \(github)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+            req.setValue("vscode/1.95.0", forHTTPHeaderField: "Editor-Version")
+            data = try await AIHTTP.send(req, timeoutSeconds: 10).0
+        } else {
+            data = try await AIAccountBroker.send(
+                account: account,
+                fieldName: "access_token",
+                method: "GET",
+                url: URL(string: "https://api.github.com/copilot_internal/v2/token")!,
+                headers: [
+                    "Authorization": "token {{\(AIAccountBroker.secretName(for: account)).access_token}}",
+                    "Accept": "application/vnd.github+json",
+                    "Editor-Version": "vscode/1.95.0"
+                ],
+                body: nil,
+                agent: "clawix.ai.github-copilot",
+                riskTier: "read",
+                timeoutSeconds: 10
+            ).0
         }
-        var req = URLRequest(url: URL(string: "https://api.github.com/copilot_internal/v2/token")!)
-        req.httpMethod = "GET"
-        req.setValue("token \(github)", forHTTPHeaderField: "Authorization")
-        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        req.setValue("vscode/1.95.0", forHTTPHeaderField: "Editor-Version")
-        let (data, _) = try await AIHTTP.send(req, timeoutSeconds: 10)
         struct Resp: Codable { let token: String }
         return try AIHTTP.decode(Resp.self, from: data).token
     }
