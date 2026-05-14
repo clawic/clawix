@@ -160,14 +160,15 @@ struct EnhancementSettingsSheet: View {
                     }
                     .buttonStyle(.plain)
                     Button("Save") {
-                        let key = apiKeyDraft
+                        let key = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !key.isEmpty else { return }
                         let target = provider
                         Task {
                             try? await EnhancementSecrets.setAPIKey(key, for: target)
                             await refreshConnected()
                         }
                     }
-                    .disabled(vault.state != .unlocked)
+                    .disabled(vault.state != .unlocked || apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             } else if provider == .ollama {
                 TextField("Base URL", text: $baseURLDraft)
@@ -356,7 +357,7 @@ struct EnhancementSettingsSheet: View {
     }
 
     private func reloadDrafts() async {
-        apiKeyDraft = (await EnhancementSecrets.apiKey(for: provider)) ?? ""
+        apiKeyDraft = ""
         modelDraft = UserDefaults.standard.string(
             forKey: EnhancementSettings.modelKey(for: provider.rawValue)
         ) ?? (provider.defaultModels.first ?? "")
