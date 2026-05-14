@@ -137,12 +137,11 @@ check_git_metadata() {
 
 check_git_metadata
 
-# The macOS app must never touch the system Keychain. Daemon admin auth
-# uses an ephemeral token in the daemon's private data dir; provider API
-# keys live in the user's encrypted vault under "Clawix System". The one
-# exception is `Bootstrap/LegacyKeychainPurge.swift`, which deletes
-# leftovers from pre-release builds and is whitelisted by the
-# `LEGACY-KEYCHAIN-PURGE-OK` marker on its first non-empty line.
+# The macOS app must not store provider/admin plaintext in the system
+# Keychain. Provider API keys live in the user's encrypted vault under
+# "Clawix System"; daemon admin auth uses ephemeral bootstrap. The allowed
+# Security.framework uses are explicit: legacy cleanup and the Secrets
+# platform KEK used to bind local vault unlock to this device.
 check_no_keychain_in_macos_sources() {
   local sources_dir="$ROOT_DIR/macos/Sources/Clawix"
   [[ -d "$sources_dir" ]] || return 0
@@ -161,13 +160,13 @@ check_no_keychain_in_macos_sources() {
     [[ -z "$file" ]] && continue
     local first_line
     first_line="$(grep -m 1 -E '\S' "$file" || true)"
-    if [[ "$first_line" == *"LEGACY-KEYCHAIN-PURGE-OK"* ]]; then
+    if [[ "$first_line" == *"LEGACY-KEYCHAIN-PURGE-OK"* ]] || [[ "$first_line" == *"SECRETS-PLATFORM-KEYCHAIN-OK"* ]]; then
       continue
     fi
     offenders+="${file}"$'\n'
   done <<< "$files"
   if [[ -n "$offenders" ]]; then
-    echo "public hygiene failed: macOS sources may not use Security.framework / Keychain APIs" >&2
+    echo "public hygiene failed: macOS sources may not use unapproved Security.framework / Keychain APIs" >&2
     printf "%s" "$offenders" >&2
     FAIL=1
   fi

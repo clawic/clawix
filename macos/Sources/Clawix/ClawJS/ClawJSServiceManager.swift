@@ -516,7 +516,8 @@ final class ClawJSServiceManager: ObservableObject {
                 bootstrapPipe = Pipe()
                 bootstrapData = try Self.secretsBootstrapData(
                     adminToken: adminToken,
-                    signedHostToken: signedHostToken
+                    signedHostToken: signedHostToken,
+                    platformKey: try SecretsPlatformKey.loadOrCreate()
                 )
                 process.standardInput = bootstrapPipe
             } else {
@@ -826,13 +827,16 @@ final class ClawJSServiceManager: ObservableObject {
         return env
     }
 
-    private static func secretsBootstrapData(adminToken: String?, signedHostToken: String?) throws -> Data {
+    private static func secretsBootstrapData(adminToken: String?, signedHostToken: String?, platformKey: Data?) throws -> Data {
         var payload: [String: String] = [:]
         if let adminToken {
             payload["adminToken"] = adminToken
         }
         if let signedHostToken {
             payload["signedHostToken"] = signedHostToken
+        }
+        if let platformKey {
+            payload["kekBase64"] = platformKey.base64EncodedString()
         }
         return try JSONSerialization.data(withJSONObject: payload, options: [])
             + Data([0x0a])

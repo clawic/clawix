@@ -53,6 +53,28 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         )
     }
 
+    func testSecretsServiceUsesKeychainPlatformKeyForKekBootstrap() throws {
+        let managerSource = try readSource("ClawJS/ClawJSServiceManager.swift")
+        let platformKeySource = try readSource("Secrets/SecretsPlatformKey.swift")
+
+        XCTAssertTrue(
+            managerSource.contains("SecretsPlatformKey.loadOrCreate()"),
+            "Secrets launch must provide a host-protected platform KEK to the ClawJS vault."
+        )
+        XCTAssertTrue(
+            managerSource.contains("payload[\"kekBase64\"] = platformKey.base64EncodedString()"),
+            "The platform KEK should travel only in the anonymous bootstrap payload."
+        )
+        XCTAssertTrue(
+            platformKeySource.contains("SECRETS-PLATFORM-KEYCHAIN-OK"),
+            "Keychain use for the Secrets platform KEK must be explicit and auditable."
+        )
+        XCTAssertTrue(
+            platformKeySource.contains("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly"),
+            "The Secrets platform KEK must be device-local, not portable Keychain material."
+        )
+    }
+
     func testConnectionAuthReadDoesNotReturnPlaintext() throws {
         let source = try readSource("Agents/AgentStore.swift")
         let body = try extractFunctionBody(
