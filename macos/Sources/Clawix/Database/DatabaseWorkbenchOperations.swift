@@ -501,7 +501,7 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
                 return .init(kind: .restoreDatabase, status: .blocked, message: "Restore input must be different from the destination database.")
             }
 
-            let sourceQueue = try DatabaseQueue(path: source)
+            let sourceQueue = try ClawixRegisteredDatabaseQueue.open(path: source)
             try sourceQueue.read { db in
                 _ = try String.fetchOne(db, sql: "PRAGMA quick_check")
             }
@@ -533,7 +533,7 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         var configuration = Configuration()
         configuration.readonly = true
         do {
-            let queue = try DatabaseQueue(path: databasePath, configuration: configuration)
+            let queue = try ClawixRegisteredDatabaseQueue.open(path: databasePath, configuration: configuration)
             let matches = try queue.read { db in
                 try searchSQLiteObjects(term, db: db)
             }
@@ -607,7 +607,7 @@ final class DatabaseWorkbenchOperationStore: ObservableObject {
         var configuration = Configuration()
         configuration.readonly = true
         do {
-            let queue = try DatabaseQueue(path: databasePath, configuration: configuration)
+            let queue = try ClawixRegisteredDatabaseQueue.open(path: databasePath, configuration: configuration)
             let diagnostics = try queue.read { db -> String in
                 let databaseRows = try Row.fetchAll(db, sql: "PRAGMA database_list")
                 let attached = databaseRows.compactMap { row -> String? in

@@ -84,9 +84,9 @@ final class DatabaseWorkbenchSessionTests: XCTestCase {
 
     func test_sqliteReadOnlyRunnerReturnsRowsFromLocalFile() throws {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("clawix-workbench-\(UUID().uuidString).sqlite")
+            .appendingPathComponent("clawix-workbench-\(UUID().uuidString).\(ClawixPersistentSurfacePaths.components.sqliteExtension)")
         defer { try? FileManager.default.removeItem(at: url) }
-        let queue = try DatabaseQueue(path: url.path)
+        let queue = try ClawixRegisteredDatabaseQueue.open(path: url.path)
         try queue.write { db in
             try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
             try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada'), ('Linus')")
@@ -108,9 +108,9 @@ final class DatabaseWorkbenchSessionTests: XCTestCase {
 
     func test_localSQLiteRunClearsStaleResultsWhenBlocked() throws {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("clawix-workbench-\(UUID().uuidString).sqlite")
+            .appendingPathComponent("clawix-workbench-\(UUID().uuidString).\(ClawixPersistentSurfacePaths.components.sqliteExtension)")
         defer { try? FileManager.default.removeItem(at: url) }
-        let queue = try DatabaseQueue(path: url.path)
+        let queue = try ClawixRegisteredDatabaseQueue.open(path: url.path)
         try queue.write { db in
             try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
             try db.execute(sql: "INSERT INTO users (name) VALUES ('Ada')")

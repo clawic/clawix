@@ -52,7 +52,7 @@ final class DatabaseConnectionProfileStoreTests: XCTestCase {
     func test_fileProfileDryRunChecksLocalFileExistence() throws {
         let sqlite = try XCTUnwrap(DatabaseWorkbenchPreferences.supportedEngines.first { $0.id == "sqlite" })
         let temp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("clawix-db-profile-\(UUID().uuidString).sqlite")
+            .appendingPathComponent("clawix-db-profile-\(UUID().uuidString).\(ClawixPersistentSurfacePaths.components.sqliteExtension)")
         FileManager.default.createFile(atPath: temp.path, contents: Data())
         defer { try? FileManager.default.removeItem(at: temp) }
 

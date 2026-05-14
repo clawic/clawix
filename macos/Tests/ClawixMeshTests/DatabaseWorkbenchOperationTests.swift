@@ -111,7 +111,7 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
 
         XCTAssertEqual(plan.status, .localReady)
         XCTAssertEqual(plan.message, "SQLite CSV import wrote 2 rows.")
-        let queue = try DatabaseQueue(path: paths.database.path)
+        let queue = try ClawixRegisteredDatabaseQueue.open(path: paths.database.path)
         let names = try queue.read { db in
             try String.fetchAll(db, sql: "SELECT name FROM users ORDER BY id")
         }
@@ -201,7 +201,7 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
 
         XCTAssertEqual(plan.status, .localReady)
         XCTAssertEqual(plan.message, "SQLite SQL dump import finished.")
-        let queue = try DatabaseQueue(path: paths.database.path)
+        let queue = try ClawixRegisteredDatabaseQueue.open(path: paths.database.path)
         let names = try queue.read { db in
             try String.fetchAll(db, sql: "SELECT name FROM users ORDER BY id")
         }
@@ -297,7 +297,7 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
     func test_sqliteBackupCopiesDatabaseWithoutOverwriting() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }
-        let output = paths.directory.appendingPathComponent("backup.sqlite")
+        let output = paths.directory.appendingPathComponent("backup.\(ClawixPersistentSurfacePaths.components.sqliteExtension)")
         let store = DatabaseWorkbenchOperationStore(defaults: defaults)
         store.outputPath = output.path
 
@@ -324,8 +324,8 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
     func test_sqliteRestoreReplacesLocalDatabase() throws {
         let paths = try makeSQLiteFixture()
         defer { try? FileManager.default.removeItem(at: paths.directory) }
-        let restoreSource = paths.directory.appendingPathComponent("restore.sqlite")
-        let sourceQueue = try DatabaseQueue(path: restoreSource.path)
+        let restoreSource = paths.directory.appendingPathComponent("restore.\(ClawixPersistentSurfacePaths.components.sqliteExtension)")
+        let sourceQueue = try ClawixRegisteredDatabaseQueue.open(path: restoreSource.path)
         try sourceQueue.write { db in
             try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
             try db.execute(sql: "INSERT INTO users (name) VALUES ('Grace')")
@@ -342,7 +342,7 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
 
         XCTAssertEqual(plan.status, .localReady)
         XCTAssertTrue(plan.message.contains("SQLite restore replaced"))
-        let restoredQueue = try DatabaseQueue(path: paths.database.path)
+        let restoredQueue = try ClawixRegisteredDatabaseQueue.open(path: paths.database.path)
         let names = try restoredQueue.read { db in
             try String.fetchAll(db, sql: "SELECT name FROM users ORDER BY id")
         }
@@ -492,8 +492,8 @@ final class DatabaseWorkbenchOperationTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("clawix-workbench-ops-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let database = directory.appendingPathComponent("fixture.sqlite")
-        let queue = try DatabaseQueue(path: database.path)
+        let database = directory.appendingPathComponent("fixture.\(ClawixPersistentSurfacePaths.components.sqliteExtension)")
+        let queue = try ClawixRegisteredDatabaseQueue.open(path: database.path)
         try queue.write { db in
             try db.execute(sql: "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
             if includeRows {
