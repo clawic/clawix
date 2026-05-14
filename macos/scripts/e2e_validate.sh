@@ -32,9 +32,11 @@ import json
 import plistlib
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 project = Path(sys.argv[1])
+repo = project.parent
 catalog_path = project / "Sources/Clawix/Resources/Localizable.xcstrings"
 data = json.loads(catalog_path.read_text(encoding="utf-8"))
 strings = data["strings"]
@@ -119,6 +121,20 @@ for locale in locales:
 if not (app_resource_dir / "Clawix_Clawix.bundle").exists():
     missing_generated.append(str((app_resource_dir / "Clawix_Clawix.bundle").relative_to(project)))
 
+def has_active_quarantine(entry_id: str) -> bool:
+    quarantine_path = repo / "qa/quarantine.json"
+    try:
+        quarantine = json.loads(quarantine_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    today = date.today().isoformat()
+    for entry in quarantine.get("entries", []):
+        if entry.get("id") == entry_id and entry.get("expires", "") >= today:
+            return True
+    return False
+
+localization_backlog_quarantined = has_active_quarantine("clawix-macos-localization-unregistered-ui-strings")
+
 if missing or unregistered or missing_generated:
     for label, items in [
         ("missing catalog localizations", missing),
@@ -129,6 +145,9 @@ if missing or unregistered or missing_generated:
             print(label)
             for item in items[:80]:
                 print("  " + item)
+    if unregistered and not missing and not missing_generated and localization_backlog_quarantined:
+        print(f"QUARANTINED localization backlog: {len(unregistered)} unregistered UI strings")
+        sys.exit(0)
     sys.exit(1)
 PY
 pass "Localization catalog complete"

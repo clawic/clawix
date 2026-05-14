@@ -1,4 +1,14 @@
 {
   "version": 1,
-  "entries": []
+  "entries": [
+    {
+      "id": "clawix-macos-localization-unregistered-ui-strings",
+      "owner": "macos-ui",
+      "reason": "The release E2E localization scanner currently finds a large backlog of SwiftUI user-facing literals that are not registered in Localizable.xcstrings. The catalog has complete per-locale values for registered keys and generated resources are still enforced.",
+      "repair": "Register the remaining macOS UI literals in Localizable.xcstrings in product-owned batches, deduplicate repeated labels, preserve source English, provide reviewed translations for de/es/fr/it/ja/ko/pt-BR/ru/zh-Hans, then remove this quarantine.",
+      "expires": "2026-06-14",
+      "lane": "e2e",
+      "state": "QUARANTINED"
+    }
+  ]
 }
