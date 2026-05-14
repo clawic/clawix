@@ -37,10 +37,17 @@ python3 "$SCRIPT_DIR/compile_xcstrings.py"
 echo "==> Building Swift package (release)…"
 cd "$PROJECT_DIR"
 swift build -c release 2>&1
+echo "==> Building Secrets XPC service (release)…"
+swift build -c release --target ClawixSecretsXPC 2>&1
 
 BINARY="$PROJECT_DIR/.build/release/${APP_NAME}"
 if [[ ! -f "$BINARY" ]]; then
     echo "ERROR: binary not found at $BINARY"
+    exit 1
+fi
+SECRETS_XPC_BINARY="$PROJECT_DIR/.build/release/ClawixSecretsXPC"
+if [[ ! -f "$SECRETS_XPC_BINARY" ]]; then
+    echo "ERROR: Secrets XPC service binary not found at $SECRETS_XPC_BINARY"
     exit 1
 fi
 
@@ -52,6 +59,29 @@ mkdir -p "$BUNDLE_DIR/Contents/Resources"
 cp "$BINARY" "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}"
 chmod +x "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}"
 cp "$ICON_FILE" "$BUNDLE_DIR/Contents/Resources/Clawix.icns"
+SECRETS_XPC_SERVICE_NAME="${BUNDLE_ID}.secrets-xpc"
+SECRETS_XPC_BUNDLE="$BUNDLE_DIR/Contents/XPCServices/ClawixSecretsXPC.xpc"
+mkdir -p "$SECRETS_XPC_BUNDLE/Contents/MacOS"
+cp "$SECRETS_XPC_BINARY" "$SECRETS_XPC_BUNDLE/Contents/MacOS/ClawixSecretsXPC"
+chmod +x "$SECRETS_XPC_BUNDLE/Contents/MacOS/ClawixSecretsXPC"
+cat > "$SECRETS_XPC_BUNDLE/Contents/Info.plist" << XPCPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>        <string>ClawixSecretsXPC</string>
+    <key>CFBundleIdentifier</key>        <string>${SECRETS_XPC_SERVICE_NAME}</string>
+    <key>CFBundleName</key>              <string>ClawixSecretsXPC</string>
+    <key>CFBundlePackageType</key>       <string>XPC!</string>
+    <key>CLXAllowedCallerIdentifier</key><string>${BUNDLE_ID}</string>
+    <key>XPCService</key>
+    <dict>
+        <key>ServiceType</key>           <string>Application</string>
+    </dict>
+</dict>
+</plist>
+XPCPLIST
 RESOURCE_BUNDLE="$(find "$PROJECT_DIR/.build" -path "*/release/${APP_NAME}_${APP_NAME}.bundle" -type d | head -n 1 || true)"
 if [[ -n "$RESOURCE_BUNDLE" ]]; then
     cp -R "$RESOURCE_BUNDLE" "$BUNDLE_DIR/Contents/Resources/"
@@ -170,6 +200,11 @@ if [[ -d "$SPARKLE_BUNDLE" ]]; then
     [[ -e "$SPARKLE_CURRENT/Autoupdate" ]] && sign_one "$SPARKLE_CURRENT/Autoupdate"
     [[ -e "$SPARKLE_CURRENT/Updater.app" ]] && sign_one "$SPARKLE_CURRENT/Updater.app"
     sign_one "$SPARKLE_BUNDLE"
+fi
+if [[ -d "$BUNDLE_DIR/Contents/XPCServices" ]]; then
+    while IFS= read -r xpc; do
+        sign_one "$xpc"
+    done < <(find "$BUNDLE_DIR/Contents/XPCServices" -maxdepth 1 -name "*.xpc" 2>/dev/null || true)
 fi
 codesign --force --sign "$SIGN_IDENTITY" --identifier "$BUNDLE_ID" --timestamp=none "$BUNDLE_DIR"
 

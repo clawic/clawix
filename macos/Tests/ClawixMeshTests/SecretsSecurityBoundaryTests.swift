@@ -111,6 +111,10 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         let reauthSource = try readSource("Secrets/SecretsReauthentication.swift")
         let platformKeySource = try readSource("Secrets/SecretsPlatformKey.swift")
         let localSecretKeySource = try readSource("Secrets/SecretsLocalSecretKey.swift")
+        let xpcClientSource = try readSource("Secrets/SecretsXPCAssertionClient.swift")
+        let xpcServiceSource = try readProjectSource("Sources/ClawixSecretsXPC/main.swift")
+        let packageSource = try readProjectSource("Package.swift")
+        let devScript = try readProjectSource("scripts/dev.sh")
 
         XCTAssertTrue(
             managerSource.contains("SecretsPlatformKey.loadOrCreate()"),
@@ -141,8 +145,32 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             "The Mac client must send password + Secret Key to the ClawJS vault."
         )
         XCTAssertTrue(
-            clientSource.contains("SecretsHostAssertion.makeHeader"),
-            "Signed-host Secrets requests must carry a per-request host assertion."
+            clientSource.contains("SecretsXPCAssertionClient.shared.assertionHeader"),
+            "Sensitive Secrets requests must obtain per-request assertions through the native XPC boundary."
+        )
+        XCTAssertTrue(
+            xpcClientSource.contains("NSXPCConnection(serviceName: serviceName)"),
+            "The Mac app must call a bundled Secrets-only XPC service for host assertions."
+        )
+        XCTAssertTrue(
+            xpcServiceSource.contains("NSXPCListener.service()"),
+            "The Secrets XPC service must be a native bundled XPC service."
+        )
+        XCTAssertTrue(
+            xpcServiceSource.contains("SecCodeCopyGuestWithAttributes"),
+            "The Secrets XPC service must verify the caller code signature before issuing assertions."
+        )
+        XCTAssertTrue(
+            xpcServiceSource.contains("CLXAllowedCallerIdentifier"),
+            "The Secrets XPC service must pin the allowed caller to the enclosing Clawix bundle identifier."
+        )
+        XCTAssertTrue(
+            packageSource.contains("name: \"ClawixSecretsXPC\""),
+            "The Secrets XPC service must compile as a separate native executable target."
+        )
+        XCTAssertTrue(
+            devScript.contains("Contents/XPCServices/ClawixSecretsXPC.xpc"),
+            "The dev app bundle must embed the Secrets XPC service in Contents/XPCServices."
         )
         XCTAssertTrue(
             clientSource.contains("secrets/unlock-local"),
@@ -242,6 +270,18 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             .deletingLastPathComponent()
             .appendingPathComponent(ClawixPersistentSurfacePaths.components.sources, isDirectory: true)
             .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+        return try String(
+            contentsOf: root.appendingPathComponent(relativePath, isDirectory: false),
+            encoding: .utf8
+        )
+    }
+
+    private func readProjectSource(_ relativePath: String) throws -> String {
+        let testFile = URL(fileURLWithPath: #filePath)
+        let root = testFile
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
         return try String(
             contentsOf: root.appendingPathComponent(relativePath, isDirectory: false),
             encoding: .utf8

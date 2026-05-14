@@ -58,10 +58,20 @@ swift build -c release \
     -Xswiftc -file-prefix-map -Xswiftc "${PROJECT_DIR}/.build=clawix/.build" \
     -Xswiftc -file-prefix-map -Xswiftc "${PROJECT_DIR}=clawix/macos" \
     2>&1
+echo "==> Building Secrets XPC service (release)"
+swift build -c release --target ClawixSecretsXPC \
+    -Xswiftc -file-prefix-map -Xswiftc "${PROJECT_DIR}/.build=clawix/.build" \
+    -Xswiftc -file-prefix-map -Xswiftc "${PROJECT_DIR}=clawix/macos" \
+    2>&1
 
 BINARY="$PROJECT_DIR/.build/release/${APP_NAME}"
 if [[ ! -f "$BINARY" ]]; then
     echo "ERROR: binary not produced at $BINARY" >&2
+    exit 1
+fi
+SECRETS_XPC_BINARY="$PROJECT_DIR/.build/release/ClawixSecretsXPC"
+if [[ ! -f "$SECRETS_XPC_BINARY" ]]; then
+    echo "ERROR: Secrets XPC service binary not produced at $SECRETS_XPC_BINARY" >&2
     exit 1
 fi
 
@@ -92,6 +102,29 @@ mkdir -p "$BUNDLE_DIR/Contents/Frameworks"
 cp "$BINARY" "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}"
 chmod +x "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}"
 cp "$ICON_FILE" "$BUNDLE_DIR/Contents/Resources/Clawix.icns"
+SECRETS_XPC_SERVICE_NAME="${BUNDLE_ID}.secrets-xpc"
+SECRETS_XPC_BUNDLE="$BUNDLE_DIR/Contents/XPCServices/ClawixSecretsXPC.xpc"
+mkdir -p "$SECRETS_XPC_BUNDLE/Contents/MacOS"
+cp "$SECRETS_XPC_BINARY" "$SECRETS_XPC_BUNDLE/Contents/MacOS/ClawixSecretsXPC"
+chmod +x "$SECRETS_XPC_BUNDLE/Contents/MacOS/ClawixSecretsXPC"
+cat > "$SECRETS_XPC_BUNDLE/Contents/Info.plist" << XPCPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>        <string>ClawixSecretsXPC</string>
+    <key>CFBundleIdentifier</key>        <string>${SECRETS_XPC_SERVICE_NAME}</string>
+    <key>CFBundleName</key>              <string>ClawixSecretsXPC</string>
+    <key>CFBundlePackageType</key>       <string>XPC!</string>
+    <key>CLXAllowedCallerIdentifier</key><string>${BUNDLE_ID}</string>
+    <key>XPCService</key>
+    <dict>
+        <key>ServiceType</key>           <string>Application</string>
+    </dict>
+</dict>
+</plist>
+XPCPLIST
 RESOURCE_BUNDLE="$(find "$PROJECT_DIR/.build" -path "*/release/${APP_NAME}_${APP_NAME}.bundle" -type d | head -n 1 || true)"
 if [[ -n "$RESOURCE_BUNDLE" ]]; then
     cp -R "$RESOURCE_BUNDLE" "$BUNDLE_DIR/Contents/Resources/"
@@ -300,6 +333,13 @@ if [[ -f "$HELPER_BIN" ]]; then
              --sign "$DEVELOPER_ID_IDENTITY" \
              --identifier "clawix.bridge" \
              "$HELPER_BIN"
+fi
+
+if [[ -d "$BUNDLE_DIR/Contents/XPCServices" ]]; then
+    echo "==> Signing bundled XPC services"
+    while IFS= read -r xpc; do
+        sign "$xpc"
+    done < <(find "$BUNDLE_DIR/Contents/XPCServices" -maxdepth 1 -name "*.xpc" 2>/dev/null || true)
 fi
 
 echo "==> Signing app binary + bundle (identity: $DEVELOPER_ID_IDENTITY)"

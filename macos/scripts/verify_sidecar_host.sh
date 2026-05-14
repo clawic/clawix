@@ -5,6 +5,7 @@ set -euo pipefail
 
 APP="${CLAWIX_APP_PATH:-/Applications/Clawix.app}"
 EXE="$APP/Contents/MacOS/Clawix"
+SECRETS_XPC="$APP/Contents/XPCServices/ClawixSecretsXPC.xpc"
 
 services=(
   "sessions:24101"
@@ -32,6 +33,8 @@ ppid_of() {
 
 [[ -d "$APP" ]] || fail "canonical app missing at $APP"
 codesign --verify --strict "$APP" >/dev/null 2>&1 || fail "codesign verification failed for $APP"
+[[ -d "$SECRETS_XPC" ]] || fail "Secrets XPC service missing at $SECRETS_XPC"
+codesign --verify --strict "$SECRETS_XPC" >/dev/null 2>&1 || fail "codesign verification failed for $SECRETS_XPC"
 
 signature_detail="$(codesign -dv "$APP" 2>&1 || true)"
 if grep -q 'Signature=adhoc' <<< "$signature_detail"; then
@@ -40,6 +43,12 @@ fi
 if ! grep -q '^TeamIdentifier=' <<< "$signature_detail"; then
   fail "$APP has no TeamIdentifier"
 fi
+xpc_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$SECRETS_XPC/Contents/Info.plist" 2>/dev/null || true)"
+app_identifier="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist" 2>/dev/null || true)"
+[[ "$xpc_identifier" == "${app_identifier}.secrets-xpc" ]] || fail "Secrets XPC identifier $xpc_identifier does not match app identifier $app_identifier"
+allowed_caller="$(/usr/libexec/PlistBuddy -c 'Print :CLXAllowedCallerIdentifier' "$SECRETS_XPC/Contents/Info.plist" 2>/dev/null || true)"
+[[ "$allowed_caller" == "$app_identifier" ]] || fail "Secrets XPC allowed caller $allowed_caller does not match app identifier $app_identifier"
+echo "PASS secrets-xpc bundle=signed identifier=$xpc_identifier caller=$allowed_caller"
 
 mapfile -t app_pids < <(pgrep -x "Clawix" 2>/dev/null | while read -r pid; do
   [[ -n "$pid" ]] || continue

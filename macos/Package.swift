@@ -97,6 +97,10 @@ let package = Package(
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
         ),
+        .executableTarget(
+            name: "ClawixSecretsXPC",
+            path: "Sources/ClawixSecretsXPC"
+        ),
         .target(
             name: "ClawixSimulatorKitShim",
             path: "Sources/ClawixSimulatorKitShim",

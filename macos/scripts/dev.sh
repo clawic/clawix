@@ -147,9 +147,16 @@ python3 "$SCRIPT_DIR/compile_xcstrings.py"
 # 1) Build.
 echo "==> Building Swift package…"
 swift build 2>&1
+echo "==> Building Secrets XPC service…"
+swift build --target ClawixSecretsXPC 2>&1
 
 if [[ ! -f "$PROJECT_DIR/.build/debug/${APP_NAME}" ]]; then
     echo "ERROR: binary not produced at .build/debug/${APP_NAME}"
+    exit 1
+fi
+SECRETS_XPC_BIN_BUILT="$PROJECT_DIR/.build/debug/ClawixSecretsXPC"
+if [[ ! -f "$SECRETS_XPC_BIN_BUILT" ]]; then
+    echo "ERROR: Secrets XPC service binary not produced at $SECRETS_XPC_BIN_BUILT"
     exit 1
 fi
 
@@ -379,6 +386,33 @@ if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
 AGENTPLIST
 fi
 
+# 3.25) Embed the Secrets-only XPC authorization service. The service issues
+#      short HMAC assertions for sensitive Secrets HTTP requests after macOS
+#      XPC connects a caller whose code signature identifier matches this app.
+SECRETS_XPC_SERVICE_NAME="${BUNDLE_ID}.secrets-xpc"
+SECRETS_XPC_BUNDLE="$BUNDLE/Contents/XPCServices/ClawixSecretsXPC.xpc"
+mkdir -p "$SECRETS_XPC_BUNDLE/Contents/MacOS"
+cp "$SECRETS_XPC_BIN_BUILT" "$SECRETS_XPC_BUNDLE/Contents/MacOS/ClawixSecretsXPC"
+chmod +x "$SECRETS_XPC_BUNDLE/Contents/MacOS/ClawixSecretsXPC"
+cat > "$SECRETS_XPC_BUNDLE/Contents/Info.plist" << XPCPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>        <string>ClawixSecretsXPC</string>
+    <key>CFBundleIdentifier</key>        <string>${SECRETS_XPC_SERVICE_NAME}</string>
+    <key>CFBundleName</key>              <string>ClawixSecretsXPC</string>
+    <key>CFBundlePackageType</key>       <string>XPC!</string>
+    <key>CLXAllowedCallerIdentifier</key><string>${BUNDLE_ID}</string>
+    <key>XPCService</key>
+    <dict>
+        <key>ServiceType</key>           <string>Application</string>
+    </dict>
+</dict>
+</plist>
+XPCPLIST
+
 # 3.3) Generate the LaunchAgent plist for the local LLM runtime. Unlike
 #      the bridge daemon, this binary does NOT ship inside the bundle —
 #      it's downloaded lazily into Application Support. So we cannot use
@@ -571,6 +605,12 @@ if [[ -f "$HELPER_BIN" ]]; then
         cat /tmp/clawix-bridge-sign.err >&2
         codesign --force --sign - --identifier "clawix.bridge" "$HELPER_BIN"
     fi
+fi
+
+if [[ -d "$BUNDLE/Contents/XPCServices" ]]; then
+    while IFS= read -r xpc; do
+        sign_one "$xpc"
+    done < <(find "$BUNDLE/Contents/XPCServices" -maxdepth 1 -name "*.xpc" 2>/dev/null || true)
 fi
 
 SPARKLE_BUNDLE="$BUNDLE/Contents/Frameworks/Sparkle.framework"

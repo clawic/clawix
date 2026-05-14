@@ -677,7 +677,11 @@ final class ClawJSSecretsClient {
         }
         if signedHostToken != nil, let hostAssertionKeyBase64 {
             request.setValue(
-                try SecretsHostAssertion.makeHeader(keyBase64: hostAssertionKeyBase64, method: method, path: path),
+                try await SecretsXPCAssertionClient.shared.assertionHeader(
+                    keyBase64: hostAssertionKeyBase64,
+                    method: method,
+                    path: path
+                ),
                 forHTTPHeaderField: "x-claw-secrets-host-assertion"
             )
         }
