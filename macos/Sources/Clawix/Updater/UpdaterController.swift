@@ -14,8 +14,8 @@ final class UpdaterController: NSObject, ObservableObject, SPUUpdaterDelegate {
     // resets to false on every relaunch and only lights up again when
     // `didFindValidUpdate` fires, which only happens during an actual
     // check.
-    static let pendingBuildKey = "ClawixPendingUpdateBuild"
-    static let pendingDisplayKey = "ClawixPendingUpdateDisplay"
+    nonisolated static let pendingBuildKey = "ClawixPendingUpdateBuild"
+    nonisolated static let pendingDisplayKey = "ClawixPendingUpdateDisplay"
 
     override init() {
         super.init()

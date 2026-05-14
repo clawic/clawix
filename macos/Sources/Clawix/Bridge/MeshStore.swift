@@ -40,7 +40,7 @@ final class MeshStore: ObservableObject {
 
     private let client: MeshClient
     private var pollers: [String: Task<Void, Never>] = [:]
-    static let workspacesDefaultsKey = "ClawixMesh.RemoteWorkspaces.v1"
+    nonisolated static let workspacesDefaultsKey = "ClawixMesh.RemoteWorkspaces.v1"
 
     enum PairingResult: Equatable {
         case success(displayName: String)

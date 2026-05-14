@@ -26,7 +26,7 @@ final class PublishingManager: ObservableObject {
 
     let client: ClawJSPublishingClient
 
-    static let workspaceKey = "clawix.publishing.workspaceId.v1"
+    nonisolated static let workspaceKey = "clawix.publishing.workspaceId.v1"
 
     private var bootstrapTask: Task<Void, Never>?
     private var supervisorObserver: AnyCancellable?
