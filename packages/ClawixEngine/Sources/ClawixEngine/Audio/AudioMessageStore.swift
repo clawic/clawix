@@ -82,16 +82,16 @@ public actor AudioMessageStore {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory())
                 .appendingPathComponent("Library/Application Support", isDirectory: true)
-        let clawix = base.appendingPathComponent("Clawix", isDirectory: true)
-        self.storeRoot = clawix.appendingPathComponent("audio", isDirectory: true)
-        self.metaURL = clawix.appendingPathComponent("audio-meta.json")
+        let clawix = base.appendingPathComponent(ClawixPersistentSurfacePathComponents.applicationSupportName, isDirectory: true)
+        self.storeRoot = clawix.appendingPathComponent(ClawixPersistentSurfacePathComponents.audioDirectory, isDirectory: true)
+        self.metaURL = clawix.appendingPathComponent(ClawixPersistentSurfacePathComponents.audioMetadataFile)
     }
 
     /// Override the root for tests so we don't pollute the real
     /// Application Support tree. The store keeps the same nested layout.
     public init(rootForTesting root: URL) {
-        self.storeRoot = root.appendingPathComponent("audio", isDirectory: true)
-        self.metaURL = root.appendingPathComponent("audio-meta.json")
+        self.storeRoot = root.appendingPathComponent(ClawixPersistentSurfacePathComponents.audioDirectory, isDirectory: true)
+        self.metaURL = root.appendingPathComponent(ClawixPersistentSurfacePathComponents.audioMetadataFile)
     }
 
     // MARK: - Public API

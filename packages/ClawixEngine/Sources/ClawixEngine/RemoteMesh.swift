@@ -73,7 +73,7 @@ public final class RemoteMeshStore: @unchecked Sendable {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
         }
         return URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-            .appendingPathComponent(".clawix/mesh", isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePathComponents.meshHome, isDirectory: true)
     }
 
     public func peers() -> [PeerRecord] {

@@ -16,10 +16,10 @@ public final class PairingService {
     public static let shared = PairingService()
 
     public let port: UInt16
-    private let bearerKey = "ClawixBridge.Bearer.v1"
-    private let shortCodeKey = "ClawixBridge.ShortCode.v1"
-    private let coordinatorURLKey = "ClawixBridge.Coordinator.URL.v1"
-    private let irohNodeIDKey = "ClawixBridge.Iroh.NodeID.v1"
+    private let bearerKey = ClawixPersistentSurfaceKeys.bridgeBearer
+    private let shortCodeKey = ClawixPersistentSurfaceKeys.bridgeShortCode
+    private let coordinatorURLKey = ClawixPersistentSurfaceKeys.bridgeCoordinatorURL
+    private let irohNodeIDKey = ClawixPersistentSurfaceKeys.bridgeIrohNodeID
     private let defaults: UserDefaults
 
     /// Alphabet for the human-typeable short code: 32 unambiguous

@@ -20,7 +20,7 @@ public final class SecretsDatabase {
 
     public static func openTemporary() throws -> SecretsDatabase {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("clawix-vault-\(UUID().uuidString).sqlite")
+            .appendingPathComponent(ClawixPersistentSurfacePathComponents.temporaryVaultDatabaseName(id: UUID()))
         return try SecretsDatabase(at: tmp)
     }
 

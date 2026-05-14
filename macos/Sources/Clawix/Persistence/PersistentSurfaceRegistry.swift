@@ -317,6 +317,30 @@ enum ClawixPersistentSurfaceRegistry {
                 parentId: "clawix.applicationSupport"
             ),
             ClawixPersistentSurface.folder(
+                id: "clawix.audioCatalog",
+                name: "Audio catalog files",
+                path: "~/Library/Application Support/Clawix/audio",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.file(
+                id: "clawix.audioCatalogMetadata",
+                name: "Audio catalog metadata",
+                path: "~/Library/Application Support/Clawix/audio-meta.json",
+                parentId: "clawix.applicationSupport"
+            ),
+            ClawixPersistentSurface.folder(
+                id: "clawix.meshHome",
+                name: "Remote mesh home",
+                path: "~/.clawix/mesh",
+                parentId: "clawix.home"
+            ),
+            ClawixPersistentSurface.database(
+                id: "clawix.secretsTemporaryVaultPattern",
+                name: "Temporary secrets vault database pattern",
+                path: "<tmp>/clawix-vault-<uuid>.sqlite",
+                parentId: nil
+            ),
+            ClawixPersistentSurface.folder(
                 id: "clawix.apps",
                 name: "Apps",
                 path: "~/Library/Application Support/Clawix/Apps",
@@ -468,26 +492,32 @@ enum ClawixPersistentSurfaceRegistry {
                 direction: "bidirectional"
             )
         }
-        let meshRoutes: [(String, String, String)] = [
-            ("GET", "/v1/mesh/identity", "Mesh identity"),
-            ("GET", "/v1/mesh/peers", "Mesh peers"),
-            ("GET", "/v1/mesh/workspaces", "Mesh workspaces"),
-            ("GET", "/v1/mesh/jobs/{jobId}", "Mesh job output"),
-            ("POST", "/v1/mesh/workspaces", "Create mesh workspace"),
-            ("POST", "/v1/mesh/peers", "Register mesh peer"),
-            ("POST", "/v1/mesh/link", "Link mesh peer"),
-            ("POST", "/v1/mesh/pair", "Pair mesh peer"),
-            ("POST", "/v1/mesh/jobs", "Start mesh job"),
-            ("POST", "/v1/mesh/jobs/cancel", "Cancel mesh job"),
-            ("POST", "/v1/mesh/jobs/events", "Read mesh job events"),
+        let apiRoutes: [(String, String, String, String)] = [
+            ("mesh", "GET", "/v1/mesh/identity", "Mesh identity"),
+            ("mesh", "GET", "/v1/mesh/peers", "Mesh peers"),
+            ("mesh", "GET", "/v1/mesh/workspaces", "Mesh workspaces"),
+            ("mesh", "GET", "/v1/mesh/jobs/{jobId}", "Mesh job output"),
+            ("mesh", "POST", "/v1/mesh/workspaces", "Create mesh workspace"),
+            ("mesh", "POST", "/v1/mesh/peers", "Register mesh peer"),
+            ("mesh", "POST", "/v1/mesh/link", "Link mesh peer"),
+            ("mesh", "POST", "/v1/mesh/pair", "Pair mesh peer"),
+            ("mesh", "POST", "/v1/mesh/jobs", "Start mesh job"),
+            ("mesh", "POST", "/v1/mesh/jobs/cancel", "Cancel mesh job"),
+            ("mesh", "POST", "/v1/mesh/jobs/events", "Read mesh job events"),
+            ("audio", "GET", "/v1/audio", "List audio catalog"),
+            ("audio", "GET", "/v1/audio/{audioId}", "Read audio catalog item"),
+            ("audio", "GET", "/v1/audio/{audioId}/bytes", "Read audio bytes"),
+            ("audio", "POST", "/v1/audio", "Register audio"),
+            ("audio", "POST", "/v1/audio/{audioId}/transcripts", "Attach audio transcript"),
+            ("audio", "DELETE", "/v1/audio/{audioId}", "Delete audio catalog item"),
         ]
-        let routeNodes = meshRoutes.map { method, route, name in
+        let routeNodes = apiRoutes.map { domain, method, route, name in
             let routeId = String(route.dropFirst(4))
                 .replacingOccurrences(of: "/", with: ".")
                 .replacingOccurrences(of: "{", with: "")
                 .replacingOccurrences(of: "}", with: "")
             return ClawixPersistentSurface.contract(
-                id: "clawix.api.mesh.\(method.lowercased()).\(routeId)",
+                id: "clawix.api.\(domain).\(method.lowercased()).\(routeId)",
                 kind: .apiRoute,
                 name: name,
                 parentId: "claw.contracts.api",
@@ -561,6 +591,7 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.content.rightSidebarWidth", "Right sidebar width", ClawixPersistentSurfaceKeys.rightSidebarWidth, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.secrets.advancedExpanded", "Secrets advanced expanded", ClawixPersistentSurfaceKeys.secretsAdvancedExpanded, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.advancedExpanded", "Dictation advanced expanded", ClawixPersistentSurfaceKeys.dictationAdvancedExpanded, PersistentSurfaceKind.appStorageKey),
+            ("clawix.prefs.dictation.activeModel", "Dictation active model", ClawixPersistentSurfaceKeys.dictationActiveModel, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.remote.coordinatorUrl", "Remote coordinator URL", ClawixPersistentSurfaceKeys.remoteCoordinatorUrl, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.remote.email", "Remote email", ClawixPersistentSurfaceKeys.remoteEmail, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.remote.deviceId", "Remote device id", ClawixPersistentSurfaceKeys.remoteDeviceId, PersistentSurfaceKind.appStorageKey),
@@ -688,6 +719,9 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.useAppleScriptPaste", "AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPaste, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.useAppleScriptPasteLegacy", "Legacy AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.bearer", "Bridge bearer token reference", ClawixPersistentSurfaceKeys.bridgeBearer, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.bridge.shortCode", "Bridge short code", ClawixPersistentSurfaceKeys.bridgeShortCode, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.bridge.coordinatorURL", "Bridge coordinator URL", ClawixPersistentSurfaceKeys.bridgeCoordinatorURL, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.bridge.irohNodeID", "Bridge Iroh node id", ClawixPersistentSurfaceKeys.bridgeIrohNodeID, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.host", "Bridge host override", ClawixPersistentSurfaceKeys.bridgeHost, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.binary.path", "Clawix binary path", ClawixPersistentSurfaceKeys.binaryPath, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.backgroundBridge.wasEnabled", "Background bridge was enabled", ClawixPersistentSurfaceKeys.backgroundBridgeWasEnabled, PersistentSurfaceKind.preferenceKey),
@@ -791,7 +825,11 @@ enum ClawixPersistentSurfaceKeys {
     static let useAppleScriptPasteLegacy = "UseAppleScriptPaste"
     static let bridgeDefaultsSuite = "clawix.bridge"
     static let bridgeBearer = "ClawixBridge.Bearer.v1"
+    static let bridgeShortCode = "ClawixBridge.ShortCode.v1"
+    static let bridgeCoordinatorURL = "ClawixBridge.Coordinator.URL.v1"
+    static let bridgeIrohNodeID = "ClawixBridge.Iroh.NodeID.v1"
     static let bridgeHost = "ClawixBridge.Host.v1"
+    static let dictationActiveModel = "dictation.activeModel"
     static let featureProviderAccountPattern = "feature.<feature>.providerAccountId"
     static let featureProviderModelPattern = "feature.<feature>.modelId"
     static let providerEnabledPattern = "provider.<provider>.enabled"

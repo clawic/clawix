@@ -18,7 +18,7 @@ public final class DictationModelManager: ObservableObject {
 
     /// Persisted choice of active model. Stored in UserDefaults so the
     /// GUI and the LaunchAgent daemon agree on which variant to load.
-    public static let activeModelDefaultsKey = "dictation.activeModel"
+    public static let activeModelDefaultsKey = ClawixPersistentSurfaceKeys.dictationActiveModel
 
     /// Posted by `TranscriptionService` (or anything else that wipes a
     /// broken install) so every `DictationModelManager` instance —

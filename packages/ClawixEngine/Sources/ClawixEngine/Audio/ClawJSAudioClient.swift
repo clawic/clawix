@@ -214,19 +214,19 @@ public struct ClawJSAudioClient: Sendable {
     // MARK: - Endpoints
 
     public func register(_ input: RegisterInput) async throws -> AssetWithTranscripts {
-        try await post("/v1/audio", body: input)
+        try await post(ClawixPersistentSurfaceAPI.path("/audio"), body: input)
     }
 
     public func attachTranscript(audioId: String, input: AttachTranscriptInput) async throws -> Transcript {
-        try await post("/v1/audio/\(audioId)/transcripts", body: input)
+        try await post(ClawixPersistentSurfaceAPI.path("/audio/\(audioId)/transcripts"), body: input)
     }
 
     public func get(audioId: String, appId: String) async throws -> AssetWithTranscripts {
-        try await get("/v1/audio/\(audioId)?appId=\(urlEncode(appId))")
+        try await get(ClawixPersistentSurfaceAPI.path("/audio/\(audioId)?appId=\(urlEncode(appId))"))
     }
 
     public func getBytes(audioId: String, appId: String) async throws -> BytesResponse {
-        try await get("/v1/audio/\(audioId)/bytes?appId=\(urlEncode(appId))")
+        try await get(ClawixPersistentSurfaceAPI.path("/audio/\(audioId)/bytes?appId=\(urlEncode(appId))"))
     }
 
     public func list(filter: ListFilter) async throws -> ListResult {
@@ -240,14 +240,14 @@ public struct ClawJSAudioClient: Sendable {
         if let v = filter.limit { items.append(.init(name: "limit", value: String(v))) }
         if let v = filter.offset { items.append(.init(name: "offset", value: String(v))) }
         var components = URLComponents()
-        components.path = "/v1/audio"
+        components.path = ClawixPersistentSurfaceAPI.path("/audio")
         components.queryItems = items
         return try await get(components.url(relativeTo: origin)!.absoluteString.replacingOccurrences(of: origin.absoluteString, with: ""))
     }
 
     @discardableResult
     public func delete(audioId: String, appId: String) async throws -> Bool {
-        let response: DeleteResponse = try await deleteRequest("/v1/audio/\(audioId)?appId=\(urlEncode(appId))")
+        let response: DeleteResponse = try await deleteRequest(ClawixPersistentSurfaceAPI.path("/audio/\(audioId)?appId=\(urlEncode(appId))"))
         return response.deleted
     }
 
