@@ -314,6 +314,37 @@ final class AIAccountSecretsStore: AIAccountStore {
         return credentials
     }
 
+    nonisolated func credentialExpiresAt(accountId: UUID) throws -> Date? {
+        try perform { try self._credentialExpiresAtOnMain(accountId: accountId) }
+    }
+
+    @MainActor
+    private func _credentialExpiresAtOnMain(accountId: UUID) throws -> Date? {
+        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
+        guard let (_, _, fields) = try findAccount(id: accountId, store: store) else {
+            throw AIAccountStoreError.accountNotFound
+        }
+        guard let raw = fields.first(where: { !$0.isSecret && $0.fieldName == "expires_at" })?.publicValue else {
+            return nil
+        }
+        return ISO8601.parse(raw)
+    }
+
+    nonisolated func hasCredentialField(accountId: UUID, fieldName: String) throws -> Bool {
+        try perform { try self._hasCredentialFieldOnMain(accountId: accountId, fieldName: fieldName) }
+    }
+
+    @MainActor
+    private func _hasCredentialFieldOnMain(accountId: UUID, fieldName: String) throws -> Bool {
+        guard let store = SecretsManager.shared.store else { throw AIAccountStoreError.vaultLocked }
+        guard let (_, _, fields) = try findAccount(id: accountId, store: store) else {
+            throw AIAccountStoreError.accountNotFound
+        }
+        return fields.first(where: { (field: SecretFieldRecord) in
+            field.isSecret && field.fieldName == fieldName && field.hasCiphertext
+        }) != nil
+    }
+
     // MARK: - Helpers
 
     @MainActor

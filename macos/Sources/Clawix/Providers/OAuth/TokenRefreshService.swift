@@ -34,19 +34,24 @@ final class TokenRefreshService: ObservableObject {
         for account in accounts {
             guard case .oauth(let flavor) = account.authMethod, account.isEnabled else { continue }
             do {
-                let credentials = try store.revealCredentials(accountId: account.id)
-                guard let refreshToken = credentials.refreshToken else { continue }
-                if let expiresAt = credentials.expiresAt,
+                guard try store.hasCredentialField(accountId: account.id, fieldName: "refresh_token") else { continue }
+                if let expiresAt = try store.credentialExpiresAt(accountId: account.id),
                    expiresAt.timeIntervalSinceNow > lookahead {
                     continue
                 }
-                let strategy = OAuthRegistry.strategy(for: flavor)
-                let tokens = try await strategy.refresh(refreshToken: refreshToken)
+                let tokens: OAuthTokens
+                switch flavor {
+                case .anthropicClaudeAi:
+                    tokens = try await AnthropicOAuthStrategy().refresh(account: account)
+                }
+                guard let refreshedRefreshToken = tokens.refreshToken else {
+                    throw AIClientError.provider("OAuth refresh did not return a replacement refresh token.")
+                }
                 try store.updateCredentials(
                     accountId: account.id,
                     apiKey: nil,
                     accessToken: tokens.accessToken,
-                    refreshToken: tokens.refreshToken ?? refreshToken,
+                    refreshToken: refreshedRefreshToken,
                     expiresAt: tokens.expiresAt,
                     scope: tokens.scope
                 )

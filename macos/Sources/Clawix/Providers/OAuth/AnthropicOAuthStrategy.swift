@@ -70,6 +70,29 @@ struct AnthropicOAuthStrategy: OAuthStrategy {
         return try parseTokens(data)
     }
 
+    @MainActor
+    func refresh(account: ProviderAccount) async throws -> OAuthTokens {
+        let secretName = AIAccountBroker.secretName(for: account)
+        let body = encodeForm([
+            "grant_type": "refresh_token",
+            "refresh_token": "{{\(secretName).refresh_token}}",
+            "client_id": Self.clientId
+        ])
+        let response = try await AIAccountBroker.send(
+            account: account,
+            fieldName: "refresh_token",
+            placement: "body",
+            method: "POST",
+            url: Self.tokenURL,
+            headers: ["Content-Type": "application/x-www-form-urlencoded"],
+            body: body,
+            agent: "clawix.ai.anthropic.oauth-refresh",
+            riskTier: "write",
+            timeoutSeconds: 30
+        )
+        return try parseTokens(response.0)
+    }
+
     private func parseTokens(_ data: Data) throws -> OAuthTokens {
         struct Response: Codable {
             let access_token: String
