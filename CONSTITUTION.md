@@ -291,6 +291,35 @@ merge-or-reject primitives. Agents that conflict do not silently overwrite
 each other; they yield, queue, or surface the conflict for the human.
 Composition (VII.7) is potential; safe coexistence is mandatory.
 
+**V.10 The unit is the user's operable life.** The primary unit of the
+project is not the chat, the app, the model, or the provider. It is the
+user's operable life: the data, tools, devices, services, relationships,
+time, money, automations, physical context, and permissions through which
+the user acts. Any part of that life can become addressable by agents when
+it has a safe representation, a permission boundary, and an action surface.
+The project is infrastructure for personal agents living with humans, not
+only an application for talking to them.
+
+**V.11 Chat is not the final store.** Conversation is an input surface, a
+negotiation surface, and a review surface. It is not the preferred final
+home for durable knowledge. When something important is learned in chat, the
+system should make it natural to promote that knowledge into memory, notes,
+canonical entities, relationships, rules, decisions, workflows, or audit
+records. Transcripts remain searchable evidence, but structured knowledge
+belongs where humans and agents can reuse it without replaying the
+conversation.
+
+**V.12 Local is a capability advantage.** Local-first is not only a privacy
+stance. The local host is powerful because it is closest to the user's real
+working context: files, screen, operating system, devices, tools,
+credentials, settings, caches, and recently used surfaces. A personal agent
+needs that world within reach. External services may be referenced, cached,
+mirrored, adapted, replicated, or replaced where that increases the user's
+sovereignty or the agent's usefulness, but they do not become the organizing
+authority. The same local layer that gives agents reach also gives the user
+stronger guardrails: per-agent permissions, audit, containment, and review
+over access to their world.
+
 ### VI. Data
 
 **VI.1 No catch-all buckets.** If something can be represented as a typed
@@ -821,6 +850,9 @@ together; an amendment is incomplete until both repositories carry it.
 - **Notes**: free-form markdown with links and tree structure for content
   that does not warrant a typed entity. Substrate for the knowledge graph
   (Concept) and shared between human and agent.
+- **Operable life**: the user's data, tools, devices, services,
+  relationships, time, money, automations, physical context, and permissions
+  as a unified action surface for agents.
 - **Pairing**: the act of trusting a client device to talk to a host. The
   basis of multi-device today.
 - **Participant**: a device that joins the mesh without running an agent
