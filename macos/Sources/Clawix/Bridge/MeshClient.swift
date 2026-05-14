@@ -69,14 +69,14 @@ struct MeshClient {
     /// display name, endpoints). Always callable; safe even when the
     /// daemon is freshly booted.
     func identity() async throws -> NodeIdentity {
-        try await get("/v1/mesh/identity", as: NodeIdentity.self)
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/identity", as: NodeIdentity.self)
     }
 
     /// GET /v1/mesh/peers — full list of paired Macs. Loopback-only on
     /// the daemon side, so this is the canonical "who is paired"
     /// query.
     func peers() async throws -> [PeerRecord] {
-        let payload: PeersOutput = try await get("/v1/mesh/peers")
+        let payload: PeersOutput = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/peers")
         return payload.peers
     }
 
@@ -86,7 +86,7 @@ struct MeshClient {
     /// the remote as a `PeerRecord` on disk.
     func link(host: String, httpPort: Int, token: String, profile: PeerPermissionProfile = .scoped) async throws -> PeerRecord {
         let body = LinkInput(host: host, httpPort: httpPort, bridgePort: nil, token: token, permissionProfile: profile)
-        let payload: PeerOutput = try await post("/v1/mesh/link", body: body)
+        let payload: PeerOutput = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/link", body: body)
         return payload.peer
     }
 
@@ -94,7 +94,7 @@ struct MeshClient {
     /// allow remote peers to execute jobs in. The list is editable from
     /// the Machines settings page (`add(workspace:)`).
     func workspaces() async throws -> [RemoteWorkspace] {
-        let payload: WorkspacesOutput = try await get("/v1/mesh/workspaces")
+        let payload: WorkspacesOutput = try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/workspaces")
         return payload.workspaces
     }
 
@@ -103,7 +103,7 @@ struct MeshClient {
     /// peers may target any subpath under it.
     func addWorkspace(path: String, label: String? = nil) async throws -> RemoteWorkspace {
         let body = LocalWorkspaceInput(path: path, label: label)
-        let payload: WorkspaceOutput = try await post("/v1/mesh/workspaces", body: body)
+        let payload: WorkspaceOutput = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/workspaces", body: body)
         return payload.workspace
     }
 
@@ -118,7 +118,7 @@ struct MeshClient {
         jobId: String? = nil
     ) async throws -> RemoteJob {
         let body = StartRemoteJobInput(peerId: peerId, workspacePath: workspacePath, prompt: prompt, jobId: jobId)
-        let payload: RemoteJobResponse = try await post("/v1/mesh/remote-jobs", body: body)
+        let payload: RemoteJobResponse = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/remote-jobs", body: body)
         return payload.job
     }
 
@@ -127,7 +127,7 @@ struct MeshClient {
     /// UI. Returns nil for the job if the daemon does not know about
     /// it (race with deletion / clean reset).
     func job(id: String) async throws -> JobOutput {
-        try await get("/v1/mesh/jobs/\(id)", as: JobOutput.self)
+        try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/jobs/\(id)", as: JobOutput.self)
     }
 
     /// POST /v1/mesh/hosts — upsert a host record on the daemon. If
@@ -138,7 +138,7 @@ struct MeshClient {
     /// these CRUD endpoints).
     func upsertHost(_ host: HostInput, sshSecret: SshSecretInput? = nil) async throws -> PeerRecord {
         let body = HostUpsertInput(host: host, sshSecret: sshSecret)
-        let payload: HostUpsertOutput = try await post("/v1/mesh/hosts", body: body)
+        let payload: HostUpsertOutput = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/hosts", body: body)
         return payload.host
     }
 
@@ -146,18 +146,18 @@ struct MeshClient {
     /// keeps its row but `revokedAt` is set; the daemon refuses jobs
     /// signed by its node id from that point on.
     func revokePeer(nodeId: String) async throws {
-        try await postEmpty("/v1/mesh/hosts/\(nodeId)/revoke")
+        try await postEmpty("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/hosts/\(nodeId)/revoke")
     }
 
     /// POST /v1/mesh/hosts/:id/unrevoke — clear the revoked flag.
     func unrevokePeer(nodeId: String) async throws {
-        try await postEmpty("/v1/mesh/hosts/\(nodeId)/unrevoke")
+        try await postEmpty("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/hosts/\(nodeId)/unrevoke")
     }
 
     /// DELETE /v1/mesh/hosts/:id — drop the host record entirely.
     /// Cascades to host_endpoints in the daemon's SQLite store.
     func removeHost(nodeId: String) async throws {
-        try await delete("/v1/mesh/hosts/\(nodeId)")
+        try await delete("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/hosts/\(nodeId)")
     }
 
     // MARK: - Wire types
