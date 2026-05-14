@@ -28,7 +28,7 @@ final class QuickAskSlashCommandsStore: ObservableObject {
 
     @Published private(set) var customCommands: [QuickAskSlashCommand] = []
 
-    static let defaultsKey = "quickAsk.slashCommandsCustom"
+    nonisolated static let defaultsKey = "quickAsk.slashCommandsCustom"
 
     static let builtIn: [QuickAskSlashCommand] = [
         QuickAskSlashCommand(trigger: "/search",   description: "Search the web"),

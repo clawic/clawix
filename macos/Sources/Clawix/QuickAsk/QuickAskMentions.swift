@@ -63,7 +63,7 @@ final class QuickAskMentionsStore: ObservableObject {
 
     @Published private(set) var customPrompts: [QuickAskMentionPrompt] = []
 
-    static let defaultsKey = "quickAsk.mentionPromptsCustom"
+    nonisolated static let defaultsKey = "quickAsk.mentionPromptsCustom"
 
     private init() {
         load()

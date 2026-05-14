@@ -125,7 +125,7 @@ final class QuickAskHotkeyManager: ObservableObject {
     /// UserDefaults key holding the JSON-encoded `QuickAskHotkey`.
     /// Kept under the same suite as the rest of the app so a fork
     /// with a different bundle id gets isolated prefs automatically.
-    static let defaultsKey = "quickAsk.hotkey"
+    nonisolated static let defaultsKey = "quickAsk.hotkey"
 
     /// Published mirror so SwiftUI Settings views update when the user
     /// records a new combo.
