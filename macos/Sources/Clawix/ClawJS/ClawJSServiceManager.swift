@@ -778,6 +778,9 @@ final class ClawJSServiceManager: ObservableObject {
         env["CLAW_FILES_DIR"] = mainFilesDirectoryURL.path
         env["CLAW_SERVICE_PORT"] = String(service.port)
         env["CLAW_SERVICE_NAME"] = service.rawValue
+        for (key, value) in ClawJSActorAssertion.environment() {
+            env[key] = value
+        }
         env["CLAW_SECRETS_PROXY_PATH"] = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("bin/secrets-proxy", isDirectory: false)
             .path
