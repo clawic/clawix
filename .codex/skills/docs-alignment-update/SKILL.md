@@ -1,0 +1,1 @@
+../../../skills/docs-alignment-update/SKILL.md

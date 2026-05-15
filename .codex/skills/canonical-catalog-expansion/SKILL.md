@@ -1,0 +1,1 @@
+../../../skills/canonical-catalog-expansion/SKILL.md

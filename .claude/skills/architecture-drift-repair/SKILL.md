@@ -1,0 +1,1 @@
+../../../skills/architecture-drift-repair/SKILL.md

@@ -1,0 +1,1 @@
+../../../skills/template-render/SKILL.md

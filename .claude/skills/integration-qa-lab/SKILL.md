@@ -1,0 +1,1 @@
+../../../skills/integration-qa-lab/SKILL.md

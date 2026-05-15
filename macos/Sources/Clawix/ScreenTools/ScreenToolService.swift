@@ -13,14 +13,14 @@ final class ScreenToolService: ObservableObject {
 
     private var historyWindow: ScreenToolHistoryWindow?
     private var areaSelectionWindow: ScreenToolAreaSelectionWindow?
-    private var allInOneMenu: NSMenu?
-    private var allInOneMenuTarget: ScreenToolMenuActionTarget?
+    var allInOneMenu: NSMenu?
+    var allInOneMenuTarget: ScreenToolMenuActionTarget?
     private var recordingCountdownTask: Task<Void, Never>?
     private var recordingTimerWindow: ScreenToolRecordingTimerWindow?
 
     private init() {}
 
-    private var featureVisible: Bool {
+    var featureVisible: Bool {
         FeatureFlags.shared.isVisible(.screenTools)
     }
 

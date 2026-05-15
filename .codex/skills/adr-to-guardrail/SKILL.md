@@ -1,0 +1,1 @@
+../../../skills/adr-to-guardrail/SKILL.md

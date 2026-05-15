@@ -1,0 +1,1 @@
+../../../skills/public-hygiene-review/SKILL.md

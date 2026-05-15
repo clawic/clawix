@@ -1,0 +1,1 @@
+../../../skills/style-extract/SKILL.md

@@ -1,0 +1,1 @@
+../../../skills/theme-factory/SKILL.md

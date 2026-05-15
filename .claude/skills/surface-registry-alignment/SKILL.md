@@ -1,0 +1,1 @@
+../../../skills/surface-registry-alignment/SKILL.md

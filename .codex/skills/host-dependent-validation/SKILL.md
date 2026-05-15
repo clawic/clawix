@@ -1,0 +1,1 @@
+../../../skills/host-dependent-validation/SKILL.md

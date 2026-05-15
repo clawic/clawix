@@ -102,6 +102,21 @@ for (const featureFlag of requiredFeatureFlags) {
   }
 }
 
+function validateLifeRegistryResource(relativePath) {
+  const envelope = JSON.parse(read(relativePath));
+  const invalid = (envelope.entries ?? []).filter((entry) => !allowedStatuses.has(entry.status));
+  if (invalid.length > 0) {
+    fail(`${relativePath} has non-v1 life statuses: ${invalid.map((entry) => `${entry.id}:${entry.status}`).join(", ")}`);
+  }
+  const stable = (envelope.entries ?? []).filter((entry) => entry.status === "stable");
+  const devOnly = (envelope.entries ?? []).filter((entry) => entry.status === "dev-only");
+  if (stable.length === 0) fail(`${relativePath} must expose at least one stable life vertical`);
+  if (devOnly.length === 0) fail(`${relativePath} must classify non-v1 life verticals as dev-only instead of provisional`);
+}
+
+validateLifeRegistryResource("macos/Sources/Clawix/Resources/life-registry.json");
+validateLifeRegistryResource("ios/Sources/Clawix/Life/Resources/life-registry.json");
+
 for (const snippet of [
   "This matrix is the Clawix gate for ADR 0007",
   "`stable`",
@@ -208,6 +223,21 @@ for (const relativePath of staleContractTargets) {
     if (text.includes(pattern)) {
       fail(`${relativePath} contains stale v1 surface ${JSON.stringify(pattern)}: ${reason}`);
     }
+  }
+}
+
+for (const relativePath of [
+  "macos/Sources/Clawix/Life/LifeRegistry.swift",
+  "ios/Sources/Clawix/Life/LifeRegistry.swift",
+]) {
+  const text = read(relativePath);
+  for (const pattern of ["case alpha", "case planned", "case deprecated"]) {
+    if (text.includes(pattern)) {
+      fail(`${relativePath} contains stale life status ${JSON.stringify(pattern)}`);
+    }
+  }
+  if (!text.includes("entries(includeDevOnly: false)")) {
+    fail(`${relativePath} must default LifeRegistry.entries to stable-only surfaces`);
   }
 }
 

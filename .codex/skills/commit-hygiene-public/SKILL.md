@@ -1,0 +1,1 @@
+../../../skills/commit-hygiene-public/SKILL.md

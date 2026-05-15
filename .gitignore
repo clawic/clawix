@@ -1,4 +1,12 @@
 .DS_Store
+.claude/*
+!.claude/skills/
+!.claude/skills/*/
+!.claude/skills/*/SKILL.md
+.codex/*
+!.codex/skills/
+!.codex/skills/*/
+!.codex/skills/*/SKILL.md
 .build/
 ios/.build/
 ios/.build-test/

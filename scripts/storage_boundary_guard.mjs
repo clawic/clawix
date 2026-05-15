@@ -34,7 +34,7 @@ const requiredSnippets = [
   ["macos/Sources/Clawix/Skills/SkillsStore.swift", "frameworkClient?.upsertSkillRecord"],
   ["macos/Sources/Clawix/HostActions/HostActionPolicy.swift", "Requires explicit host approval."],
   ["macos/Sources/Clawix/MacUtilities/MacUtilitiesController.swift", "HostActionPolicy.authorize"],
-  ["macos/Sources/Clawix/ScreenTools/ScreenToolService.swift", "HostActionPolicy.authorize"],
+  ["macos/Sources/Clawix/ScreenTools/ScreenToolService+HostPolicy.swift", "HostActionPolicy.authorize"],
   ["docs/interface-matrix.md", "Reject App Support as canonical Apps path"],
   ["docs/interface-matrix.md", "Framework workspace storage"],
 ];
