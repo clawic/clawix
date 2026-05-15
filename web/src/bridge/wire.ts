@@ -48,6 +48,7 @@ export const ZWireSession = z.object({
   lastTurnInterrupted: z.boolean().default(false),
   threadId: z.string().optional(),
   agent: z.string().default("codex"),
+  agentId: z.string().optional(),
 });
 export type WireSession = z.infer<typeof ZWireSession>;
 
