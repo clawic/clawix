@@ -74,14 +74,14 @@ final class ClawJSSecretsClient {
         try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/health")
     }
 
-    struct SecretsStateInfo: Codable {
+    struct SecretsServiceState: Codable {
         let tenantId: String
         let initialized: Bool
         let unlocked: Bool
         let autoLockMinutes: Int
     }
 
-    func state() async throws -> SecretsStateInfo {
+    func state() async throws -> SecretsServiceState {
         try await get("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/secrets/state")
     }
 

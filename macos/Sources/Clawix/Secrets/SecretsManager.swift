@@ -135,8 +135,8 @@ final class SecretsManager: ObservableObject {
             }
         }
         do {
-            let info = try await client.state()
-            if !info.initialized {
+            let serviceState = try await client.state()
+            if !serviceState.initialized {
                 #if DEBUG
                 if ClawixEnv.isEnabled(ClawixEnv.dummyMode) {
                     await autoBootstrapDummyVault()
@@ -147,7 +147,7 @@ final class SecretsManager: ObservableObject {
                 loadGeneration = nil
                 return
             }
-            if info.unlocked {
+            if serviceState.unlocked {
                 try await mountStores(seedDefaultVault: false)
                 state = .unlocked
                 scheduleAutoLock()

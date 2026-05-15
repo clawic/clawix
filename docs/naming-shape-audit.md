@@ -11,7 +11,7 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 65.
+- Naming warnings: 64.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
 
@@ -60,6 +60,9 @@ for staged rename/split work and must not be hidden by compressing code.
   `BackendAccountProfile`, and `ClawixBinaryInfo` is now
   `ClawixBinaryResolution`. These are local app concepts: a parsed account
   profile and the resolved runtime executable path/version.
+- Secrets service vocabulary: `SecretsStateInfo` is now
+  `SecretsServiceState`, and the loader uses `serviceState` locally instead of
+  generic `info`.
 
 ## Validation snapshot
 
