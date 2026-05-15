@@ -145,8 +145,8 @@ struct UserAudioBubble: View {
         }
     }
 
-    /// Resolution order: framework audio catalog only. The host no
-    /// longer treats its legacy on-disk audio store as canonical.
+    /// Resolution order: framework audio catalog only. The host does not
+    /// read sidecar audio files for message playback.
     private static func loadBytes(for audioId: String) async -> (data: Data, mimeType: String)? {
         if let client = await MainActor.run(body: { AudioCatalogBootstrap.shared.currentClient }) {
             do {

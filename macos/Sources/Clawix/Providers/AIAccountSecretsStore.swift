@@ -282,7 +282,7 @@ final class AIAccountSecretsStore: AIAccountStore {
         try store.trashSecret(id: secret.id)
     }
 
-    // MARK: - Plaintext reveal compatibility
+    // MARK: - Plaintext reveal boundary
 
     nonisolated func revealCredentials(accountId: UUID) throws -> AIAccountCredentials {
         _ = accountId

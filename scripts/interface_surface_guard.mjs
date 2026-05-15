@@ -458,6 +458,25 @@ for (const pattern of ["legacy services", "still own a token store"]) {
   }
 }
 
+const toolRoleSource = read("macos/Sources/Clawix/ClawixToolRole.swift");
+for (const pattern of ["CLXAppRole=tasks", "ClawixToolRole(rawValue: raw)"]) {
+  if (toolRoleSource.includes(pattern)) {
+    fail(`ClawixToolRole.swift must require tool:<slug> roles for v1 mini-apps: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const devScriptSource = read("macos/scripts/dev.sh");
+for (const pattern of ["CLAWIX_DEV_SKIP_TASKS", "role_value=\"tasks\""]) {
+  if (devScriptSource.includes(pattern)) {
+    fail(`macos/scripts/dev.sh must not emit or accept pre-v1 mini-app role controls: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const hostsPageSource = read("macos/Sources/Clawix/Settings/HostsPage.swift");
+if (hostsPageSource.includes("typealias MachinesPage = HostsPage")) {
+  fail("HostsPage.swift must not keep the pre-v1 MachinesPage alias");
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

@@ -230,7 +230,7 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
 
         XCTAssertTrue(
             body.contains("throw AIAccountStoreError.credentialMissing"),
-            "The legacy revealCredentials protocol method must fail closed."
+            "The revealCredentials protocol method must fail closed."
         )
         XCTAssertFalse(body.contains("store.revealField"))
         XCTAssertFalse(body.contains("revealCredentialsRaw"))

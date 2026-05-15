@@ -42,15 +42,11 @@ enum ClawixToolRole: String, CaseIterable {
         }
     }
 
-    /// Resolves the role from `Bundle.main`. The legacy Tasks mini-app
-    /// shipped with `CLXAppRole=tasks` (no `tool:` prefix); newer mini-apps
-    /// use `tool:<slug>`. Both formats are accepted so a freshly built
-    /// Tasks.app keeps working alongside the older installed bundle.
+    /// Resolves the role from `Bundle.main`. v1 tool bundles declare
+    /// `CLXAppRole=tool:<slug>`.
     static func fromBundle() -> ClawixToolRole? {
         let raw = Bundle.main.infoDictionary?["CLXAppRole"] as? String ?? ""
-        if raw.hasPrefix("tool:") {
-            return ClawixToolRole(rawValue: String(raw.dropFirst("tool:".count)))
-        }
-        return ClawixToolRole(rawValue: raw)
+        guard raw.hasPrefix("tool:") else { return nil }
+        return ClawixToolRole(rawValue: String(raw.dropFirst("tool:".count)))
     }
 }

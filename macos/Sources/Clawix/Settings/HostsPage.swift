@@ -304,10 +304,6 @@ struct HostsPage: View {
     }
 }
 
-// MARK: - Backwards-compatible alias
-
-typealias MachinesPage = HostsPage
-
 // MARK: - Kind filter
 
 enum HostKindFilter: String, CaseIterable, Identifiable {

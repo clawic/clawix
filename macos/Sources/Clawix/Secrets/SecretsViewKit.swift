@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// Thin compatibility wrappers around the canonical primitives in
-/// SettingsKit + SheetChrome. Existing Secrets surfaces still call
-/// `SecretsCard` / `SecretsPrimaryButton` / etc, but the visuals now come
-/// from the shared design system. As each surface gets its phase-2..6
-/// rewrite, calls migrate to the canonical primitives directly. Once
-/// the migration is complete the file is reduced to just `SecretsUI`.
+/// Secrets-local view primitives backed by SettingsKit + SheetChrome.
+/// Keeping the names local lets Secrets surfaces share vault-specific
+/// behavior while the visuals come from the shared design system.
 enum SecretsUI {
 
     /// Centered panel for vault chrome (lock screen, onboarding,

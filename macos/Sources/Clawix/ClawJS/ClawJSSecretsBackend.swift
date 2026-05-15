@@ -340,8 +340,8 @@ final class ClawJSSecretsStore {
     }
 
     func purgeTrashed(olderThan: Timestamp) throws -> Int {
-        // The HTTP server has no explicit purge endpoint yet; mirroring
-        // the legacy behavior we treat this as a no-op and return 0.
+        // The HTTP server has no explicit purge endpoint yet, so the
+        // backend reports that no rows were purged.
         _ = olderThan
         return 0
     }

@@ -654,18 +654,16 @@ fi
 #      binary detects the role at launch via the CLXAppRole Info.plist
 #      key (read by ClawixToolRole.fromBundle) and renders only that
 #      tool's view. The full set can be skipped via
-#      CLAWIX_DEV_SKIP_TOOLS=1 (legacy CLAWIX_DEV_SKIP_TASKS also
-#      accepted); a comma-separated subset can be selected via
+#      CLAWIX_DEV_SKIP_TOOLS=1; a comma-separated subset can be selected via
 #      CLAWIX_DEV_TOOLS_ONLY="tasks,notes". Bundle ids default to
 #      ${BUNDLE_ID}.tools.<slug>; a per-tool override
-#      BUNDLE_ID_<UPPER_SLUG> takes precedence so the existing Tasks.app
-#      codesign / TCC state stays stable across the migration.
+#      BUNDLE_ID_<UPPER_SLUG> takes precedence.
 
 assemble_tool_app() {
     local slug="$1"      # "tasks", "goals", ...
     local display="$2"   # "Tasks", "Goals", ...
     local bid="$3"       # bundle id (override or derived)
-    local role="$4"      # CLXAppRole literal ("tasks" or "tool:<slug>")
+    local role="$4"      # CLXAppRole literal ("tool:<slug>")
     local upper staging staging_var staging_default bin icon_src sparkle_src
     upper="$(echo "$slug" | tr '[:lower:]' '[:upper:]')"
     staging_default="$DEV_DIR/${display}.app"
@@ -774,7 +772,7 @@ TOOLS_CATALOG=(
     "drive:Drive"
 )
 
-if [[ "${CLAWIX_DEV_SKIP_TOOLS:-${CLAWIX_DEV_SKIP_TASKS:-0}}" != "1" ]]; then
+if [[ "${CLAWIX_DEV_SKIP_TOOLS:-0}" != "1" ]]; then
     declare -a TOOLS_ONLY=()
     if [[ -n "${CLAWIX_DEV_TOOLS_ONLY:-}" ]]; then
         IFS=',' read -ra TOOLS_ONLY <<< "${CLAWIX_DEV_TOOLS_ONLY}"
@@ -797,15 +795,7 @@ if [[ "${CLAWIX_DEV_SKIP_TOOLS:-${CLAWIX_DEV_SKIP_TASKS:-0}}" != "1" ]]; then
         bid="${!override_var:-${BUNDLE_ID}.tools.${slug}}"
         [[ -n "$bid" ]] || continue
 
-        # Tasks keeps the unprefixed legacy role literal so a freshly
-        # rebuilt Tasks.app stays drop-in compatible with installs from
-        # before the tool registry refactor. All other slugs use the
-        # tool:<slug> form, which ClawixToolRole.fromBundle parses too.
-        if [[ "$slug" == "tasks" ]]; then
-            role_value="tasks"
-        else
-            role_value="tool:$slug"
-        fi
+        role_value="tool:$slug"
 
         assemble_tool_app "$slug" "$display" "$bid" "$role_value"
     done
