@@ -7,7 +7,7 @@ internal sealed partial class BridgeFrameConverter
     public override void Write(Utf8JsonWriter writer, BridgeFrame value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteNumber("schemaVersion", value.ProtocolVersion);
+        writer.WriteNumber("protocolVersion", value.ProtocolVersion);
         writer.WriteString("type", value.Body.TypeTag);
         EncodeBody(writer, value.Body, options);
         writer.WriteEndObject();

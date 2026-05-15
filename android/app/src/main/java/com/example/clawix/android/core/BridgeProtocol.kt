@@ -4,10 +4,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Wire-format version. Mirrors `bridgeSchemaVersion` in
+ * Wire-format version. Mirrors `bridgeProtocolVersion` in
  * `clawix/packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift`.
  */
-const val BRIDGE_SCHEMA_VERSION: Int = 1
+const val BRIDGE_PROTOCOL_VERSION: Int = 8
 
 const val BRIDGE_INITIAL_PAGE_LIMIT: Int = 60
 const val BRIDGE_OLDER_PAGE_LIMIT: Int = 40
@@ -24,14 +24,14 @@ enum class ClientKind(val wireValue: String) {
 }
 
 /**
- * Top-level frame. Wire format is flat: `{ "schemaVersion": N, "type": "...", ...payload-fields }`,
+ * Top-level frame. Wire format is flat: `{ "protocolVersion": N, "type": "...", ...payload-fields }`,
  * no nested envelope. Implemented with a custom serializer because
  * kotlinx-serialization's polymorphic discriminator support assumes the
  * payload sits inside a sub-object.
  */
 @Serializable(with = BridgeFrameSerializer::class)
 data class BridgeFrame(
-    val schemaVersion: Int = BRIDGE_SCHEMA_VERSION,
+    val protocolVersion: Int = BRIDGE_PROTOCOL_VERSION,
     val body: BridgeBody,
 )
 
@@ -44,7 +44,7 @@ data class BridgeFrame(
 sealed class BridgeBody {
     abstract val typeTag: String
 
-    // MARK: - v1 outbound (mobile -> daemon)
+    // MARK: - Outbound (mobile -> daemon)
     data class Auth(
         val token: String,
         val deviceName: String?,
@@ -72,7 +72,7 @@ sealed class BridgeBody {
         override val typeTag = "interruptTurn"
     }
 
-    // MARK: - v1 inbound (daemon -> mobile)
+    // MARK: - Inbound (daemon -> mobile)
     data class AuthOk(val hostDisplayName: String?) : BridgeBody() { override val typeTag = "authOk" }
     data class AuthFailed(val reason: String) : BridgeBody() { override val typeTag = "authFailed" }
     data class VersionMismatch(val serverVersion: Int) : BridgeBody() { override val typeTag = "versionMismatch" }

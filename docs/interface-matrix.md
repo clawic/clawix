@@ -73,7 +73,7 @@ experimental switch. Every current surface must be one of:
 
 - `protocolVersion` is retained for the bridge JSON wire contract and must be `8`.
 - Bridge docs and public wire names use `session`, not stable `chat`.
-- Public bridge names must not use `sendMessage`, `WireSession`, `sessionUpdated`, or
+- Public bridge names use `sendMessage`, `WireSession`, `sessionUpdated`, and
   `hostDisplayName`.
 - Stable Clawix defaults must not use port `7777`.
 - `clawix://chat`, `clawix://oauth-callback`, and stable

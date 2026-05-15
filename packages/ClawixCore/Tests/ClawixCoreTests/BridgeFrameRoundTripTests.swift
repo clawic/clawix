@@ -7,7 +7,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         let original = BridgeFrame(body)
         let data = try BridgeCoder.encode(original)
         let decoded = try BridgeCoder.decode(data)
-        XCTAssertEqual(decoded.schemaVersion, bridgeSchemaVersion, file: file, line: line)
+        XCTAssertEqual(decoded.protocolVersion, bridgeProtocolVersion, file: file, line: line)
         XCTAssertEqual(decoded.body, body, file: file, line: line)
     }
 
@@ -157,7 +157,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     /// "no scroll-up available".
     func testOpenSessionDecodesWithoutLimit() throws {
         let data = """
-        {"schemaVersion":\(bridgeSchemaVersion),"type":"openSession","sessionId":"abc"}
+        {"protocolVersion":\(bridgeProtocolVersion),"type":"openSession","sessionId":"abc"}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
         XCTAssertEqual(frame.body, .openSession(sessionId: "abc", limit: nil))
@@ -165,7 +165,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     func testLegacyMessagesSnapshotDecodesWithoutHasMore() throws {
         let data = """
-        {"schemaVersion":\(bridgeSchemaVersion),"type":"messagesSnapshot","sessionId":"abc","messages":[]}
+        {"protocolVersion":\(bridgeProtocolVersion),"type":"messagesSnapshot","sessionId":"abc","messages":[]}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
         XCTAssertEqual(frame.body, .messagesSnapshot(sessionId: "abc", messages: [], hasMore: nil))
@@ -290,7 +290,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         let frame = BridgeFrame(.sendMessage(sessionId: "abc", text: "hello", attachments: []))
         let data = try BridgeCoder.encode(frame)
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
-        XCTAssertTrue(json.contains("\"schemaVersion\":\(bridgeSchemaVersion)"))
+        XCTAssertTrue(json.contains("\"protocolVersion\":\(bridgeProtocolVersion)"))
         XCTAssertTrue(json.contains("\"type\":\"sendMessage\""))
         XCTAssertTrue(json.contains("\"sessionId\":\"abc\""))
         XCTAssertTrue(json.contains("\"text\":\"hello\""))
@@ -300,36 +300,32 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     func testLegacyPromptFramesDecodeWithoutAttachments() throws {
         let data = """
-        {"schemaVersion":1,"type":"sendMessage","sessionId":"abc","text":"hello"}
+        {"protocolVersion":8,"type":"sendMessage","sessionId":"abc","text":"hello"}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
         XCTAssertEqual(frame.body, .sendMessage(sessionId: "abc", text: "hello", attachments: []))
     }
 
-    /// v1 frames (no `clientKind` on `auth`) decode cleanly into v2.
-    /// Required so a v1 iPhone (in the wild between releases) can
-    /// connect to a v2 server, and so v2 frames remain readable by
-    /// the v1 round-trip path.
-    func testV1AuthFrameDecodesUnderV2() throws {
-        let v1Json = """
-        {"schemaVersion":1,"type":"auth","token":"abc","deviceName":"iPhone"}
+    func testAuthFrameDecodesWithoutOptionalClientFields() throws {
+        let currentJson = """
+        {"protocolVersion":8,"type":"auth","token":"abc","deviceName":"iPhone"}
         """.data(using: .utf8)!
-        let frame = try BridgeCoder.decode(v1Json)
+        let frame = try BridgeCoder.decode(currentJson)
         guard case .auth(let token, let device, let kind, let clientId, let installationId, let deviceId) = frame.body else {
             XCTFail("expected auth")
             return
         }
         XCTAssertEqual(token, "abc")
         XCTAssertEqual(device, "iPhone")
-        XCTAssertNil(kind, "v1 auth omits clientKind, decodes as nil")
+        XCTAssertNil(kind, "current auth omits clientKind, decodes as nil")
         XCTAssertNil(clientId)
         XCTAssertNil(installationId)
         XCTAssertNil(deviceId)
-        XCTAssertEqual(frame.schemaVersion, 1)
+        XCTAssertEqual(frame.protocolVersion, bridgeProtocolVersion)
     }
 
     func testRejectsUnknownType() {
-        let bogus = #"{"schemaVersion":1,"type":"madeUp"}"#.data(using: .utf8)!
+        let bogus = #"{"protocolVersion":8,"type":"madeUp"}"#.data(using: .utf8)!
         XCTAssertThrowsError(try BridgeCoder.decode(bogus)) { err in
             guard case BridgeDecodingError.unknownType(let t) = err else {
                 XCTFail("expected unknownType, got \(err)")

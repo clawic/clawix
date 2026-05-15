@@ -10,7 +10,7 @@ public abstract record BridgeBody
 {
     public abstract string TypeTag { get; }
 
-    // ===== v1 outbound (iPhone -> Mac) =====
+    // ===== Outbound (iPhone -> Mac) =====
 
     public sealed record Auth(
         string Token,
@@ -54,7 +54,7 @@ public abstract record BridgeBody
         public override string TypeTag => "interruptTurn";
     }
 
-    // ===== v1 inbound (Mac -> iPhone) =====
+    // ===== Inbound (Mac -> iPhone) =====
 
     public sealed record AuthOk(string? HostDisplayName) : BridgeBody
     {

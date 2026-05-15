@@ -57,7 +57,7 @@ struct BridgeMain {
             #endif
         }
 
-        BridgeLog.write("starting schemaVersion=\(bridgeSchemaVersion)")
+        BridgeLog.write("starting protocolVersion=\(bridgeProtocolVersion)")
         let env = ProcessInfo.processInfo.environment
         let port = env["CLAWIX_BRIDGE_PORT"].flatMap(UInt16.init) ?? 24080
         let httpPort = env["CLAWIX_BRIDGE_HTTP_PORT"].flatMap(UInt16.init) ?? 24081

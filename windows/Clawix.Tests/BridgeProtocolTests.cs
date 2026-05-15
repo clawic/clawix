@@ -8,9 +8,9 @@ namespace Clawix.Tests;
 public sealed class BridgeProtocolTests
 {
     [Fact]
-    public void SchemaVersion_Matches_Swift()
+    public void ProtocolVersion_Matches_Swift()
     {
-        Assert.Equal(1, BridgeConstants.SchemaVersion);
+        Assert.Equal(8, BridgeConstants.ProtocolVersion);
         Assert.Equal(60, BridgeConstants.InitialPageLimit);
         Assert.Equal(40, BridgeConstants.OlderPageLimit);
     }
@@ -20,7 +20,7 @@ public sealed class BridgeProtocolTests
     {
         var frame = new BridgeFrame(new BridgeBody.Auth("token-abc", "iPhone 15", ClientKind.Companion));
         var json = BridgeCoder.Encode(frame);
-        Assert.Contains("\"schemaVersion\":1", json);
+        Assert.Contains("\"protocolVersion\":8", json);
         Assert.Contains("\"type\":\"auth\"", json);
         Assert.Contains("\"token\":\"token-abc\"", json);
         Assert.Contains("\"deviceName\":\"iPhone 15\"", json);
@@ -46,7 +46,7 @@ public sealed class BridgeProtocolTests
     {
         var frame = new BridgeFrame(new BridgeBody.ListSessions());
         var json = BridgeCoder.Encode(frame);
-        Assert.Equal("{\"schemaVersion\":1,\"type\":\"listSessions\"}", json);
+        Assert.Equal("{\"protocolVersion\":8,\"type\":\"listSessions\"}", json);
         var decoded = BridgeCoder.Decode(json);
         Assert.IsType<BridgeBody.ListSessions>(decoded.Body);
     }
@@ -116,7 +116,7 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void Unknown_Type_Throws()
     {
-        var json = "{\"schemaVersion\":1,\"type\":\"someUnknownThing\",\"sessionId\":\"x\"}";
+        var json = "{\"protocolVersion\":8,\"type\":\"someUnknownThing\",\"sessionId\":\"x\"}";
         Assert.ThrowsAny<Exception>(() => BridgeCoder.Decode(json));
     }
 
@@ -127,7 +127,7 @@ public sealed class BridgeProtocolTests
     [InlineData("requestRateLimits")]
     public void EmptyBodies_RoundTrip(string typeTag)
     {
-        var json = $"{{\"schemaVersion\":1,\"type\":\"{typeTag}\"}}";
+        var json = $"{{\"protocolVersion\":8,\"type\":\"{typeTag}\"}}";
         var decoded = BridgeCoder.Decode(json);
         Assert.Equal(typeTag, decoded.Body.TypeTag);
     }

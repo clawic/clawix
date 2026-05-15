@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace Clawix.Core;
 
 /// <summary>
-/// Wire envelope. Flat JSON: { schemaVersion, type, ...payload }.
+/// Wire envelope. Flat JSON: { protocolVersion, type, ...payload }.
 /// Mirrors <c>BridgeFrame</c> in Swift (packages/ClawixCore/BridgeProtocol.swift).
 /// </summary>
 [JsonConverter(typeof(BridgeFrameConverter))]

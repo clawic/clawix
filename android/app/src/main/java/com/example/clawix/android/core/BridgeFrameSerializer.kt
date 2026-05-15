@@ -18,7 +18,7 @@ object BridgeFrameSerializer : KSerializer<BridgeFrame> {
     override fun serialize(encoder: Encoder, value: BridgeFrame) {
         require(encoder is JsonEncoder) { "BridgeFrameSerializer requires a JSON encoder" }
         val obj = buildJsonObject {
-            put("schemaVersion", value.schemaVersion)
+            put("protocolVersion", value.protocolVersion)
             put("type", value.body.typeTag)
             encodePayload(value.body, this)
         }
@@ -28,11 +28,11 @@ object BridgeFrameSerializer : KSerializer<BridgeFrame> {
     override fun deserialize(decoder: Decoder): BridgeFrame {
         require(decoder is JsonDecoder) { "BridgeFrameSerializer requires a JSON decoder" }
         val obj = decoder.decodeJsonElement().jsonObject
-        val schemaVersion = obj["schemaVersion"]?.jsonPrimitive?.content?.toInt()
-            ?: error("BridgeFrame missing schemaVersion")
+        val protocolVersion = obj["protocolVersion"]?.jsonPrimitive?.content?.toInt()
+            ?: error("BridgeFrame missing protocolVersion")
         val type = obj["type"]?.jsonPrimitive?.content
             ?: error("BridgeFrame missing type")
         val body = decodePayload(type, obj)
-        return BridgeFrame(schemaVersion, body)
+        return BridgeFrame(protocolVersion, body)
     }
 }

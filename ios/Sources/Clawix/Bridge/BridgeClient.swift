@@ -497,8 +497,8 @@ final class BridgeClient: NSObject {
         } catch {
             return
         }
-        guard frame.schemaVersion == bridgeSchemaVersion else {
-            clientDbg.error("RX protocol mismatch frame=\(frame.schemaVersion, privacy: .public) ours=\(bridgeSchemaVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
+        guard frame.protocolVersion == bridgeProtocolVersion else {
+            clientDbg.error("RX protocol mismatch frame=\(frame.protocolVersion, privacy: .public) ours=\(bridgeProtocolVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
             store.connection = .error(message: "Update Clawix on the Mac")
             store.bridgeSync = .error("Update Clawix on the Mac")
             store.bridgeSyncUpdatedAt = Date()

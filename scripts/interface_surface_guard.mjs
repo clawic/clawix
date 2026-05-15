@@ -64,7 +64,7 @@ const requiredFeatureFlags = new Set([
   "simulators",
 ]);
 const requiredIds = new Set([
-  "bridge.v1",
+  "bridge.v8",
   "deepLinks.session",
   "deepLinks.authCallback",
   "pairing.qrJson",
@@ -147,13 +147,13 @@ const staleContractTargets = [
 ];
 
 const stalePatterns = [
-  { pattern: "bridgeProtocolVersion", reason: "bridge wire version is bridgeSchemaVersion" },
-  { pattern: "BRIDGE_PROTOCOL_VERSION", reason: "bridge wire version is BRIDGE_SCHEMA_VERSION" },
-  { pattern: "\"protocolVersion\"", reason: "bridge wire envelope field is schemaVersion" },
-  { pattern: "\"schemaVersion\":5", reason: "stable bridge schema version must be 1" },
-  { pattern: "\"schemaVersion\":8", reason: "stable bridge schema version must be 1" },
-  { pattern: "Schema version 5", reason: "stable bridge schema version must be 1" },
-  { pattern: "Schema version 8", reason: "stable bridge schema version must be 1" },
+  { pattern: "bridgeSchemaVersion", reason: "bridge wire version is bridgeProtocolVersion" },
+  { pattern: "BRIDGE_SCHEMA_VERSION", reason: "bridge wire version is BRIDGE_PROTOCOL_VERSION" },
+  { pattern: "\"schemaVersion\"", reason: "bridge wire envelope field is protocolVersion" },
+  { pattern: "\"protocolVersion\":5", reason: "stable bridge protocol version must be 8" },
+  { pattern: "\"protocolVersion\":1", reason: "stable bridge protocol version must be 8" },
+  { pattern: "Protocol version 5", reason: "stable bridge protocol version must be 8" },
+  { pattern: "Protocol version 1", reason: "stable bridge protocol version must be 8" },
   { pattern: "127.0.0.1:7777", reason: "stable bridge port must be 24080" },
   { pattern: "port = 7777", reason: "stable bridge port must be 24080" },
   { pattern: "(ushort)7777", reason: "stable bridge port must be 24080" },

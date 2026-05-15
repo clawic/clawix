@@ -1,9 +1,9 @@
 import Foundation
 
 /// Wire-format version exchanged in every frame. Clients refuse to talk to a
-/// peer reporting a different `schemaVersion` and surface an "update Clawix"
+/// peer reporting a different `protocolVersion` and surface an "update Clawix"
 /// empty state.
-public let bridgeSchemaVersion: Int = 1
+public let bridgeProtocolVersion: Int = 8
 
 /// Default count of trailing messages the server returns on
 /// `openSession(limit:)` when the client opts into pagination. 60 covers
@@ -35,39 +35,39 @@ public enum ClientKind: String, Codable, Equatable, Sendable {
 }
 
 public struct BridgeFrame: Codable, Equatable, Sendable {
-    public let schemaVersion: Int
+    public let protocolVersion: Int
     public let body: BridgeBody
 
-    public init(_ body: BridgeBody, schemaVersion: Int = bridgeSchemaVersion) {
-        self.schemaVersion = schemaVersion
+    public init(_ body: BridgeBody, protocolVersion: Int = bridgeProtocolVersion) {
+        self.protocolVersion = protocolVersion
         self.body = body
     }
 
     private enum TopKeys: String, CodingKey {
-        case schemaVersion
+        case protocolVersion
         case type
     }
 
     public init(from decoder: Decoder) throws {
         let top = try decoder.container(keyedBy: TopKeys.self)
-        self.schemaVersion = try top.decode(Int.self, forKey: .schemaVersion)
+        self.protocolVersion = try top.decode(Int.self, forKey: .protocolVersion)
         let type = try top.decode(String.self, forKey: .type)
         self.body = try BridgeBody.decode(type: type, from: decoder)
     }
 
     public func encode(to encoder: Encoder) throws {
         var top = encoder.container(keyedBy: TopKeys.self)
-        try top.encode(schemaVersion, forKey: .schemaVersion)
+        try top.encode(protocolVersion, forKey: .protocolVersion)
         try top.encode(body.typeTag, forKey: .type)
         try body.encodePayload(to: encoder)
     }
 }
 
 /// All discriminated frame bodies. Wire format is flat: every frame
-/// carries `schemaVersion`, `type`, and the payload fields at the top
+/// carries `protocolVersion`, `type`, and the payload fields at the top
 /// level (no `payload` envelope) so log lines stay readable.
 public enum BridgeBody: Equatable, Sendable {
-    // MARK: - v1 outbound (iPhone -> Mac)
+    // MARK: - Outbound (iPhone -> Mac)
     case auth(
         token: String,
         deviceName: String?,
@@ -109,7 +109,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// No-op when the chat has no in-flight turn.
     case interruptTurn(sessionId: String)
 
-    // MARK: - v1 inbound (Mac -> iPhone)
+    // MARK: - Inbound (Mac -> iPhone)
     case authOk(hostDisplayName: String?)
     case authFailed(reason: String)
     case versionMismatch(serverVersion: Int)

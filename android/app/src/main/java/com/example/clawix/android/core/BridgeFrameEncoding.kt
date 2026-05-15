@@ -140,7 +140,7 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
         is BridgeBody.Unknown -> {
             // Re-emit raw fields preserving keys.
             body.raw.forEach { (k, v) ->
-                if (k != "schemaVersion" && k != "type") b.put(k, v)
+                if (k != "protocolVersion" && k != "type") b.put(k, v)
             }
         }
     }

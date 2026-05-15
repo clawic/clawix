@@ -8,14 +8,14 @@ local WebSocket. Frames are JSON, one frame per WS text message.
 Every frame is a flat JSON object:
 
 ```
-{ "schemaVersion": 1, "type": "<tag>", ...payload fields }
+{ "protocolVersion": 8, "type": "<tag>", ...payload fields }
 ```
 
 Clawix is still pre-public, so the complete current bridge surface is the v1
 contract. Clients refuse to talk to a daemon reporting a different
-`schemaVersion` and show an "Update Clawix" empty state.
+`protocolVersion` and show an "Update Clawix" empty state.
 
-The current version is `1`.
+The current protocol version is `8`.
 
 ## Lifecycle
 
@@ -49,7 +49,7 @@ The current version is `1`.
 - `authOk` `{ hostDisplayName? }`.
 - `authFailed` `{ reason }`. Generic reason string for debugging.
 - `versionMismatch` `{ serverVersion }`. Sent before close when the daemon
-  detects an incompatible `schemaVersion`.
+  detects an incompatible `protocolVersion`.
 - `sessionsSnapshot` `{ sessions: [WireSession] }`. Full list of sessions visible
   on the Mac.
 - `sessionUpdated` `{ session: WireSession }`. Single session changed (title,
