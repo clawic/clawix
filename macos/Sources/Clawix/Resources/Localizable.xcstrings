@@ -20399,70 +20399,6 @@
         }
       }
     },
-    "Toggle experimental features by editing the configuration file.": {
-      "localizations": {
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configura las funciones experimentales desde el archivo de configuración."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toggle experimental features by editing the configuration file."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configurez les fonctionnalités expérimentales depuis le fichier de configuration."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Konfiguriere experimentelle Funktionen über die Konfigurationsdatei."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configura le funzionalità sperimentali dal file di configurazione."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Configure os recursos experimentais pelo arquivo de configuração."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "設定ファイルから実験的機能を設定します。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从配置文件中配置实验性功能。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "구성 파일에서 실험적 기능을 설정하세요."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Настройте экспериментальные функции в файле конфигурации."
-          }
-        }
-      }
-    },
     "Transcribe and send": {
       "localizations": {
         "en": {
@@ -47149,70 +47085,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Retry up to 3×"
-          }
-        }
-      }
-    },
-    "Run a silent transcription at boot so the first dictation of the session is instant. Experimental": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ejecuta una transcripción silenciosa al arrancar para que el primer dictado de la sesión sea instantáneo. Experimental"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Run a silent transcription at boot so the first dictation of the session is instant. Experimental"
           }
         }
       }
@@ -76658,6 +76530,134 @@
           "stringUnit": {
             "state": "translated",
             "value": "Agents: \\(shares.agent.count)"
+          }
+        }
+      }
+    },
+    "Toggle developer-only surfaces by editing the configuration file.": {
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle developer-only surfaces by editing the configuration file."
+          }
+        }
+      }
+    },
+    "Run a local warm-up at boot so the first dictation of the session is instant.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a local warm-up at boot so the first dictation of the session is instant."
           }
         }
       }

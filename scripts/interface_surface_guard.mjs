@@ -110,6 +110,7 @@ for (const snippet of [
   "clawix://session/<sessionId>",
   "clawix://auth/callback/<provider>",
   "JSON payload with `v`, `host`, `port`, `token`",
+  "`HostActionPolicy` approval/audit API",
 ]) {
   requireSnippet("docs/interface-matrix.md", snippet);
 }
@@ -148,6 +149,7 @@ const staleContractTargets = [
   "docs/interface-matrix.md",
   "docs/persistent-surface-clawix.manifest.json",
   "macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift",
+  "macos/Sources/Clawix/FeatureFlags.swift",
   "macos/Sources/Clawix/AppState/Routes.swift",
   "macos/Sources/Clawix/AppState/DeepLinks.swift",
   "macos/Sources/Clawix/Providers/OAuth/OAuthStrategy.swift",
@@ -191,6 +193,12 @@ const stalePatterns = [
   { pattern: "clawix://oauth-callback", reason: "OAuth deep link is clawix://auth/callback/<provider>" },
   { pattern: "clawix://pair/{token}", reason: "stable pairing contract is JSON QR" },
   { pattern: "clawix://pair?", reason: "stable pairing contract is JSON QR" },
+  { pattern: "FeatureTier.beta", reason: "v1 surfaces must be stable, dev-only, or removed" },
+  { pattern: "FeatureTier.experimental", reason: "v1 surfaces must be stable, dev-only, or removed" },
+  { pattern: "case beta", reason: "v1 surfaces must be stable, dev-only, or removed" },
+  { pattern: "case experimental", reason: "v1 surfaces must be stable, dev-only, or removed" },
+  { pattern: "FeatureFlags.beta", reason: "use explicit stable/dev-only classification" },
+  { pattern: "FeatureFlags.experimental", reason: "use explicit stable/dev-only classification" },
 ];
 
 for (const relativePath of staleContractTargets) {

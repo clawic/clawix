@@ -36,36 +36,25 @@ struct GeneralPage: View {
             PageHeader(title: "General")
 
 #if DEBUG
-            // Beta + Experimental toggles ship in dev builds only. Release
-            // builds compile both flags as `let beta = false` /
-            // `let experimental = false` (see FeatureFlags.swift), so the
-            // setter Binding below cannot exist there. Hiding the whole
-            // card keeps the Settings page tidy and prevents users on a
-            // notarized build from poking at half-finished surfaces.
-            SectionLabel(title: "Feature previews")
+            // Developer-only tooling ships in dev builds only. Release builds
+            // compile the switch as `let developerSurfaces = false` (see
+            // FeatureFlags.swift), so the setter Binding below cannot exist
+            // there.
+            SectionLabel(title: "Developer tools")
             SettingsCard {
                 ToggleRow(
-                    title: "Beta features",
-                    detail: "Show features in active development. They generally work but may still have rough edges. Off by default.",
+                    title: "Developer-only surfaces",
+                    detail: "Show internal tools that are explicitly outside product v1, such as simulators. Off by default.",
                     isOn: Binding(
-                        get: { flags.beta },
-                        set: { flags.beta = $0 }
-                    )
-                )
-                CardDivider()
-                ToggleRow(
-                    title: "Experimental features",
-                    detail: "Show very early features that may not work well yet. For previewing only, not for serious use. Off by default.",
-                    isOn: Binding(
-                        get: { flags.experimental },
-                        set: { flags.experimental = $0 }
+                        get: { flags.developerSurfaces },
+                        set: { flags.developerSurfaces = $0 }
                     )
                 )
             }
             .padding(.bottom, 8)
 #endif
 
-            if flags.experimental {
+            if flags.developerSurfaces {
                 Text("Work mode")
                     .font(BodyFont.system(size: 13, wght: 600))
                     .foregroundColor(Palette.textPrimary)
@@ -132,29 +121,29 @@ struct GeneralPage: View {
                         set: { backgroundBridge.toggle($0) }
                     )
                 )
-                if flags.experimental {
-                    CardDivider()
-                    SegmentedRow(
-                        title: "Agent runtime",
-                        detail: appState.selectedAgentRuntime == .opencode
-                            ? "OpenCode uses \(appState.openCodeModelSelection). Restart the background bridge after switching."
-                            : "Codex remains the default runtime.",
-                        options: AgentRuntimeChoice.visibleCases().map { ($0, $0.label) },
-                        selection: $appState.selectedAgentRuntime
+                CardDivider()
+                SegmentedRow(
+                    title: "Agent runtime",
+                    detail: appState.selectedAgentRuntime == .opencode
+                        ? "OpenCode uses \(appState.openCodeModelSelection). Restart the background bridge after switching."
+                        : "Codex remains the default runtime.",
+                    options: AgentRuntimeChoice.visibleCases().map { ($0, $0.label) },
+                    selection: $appState.selectedAgentRuntime
+                )
+                CardDivider()
+                DropdownRow(
+                    title: "OpenCode model",
+                    detail: "Provider/model id used when OpenCode is active. DeepSeek V4 Pro is selected by default.",
+                    options: [(AgentRuntimeChoice.defaultOpenCodeModel, AgentRuntimeChoice.defaultOpenCodeModel)],
+                    selection: Binding(
+                        get: { appState.openCodeModelSelection },
+                        set: {
+                            appState.selectedModel = $0
+                            appState.selectedAgentRuntime = .opencode
+                        }
                     )
-                    CardDivider()
-                    DropdownRow(
-                        title: "OpenCode model",
-                        detail: "Provider/model id used when OpenCode is active. DeepSeek V4 Pro is selected by default.",
-                        options: [(AgentRuntimeChoice.defaultOpenCodeModel, AgentRuntimeChoice.defaultOpenCodeModel)],
-                        selection: Binding(
-                            get: { appState.openCodeModelSelection },
-                            set: {
-                                appState.selectedModel = $0
-                                appState.selectedAgentRuntime = .opencode
-                            }
-                        )
-                    )
+                )
+                if flags.developerSurfaces {
                     CardDivider()
                     DropdownRow(
                         title: "Default open destination",
@@ -251,7 +240,7 @@ struct GeneralPage: View {
 
             HiddenCodexFoldersSection()
 
-            if flags.experimental {
+            if flags.developerSurfaces {
                 SectionLabel(title: "Dictation")
                 SettingsCard {
                     ActionPillRow(

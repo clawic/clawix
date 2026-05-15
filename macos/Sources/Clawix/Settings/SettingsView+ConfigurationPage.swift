@@ -146,7 +146,7 @@ struct DeprecationBanner: View {
                 HStack(spacing: 4) {
                     LucideIcon(.globe, size: 11)
                         .foregroundColor(Palette.pastelBlue)
-                    Text("Toggle experimental features by editing the configuration file.")
+                    Text("Toggle developer-only surfaces by editing the configuration file.")
                         .font(BodyFont.system(size: 11.5, wght: 500))
                         .foregroundColor(Palette.pastelBlue)
                     Text("for details.")

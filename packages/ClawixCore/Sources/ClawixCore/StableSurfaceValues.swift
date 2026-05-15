@@ -25,7 +25,6 @@ public enum ClawixEnv {
     public static let e2eDictationReport = "CLAWIX_E2E_DICTATION_REPORT"
     public static let e2eEnhancementFail = "CLAWIX_E2E_ENHANCEMENT_FAIL"
     public static let e2eTranscriptionText = "CLAWIX_E2E_TRANSCRIPTION_TEXT"
-    public static let experimentalFeatures = "CLAWIX_EXPERIMENTAL_FEATURES"
     public static let fileFixtureDir = "CLAWIX_FILE_FIXTURE_DIR"
     public static let fixtureSeeding = "CLAWIX_FIXTURE_SEEDING"
     public static let forceHangDetector = "CLAWIX_FORCE_HANG_DETECTOR"

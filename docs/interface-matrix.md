@@ -45,8 +45,8 @@ experimental switch. Every current surface must be one of:
 | Apps | Framework | Apps catalog and app surface | ClawJS apps/resource APIs | Framework workspace storage | Reject App Support as canonical Apps path |
 | Design | Framework | Styles, templates, references, editor | Design resource types in registry/runtime | Framework workspace storage | Design fixtures and storage boundary tests |
 | Browser tool | Host | Browser/right sidebar | Host browser policy/API/audit | Host policy plus UI cache | Approval/policy tests |
-| Screen tools | Host | Capture tools | Host screen policy/API/audit | Host policy plus UI prefs | Signed-host permission validation |
-| Mac Utilities | Host | Native utility controls | Host native action policy/API/audit | Host policy | Approval/audit tests |
+| Screen tools | Host | Capture tools | `HostActionPolicy` approval/audit API | Host policy plus UI prefs | Signed-host permission validation + policy tests |
+| Mac Utilities | Host | Native utility controls | `HostActionPolicy` approval/audit API | Host policy + host action audit | Approval/audit tests |
 | Git workflow | Framework + Host | Git workflow affordances | Framework git/resource APIs plus host policy | Framework resource plus host policy | Policy fixtures |
 | Remote Mesh | Framework + Host | Mesh targets and status | Framework mesh APIs and bridge fixtures | Framework runtime plus host state | Mesh API and bridge parity tests |
 | OpenCode/runtime adapters | Framework | Runtime adapter selector | Framework runtime adapter registry | Framework runtime | Adapter registry tests |
@@ -78,5 +78,6 @@ experimental switch. Every current surface must be one of:
 - Stable Clawix defaults must use port `24080`.
 - Legacy chat, OAuth callback, and pairing-token deep link spellings are not
   accepted v1 contracts.
-- `FeatureFlags.beta` and `FeatureFlags.experimental` may not be used as a
-  reason to skip any current surface from this matrix.
+- `FeatureFlags.developerSurfaces` is only for surfaces classified as
+  `dev-only`; it may not be used as a reason to skip any current stable
+  surface from this matrix.

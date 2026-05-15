@@ -258,7 +258,7 @@ extension AppState {
         return AgentRuntimeChoice.persistedOpenCodeModel()
     }
 
-    func enforceExperimentalRuntimeVisibility() {
+    func enforceRuntimeVisibility() {
         guard !FeatureFlags.shared.isVisible(.openCode) else { return }
         if selectedAgentRuntime == .opencode {
             selectedAgentRuntime = .codex

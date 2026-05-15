@@ -96,7 +96,7 @@ struct QuickAskSettingsPage: View {
                         QuickAskController.shared.quickAskDefaultModel =
                             newValue.isEmpty ? nil : newValue
                     }
-                    .onChange(of: flags.experimental) { _, _ in
+                    .onChange(of: flags.developerSurfaces) { _, _ in
                         if defaultModelSelection.contains("/"), !flags.isVisible(.openCode) {
                             defaultModelSelection = ""
                             QuickAskController.shared.quickAskDefaultModel = nil

@@ -20,16 +20,13 @@ enum AgentRuntimeSelection: String {
     static let defaultOpenCodeModel = "deepseekv4/deepseek-v4-pro"
 
     static func resolve(environment: [String: String], defaults: UserDefaults) -> AgentRuntimeSelection {
-        let experimentalEnabled =
-            environment[ClawixEnv.experimentalFeatures] == "1"
-            || (defaults.object(forKey: "FeatureFlags.experimental") as? Bool ?? false)
         if let raw = environment[ClawixEnv.agentRuntime]?.lowercased(),
            let runtime = AgentRuntimeSelection(rawValue: raw) {
-            return runtime == .opencode && !experimentalEnabled ? .codex : runtime
+            return runtime
         }
         if let raw = defaults.string(forKey: runtimeKey)?.lowercased(),
            let runtime = AgentRuntimeSelection(rawValue: raw) {
-            return runtime == .opencode && !experimentalEnabled ? .codex : runtime
+            return runtime
         }
         return .codex
     }

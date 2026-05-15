@@ -32,6 +32,9 @@ const requiredSnippets = [
   ["macos/Sources/Clawix/Agents/AgentStore.swift", "frameworkClient.listAgents"],
   ["macos/Sources/Clawix/Skills/SkillsStore.swift", "Source of truth lives in ClawJS"],
   ["macos/Sources/Clawix/Skills/SkillsStore.swift", "frameworkClient?.upsertSkillRecord"],
+  ["macos/Sources/Clawix/HostActions/HostActionPolicy.swift", "Requires explicit host approval."],
+  ["macos/Sources/Clawix/MacUtilities/MacUtilitiesController.swift", "HostActionPolicy.authorize"],
+  ["macos/Sources/Clawix/ScreenTools/ScreenToolService.swift", "HostActionPolicy.authorize"],
   ["docs/interface-matrix.md", "Reject App Support as canonical Apps path"],
   ["docs/interface-matrix.md", "Framework workspace storage"],
 ];
@@ -110,6 +113,18 @@ for (const [id, expectedPath] of [
   if (node.path !== expectedPath) fail(`${id} path must be ${expectedPath}`);
   if (node.storageClass !== "frameworkGlobal") fail(`${id} storageClass must be frameworkGlobal`);
   if (node.canonicality !== "frameworkCanonical") fail(`${id} canonicality must be frameworkCanonical`);
+}
+
+const hostActionAudit = nodes.get("clawix.hostActionAudit");
+if (!hostActionAudit) {
+  fail("persistent surface manifest is missing clawix.hostActionAudit");
+} else {
+  if (hostActionAudit.owner !== "clawix") fail("clawix.hostActionAudit owner must be clawix");
+  if (hostActionAudit.path !== "~/Library/Application Support/Clawix/host-action-audit.jsonl") {
+    fail("clawix.hostActionAudit path must be ~/Library/Application Support/Clawix/host-action-audit.jsonl");
+  }
+  if (hostActionAudit.storageClass !== "hostOperational") fail("clawix.hostActionAudit storageClass must be hostOperational");
+  if (hostActionAudit.canonicality !== "hostOnly") fail("clawix.hostActionAudit canonicality must be hostOnly");
 }
 
 for (const staleId of ["clawix.apps", "clawix.design", "clawix.audioCatalog", "clawix.audioCatalogMetadata", "clawix.dictationAudio"]) {

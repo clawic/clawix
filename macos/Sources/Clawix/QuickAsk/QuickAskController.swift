@@ -187,9 +187,8 @@ final class QuickAskController: ObservableObject {
 
     /// Toggle visibility. Pressing the hotkey while the panel is on
     /// screen dismisses it, mirroring launcher-style HUD behaviour.
-    /// No-op when the experimental feature flag is off, so a stale
-    /// hotkey configured before the user disabled the flag doesn't
-    /// surprise them with a panel.
+    /// No-op when the QuickAsk surface is not visible, so a stale hotkey
+    /// configured in a dev-only build does not surprise the user with a panel.
     func toggle() {
         guard FeatureFlags.shared.isVisible(.quickAsk) else { return }
         let visible = panel?.isVisible == true

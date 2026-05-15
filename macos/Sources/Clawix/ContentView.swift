@@ -446,12 +446,9 @@ struct ContentView: View {
                 appState.isRightSidebarMaximized = false
             }
         }
-        .onChange(of: flags.beta) { _, _ in
+        .onChange(of: flags.developerSurfaces) { _, _ in
             appState.enforceCurrentRouteVisibility()
-        }
-        .onChange(of: flags.experimental) { _, _ in
-            appState.enforceCurrentRouteVisibility()
-            appState.enforceExperimentalRuntimeVisibility()
+            appState.enforceRuntimeVisibility()
         }
         .overlay(CommandPaletteOverlay(appState: appState))
         .overlay(ImagePreviewOverlay(appState: appState))

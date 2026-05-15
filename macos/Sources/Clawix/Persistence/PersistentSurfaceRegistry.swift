@@ -165,8 +165,15 @@ enum ClawixPersistentSurface {
         node(id: id, kind: kind, name: name, key: key, storageClass: "nativeAppData", notes: notes)
     }
 
-    static func file(id: String, name: String, path: String, parentId: String? = nil, storageClass: String = "nativeAppData") -> PersistentSurfaceNode {
-        node(id: id, kind: .file, name: name, path: path, storageClass: storageClass, parentId: parentId)
+    static func file(
+        id: String,
+        name: String,
+        path: String,
+        parentId: String? = nil,
+        storageClass: String = "nativeAppData",
+        notes: String? = nil
+    ) -> PersistentSurfaceNode {
+        node(id: id, kind: .file, name: name, path: path, storageClass: storageClass, parentId: parentId, notes: notes)
     }
 
     static func cache(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
@@ -439,6 +446,14 @@ enum ClawixPersistentSurfaceRegistry {
                 path: "~/Library/Logs/Clawix",
                 parentId: "clawix.applicationSupport"
             ),
+            ClawixPersistentSurface.file(
+                id: "clawix.hostActionAudit",
+                name: "Host action audit log",
+                path: "~/Library/Application Support/Clawix/host-action-audit.jsonl",
+                parentId: "clawix.applicationSupport",
+                storageClass: "hostOperational",
+                notes: "Append-only audit for host-owned Browser, Screen Tools, Mac Utilities, and agent-visible native action policy decisions."
+            ),
             ClawixPersistentSurface.folder(
                 id: "clawix.bridgeState",
                 name: "Bridge state",
@@ -593,7 +608,6 @@ enum ClawixPersistentSurfaceRegistry {
             "CLAWIX_E2E_DICTATION_REPORT",
             "CLAWIX_E2E_ENHANCEMENT_FAIL",
             "CLAWIX_E2E_TRANSCRIPTION_TEXT",
-            "CLAWIX_EXPERIMENTAL_FEATURES",
             "CLAWIX_FILE_FIXTURE_DIR",
             "CLAWIX_FIXTURE_SEEDING",
             "CLAWIX_FORCE_HANG_DETECTOR",
@@ -792,14 +806,15 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.publishing.homeTab", "Publishing home tab", ClawixPersistentSurfaceKeys.publishingHomeTab, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.publishing.workspace", "Publishing workspace", PublishingManager.workspaceKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.git.commitInstructions", "Git commit instructions", ClawixPersistentSurfaceKeys.gitCommitInstructions, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.featureFlags.beta", "Beta feature flag", ClawixPersistentSurfaceKeys.featureFlagsBeta, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.featureFlags.experimental", "Experimental feature flag", ClawixPersistentSurfaceKeys.featureFlagsExperimental, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.featureFlags.developerSurfaces", "Developer-only surface flag", ClawixPersistentSurfaceKeys.featureFlagsDeveloperSurfaces, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.life.enabledVerticals", "Life enabled verticals", ClawixPersistentSurfaceKeys.lifeEnabledVerticals, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.life.hiddenVerticals", "Life hidden verticals", ClawixPersistentSurfaceKeys.lifeHiddenVerticals, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.relay.refresh", "Relay refresh token pattern", ClawixPersistentSurfaceKeys.relayRefreshPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.browser.websiteApproval", "Browser website approval", BrowserPermissionPolicy.approvalStorageKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.browser.blockedDomains", "Browser blocked domains", BrowserPermissionPolicy.blockedDomainsStorageKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.browser.allowedDomains", "Browser allowed domains", BrowserPermissionPolicy.allowedDomainsStorageKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.hostPolicy.screenTools.approval", "Screen Tools host action approval", HostActionPolicy.screenToolsApprovalKey, PersistentSurfaceKind.preferenceKey),
+            ("clawix.prefs.hostPolicy.macUtilities.approval", "Mac Utilities host action approval", HostActionPolicy.macUtilitiesApprovalKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.mesh.httpPort", "Mesh HTTP port override", MeshClient.httpPortDefaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.mesh.remoteWorkspaces", "Mesh remote workspaces", MeshStore.workspacesDefaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.localModels.defaultModel", "Local models default model", LocalModelsService.defaultModelKey, PersistentSurfaceKind.preferenceKey),
@@ -990,8 +1005,7 @@ enum ClawixPersistentSurfaceKeys {
     static let publishingHomeTab = "clawix.publishing.homeTab.v1"
     static let feedDisplayMode = "clawix.feed.displayMode"
     static let gitCommitInstructions = "clawix.git.commitInstructions"
-    static let featureFlagsBeta = "FeatureFlags.beta"
-    static let featureFlagsExperimental = "FeatureFlags.experimental"
+    static let featureFlagsDeveloperSurfaces = "FeatureFlags.developerSurfaces"
     static let lifeEnabledVerticals = "LifeEnabledVerticals"
     static let lifeHiddenVerticals = "LifeHiddenVerticals"
     static let relayRefreshPrefix = "clawix.relay.refresh"

@@ -284,7 +284,7 @@ struct DictationSettingsPage: View {
                 SettingsCard {
                     ToggleRow(
                         title: "Prewarm model on launch",
-                        detail: "Run a silent transcription at boot so the first dictation of the session is instant. Experimental",
+                        detail: "Run a local warm-up at boot so the first dictation of the session is instant.",
                         isOn: $prewarmOnLaunch
                     )
                 }
