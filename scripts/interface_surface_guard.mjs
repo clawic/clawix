@@ -247,6 +247,24 @@ for (const pattern of ["EXPERIMENTAL.", "experimental API methods", "requires ex
     fail(`ClawixProtocol.swift contains ambiguous experimental wording ${JSON.stringify(pattern)}`);
   }
 }
+for (const pattern of ["let experimentalApi", "experimentalApi: true", "wire key remains", "legacy; subsumed"]) {
+  if (clawixProtocol.includes(pattern)) {
+    fail(`ClawixProtocol.swift must expose stable local v1 names for upstream wire fields: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const bridgedBackendRPC = read("macos/Helpers/Bridged/Sources/clawix-bridge/BackendRPC.swift");
+const bridgedMain = read("macos/Helpers/Bridged/Sources/clawix-bridge/main.swift");
+for (const [relativePath, source] of [
+  ["macos/Helpers/Bridged/Sources/clawix-bridge/BackendRPC.swift", bridgedBackendRPC],
+  ["macos/Helpers/Bridged/Sources/clawix-bridge/main.swift", bridgedMain],
+]) {
+  for (const pattern of ["let experimentalApi", "experimentalApi: true", "personality: nil"]) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must expose stable local v1 names for upstream wire fields: ${JSON.stringify(pattern)}`);
+    }
+  }
+}
 
 const bridgeProtocol = read("packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift");
 for (const pattern of ["legacy (v1-v5)", "legacyTypeTag", "encodeLegacyPayload", "decodeLegacy"]) {

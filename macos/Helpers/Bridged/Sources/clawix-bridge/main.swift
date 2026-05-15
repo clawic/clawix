@@ -377,7 +377,7 @@ final class DaemonEngineHost: EngineHost {
                 method: "initialize",
                 params: InitializeParams(
                     clientInfo: InitializeClientInfo(name: "Clawix Bridge", title: "Clawix", version: "1"),
-                    capabilities: InitializeCapabilities(experimentalApi: true, optOutNotificationMethods: nil)
+                    capabilities: InitializeCapabilities(extensionFields: true, optOutNotificationMethods: nil)
                 ),
                 timeoutSeconds: initialRequestTimeoutSeconds
             )
@@ -815,7 +815,7 @@ final class DaemonEngineHost: EngineHost {
                     model: nil,
                     approvalPolicy: nil,
                     sandbox: nil,
-                    personality: nil,
+                    personalizationPreset: nil,
                     serviceTier: nil,
                     collaborationMode: nil
                 ),
@@ -997,7 +997,7 @@ final class DaemonEngineHost: EngineHost {
                 model: nil,
                 approvalPolicy: nil,
                 sandbox: nil,
-                personality: nil,
+                personalizationPreset: nil,
                 serviceTier: nil,
                 collaborationMode: nil
             ),

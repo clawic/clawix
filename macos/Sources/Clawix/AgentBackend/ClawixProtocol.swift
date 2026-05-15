@@ -132,11 +132,15 @@ struct InitializeClientInfo: Encodable {
 }
 
 struct InitializeCapabilities: Encodable {
-    /// Upstream capability name required by the daemon for extension fields
-    /// such as `collaborationMode`. Clawix treats the integration itself as
-    /// stable; the wire key remains `experimentalApi` for compatibility.
-    let experimentalApi: Bool?
+    /// Enables the stable Clawix extension fields consumed by the daemon,
+    /// including `collaborationMode`.
+    let extensionFields: Bool?
     let optOutNotificationMethods: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case extensionFields = "experimentalApi"
+        case optOutNotificationMethods
+    }
 }
 
 struct InitializeParams: Encodable {
@@ -151,7 +155,9 @@ struct ThreadStartParams: Encodable {
     let model: String?
     let approvalPolicy: String?      // "never" | "on-request" | "untrusted" | "on-failure"
     let sandbox: String?             // "read-only" | "workspace-write" | "danger-full-access"
-    let personality: String?         // "none" | "friendly" | "pragmatic" (legacy; subsumed by activeSkills kind=personality)
+    /// App-level personalization preset ("none" | "friendly" | "pragmatic").
+    /// Agent/personality records still travel through `activeSkills`.
+    let personalizationPreset: String?
     /// "fast" | "flex" | nil. Matches the composer's speed picker.
     let serviceTier: String?
     /// Skills active for this thread, resolved by the client from the
@@ -165,6 +171,17 @@ struct ThreadStartParams: Encodable {
     /// `mode = "plan"` arms the agent to consult the user via
     /// `item/tool/requestUserInput`; `mode = "default"` is execute-as-you-go.
     let collaborationMode: CollaborationModePayload?
+
+    enum CodingKeys: String, CodingKey {
+        case cwd
+        case model
+        case approvalPolicy
+        case sandbox
+        case personalizationPreset = "personality"
+        case serviceTier
+        case activeSkills
+        case collaborationMode
+    }
 }
 
 /// Wire description of a skill the thread should boot with. Only the

@@ -64,7 +64,7 @@ final class ClawixService: ObservableObject {
                 params: InitializeParams(
                     clientInfo: InitializeClientInfo(name: "Clawix", title: "Clawix", version: AppVersion.marketing),
                     capabilities: InitializeCapabilities(
-                        experimentalApi: true,
+                        extensionFields: true,
                         optOutNotificationMethods: nil
                     )
                 )
@@ -375,7 +375,7 @@ final class ClawixService: ObservableObject {
                 model: modelSlug,
                 approvalPolicy: permissionMode.codexApprovalPolicy,
                 sandbox: permissionMode.codexSandbox,
-                personality: appState?.personality.rawValue,
+                personalizationPreset: appState?.personality.rawValue,
                 serviceTier: serviceTier,
                 activeSkills: nil,
                 collaborationMode: nil

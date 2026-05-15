@@ -247,8 +247,13 @@ struct InitializeClientInfo: Encodable {
 }
 
 struct InitializeCapabilities: Encodable {
-    let experimentalApi: Bool?
+    let extensionFields: Bool?
     let optOutNotificationMethods: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case extensionFields = "experimentalApi"
+        case optOutNotificationMethods
+    }
 }
 
 struct InitializeParams: Encodable {
@@ -422,9 +427,19 @@ struct ThreadStartParams: Encodable {
     let model: String?
     let approvalPolicy: String?
     let sandbox: String?
-    let personality: String?
+    let personalizationPreset: String?
     let serviceTier: String?
     let collaborationMode: CollaborationModePayload?
+
+    enum CodingKeys: String, CodingKey {
+        case cwd
+        case model
+        case approvalPolicy
+        case sandbox
+        case personalizationPreset = "personality"
+        case serviceTier
+        case collaborationMode
+    }
 }
 
 struct ThreadHandle: Decodable {
