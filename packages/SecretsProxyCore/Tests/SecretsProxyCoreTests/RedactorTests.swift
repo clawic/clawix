@@ -26,21 +26,21 @@ final class RedactorTests: XCTestCase {
         XCTAssertEqual(Redactor.redact("hello", with: [RedactionEntry(value: "", label: "[X]")]), "hello")
     }
 
-    func testHandlesUTF8Data() {
+    func testRedactsUTF8Payload() {
         let entry = RedactionEntry(value: "secret🔐value", label: "[REDACTED:x]")
         let payload = Data("body=secret🔐value\n".utf8)
         let redacted = Redactor.redact(data: payload, with: [entry])
         XCTAssertEqual(String(data: redacted, encoding: .utf8), "body=[REDACTED:x]\n")
     }
 
-    func testNonUtf8DataPassesThrough() {
+    func testNonUtf8PayloadPassesThrough() {
         let bytes: [UInt8] = [0xFF, 0xFE, 0x00, 0x01]
         let original = Data(bytes)
         let redacted = Redactor.redact(data: original, with: [RedactionEntry(value: "x", label: "[X]")])
         XCTAssertEqual(redacted, original)
     }
 
-    func testLabelHelper() {
+    func testBuildsRedactionLabels() {
         XCTAssertEqual(Redactor.label(forSecretInternalName: "service_main"), "[REDACTED:service_main]")
         XCTAssertEqual(Redactor.label(forSecretInternalName: "x", customLabel: "[GH_TOKEN]"), "[GH_TOKEN]")
         XCTAssertEqual(Redactor.label(forSecretInternalName: "x", customLabel: ""), "[REDACTED:x]")
