@@ -74,7 +74,7 @@ final class BridgeClient: NSObject {
     /// streaming smooth (~12fps text growth, well under typing speed)
     /// while collapsing redraws by an order of magnitude when chunks
     /// arrive faster than the eye can read.
-    private static let streamCoalesceNanos: UInt64 = 80_000_000
+    private static let streamCoalesceNanos: UInt64 = 10_000_000
 
     /// Pending streaming updates keyed by `messageId`. Each new chunk
     /// for the same message overwrites the previous (last-wins); a
@@ -497,8 +497,8 @@ final class BridgeClient: NSObject {
         } catch {
             return
         }
-        guard frame.protocolVersion == bridgeProtocolVersion else {
-            clientDbg.error("RX protocol mismatch frame=\(frame.protocolVersion, privacy: .public) ours=\(bridgeProtocolVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
+        guard frame.schemaVersion == bridgeSchemaVersion else {
+            clientDbg.error("RX protocol mismatch frame=\(frame.schemaVersion, privacy: .public) ours=\(bridgeSchemaVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
             store.connection = .error(message: "Update Clawix on the Mac")
             store.bridgeSync = .error("Update Clawix on the Mac")
             store.bridgeSyncUpdatedAt = Date()

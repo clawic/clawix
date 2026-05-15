@@ -16,7 +16,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, info, warn};
 
 const DEFAULT_PORT: u16 = 24080;
-const BRIDGE_PROTOCOL_VERSION: u8 = 8;
+const BRIDGE_SCHEMA_VERSION: u8 = 1;
 const RECONNECT_BACKOFF_MS: u64 = 1500;
 const FRAME_BATCH_WINDOW_MS: u64 = 16;
 
@@ -108,7 +108,7 @@ impl DaemonClient {
             .as_ref()
             .ok_or_else(|| anyhow!("daemon not connected"))?;
         let frame = serde_json::json!({
-            "protocolVersion": BRIDGE_PROTOCOL_VERSION,
+            "schemaVersion": BRIDGE_SCHEMA_VERSION,
             "body": body
         });
         tx.send(Message::Text(frame.to_string()))
@@ -133,7 +133,7 @@ pub async fn connect_and_run(client: Arc<Mutex<DaemonClient>>, app: AppHandle) -
                 // Auth frame
                 if let Ok(bearer) = read_bearer() {
                     let auth = serde_json::json!({
-                        "protocolVersion": BRIDGE_PROTOCOL_VERSION,
+                        "schemaVersion": BRIDGE_SCHEMA_VERSION,
                         "body": {
                             "type": "auth",
                             "token": bearer,

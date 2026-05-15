@@ -3,7 +3,7 @@ package com.example.clawix.android.bridge
 import android.util.Log
 import com.example.clawix.android.core.BRIDGE_INITIAL_PAGE_LIMIT
 import com.example.clawix.android.core.BRIDGE_OLDER_PAGE_LIMIT
-import com.example.clawix.android.core.BRIDGE_PROTOCOL_VERSION
+import com.example.clawix.android.core.BRIDGE_SCHEMA_VERSION
 import com.example.clawix.android.core.BridgeBody
 import com.example.clawix.android.core.BridgeCoder
 import com.example.clawix.android.core.BridgeFrame
@@ -233,7 +233,7 @@ class BridgeClient(
                 while (scope.isActive) {
                     delay(15_000)
                     val ws = winner ?: break
-                    val sent = ws.send("{\"protocolVersion\":$BRIDGE_PROTOCOL_VERSION,\"type\":\"_ping\"}")
+                    val sent = ws.send("{\"schemaVersion\":$BRIDGE_SCHEMA_VERSION,\"type\":\"_ping\"}")
                     if (!sent) break
                     val sinceLast = System.currentTimeMillis() - winnerResult.listener.lastInboundAt.get()
                     if (sinceLast > 30_000) {

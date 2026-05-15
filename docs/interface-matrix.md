@@ -71,12 +71,12 @@ experimental switch. Every current surface must be one of:
 
 ## Guardrails
 
-- `protocolVersion` is retained for the bridge JSON wire contract and must be `8`.
+- `schemaVersion` is retained for the bridge JSON wire contract and must be `1`.
 - Bridge docs and public wire names use `session`, not stable `chat`.
 - Public bridge names use `sendMessage`, `WireSession`, `sessionUpdated`, and
   `hostDisplayName`.
-- Stable Clawix defaults must not use port `7777`.
-- `clawix://chat`, `clawix://oauth-callback`, and stable
-  `clawix://pair/<token>` are not accepted v1 contracts.
+- Stable Clawix defaults must use port `24080`.
+- Legacy chat, OAuth callback, and pairing-token deep link spellings are not
+  accepted v1 contracts.
 - `FeatureFlags.beta` and `FeatureFlags.experimental` may not be used as a
   reason to skip any current surface from this matrix.

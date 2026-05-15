@@ -3,7 +3,7 @@
  * Mirrors `BridgeBody` in `packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift`.
  *
  * Wire format is FLAT: every frame is a top-level JSON object with
- * `protocolVersion`, `type`, and the payload fields. There is no `payload` envelope.
+ * `schemaVersion`, `type`, and the payload fields. There is no `payload` envelope.
  */
 
 import { z } from "zod";
@@ -21,14 +21,14 @@ import {
   ZWireRateLimitSnapshot,
 } from "./wire";
 
-export const BRIDGE_PROTOCOL_VERSION = 8 as const;
+export const BRIDGE_SCHEMA_VERSION = 1 as const;
 export const BRIDGE_INITIAL_PAGE_LIMIT = 60 as const;
 export const BRIDGE_OLDER_PAGE_LIMIT = 40 as const;
 
 export const ZClientKind = z.enum(["companion", "desktop"]);
 export type ClientKind = z.infer<typeof ZClientKind>;
 
-const base = { protocolVersion: z.number().int().default(BRIDGE_PROTOCOL_VERSION) };
+const base = { schemaVersion: z.number().int().default(BRIDGE_SCHEMA_VERSION) };
 
 /** Outbound: client -> server */
 export const ZAuth = z.object({
@@ -372,11 +372,11 @@ export type FrameOf<T extends FrameType> = Extract<BridgeFrame, { type: T }>;
 
 /** Distributive Omit so each member of the union keeps its own type tag. */
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
-export type FrameBody = DistributiveOmit<BridgeFrame, "protocolVersion">;
+export type FrameBody = DistributiveOmit<BridgeFrame, "schemaVersion">;
 
 /** Encode a frame body to a JSON string ready to send over WebSocket. */
 export function encodeFrame(body: FrameBody): string {
-  const frame = { protocolVersion: BRIDGE_PROTOCOL_VERSION, ...body };
+  const frame = { schemaVersion: BRIDGE_SCHEMA_VERSION, ...body };
   return JSON.stringify(frame);
 }
 
@@ -398,12 +398,12 @@ export function decodeFrame(raw: string): BridgeFrame | null {
   }
 }
 
-/** Inspect protocolVersion before full parsing to bail on mismatched peers. */
-export function peekProtocolVersion(raw: string): number | null {
+/** Inspect schemaVersion before full parsing to bail on mismatched peers. */
+export function peekSchemaVersion(raw: string): number | null {
   try {
     const obj = JSON.parse(raw);
-    if (typeof obj === "object" && obj !== null && typeof obj.protocolVersion === "number") {
-      return obj.protocolVersion;
+    if (typeof obj === "object" && obj !== null && typeof obj.schemaVersion === "number") {
+      return obj.schemaVersion;
     }
     return null;
   } catch {

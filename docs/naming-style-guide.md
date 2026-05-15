@@ -37,7 +37,7 @@ The canonical shared guide lives in the ClawJS repository at
 - Use `sessionId`, not stable `chatId`, in bridge/protocol contracts.
 - `chat` may appear only as UI copy or UI-local naming.
 - Use `threadId` only for external runtime IDs.
-- Use `schemaVersion` for data and `protocolVersion` for wire protocols.
+- Use `schemaVersion` for versioned JSON envelopes, including the Clawix bridge.
 - Frame/event `type` strings use `lowerCamelCase`.
 - Stable error codes use `snake_case`.
 - Deep links use:

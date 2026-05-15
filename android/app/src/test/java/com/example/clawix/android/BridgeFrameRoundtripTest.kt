@@ -4,7 +4,7 @@ import com.example.clawix.android.core.BridgeBody
 import com.example.clawix.android.core.BridgeCoder
 import com.example.clawix.android.core.BridgeFrame
 import com.example.clawix.android.core.BridgeJson
-import com.example.clawix.android.core.BRIDGE_PROTOCOL_VERSION
+import com.example.clawix.android.core.BRIDGE_SCHEMA_VERSION
 import com.example.clawix.android.core.ClientKind
 import com.example.clawix.android.core.WireAttachment
 import com.example.clawix.android.core.WireAttachmentKind
@@ -29,7 +29,7 @@ import org.junit.Test
  *   2. decodes the JSON back
  *   3. checks structural equality
  *   4. for the inline-shape sanity test, also asserts the JSON has the
- *      flat envelope (`{ "protocolVersion": N, "type": "...", ...flat }`)
+ *      flat envelope (`{ "schemaVersion": N, "type": "...", ...flat }`)
  */
 class BridgeFrameRoundtripTest {
 
@@ -39,13 +39,13 @@ class BridgeFrameRoundtripTest {
         val frame = BridgeFrame(body = body)
         val raw = BridgeCoder.encode(frame)
         val decoded = BridgeCoder.decode(raw)
-        assertEquals("protocolVersion mismatch", BRIDGE_PROTOCOL_VERSION, decoded.protocolVersion)
+        assertEquals("schemaVersion mismatch", BRIDGE_SCHEMA_VERSION, decoded.schemaVersion)
         assertEquals("body mismatch on $body", body, decoded.body)
     }
 
     private fun assertFlatEnvelope(raw: String, expectedType: String, expectedFlatKey: String) {
         val obj = parser.parseToJsonElement(raw).jsonObject
-        assertEquals(BRIDGE_PROTOCOL_VERSION, obj["protocolVersion"]?.jsonPrimitive?.content?.toInt())
+        assertEquals(BRIDGE_SCHEMA_VERSION, obj["schemaVersion"]?.jsonPrimitive?.content?.toInt())
         assertEquals(expectedType, obj["type"]?.jsonPrimitive?.content)
         assertNotNull("expected $expectedFlatKey at top level (no payload nesting)", obj[expectedFlatKey])
     }
@@ -56,7 +56,7 @@ class BridgeFrameRoundtripTest {
         )
         assertFlatEnvelope(raw, "auth", "token")
         assertTrue(raw.contains("\"deviceName\":\"iPhone\""))
-        assertTrue(raw.contains("\"clientKind\":\"ios\""))
+        assertTrue(raw.contains("\"clientKind\":\"companion\""))
     }
 
     @Test fun roundtrip_outbound_v1() {
@@ -166,7 +166,7 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun unknown_frame_type_decodes_as_unknown() {
-        val raw = """{"protocolVersion":8,"type":"futureFrame","extraField":42}"""
+        val raw = """{"schemaVersion":1,"type":"futureFrame","extraField":42}"""
         val decoded = BridgeCoder.decode(raw)
         assertTrue(decoded.body is BridgeBody.Unknown)
         val unk = decoded.body as BridgeBody.Unknown
@@ -174,7 +174,7 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun unknown_fields_in_known_type_are_ignored() {
-        val raw = """{"protocolVersion":8,"type":"openSession","sessionId":"c-1","limit":60,"thisIsFromTheFuture":true}"""
+        val raw = """{"schemaVersion":1,"type":"openSession","sessionId":"c-1","limit":60,"thisIsFromTheFuture":true}"""
         val decoded = BridgeCoder.decode(raw)
         assertEquals(BridgeBody.OpenSession("c-1", 60), decoded.body)
     }
@@ -186,7 +186,7 @@ class BridgeFrameRoundtripTest {
 
     @Test fun chat_decodes_with_legacy_payload_missing_optional_fields() {
         val raw = """
-            {"protocolVersion":8,"type":"sessionsSnapshot",
+            {"schemaVersion":1,"type":"sessionsSnapshot",
              "sessions":[{"id":"c-1","title":"t","createdAt":"2026-05-01T12:00:00Z"}]}
         """.trimIndent()
         val decoded = BridgeCoder.decode(raw)

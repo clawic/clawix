@@ -11,7 +11,7 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         XCTAssertTrue(nodes.contains { $0.id == "clawix.database.local.table.terminal_tabs.index.terminal_tabs_chat_position_idx" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.prefs.sidebar.viewMode" && $0.key == "SidebarViewMode" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge" && $0.surfaceClass == "protocol" })
-        XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge.field.protocolVersion" && $0.fieldPath == "protocolVersion" })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge.field.schemaVersion" && $0.fieldPath == "schemaVersion" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.api.mesh.post.mesh.jobs" && $0.route == "/v1/mesh/jobs" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.event.remoteJob.completed" && $0.value == "completed" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.web.storage.currentRoute" && $0.key == "ui.route" })

@@ -50,7 +50,7 @@ tests/
 
 ## Wire protocol
 
-Mirrors `packages/ClawixCore/Sources/ClawixCore/BridgeModels.swift` and `BridgeProtocol.swift`. Protocol version is read from `bridgeProtocolVersion` (currently `8`). When the daemon advertises a higher version, the SPA shows an "Update Clawix" empty state.
+Mirrors `packages/ClawixCore/Sources/ClawixCore/BridgeModels.swift` and `BridgeProtocol.swift`. Schema version is read from `bridgeSchemaVersion` (currently `1`). When the daemon advertises a higher version, the SPA shows an "Update Clawix" empty state.
 
 ## Tests
 

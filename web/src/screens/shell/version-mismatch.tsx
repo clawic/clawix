@@ -1,5 +1,5 @@
 /**
- * Banner shown when the daemon advertises a higher protocolVersion than
+ * Banner shown when the daemon advertises a higher schemaVersion than
  * this SPA knows about. The fix is to update the Mac app, which will ship
  * a newer web bundle inside its daemon.
  */

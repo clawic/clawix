@@ -91,7 +91,7 @@ function parseZodObjects(src: string): ZodObject[] {
     let fm: RegExpExecArray | null;
     while ((fm = fieldRe.exec(body)) !== null) {
       const fieldName = fm[1];
-      if (fieldName && fieldName !== "protocolVersion" && fieldName !== "type") {
+      if (fieldName && fieldName !== "schemaVersion" && fieldName !== "type") {
         fields.push(fieldName);
       }
     }

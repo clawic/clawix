@@ -233,7 +233,7 @@ final class BridgeConnection {
 
     private func injectBridgeBootstrap(into html: Data) -> Data {
         let snippet = """
-        <script>window.__CLAWIX_BRIDGE__ = { wsPort: \(wsPort), protocolVersion: \(bridgeProtocolVersion) };</script>
+        <script>window.__CLAWIX_BRIDGE__ = { wsPort: \(wsPort), schemaVersion: \(bridgeSchemaVersion) };</script>
         """
         guard var s = String(data: html, encoding: .utf8) else { return html }
         if let range = s.range(of: "</head>") {

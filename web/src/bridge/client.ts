@@ -12,14 +12,14 @@
  */
 
 import {
-  BRIDGE_PROTOCOL_VERSION,
+  BRIDGE_SCHEMA_VERSION,
   type BridgeFrame,
   type FrameBody,
   type FrameOf,
   type FrameType,
   decodeFrame,
   encodeFrame,
-  peekProtocolVersion,
+  peekSchemaVersion,
 } from "./frames";
 import { Backoff } from "../lib/reconnect";
 
@@ -49,7 +49,7 @@ type StateListener = (state: ConnectionState) => void;
 
 interface BridgeBootstrap {
   wsPort?: number;
-  protocolVersion?: number;
+  schemaVersion?: number;
 }
 
 function defaultEndpoint(): string {
@@ -158,8 +158,8 @@ export class BridgeClient {
       const raw = typeof ev.data === "string" ? ev.data : "";
       if (!raw) return;
 
-      const peeked = peekProtocolVersion(raw);
-      if (peeked != null && peeked > BRIDGE_PROTOCOL_VERSION) {
+      const peeked = peekSchemaVersion(raw);
+      if (peeked != null && peeked > BRIDGE_SCHEMA_VERSION) {
         this.setState({ kind: "version-mismatch", serverVersion: peeked });
         try { ws.close(1000, "version-mismatch"); } catch { /* ignore */ }
         return;

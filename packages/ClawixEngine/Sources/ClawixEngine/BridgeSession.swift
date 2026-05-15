@@ -81,8 +81,8 @@ public final class BridgeSession: Identifiable {
         // new field is optional), so we only refuse frames we genuinely
         // can't interpret. Anything else gets a `versionMismatch`
         // before close so the client knows to update.
-        if frame.protocolVersion > bridgeProtocolVersion {
-            send(BridgeFrame(.versionMismatch(serverVersion: bridgeProtocolVersion)))
+        if frame.schemaVersion > bridgeSchemaVersion {
+            send(BridgeFrame(.versionMismatch(serverVersion: bridgeSchemaVersion)))
             close(.protocolCode(.protocolError))
             return
         }

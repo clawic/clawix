@@ -59,10 +59,10 @@ primary source. This Clawix ADR records the host-specific consequences.
 - `chat` remains UI vocabulary only.
 - `threadId` is reserved for external runtime IDs.
 - Frame/event `type` strings use `lowerCamelCase`.
-- Protocol data uses `schemaVersion`; wire protocols use `protocolVersion`.
+- Versioned JSON envelopes use `schemaVersion`, including the Clawix bridge.
 - Clawix deep links are:
   - `clawix://auth/callback/<provider>`
-  - `clawix://pair/<token>`
+  - pairing uses QR JSON `{ v, host, port, token, ... }`, not a stable pairing deep link
   - `clawix://session/<sessionId>`
   - `clawix://settings/<section>`
 - `claw://` is reserved for future framework-level links.

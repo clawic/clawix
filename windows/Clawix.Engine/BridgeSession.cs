@@ -39,9 +39,9 @@ public sealed class BridgeSession
             {
                 var frame = await ReadFrameAsync(ct);
                 if (frame is null) break;
-                if (frame.ProtocolVersion != BridgeConstants.ProtocolVersion)
+                if (frame.SchemaVersion != BridgeConstants.SchemaVersion)
                 {
-                    await SendAsync(new BridgeFrame(new BridgeBody.VersionMismatch(BridgeConstants.ProtocolVersion)), ct);
+                    await SendAsync(new BridgeFrame(new BridgeBody.VersionMismatch(BridgeConstants.SchemaVersion)), ct);
                     break;
                 }
                 if (!_authenticated)

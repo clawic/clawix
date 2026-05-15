@@ -3,7 +3,7 @@
  * so a Swift-side change (or a TS-side typo) shows up as a red dot here.
  */
 import { describe, it, expect } from "vitest";
-import { decodeFrame, encodeFrame, peekProtocolVersion, BRIDGE_PROTOCOL_VERSION, type FrameBody } from "../../src/bridge/frames";
+import { decodeFrame, encodeFrame, peekSchemaVersion, BRIDGE_SCHEMA_VERSION, type FrameBody } from "../../src/bridge/frames";
 
 describe("frames", () => {
   it("roundtrips an auth frame", () => {
@@ -20,23 +20,23 @@ describe("frames", () => {
       token: "abc",
       deviceName: "Web",
       clientKind: "companion",
-      protocolVersion: BRIDGE_PROTOCOL_VERSION,
+      schemaVersion: BRIDGE_SCHEMA_VERSION,
     });
   });
 
   it("decodes an authOk frame from the daemon", () => {
-    const raw = JSON.stringify({ protocolVersion: BRIDGE_PROTOCOL_VERSION, type: "authOk", hostDisplayName: "Mac" });
+    const raw = JSON.stringify({ schemaVersion: BRIDGE_SCHEMA_VERSION, type: "authOk", hostDisplayName: "Mac" });
     expect(decodeFrame(raw)).toMatchObject({ type: "authOk", hostDisplayName: "Mac" });
   });
 
   it("decodes a sessionsSnapshot with empty array", () => {
-    const raw = JSON.stringify({ protocolVersion: BRIDGE_PROTOCOL_VERSION, type: "sessionsSnapshot", sessions: [] });
+    const raw = JSON.stringify({ schemaVersion: BRIDGE_SCHEMA_VERSION, type: "sessionsSnapshot", sessions: [] });
     expect(decodeFrame(raw)).toMatchObject({ type: "sessionsSnapshot", sessions: [] });
   });
 
   it("decodes a messagesSnapshot with messages", () => {
     const raw = JSON.stringify({
-      protocolVersion: BRIDGE_PROTOCOL_VERSION,
+      schemaVersion: BRIDGE_SCHEMA_VERSION,
       type: "messagesSnapshot",
       sessionId: "c1",
       messages: [
@@ -57,12 +57,12 @@ describe("frames", () => {
   });
 
   it("returns null on unknown frame types (forward-compat)", () => {
-    const raw = JSON.stringify({ protocolVersion: 99, type: "futureFrame", foo: "bar" });
+    const raw = JSON.stringify({ schemaVersion: 99, type: "futureFrame", foo: "bar" });
     expect(decodeFrame(raw)).toBeNull();
   });
 
-  it("peeks the protocol version without parsing", () => {
-    const raw = JSON.stringify({ protocolVersion: 6, type: "ping" });
-    expect(peekProtocolVersion(raw)).toBe(6);
+  it("peeks the schema version without parsing", () => {
+    const raw = JSON.stringify({ schemaVersion: 6, type: "ping" });
+    expect(peekSchemaVersion(raw)).toBe(6);
   });
 });

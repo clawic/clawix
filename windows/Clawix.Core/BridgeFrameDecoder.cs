@@ -16,16 +16,16 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
         using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
-        if (!root.TryGetProperty("protocolVersion", out var protocolProp))
-            throw new JsonException("frame missing 'protocolVersion'");
-        var protocolVersion = protocolProp.GetInt32();
+        if (!root.TryGetProperty("schemaVersion", out var protocolProp))
+            throw new JsonException("frame missing 'schemaVersion'");
+        var schemaVersion = protocolProp.GetInt32();
 
         if (!root.TryGetProperty("type", out var typeProp))
             throw new JsonException("frame missing 'type'");
         var type = typeProp.GetString() ?? throw new JsonException("frame 'type' is null");
 
         var body = DecodeBody(root, type, options);
-        return new BridgeFrame(body, protocolVersion);
+        return new BridgeFrame(body, schemaVersion);
     }
 
     private static BridgeBody DecodeBody(JsonElement root, string type, JsonSerializerOptions options)
