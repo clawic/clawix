@@ -8,8 +8,7 @@ import Combine
 /// the running `@clawjs/audio` supervisor service. Subscribes to the
 /// supervisor's per-service snapshot stream and, the first time the
 /// audio service reports `.ready` (or `.readyFromDaemon`), constructs
-/// a `ClawJSAudioClient` against the right port and runs the legacy
-/// `AudioMessageStore` migration in the background.
+/// a `ClawJSAudioClient` against the right port.
 ///
 /// Lives in `Clawix` (not in `ClawixEngine`) because it depends on the
 /// macOS-only `ClawJSServiceManager` to read the per-session bearer
@@ -21,8 +20,6 @@ final class AudioCatalogBootstrap: ObservableObject {
     static let shared = AudioCatalogBootstrap()
 
     @Published private(set) var currentClient: ClawJSAudioClient?
-    @Published private(set) var migrationCount: Int?
-
     private var cancellable: AnyCancellable?
     private var didStart = false
 
@@ -54,7 +51,6 @@ final class AudioCatalogBootstrap: ObservableObject {
         let origin = URL(string: "http://127.0.0.1:\(port)")!
         let client = ClawJSAudioClient(bearerToken: token, origin: origin)
         currentClient = client
-        runMigration(client: client)
     }
 
     private func resolveBearerToken() -> String? {
@@ -64,21 +60,4 @@ final class AudioCatalogBootstrap: ObservableObject {
         return try? ClawJSServiceManager.adminTokenFromDataDir(for: .audio)
     }
 
-    private func runMigration(client: ClawJSAudioClient) {
-        Task { @MainActor in
-            do {
-                let outcome = try await AudioCatalogMigration.migrateIfNeeded(client: client)
-                switch outcome {
-                case .migrated(let count):
-                    self.migrationCount = count
-                case .alreadyMigrated, .noLegacyData:
-                    self.migrationCount = 0
-                }
-            } catch {
-                // Migration is idempotent; on failure we leave the marker
-                // absent so the next boot tries again. The error surfaces
-                // through the supervisor's log file.
-            }
-        }
-    }
 }

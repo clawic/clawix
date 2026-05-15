@@ -322,29 +322,18 @@ enum ClawixPersistentSurfaceRegistry {
                 path: "~/Library/Application Support/Clawix/clawix.sqlite",
                 parentId: "clawix.applicationSupport"
             ),
-            ClawixPersistentSurface.folder(
-                id: "clawix.dictationAudio",
-                name: "Dictation audio",
-                path: "~/Library/Application Support/Clawix/dictation-audio",
-                parentId: "clawix.applicationSupport"
+            ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.audio",
+                name: "Audio",
+                path: "~/.claw/audio",
+                parentId: nil,
+                notes: "Framework-owned audio catalog bytes and SQLite metadata served by @clawjs/audio."
             ),
-            ClawixPersistentSurface.folder(
+            ClawixPersistentSurface.persistentTemp(
                 id: "clawix.dictationAudioDebug",
                 name: "Dictation audio debug",
-                path: "~/Library/Application Support/Clawix/dictation-audio-debug",
-                parentId: "clawix.applicationSupport"
-            ),
-            ClawixPersistentSurface.folder(
-                id: "clawix.audioCatalog",
-                name: "Audio catalog files",
-                path: "~/Library/Application Support/Clawix/audio",
-                parentId: "clawix.applicationSupport"
-            ),
-            ClawixPersistentSurface.file(
-                id: "clawix.audioCatalogMetadata",
-                name: "Audio catalog metadata",
-                path: "~/Library/Application Support/Clawix/audio-meta.json",
-                parentId: "clawix.applicationSupport"
+                path: "~/.clawix/tmp/dictation-audio-debug",
+                parentId: "clawix.home"
             ),
             ClawixPersistentSurface.folder(
                 id: "clawix.meshHome",
@@ -1071,7 +1060,9 @@ enum ClawixPersistentSurfacePaths {
         static let secrets = "secrets"
         static let localModels = "local-models"
         static let favicons = "Favicons"
-        static let dictationAudio = "dictation-audio"
+        static let audio = "audio"
+        static let dictation = "dictation"
+        static let tmp = "tmp"
         static let dictationAudioDebug = "dictation-audio-debug"
         static let dictationSounds = "dictation-sounds"
         static let captures = "Clawix-Captures"

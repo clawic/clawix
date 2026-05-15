@@ -517,7 +517,7 @@ final class DaemonEngineHost: EngineHost {
                     content: preview,
                     streamingFinished: true,
                     timestamp: Date(),
-                    audioRef: audioRef?.wireRef,
+                    audioRef: audioRef?.ref,
                     attachments: imageAttachments
                 ))
                 updateChat(chatId: chatIdString) { chat in
@@ -549,8 +549,13 @@ final class DaemonEngineHost: EngineHost {
         }
     }
 
-    /// Whisper-transcribe each audio attachment, persist the bytes via
-    /// `AudioMessageStore`, and return a wire-ready ref pointing at the
+    private struct IngestedAudioAttachment {
+        var ref: WireAudioRef
+        var transcript: String
+    }
+
+    /// Whisper-transcribe each audio attachment, register the bytes via
+    /// the framework audio catalog, and return a wire-ready ref pointing at the
     /// most recent (or only) clip. Today the iPhone composer ships at
     /// most one audio per send; the loop is defensive in case a future
     /// surface chains multiple takes. Order is preserved by the caller
@@ -562,7 +567,7 @@ final class DaemonEngineHost: EngineHost {
         chatId: String,
         messageId: String,
         providedTranscript: String
-    ) async throws -> AudioStoreEntry? {
+    ) async throws -> IngestedAudioAttachment? {
         guard !attachments.isEmpty else { return nil }
         // The iPhone composer transcribes locally (via the existing
         // `transcribeAudio` frame) before sending so the user sees the
@@ -571,8 +576,8 @@ final class DaemonEngineHost: EngineHost {
         // provided one, the daemon stores it without re-running the
         // model. Only when the client shipped audio without text (a
         // future "raw audio prompt" surface) does the daemon fall back
-        // to its own Whisper run so the audio store sidecar still
-        // carries something useful for the hydrate-decoration path.
+        // to its own Whisper run so the catalog still carries useful
+        // transcript metadata.
         let normalizedTranscript = providedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         var fallbackTranscript: String? = nil
         if normalizedTranscript.isEmpty {
@@ -588,7 +593,7 @@ final class DaemonEngineHost: EngineHost {
                     .appendingPathComponent("clawix-attachments", isDirectory: true)
                     .appendingPathComponent("ingest", isDirectory: true)
                 try? FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
-                let ext = AudioMessageStore.fileExtension(for: first.mimeType)
+                let ext = AudioCatalogRegistration.fileExtension(for: first.mimeType)
                 let tmpURL = tmpDir.appendingPathComponent("\(first.id).\(ext)")
                 try? data.write(to: tmpURL, options: .atomic)
                 if let transcript = try? await TranscriptionService.shared.transcribe(
@@ -602,21 +607,33 @@ final class DaemonEngineHost: EngineHost {
             }
         }
 
-        var lastEntry: AudioStoreEntry?
+        guard let client = audioCatalogClient else {
+            throw ClawJSAudioClient.Error.serviceNotReady
+        }
+        var lastEntry: IngestedAudioAttachment?
         for attachment in attachments {
             guard let data = Data(base64Encoded: attachment.dataBase64) else {
                 BridgeLog.write("audio attachment decode failed id=\(attachment.id)")
                 continue
             }
-            let entry = try await AudioMessageStore.shared.ingest(
-                threadId: threadId,
-                chatId: chatId,
-                messageId: messageId,
+            let transcript = normalizedTranscript.isEmpty ? (fallbackTranscript ?? "") : normalizedTranscript
+            let ref = try await AudioCatalogRegistration.register(
+                client: client,
+                id: attachment.id,
+                kind: WireAudioKind.user_message.rawValue,
+                appId: "clawix",
+                originActor: WireAudioOriginActor.user.rawValue,
                 audioData: data,
                 mimeType: attachment.mimeType,
-                transcript: normalizedTranscript.isEmpty ? (fallbackTranscript ?? "") : normalizedTranscript
+                threadId: threadId,
+                linkedMessageId: messageId,
+                transcript: transcript.isEmpty ? nil : .init(
+                    text: transcript,
+                    role: "transcription",
+                    provider: normalizedTranscript.isEmpty ? "daemonWhisper" : "transcribeAudio"
+                )
             )
-            lastEntry = entry
+            lastEntry = IngestedAudioAttachment(ref: ref, transcript: transcript)
         }
         return lastEntry
     }
@@ -658,16 +675,14 @@ final class DaemonEngineHost: EngineHost {
                     reply(result.base64, result.mimeType, nil)
                     return
                 } catch ClawJSAudioClient.Error.notFound {
-                    // Fall through to legacy lookup.
+                    reply(nil, nil, "Audio no longer available")
+                    return
                 } catch {
-                    // Transport / decoding error: fall through.
+                    reply(nil, nil, error.localizedDescription)
+                    return
                 }
             }
-            if let payload = await AudioMessageStore.shared.data(forAudioId: audioId) {
-                reply(payload.data.base64EncodedString(), payload.mimeType, nil)
-            } else {
-                reply(nil, nil, "Audio no longer available")
-            }
+            reply(nil, nil, "Audio catalog is not available")
         }
     }
 

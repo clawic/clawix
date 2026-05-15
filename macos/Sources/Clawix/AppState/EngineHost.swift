@@ -37,27 +37,20 @@ extension AppState: EngineHost {
         reply: @MainActor @escaping (String?, String?, String?) -> Void
     ) {
         Task { @MainActor in
-            // Prefer the framework's audio catalog (covers migrated
-            // legacy data and every new ingest). Fall back to the
-            // on-disk `AudioMessageStore` while the supervisor is still
-            // bringing the service up.
             if let client = audioCatalogClient {
                 do {
                     let result = try await client.getBytes(audioId: audioId, appId: "clawix")
                     reply(result.base64, result.mimeType, nil)
                     return
                 } catch ClawJSAudioClient.Error.notFound {
-                    // Fall through to legacy lookup.
+                    reply(nil, nil, "Audio no longer available")
+                    return
                 } catch {
-                    // Transport / decoding error: also fall through so
-                    // unmigrated audios still play during a hot reload.
+                    reply(nil, nil, error.localizedDescription)
+                    return
                 }
             }
-            if let payload = await AudioMessageStore.shared.data(forAudioId: audioId) {
-                reply(payload.data.base64EncodedString(), payload.mimeType, nil)
-            } else {
-                reply(nil, nil, "Audio no longer available")
-            }
+            reply(nil, nil, "Audio catalog is not available")
         }
     }
 
@@ -89,7 +82,7 @@ extension AppState: EngineHost {
                 .appendingPathComponent("dictation", isDirectory: true)
             do {
                 try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
-                let ext = AudioMessageStore.fileExtension(for: mimeType)
+                let ext = AudioCatalogRegistration.fileExtension(for: mimeType)
                 let url = tmpDir.appendingPathComponent("\(requestId).\(ext)")
                 try data.write(to: url, options: .atomic)
                 let activeRaw = UserDefaults.standard.string(

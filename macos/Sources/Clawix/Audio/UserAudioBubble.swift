@@ -10,10 +10,7 @@ import ClawixEngine
 /// the user can read what they sent and replay it without losing
 /// context.
 ///
-/// macOS reads audio bytes directly from `AudioMessageStore.shared` —
-/// the daemon (in daemon mode) or the in-process EngineHost (in
-/// non-daemon mode) both write to the same store, so the GUI never
-/// needs a bridge round-trip to play back.
+/// macOS reads audio bytes from the framework audio catalog.
 struct UserAudioBubble: View {
     let audioRef: WireAudioRef
 
@@ -132,7 +129,7 @@ struct UserAudioBubble: View {
                     self.failureMessage = "Audio no longer available"
                     return
                 }
-                let ext = AudioMessageStore.fileExtension(for: payload.mimeType)
+                let ext = AudioCatalogRegistration.fileExtension(for: payload.mimeType)
                 let url = FileManager.default.temporaryDirectory
                     .appendingPathComponent("clawix-replay-\(self.audioRef.id).\(ext)")
                 try? payload.data.write(to: url, options: .atomic)
@@ -148,10 +145,8 @@ struct UserAudioBubble: View {
         }
     }
 
-    /// Resolution order: framework audio catalog (covers every migrated
-    /// and freshly registered asset) first, on-disk `AudioMessageStore`
-    /// second. The fallback keeps replay working before the supervisor
-    /// finishes bringing the audio service up.
+    /// Resolution order: framework audio catalog only. The host no
+    /// longer treats its legacy on-disk audio store as canonical.
     private static func loadBytes(for audioId: String) async -> (data: Data, mimeType: String)? {
         if let client = await MainActor.run(body: { AudioCatalogBootstrap.shared.currentClient }) {
             do {
@@ -160,12 +155,12 @@ struct UserAudioBubble: View {
                     return (bytes, response.mimeType)
                 }
             } catch ClawJSAudioClient.Error.notFound {
-                // Fall through to legacy.
+                return nil
             } catch {
-                // Transport / decoding error: fall through.
+                return nil
             }
         }
-        return await AudioMessageStore.shared.data(forAudioId: audioId)
+        return nil
     }
 
     private func startProgressTimer() {

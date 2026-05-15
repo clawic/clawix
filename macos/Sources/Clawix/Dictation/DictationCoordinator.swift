@@ -1121,11 +1121,9 @@ final class DictationCoordinator: ObservableObject {
                 model: model,
                 language: language
             )
-            // Persist a transcript row + companion WAV so the
-            // history view (#24), cleanup (#25), export (#26), and
-            // metrics (#27) all have something to chew on. The audio
-            // dump runs synchronously here because it's just a
-            // local file write; the DB insert hops a Task.
+            // Persist a local history projection and register the audio
+            // with the framework catalog. The WAV write is only a
+            // framework-owned staging copy under ~/.claw/audio.
             let id = UUID().uuidString
             let audioURL = DictationAudioStorage.writeWAV(samples: samples, id: id)
             let words = processed.split(whereSeparator: { $0.isWhitespace }).count
@@ -1152,6 +1150,36 @@ final class DictationCoordinator: ObservableObject {
             )
             Task { @MainActor in
                 await TranscriptionsRepository.shared.record(record)
+                if let audioURL, let data = try? Data(contentsOf: audioURL),
+                   let client = AudioCatalogBootstrap.shared.currentClient {
+                    let transcript = ClawJSAudioClient.RegisterTranscriptInput(
+                        text: processed,
+                        role: "transcription",
+                        provider: model?.rawValue,
+                        language: language
+                    )
+                    let metadata: [String: Any?] = [
+                        "originalText": text,
+                        "powerModeId": pmId,
+                        "enhancementProvider": enhancementProvider,
+                        "costUSD": record.costUSD,
+                    ]
+                    let metadataData = try? JSONSerialization.data(
+                        withJSONObject: metadata.compactMapValues { $0 },
+                        options: [.sortedKeys]
+                    )
+                    _ = try? await AudioCatalogRegistration.register(
+                        client: client,
+                        id: id,
+                        kind: WireAudioKind.dictation.rawValue,
+                        appId: "clawix",
+                        originActor: WireAudioOriginActor.user.rawValue,
+                        audioData: data,
+                        mimeType: "audio/wav",
+                        metadataJson: metadataData.flatMap { String(data: $0, encoding: .utf8) },
+                        transcript: transcript
+                    )
+                }
             }
         }
 
@@ -1215,8 +1243,7 @@ final class DictationCoordinator: ObservableObject {
                 // handed to Whisper, so when the user reports "the
                 // waves looked right but it returned nothing" we can
                 // open the WAV and verify whether capture or decode is
-                // at fault. Lives in
-                // ~/Library/Application Support/Clawix/dictation-audio-debug/
+                // at fault. Lives in ~/.clawix/tmp/dictation-audio-debug/
                 // and is never auto-cleaned; the user can wipe it.
                 let debugURL = DictationAudioStorage.writeEmptyTranscriptDebugWAV(samples: samples)
                 fputs(
@@ -1228,7 +1255,7 @@ final class DictationCoordinator: ObservableObject {
                 } else if isLowEnergy {
                     showErrorToast("Couldn't hear you. Speak louder or check your microphone in System Settings → Privacy & Security → Microphone.")
                 } else {
-                    showErrorToast("Whisper returned no text for audible audio. A copy of what was captured is in ~/Library/Application Support/Clawix/dictation-audio-debug/ — open it to confirm the recording.")
+                    showErrorToast("Whisper returned no text for audible audio. A copy of what was captured is in ~/.clawix/tmp/dictation-audio-debug/ — open it to confirm the recording.")
                 }
             }
         }

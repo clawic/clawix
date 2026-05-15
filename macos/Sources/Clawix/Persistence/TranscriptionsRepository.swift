@@ -1,9 +1,9 @@
 import Foundation
 import GRDB
 
-/// One persisted dictation result. The repository hands these back
-/// in reverse-chronological order. Audio file path is nullable so
-/// the audio-cleanup policy (#25) can drop just the WAV.
+/// One local UI projection of a dictation result. Canonical audio bytes
+/// and transcript metadata live in the framework audio catalog; this row
+/// keeps the macOS history view fast and searchable.
 struct TranscriptionRecord: Identifiable, Codable, Equatable, FetchableRecord, PersistableRecord {
     static let databaseTableName = "dictation_transcript"
 
@@ -160,8 +160,8 @@ final class TranscriptionsRepository: ObservableObject {
 
     // MARK: - Cleanup
 
-    /// Delete every record older than `cutoff` and best-effort remove
-    /// the corresponding audio files from Application Support.
+    /// Delete every local history row older than `cutoff` and best-effort
+    /// remove the staged framework audio file if one is still referenced.
     func purgeRecords(olderThan cutoff: Date) async {
         do {
             let toDelete: [TranscriptionRecord] = try await dbQueue.read { db in
@@ -242,21 +242,15 @@ final class TranscriptionsRepository: ObservableObject {
     }
 }
 
-/// Storage helper for raw audio files associated with transcripts.
-/// Lives in `Application Support/Clawix/dictation-audio/<UUID>.wav`
-/// so cleanup can target a single directory.
+/// Staging helper for raw audio files associated with transcripts.
+/// Regular dictation audio is staged under `~/.claw/audio/dictation/`
+/// because the framework audio catalog owns the durable audio surface.
 enum DictationAudioStorage {
     static func storageDirectory() throws -> URL {
         let fm = FileManager.default
-        let support = try fm.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let dir = support
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.dictationAudio, isDirectory: true)
+        let dir = ClawixPersistentSurfacePaths
+            .frameworkGlobalChild(ClawixPersistentSurfacePaths.components.audio, isDirectory: true)
+            .appendingPathComponent(ClawixPersistentSurfacePaths.components.dictation, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -269,14 +263,8 @@ enum DictationAudioStorage {
     /// what was actually captured when Whisper insists "no speech".
     static func emptyTranscriptDebugDirectory() throws -> URL {
         let fm = FileManager.default
-        let support = try fm.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let dir = support
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
+        let dir = ClawixPersistentSurfacePaths
+            .homeChild(ClawixPersistentSurfacePaths.components.tmp, isDirectory: true)
             .appendingPathComponent(ClawixPersistentSurfacePaths.components.dictationAudioDebug, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try fm.createDirectory(at: dir, withIntermediateDirectories: true)

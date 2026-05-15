@@ -18,7 +18,5 @@ public enum ClawixPersistentSurfaceKeys {
 
 public enum ClawixPersistentSurfacePathComponents {
     public static let applicationSupportName = "Clawix"
-    public static let audioDirectory = "audio"
-    public static let audioMetadataFile = "audio-meta.json"
     public static let meshHome = ".clawix/mesh"
 }

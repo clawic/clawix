@@ -441,11 +441,10 @@ extension AppState {
         // pill: the user has acknowledged the gap and is moving on.
         chats[idx].lastTurnInterrupted = false
 
-        // Audio attachments are stored locally (so the chat history
-        // can replay the clip later) and never shipped to the model:
-        // Codex doesn't accept audio, the iPhone composer already
-        // transcribed via the `transcribeAudio` frame, and we use that
-        // transcript as the prompt text.
+        // Audio attachments are registered with the framework catalog
+        // and never shipped to the model: Codex doesn't accept audio,
+        // the iPhone composer already transcribed via `transcribeAudio`,
+        // and we use that transcript as the prompt text.
         if !audioAttachments.isEmpty {
             ingestAudioFromBridge(
                 attachments: audioAttachments,
@@ -477,11 +476,11 @@ extension AppState {
         }
     }
 
-    /// Persist audio attachments coming off the bridge into
-    /// `AudioMessageStore` and patch the user message with the
-    /// resulting `audioRef` once the bytes land. Runs detached so the
-    /// optimistic message bubble shows immediately; the bubble's
-    /// playable state lights up as soon as ingest finishes.
+    /// Register audio attachments coming off the bridge into the
+    /// framework catalog and patch the user message with the resulting
+    /// `audioRef` once the bytes land. Runs detached so the optimistic
+    /// message bubble shows immediately; the bubble's playable state
+    /// lights up as soon as registration finishes.
     private func ingestAudioFromBridge(
         attachments: [WireAttachment],
         chatId: UUID,
@@ -501,42 +500,31 @@ extension AppState {
         let messageIdString = messageId.uuidString
         Task { [weak self] in
             do {
-                let entry = try await AudioMessageStore.shared.ingest(
-                    threadId: threadId,
-                    chatId: chatIdString,
-                    messageId: messageIdString,
+                guard let client = await MainActor.run(body: { AudioCatalogBootstrap.shared.currentClient }) else {
+                    throw ClawJSAudioClient.Error.serviceNotReady
+                }
+                let audioRef = try await AudioCatalogRegistration.register(
+                    client: client,
+                    id: attachment.id,
+                    kind: WireAudioKind.user_message.rawValue,
+                    appId: "clawix",
+                    originActor: WireAudioOriginActor.user.rawValue,
                     audioData: data,
                     mimeType: mime,
-                    transcript: transcript
+                    threadId: threadId,
+                    linkedMessageId: messageIdString,
+                    transcript: transcript.isEmpty ? nil : .init(
+                        text: transcript,
+                        role: "transcription",
+                        provider: "transcribeAudio"
+                    )
                 )
                 await MainActor.run {
                     guard let self else { return }
                     guard let cIdx = self.chats.firstIndex(where: { $0.id == chatId }),
                           let mIdx = self.chats[cIdx].messages.firstIndex(where: { $0.id == messageId })
                     else { return }
-                    self.chats[cIdx].messages[mIdx].audioRef = entry.wireRef
-                }
-                // Dual-write into the framework audio catalog so new
-                // ingests stay queryable via `audioGetBytes / audioList`
-                // alongside the legacy on-disk store. Best effort: the
-                // legacy store is still the source of truth this release.
-                if let client = await MainActor.run(body: { AudioCatalogBootstrap.shared.currentClient }) {
-                    _ = try? await client.register(.init(
-                        id: entry.id,
-                        kind: "user_message",
-                        appId: "clawix",
-                        originActor: "user",
-                        mimeType: entry.mimeType,
-                        bytesBase64: data.base64EncodedString(),
-                        durationMs: entry.durationMs,
-                        threadId: entry.threadId,
-                        linkedMessageId: entry.messageId,
-                        transcript: transcript.isEmpty ? nil : .init(
-                            text: transcript,
-                            role: "transcription",
-                            provider: "transcribeAudio"
-                        )
-                    ))
+                    self.chats[cIdx].messages[mIdx].audioRef = audioRef
                 }
             } catch {
                 // Soft fail: the user message is still in the chat;

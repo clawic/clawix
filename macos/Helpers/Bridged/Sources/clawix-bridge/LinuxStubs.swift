@@ -1,28 +1,17 @@
 #if !canImport(AVFoundation)
 import Foundation
+import ClawixCore
+import ClawixEngine
 
 // Linux stubs that satisfy call sites in `main.swift` which on Apple
-// platforms rely on `ClawixEngine.AudioMessageStore` /
-// `DictationModelManager` / `TranscriptionService`. The real types
+// platforms rely on AVFoundation-backed audio helpers,
+// `DictationModelManager` and `TranscriptionService`. The real types
 // depend on AVFoundation + WhisperKit and therefore do not compile on
 // Linux. Until the Linux daemon ships a whisper.cpp-backed engine,
 // these stubs make remote dictation requests and audio replays return
 // "not available" instead of failing the build.
 
-public struct AudioMessageEntry: Sendable {
-    public let id: String
-    public let mimeType: String
-    public let durationMs: Int
-}
-
-public struct AudioMessagePayload: Sendable {
-    public let data: Data
-    public let mimeType: String
-}
-
-public actor AudioMessageStore {
-    public static let shared = AudioMessageStore()
-
+public enum AudioCatalogRegistration {
     public static func fileExtension(for mimeType: String) -> String {
         switch mimeType.lowercased() {
         case "audio/wav", "audio/x-wav", "audio/wave": return "wav"
@@ -36,18 +25,22 @@ public actor AudioMessageStore {
         }
     }
 
-    public func data(forAudioId audioId: String) async -> AudioMessagePayload? { nil }
-
-    public func entries(forThread threadId: String) async -> [AudioMessageEntry] { [] }
-
-    public func ingest(
-        threadId: String,
-        messageId: String,
-        data: Data,
+    public static func register(
+        client: ClawJSAudioClient,
+        id: String? = nil,
+        kind: String,
+        appId: String,
+        originActor: String,
+        audioData: Data,
         mimeType: String,
-        durationMs: Int
-    ) async throws -> AudioMessageEntry {
-        AudioMessageEntry(id: messageId, mimeType: mimeType, durationMs: durationMs)
+        deviceId: String? = nil,
+        sessionId: String? = nil,
+        threadId: String? = nil,
+        linkedMessageId: String? = nil,
+        metadataJson: String? = nil,
+        transcript: ClawJSAudioClient.RegisterTranscriptInput? = nil
+    ) async throws -> WireAudioRef {
+        throw ClawJSAudioClient.Error.serviceNotReady
     }
 }
 
