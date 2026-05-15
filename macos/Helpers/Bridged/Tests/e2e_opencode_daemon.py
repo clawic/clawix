@@ -341,7 +341,7 @@ def main():
                 _, err = daemon.communicate(timeout=1)
                 raise AssertionError(err)
 
-            ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E", "clientKind": "ios"})
+            ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E", "clientKind": "companion"})
             ws.recv_until(lambda f: f["type"] == "authOk")
             snapshot = ws.recv_until(lambda f: f["type"] == "sessionsSnapshot" and f["sessions"])
             chat_id = snapshot["sessions"][0]["id"]
@@ -369,7 +369,7 @@ def main():
             )
             assert fake.event_connected.wait(5), "OpenCode event stream was not opened"
 
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": chat_id, "text": "new prompt"})
+            ws.send_json({"schemaVersion": 2, "type": "sendMessage", "sessionId": chat_id, "text": "new prompt"})
             time.sleep(0.2)
             assert fake.permission_replied.wait(5), "permission request was not rejected"
 
@@ -388,7 +388,7 @@ def main():
             ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": image_chat})
             ws.send_json({
                 "schemaVersion": 2,
-                "type": "sendPrompt",
+                "type": "sendMessage",
                 "sessionId": image_chat,
                 "text": "describe this",
                 "attachments": [{
@@ -409,20 +409,20 @@ def main():
 
             slow_chat = "22222222-2222-4333-8444-555555555555"
             ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": slow_chat})
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": slow_chat, "text": "slow turn"})
+            ws.send_json({"schemaVersion": 2, "type": "sendMessage", "sessionId": slow_chat, "text": "slow turn"})
             time.sleep(0.1)
             ws.send_json({"schemaVersion": 2, "type": "interruptTurn", "sessionId": slow_chat})
             ws.recv_until(
-                lambda f: f["type"] == "chatUpdated"
-                and f["chat"]["id"] == slow_chat
-                and f["chat"]["lastTurnInterrupted"] is True
+                lambda f: f["type"] == "sessionUpdated"
+                and f["session"]["id"] == slow_chat
+                and f["session"]["lastTurnInterrupted"] is True
             )
             assert fake.abort_seen.wait(5), "abort endpoint was not called"
 
             ws.send_json({"schemaVersion": 2, "type": "archiveSession", "sessionId": image_chat})
-            ws.recv_until(lambda f: f["type"] == "chatUpdated" and f["chat"]["id"] == image_chat and f["chat"]["isArchived"] is True)
+            ws.recv_until(lambda f: f["type"] == "sessionUpdated" and f["session"]["id"] == image_chat and f["session"]["isArchived"] is True)
             ws.send_json({"schemaVersion": 2, "type": "unarchiveSession", "sessionId": image_chat})
-            ws.recv_until(lambda f: f["type"] == "chatUpdated" and f["chat"]["id"] == image_chat and f["chat"]["isArchived"] is False)
+            ws.recv_until(lambda f: f["type"] == "sessionUpdated" and f["session"]["id"] == image_chat and f["session"]["isArchived"] is False)
             ws.close()
         finally:
             daemon.terminate()

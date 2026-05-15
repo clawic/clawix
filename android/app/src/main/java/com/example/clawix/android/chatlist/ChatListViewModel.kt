@@ -6,7 +6,7 @@ import com.example.clawix.android.AppContainer
 import com.example.clawix.android.bridge.ConnectionState
 import com.example.clawix.android.bridge.DerivedProject
 import com.example.clawix.android.core.BridgeBody
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,8 +18,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class ChatListUi(
-    val pinnedChats: List<WireChat>,
-    val recentChats: List<WireChat>,
+    val pinnedChats: List<WireSession>,
+    val recentChats: List<WireSession>,
     val projects: List<DerivedProject>,
     val unread: Set<String>,
     val connection: ConnectionState,
@@ -41,7 +41,7 @@ class ChatListViewModel(private val container: AppContainer) : ViewModel() {
                 (it.lastMessagePreview ?: "").contains(q, ignoreCase = true)
         }
         val sorted = filtered.sortedWith(
-            compareByDescending<WireChat> { it.isPinned }
+            compareByDescending<WireSession> { it.isPinned }
                 .thenByDescending { it.lastMessageAt ?: it.createdAt }
         )
         ChatListUi(
@@ -69,17 +69,17 @@ class ChatListViewModel(private val container: AppContainer) : ViewModel() {
         return id
     }
 
-    fun togglePin(chat: WireChat) {
+    fun togglePin(chat: WireSession) {
         if (chat.isPinned) container.bridgeClient.unpinSession(chat.id)
         else container.bridgeClient.pinSession(chat.id)
     }
 
-    fun toggleArchive(chat: WireChat) {
+    fun toggleArchive(chat: WireSession) {
         if (chat.isArchived) container.bridgeClient.unarchiveSession(chat.id)
         else container.bridgeClient.archiveSession(chat.id)
     }
 
-    fun rename(chat: WireChat, newTitle: String) {
+    fun rename(chat: WireSession, newTitle: String) {
         val trimmed = newTitle.trim()
         if (trimmed.isEmpty()) return
         container.bridgeClient.renameSession(chat.id, trimmed)

@@ -14,7 +14,7 @@ data class Credentials(
     val host: String,
     val port: Int,
     val token: String,
-    val macName: String?,
+    val hostDisplayName: String?,
     val tailscaleHost: String?,
 ) {
     companion object {
@@ -22,7 +22,7 @@ data class Credentials(
             host = p.host,
             port = p.port,
             token = p.token,
-            macName = p.macName,
+            hostDisplayName = p.hostDisplayName,
             tailscaleHost = p.tailscaleHost,
         )
     }
@@ -79,7 +79,7 @@ class CredentialStore(context: Context) {
             host = host,
             port = port,
             token = token,
-            macName = prefs.getString(KEY_MAC_NAME, null),
+            hostDisplayName = prefs.getString(KEY_MAC_NAME, null),
             tailscaleHost = prefs.getString(KEY_TAILSCALE_HOST, null),
         )
     }
@@ -89,7 +89,7 @@ class CredentialStore(context: Context) {
             .putString(KEY_HOST, c.host)
             .putInt(KEY_PORT, c.port)
             .putString(KEY_TOKEN, c.token)
-            .putString(KEY_MAC_NAME, c.macName)
+            .putString(KEY_MAC_NAME, c.hostDisplayName)
             .putString(KEY_TAILSCALE_HOST, c.tailscaleHost)
             .apply()
     }
@@ -102,7 +102,7 @@ class CredentialStore(context: Context) {
         private const val KEY_HOST = "host"
         private const val KEY_PORT = "port"
         private const val KEY_TOKEN = "token"
-        private const val KEY_MAC_NAME = "macName"
+        private const val KEY_MAC_NAME = "hostDisplayName"
         private const val KEY_TAILSCALE_HOST = "tailscaleHost"
     }
 }

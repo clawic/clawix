@@ -3,7 +3,7 @@
 // the shell's resizable column.
 import { useMemo, useState } from "react";
 import { useBridgeStore } from "../../bridge/store";
-import type { WireChat } from "../../bridge/wire";
+import type { WireSession } from "../../bridge/wire";
 import {
   ChatIcon,
   PinIcon,
@@ -139,7 +139,7 @@ function SidebarGroup({ label, icon, children }: { label: string; icon?: React.R
   );
 }
 
-function SidebarRow({ chat, selected, onClick }: { chat: WireChat; selected: boolean; onClick: () => void }) {
+function SidebarRow({ chat, selected, onClick }: { chat: WireSession; selected: boolean; onClick: () => void }) {
   const last = chat.lastMessageAt ?? chat.createdAt;
   return (
     <button
@@ -187,9 +187,9 @@ function SidebarRow({ chat, selected, onClick }: { chat: WireChat; selected: boo
   );
 }
 
-function groupChats(chats: WireChat[], query: string) {
+function groupChats(chats: WireSession[], query: string) {
   const q = query.trim().toLowerCase();
-  const filter = (c: WireChat) =>
+  const filter = (c: WireSession) =>
     !q ||
     c.title.toLowerCase().includes(q) ||
     (c.lastMessagePreview ?? "").toLowerCase().includes(q);

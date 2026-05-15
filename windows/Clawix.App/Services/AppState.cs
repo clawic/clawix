@@ -18,10 +18,10 @@ public sealed partial class AppState : ObservableObject
     private DaemonClient? _client;
 
     [ObservableProperty]
-    private List<WireChat> _chats = [];
+    private List<WireSession> _chats = [];
 
     [ObservableProperty]
-    private WireChat? _currentChat;
+    private WireSession? _currentChat;
 
     [ObservableProperty]
     private List<WireMessage> _currentMessages = [];
@@ -67,8 +67,8 @@ public sealed partial class AppState : ObservableObject
             case BridgeBody.SessionsSnapshot cs:
                 Sessions = cs.Sessions.ToList();
                 break;
-            case BridgeBody.ChatUpdated cu:
-                Sessions = Sessions.Select(c => c.Id == cu.Chat.Id ? cu.Chat : c).ToList();
+            case BridgeBody.SessionUpdated cu:
+                Sessions = Sessions.Select(c => c.Id == cu.Session.Id ? cu.Session : c).ToList();
                 break;
             case BridgeBody.MessagesSnapshot ms when CurrentChat?.Id == ms.SessionId:
                 CurrentMessages = ms.Messages.ToList();
@@ -84,7 +84,7 @@ public sealed partial class AppState : ObservableObject
         }
     }
 
-    public Task SelectChatAsync(WireChat chat)
+    public Task SelectChatAsync(WireSession chat)
     {
         CurrentChat = chat;
         CurrentMessages = [];
@@ -92,9 +92,9 @@ public sealed partial class AppState : ObservableObject
             ?? Task.CompletedTask;
     }
 
-    public Task SendPromptAsync(string text)
+    public Task SendMessageAsync(string text)
     {
         if (CurrentChat is null || _client is null) return Task.CompletedTask;
-        return _client.SendAsync(new BridgeFrame(new BridgeBody.SendPrompt(CurrentChat.Id, text, [])), CancellationToken.None);
+        return _client.SendAsync(new BridgeFrame(new BridgeBody.SendMessage(CurrentChat.Id, text, [])), CancellationToken.None);
     }
 }

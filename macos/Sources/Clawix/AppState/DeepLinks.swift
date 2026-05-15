@@ -82,7 +82,7 @@ extension AppState {
         composer.text = ""
     }
 
-    func handleSendPromptIntent(_ prompt: String) {
+    func handleSendMessageIntent(_ prompt: String) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         currentRoute = .home

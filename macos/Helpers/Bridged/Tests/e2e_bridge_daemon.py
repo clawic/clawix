@@ -195,7 +195,7 @@ def main():
                 _, err = daemon.communicate(timeout=1)
                 raise AssertionError(err)
 
-            ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E iPhone", "clientKind": "ios"})
+            ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "E2E iPhone", "clientKind": "companion"})
             ws.recv_until(lambda f: f["type"] == "authOk")
 
             desktop = WebSocket(port)
@@ -205,7 +205,7 @@ def main():
             pairing = desktop.recv_until(lambda f: f["type"] == "pairingPayload")
             qr = json.loads(pairing["qrJson"])
             qr_ws = WebSocket(port)
-            qr_ws.send_json({"schemaVersion": 2, "type": "auth", "token": qr["token"], "deviceName": "QR iPhone", "clientKind": "ios"})
+            qr_ws.send_json({"schemaVersion": 2, "type": "auth", "token": qr["token"], "deviceName": "QR iPhone", "clientKind": "companion"})
             qr_ws.recv_until(lambda f: f["type"] == "authOk")
             qr_ws.close()
             desktop.close()
@@ -220,7 +220,7 @@ def main():
                 and any(m["content"] == "existing answer" for m in f["messages"])
             )
 
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": chat_id, "text": "new prompt"})
+            ws.send_json({"schemaVersion": 2, "type": "sendMessage", "sessionId": chat_id, "text": "new prompt"})
             ws.recv_until(
                 lambda f: (
                     f["type"] == "messageStreaming"
@@ -236,7 +236,7 @@ def main():
 
             new_chat_id = "11111111-2222-4333-8444-555555555555"
             ws.send_json({"schemaVersion": 2, "type": "openSession", "sessionId": new_chat_id})
-            ws.send_json({"schemaVersion": 2, "type": "sendPrompt", "sessionId": new_chat_id, "text": "brand new prompt"})
+            ws.send_json({"schemaVersion": 2, "type": "sendMessage", "sessionId": new_chat_id, "text": "brand new prompt"})
             ws.recv_until(
                 lambda f: (
                     f["type"] == "sessionsSnapshot"
@@ -261,17 +261,17 @@ def main():
             ws.send_json({"schemaVersion": 2, "type": "archiveSession", "sessionId": new_chat_id})
             ws.recv_until(
                 lambda f: (
-                    f["type"] == "chatUpdated"
-                    and f["chat"]["id"] == new_chat_id
-                    and f["chat"]["isArchived"] is True
+                    f["type"] == "sessionUpdated"
+                    and f["session"]["id"] == new_chat_id
+                    and f["session"]["isArchived"] is True
                 )
             )
             ws.send_json({"schemaVersion": 2, "type": "unarchiveSession", "sessionId": new_chat_id})
             ws.recv_until(
                 lambda f: (
-                    f["type"] == "chatUpdated"
-                    and f["chat"]["id"] == new_chat_id
-                    and f["chat"]["isArchived"] is False
+                    f["type"] == "sessionUpdated"
+                    and f["session"]["id"] == new_chat_id
+                    and f["session"]["isArchived"] is False
                 )
             )
             ws.close()
@@ -299,7 +299,7 @@ def main():
                 if timeout_ws is None:
                     _, err = timeout_daemon.communicate(timeout=1)
                     raise AssertionError(err)
-                timeout_ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "Timeout iPhone", "clientKind": "ios"})
+                timeout_ws.send_json({"schemaVersion": 2, "type": "auth", "token": token, "deviceName": "Timeout iPhone", "clientKind": "companion"})
                 timeout_ws.recv_until(lambda f: f["type"] == "authOk")
                 timeout_ws.recv_until(lambda f: f["type"] == "bridgeState" and f["state"] == "ready", timeout=5)
             finally:

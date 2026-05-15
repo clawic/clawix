@@ -157,7 +157,7 @@ struct AgentDelegation: Equatable, Codable {
 // MARK: - Agent
 
 struct Agent: Identifiable, Equatable, Codable {
-    /// Stable id used by `~/.claw/agents/<id>/` and by `WireChat.agentId`.
+    /// Stable id used by `~/.claw/agents/<id>/` and by `WireSession.agentId`.
     /// For the built-in default Codex agent this is `agent.default.codex`
     /// and the editor refuses to mutate it.
     var id: String

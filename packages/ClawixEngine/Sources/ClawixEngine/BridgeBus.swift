@@ -203,7 +203,7 @@ public final class BridgeBus {
 
     /// Client called `listSessions`. Returns the current chats list. The
     /// session replies with `sessionsSnapshot`.
-    public func currentSessions() -> [WireChat] {
+    public func currentSessions() -> [WireSession] {
         host?.bridgeChatsCurrent.map(\.chat) ?? []
     }
 
@@ -280,13 +280,13 @@ public final class BridgeBus {
             }
 
             if metadataChanged {
-                emit(BridgeFrame(.chatUpdated(chat: snap.chat)))
+                emit(BridgeFrame(.sessionUpdated(session: snap.chat)))
             }
 
-            // Unsubscribed chats still get a chatUpdated when surface
+            // Unsubscribed chats still get a sessionUpdated when surface
             // metadata (title, lastMessage, hasActiveTurn) changed.
             if !subscribedChatIds.contains(snap.id), prev != nil, !metadataChanged {
-                emit(BridgeFrame(.chatUpdated(chat: snap.chat)))
+                emit(BridgeFrame(.sessionUpdated(session: snap.chat)))
             }
         }
 

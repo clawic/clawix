@@ -74,7 +74,7 @@ extension AppState {
                     return
                 }
                 if let daemonBridgeClient = self.daemonBridgeClient {
-                    daemonBridgeClient.sendPrompt(chatId: chatId, text: combined, attachments: self.wireAttachments(from: attachments))
+                    daemonBridgeClient.sendMessage(chatId: chatId, text: combined, attachments: self.wireAttachments(from: attachments))
                 } else if let clawix = self.clawix {
                     await clawix.sendUserMessage(chatId: chatId, text: combined)
                     self.clawixBackendStatus = clawix.status
@@ -85,7 +85,7 @@ extension AppState {
 
         if let daemonBridgeClient {
             trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
-            daemonBridgeClient.sendPrompt(chatId: chatId, text: combined, attachments: wireAttachments(from: attachments))
+            daemonBridgeClient.sendMessage(chatId: chatId, text: combined, attachments: wireAttachments(from: attachments))
         } else if selectedAgentRuntime == .opencode {
             appendAssistantSystemMessage(
                 to: chatId,
@@ -288,11 +288,11 @@ extension AppState {
     /// switches the main route to `.chat(id)`. QuickAsk does NOT touch
     /// `currentRoute` (it would yank the user out of the HUD), so this
     /// function MUST call `daemonBridgeClient.openSession(resolvedId)` itself
-    /// before `sendPrompt`. Without it the daemon receives the prompt but
+    /// before `sendMessage`. Without it the daemon receives the prompt but
     /// the BridgeBus has no subscription for this chatId, so
     /// `messageStreaming` / `messageAppended` frames are filtered out and
     /// the HUD never sees the assistant reply. References:
-    ///   - BridgeIntent.swift `.sendPrompt` case (no auto-subscribe)
+    ///   - BridgeIntent.swift `.sendMessage` case (no auto-subscribe)
     ///   - BridgeBus.subscribe (idempotent set insert)
     ///   - BridgeProtocol.swift comment on `.newChat` ("auto-subscribes")
     ///   - sister bubble: `QuickAskMessageBubble` in QuickAskView.swift
@@ -386,7 +386,7 @@ extension AppState {
             // re-subscribe-after-reconnect case.
             trackOptimisticUserMessage(chatId: resolvedId, messageId: userMsg.id)
             daemonBridgeClient.openSession(resolvedId)
-            daemonBridgeClient.sendPrompt(chatId: resolvedId, text: combined)
+            daemonBridgeClient.sendMessage(chatId: resolvedId, text: combined)
         } else if let clawix {
             Task { @MainActor in
                 await clawix.sendUserMessage(chatId: resolvedId, text: combined)
@@ -460,7 +460,7 @@ extension AppState {
             // `localImage` paths to Codex; we just forward the raw
             // wire payload over loopback.
             trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
-            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
+            daemonBridgeClient.sendMessage(chatId: chatId, text: trimmed, attachments: attachments)
         } else if let clawix {
             let imagePaths = AttachmentSpooler.write(
                 attachments: imageAttachments,
@@ -612,7 +612,7 @@ extension AppState {
 
         if let daemonBridgeClient {
             trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
-            daemonBridgeClient.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
+            daemonBridgeClient.sendMessage(chatId: chatId, text: trimmed, attachments: attachments)
         } else if let clawix {
             let imagePaths = AttachmentSpooler.write(
                 attachments: imageAttachments,

@@ -415,12 +415,12 @@ final class AppState: ObservableObject {
 
     /// Wire mirror of what the daemon (or the on-disk snapshot) last
     /// delivered, kept in lock-step with `chats` / `chats[i].messages`
-    /// so we can persist the same `WireChat` / `WireMessage` shapes the
+    /// so we can persist the same `WireSession` / `WireMessage` shapes the
     /// iPhone uses without round-tripping through `Chat`/`ChatMessage`.
     /// Updated by every `applyDaemon*` and `appendDaemonMessage` path.
     /// Streaming partials are deliberately NOT mirrored here: the on-
     /// disk snapshot only holds settled messages, matching iOS.
-    var cachedWireChats: [WireChat] = []
+    var cachedWireSessions: [WireSession] = []
     var cachedWireMessagesByChat: [String: [WireMessage]] = [:]
     var optimisticUserMessageIdsByChat: [UUID: Set<UUID>] = [:]
     /// Drives `SnapshotCache.save` after a quiet 500ms window. Each
@@ -712,8 +712,8 @@ final class AppState: ObservableObject {
         }
         // AppIntents → AppState bridge (#13). Shortcuts.app posts
         // these notifications when the user invokes NewChat or
-        // SendPrompt; we react by routing to home (so the composer
-        // is in scope) and, for SendPrompt, prefilling the composer
+        // SendMessage; we react by routing to home (so the composer
+        // is in scope) and, for SendMessage, prefilling the composer
         // and submitting.
         NotificationCenter.default.addObserver(
             forName: Notification.Name("clawix.intent.newChat"),
@@ -723,12 +723,12 @@ final class AppState: ObservableObject {
             Task { @MainActor in self?.handleNewChatIntent() }
         }
         NotificationCenter.default.addObserver(
-            forName: Notification.Name("clawix.intent.sendPrompt"),
+            forName: Notification.Name("clawix.intent.sendMessage"),
             object: nil,
             queue: .main
         ) { [weak self] note in
             let prompt = note.userInfo?["prompt"] as? String ?? ""
-            Task { @MainActor in self?.handleSendPromptIntent(prompt) }
+            Task { @MainActor in self?.handleSendMessageIntent(prompt) }
         }
         NotificationCenter.default.addObserver(
             forName: .clawixOpenURL,
@@ -1464,7 +1464,7 @@ final class AppState: ObservableObject {
     /// Same project-resolution logic as the `AgentThreadSummary`
     /// variant but parameterised on the thread id + cwd directly so
     /// wire chats coming from the daemon (which carry both via the
-    /// `threadId` field added to `WireChat`) can be reconciled
+    /// `threadId` field added to `WireSession`) can be reconciled
     /// without first being re-wrapped as an `AgentThreadSummary`.
     /// Returns nil when the
     /// thread id is missing (legacy daemons that don't emit it yet),

@@ -3,6 +3,7 @@ package com.example.clawix.android.bridge
 import android.util.Log
 import com.example.clawix.android.core.BRIDGE_INITIAL_PAGE_LIMIT
 import com.example.clawix.android.core.BRIDGE_OLDER_PAGE_LIMIT
+import com.example.clawix.android.core.BRIDGE_SCHEMA_VERSION
 import com.example.clawix.android.core.BridgeBody
 import com.example.clawix.android.core.BridgeCoder
 import com.example.clawix.android.core.BridgeFrame
@@ -48,7 +49,7 @@ private sealed class RaceResult {
     data class Win(
         val socket: WebSocket,
         val route: ConnectionRoute,
-        val macName: String?,
+        val hostDisplayName: String?,
         val candidate: Candidate,
         val listener: WinnerListener,
     ) : RaceResult()
@@ -140,8 +141,8 @@ class BridgeClient(
         send(BridgeBody.LoadOlderMessages(sessionId, beforeMessageId, BRIDGE_OLDER_PAGE_LIMIT))
     }
 
-    fun sendPrompt(sessionId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
-        send(BridgeBody.SendPrompt(sessionId, text, attachments))
+    fun sendMessage(sessionId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
+        send(BridgeBody.SendMessage(sessionId, text, attachments))
     }
 
     fun newSession(sessionId: String, text: String, attachments: List<WireAttachment> = emptyList()) {
@@ -218,7 +219,7 @@ class BridgeClient(
             mutex.withLock {
                 winner = winnerResult.socket
             }
-            store.setConnection(ConnectionState.Connected(winnerResult.macName, winnerResult.route))
+            store.setConnection(ConnectionState.Connected(winnerResult.hostDisplayName, winnerResult.route))
             replayPendingNewChats()
 
             // Bind a stream coalescer for this session
@@ -232,7 +233,7 @@ class BridgeClient(
                 while (scope.isActive) {
                     delay(15_000)
                     val ws = winner ?: break
-                    val sent = ws.send("{\"schemaVersion\":5,\"type\":\"_ping\"}")
+                    val sent = ws.send("{\"schemaVersion\":$BRIDGE_SCHEMA_VERSION,\"type\":\"_ping\"}")
                     if (!sent) break
                     val sinceLast = System.currentTimeMillis() - winnerResult.listener.lastInboundAt.get()
                     if (sinceLast > 30_000) {
@@ -312,9 +313,9 @@ class BridgeClient(
             val request = Request.Builder().url("ws://${c.host}:${c.port}/").build()
             val listener = WinnerListener()
             val ws = http.newWebSocket(request, listener)
-            listener.attach(ws) { macName ->
+            listener.attach(ws) { hostDisplayName ->
                 if (cont.isActive) {
-                    cont.resume(RaceResult.Win(ws, c.route, macName, c, listener))
+                    cont.resume(RaceResult.Win(ws, c.route, hostDisplayName, c, listener))
                 }
             }
             listener.onAuthFailed = {
@@ -330,7 +331,7 @@ class BridgeClient(
                     body = BridgeBody.Auth(
                         token = creds.token,
                         deviceName = DeviceName.resolve(appContext),
-                        clientKind = ClientKind.ios,
+                        clientKind = ClientKind.COMPANION,
                     )
                 )
                 ws.send(BridgeCoder.encode(auth))
@@ -367,7 +368,7 @@ class WinnerListener : WebSocketListener() {
     var coalescer: StreamCoalescer? = null
     var store: BridgeStore? = null
 
-    private var promotedAuthOk: ((macName: String?) -> Unit)? = null
+    private var promotedAuthOk: ((hostDisplayName: String?) -> Unit)? = null
     private var attachedSocket: WebSocket? = null
 
     fun attach(ws: WebSocket, onAuthOk: (String?) -> Unit) {
@@ -384,7 +385,7 @@ class WinnerListener : WebSocketListener() {
         val frame = runCatching { BridgeCoder.decode(text) }.getOrNull() ?: return
         when (val body = frame.body) {
             is BridgeBody.AuthOk -> {
-                promotedAuthOk?.invoke(body.macName)
+                promotedAuthOk?.invoke(body.hostDisplayName)
                 promotedAuthOk = null
             }
             is BridgeBody.AuthFailed -> {
@@ -395,7 +396,7 @@ class WinnerListener : WebSocketListener() {
                 webSocket.close(1000, "version mismatch")
             }
             is BridgeBody.SessionsSnapshot -> store?.applySessionsSnapshot(body.sessions)
-            is BridgeBody.ChatUpdated -> store?.applyChatUpdated(body.chat)
+            is BridgeBody.SessionUpdated -> store?.applySessionUpdated(body.session)
             is BridgeBody.MessagesSnapshot -> store?.applyMessagesSnapshot(body.sessionId, body.messages, body.hasMore)
             is BridgeBody.MessagesPage -> store?.applyMessagesPage(body.sessionId, body.messages, body.hasMore)
             is BridgeBody.MessageAppended -> store?.applyMessageAppended(body.sessionId, body.message)

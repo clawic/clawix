@@ -2,7 +2,7 @@ package com.example.clawix.android.bridge
 
 import com.example.clawix.android.core.BridgeRuntimeState
 import com.example.clawix.android.core.SnapshotCache
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.core.WireMessage
 import com.example.clawix.android.core.WireProject
 import kotlinx.coroutines.CoroutineScope
@@ -54,12 +54,12 @@ class BridgeStore(
         _state.update { it.copy(runtime = state) }
     }
 
-    fun applySessionsSnapshot(chats: List<WireChat>) {
+    fun applySessionsSnapshot(chats: List<WireSession>) {
         _state.update { it.copy(chats = chats) }
         persistAsync()
     }
 
-    fun applyChatUpdated(chat: WireChat) {
+    fun applySessionUpdated(chat: WireSession) {
         _state.update { current ->
             val existing = current.chats.toMutableList()
             val idx = existing.indexOfFirst { it.id == chat.id }
@@ -71,11 +71,11 @@ class BridgeStore(
 
     /**
      * Optimistic mutation. The UI updates immediately while the daemon
-     * confirms with a `chatUpdated` frame that overwrites the entire chat
-     * record. Mirrors how iOS `BridgeStore` patches `WireChat.isPinned`
+     * confirms with a `sessionUpdated` frame that overwrites the entire chat
+     * record. Mirrors how iOS `BridgeStore` patches `WireSession.isPinned`
      * locally before the round-trip resolves.
      */
-    private inline fun mutateChat(chatId: String, transform: (WireChat) -> WireChat) {
+    private inline fun mutateChat(chatId: String, transform: (WireSession) -> WireSession) {
         _state.update { current ->
             val list = current.chats.toMutableList()
             val idx = list.indexOfFirst { it.id == chatId }

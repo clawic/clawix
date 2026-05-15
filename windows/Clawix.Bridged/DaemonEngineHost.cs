@@ -10,7 +10,7 @@ namespace Clawix.Bridged;
 /// Daemon-side <see cref="IEngineHost"/>. Wraps <see cref="CodexBackend"/>
 /// and exposes the chat / message surface to the bridge sessions.
 /// Mirrors Swift <c>DaemonEngineHost</c>. Phase 2 brings up enough of
-/// this to round-trip <c>listSessions</c>, <c>openSession</c>, <c>sendPrompt</c>
+/// this to round-trip <c>listSessions</c>, <c>openSession</c>, <c>sendMessage</c>
 /// and streaming; the rest of the surface lives behind incremental
 /// implementations as the daemon catches up to the macOS counterpart.
 /// </summary>
@@ -20,7 +20,7 @@ public sealed partial class DaemonEngineHost : IEngineHost, IAsyncDisposable
     private readonly ILogger<DaemonEngineHost> _logger;
     private readonly object _stateLock = new();
     private BridgeRuntimeState _state = new BridgeRuntimeState.Booting();
-    private List<WireChat> _sessions = [];
+    private List<WireSession> _sessions = [];
     private (WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId) _rateLimits = (null, new Dictionary<string, WireRateLimitSnapshot>());
 
     public DaemonEngineHost(CodexBackend backend, ILogger<DaemonEngineHost> logger)
@@ -31,15 +31,15 @@ public sealed partial class DaemonEngineHost : IEngineHost, IAsyncDisposable
     }
 
     public BridgeRuntimeState BridgeStateCurrent { get { lock (_stateLock) return _state; } }
-    public IReadOnlyList<WireChat> BridgeSessionsCurrent { get { lock (_stateLock) return _sessions; } }
+    public IReadOnlyList<WireSession> BridgeSessionsCurrent { get { lock (_stateLock) return _sessions; } }
     public (WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId) BridgeRateLimitsCurrent
     {
         get { lock (_stateLock) return _rateLimits; }
     }
 
     public event Action<BridgeRuntimeState>? BridgeStateChanged;
-    public event Action<IReadOnlyList<WireChat>>? BridgeSessionsChanged;
-    public event Action<WireChat>? ChatChanged;
+    public event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
+    public event Action<WireSession>? ChatChanged;
     public event Action<MessagesEvent>? MessagesChanged;
     public event Action<(WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId)>? RateLimitsChanged;
 

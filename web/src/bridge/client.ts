@@ -8,9 +8,7 @@
  *   4. push subsequent frames to listeners; reconnect with exponential
  *      backoff on close.
  *
- * The web client is read-mostly like iOS, so we identify as `clientKind: "ios"`.
- * Adding a real `web` enum member to the Swift `ClientKind` is a follow-up
- * (decided in plan §6); using `ios` keeps backward compatibility today.
+ * The web client is read-mostly, so it authenticates as `clientKind: "companion"`.
  */
 
 import {
@@ -29,7 +27,7 @@ export type ConnectionState =
   | { kind: "idle" }
   | { kind: "connecting" }
   | { kind: "authenticating" }
-  | { kind: "ready"; macName: string | null }
+  | { kind: "ready"; hostDisplayName: string | null }
   | { kind: "auth-failed"; reason: string }
   | { kind: "version-mismatch"; serverVersion: number }
   | { kind: "offline"; reason: string; retryAt: number };
@@ -148,7 +146,7 @@ export class BridgeClient {
           type: "auth",
           token: this.opts.token,
           deviceName: this.opts.deviceName ?? this.guessDeviceName(),
-          clientKind: "ios",
+          clientKind: "companion",
         }),
       );
       this.startHeartbeat();
@@ -173,7 +171,7 @@ export class BridgeClient {
       switch (frame.type) {
         case "authOk":
           this.backoff.reset();
-          this.setState({ kind: "ready", macName: frame.macName ?? null });
+          this.setState({ kind: "ready", hostDisplayName: frame.hostDisplayName ?? null });
           break;
         case "authFailed":
           this.setState({ kind: "auth-failed", reason: frame.reason });

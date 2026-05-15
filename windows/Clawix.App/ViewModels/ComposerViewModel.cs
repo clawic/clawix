@@ -19,7 +19,7 @@ public sealed partial class ComposerViewModel : ObservableObject
         Busy = true;
         try
         {
-            await App.Services.State.SendPromptAsync(text);
+            await App.Services.State.SendMessageAsync(text);
             Draft = string.Empty;
         }
         finally { Busy = false; }

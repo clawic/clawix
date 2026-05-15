@@ -464,7 +464,7 @@ final class DaemonEngineHost: EngineHost {
         hydrate(chatId: sessionId.uuidString)
     }
 
-    func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment]) {
+    func handleSendMessage(sessionId: UUID, text: String, attachments: [WireAttachment]) {
         let chatIdString = sessionId.uuidString
         // Split image vs audio attachments. Images go to Codex as
         // `localImage` items; audio is transcribed via Whisper, stored
@@ -641,7 +641,7 @@ final class DaemonEngineHost: EngineHost {
         // `newSession` frame so the daemon can mint the thread with the
         // chat's pre-allocated UUID. The actual run path is identical
         // to a regular send: ensureThread creates the thread on demand.
-        handleSendPrompt(sessionId: sessionId, text: text, attachments: attachments)
+        handleSendMessage(sessionId: sessionId, text: text, attachments: attachments)
     }
 
     func handleRequestAudio(
@@ -837,7 +837,7 @@ final class DaemonEngineHost: EngineHost {
         guard let threadId = threadByChat[chatIdString] else { return }
         // Optimistic local update so any client subscribed to this
         // session sees the new title before the runtime ack lands. The
-        // bus will republish via `chatUpdated`, which all peers (the
+        // bus will republish via `sessionUpdated`, which all peers (the
         // initiating iPhone included) treat as the canonical state.
         updateChat(chatId: chatIdString) {
             $0.title = trimmed
@@ -1036,7 +1036,7 @@ final class DaemonEngineHost: EngineHost {
         threadByChat[chatId] = thread.id
         let archived = thread.archived ?? false
         return BridgeChatSnapshot(
-            chat: WireChat(
+            chat: WireSession(
                 id: chatId,
                 title: title(for: thread),
                 createdAt: thread.updatedDate,
@@ -1099,7 +1099,7 @@ final class DaemonEngineHost: EngineHost {
         var snapshots = bridgeChatsCurrent
         snapshots.insert(
             BridgeChatSnapshot(
-                chat: WireChat(
+                chat: WireSession(
                     id: chatId,
                     title: trimmed.isEmpty ? "Conversation" : String(trimmed.prefix(60)),
                     createdAt: Date(),
@@ -1297,7 +1297,7 @@ final class DaemonEngineHost: EngineHost {
         }
     }
 
-    private func updateChat(chatId: String, mutate: (inout WireChat) -> Void) {
+    private func updateChat(chatId: String, mutate: (inout WireSession) -> Void) {
         updateSnapshot(chatId: chatId) { mutate(&$0.chat) }
     }
 
@@ -1369,7 +1369,7 @@ private func normalizedPrompt(_ text: String) -> String {
 }
 
 private struct MutableSnapshot {
-    var chat: WireChat
+    var chat: WireSession
     var messages: [WireMessage]
 
     init(_ snapshot: BridgeChatSnapshot) {

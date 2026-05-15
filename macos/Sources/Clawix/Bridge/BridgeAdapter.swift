@@ -2,9 +2,9 @@ import Foundation
 import ClawixCore
 
 extension Chat {
-    func toWire() -> WireChat {
+    func toWire() -> WireSession {
         let last = messages.last
-        return WireChat(
+        return WireSession(
             id: id.uuidString,
             title: title,
             createdAt: createdAt,

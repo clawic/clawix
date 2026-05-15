@@ -1,7 +1,7 @@
 package com.example.clawix.android.bridge
 
 import com.example.clawix.android.core.BridgeRuntimeState
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.core.WireMessage
 import com.example.clawix.android.core.WireProject
 import kotlinx.datetime.Instant
@@ -14,7 +14,7 @@ import kotlinx.datetime.Instant
 sealed class ConnectionState {
     data object Idle : ConnectionState()
     data object Connecting : ConnectionState()
-    data class Connected(val macName: String?, val route: ConnectionRoute) : ConnectionState()
+    data class Connected(val hostDisplayName: String?, val route: ConnectionRoute) : ConnectionState()
     data class Reconnecting(val attempt: Int) : ConnectionState()
     data class Failed(val reason: String) : ConnectionState()
     data class VersionMismatch(val serverVersion: Int) : ConnectionState()
@@ -43,7 +43,7 @@ data class GeneratedImageState(
 data class BridgeState(
     val connection: ConnectionState = ConnectionState.Idle,
     val runtime: BridgeRuntimeState? = null,
-    val chats: List<WireChat> = emptyList(),
+    val chats: List<WireSession> = emptyList(),
     val messagesBySession: Map<String, List<WireMessage>> = emptyMap(),
     val hasMoreBySession: Map<String, Boolean> = emptyMap(),
     val openSessionId: String? = null,

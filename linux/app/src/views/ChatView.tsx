@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal, onMount } from "solid-js";
 import { useParams } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import { daemonStore, loadChats, sendPrompt } from "../lib/daemon_ws";
+import { daemonStore, loadChats, sendMessage } from "../lib/daemon_ws";
 import { renderMarkdown } from "../lib/markdown";
 
 interface Message {
@@ -43,7 +43,7 @@ export default function ChatView() {
     const text = composer().trim();
     if (!text) return;
     setComposer("");
-    await sendPrompt(text, params.id);
+    await sendMessage(text, params.id);
   }
 
   return (

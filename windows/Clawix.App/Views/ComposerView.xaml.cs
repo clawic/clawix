@@ -15,7 +15,7 @@ public sealed partial class ComposerView : UserControl
         var text = InputBox.Text.Trim();
         if (string.IsNullOrEmpty(text)) return;
         InputBox.Text = string.Empty;
-        await App.Services.State.SendPromptAsync(text);
+        await App.Services.State.SendMessageAsync(text);
     }
 
     private void Attach_Click(object sender, RoutedEventArgs e)

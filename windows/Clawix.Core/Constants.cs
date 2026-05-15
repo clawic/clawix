@@ -2,7 +2,7 @@ namespace Clawix.Core;
 
 public static class BridgeConstants
 {
-    public const int SchemaVersion = 5;
+    public const int ProtocolVersion = 8;
 
     public const int InitialPageLimit = 60;
 

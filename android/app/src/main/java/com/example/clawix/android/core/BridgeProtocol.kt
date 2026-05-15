@@ -1,26 +1,26 @@
 package com.example.clawix.android.core
 
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.JsonObject
 
 /**
- * Wire-format version. Bumped on any breaking change to BridgeFrame
- * payloads. Mirrors `bridgeSchemaVersion` in
+ * Wire-format version. Mirrors `bridgeSchemaVersion` in
  * `clawix/packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift`.
- *
- * v5 (2026-05): rate limits, generated images inline, voice notes, etc.
- * v1..v4 frames decode cleanly because every new field is optional.
  */
-const val BRIDGE_SCHEMA_VERSION: Int = 8
+const val BRIDGE_SCHEMA_VERSION: Int = 1
 
 const val BRIDGE_INITIAL_PAGE_LIMIT: Int = 60
 const val BRIDGE_OLDER_PAGE_LIMIT: Int = 40
 
 @Serializable
-enum class ClientKind {
-    @SerialName("ios") ios,
-    @SerialName("desktop") desktop,
+enum class ClientKind(val wireValue: String) {
+    COMPANION("companion"),
+    DESKTOP("desktop");
+
+    companion object {
+        fun fromWire(value: String): ClientKind =
+            entries.firstOrNull { it.wireValue == value } ?: error("unknown clientKind $value")
+    }
 }
 
 /**
@@ -45,7 +45,14 @@ sealed class BridgeBody {
     abstract val typeTag: String
 
     // MARK: - v1 outbound (mobile -> daemon)
-    data class Auth(val token: String, val deviceName: String?, val clientKind: ClientKind?) : BridgeBody() {
+    data class Auth(
+        val token: String,
+        val deviceName: String?,
+        val clientKind: ClientKind?,
+        val clientId: String? = null,
+        val installationId: String? = null,
+        val deviceId: String? = null,
+    ) : BridgeBody() {
         override val typeTag = "auth"
     }
     data object ListSessions : BridgeBody() { override val typeTag = "listSessions" }
@@ -55,8 +62,8 @@ sealed class BridgeBody {
     data class LoadOlderMessages(val sessionId: String, val beforeMessageId: String, val limit: Int) : BridgeBody() {
         override val typeTag = "loadOlderMessages"
     }
-    data class SendPrompt(val sessionId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
-        override val typeTag = "sendPrompt"
+    data class SendMessage(val sessionId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
+        override val typeTag = "sendMessage"
     }
     data class NewSession(val sessionId: String, val text: String, val attachments: List<WireAttachment>) : BridgeBody() {
         override val typeTag = "newSession"
@@ -66,11 +73,11 @@ sealed class BridgeBody {
     }
 
     // MARK: - v1 inbound (daemon -> mobile)
-    data class AuthOk(val macName: String?) : BridgeBody() { override val typeTag = "authOk" }
+    data class AuthOk(val hostDisplayName: String?) : BridgeBody() { override val typeTag = "authOk" }
     data class AuthFailed(val reason: String) : BridgeBody() { override val typeTag = "authFailed" }
     data class VersionMismatch(val serverVersion: Int) : BridgeBody() { override val typeTag = "versionMismatch" }
-    data class SessionsSnapshot(val sessions: List<WireChat>) : BridgeBody() { override val typeTag = "sessionsSnapshot" }
-    data class ChatUpdated(val chat: WireChat) : BridgeBody() { override val typeTag = "chatUpdated" }
+    data class SessionsSnapshot(val sessions: List<WireSession>) : BridgeBody() { override val typeTag = "sessionsSnapshot" }
+    data class SessionUpdated(val session: WireSession) : BridgeBody() { override val typeTag = "sessionUpdated" }
     data class MessagesSnapshot(val sessionId: String, val messages: List<WireMessage>, val hasMore: Boolean?) : BridgeBody() {
         override val typeTag = "messagesSnapshot"
     }

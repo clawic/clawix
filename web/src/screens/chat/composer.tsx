@@ -28,7 +28,7 @@ interface Attachment {
 }
 
 export function Composer({ chatId, hasActiveTurn }: Props) {
-  const sendPrompt = useBridgeStore((s) => s.sendPrompt);
+  const sendMessage = useBridgeStore((s) => s.sendMessage);
   const newChat = useBridgeStore((s) => s.newChat);
   const interruptTurn = useBridgeStore((s) => s.interruptTurn);
   const transcribeAudio = useBridgeStore((s) => s.transcribeAudio);
@@ -66,7 +66,7 @@ export function Composer({ chatId, hasActiveTurn }: Props) {
     const body = text.trim();
     if (!body && attachments.length === 0) return;
     if (chatId) {
-      sendPrompt(chatId, body, attachments.map(toWireAttachment));
+      sendMessage(chatId, body, attachments.map(toWireAttachment));
     } else {
       newChat(body, attachments.map(toWireAttachment));
     }

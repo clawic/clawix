@@ -17,8 +17,8 @@ enum MockData {
     /// reveals the rest in batches as the user scrolls up.
     static let longChatId = "BBBBBBBB-1111-2222-3333-444444444444"
 
-    static let chats: [WireChat] = [
-        WireChat(
+    static let chats: [WireSession] = [
+        WireSession(
             id: longChatId,
             title: "Long thread · pagination preview",
             createdAt: now.addingTimeInterval(-3600 * 12),
@@ -30,7 +30,7 @@ enum MockData {
             branch: "main",
             cwd: "/workspace/long-thread"
         ),
-        WireChat(
+        WireSession(
             id: "8B46DFE1-B932-48E6-94E7-C86E65F7F18D",
             title: "Refactor authentication module",
             createdAt: now.addingTimeInterval(-3600 * 36),
@@ -42,7 +42,7 @@ enum MockData {
             branch: "main",
             cwd: "/workspace/auth-service"
         ),
-        WireChat(
+        WireSession(
             id: "AE001-AUTH-2",
             title: "Add JWT rotation to login flow",
             createdAt: now.addingTimeInterval(-3600 * 50),
@@ -54,7 +54,7 @@ enum MockData {
             branch: "feat/jwt-rotation",
             cwd: "/workspace/auth-service"
         ),
-        WireChat(
+        WireSession(
             id: "C0FFEE11-CAFE-4BAB-9B0E-BAB1E7B0FFEE",
             title: "Find round titanium frames on 1688",
             createdAt: now.addingTimeInterval(-3600 * 14),
@@ -66,7 +66,7 @@ enum MockData {
             branch: nil,
             cwd: nil
         ),
-        WireChat(
+        WireSession(
             id: "11111111-2222-3333-4444-555555555555",
             title: "Migrate notes screen to Plus Jakarta Sans",
             createdAt: now.addingTimeInterval(-3600 * 96),
@@ -78,7 +78,7 @@ enum MockData {
             branch: "feat/typography-pass",
             cwd: "/workspace/notes-app"
         ),
-        WireChat(
+        WireSession(
             id: "NOTES-EMPTY-2",
             title: "Convert NoteCard to glass surface",
             createdAt: now.addingTimeInterval(-3600 * 120),
@@ -90,7 +90,7 @@ enum MockData {
             branch: "feat/glass-cards",
             cwd: "/workspace/notes-app"
         ),
-        WireChat(
+        WireSession(
             id: "22222222-3333-4444-5555-666666666666",
             title: "Investigate flaky session-resume tests",
             createdAt: now.addingTimeInterval(-3600 * 24 * 6),
@@ -102,7 +102,7 @@ enum MockData {
             branch: "main",
             cwd: "/workspace/session-pipeline"
         ),
-        WireChat(
+        WireSession(
             id: "LANDING-1",
             title: "Hero copy A/B for the landing page",
             createdAt: now.addingTimeInterval(-3600 * 8),
@@ -114,7 +114,7 @@ enum MockData {
             branch: "main",
             cwd: "/workspace/clawix-landing"
         ),
-        WireChat(
+        WireSession(
             id: "LANDING-2",
             title: "Add download tile to the landing nav",
             createdAt: now.addingTimeInterval(-3600 * 30),

@@ -419,7 +419,7 @@ extension AppState {
             // (the user is still on the parent chat route).
             trackOptimisticUserMessage(chatId: chatId, messageId: userMsg.id)
             daemonBridgeClient.openSession(chatId)
-            daemonBridgeClient.sendPrompt(
+            daemonBridgeClient.sendMessage(
                 chatId: chatId,
                 text: combined,
                 attachments: wireAttachments(from: attachments)

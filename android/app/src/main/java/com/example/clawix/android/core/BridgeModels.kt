@@ -30,7 +30,7 @@ enum class WireAttachmentKind {
     @SerialName("audio") audio,
 }
 
-/** Inline attachment piggy-backing on `sendPrompt` / `newSession`. Bytes
+/** Inline attachment piggy-backing on `sendMessage` / `newSession`. Bytes
  *  travel base64-encoded inline; daemon writes to a turn-scoped temp
  *  file and forwards the path to Codex (image) or runs Whisper on it
  *  (audio). */
@@ -64,7 +64,7 @@ data class WireProject(
 }
 
 @Serializable
-data class WireChat(
+data class WireSession(
     val id: String,
     val title: String,
     @Serializable(with = IsoDateSerializer::class)
@@ -81,7 +81,7 @@ data class WireChat(
     val threadId: String? = null,
 ) {
     companion object {
-        val listSerializer: KSerializer<List<WireChat>> = ListSerializer(serializer())
+        val listSerializer: KSerializer<List<WireSession>> = ListSerializer(serializer())
     }
 }
 

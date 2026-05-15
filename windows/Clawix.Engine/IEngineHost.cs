@@ -16,19 +16,19 @@ public interface IEngineHost
 
     BridgeRuntimeState BridgeStateCurrent { get; }
 
-    IReadOnlyList<WireChat> BridgeSessionsCurrent { get; }
+    IReadOnlyList<WireSession> BridgeSessionsCurrent { get; }
 
     event Action<BridgeRuntimeState>? BridgeStateChanged;
 
-    event Action<IReadOnlyList<WireChat>>? BridgeSessionsChanged;
+    event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
 
-    event Action<WireChat>? ChatChanged;
+    event Action<WireSession>? ChatChanged;
 
     event Action<MessagesEvent>? MessagesChanged;
 
     // ===== Session actions =====
 
-    Task HandleSendPromptAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
+    Task HandleSendMessageAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
 
     Task HandleNewSessionAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct);
 

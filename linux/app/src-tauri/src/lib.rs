@@ -87,7 +87,7 @@ mod commands {
     use tauri::{Manager, State};
 
     #[derive(Serialize)]
-    pub struct WireChatBrief {
+    pub struct WireSessionBrief {
         pub id: String,
         pub title: String,
         pub last_message: Option<String>,
@@ -95,7 +95,7 @@ mod commands {
     }
 
     #[tauri::command]
-    pub async fn get_chats(state: State<'_, AppState>) -> Result<Vec<WireChatBrief>, String> {
+    pub async fn get_chats(state: State<'_, AppState>) -> Result<Vec<WireSessionBrief>, String> {
         let client = state.daemon.lock().await;
         client.get_chats().await.map_err(|e| e.to_string())
     }
@@ -110,14 +110,14 @@ mod commands {
     }
 
     #[derive(Deserialize)]
-    pub struct SendPromptArgs {
+    pub struct SendMessageArgs {
         pub chat_id: Option<String>,
         pub text: String,
     }
 
     #[tauri::command]
     pub async fn send_prompt(
-        args: SendPromptArgs,
+        args: SendMessageArgs,
         state: State<'_, AppState>,
     ) -> Result<serde_json::Value, String> {
         let client = state.daemon.lock().await;

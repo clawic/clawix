@@ -7,7 +7,7 @@ internal sealed partial class BridgeFrameConverter
     public override void Write(Utf8JsonWriter writer, BridgeFrame value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteNumber("schemaVersion", value.SchemaVersion);
+        writer.WriteNumber("schemaVersion", value.ProtocolVersion);
         writer.WriteString("type", value.Body.TypeTag);
         EncodeBody(writer, value.Body, options);
         writer.WriteEndObject();
@@ -25,6 +25,9 @@ internal sealed partial class BridgeFrameConverter
                     writer.WritePropertyName("clientKind");
                     JsonSerializer.Serialize(writer, a.ClientKind.Value, options);
                 }
+                if (a.ClientId is not null) writer.WriteString("clientId", a.ClientId);
+                if (a.InstallationId is not null) writer.WriteString("installationId", a.InstallationId);
+                if (a.DeviceId is not null) writer.WriteString("deviceId", a.DeviceId);
                 break;
             case BridgeBody.ListSessions:
                 break;
@@ -37,7 +40,7 @@ internal sealed partial class BridgeFrameConverter
                 writer.WriteString("beforeMessageId", l.BeforeMessageId);
                 writer.WriteNumber("limit", l.Limit);
                 break;
-            case BridgeBody.SendPrompt s:
+            case BridgeBody.SendMessage s:
                 writer.WriteString("sessionId", s.SessionId);
                 writer.WriteString("text", s.Text);
                 if (s.Attachments.Count > 0)
@@ -59,7 +62,7 @@ internal sealed partial class BridgeFrameConverter
                 writer.WriteString("sessionId", it.SessionId);
                 break;
             case BridgeBody.AuthOk ao:
-                if (ao.MacName is not null) writer.WriteString("macName", ao.MacName);
+                if (ao.HostDisplayName is not null) writer.WriteString("hostDisplayName", ao.HostDisplayName);
                 break;
             case BridgeBody.AuthFailed af:
                 writer.WriteString("reason", af.Reason);
@@ -71,9 +74,9 @@ internal sealed partial class BridgeFrameConverter
                 writer.WritePropertyName("sessions");
                 JsonSerializer.Serialize(writer, cs.Sessions, options);
                 break;
-            case BridgeBody.ChatUpdated cu:
-                writer.WritePropertyName("chat");
-                JsonSerializer.Serialize(writer, cu.Chat, options);
+            case BridgeBody.SessionUpdated cu:
+                writer.WritePropertyName("session");
+                JsonSerializer.Serialize(writer, cu.Session, options);
                 break;
             case BridgeBody.MessagesSnapshot ms:
                 writer.WriteString("sessionId", ms.SessionId);

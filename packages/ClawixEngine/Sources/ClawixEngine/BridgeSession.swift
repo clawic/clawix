@@ -87,7 +87,7 @@ public final class BridgeSession: Identifiable {
             return
         }
         if !isAuthenticated {
-            if case .auth(let token, let name, let kind) = frame.body {
+            if case .auth(let token, let name, let kind, _, _, _) = frame.body {
                 handleAuth(token: token, deviceName: name, clientKind: kind)
             } else {
                 send(BridgeFrame(.authFailed(reason: "auth-required-first")))
@@ -116,15 +116,15 @@ public final class BridgeSession: Identifiable {
         self.deviceName = deviceName
         // Absent kind = legacy v1 client = treat as iOS so existing
         // iPhones keep working unchanged.
-        self.clientKind = clientKind ?? .ios
+        self.clientKind = clientKind ?? .companion
         // Tell the peer where the host is in its bootstrap so an empty
         // chats list reads as "syncing" instead of "no chats". The bus
         // also re-emits this frame on every state transition, so a
         // peer that connected during boot sees `syncing → ready`.
-        send(BridgeFrame(.authOk(macName: HostIdentity.localizedName)))
+        send(BridgeFrame(.authOk(hostDisplayName: HostIdentity.localizedName)))
         send(bus.currentBridgeStateFrame())
         send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
-        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")
+        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "companion") name=\(deviceName ?? "?")")
     }
 
     public func send(_ frame: BridgeFrame) {

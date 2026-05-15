@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Clawix.Engine;
 
 /// <summary>
-/// Bridge WebSocket server. Loopback only by default (127.0.0.1:7777),
+/// Bridge WebSocket server. Loopback only by default (127.0.0.1:24080),
 /// matches the Swift NWListener server in
 /// <c>packages/ClawixEngine/BridgeServer.swift</c>. Each accepted
 /// connection becomes a <see cref="BridgeSession"/>.

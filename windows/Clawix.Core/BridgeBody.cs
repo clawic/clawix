@@ -12,7 +12,14 @@ public abstract record BridgeBody
 
     // ===== v1 outbound (iPhone -> Mac) =====
 
-    public sealed record Auth(string Token, string? DeviceName, ClientKind? ClientKind) : BridgeBody
+    public sealed record Auth(
+        string Token,
+        string? DeviceName,
+        ClientKind? ClientKind,
+        string? ClientId = null,
+        string? InstallationId = null,
+        string? DeviceId = null
+    ) : BridgeBody
     {
         public override string TypeTag => "auth";
     }
@@ -32,9 +39,9 @@ public abstract record BridgeBody
         public override string TypeTag => "loadOlderMessages";
     }
 
-    public sealed record SendPrompt(string SessionId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
+    public sealed record SendMessage(string SessionId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
     {
-        public override string TypeTag => "sendPrompt";
+        public override string TypeTag => "sendMessage";
     }
 
     public sealed record NewSession(string SessionId, string Text, IReadOnlyList<WireAttachment> Attachments) : BridgeBody
@@ -49,7 +56,7 @@ public abstract record BridgeBody
 
     // ===== v1 inbound (Mac -> iPhone) =====
 
-    public sealed record AuthOk(string? MacName) : BridgeBody
+    public sealed record AuthOk(string? HostDisplayName) : BridgeBody
     {
         public override string TypeTag => "authOk";
     }
@@ -64,14 +71,14 @@ public abstract record BridgeBody
         public override string TypeTag => "versionMismatch";
     }
 
-    public sealed record SessionsSnapshot(IReadOnlyList<WireChat> Sessions) : BridgeBody
+    public sealed record SessionsSnapshot(IReadOnlyList<WireSession> Sessions) : BridgeBody
     {
         public override string TypeTag => "sessionsSnapshot";
     }
 
-    public sealed record ChatUpdated(WireChat Chat) : BridgeBody
+    public sealed record SessionUpdated(WireSession Session) : BridgeBody
     {
-        public override string TypeTag => "chatUpdated";
+        public override string TypeTag => "sessionUpdated";
     }
 
     public sealed record MessagesSnapshot(string SessionId, IReadOnlyList<WireMessage> Messages, bool? HasMore) : BridgeBody

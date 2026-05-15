@@ -15,17 +15,17 @@ import {
   ZWireAudioListResult,
   ZWireAudioRegisterRequest,
   ZWireAudioTranscript,
-  ZWireChat,
+  ZWireSession,
   ZWireMessage,
   ZWireProject,
   ZWireRateLimitSnapshot,
 } from "./wire";
 
-export const BRIDGE_SCHEMA_VERSION = 5 as const;
+export const BRIDGE_SCHEMA_VERSION = 1 as const;
 export const BRIDGE_INITIAL_PAGE_LIMIT = 60 as const;
 export const BRIDGE_OLDER_PAGE_LIMIT = 40 as const;
 
-export const ZClientKind = z.enum(["ios", "desktop"]);
+export const ZClientKind = z.enum(["companion", "desktop"]);
 export type ClientKind = z.infer<typeof ZClientKind>;
 
 const base = { schemaVersion: z.number().int().default(BRIDGE_SCHEMA_VERSION) };
@@ -37,6 +37,9 @@ export const ZAuth = z.object({
   token: z.string(),
   deviceName: z.string().optional(),
   clientKind: ZClientKind.optional(),
+  clientId: z.string().optional(),
+  installationId: z.string().optional(),
+  deviceId: z.string().optional(),
 });
 
 export const ZListSessions = z.object({ ...base, type: z.literal("listSessions") });
@@ -56,9 +59,9 @@ export const ZLoadOlderMessages = z.object({
   limit: z.number().int(),
 });
 
-export const ZSendPrompt = z.object({
+export const ZSendMessage = z.object({
   ...base,
-  type: z.literal("sendPrompt"),
+  type: z.literal("sendMessage"),
   sessionId: z.string(),
   text: z.string(),
   attachments: z.array(ZWireAttachment).optional().default([]),
@@ -104,12 +107,12 @@ export const ZRequestGeneratedImage = z.object({ ...base, type: z.literal("reque
 export const ZRequestRateLimits = z.object({ ...base, type: z.literal("requestRateLimits") });
 
 /** Inbound: server -> client */
-export const ZAuthOk = z.object({ ...base, type: z.literal("authOk"), macName: z.string().optional() });
+export const ZAuthOk = z.object({ ...base, type: z.literal("authOk"), hostDisplayName: z.string().optional() });
 export const ZAuthFailed = z.object({ ...base, type: z.literal("authFailed"), reason: z.string() });
 export const ZVersionMismatch = z.object({ ...base, type: z.literal("versionMismatch"), serverVersion: z.number().int() });
 
-export const ZSessionsSnapshot = z.object({ ...base, type: z.literal("sessionsSnapshot"), sessions: z.array(ZWireChat) });
-export const ZChatUpdated = z.object({ ...base, type: z.literal("chatUpdated"), chat: ZWireChat });
+export const ZSessionsSnapshot = z.object({ ...base, type: z.literal("sessionsSnapshot"), sessions: z.array(ZWireSession) });
+export const ZSessionUpdated = z.object({ ...base, type: z.literal("sessionUpdated"), session: ZWireSession });
 
 export const ZMessagesSnapshot = z.object({
   ...base,
@@ -313,7 +316,7 @@ export const ZBridgeFrame = z.discriminatedUnion("type", [
   ZListSessions,
   ZOpenSession,
   ZLoadOlderMessages,
-  ZSendPrompt,
+  ZSendMessage,
   ZNewSession,
   ZInterruptTurn,
   ZEditPrompt,
@@ -333,7 +336,7 @@ export const ZBridgeFrame = z.discriminatedUnion("type", [
   ZAuthFailed,
   ZVersionMismatch,
   ZSessionsSnapshot,
-  ZChatUpdated,
+  ZSessionUpdated,
   ZMessagesSnapshot,
   ZMessagesPage,
   ZMessageAppended,
@@ -415,7 +418,7 @@ export const ZQrPayload = z.object({
   port: z.number().int(),
   token: z.string(),
   shortCode: z.string(),
-  macName: z.string(),
+  hostDisplayName: z.string(),
   tailscaleHost: z.string().optional(),
 });
 export type QrPayload = z.infer<typeof ZQrPayload>;

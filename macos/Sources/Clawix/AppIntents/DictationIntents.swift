@@ -73,7 +73,7 @@ struct RetryLastTranscriptionIntent: AppIntent {
     }
 }
 
-// MARK: - Chat intents (#13 NewChat + SendPrompt)
+// MARK: - Chat intents (#13 NewChat + SendMessage)
 
 /// `Notification.Name` constants the Clawix root view observes to
 /// react to AppIntent invocations from Shortcuts.app. Using
@@ -81,8 +81,8 @@ struct RetryLastTranscriptionIntent: AppIntent {
 /// existing `@EnvironmentObject` flow keeps owning state.
 enum ClawixIntentNotifications {
     static let newChatRequested = Notification.Name("clawix.intent.newChat")
-    static let sendPromptRequested = Notification.Name("clawix.intent.sendPrompt")
-    /// User-info key for the prompt text on `sendPromptRequested`.
+    static let sendMessageRequested = Notification.Name("clawix.intent.sendMessage")
+    /// User-info key for the prompt text on `sendMessageRequested`.
     static let promptUserInfoKey = "prompt"
 }
 
@@ -106,7 +106,7 @@ struct NewChatIntent: AppIntent {
 }
 
 @available(macOS 13.0, *)
-struct SendPromptIntent: AppIntent {
+struct SendMessageIntent: AppIntent {
     static var title: LocalizedStringResource = "Send prompt to Clawix"
     static var description = IntentDescription(
         "Submit the given text as a new chat prompt."
@@ -120,7 +120,7 @@ struct SendPromptIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         NSApp.activate(ignoringOtherApps: true)
         NotificationCenter.default.post(
-            name: ClawixIntentNotifications.sendPromptRequested,
+            name: ClawixIntentNotifications.sendMessageRequested,
             object: nil,
             userInfo: [ClawixIntentNotifications.promptUserInfoKey: prompt]
         )

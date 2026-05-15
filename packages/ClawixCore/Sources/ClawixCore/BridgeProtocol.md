@@ -1,7 +1,7 @@
-# Bridge protocol (Mac <-> iPhone)
+# Bridge protocol (Clawix clients <-> bridge daemon)
 
-Wire format used by the iOS companion to talk to the macOS app over a
-local-network WebSocket. Frames are JSON, one frame per WS text message.
+Wire format used by Clawix clients to talk to the signed bridge daemon over a
+local WebSocket. Frames are JSON, one frame per WS text message.
 
 ## Envelope
 
@@ -11,51 +11,53 @@ Every frame is a flat JSON object:
 { "schemaVersion": 1, "type": "<tag>", ...payload fields }
 ```
 
-`schemaVersion` is bumped on any breaking change. The iPhone refuses to
-talk to a Mac reporting a different `schemaVersion` and shows an
-"update Clawix on the Mac" empty state.
+Clawix is still pre-public, so the complete current bridge surface is the v1
+contract. Clients refuse to talk to a daemon reporting a different
+`schemaVersion` and show an "Update Clawix" empty state.
 
 The current version is `1`.
 
 ## Lifecycle
 
-1. iPhone opens WS over TLS. The server cert is pinned by the SHA-256
-   fingerprint carried in the pairing QR.
-2. First frame the iPhone sends MUST be `auth`. Anything else closes
+1. Client opens WS to the paired/local daemon endpoint.
+2. First frame the companion sends MUST be `auth`. Anything else closes
    the connection with WS code `1008`.
 3. Server replies with `authOk` or `authFailed`. On `authFailed` the
-   iPhone clears its credentials and prompts for re-pairing.
-4. After `authOk`, the iPhone may request `listSessions`, `openSession`,
-   `sendPrompt`. The server may push `sessionsSnapshot`, `chatUpdated`,
-   `messagesSnapshot`, `messageAppended`, `messageStreaming`,
-   `errorEvent` at any time.
+   companion clears its credentials and prompts for re-pairing.
+4. After `authOk`, the client may request frames allowed for its
+   `clientKind`. The daemon may push snapshots, deltas and non-fatal
+   `errorEvent` frames at any time.
 
-## Outbound (iPhone -> Mac)
+## Outbound (client -> daemon)
 
-- `auth` `{ token, deviceName? }`. Bearer token from the QR. Must be
-  the first frame.
+- `auth` `{ token, deviceName?, clientKind?, clientId?, installationId?, deviceId? }`.
+  Bearer token from pairing or local bootstrap. Must be the first frame.
 - `listSessions` `{}`. Asks for a snapshot of the current sessions list. The
   server replies with `sessionsSnapshot`.
-- `openSession` `{ sessionId }`. Subscribes to a chat. The server replies
-  with `messagesSnapshot` and continues to push `messageAppended` and
-  `messageStreaming` for that chat.
-- `sendPrompt` `{ sessionId, text }`. Routes a user prompt to the
-  existing `AppState.sendUserMessageFromBridge(sessionId, text)` flow.
+- `openSession` `{ sessionId, limit? }`. Subscribes to a session and may request
+  a trailing page.
+- `loadOlderMessages` `{ sessionId, beforeMessageId, limit }`. Fetches older
+  message pages.
+- `sendMessage` / `newSession` `{ sessionId, text, attachments? }`. Routes a
+  user prompt with optional image/audio attachments.
+- Desktop-capable clients may additionally use edit/archive/pin/project,
+  pairing, file, audio, image, rate-limit and skills frames registered in
+  `BridgeProtocol.swift`.
 
-## Inbound (Mac -> iPhone)
+## Inbound (daemon -> client)
 
-- `authOk` `{ macName? }`.
+- `authOk` `{ hostDisplayName? }`.
 - `authFailed` `{ reason }`. Generic reason string for debugging.
-- `versionMismatch` `{ serverVersion }`. Sent before close when the
-  server detects a frame with an older/newer `schemaVersion`.
-- `sessionsSnapshot` `{ sessions: [WireChat] }`. Full list of sessions visible
+- `versionMismatch` `{ serverVersion }`. Sent before close when the daemon
+  detects an incompatible `schemaVersion`.
+- `sessionsSnapshot` `{ sessions: [WireSession] }`. Full list of sessions visible
   on the Mac.
-- `chatUpdated` `{ chat: WireChat }`. Single chat changed (title,
+- `sessionUpdated` `{ session: WireSession }`. Single session changed (title,
   branch, hasActiveTurn, last message preview, etc.).
-- `messagesSnapshot` `{ sessionId, messages: [WireMessage] }`. Full
-  message list for a chat. Sent in response to `openSession`.
+- `messagesSnapshot` `{ sessionId, messages: [WireMessage], hasMore? }`.
+  Current message page for a session. Sent in response to `openSession`.
 - `messageAppended` `{ sessionId, message: WireMessage }`. A new message
-  joined the chat (user echo, assistant placeholder, etc.).
+  joined the session (user echo, assistant placeholder, etc.).
 - `messageStreaming` `{ sessionId, messageId, content, reasoningText, finished }`.
   Carries the full current state of the message every tick. The
   iPhone replaces. Sending the full state, not deltas, trades a few
@@ -63,39 +65,6 @@ The current version is `1`.
   rewrites, edits). `finished=true` freezes the message.
 - `errorEvent` `{ code, message }`. Non-fatal error to surface in UI.
 
-## WireChat
-
-```
-{
-  "id": "uuid",
-  "title": "...",
-  "createdAt": "iso8601",
-  "isPinned": false,
-  "isArchived": false,
-  "hasActiveTurn": false,
-  "lastMessageAt": "iso8601 | null",
-  "lastMessagePreview": "string | null",
-  "branch": "main | null",
-  "cwd": "/abs/path | null"
-}
-```
-
-## WireMessage
-
-```
-{
-  "id": "uuid",
-  "role": "user | assistant",
-  "content": "...",
-  "reasoningText": "...",
-  "streamingFinished": true,
-  "isError": false,
-  "timestamp": "iso8601"
-}
-```
-
-## Out of scope (MVP)
-
-The MVP omits tool calls, plan questions, attachments, image
-generation, work summaries and context-usage. They become new frame
-types in a later `schemaVersion` bump.
+The exhaustive frame and model definitions live in `BridgeProtocol.swift` and
+`BridgeModels.swift`; this document pins the public wire conventions, not a
+second hand-maintained schema.

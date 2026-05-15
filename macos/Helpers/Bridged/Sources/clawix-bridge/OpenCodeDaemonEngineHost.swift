@@ -114,7 +114,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         }
     }
 
-    func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment]) {
+    func handleSendMessage(sessionId: UUID, text: String, attachments: [WireAttachment]) {
         let chatIdString = sessionId.uuidString
         BridgeLog.write("opencode send chat=\(chatIdString) textChars=\(text.count) attachments=\(attachments.count)")
         Task { @MainActor in
@@ -153,7 +153,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
     }
 
     func handleNewSession(sessionId: UUID, text: String, attachments: [WireAttachment]) {
-        handleSendPrompt(sessionId: sessionId, text: text, attachments: attachments)
+        handleSendMessage(sessionId: sessionId, text: text, attachments: attachments)
     }
 
     func handleInterruptTurn(sessionId: UUID) {
@@ -259,7 +259,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         let title = nonEmpty(string(session["title"])) ?? nonEmpty(string(session["slug"])) ?? "OpenCode chat"
         let cwd = string(session["directory"])
         return BridgeChatSnapshot(
-            chat: WireChat(
+            chat: WireSession(
                 id: chatId,
                 title: title,
                 createdAt: created,
@@ -295,7 +295,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         let trimmed = firstPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
         var snapshots = bridgeChatsCurrent
         snapshots.insert(BridgeChatSnapshot(
-            chat: WireChat(
+            chat: WireSession(
                 id: chatId,
                 title: trimmed.isEmpty ? "OpenCode chat" : String(trimmed.prefix(60)),
                 createdAt: Date(),
@@ -672,7 +672,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         }
     }
 
-    private func updateChat(chatId: String, mutate: (inout WireChat) -> Void) {
+    private func updateChat(chatId: String, mutate: (inout WireSession) -> Void) {
         updateSnapshot(chatId: chatId) { mutate(&$0.chat) }
     }
 
@@ -995,7 +995,7 @@ private func normalizedPrompt(_ text: String) -> String {
 }
 
 private struct MutableSnapshot {
-    var chat: WireChat
+    var chat: WireSession
     var messages: [WireMessage]
 
     init(_ snapshot: BridgeChatSnapshot) {

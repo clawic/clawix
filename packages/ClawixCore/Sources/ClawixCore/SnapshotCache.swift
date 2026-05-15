@@ -10,7 +10,7 @@ import Foundation
 /// or to wake it from sleep.
 ///
 /// Lives in `ClawixCore` so iOS and the macOS desktop client share the
-/// same on-disk format; both targets read the same `WireChat` /
+/// same on-disk format; both targets read the same `WireSession` /
 /// `WireMessage` shapes via `BridgeCoder`. The cache is intentionally
 /// small (last 30 chats, last 80 messages each). Users with thousands
 /// of chats/messages still get an instant home; rarely-touched chats
@@ -21,10 +21,10 @@ public enum SnapshotCache {
     /// this cache should be reading from / writing to it.
     public struct Payload: Codable {
         public let cacheKey: String?
-        public let chats: [WireChat]
+        public let chats: [WireSession]
         public let messagesBySession: [String: [WireMessage]]
 
-        public init(cacheKey: String? = nil, chats: [WireChat], messagesBySession: [String: [WireMessage]]) {
+        public init(cacheKey: String? = nil, chats: [WireSession], messagesBySession: [String: [WireMessage]]) {
             self.cacheKey = cacheKey
             self.chats = chats
             self.messagesBySession = messagesBySession
@@ -40,7 +40,7 @@ public enum SnapshotCache {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             cacheKey = try container.decodeIfPresent(String.self, forKey: .cacheKey)
-            chats = try container.decode([WireChat].self, forKey: .chats)
+            chats = try container.decode([WireSession].self, forKey: .chats)
             messagesBySession = try container.decodeIfPresent([String: [WireMessage]].self, forKey: .messagesBySession)
                 ?? container.decodeIfPresent([String: [WireMessage]].self, forKey: .messagesByChat)
                 ?? [:]
@@ -104,7 +104,7 @@ public enum SnapshotCache {
     /// Persist a clipped snapshot. Safe to call from a background
     /// queue; writes through a temp file so a mid-write process kill
     /// does not leave a partial JSON in place.
-    public static func save(chats: [WireChat], messages: [String: [WireMessage]], cacheKey: String? = nil) {
+    public static func save(chats: [WireSession], messages: [String: [WireMessage]], cacheKey: String? = nil) {
         guard let url = fileURL else { return }
         let topChats = chats
             .filter { !$0.isArchived }

@@ -32,12 +32,12 @@ public final class BridgeServer {
     ///   owns real chat state.
     public init(
         host: EngineHost,
-        port: UInt16 = 7777,
+        port: UInt16 = 24080,
         pairing: PairingService = .shared,
         publishBonjour: Bool = true
     ) {
         self.host = host
-        self.port = NWEndpoint.Port(rawValue: port) ?? NWEndpoint.Port(rawValue: 7777)!
+        self.port = NWEndpoint.Port(rawValue: port) ?? NWEndpoint.Port(rawValue: 24080)!
         self.pairing = pairing
         self.publishBonjour = publishBonjour
     }

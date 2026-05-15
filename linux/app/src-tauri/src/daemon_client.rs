@@ -16,6 +16,7 @@ use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, info, warn};
 
 const DEFAULT_PORT: u16 = 24080;
+const BRIDGE_SCHEMA_VERSION: u8 = 1;
 const RECONNECT_BACKOFF_MS: u64 = 1500;
 const FRAME_BATCH_WINDOW_MS: u64 = 16;
 
@@ -44,7 +45,7 @@ impl DaemonClient {
         Self { write_tx: None }
     }
 
-    pub async fn get_chats(&self) -> Result<Vec<crate::commands::WireChatBrief>> {
+    pub async fn get_chats(&self) -> Result<Vec<crate::commands::WireSessionBrief>> {
         self.send_intent(serde_json::json!({ "type": "listSessions" })).await?;
         Ok(Vec::new())
     }
@@ -59,7 +60,7 @@ impl DaemonClient {
 
     pub async fn send_prompt(&self, chat_id: Option<&str>, text: &str) -> Result<serde_json::Value> {
         let body = if let Some(id) = chat_id {
-            serde_json::json!({ "type": "sendPrompt", "sessionId": id, "text": text })
+            serde_json::json!({ "type": "sendMessage", "sessionId": id, "text": text })
         } else {
             serde_json::json!({
                 "type": "newSession",
@@ -107,7 +108,7 @@ impl DaemonClient {
             .as_ref()
             .ok_or_else(|| anyhow!("daemon not connected"))?;
         let frame = serde_json::json!({
-            "schemaVersion": 1,
+            "schemaVersion": BRIDGE_SCHEMA_VERSION,
             "body": body
         });
         tx.send(Message::Text(frame.to_string()))
@@ -132,7 +133,7 @@ pub async fn connect_and_run(client: Arc<Mutex<DaemonClient>>, app: AppHandle) -
                 // Auth frame
                 if let Ok(bearer) = read_bearer() {
                     let auth = serde_json::json!({
-                        "schemaVersion": 1,
+                        "schemaVersion": BRIDGE_SCHEMA_VERSION,
                         "body": {
                             "type": "auth",
                             "token": bearer,

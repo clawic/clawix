@@ -17,11 +17,11 @@ fi
 # rules to whichever firewall manager the host runs (firewalld is default
 # on Fedora/RHEL; ufw on Ubuntu; nothing on Arch). Failures are best-effort.
 if command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
-  firewall-cmd --permanent --add-port=7777/tcp || true
+  firewall-cmd --permanent --add-port=24080/tcp || true
   firewall-cmd --permanent --add-port=5353/udp || true
   firewall-cmd --reload || true
 elif command -v ufw >/dev/null 2>&1; then
-  ufw allow 7777/tcp || true
+  ufw allow 24080/tcp || true
   ufw allow 5353/udp || true
 fi
 

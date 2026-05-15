@@ -131,7 +131,10 @@ final class ShortCodePairingFlow {
         let frame = BridgeFrame(.auth(
             token: code,
             deviceName: UIDevice.current.name,
-            clientKind: .ios
+            clientKind: .companion,
+            clientId: nil,
+            installationId: nil,
+            deviceId: nil
         ))
         guard let data = try? BridgeCoder.encode(frame) else {
             fail("Could not encode auth frame")
@@ -172,12 +175,12 @@ final class ShortCodePairingFlow {
                     return
                 }
                 switch frame.body {
-                case .authOk(let macName):
+                case .authOk(let hostDisplayName):
                     let creds = Credentials(
                         host: "",
                         port: 24080,
                         token: code,
-                        macName: macName ?? mac.name,
+                        hostDisplayName: hostDisplayName ?? mac.name,
                         tailscaleHost: nil
                     )
                     self.complete(creds)

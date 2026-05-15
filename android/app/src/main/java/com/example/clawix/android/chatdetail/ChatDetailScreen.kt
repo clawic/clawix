@@ -203,7 +203,7 @@ fun ChatDetailScreen(
                 isStreaming = ui.isStreaming,
                 onSend = { text, attachments ->
                     Haptics.send(view)
-                    vm.sendPrompt(text, attachments)
+                    vm.sendMessage(text, attachments)
                 },
                 onStop = {
                     Haptics.tap(view)

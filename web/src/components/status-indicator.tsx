@@ -17,7 +17,7 @@ const labels = {
 
 export function StatusIndicator() {
   const conn = useBridgeStore((s) => s.connection);
-  const macName = useBridgeStore((s) => s.macName);
+  const hostDisplayName = useBridgeStore((s) => s.hostDisplayName);
   const bridge = useBridgeStore((s) => s.bridge);
   const [now, setNow] = useState(Date.now());
 
@@ -36,7 +36,7 @@ export function StatusIndicator() {
         : "bg-[var(--color-banner-danger-fg)]";
 
   let detail = "";
-  if (conn.kind === "ready" && macName) detail = ` ${macName}`;
+  if (conn.kind === "ready" && hostDisplayName) detail = ` ${hostDisplayName}`;
   if (conn.kind === "offline") {
     const remaining = Math.max(0, conn.retryAt - now);
     detail = ` in ${Math.ceil(remaining / 1000)}s`;

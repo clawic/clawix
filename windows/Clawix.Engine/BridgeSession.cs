@@ -20,7 +20,7 @@ public sealed class BridgeSession
     private readonly ILogger _logger;
     private readonly SemaphoreSlim _sendGate = new(1, 1);
     private bool _authenticated;
-    private ClientKind _clientKind = ClientKind.Ios;
+    private ClientKind _clientKind = ClientKind.Companion;
     private readonly HashSet<string> _subscribedSessionIds = new(StringComparer.Ordinal);
 
     public BridgeSession(WebSocket socket, IEngineHost host, PairingService pairing, ILogger logger)
@@ -78,7 +78,7 @@ public sealed class BridgeSession
             return;
         }
         _authenticated = true;
-        _clientKind = auth.ClientKind ?? ClientKind.Ios;
+        _clientKind = auth.ClientKind ?? ClientKind.Companion;
         await SendAsync(new BridgeFrame(new BridgeBody.AuthOk(_pairing.BonjourServiceName)), ct);
         var state = _host.BridgeStateCurrent;
         await SendAsync(new BridgeFrame(new BridgeBody.BridgeState(
@@ -104,8 +104,8 @@ public sealed class BridgeSession
                 await SendAsync(new BridgeFrame(new BridgeBody.MessagesPage(lom.SessionId, page.Messages, page.HasMore)), ct);
                 break;
 
-            case BridgeBody.SendPrompt sp:
-                await _host.HandleSendPromptAsync(sp.SessionId, sp.Text, sp.Attachments, ct);
+            case BridgeBody.SendMessage sp:
+                await _host.HandleSendMessageAsync(sp.SessionId, sp.Text, sp.Attachments, ct);
                 break;
 
             case BridgeBody.NewSession nc:

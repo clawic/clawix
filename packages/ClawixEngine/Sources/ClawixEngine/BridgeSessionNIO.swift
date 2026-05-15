@@ -55,7 +55,7 @@ public final class BridgeSession: Identifiable {
             return
         }
         if !isAuthenticated {
-            if case .auth(let token, let name, let kind) = frame.body {
+            if case .auth(let token, let name, let kind, _, _, _) = frame.body {
                 handleAuth(token: token, deviceName: name, clientKind: kind)
             } else {
                 send(BridgeFrame(.authFailed(reason: "auth-required-first")))
@@ -77,12 +77,12 @@ public final class BridgeSession: Identifiable {
         isAuthenticated = true
         BridgeStats.shared.increment()
         self.deviceName = deviceName
-        self.clientKind = clientKind ?? .ios
+        self.clientKind = clientKind ?? .companion
         let hostName = ProcessInfo.processInfo.hostName
-        send(BridgeFrame(.authOk(macName: hostName)))
+        send(BridgeFrame(.authOk(hostDisplayName: hostName)))
         send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
         send(bus.currentBridgeStateFrame())
-        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "ios") name=\(deviceName ?? "?")")
+        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "companion") name=\(deviceName ?? "?")")
     }
 
     public func send(_ frame: BridgeFrame) {

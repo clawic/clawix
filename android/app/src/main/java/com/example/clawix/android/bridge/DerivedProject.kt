@@ -1,6 +1,6 @@
 package com.example.clawix.android.bridge
 
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import kotlinx.datetime.Instant
 
 /**
@@ -21,7 +21,7 @@ data class DerivedProject(
     val lastUsedAt: Instant?,
 ) {
     companion object {
-        fun from(chats: List<WireChat>): List<DerivedProject> {
+        fun from(chats: List<WireSession>): List<DerivedProject> {
             // Group by cwd; chats without cwd are not projectised.
             val byCwd = chats.groupBy { it.cwd ?: "" }
             val derived = byCwd

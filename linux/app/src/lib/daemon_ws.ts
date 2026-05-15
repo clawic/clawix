@@ -69,6 +69,6 @@ export async function loadChats(): Promise<void> {
   setChats(initial);
 }
 
-export async function sendPrompt(text: string, chatId?: string): Promise<void> {
+export async function sendMessage(text: string, chatId?: string): Promise<void> {
   await invoke("send_prompt", { args: { chatId, text } });
 }

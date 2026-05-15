@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.clawix.android.AppContainer
 import com.example.clawix.android.core.BridgeBody
 import com.example.clawix.android.core.WireAttachment
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.core.WireMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class ChatDetailUi(
-    val chat: WireChat?,
+    val chat: WireSession?,
     val messages: List<WireMessage>,
     val hasMore: Boolean,
     val isStreaming: Boolean,
@@ -51,12 +51,12 @@ class ChatDetailViewModel(
         container.bridgeClient.loadOlderMessages(sessionId, beforeMessageId)
     }
 
-    fun sendPrompt(text: String, attachments: List<WireAttachment> = emptyList()) {
+    fun sendMessage(text: String, attachments: List<WireAttachment> = emptyList()) {
         if (sessionId in (container.bridgeStore.state.value.pendingNewSessions)) {
             container.bridgeClient.newSession(sessionId, text, attachments)
             container.bridgeStore.unregisterPendingNewSession(sessionId)
         } else {
-            container.bridgeClient.sendPrompt(sessionId, text, attachments)
+            container.bridgeClient.sendMessage(sessionId, text, attachments)
         }
     }
 

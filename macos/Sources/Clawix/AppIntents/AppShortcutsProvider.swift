@@ -58,7 +58,7 @@ struct ClawixAppShortcuts: AppShortcutsProvider {
             systemImageName: "square.and.pencil"
         )
         AppShortcut(
-            intent: SendPromptIntent(),
+            intent: SendMessageIntent(),
             phrases: [
                 "Send to \(.applicationName)",
                 "Ask \(.applicationName)"

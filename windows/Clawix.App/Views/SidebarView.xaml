@@ -30,7 +30,7 @@
               SelectionChanged="ChatList_SelectionChanged"
               SelectionMode="Single">
       <ListView.ItemTemplate>
-        <DataTemplate x:DataType="models:WireChat">
+        <DataTemplate x:DataType="models:WireSession">
           <StackPanel Padding="6,4">
             <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
             <TextBlock Text="{x:Bind LastMessagePreview}" Opacity="0.6" TextTrimming="CharacterEllipsis" />

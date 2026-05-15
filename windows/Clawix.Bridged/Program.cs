@@ -18,7 +18,7 @@ Log.Logger = new LoggerConfiguration()
         rollingInterval: RollingInterval.Day, retainedFileCountLimit: 7)
     .CreateLogger();
 
-var port = ushort.TryParse(Environment.GetEnvironmentVariable("CLAWIX_BRIDGE_PORT"), out var p) ? p : (ushort)7777;
+var port = ushort.TryParse(Environment.GetEnvironmentVariable("CLAWIX_BRIDGE_PORT"), out var p) ? p : (ushort)24080;
 var bonjourDisabled = Environment.GetEnvironmentVariable("CLAWIX_BRIDGE_DISABLE_BONJOUR") == "1";
 
 using var builder = Host.CreateDefaultBuilder(args)

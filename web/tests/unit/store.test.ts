@@ -6,6 +6,6 @@ describe("bridge store", () => {
     const s = useBridgeStore.getState();
     expect(s.connection.kind).toBe("idle");
     expect(s.chats).toEqual([]);
-    expect(s.macName).toBeNull();
+    expect(s.hostDisplayName).toBeNull();
   });
 });

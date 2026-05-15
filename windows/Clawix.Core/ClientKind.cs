@@ -5,6 +5,6 @@ namespace Clawix.Core;
 [JsonConverter(typeof(JsonStringEnumConverter<ClientKind>))]
 public enum ClientKind
 {
-    [JsonStringEnumMemberName("ios")] Ios,
+    [JsonStringEnumMemberName("companion")] Companion,
     [JsonStringEnumMemberName("desktop")] Desktop,
 }

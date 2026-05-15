@@ -101,7 +101,7 @@ struct ChatDetailView: View {
     @State private var imageViewer: ImageViewerSelection?
     #endif
 
-    private var chat: WireChat? { store.chat(chatId) }
+    private var chat: WireSession? { store.chat(chatId) }
     private var messages: [WireMessage] { store.messages(for: chatId) }
     /// Cached `DerivedProject.from(chats:)` result. The previous code
     /// recomputed it twice per body (once for `derivedProject`, once
@@ -861,7 +861,7 @@ struct ChatDetailView: View {
     }
 
     /// sendAsAudio submission: bundles the m4a bytes as a `kind=audio`
-    /// attachment in the same `sendPrompt` the daemon receives, with
+    /// attachment in the same `sendMessage` the daemon receives, with
     /// the Whisper transcript as the prompt text. The daemon stores
     /// the bytes against the user message so the chat history shows a
     /// playable bubble on every surface; the transcript is what Codex

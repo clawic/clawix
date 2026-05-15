@@ -46,7 +46,7 @@ struct ChatListView: View {
     private let searchChatLimitStep = 20
     private let searchProjectLimit = 8
 
-    private var visibleChats: [WireChat] {
+    private var visibleChats: [WireSession] {
         store.chats
             .filter { !$0.isArchived }
             .sorted { lhs, rhs in
@@ -65,7 +65,7 @@ struct ChatListView: View {
         searchActive && !searchText.isEmpty
     }
 
-    private var filteredChats: [WireChat] {
+    private var filteredChats: [WireSession] {
         guard isSearching else { return visibleChats }
         let q = searchText.lowercased()
         return visibleChats.filter { chat in
@@ -86,7 +86,7 @@ struct ChatListView: View {
         }
     }
 
-    private var displayedFilteredChats: [WireChat] {
+    private var displayedFilteredChats: [WireSession] {
         Array(filteredChats.prefix(searchChatLimit))
     }
 
@@ -538,7 +538,7 @@ struct ChatListView: View {
             .padding(.top, 8)
     }
 
-    private func chatRowButton(_ chat: WireChat) -> some View {
+    private func chatRowButton(_ chat: WireSession) -> some View {
         Button {
             Haptics.tap()
             onOpen(chat.id)
@@ -553,7 +553,7 @@ struct ChatListView: View {
 
 struct DerivedProject: Identifiable, Hashable {
     let cwd: String
-    let chats: [WireChat]
+    let chats: [WireSession]
     var id: String { cwd }
     var name: String {
         let comp = (cwd as NSString).lastPathComponent
@@ -566,7 +566,7 @@ struct DerivedProject: Identifiable, Hashable {
         chats.contains(where: { $0.hasActiveTurn })
     }
 
-    // `WireChat` is Equatable but not Hashable, so we collapse the
+    // `WireSession` is Equatable but not Hashable, so we collapse the
     // identity to the cwd (which is what defines a project here).
     static func == (lhs: DerivedProject, rhs: DerivedProject) -> Bool {
         lhs.cwd == rhs.cwd
@@ -575,8 +575,8 @@ struct DerivedProject: Identifiable, Hashable {
         hasher.combine(cwd)
     }
 
-    static func from(chats: [WireChat]) -> [DerivedProject] {
-        let grouped = Dictionary(grouping: chats.compactMap { chat -> (String, WireChat)? in
+    static func from(chats: [WireSession]) -> [DerivedProject] {
+        let grouped = Dictionary(grouping: chats.compactMap { chat -> (String, WireSession)? in
             guard let cwd = chat.cwd, !cwd.isEmpty else { return nil }
             return (cwd, chat)
         }, by: { $0.0 })
@@ -619,7 +619,7 @@ private struct ProjectRow: View {
 // MARK: - Chat row
 
 struct ChatRow: View {
-    let chat: WireChat
+    let chat: WireSession
     /// `true` when the chat finished its last assistant turn while the
     /// user wasn't viewing it. Drives the soft-blue dot pinned to the
     /// trailing edge. Owned by `BridgeStore.unreadChatIds`; the call
@@ -702,7 +702,7 @@ private struct SearchProjectRow: View {
 }
 
 private struct SearchChatRow: View {
-    let chat: WireChat
+    let chat: WireSession
     let query: String
 
     var body: some View {
@@ -788,7 +788,7 @@ private enum SearchHighlight {
     /// Pick the field that actually contains the match, in priority:
     /// preview → cwd → title. Returns nil if none of the fields
     /// contains the query.
-    static func snippetSource(for chat: WireChat, query: String) -> String? {
+    static func snippetSource(for chat: WireSession, query: String) -> String? {
         guard !query.isEmpty else { return nil }
         if let preview = chat.lastMessagePreview,
            !preview.isEmpty,
@@ -995,8 +995,8 @@ private struct SettingsSheet: View {
             return "Not paired"
         case .connecting:
             return "Connecting"
-        case .connected(let macName, _):
-            return macName ?? "Connected"
+        case .connected(let hostDisplayName, _):
+            return hostDisplayName ?? "Connected"
         case .error:
             return "Disconnected"
         }

@@ -12,9 +12,9 @@ import kotlinx.serialization.Serializable
 data class PairingPayload(
     val v: Int = 1,
     val host: String,
-    val port: Int = 7777,
+    val port: Int = 24080,
     val token: String,
-    val macName: String? = null,
+    val hostDisplayName: String? = null,
     val tailscaleHost: String? = null,
     val shortCode: String? = null,
 ) {

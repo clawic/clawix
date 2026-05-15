@@ -73,6 +73,6 @@ public sealed class PairingTests
         Assert.Equal(svc.Bearer, root.GetProperty("token").GetString());
         Assert.Equal(svc.ShortCode, root.GetProperty("shortCode").GetString());
         Assert.True(root.TryGetProperty("host", out _));
-        Assert.True(root.TryGetProperty("macName", out _));
+        Assert.True(root.TryGetProperty("hostDisplayName", out _));
     }
 }

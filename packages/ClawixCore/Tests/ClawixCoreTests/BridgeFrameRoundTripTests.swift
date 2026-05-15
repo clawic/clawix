@@ -12,9 +12,9 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testAuth() throws {
-        try roundTrip(.auth(token: "deadbeef", deviceName: "iPhone Studio", clientKind: .ios))
-        try roundTrip(.auth(token: "x", deviceName: nil, clientKind: nil))
-        try roundTrip(.auth(token: "y", deviceName: "macOS GUI", clientKind: .desktop))
+        try roundTrip(.auth(token: "deadbeef", deviceName: "iPhone Studio", clientKind: .companion, clientId: "client-1", installationId: "install-1", deviceId: "device-1"))
+        try roundTrip(.auth(token: "x", deviceName: nil, clientKind: nil, clientId: nil, installationId: nil, deviceId: nil))
+        try roundTrip(.auth(token: "y", deviceName: "macOS GUI", clientKind: .desktop, clientId: nil, installationId: nil, deviceId: nil))
     }
 
     func testEditPrompt() throws {
@@ -64,9 +64,9 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         ))
     }
 
-    func testSendPrompt() throws {
-        try roundTrip(.sendPrompt(sessionId: "AB-123", text: "hello world\nwith newline", attachments: []))
-        try roundTrip(.sendPrompt(
+    func testSendMessage() throws {
+        try roundTrip(.sendMessage(sessionId: "AB-123", text: "hello world\nwith newline", attachments: []))
+        try roundTrip(.sendMessage(
             sessionId: "AB-123",
             text: "look at this",
             attachments: [
@@ -85,8 +85,8 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testAuthOk() throws {
-        try roundTrip(.authOk(macName: "studio Mac"))
-        try roundTrip(.authOk(macName: nil))
+        try roundTrip(.authOk(hostDisplayName: "studio Mac"))
+        try roundTrip(.authOk(hostDisplayName: nil))
     }
 
     func testAuthFailed() throws {
@@ -98,7 +98,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testSessionsSnapshot() throws {
-        let chat = WireChat(
+        let chat = WireSession(
             id: "uuid-1",
             title: "First chat",
             createdAt: .init(timeIntervalSince1970: 1_700_000_000),
@@ -114,13 +114,13 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.sessionsSnapshot(sessions: []))
     }
 
-    func testChatUpdated() throws {
-        let chat = WireChat(
+    func testSessionUpdated() throws {
+        let chat = WireSession(
             id: "uuid-2",
             title: "Renamed",
             createdAt: .init(timeIntervalSince1970: 1_700_000_000)
         )
-        try roundTrip(.chatUpdated(chat: chat))
+        try roundTrip(.sessionUpdated(session: chat))
     }
 
     func testMessagesSnapshot() throws {
@@ -251,7 +251,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         ))
     }
 
-    func testSendPromptCarriesAudioAttachment() throws {
+    func testSendMessageCarriesAudioAttachment() throws {
         let audio = WireAttachment(
             id: "att-1",
             kind: .audio,
@@ -259,7 +259,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             filename: "voice.m4a",
             dataBase64: "AAAAAA=="
         )
-        try roundTrip(.sendPrompt(sessionId: "uuid-1", text: "hello", attachments: [audio]))
+        try roundTrip(.sendMessage(sessionId: "uuid-1", text: "hello", attachments: [audio]))
     }
 
     func testWireMessageCarriesAudioRef() throws {
@@ -287,11 +287,11 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     }
 
     func testWireFormatIsFlat() throws {
-        let frame = BridgeFrame(.sendPrompt(sessionId: "abc", text: "hello", attachments: []))
+        let frame = BridgeFrame(.sendMessage(sessionId: "abc", text: "hello", attachments: []))
         let data = try BridgeCoder.encode(frame)
         let json = try XCTUnwrap(String(data: data, encoding: .utf8))
         XCTAssertTrue(json.contains("\"schemaVersion\":\(bridgeSchemaVersion)"))
-        XCTAssertTrue(json.contains("\"type\":\"sendPrompt\""))
+        XCTAssertTrue(json.contains("\"type\":\"sendMessage\""))
         XCTAssertTrue(json.contains("\"sessionId\":\"abc\""))
         XCTAssertTrue(json.contains("\"text\":\"hello\""))
         XCTAssertFalse(json.contains("\"attachments\""))
@@ -300,10 +300,10 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     func testLegacyPromptFramesDecodeWithoutAttachments() throws {
         let data = """
-        {"schemaVersion":2,"type":"sendPrompt","sessionId":"abc","text":"hello"}
+        {"schemaVersion":1,"type":"sendMessage","sessionId":"abc","text":"hello"}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(data)
-        XCTAssertEqual(frame.body, .sendPrompt(sessionId: "abc", text: "hello", attachments: []))
+        XCTAssertEqual(frame.body, .sendMessage(sessionId: "abc", text: "hello", attachments: []))
     }
 
     /// v1 frames (no `clientKind` on `auth`) decode cleanly into v2.
@@ -315,13 +315,16 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         {"schemaVersion":1,"type":"auth","token":"abc","deviceName":"iPhone"}
         """.data(using: .utf8)!
         let frame = try BridgeCoder.decode(v1Json)
-        guard case .auth(let token, let device, let kind) = frame.body else {
+        guard case .auth(let token, let device, let kind, let clientId, let installationId, let deviceId) = frame.body else {
             XCTFail("expected auth")
             return
         }
         XCTAssertEqual(token, "abc")
         XCTAssertEqual(device, "iPhone")
         XCTAssertNil(kind, "v1 auth omits clientKind, decodes as nil")
+        XCTAssertNil(clientId)
+        XCTAssertNil(installationId)
+        XCTAssertNil(deviceId)
         XCTAssertEqual(frame.schemaVersion, 1)
     }
 

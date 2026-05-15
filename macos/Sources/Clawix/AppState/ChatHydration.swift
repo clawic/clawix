@@ -230,8 +230,8 @@ extension AppState {
         hydrateHistoryIfNeeded(chatId: chatId, blocking: true)
     }
 
-    func applyDaemonChats(_ wireChats: [WireChat]) {
-        cachedWireChats = wireChats
+    func applyDaemonChats(_ wireChats: [WireSession]) {
+        cachedWireSessions = wireChats
         // Refresh `projects` from the latest backendState before
         // resolving each wire chat's project: the daemon may have
         // delivered a snapshot that references workspace roots Codex
@@ -251,7 +251,7 @@ extension AppState {
         let oldArchivedByThreadId = Dictionary(uniqueKeysWithValues: archivedChats.compactMap { chat in
             chat.clawixThreadId.map { ($0, chat) }
         })
-        func resolveOld(for wire: WireChat) -> Chat? {
+        func resolveOld(for wire: WireSession) -> Chat? {
             if let id = UUID(uuidString: wire.id) {
                 if let hit = oldById[id] ?? oldArchivedById[id] { return hit }
             }
@@ -323,12 +323,12 @@ extension AppState {
         pinnedOrder = pinIds.compactMap { threadToChat[$0] }
     }
 
-    func applyDaemonChat(_ wire: WireChat) {
+    func applyDaemonChat(_ wire: WireSession) {
         guard let id = UUID(uuidString: wire.id) else { return }
-        if let idx = cachedWireChats.firstIndex(where: { $0.id == wire.id }) {
-            cachedWireChats[idx] = wire
+        if let idx = cachedWireSessions.firstIndex(where: { $0.id == wire.id }) {
+            cachedWireSessions[idx] = wire
         } else {
-            cachedWireChats.append(wire)
+            cachedWireSessions.append(wire)
         }
         withAnimation(.easeOut(duration: 0.20)) {
             if wire.isArchived {
@@ -407,7 +407,7 @@ extension AppState {
         // Mirror first so the snapshot persist sees the same shape the
         // chat detail does, regardless of whether the chat exists in
         // the local model yet (newChat path lands a `messageAppended`
-        // before `chatUpdated`).
+        // before `sessionUpdated`).
         if let mIdx = cachedWireMessagesByChat[chatId]?.firstIndex(where: { $0.id == message.id }) {
             cachedWireMessagesByChat[chatId]?[mIdx] = message
         } else {
@@ -594,7 +594,7 @@ extension AppState {
     /// shortly overwrite this with the canonical truth.
     func loadCachedSnapshot() {
         guard let payload = SnapshotCache.load() else { return }
-        cachedWireChats = payload.chats
+        cachedWireSessions = payload.chats
         cachedWireMessagesByChat = payload.messagesBySession
         if chats.isEmpty && archivedChats.isEmpty {
             // Fresh install / no SQLite: populate `chats` from the
@@ -659,7 +659,7 @@ extension AppState {
         persistTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 500_000_000)
             guard !Task.isCancelled, let self else { return }
-            let chatsSnap = self.cachedWireChats
+            let chatsSnap = self.cachedWireSessions
             let messagesSnap = self.cachedWireMessagesByChat
             await Task.detached(priority: .background) {
                 SnapshotCache.save(chats: chatsSnap, messages: messagesSnap)
@@ -667,7 +667,7 @@ extension AppState {
         }
     }
 
-    private func chat(from wire: WireChat, old: Chat?) -> Chat {
+    private func chat(from wire: WireSession, old: Chat?) -> Chat {
         // Wire chats from the daemon don't share UUIDs with our
         // persisted snapshot, so `old` is usually nil and the chat
         // arrives without `clawixThreadId` / `projectId`. The new

@@ -20,7 +20,7 @@ extension AppState: EngineHost {
         hydrateHistoryFromBridge(chatId: sessionId)
     }
 
-    public func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment]) {
+    public func handleSendMessage(sessionId: UUID, text: String, attachments: [WireAttachment]) {
         sendUserMessageFromBridge(chatId: sessionId, text: text, attachments: attachments)
     }
 

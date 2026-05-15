@@ -25,7 +25,7 @@ public final class BridgeServer {
 
     public init(
         host: EngineHost,
-        port: UInt16 = 7777,
+        port: UInt16 = 24080,
         pairing: PairingService = .shared,
         publishBonjour: Bool = true
     ) {

@@ -9,7 +9,10 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
     "auth" -> BridgeBody.Auth(
         token = obj.requireString("token"),
         deviceName = obj.optString("deviceName"),
-        clientKind = obj.optString("clientKind")?.let(ClientKind::valueOf),
+        clientKind = obj.optString("clientKind")?.let(ClientKind::fromWire),
+        clientId = obj.optString("clientId"),
+        installationId = obj.optString("installationId"),
+        deviceId = obj.optString("deviceId"),
     )
     "listSessions" -> BridgeBody.ListSessions
     "openSession" -> BridgeBody.OpenSession(obj.requireString("sessionId"), obj.optInt("limit"))
@@ -18,7 +21,7 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
         obj.requireString("beforeMessageId"),
         obj.requireInt("limit"),
     )
-    "sendPrompt" -> BridgeBody.SendPrompt(
+    "sendMessage" -> BridgeBody.SendMessage(
         obj.requireString("sessionId"),
         obj.requireString("text"),
         obj.optList("attachments", WireAttachment.listSerializer) ?: emptyList(),
@@ -29,11 +32,11 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
         obj.optList("attachments", WireAttachment.listSerializer) ?: emptyList(),
     )
     "interruptTurn" -> BridgeBody.InterruptTurn(obj.requireString("sessionId"))
-    "authOk" -> BridgeBody.AuthOk(obj.optString("macName"))
+    "authOk" -> BridgeBody.AuthOk(obj.optString("hostDisplayName"))
     "authFailed" -> BridgeBody.AuthFailed(obj.requireString("reason"))
     "versionMismatch" -> BridgeBody.VersionMismatch(obj.requireInt("serverVersion"))
-    "sessionsSnapshot" -> BridgeBody.SessionsSnapshot(obj.requireList("sessions", WireChat.listSerializer))
-    "chatUpdated" -> BridgeBody.ChatUpdated(obj.requireObj("chat", WireChat.serializer()))
+    "sessionsSnapshot" -> BridgeBody.SessionsSnapshot(obj.requireList("sessions", WireSession.listSerializer))
+    "sessionUpdated" -> BridgeBody.SessionUpdated(obj.requireObj("session", WireSession.serializer()))
     "messagesSnapshot" -> BridgeBody.MessagesSnapshot(
         obj.requireString("sessionId"),
         obj.requireList("messages", WireMessage.listSerializer),

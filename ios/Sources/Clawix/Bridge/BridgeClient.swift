@@ -168,9 +168,9 @@ final class BridgeClient: NSObject {
         )), on: winner)
     }
 
-    func sendPrompt(sessionId: String, text: String, attachments: [WireAttachment]) {
+    func sendMessage(sessionId: String, text: String, attachments: [WireAttachment]) {
         guard let winner else { return }
-        send(BridgeFrame(.sendPrompt(sessionId: sessionId, text: text, attachments: attachments)), on: winner)
+        send(BridgeFrame(.sendMessage(sessionId: sessionId, text: text, attachments: attachments)), on: winner)
     }
 
     func sendNewSession(sessionId: String, text: String, attachments: [WireAttachment]) {
@@ -258,7 +258,7 @@ final class BridgeClient: NSObject {
 
     private func handleBrowse(_ results: Set<NWBrowser.Result>) {
         guard winner == nil, let creds else { return }
-        let target = creds.macName
+        let target = creds.hostDisplayName
         for result in results {
             guard case .service(let name, _, _, _) = result.endpoint else { continue }
             // If we know the Mac's name, only accept that service. If
@@ -439,7 +439,10 @@ final class BridgeClient: NSObject {
         let frame = BridgeFrame(.auth(
             token: creds.token,
             deviceName: deviceName(),
-            clientKind: .ios
+            clientKind: .companion,
+            clientId: nil,
+            installationId: nil,
+            deviceId: nil
         ))
         send(frame, on: candidate)
     }
@@ -495,7 +498,7 @@ final class BridgeClient: NSObject {
             return
         }
         guard frame.schemaVersion == bridgeSchemaVersion else {
-            clientDbg.error("RX schema mismatch frame=\(frame.schemaVersion, privacy: .public) ours=\(bridgeSchemaVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
+            clientDbg.error("RX protocol mismatch frame=\(frame.schemaVersion, privacy: .public) ours=\(bridgeSchemaVersion, privacy: .public) cand=\(candidate.label, privacy: .public)")
             store.connection = .error(message: "Update Clawix on the Mac")
             store.bridgeSync = .error("Update Clawix on the Mac")
             store.bridgeSyncUpdatedAt = Date()
@@ -508,9 +511,9 @@ final class BridgeClient: NSObject {
         // accepted from the winner only (other candidates are
         // already cancelled at that point).
         switch frame.body {
-        case .authOk(let macName):
+        case .authOk(let hostDisplayName):
             if winner == nil {
-                promote(candidate, macName: macName)
+                promote(candidate, hostDisplayName: hostDisplayName)
             }
         case .authFailed(let reason):
             clientDbg.error("RX authFailed reason=\(reason, privacy: .public) cand=\(candidate.label, privacy: .public)")
@@ -535,10 +538,10 @@ final class BridgeClient: NSObject {
             } else {
                 clientDbg.notice("RX sessionsSnapshot DROPPED (not winner) cand=\(candidate.label, privacy: .public)")
             }
-        case .chatUpdated(let chat):
+        case .sessionUpdated(let session):
             if winner?.id == candidate.id {
-                clientDbg.notice("RX chatUpdated id=\(chat.id, privacy: .public) hasActiveTurn=\(chat.hasActiveTurn, privacy: .public)")
-                store.applyChatUpdate(chat)
+                clientDbg.notice("RX sessionUpdated id=\(session.id, privacy: .public) hasActiveTurn=\(session.hasActiveTurn, privacy: .public)")
+                store.applyChatUpdate(session)
                 store.persistSnapshotDebounced()
             }
         case .messagesSnapshot(let sessionId, let messages, let hasMore):
@@ -628,7 +631,7 @@ final class BridgeClient: NSObject {
                 store.applyBridgeState(state: state, message: message)
             }
         case .auth, .listSessions, .openSession, .loadOlderMessages,
-             .sendPrompt, .newSession,
+             .sendMessage, .newSession,
              .interruptTurn, .readFile, .editPrompt, .archiveSession,
              .unarchiveSession, .pinSession, .unpinSession, .renameSession,
              .pairingStart, .listProjects, .pairingPayload,
@@ -670,7 +673,7 @@ final class BridgeClient: NSObject {
         }
     }
 
-    private func promote(_ candidate: Candidate, macName: String?) {
+    private func promote(_ candidate: Candidate, hostDisplayName: String?) {
         winner = candidate
         candidate.timeoutWork?.cancel()
         candidate.timeoutWork = nil
@@ -682,8 +685,8 @@ final class BridgeClient: NSObject {
         }
         candidates.removeAll()
         reconnectAttempt = 0
-        store.connection = .connected(macName: macName, via: candidate.route)
-        clientDbg.notice("PROMOTE winner=\(candidate.label, privacy: .public) mac=\(macName ?? "?", privacy: .public)")
+        store.connection = .connected(hostDisplayName: hostDisplayName, via: candidate.route)
+        clientDbg.notice("PROMOTE winner=\(candidate.label, privacy: .public) mac=\(hostDisplayName ?? "?", privacy: .public)")
         startKeepalive()
         send(BridgeFrame(.listSessions), on: candidate)
     }

@@ -18,11 +18,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SnapshotPayload(
     val schemaVersion: Int,
-    val sessions: List<WireChat>,
+    val sessions: List<WireSession>,
     val messagesBySession: Map<String, List<WireMessage>>,
 )
 
 class SnapshotCache(filesDir: File) {
+    private val cacheSchemaVersion = 1
     private val dir = File(filesDir, "clawix").apply { mkdirs() }
     private val file = File(dir, "snapshot.json")
     private val tmp = File(dir, "snapshot.json.tmp")
@@ -36,7 +37,7 @@ class SnapshotCache(filesDir: File) {
         return runCatching { BridgeJson.decodeFromString(ser, file.readText()) }.getOrNull()
     }
 
-    fun save(chats: List<WireChat>, messagesBySession: Map<String, List<WireMessage>>) {
+    fun save(chats: List<WireSession>, messagesBySession: Map<String, List<WireMessage>>) {
         val trimmedChats = chats
             .sortedByDescending { it.lastMessageAt ?: it.createdAt }
             .take(maxChats)
@@ -46,7 +47,7 @@ class SnapshotCache(filesDir: File) {
             .mapValues { (_, list) -> list.takeLast(maxMessages) }
 
         val payload = SnapshotPayload(
-            schemaVersion = BRIDGE_SCHEMA_VERSION,
+            schemaVersion = cacheSchemaVersion,
             sessions = trimmedChats,
             messagesBySession = trimmedMessages,
         )

@@ -81,7 +81,7 @@ class ShortCodePairingFlow(private val container: AppContainer) {
                             body = BridgeBody.Auth(
                                 token = code,
                                 deviceName = DeviceName.resolve(container.context),
-                                clientKind = ClientKind.ios,
+                                clientKind = ClientKind.COMPANION,
                             )
                         )
                         webSocket.send(BridgeCoder.encode(auth))
@@ -97,7 +97,7 @@ class ShortCodePairingFlow(private val container: AppContainer) {
                                         host = mac.host,
                                         port = mac.port,
                                         token = code,
-                                        macName = body.macName ?: mac.name,
+                                        hostDisplayName = body.hostDisplayName ?: mac.name,
                                         tailscaleHost = null,
                                     )
                                     container.credentialStore.save(creds)

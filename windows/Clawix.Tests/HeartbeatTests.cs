@@ -20,7 +20,7 @@ public sealed class HeartbeatTests
             await using var hb = new Heartbeat(() => new HeartbeatState
             {
                 Version = "0.0.0",
-                Port = 7777,
+                Port = 24080,
                 State = "ready",
                 ChatCount = 0,
             }, NullLogger<Heartbeat>.Instance);
@@ -31,7 +31,7 @@ public sealed class HeartbeatTests
             Assert.True(File.Exists(p));
             using var doc = JsonDocument.Parse(File.ReadAllText(p));
             Assert.Equal("ready", doc.RootElement.GetProperty("state").GetString());
-            Assert.Equal(7777, doc.RootElement.GetProperty("port").GetInt32());
+            Assert.Equal(24080, doc.RootElement.GetProperty("port").GetInt32());
         }
         finally
         {

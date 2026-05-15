@@ -6,7 +6,7 @@ namespace Clawix.Bridged;
 
 public sealed partial class DaemonEngineHost
 {
-    public async Task HandleSendPromptAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct)
+    public async Task HandleSendMessageAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct)
     {
         await _backend.NotifyAsync("thread/prompt", new { sessionId, text, attachments }, ct);
     }

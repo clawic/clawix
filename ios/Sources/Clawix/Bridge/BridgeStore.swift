@@ -32,7 +32,7 @@ final class BridgeStore {
     enum ConnectionState: Equatable {
         case unpaired
         case connecting
-        case connected(macName: String?, via: Route?)
+        case connected(hostDisplayName: String?, via: Route?)
         case error(message: String)
     }
 
@@ -86,7 +86,7 @@ final class BridgeStore {
     /// drops. Optional because we may have never received one (e.g.
     /// talking to an old daemon that doesn't emit the frame).
     var bridgeSyncUpdatedAt: Date?
-    var chats: [WireChat] = []
+    var chats: [WireSession] = []
     var messagesByChat: [String: [WireMessage]] = [:]
     /// Pagination state per chat. `true` means the daemon has older
     /// messages we haven't pulled yet; the chat detail view shows the
@@ -153,7 +153,7 @@ final class BridgeStore {
     private var previousActiveTurnByChat: [String: Bool] = [:]
 
     /// Chat ids minted locally by the FAB that haven't yet been
-    /// flushed to the Mac. The first `sendPrompt` for an id in this
+    /// flushed to the Mac. The first `sendMessage` for an id in this
     /// set is upgraded to a `newChat` frame so the Mac creates the
     /// chat with that exact UUID.
     @ObservationIgnored
@@ -272,9 +272,9 @@ final class BridgeStore {
     /// `hasActiveTurn: true → false` transition and surfaces the
     /// soft-blue unread dot when the user is not currently viewing
     /// that chat. Routed from both `applyChatsSnapshot` and the
-    /// per-chat `chatUpdated` frame.
+    /// per-chat `sessionUpdated` frame.
     @MainActor
-    private func observeActiveTurnTransition(_ updated: WireChat) {
+    private func observeActiveTurnTransition(_ updated: WireSession) {
         let prior = previousActiveTurnByChat[updated.id]
         if prior == true && updated.hasActiveTurn == false && openChatId != updated.id {
             if !unreadChatIds.contains(updated.id) {
@@ -389,11 +389,11 @@ final class BridgeStore {
             // newChat path: the chat doesn't exist locally yet because
             // the daemon hasn't echoed it back. Synthesize a stub so
             // `chat?.hasActiveTurn` reads true; the daemon's later
-            // `chatUpdated` replaces this row by id.
+            // `sessionUpdated` replaces this row by id.
             let titleSeed = trimmed.isEmpty
                 ? (attachmentCount == 1 ? "Image" : "Images")
                 : String(trimmed.prefix(40))
-            chats.append(WireChat(
+            chats.append(WireSession(
                 id: chatId,
                 title: titleSeed,
                 createdAt: Date(),
@@ -462,7 +462,7 @@ final class BridgeStore {
             client?.sendNewSession(sessionId: chatId, text: trimmed, attachments: attachments)
         } else {
             bridgeDbg.notice("dispatchPrompt SEND id=\(chatId, privacy: .public)")
-            client?.sendPrompt(chatId: chatId, text: trimmed, attachments: attachments)
+            client?.sendMessage(chatId: chatId, text: trimmed, attachments: attachments)
         }
     }
 
@@ -471,7 +471,7 @@ final class BridgeStore {
     /// `ChatDetailView.send()` uses the split form so the composer
     /// icon transitions arrow → stop in a single tick.
     @MainActor
-    func sendPrompt(chatId: String, text: String, attachments: [WireAttachment] = []) {
+    func sendMessage(chatId: String, text: String, attachments: [WireAttachment] = []) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty || !attachments.isEmpty else { return }
         beginPendingTurn(
@@ -707,7 +707,7 @@ final class BridgeStore {
     /// chat list and detail header reflect the new name immediately,
     /// then sends a `renameChat` frame to the Mac. The daemon writes
     /// through to Codex (`thread/name/set`) and republishes via
-    /// `chatUpdated`, which is the canonical state.
+    /// `sessionUpdated`, which is the canonical state.
     @MainActor
     func renameChat(chatId: String, newTitle: String) {
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -738,7 +738,7 @@ final class BridgeStore {
     /// (or drops) the trailing assistant placeholder so the "Thinking"
     /// shimmer disappears the instant the user taps. The bridge frame
     /// is fire-and-forget; the daemon eventually echoes back a
-    /// `chatUpdated` carrying the same state.
+    /// `sessionUpdated` carrying the same state.
     @MainActor
     func interruptTurn(chatId: String) {
         if let idx = chats.firstIndex(where: { $0.id == chatId }), chats[idx].hasActiveTurn {
@@ -765,7 +765,7 @@ final class BridgeStore {
     }
 
     /// Mints a fresh chat id for the FAB-driven "new chat" flow. The
-    /// id is queued as pending so the next `sendPrompt(chatId:text:)`
+    /// id is queued as pending so the next `sendMessage(chatId:text:)`
     /// emits a `newChat` frame instead, and `messagesByChat` is seeded
     /// to `[]` so the detail view treats the chat as "loaded, empty"
     /// rather than gating on a snapshot that will never arrive (the
@@ -808,7 +808,7 @@ final class BridgeStore {
     /// bubble (so we know it's mid-flight, not just stale) is appended
     /// back. The chat list views handle final ordering.
     @MainActor
-    func applyChatsSnapshot(_ incoming: [WireChat]) {
+    func applyChatsSnapshot(_ incoming: [WireSession]) {
         let incomingIds = Set(incoming.map(\.id))
         let inflightCandidates = chats.filter { existing in
             guard !incomingIds.contains(existing.id) else { return false }
@@ -840,12 +840,12 @@ final class BridgeStore {
         }
     }
 
-    /// Apply a single `chatUpdated` frame. Centralized so the
+    /// Apply a single `sessionUpdated` frame. Centralized so the
     /// soft-blue unread dot logic lives in one place; `BridgeClient`
     /// routes through this instead of writing into `chats[idx]`
     /// directly.
     @MainActor
-    func applyChatUpdate(_ chat: WireChat) {
+    func applyChatUpdate(_ chat: WireSession) {
         observeActiveTurnTransition(chat)
         if let idx = chats.firstIndex(where: { $0.id == chat.id }) {
             chats[idx] = chat
@@ -858,8 +858,8 @@ final class BridgeStore {
 
     /// Snapshot of cwds the user attached to in-flight `newChat`s via
     /// `startNewChat(cwd:)`. Consumed by `beginPendingTurn` so the
-    /// synthesized `WireChat` carries the folder hint immediately. The
-    /// daemon's later `chatUpdated` is the canonical truth and
+    /// synthesized `WireSession` carries the folder hint immediately. The
+    /// daemon's later `sessionUpdated` is the canonical truth and
     /// replaces it.
     @ObservationIgnored
     private var pendingNewChatCwds: [String: String] = [:]
@@ -1038,7 +1038,7 @@ final class BridgeStore {
         messagesByChat[chatId] ?? []
     }
 
-    func chat(_ chatId: String) -> WireChat? {
+    func chat(_ chatId: String) -> WireSession? {
         chats.first { $0.id == chatId }
     }
 
@@ -1090,7 +1090,7 @@ final class BridgeStore {
 
     static func mock() -> BridgeStore {
         let s = BridgeStore()
-        s.connection = .connected(macName: "studio Mac", via: .lan)
+        s.connection = .connected(hostDisplayName: "studio Mac", via: .lan)
         s.chats = MockData.chats
         // Seed every chat with the same canned transcript so any row the
         // designer taps lands on a populated detail screen instead of

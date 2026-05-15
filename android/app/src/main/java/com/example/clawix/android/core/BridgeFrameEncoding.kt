@@ -7,7 +7,10 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
         is BridgeBody.Auth -> {
             b.put("token", body.token)
             body.deviceName?.let { b.put("deviceName", it) }
-            body.clientKind?.let { b.put("clientKind", it.name) }
+            body.clientKind?.let { b.put("clientKind", it.wireValue) }
+            body.clientId?.let { b.put("clientId", it) }
+            body.installationId?.let { b.put("installationId", it) }
+            body.deviceId?.let { b.put("deviceId", it) }
         }
         BridgeBody.ListSessions -> {}
         is BridgeBody.OpenSession -> {
@@ -19,7 +22,7 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
             b.put("beforeMessageId", body.beforeMessageId)
             b.put("limit", body.limit)
         }
-        is BridgeBody.SendPrompt -> {
+        is BridgeBody.SendMessage -> {
             b.put("sessionId", body.sessionId)
             b.put("text", body.text)
             if (body.attachments.isNotEmpty()) {
@@ -34,11 +37,11 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
             }
         }
         is BridgeBody.InterruptTurn -> b.put("sessionId", body.sessionId)
-        is BridgeBody.AuthOk -> body.macName?.let { b.put("macName", it) }
+        is BridgeBody.AuthOk -> body.hostDisplayName?.let { b.put("hostDisplayName", it) }
         is BridgeBody.AuthFailed -> b.put("reason", body.reason)
         is BridgeBody.VersionMismatch -> b.put("serverVersion", body.serverVersion)
-        is BridgeBody.SessionsSnapshot -> b.put("sessions", BridgeJson.encodeToJsonElement(WireChat.listSerializer, body.sessions))
-        is BridgeBody.ChatUpdated -> b.put("chat", BridgeJson.encodeToJsonElement(WireChat.serializer(), body.chat))
+        is BridgeBody.SessionsSnapshot -> b.put("sessions", BridgeJson.encodeToJsonElement(WireSession.listSerializer, body.sessions))
+        is BridgeBody.SessionUpdated -> b.put("session", BridgeJson.encodeToJsonElement(WireSession.serializer(), body.session))
         is BridgeBody.MessagesSnapshot -> {
             b.put("sessionId", body.sessionId)
             b.put("messages", BridgeJson.encodeToJsonElement(WireMessage.listSerializer, body.messages))
@@ -117,7 +120,7 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
         }
         is BridgeBody.BridgeStateFrame -> {
             b.put("state", body.state)
-            b.put("chatCount", body.chatCount)
+            b.put("chatCount", body.sessionCount)
             body.message?.let { b.put("message", it) }
         }
         is BridgeBody.RateLimitsSnapshot -> {

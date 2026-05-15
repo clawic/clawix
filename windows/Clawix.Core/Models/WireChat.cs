@@ -1,6 +1,6 @@
 namespace Clawix.Core.Models;
 
-public sealed record WireChat
+public sealed record WireSession
 {
     public required string Id { get; init; }
 

@@ -23,7 +23,7 @@ public sealed class PairingService
 
     public ushort Port { get; }
 
-    public PairingService(IPairingStore store, ushort port = 7777)
+    public PairingService(IPairingStore store, ushort port = 24080)
     {
         _store = store;
         Port = port;
@@ -128,7 +128,7 @@ public sealed class PairingService
             ["port"] = (int)Port,
             ["token"] = Bearer,
             ["shortCode"] = ShortCode,
-            ["macName"] = BonjourServiceName,
+            ["hostDisplayName"] = BonjourServiceName,
         };
         var ts = CurrentTailscaleIPv4();
         if (!string.IsNullOrEmpty(ts)) dict["tailscaleHost"] = ts;

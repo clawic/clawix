@@ -20,7 +20,7 @@ import type {
   WireAudioAttachTranscriptInput,
   WireAudioListFilter,
   WireAudioRegisterRequest,
-  WireChat,
+  WireSession,
   WireMessage,
   WireProject,
   WireRateLimitSnapshot,
@@ -39,10 +39,10 @@ export interface BridgeStoreState {
   client: BridgeClient | null;
   connection: ConnectionState;
   bridge: BridgeRuntime;
-  macName: string | null;
+  hostDisplayName: string | null;
   /** UI vocabulary. Wire frames call these sessions. */
-  chats: WireChat[];
-  sessions: WireChat[];
+  chats: WireSession[];
+  sessions: WireSession[];
   projects: WireProject[];
   /** Indexed by sessionId. Only populated for sessions the user has opened. */
   messagesBySession: Record<string, WireMessage[]>;
@@ -60,7 +60,7 @@ export interface BridgeStoreState {
 
   openSession(sessionId: string, useInitialPage?: boolean): void;
   loadOlderMessages(sessionId: string): void;
-  sendPrompt(sessionId: string, text: string, attachments?: WireMessage["attachments"]): void;
+  sendMessage(sessionId: string, text: string, attachments?: WireMessage["attachments"]): void;
   newSession(text: string, attachments?: WireMessage["attachments"]): string;
   newChat(text: string, attachments?: WireMessage["attachments"]): string;
   interruptTurn(sessionId: string): void;
@@ -93,7 +93,7 @@ export const useBridgeStore = create<BridgeStoreState>()(
     client: null,
     connection: { kind: "idle" } satisfies ConnectionState,
     bridge: { state: "booting", chatCount: 0 },
-    macName: null,
+    hostDisplayName: null,
     chats: [],
     sessions: [],
     projects: [],
@@ -130,7 +130,7 @@ export const useBridgeStore = create<BridgeStoreState>()(
         projects: [],
         messagesBySession: {},
         hasMoreBySession: {},
-        macName: null,
+        hostDisplayName: null,
         rateLimits: null,
         rateLimitsByLimitId: {},
       });
@@ -158,10 +158,10 @@ export const useBridgeStore = create<BridgeStoreState>()(
       });
     },
 
-    sendPrompt(sessionId, text, attachments = []) {
+    sendMessage(sessionId, text, attachments = []) {
       const client = get().client;
       if (!client) return;
-      client.send({ type: "sendPrompt", sessionId, text, attachments });
+      client.send({ type: "sendMessage", sessionId, text, attachments });
     },
 
     newSession(text, attachments = []) {
@@ -249,17 +249,17 @@ type Get = () => BridgeStoreState;
 function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
   switch (frame.type) {
     case "authOk":
-      set({ macName: frame.macName ?? null });
+      set({ hostDisplayName: frame.hostDisplayName ?? null });
       get().requestRateLimits();
       get().listProjects();
       break;
     case "sessionsSnapshot":
       setSessions(set, sortSessions(frame.sessions));
       break;
-    case "chatUpdated": {
+    case "sessionUpdated": {
       const { sessions } = get();
-      const idx = sessions.findIndex((c) => c.id === frame.chat.id);
-      const next = idx >= 0 ? sessions.with(idx, frame.chat) : [...sessions, frame.chat];
+      const idx = sessions.findIndex((c) => c.id === frame.session.id);
+      const next = idx >= 0 ? sessions.with(idx, frame.session) : [...sessions, frame.session];
       setSessions(set, sortSessions(next));
       break;
     }
@@ -356,7 +356,7 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
       });
       break;
     case "bridgeState":
-      set({ bridge: { state: frame.state, chatCount: frame.chatCount, message: frame.message } });
+      set({ bridge: { state: frame.state, chatCount: frame.sessionCount, message: frame.message } });
       break;
     case "rateLimitsSnapshot":
     case "rateLimitsUpdated":
@@ -376,7 +376,7 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
   }
 }
 
-function sortSessions(sessions: WireChat[]): WireChat[] {
+function sortSessions(sessions: WireSession[]): WireSession[] {
   return [...sessions].sort((a, b) => {
     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
     const aTs = a.lastMessageAt ? Date.parse(a.lastMessageAt) : Date.parse(a.createdAt);
@@ -385,7 +385,7 @@ function sortSessions(sessions: WireChat[]): WireChat[] {
   });
 }
 
-function setSessions(set: Set, sessions: WireChat[]): void {
+function setSessions(set: Set, sessions: WireSession[]): void {
   set({ sessions, chats: sessions });
 }
 

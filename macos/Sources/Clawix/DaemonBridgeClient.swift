@@ -73,8 +73,8 @@ final class DaemonBridgeClient {
         ))
     }
 
-    func sendPrompt(chatId: UUID, text: String, attachments: [WireAttachment] = []) {
-        send(.sendPrompt(sessionId: chatId.uuidString, text: text, attachments: attachments))
+    func sendMessage(chatId: UUID, text: String, attachments: [WireAttachment] = []) {
+        send(.sendMessage(sessionId: chatId.uuidString, text: text, attachments: attachments))
     }
 
     func archiveChat(_ chatId: UUID) {
@@ -93,7 +93,14 @@ final class DaemonBridgeClient {
         switch state {
         case .ready:
             receive()
-            send(.auth(token: pairing.bearer, deviceName: Host.current().localizedName, clientKind: .desktop))
+            send(.auth(
+                token: pairing.bearer,
+                deviceName: Host.current().localizedName,
+                clientKind: .desktop,
+                clientId: nil,
+                installationId: nil,
+                deviceId: nil
+            ))
         case .failed, .cancelled:
             isAuthenticated = false
             scheduleReconnect()
@@ -148,8 +155,8 @@ final class DaemonBridgeClient {
             }
             appState?.applyDaemonChats(chats)
             appState?.persistSnapshotDebounced()
-        case .chatUpdated(let chat):
-            appState?.applyDaemonChat(chat)
+        case .sessionUpdated(let session):
+            appState?.applyDaemonChat(session)
             appState?.persistSnapshotDebounced()
         case .messagesSnapshot(let chatId, let messages, let hasMore):
             appState?.applyDaemonMessages(chatId: chatId, messages: messages, hasMore: hasMore)

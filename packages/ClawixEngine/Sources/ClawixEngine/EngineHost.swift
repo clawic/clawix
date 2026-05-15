@@ -27,7 +27,7 @@ public struct WireRateLimitsPayload: Equatable, Sendable {
 }
 
 /// Snapshot of one chat carrying everything the bridge needs to diff
-/// and emit frames for: the wire-level metadata (`WireChat`) plus the
+/// and emit frames for: the wire-level metadata (`WireSession`) plus the
 /// full ordered message list. The host (the macOS `AppState` today,
 /// the LaunchAgent daemon's `EngineCore` later) republishes this list
 /// on every chat change.
@@ -36,10 +36,10 @@ public struct WireRateLimitsPayload: Equatable, Sendable {
 /// owns the diffing logic and decides per-tick what to emit on the
 /// wire. The host does not have to reason about deltas at all.
 public struct BridgeChatSnapshot: Equatable, Sendable {
-    public let chat: WireChat
+    public let chat: WireSession
     public let messages: [WireMessage]
 
-    public init(chat: WireChat, messages: [WireMessage]) {
+    public init(chat: WireSession, messages: [WireMessage]) {
         self.chat = chat
         self.messages = messages
     }
@@ -99,13 +99,13 @@ public protocol EngineHost: AnyObject {
     /// the full message list.
     func handleHydrateHistory(sessionId: UUID)
 
-    /// Inbound `sendPrompt` from a client. The host is responsible for
+    /// Inbound `sendMessage` from a client. The host is responsible for
     /// routing the prompt into the agent (the macOS GUI delegates to
     /// `AppState.sendUserMessageFromBridge`). Attachments are inline
     /// image payloads the daemon writes to disk and forwards as
     /// `localImage` user input items; hosts that don't support them
     /// can ignore the array.
-    func handleSendPrompt(sessionId: UUID, text: String, attachments: [WireAttachment])
+    func handleSendMessage(sessionId: UUID, text: String, attachments: [WireAttachment])
 
     /// Inbound `newSession` from a client. The host creates a fresh chat
     /// with the supplied UUID, appends the user message, and kicks off

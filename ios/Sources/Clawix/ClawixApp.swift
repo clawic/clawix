@@ -76,7 +76,7 @@ struct ClawixApp: App {
             store.connection = mock.connection
             store.chats = mock.chats
             store.messagesByChat = mock.messagesByChat
-            creds = Credentials(host: "127.0.0.1", port: 7777, token: "mock", macName: "studio Mac", tailscaleHost: nil)
+            creds = Credentials(host: "127.0.0.1", port: 24080, token: "mock", hostDisplayName: "studio Mac", tailscaleHost: nil)
             if ProcessInfo.processInfo.environment["CLAWIX_MOCK_OPEN_FIRST_CHAT"] == "1",
                let first = store.chats.first {
                 store.openChatId = first.id
@@ -132,7 +132,7 @@ struct ClawixApp: App {
             host: host,
             port: port,
             token: env["CLAWIX_TEST_CREDENTIALS_TOKEN"] ?? "test-token",
-            macName: env["CLAWIX_TEST_CREDENTIALS_MAC"],
+            hostDisplayName: env["CLAWIX_TEST_CREDENTIALS_MAC"],
             tailscaleHost: nil
         )
     }
@@ -142,7 +142,7 @@ struct ClawixApp: App {
         guard let title = env["CLAWIX_TEST_SNAPSHOT_TITLE"] else { return }
         let cacheKey = env["CLAWIX_TEST_SNAPSHOT_KEY"]
         let cwd = env["CLAWIX_TEST_SNAPSHOT_CWD"] ?? "/tmp/\(title)"
-        let chat = WireChat(
+        let chat = WireSession(
             id: "test-snapshot-chat",
             title: title,
             createdAt: Date(),
@@ -216,7 +216,7 @@ private struct RootView: View {
                             // Mint a fresh chat id locally and route into
                             // the detail screen. The chat materializes on
                             // the Mac when the user sends the first
-                            // message (see BridgeStore.sendPrompt's
+                            // message (see BridgeStore.sendMessage's
                             // pending-newChats path).
                             let id = store.startNewChat()
                             path.append(RootNav.chat(id))

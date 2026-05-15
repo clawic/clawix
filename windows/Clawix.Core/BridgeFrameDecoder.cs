@@ -16,16 +16,16 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
         using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
 
-        if (!root.TryGetProperty("schemaVersion", out var schemaProp))
+        if (!root.TryGetProperty("schemaVersion", out var protocolProp))
             throw new JsonException("frame missing 'schemaVersion'");
-        var schema = schemaProp.GetInt32();
+        var schemaVersion = protocolProp.GetInt32();
 
         if (!root.TryGetProperty("type", out var typeProp))
             throw new JsonException("frame missing 'type'");
         var type = typeProp.GetString() ?? throw new JsonException("frame 'type' is null");
 
         var body = DecodeBody(root, type, options);
-        return new BridgeFrame(body, schema);
+        return new BridgeFrame(body, schemaVersion);
     }
 
     private static BridgeBody DecodeBody(JsonElement root, string type, JsonSerializerOptions options)
@@ -55,7 +55,10 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
             "auth" => new BridgeBody.Auth(
                 GetStr("token"),
                 GetStrOpt("deviceName"),
-                Get<ClientKind?>("clientKind")),
+                Get<ClientKind?>("clientKind"),
+                GetStrOpt("clientId"),
+                GetStrOpt("installationId"),
+                GetStrOpt("deviceId")),
 
             "listSessions" => new BridgeBody.ListSessions(),
             "openSession" => new BridgeBody.OpenSession(GetStr("sessionId"), GetIntOpt("limit")),
@@ -65,14 +68,14 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
                 GetStr("beforeMessageId"),
                 GetInt("limit")),
 
-            "sendPrompt" => new BridgeBody.SendPrompt(GetStr("sessionId"), GetStr("text"), GetAttachments()),
+            "sendMessage" => new BridgeBody.SendMessage(GetStr("sessionId"), GetStr("text"), GetAttachments()),
             "newSession" => new BridgeBody.NewSession(GetStr("sessionId"), GetStr("text"), GetAttachments()),
             "interruptTurn" => new BridgeBody.InterruptTurn(GetStr("sessionId")),
-            "authOk" => new BridgeBody.AuthOk(GetStrOpt("macName")),
+            "authOk" => new BridgeBody.AuthOk(GetStrOpt("hostDisplayName")),
             "authFailed" => new BridgeBody.AuthFailed(GetStr("reason")),
             "versionMismatch" => new BridgeBody.VersionMismatch(GetInt("serverVersion")),
-            "sessionsSnapshot" => new BridgeBody.SessionsSnapshot(GetReq<List<WireChat>>("sessions")),
-            "chatUpdated" => new BridgeBody.ChatUpdated(GetReq<WireChat>("chat")),
+            "sessionsSnapshot" => new BridgeBody.SessionsSnapshot(GetReq<List<WireSession>>("sessions")),
+            "sessionUpdated" => new BridgeBody.SessionUpdated(GetReq<WireSession>("session")),
 
             "messagesSnapshot" => new BridgeBody.MessagesSnapshot(
                 GetStr("sessionId"),

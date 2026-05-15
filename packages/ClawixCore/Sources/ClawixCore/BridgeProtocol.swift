@@ -1,91 +1,9 @@
 import Foundation
 
-/// Wire-format version exchanged in every frame. Bumped on any breaking
-/// change to `BridgeFrame` payloads. Clients refuse to talk to a peer
-/// reporting a different `schemaVersion` and surface an "update Clawix"
+/// Wire-format version exchanged in every frame. Clients refuse to talk to a
+/// peer reporting a different `schemaVersion` and surface an "update Clawix"
 /// empty state.
-///
-/// v2 (2026-05): Added `clientKind` capability tag to `auth` so the
-/// server can tell apart the iPhone companion from a co-located desktop
-/// client (the macOS GUI talking to the LaunchAgent daemon over
-/// loopback). Added desktop-only frame types for chat editing
-/// (`editPrompt`), archive/pin toggles, project listing, and the
-/// pairing handshake the GUI uses to ask the daemon for a fresh QR.
-/// v1 frames decode cleanly into v2 because every new field is optional
-/// and every new frame type is additive.
-///
-/// v3 (2026-05): Voice notes. `WireAttachment` now carries a `kind`
-/// discriminator (`image` | `audio`) so the daemon can route audio
-/// blobs to Whisper instead of `localImage`. `WireMessage` carries an
-/// optional `audioRef` so the chat history shows a playable bubble for
-/// user messages that started life as a voice clip. New `requestAudio`
-/// / `audioSnapshot` frames let clients fetch the original audio bytes
-/// for replay. Old peers accept the new fields tolerantly because
-/// every addition is optional, but `schemaVersion` bumps so callers
-/// without the new frame types short-circuit cleanly with an "Update
-/// Clawix" empty state instead of silently failing on a missing case.
-///
-/// v4 (2026-05): Inline assistant images. `WireWorkItem` carries an
-/// optional `generatedImagePath` so clients know which PNG Codex wrote
-/// for an `imageGeneration` tool call. New `requestGeneratedImage` /
-/// `generatedImageSnapshot` frames let clients fetch the bytes by
-/// path (the daemon sandboxes reads to `~/.codex/generated_images`).
-/// Used both by the work-item path (turn 1: model called the
-/// `imagegen` tool) and by markdown-detected paths the model wrote
-/// inline (turn 2: model wrote `![](/Users/.../*.png)` after the
-/// user complained the image hadn't shown up). All additions are
-/// optional so v3 peers keep parsing.
-///
-/// v5 (2026-05): Rate limits. Three new desktop-only frames so the
-/// macOS GUI can keep its "Remaining usage limits" widget alive when
-/// the LaunchAgent daemon owns the Codex backend. `requestRateLimits`
-/// (desktop -> daemon) asks for the current snapshot, `rateLimitsSnapshot`
-/// is the reply, and `rateLimitsUpdated` is a daemon push fired whenever
-/// Codex emits `account/rateLimits/updated`. iPhone clients ignore the
-/// new types. All additions are additive frames; v4 peers decode v5
-/// frames as `unknownType` and fall through to their default branch.
-///
-/// v7 (2026-05): Index. New top-level surface that catalogs typed
-/// entities captured from agent-read internet (products, listings,
-/// articles, posts, videos, episodes, papers, profiles, places,
-/// channels, docs, repos, events, jobs, reviews) plus first-class
-/// Searches, Monitors, Runs and Alerts. The macOS GUI and the iOS
-/// companion both talk to a new loopback service `@clawjs/index`
-/// (HTTP/WS on `127.0.0.1:7796`). Cross-device sync is layered on top
-/// later; v7 bumps the schema so v6 peers receiving Index alerts via
-/// push notifications fall through their decode `default` branch and
-/// surface a "needs update" toast.
-///
-/// v6 (2026-05): Skills. Surfaces the unified Skills library
-/// (kind: personality | procedure | snippet | role, agentskills.io
-/// compatible; central source of truth at `~/.claw/skills/`). The
-/// daemon owns the SKILL.md filesystem and the SQLite index; clients
-/// browse, search, view, edit, activate/deactivate per scope, and
-/// trigger sync to external agent dirs (Codex CLI, HermesAgent,
-/// Cursor) — the daemon materializes these as symlinks. Wire payloads
-/// keep frontmatter as opaque JSON strings so the bridge does not need
-/// a Swift mirror for every new frontmatter field ClawJS adds.
-/// Push frame `skillsActiveChanged` lets cross-device clients refresh
-/// their resolved active set without polling. iPhone clients only need
-/// the read frames (`skillsList`, `skillsView`, results); desktop
-/// uses the full surface. v5 peers receiving v6 frames fall through
-/// the decode `default` branch and surface a "needs update" toast.
-/// v8 (2026-05): Agents become first-class. `WireChat` carries an
-/// optional `agentId` pointing at an `Agent.id` (e.g.
-/// `agent.default.codex`); the daemon resolves the runtime + model
-/// from the on-disk agent record when minting a thread. New Wire
-/// payloads — `WireAgent`, `WirePersonality`, `WireSkillCollection`,
-/// `WireConnection`, `WireAgentApprovalRequest`,
-/// `WireAgentAuditEntry` — surface the four new top-level entities
-/// the macOS app manages locally at `~/.claw/`. The frame surface
-/// for CRUD is filesystem-backed on the client side; cross-device
-/// sync of agent records happens via filesystem-level mechanisms
-/// (iCloud Drive / Syncthing / git on the `~/.claw/` tree), so the
-/// v8 bump is for the additive Wire model rather than for a new
-/// daemon RPC. Old peers receiving a frame whose `WireChat` carries
-/// an unknown `agentId` keep parsing because the field decodes via
-/// `decodeIfPresent`.
-public let bridgeSchemaVersion: Int = 8
+public let bridgeSchemaVersion: Int = 1
 
 /// Default count of trailing messages the server returns on
 /// `openSession(limit:)` when the client opts into pagination. 60 covers
@@ -104,16 +22,15 @@ public let bridgeOlderPageLimit: Int = 40
 /// Kind of client speaking on a session. Affects which frame types the
 /// server is willing to dispatch:
 ///
-/// - `.ios` is the read-mostly mobile companion: list/open sessions and
-///   send prompts, but not the chat-mutation grab-bag.
+/// - `.companion` is the read-mostly companion role: list/open sessions
+///   and send messages, but not the session-mutation grab-bag.
 /// - `.desktop` is the macOS GUI talking to the LaunchAgent daemon. It
 ///   gets the full surface (edit, archive, pin, branch switch, project
 ///   selection, pairing token issuance, auth coordinator, etc.).
 ///
-/// Old v1 iPhones don't send a `clientKind`; the server treats absent
-/// as `.ios` so they keep working unchanged.
+/// Clients that do not send a `clientKind` are treated as `.companion`.
 public enum ClientKind: String, Codable, Equatable, Sendable {
-    case ios
+    case companion
     case desktop
 }
 
@@ -151,7 +68,14 @@ public struct BridgeFrame: Codable, Equatable, Sendable {
 /// level (no `payload` envelope) so log lines stay readable.
 public enum BridgeBody: Equatable, Sendable {
     // MARK: - v1 outbound (iPhone -> Mac)
-    case auth(token: String, deviceName: String?, clientKind: ClientKind?)
+    case auth(
+        token: String,
+        deviceName: String?,
+        clientKind: ClientKind?,
+        clientId: String?,
+        installationId: String?,
+        deviceId: String?
+    )
     case listSessions
     /// Open a chat for streaming. `limit` is optional: when set, the
     /// server replies with the trailing N messages and a `hasMore`
@@ -171,7 +95,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// Old peers that don't know about attachments omit the field; old
     /// servers receiving a frame with attachments fall back to text
     /// because the field is decoded with `decodeIfPresent ?? []`.
-    case sendPrompt(sessionId: String, text: String, attachments: [WireAttachment])
+    case sendMessage(sessionId: String, text: String, attachments: [WireAttachment])
     /// New conversation kicked off from the iPhone FAB. The client
     /// pre-mints the UUID so it can route to the chat detail screen
     /// before the round trip lands; the Mac creates a chat with that
@@ -186,11 +110,11 @@ public enum BridgeBody: Equatable, Sendable {
     case interruptTurn(sessionId: String)
 
     // MARK: - v1 inbound (Mac -> iPhone)
-    case authOk(macName: String?)
+    case authOk(hostDisplayName: String?)
     case authFailed(reason: String)
     case versionMismatch(serverVersion: Int)
-    case sessionsSnapshot(sessions: [WireChat])
-    case chatUpdated(chat: WireChat)
+    case sessionsSnapshot(sessions: [WireSession])
+    case sessionUpdated(session: WireSession)
     /// Replace the client's view of a chat with the server's. `hasMore`
     /// is optional and only populated when the server honoured a paged
     /// `openSession` (`limit != nil`); a `nil` value means "old server
@@ -230,7 +154,7 @@ public enum BridgeBody: Equatable, Sendable {
     case unpinSession(sessionId: String)
     /// Rename a chat. Daemon writes the new name to the runtime
     /// (`thread/name/set` JSON-RPC against Codex) and echoes the
-    /// updated `WireChat` back via `chatUpdated` so every other
+    /// updated `WireSession` back via `sessionUpdated` so every other
     /// connected client sees the new title.
     case renameSession(sessionId: String, title: String)
     /// Ask the daemon for a fresh pairing payload (token + QR JSON).
@@ -440,14 +364,14 @@ public enum BridgeBody: Equatable, Sendable {
         case .listSessions:          return "listSessions"
         case .openSession:           return "openSession"
         case .loadOlderMessages:  return "loadOlderMessages"
-        case .sendPrompt:         return "sendPrompt"
+        case .sendMessage:         return "sendMessage"
         case .newSession:            return "newSession"
         case .interruptTurn:      return "interruptTurn"
         case .authOk:             return "authOk"
         case .authFailed:         return "authFailed"
         case .versionMismatch:    return "versionMismatch"
         case .sessionsSnapshot:      return "sessionsSnapshot"
-        case .chatUpdated:        return "chatUpdated"
+        case .sessionUpdated:        return "sessionUpdated"
         case .messagesSnapshot:   return "messagesSnapshot"
         case .messagesPage:       return "messagesPage"
         case .messageAppended:    return "messageAppended"
@@ -527,10 +451,10 @@ public enum BridgeBody: Equatable, Sendable {
     }
 
     private enum FlatKeys: String, CodingKey {
-        case token, deviceName, clientKind
+        case token, deviceName, clientKind, clientId, installationId, deviceId
         case sessionId, text, messageId, title
-        case macName, reason, serverVersion
-        case sessions, chat, messages, message
+        case hostDisplayName, reason, serverVersion
+        case sessions, session, messages, message
         case content, reasoningText, finished
         case code
         case qrJson, bearer
@@ -563,10 +487,13 @@ public enum BridgeBody: Equatable, Sendable {
 
     private func encodeLegacyPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws {
         switch self {
-        case .auth(let token, let deviceName, let clientKind):
+        case .auth(let token, let deviceName, let clientKind, let clientId, let installationId, let deviceId):
             try c.encode(token, forKey: .token)
             try c.encodeIfPresent(deviceName, forKey: .deviceName)
             try c.encodeIfPresent(clientKind, forKey: .clientKind)
+            try c.encodeIfPresent(clientId, forKey: .clientId)
+            try c.encodeIfPresent(installationId, forKey: .installationId)
+            try c.encodeIfPresent(deviceId, forKey: .deviceId)
         case .listSessions:
             break
         case .openSession(let sessionId, let limit):
@@ -576,7 +503,7 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encode(sessionId, forKey: .sessionId)
             try c.encode(beforeMessageId, forKey: .beforeMessageId)
             try c.encode(limit, forKey: .limit)
-        case .sendPrompt(let sessionId, let text, let attachments):
+        case .sendMessage(let sessionId, let text, let attachments):
             try c.encode(sessionId, forKey: .sessionId)
             try c.encode(text, forKey: .text)
             if !attachments.isEmpty {
@@ -590,16 +517,16 @@ public enum BridgeBody: Equatable, Sendable {
             }
         case .interruptTurn(let sessionId):
             try c.encode(sessionId, forKey: .sessionId)
-        case .authOk(let macName):
-            try c.encodeIfPresent(macName, forKey: .macName)
+        case .authOk(let hostDisplayName):
+            try c.encodeIfPresent(hostDisplayName, forKey: .hostDisplayName)
         case .authFailed(let reason):
             try c.encode(reason, forKey: .reason)
         case .versionMismatch(let serverVersion):
             try c.encode(serverVersion, forKey: .serverVersion)
         case .sessionsSnapshot(let sessions):
             try c.encode(sessions, forKey: .sessions)
-        case .chatUpdated(let chat):
-            try c.encode(chat, forKey: .chat)
+        case .sessionUpdated(let session):
+            try c.encode(session, forKey: .session)
         case .messagesSnapshot(let sessionId, let messages, let hasMore):
             try c.encode(sessionId, forKey: .sessionId)
             try c.encode(messages, forKey: .messages)
@@ -888,7 +815,10 @@ public enum BridgeBody: Equatable, Sendable {
             return .auth(
                 token: try c.decode(String.self, forKey: .token),
                 deviceName: try c.decodeIfPresent(String.self, forKey: .deviceName),
-                clientKind: try c.decodeIfPresent(ClientKind.self, forKey: .clientKind)
+                clientKind: try c.decodeIfPresent(ClientKind.self, forKey: .clientKind),
+                clientId: try c.decodeIfPresent(String.self, forKey: .clientId),
+                installationId: try c.decodeIfPresent(String.self, forKey: .installationId),
+                deviceId: try c.decodeIfPresent(String.self, forKey: .deviceId)
             )
         case "listSessions":
             return .listSessions
@@ -903,8 +833,8 @@ public enum BridgeBody: Equatable, Sendable {
                 beforeMessageId: try c.decode(String.self, forKey: .beforeMessageId),
                 limit: try c.decode(Int.self, forKey: .limit)
             )
-        case "sendPrompt":
-            return .sendPrompt(
+        case "sendMessage":
+            return .sendMessage(
                 sessionId: try c.decode(String.self, forKey: .sessionId),
                 text: try c.decode(String.self, forKey: .text),
                 attachments: try c.decodeIfPresent([WireAttachment].self, forKey: .attachments) ?? []
@@ -918,15 +848,15 @@ public enum BridgeBody: Equatable, Sendable {
         case "interruptTurn":
             return .interruptTurn(sessionId: try c.decode(String.self, forKey: .sessionId))
         case "authOk":
-            return .authOk(macName: try c.decodeIfPresent(String.self, forKey: .macName))
+            return .authOk(hostDisplayName: try c.decodeIfPresent(String.self, forKey: .hostDisplayName))
         case "authFailed":
             return .authFailed(reason: try c.decode(String.self, forKey: .reason))
         case "versionMismatch":
             return .versionMismatch(serverVersion: try c.decode(Int.self, forKey: .serverVersion))
         case "sessionsSnapshot":
-            return .sessionsSnapshot(sessions: try c.decode([WireChat].self, forKey: .sessions))
-        case "chatUpdated":
-            return .chatUpdated(chat: try c.decode(WireChat.self, forKey: .chat))
+            return .sessionsSnapshot(sessions: try c.decode([WireSession].self, forKey: .sessions))
+        case "sessionUpdated":
+            return .sessionUpdated(session: try c.decode(WireSession.self, forKey: .session))
         case "messagesSnapshot":
             return .messagesSnapshot(
                 sessionId: try c.decode(String.self, forKey: .sessionId),
@@ -1266,7 +1196,7 @@ public struct WireSkillSummary: Codable, Equatable, Sendable {
     public let description: String
     public let kind: String          // "personality" | "procedure" | "snippet" | "role"
     public let tags: [String]
-    public let scopeKind: String     // "global" | "project" | "tag" | "chat"
+    public let scopeKind: String     // "global" | "project" | "tag" | "session"
     public let builtin: Bool
     public let importedFrom: String?
     public let isInstance: Bool

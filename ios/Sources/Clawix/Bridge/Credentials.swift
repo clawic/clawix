@@ -4,7 +4,7 @@ struct Credentials: Codable, Equatable {
     var host: String
     var port: Int
     var token: String
-    var macName: String?
+    var hostDisplayName: String?
     /// Tailscale CGNAT IPv4 of the Mac, if it was running Tailscale at
     /// pairing time. Used as a fallback when the LAN host is not
     /// reachable (iPhone on cellular, on a different WiFi, traveling).
@@ -26,7 +26,7 @@ struct Credentials: Codable, Equatable {
     /// Ordered list the bridge client should try, fastest-first.
     /// LAN goes first so being at home stays sub-second; Tailscale is
     /// the away path. Empty hosts are skipped so a malformed pairing
-    /// does not produce `ws://:7777`.
+    /// does not produce `ws://:24080`.
     var candidateURLs: [URL] {
         var urls: [URL] = []
         for host in [host, tailscaleHost ?? ""] {
@@ -41,7 +41,7 @@ struct Credentials: Codable, Equatable {
 
     var snapshotCacheKey: String {
         [
-            macName ?? "",
+            hostDisplayName ?? "",
             host.trimmingCharacters(in: .whitespacesAndNewlines),
             "\(port)",
             tailscaleHost?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -75,7 +75,7 @@ struct PairingPayload: Codable {
     var host: String
     var port: Int
     var token: String
-    var macName: String?
+    var hostDisplayName: String?
     var tailscaleHost: String?
     /// Optional 9-character short code the Mac embeds alongside the
     /// long bearer in v0.1.1+. The QR scan path ignores it because
@@ -102,7 +102,7 @@ struct PairingPayload: Codable {
             host: host,
             port: port,
             token: token,
-            macName: macName,
+            hostDisplayName: hostDisplayName,
             tailscaleHost: tailscaleHost,
             coordinatorUrl: coordinatorUrl,
             irohNodeId: irohNodeId

@@ -10,7 +10,7 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void SchemaVersion_Matches_Swift()
     {
-        Assert.Equal(5, BridgeConstants.SchemaVersion);
+        Assert.Equal(1, BridgeConstants.SchemaVersion);
         Assert.Equal(60, BridgeConstants.InitialPageLimit);
         Assert.Equal(40, BridgeConstants.OlderPageLimit);
     }
@@ -18,9 +18,9 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void Auth_Frame_RoundTrip()
     {
-        var frame = new BridgeFrame(new BridgeBody.Auth("token-abc", "iPhone 15", ClientKind.Ios));
+        var frame = new BridgeFrame(new BridgeBody.Auth("token-abc", "iPhone 15", ClientKind.Companion));
         var json = BridgeCoder.Encode(frame);
-        Assert.Contains("\"schemaVersion\":5", json);
+        Assert.Contains("\"schemaVersion\":1", json);
         Assert.Contains("\"type\":\"auth\"", json);
         Assert.Contains("\"token\":\"token-abc\"", json);
         Assert.Contains("\"deviceName\":\"iPhone 15\"", json);
@@ -46,7 +46,7 @@ public sealed class BridgeProtocolTests
     {
         var frame = new BridgeFrame(new BridgeBody.ListSessions());
         var json = BridgeCoder.Encode(frame);
-        Assert.Equal("{\"schemaVersion\":5,\"type\":\"listSessions\"}", json);
+        Assert.Equal("{\"schemaVersion\":1,\"type\":\"listSessions\"}", json);
         var decoded = BridgeCoder.Decode(json);
         Assert.IsType<BridgeBody.ListSessions>(decoded.Body);
     }
@@ -64,14 +64,14 @@ public sealed class BridgeProtocolTests
     }
 
     [Fact]
-    public void SendPrompt_OmitsAttachmentsWhenEmpty()
+    public void SendMessage_OmitsAttachmentsWhenEmpty()
     {
-        var frame = new BridgeFrame(new BridgeBody.SendPrompt("c", "hi", []));
+        var frame = new BridgeFrame(new BridgeBody.SendMessage("c", "hi", []));
         var json = BridgeCoder.Encode(frame);
         Assert.DoesNotContain("\"attachments\"", json);
 
         var att = new WireAttachment { Id = "a1", MimeType = "image/png", Filename = "p.png", DataBase64 = "AAAA" };
-        var withAtt = new BridgeFrame(new BridgeBody.SendPrompt("c", "hi", [att]));
+        var withAtt = new BridgeFrame(new BridgeBody.SendMessage("c", "hi", [att]));
         var jsonB = BridgeCoder.Encode(withAtt);
         Assert.Contains("\"attachments\"", jsonB);
         var decoded = BridgeCoder.Decode(jsonB);
@@ -81,7 +81,7 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void SessionsSnapshot_RoundTrip()
     {
-        var chat = new WireChat
+        var chat = new WireSession
         {
             Id = "id-1",
             Title = "Hello",
@@ -116,7 +116,7 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void Unknown_Type_Throws()
     {
-        var json = "{\"schemaVersion\":5,\"type\":\"someUnknownThing\",\"sessionId\":\"x\"}";
+        var json = "{\"schemaVersion\":1,\"type\":\"someUnknownThing\",\"sessionId\":\"x\"}";
         Assert.ThrowsAny<Exception>(() => BridgeCoder.Decode(json));
     }
 
@@ -127,7 +127,7 @@ public sealed class BridgeProtocolTests
     [InlineData("requestRateLimits")]
     public void EmptyBodies_RoundTrip(string typeTag)
     {
-        var json = $"{{\"schemaVersion\":5,\"type\":\"{typeTag}\"}}";
+        var json = $"{{\"schemaVersion\":1,\"type\":\"{typeTag}\"}}";
         var decoded = BridgeCoder.Decode(json);
         Assert.Equal(typeTag, decoded.Body.TypeTag);
     }

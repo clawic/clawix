@@ -188,7 +188,7 @@ final class AppBridgeMessageHandler: NSObject, WKScriptMessageHandler {
         // Mirror the path "user types into composer in chat X". We
         // don't have a public API on AppState to inject a synthetic
         // user message without a UI roundtrip, so for v1 we just route
-        // the agent message through the standard sendPrompt path.
+        // the agent message through the standard sendMessage path.
         appState.dispatchAppMessage(text, toChatId: chatId)
     }
 

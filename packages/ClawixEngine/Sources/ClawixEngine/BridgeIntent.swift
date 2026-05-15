@@ -48,12 +48,12 @@ public enum BridgeIntent {
                 hasMore: page.hasMore
             )))
 
-        case .sendPrompt(let sessionIdString, let text, let attachments):
+        case .sendMessage(let sessionIdString, let text, let attachments):
             guard let uuid = UUID(uuidString: sessionIdString) else {
                 session.send(BridgeFrame(.errorEvent(code: "badSessionId", message: sessionIdString)))
                 return
             }
-            host?.handleSendPrompt(sessionId: uuid, text: text, attachments: attachments)
+            host?.handleSendMessage(sessionId: uuid, text: text, attachments: attachments)
 
         case .newSession(let sessionIdString, let text, let attachments):
             guard let uuid = UUID(uuidString: sessionIdString) else {
@@ -249,7 +249,7 @@ public enum BridgeIntent {
             )
 
         case .auth, .authOk, .authFailed, .versionMismatch,
-             .sessionsSnapshot, .chatUpdated, .messagesSnapshot,
+             .sessionsSnapshot, .sessionUpdated, .messagesSnapshot,
              .messagesPage,
              .messageAppended, .messageStreaming, .errorEvent,
              .pairingPayload, .projectsSnapshot, .fileSnapshot,

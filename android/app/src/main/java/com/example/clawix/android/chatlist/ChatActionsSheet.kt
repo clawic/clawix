@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.icons.LucideGlyph
 import com.example.clawix.android.icons.LucideIcon
 import com.example.clawix.android.theme.AppLayout
@@ -37,7 +37,7 @@ import com.example.clawix.android.theme.Palette
  */
 @Composable
 fun ChatActionsSheet(
-    chat: WireChat,
+    chat: WireSession,
     onDismiss: () -> Unit,
     onTogglePin: () -> Unit,
     onRename: () -> Unit,

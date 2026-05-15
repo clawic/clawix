@@ -78,7 +78,7 @@ private fun ConnectionStatusRow(connection: ConnectionState) {
                 ConnectionRoute.Tailscale -> "Tailscale"
                 ConnectionRoute.Bonjour -> "Bonjour"
             }
-            Triple("Connected via $routeLabel${connection.macName?.let { " · $it" } ?: ""}", Palette.unreadDot, LucideGlyph.Wifi)
+            Triple("Connected via $routeLabel${connection.hostDisplayName?.let { " · $it" } ?: ""}", Palette.unreadDot, LucideGlyph.Wifi)
         }
         is ConnectionState.Failed -> Triple("Failed: ${connection.reason}", Palette.unreadDot, LucideGlyph.CircleAlert)
         is ConnectionState.VersionMismatch -> Triple("Update required (server v${connection.serverVersion})", Palette.unreadDot, LucideGlyph.CircleAlert)

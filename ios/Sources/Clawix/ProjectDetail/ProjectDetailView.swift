@@ -32,7 +32,7 @@ struct ProjectDetailView: View {
     // updates land here without leaving and re-entering the folder.
     // The captured `project` only carries the cwd identity; everything
     // else flows from the observable store.
-    private var chats: [WireChat] {
+    private var chats: [WireSession] {
         store.chats
             .filter { !$0.isArchived && $0.cwd == project.cwd }
             .sorted { lhs, rhs in

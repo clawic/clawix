@@ -18,7 +18,7 @@ public enum WireAttachmentKind: String, Codable, Equatable, Sendable {
     case audio
 }
 
-/// One attachment piggy-backing on a `sendPrompt` / `newSession` frame. The
+/// One attachment piggy-backing on a `sendMessage` / `newSession` frame. The
 /// payload rides inline as base64 because the bridge speaks JSON over
 /// WebSocket (no multipart). The daemon's behaviour depends on `kind`:
 /// images are forwarded to Codex as `localImage`; audio is transcribed
@@ -96,7 +96,7 @@ public struct WireProject: Codable, Equatable, Sendable {
     }
 }
 
-public struct WireChat: Codable, Equatable, Sendable, Identifiable {
+public struct WireSession: Codable, Equatable, Sendable, Identifiable {
     public let id: String
     public var title: String
     public var createdAt: Date

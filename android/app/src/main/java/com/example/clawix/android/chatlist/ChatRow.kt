@@ -21,7 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.icons.LucideGlyph
 import com.example.clawix.android.icons.LucideIcon
 import com.example.clawix.android.theme.AppLayout
@@ -30,7 +30,7 @@ import com.example.clawix.android.theme.Palette
 
 @Composable
 fun ChatRow(
-    chat: WireChat,
+    chat: WireSession,
     isUnread: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,

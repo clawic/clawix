@@ -45,7 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.clawix.android.AppContainer
 import com.example.clawix.android.bridge.DerivedProject
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.icons.ComposeIcon
 import com.example.clawix.android.icons.SearchIcon
 import com.example.clawix.android.icons.SettingsIcon
@@ -73,8 +73,8 @@ fun ChatListScreen(
     var searchExpanded by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showAllProjects by remember { mutableStateOf(false) }
-    var actionsTarget by remember { mutableStateOf<WireChat?>(null) }
-    var renameTarget by remember { mutableStateOf<WireChat?>(null) }
+    var actionsTarget by remember { mutableStateOf<WireSession?>(null) }
+    var renameTarget by remember { mutableStateOf<WireSession?>(null) }
 
     LaunchedEffect(Unit) {
         // Refresh chats list once on entry

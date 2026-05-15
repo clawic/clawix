@@ -34,7 +34,7 @@ export const ZWireProject = z.object({
 });
 export type WireProject = z.infer<typeof ZWireProject>;
 
-export const ZWireChat = z.object({
+export const ZWireSession = z.object({
   id: z.string(),
   title: z.string(),
   createdAt: ZIso8601,
@@ -49,7 +49,7 @@ export const ZWireChat = z.object({
   threadId: z.string().optional(),
   agent: z.string().default("codex"),
 });
-export type WireChat = z.infer<typeof ZWireChat>;
+export type WireSession = z.infer<typeof ZWireSession>;
 
 export const ZWireWorkItemStatus = z.enum(["inProgress", "completed", "failed"]);
 export type WireWorkItemStatus = z.infer<typeof ZWireWorkItemStatus>;

@@ -8,13 +8,13 @@ namespace Clawix.Bridged;
 
 public sealed partial class DaemonEngineHost
 {
-    private static List<WireChat> ChatSnapshotFromBackend(JsonElement el)
+    private static List<WireSession> ChatSnapshotFromBackend(JsonElement el)
     {
-        var list = new List<WireChat>();
+        var list = new List<WireSession>();
         if (el.ValueKind != JsonValueKind.Array) return list;
         foreach (var item in el.EnumerateArray())
         {
-            list.Add(new WireChat
+            list.Add(new WireSession
             {
                 Id = item.TryGetProperty("id", out var id) ? id.GetString() ?? Guid.NewGuid().ToString() : Guid.NewGuid().ToString(),
                 Title = item.TryGetProperty("title", out var t) ? (t.GetString() ?? "Untitled") : "Untitled",

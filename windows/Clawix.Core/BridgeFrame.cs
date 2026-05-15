@@ -7,7 +7,7 @@ namespace Clawix.Core;
 /// Mirrors <c>BridgeFrame</c> in Swift (packages/ClawixCore/BridgeProtocol.swift).
 /// </summary>
 [JsonConverter(typeof(BridgeFrameConverter))]
-public sealed record BridgeFrame(BridgeBody Body, int SchemaVersion = BridgeConstants.SchemaVersion);
+public sealed record BridgeFrame(BridgeBody Body, int ProtocolVersion = BridgeConstants.ProtocolVersion);
 
 public sealed class BridgeDecodingException : Exception
 {

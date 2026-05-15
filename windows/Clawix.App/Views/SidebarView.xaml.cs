@@ -7,7 +7,7 @@ namespace Clawix.App.Views;
 
 public sealed partial class SidebarView : UserControl
 {
-    public ObservableCollection<WireChat> Sessions { get; } = new();
+    public ObservableCollection<WireSession> Sessions { get; } = new();
 
     public SidebarView()
     {
@@ -34,7 +34,7 @@ public sealed partial class SidebarView : UserControl
 
     private async void ChatList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ChatList.SelectedItem is WireChat chat)
+        if (ChatList.SelectedItem is WireSession chat)
             await App.Services.State.SelectChatAsync(chat);
     }
 

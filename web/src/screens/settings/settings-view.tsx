@@ -63,7 +63,7 @@ export function SettingsView() {
 }
 
 function GeneralSettings() {
-  const macName = useBridgeStore((s) => s.macName);
+  const hostDisplayName = useBridgeStore((s) => s.hostDisplayName);
   const detach = useBridgeStore((s) => s.detach);
   const [deviceName, setDeviceName] = useState(() => storage.get<string>(StorageKeys.deviceName) ?? "");
 
@@ -71,8 +71,8 @@ function GeneralSettings() {
     <>
       <SectionLabel>Connection</SectionLabel>
       <Card>
-        <Row label="Paired with" hint={macName ? `Currently bonded to ${macName}` : "Not paired"}>
-          <code style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>{macName ?? "—"}</code>
+        <Row label="Paired with" hint={hostDisplayName ? `Currently bonded to ${hostDisplayName}` : "Not paired"}>
+          <code style={{ fontSize: 12, color: "var(--color-fg-secondary)" }}>{hostDisplayName ?? "—"}</code>
         </Row>
         <CardDivider />
         <Row label="Device label" hint="Shown in the Mac app's connected peers list.">

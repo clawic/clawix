@@ -4,10 +4,11 @@ import com.example.clawix.android.core.BridgeBody
 import com.example.clawix.android.core.BridgeCoder
 import com.example.clawix.android.core.BridgeFrame
 import com.example.clawix.android.core.BridgeJson
+import com.example.clawix.android.core.BRIDGE_SCHEMA_VERSION
 import com.example.clawix.android.core.ClientKind
 import com.example.clawix.android.core.WireAttachment
 import com.example.clawix.android.core.WireAttachmentKind
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.core.WireMessage
 import com.example.clawix.android.core.WireRole
 import com.example.clawix.android.core.WireTimelineEntry
@@ -38,20 +39,20 @@ class BridgeFrameRoundtripTest {
         val frame = BridgeFrame(body = body)
         val raw = BridgeCoder.encode(frame)
         val decoded = BridgeCoder.decode(raw)
-        assertEquals("schemaVersion mismatch", 5, decoded.schemaVersion)
+        assertEquals("schemaVersion mismatch", BRIDGE_SCHEMA_VERSION, decoded.schemaVersion)
         assertEquals("body mismatch on $body", body, decoded.body)
     }
 
     private fun assertFlatEnvelope(raw: String, expectedType: String, expectedFlatKey: String) {
         val obj = parser.parseToJsonElement(raw).jsonObject
-        assertEquals(5, obj["schemaVersion"]?.jsonPrimitive?.content?.toInt())
+        assertEquals(BRIDGE_SCHEMA_VERSION, obj["schemaVersion"]?.jsonPrimitive?.content?.toInt())
         assertEquals(expectedType, obj["type"]?.jsonPrimitive?.content)
         assertNotNull("expected $expectedFlatKey at top level (no payload nesting)", obj[expectedFlatKey])
     }
 
     @Test fun auth_flat_envelope() {
         val raw = BridgeCoder.encode(
-            BridgeFrame(body = BridgeBody.Auth("tok", "iPhone", ClientKind.ios))
+            BridgeFrame(body = BridgeBody.Auth("tok", "iPhone", ClientKind.COMPANION))
         )
         assertFlatEnvelope(raw, "auth", "token")
         assertTrue(raw.contains("\"deviceName\":\"iPhone\""))
@@ -59,15 +60,15 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun roundtrip_outbound_v1() {
-        roundtrip(BridgeBody.Auth("tok", "iPhone", ClientKind.ios))
+        roundtrip(BridgeBody.Auth("tok", "iPhone", ClientKind.COMPANION))
         roundtrip(BridgeBody.Auth("tok", null, null))
         roundtrip(BridgeBody.ListSessions)
         roundtrip(BridgeBody.OpenSession("chat-1", null))
         roundtrip(BridgeBody.OpenSession("chat-1", 60))
         roundtrip(BridgeBody.LoadOlderMessages("chat-1", "msg-x", 40))
-        roundtrip(BridgeBody.SendPrompt("chat-1", "hello", emptyList()))
+        roundtrip(BridgeBody.SendMessage("chat-1", "hello", emptyList()))
         roundtrip(
-            BridgeBody.SendPrompt(
+            BridgeBody.SendMessage(
                 "chat-1",
                 "with image",
                 listOf(WireAttachment("a-1", WireAttachmentKind.image, "image/jpeg", "x.jpg", "AAA="))
@@ -85,7 +86,7 @@ class BridgeFrameRoundtripTest {
         roundtrip(
             BridgeBody.SessionsSnapshot(
                 listOf(
-                    WireChat(
+                    WireSession(
                         id = "c-1",
                         title = "test",
                         createdAt = Instant.parse("2026-05-01T12:00:00Z"),
@@ -165,7 +166,7 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun unknown_frame_type_decodes_as_unknown() {
-        val raw = """{"schemaVersion":5,"type":"futureFrame","extraField":42}"""
+        val raw = """{"schemaVersion":1,"type":"futureFrame","extraField":42}"""
         val decoded = BridgeCoder.decode(raw)
         assertTrue(decoded.body is BridgeBody.Unknown)
         val unk = decoded.body as BridgeBody.Unknown
@@ -173,7 +174,7 @@ class BridgeFrameRoundtripTest {
     }
 
     @Test fun unknown_fields_in_known_type_are_ignored() {
-        val raw = """{"schemaVersion":5,"type":"openSession","sessionId":"c-1","limit":60,"thisIsFromTheFuture":true}"""
+        val raw = """{"schemaVersion":1,"type":"openSession","sessionId":"c-1","limit":60,"thisIsFromTheFuture":true}"""
         val decoded = BridgeCoder.decode(raw)
         assertEquals(BridgeBody.OpenSession("c-1", 60), decoded.body)
     }
@@ -185,7 +186,7 @@ class BridgeFrameRoundtripTest {
 
     @Test fun chat_decodes_with_legacy_payload_missing_optional_fields() {
         val raw = """
-            {"schemaVersion":5,"type":"sessionsSnapshot",
+            {"schemaVersion":1,"type":"sessionsSnapshot",
              "sessions":[{"id":"c-1","title":"t","createdAt":"2026-05-01T12:00:00Z"}]}
         """.trimIndent()
         val decoded = BridgeCoder.decode(raw)

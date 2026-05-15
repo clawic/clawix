@@ -32,7 +32,7 @@ public final class PairingService {
     /// singleton uses the host app's `appPrefsSuite`. The default
     /// initialiser falls back to `.standard`, which is fine for the
     /// stand-alone daemon binary that has its own bundle id.
-    public init(defaults: UserDefaults = .standard, port: UInt16 = 7777) {
+    public init(defaults: UserDefaults = .standard, port: UInt16 = 24080) {
         self.defaults = defaults
         self.port = port
     }
@@ -124,7 +124,7 @@ public final class PairingService {
             "port": Int(port),
             "token": bearer,
             "shortCode": shortCode,
-            "macName": HostIdentity.localizedName ?? "Mac"
+            "hostDisplayName": HostIdentity.localizedName ?? "Mac"
         ]
         if let ts = Self.currentTailscaleIPv4() {
             dict["tailscaleHost"] = ts

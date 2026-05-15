@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.clawix.android.AppContainer
 import com.example.clawix.android.bridge.DerivedProject
-import com.example.clawix.android.core.WireChat
+import com.example.clawix.android.core.WireSession
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.stateIn
 
 data class ProjectDetailUi(
     val project: DerivedProject?,
-    val chats: List<WireChat>,
+    val chats: List<WireSession>,
 )
 
 class ProjectDetailViewModel(

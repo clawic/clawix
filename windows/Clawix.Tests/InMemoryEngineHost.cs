@@ -12,26 +12,26 @@ namespace Clawix.Tests;
 public sealed class InMemoryEngineHost : IEngineHost
 {
     private BridgeRuntimeState _state = new BridgeRuntimeState.Ready();
-    private List<WireChat> _sessions = new();
+    private List<WireSession> _sessions = new();
 
     public BridgeRuntimeState BridgeStateCurrent => _state;
-    public IReadOnlyList<WireChat> BridgeSessionsCurrent => _sessions;
+    public IReadOnlyList<WireSession> BridgeSessionsCurrent => _sessions;
     public (WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId) BridgeRateLimitsCurrent
         => (null, new Dictionary<string, WireRateLimitSnapshot>());
 
     public event Action<BridgeRuntimeState>? BridgeStateChanged;
-    public event Action<IReadOnlyList<WireChat>>? BridgeSessionsChanged;
-    public event Action<WireChat>? ChatChanged;
+    public event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
+    public event Action<WireSession>? ChatChanged;
     public event Action<MessagesEvent>? MessagesChanged;
     public event Action<(WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId)>? RateLimitsChanged;
 
-    public void SetSessions(IEnumerable<WireChat> sessions)
+    public void SetSessions(IEnumerable<WireSession> sessions)
     {
         _sessions = sessions.ToList();
         BridgeSessionsChanged?.Invoke(_sessions);
     }
 
-    public Task HandleSendPromptAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct) => Task.CompletedTask;
+    public Task HandleSendMessageAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct) => Task.CompletedTask;
     public Task HandleNewSessionAsync(string sessionId, string text, IReadOnlyList<WireAttachment> attachments, CancellationToken ct) => Task.CompletedTask;
     public Task HandleInterruptTurnAsync(string sessionId, CancellationToken ct) => Task.CompletedTask;
     public Task<IReadOnlyList<WireMessage>> HandleOpenSessionAsync(string sessionId, int? limit, CancellationToken ct)

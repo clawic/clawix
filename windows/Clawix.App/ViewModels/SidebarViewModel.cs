@@ -7,13 +7,13 @@ namespace Clawix.App.ViewModels;
 
 public sealed partial class SidebarViewModel : ObservableObject
 {
-    public ObservableCollection<WireChat> Sessions { get; } = new();
+    public ObservableCollection<WireSession> Sessions { get; } = new();
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]
-    private WireChat? _selectedChat;
+    private WireSession? _selectedChat;
 
     public SidebarViewModel()
     {
@@ -25,14 +25,14 @@ public sealed partial class SidebarViewModel : ObservableObject
         };
     }
 
-    private void ReplaceChats(IEnumerable<WireChat> chats)
+    private void ReplaceChats(IEnumerable<WireSession> chats)
     {
         Sessions.Clear();
         foreach (var c in chats) Sessions.Add(c);
     }
 
     [RelayCommand]
-    private async Task SelectChatAsync(WireChat chat)
+    private async Task SelectChatAsync(WireSession chat)
     {
         SelectedChat = chat;
         await App.Services.State.SelectChatAsync(chat);
