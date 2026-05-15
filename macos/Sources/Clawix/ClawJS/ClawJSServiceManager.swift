@@ -913,10 +913,10 @@ final class ClawJSServiceManager: ObservableObject {
         return key
     }
 
-    /// Filesystem fallback only for legacy services that still own a token
-    /// store. Services in `adminTokenEnvVar` deliberately have no disk
-    /// fallback: same-user local processes can read owner files, so V1 host
-    /// identity must stay in-memory/native.
+    /// Filesystem token lookup only for services that explicitly own a
+    /// token-file contract. Services in `adminTokenEnvVar` deliberately
+    /// have no disk lookup: same-user local processes can read owner files,
+    /// so v1 host identity must stay in-memory/native.
     static func adminTokenFromDataDir(for service: ClawJSService) throws -> String {
         if adminTokenEnvVar[service] != nil {
             throw NSError(domain: "ClawJSServiceManager", code: 3, userInfo: [

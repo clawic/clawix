@@ -451,6 +451,13 @@ if (secretsManager.includes("migrateLegacyConnectionAuths")) {
   fail("SecretsManager.swift must not migrate pre-v1 connection auth files");
 }
 
+const serviceManagerSource = read("macos/Sources/Clawix/ClawJS/ClawJSServiceManager.swift");
+for (const pattern of ["legacy services", "still own a token store"]) {
+  if (serviceManagerSource.includes(pattern)) {
+    fail(`ClawJSServiceManager.swift must classify token-file services as explicit v1 contracts, not legacy: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",
