@@ -1,10 +1,9 @@
 import Foundation
 
 enum LifeVerticalStatus: String, Codable {
-    case planned
-    case alpha
     case stable
-    case deprecated
+    case devOnly = "dev-only"
+    case removed
 }
 
 enum LifeCategory: String, Codable, CaseIterable {
@@ -56,14 +55,30 @@ private struct RegistryEnvelope: Decodable {
 }
 
 enum LifeRegistry {
-    static let entries: [LifeRegistryEntry] = loadEntries()
+    private static let allEntries: [LifeRegistryEntry] = loadEntries()
 
-    static func entry(byId id: String) -> LifeRegistryEntry? {
-        entries.first { $0.id == id }
+    static var entries: [LifeRegistryEntry] {
+        entries(includeDevOnly: false)
     }
 
-    static func entries(in category: LifeCategory) -> [LifeRegistryEntry] {
-        entries.filter { $0.category == category }
+    static func entries(includeDevOnly: Bool) -> [LifeRegistryEntry] {
+        allEntries.filter { includeDevOnly || $0.status == .stable }
+    }
+
+    static func entry(byId id: String) -> LifeRegistryEntry? {
+        allEntries.first { $0.id == id && $0.status == .stable }
+    }
+
+    static func entry(byId id: String, includeDevOnly: Bool) -> LifeRegistryEntry? {
+        allEntries.first { entry in
+            entry.id == id && (includeDevOnly || entry.status == .stable)
+        }
+    }
+
+    static func entries(in category: LifeCategory, includeDevOnly: Bool = false) -> [LifeRegistryEntry] {
+        allEntries.filter { entry in
+            entry.category == category && (includeDevOnly || entry.status == .stable)
+        }
     }
 
     private static func loadEntries() -> [LifeRegistryEntry] {

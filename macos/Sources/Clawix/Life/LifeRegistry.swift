@@ -9,11 +9,11 @@ enum LifeVerticalStatus: String, Codable {
     init(from decoder: Decoder) throws {
         let rawValue = try decoder.singleValueContainer().decode(String.self)
         switch rawValue {
-        case "stable", "alpha":
+        case "stable":
             self = .stable
-        case "dev-only", "planned":
+        case "dev-only":
             self = .devOnly
-        case "removed", "deprecated":
+        case "removed":
             self = .removed
         default:
             throw DecodingError.dataCorrupted(
@@ -88,20 +88,28 @@ private struct RegistryEnvelope: Decodable {
 /// (`life-registry.json`) and falls back to an embedded subset so the app
 /// is always usable even before the daemon has shipped its copy.
 enum LifeRegistry {
-    static let entries: [LifeRegistryEntry] = loadEntries()
+    private static let allEntries: [LifeRegistryEntry] = loadEntries()
+
+    static var entries: [LifeRegistryEntry] {
+        entries(includeDevOnly: false)
+    }
+
+    static func entries(includeDevOnly: Bool) -> [LifeRegistryEntry] {
+        allEntries.filter { includeDevOnly || $0.status == .stable }
+    }
 
     static func entry(byId id: String) -> LifeRegistryEntry? {
-        entries.first { $0.id == id && $0.status == .stable }
+        allEntries.first { $0.id == id && $0.status == .stable }
     }
 
     static func entry(byId id: String, includeDevOnly: Bool) -> LifeRegistryEntry? {
-        entries.first { entry in
+        allEntries.first { entry in
             entry.id == id && (includeDevOnly || entry.status == .stable)
         }
     }
 
     static func entries(in category: LifeCategory, includeDevOnly: Bool = false) -> [LifeRegistryEntry] {
-        entries.filter { entry in
+        allEntries.filter { entry in
             entry.category == category && (includeDevOnly || entry.status == .stable)
         }
     }
