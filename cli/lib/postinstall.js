@@ -130,7 +130,7 @@ try {
 // install pipeline end-to-end without uploading anything to GitHub.
 // Skips both the download and the SHA-256 check; codesign --verify
 // still gates the binaries that get extracted.
-const localTarball = process.env.CLAWIX_LOCAL_TARBALL || null;
+const localTarball = process.env[platform.Env.clawixLocalTarball] || null;
 
 const expectedSha = checksums[ASSET];
 if (!localTarball && !expectedSha) {

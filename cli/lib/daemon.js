@@ -2,17 +2,13 @@
 
 const fs = require('node:fs');
 const net = require('node:net');
-const path = require('node:path');
-const os = require('node:os');
 const launchctl = require('./service');
 const { resolveBridged, isAppInstalled } = require('./binary');
-const { BRIDGE_LABEL, BRIDGE_PORT } = require('./platform');
-
-const STATE_FILE = path.join(os.homedir(), '.clawix', 'state', 'bridge-status.json');
+const { BRIDGE_LABEL, BRIDGE_PORT, BRIDGE_STATUS_FILE } = require('./platform');
 
 function readHeartbeat() {
     try {
-        return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+        return JSON.parse(fs.readFileSync(BRIDGE_STATUS_FILE, 'utf8'));
     } catch (e) {
         return null;
     }

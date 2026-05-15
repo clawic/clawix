@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwind from "@tailwindcss/vite";
 import path from "node:path";
 
+// @persistent-surface-wrapper
 const DAEMON_HOST = process.env.CLAWIX_BRIDGE_HOST ?? "localhost";
 const DAEMON_PORT = process.env.CLAWIX_BRIDGE_PORT ?? "24080";
 

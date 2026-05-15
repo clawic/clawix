@@ -8,7 +8,8 @@ const {
   APP_BUNDLE_PATH,
   DAEMON_BIN_NAME,
   MENUBAR_BIN_NAME,
-  IS_WINDOWS
+  IS_WINDOWS,
+  Env
 } = require('./platform');
 
 // Read ~/.clawix/bin/manifest.json once. Dev links written by
@@ -38,7 +39,7 @@ function isDevLink() {
 //   3. Clawix.app's embedded daemon if installed.
 //   4. The npm-installed daemon under ~/.clawix/bin/.
 function resolveBridged() {
-  const override = process.env.CLAWIX_BRIDGE_PATH;
+  const override = process.env[Env.clawixBridgePath];
   if (override && fs.existsSync(override)) return override;
   const npmBin = path.join(BIN_DIR, DAEMON_BIN_NAME);
   if (isDevLink() && fs.existsSync(npmBin)) return npmBin;
@@ -47,7 +48,7 @@ function resolveBridged() {
 }
 
 function resolveMenubar() {
-  const override = process.env.CLAWIX_MENUBAR_PATH;
+  const override = process.env[Env.clawixMenubarPath];
   if (override && fs.existsSync(override)) return override;
   return path.join(BIN_DIR, MENUBAR_BIN_NAME);
 }

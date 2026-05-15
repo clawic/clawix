@@ -1,5 +1,6 @@
 'use strict';
 
+// @persistent-surface-wrapper
 const os = require('node:os');
 const path = require('node:path');
 
@@ -28,6 +29,14 @@ const HOME = os.homedir();
 const CLAWIX_HOME = path.join(HOME, '.clawix');
 const BIN_DIR = path.join(CLAWIX_HOME, 'bin');
 const STATE_DIR = path.join(CLAWIX_HOME, 'state');
+const BRIDGE_STATUS_FILE = path.join(STATE_DIR, 'bridge-status.json');
+const Env = Object.freeze({
+  clawixBridgePath: 'CLAWIX_BRIDGE_PATH',
+  clawixMenubarPath: 'CLAWIX_MENUBAR_PATH',
+  clawixLocalTarball: 'CLAWIX_LOCAL_TARBALL',
+  localAppData: 'LOCALAPPDATA',
+  xdgConfigHome: 'XDG_CONFIG_HOME',
+});
 
 // Per-platform location of the autostart manifest. macOS uses launchd
 // LaunchAgents (XML plist); Linux uses systemd user units; Windows uses
@@ -36,9 +45,9 @@ const STATE_DIR = path.join(CLAWIX_HOME, 'state');
 // process.platform.
 let LAUNCH_AGENTS_DIR;
 if (IS_WINDOWS) {
-  LAUNCH_AGENTS_DIR = path.join(process.env.LOCALAPPDATA || HOME, 'Clawix', 'autostart');
+  LAUNCH_AGENTS_DIR = path.join(process.env[Env.localAppData] || HOME, 'Clawix', 'autostart');
 } else if (IS_LINUX) {
-  const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(HOME, '.config');
+  const xdgConfig = process.env[Env.xdgConfigHome] || path.join(HOME, '.config');
   LAUNCH_AGENTS_DIR = path.join(xdgConfig, 'systemd', 'user');
 } else {
   LAUNCH_AGENTS_DIR = path.join(HOME, 'Library', 'LaunchAgents');
@@ -57,7 +66,7 @@ const BRIDGE_HTTP_PORT = 24081;
 let APP_BUNDLE_PATH;
 let APP_BUNDLED_DAEMON;
 if (IS_WINDOWS) {
-  APP_BUNDLE_PATH = path.join(process.env.LOCALAPPDATA || HOME, 'Clawix');
+  APP_BUNDLE_PATH = path.join(process.env[Env.localAppData] || HOME, 'Clawix');
   APP_BUNDLED_DAEMON = path.join(APP_BUNDLE_PATH, 'clawix-bridge.exe');
 } else if (IS_LINUX) {
   // Resolved at runtime by service_manager.rs / daemon.js because the
@@ -83,6 +92,8 @@ module.exports = {
   CLAWIX_HOME,
   BIN_DIR,
   STATE_DIR,
+  BRIDGE_STATUS_FILE,
+  Env,
   LAUNCH_AGENTS_DIR,
   BRIDGE_LABEL,
   MENUBAR_LABEL,

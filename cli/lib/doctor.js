@@ -7,7 +7,7 @@ const path = require('node:path');
 const ui = require('./ui');
 const diag = require('./diagnostics');
 const { resolveBridged, resolveMenubar } = require('./binary');
-const { BIN_DIR, LAUNCH_AGENTS_DIR, BRIDGE_LABEL, BRIDGE_PORT, APP_BUNDLE_PATH } = require('./platform');
+const { BIN_DIR, LAUNCH_AGENTS_DIR, BRIDGE_LABEL, BRIDGE_PORT, APP_BUNDLE_PATH, BRIDGE_STATUS_FILE, Env } = require('./platform');
 
 function check(name, level, message, fix) {
     return { name, level, message, fix: fix || null };
@@ -27,7 +27,7 @@ function run() {
         // location (~/.clawix/state/bridge-status.json) but resolved via
         // %USERPROFILE%; mac-specific things (codesign, plist, launchctl)
         // are skipped.
-        const stateFile = path.join(os.homedir(), '.clawix', 'state', 'bridge-status.json');
+        const stateFile = BRIDGE_STATUS_FILE;
         if (!fs.existsSync(stateFile)) {
             checks.push(check('heartbeat', 'warn',
                 'bridge-status.json missing on Windows.',
@@ -45,7 +45,7 @@ function run() {
                 checks.push(check('heartbeat', 'fail', 'bridge-status.json is not valid JSON.', 'restart the daemon.'));
             }
         }
-        const localApp = path.join(process.env.LOCALAPPDATA || os.homedir(), 'Clawix', 'clawix-bridge.exe');
+        const localApp = path.join(process.env[Env.localAppData] || os.homedir(), 'Clawix', 'clawix-bridge.exe');
         if (!fs.existsSync(localApp)) {
             checks.push(check('clawix-bridge-binary', 'warn',
                 `clawix-bridge.exe not found at ${localApp}.`,
@@ -208,7 +208,7 @@ function run() {
         checks.push(check('clawix-app', 'ok', 'Clawix.app not installed (optional)', null));
     }
 
-    const stateFile = path.join(os.homedir(), '.clawix/state/bridge-status.json');
+    const stateFile = BRIDGE_STATUS_FILE;
     if (!fs.existsSync(stateFile)) {
         checks.push(check('heartbeat', 'warn',
             'bridge-status.json missing.',

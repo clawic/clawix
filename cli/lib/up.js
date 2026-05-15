@@ -1,21 +1,17 @@
 'use strict';
 
 const fs = require('node:fs');
-const path = require('node:path');
-const os = require('node:os');
 
 const ui = require('./ui');
 const daemon = require('./daemon');
 const menubar = require('./menubar');
 const pair = require('./pair');
-const { BRIDGE_PORT } = require('./platform');
-
-const STATE_FILE = path.join(os.homedir(), '.clawix', 'state', 'bridge-status.json');
+const { BRIDGE_PORT, BRIDGE_STATUS_FILE } = require('./platform');
 const NO_PEER_TIP_AFTER_MS = 30_000;
 
 function readStatus() {
     try {
-        const raw = fs.readFileSync(STATE_FILE, 'utf8');
+        const raw = fs.readFileSync(BRIDGE_STATUS_FILE, 'utf8');
         return JSON.parse(raw);
     } catch (e) {
         return null;
