@@ -67,7 +67,6 @@ struct EnhancementSettingsSheet: View {
     @AppStorage(EnhancementSettings.timeoutSecondsKey) private var timeoutSeconds = 7
     @AppStorage(EnhancementSettings.timeoutPolicyKey) private var timeoutPolicy = "retry"
     @AppStorage(EnhancementSettings.clipboardContextKey) private var clipboardContext = false
-    @AppStorage(EnhancementSettings.screenContextKey) private var screenContext = false
 
     @State private var apiKeyDraft: String = ""
     @State private var apiKeyVisible: Bool = false
@@ -313,18 +312,6 @@ struct EnhancementSettingsSheet: View {
                     .foregroundColor(Palette.textPrimary)
                 Spacer()
                 PillToggle(isOn: $clipboardContext)
-            }
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Send screen-capture text (OCR)")
-                        .font(BodyFont.system(size: 12.5, wght: 500))
-                        .foregroundColor(Palette.textPrimary)
-                    Text("Wired but inert until the OCR follow-up ships")
-                        .font(BodyFont.system(size: 11, wght: 500))
-                        .foregroundColor(Palette.textSecondary)
-                }
-                Spacer()
-                PillToggle(isOn: $screenContext)
             }
         }
     }

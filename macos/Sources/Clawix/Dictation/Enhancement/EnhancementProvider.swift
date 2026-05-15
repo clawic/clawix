@@ -20,7 +20,7 @@ protocol EnhancementProvider: Sendable {
     /// Send the raw transcript + the prompt that should drive the
     /// post-processing. Returns the enhanced text. `model` is the
     /// per-provider id the user picked; `context` is optional
-    /// clipboard/screen text the user may have opted into.
+    /// clipboard text the user may have opted into.
     func enhance(
         text: String,
         systemPrompt: String,
@@ -31,17 +31,12 @@ protocol EnhancementProvider: Sendable {
     ) async throws -> String
 }
 
-/// Optional extra context the enhancement step may consume. Both
-/// fields are nil when the user hasn't opted into clipboard/screen
-/// awareness (`EnhancementSettings.clipboardContextKey`).
+/// Optional extra context the enhancement step may consume. It is nil
+/// when the user hasn't opted into clipboard awareness.
 struct EnhancementContext: Sendable {
     /// Whatever's currently on `NSPasteboard.general` as a string
     /// (truncated to a safe length before being passed in).
     var clipboardText: String?
-    /// OCR-extracted text from the active window's screenshot. Wired
-    /// in a follow-up; for now this is always nil even when the toggle
-    /// is on.
-    var screenText: String?
 }
 
 extension EnhancementProvider {
@@ -49,7 +44,7 @@ extension EnhancementProvider {
     /// transcript is wrapped between explicit markers so the prompt
     /// can refer to it as `<<<TRANSCRIPT>>>` without confusing the
     /// model when the user prompt itself contains stray quotes.
-    /// Optional context (clipboard, screen) is appended after.
+    /// Optional context is appended after.
     func composeUserMessage(text: String, prompt: String, context: EnhancementContext?) -> String {
         var parts: [String] = []
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -59,9 +54,6 @@ extension EnhancementProvider {
         parts.append("<<<TRANSCRIPT>>>\n\(text)\n<<<END_TRANSCRIPT>>>")
         if let clip = context?.clipboardText, !clip.isEmpty {
             parts.append("Recent clipboard for context:\n\(clip.prefix(2000))")
-        }
-        if let screen = context?.screenText, !screen.isEmpty {
-            parts.append("Screen context:\n\(screen.prefix(2000))")
         }
         return parts.joined(separator: "\n\n")
     }

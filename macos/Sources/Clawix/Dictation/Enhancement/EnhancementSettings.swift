@@ -2,8 +2,7 @@ import Foundation
 
 /// Centralized read/write of every UserDefaults key the AI enhancement
 /// module owns. Kept in one struct so settings UI doesn't end up with
-/// a scattered swarm of `@AppStorage` keys, and so the future
-/// JSON-export feature (#26) has one source of truth to enumerate.
+/// a scattered swarm of `@AppStorage` keys.
 enum EnhancementSettings {
 
     // MARK: - Keys
@@ -44,7 +43,6 @@ enum EnhancementSettings {
     // MARK: Context awareness
 
     static let clipboardContextKey = "dictation.enhancement.clipboardContext"
-    static let screenContextKey = "dictation.enhancement.screenContext"
 
     // MARK: Defaults
 
@@ -69,9 +67,6 @@ enum EnhancementSettings {
         }
         if defaults.object(forKey: clipboardContextKey) == nil {
             defaults.set(false, forKey: clipboardContextKey)
-        }
-        if defaults.object(forKey: screenContextKey) == nil {
-            defaults.set(false, forKey: screenContextKey)
         }
         // Defaults for built-in models per provider, to give first-run
         // users a sensible value to point at.

@@ -109,8 +109,7 @@ final class EnhancementService {
             let context = EnhancementContext(
                 clipboardText: defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
                     ? clipboardSnapshot()
-                    : nil,
-                screenText: nil
+                    : nil
             )
             do {
                 let client = try await AIClientFactory.client(for: routed.account, model: routed.model)
@@ -142,8 +141,7 @@ final class EnhancementService {
         let context = EnhancementContext(
             clipboardText: defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
                 ? clipboardSnapshot()
-                : nil,
-            screenText: nil // Wired in a follow-up (ScreenCaptureKit + OCR).
+                : nil
         )
 
         let maxAttempts = policy == "retry" ? 3 : 1
@@ -192,9 +190,6 @@ final class EnhancementService {
         parts.append("<<<TRANSCRIPT>>>\n\(text)\n<<<END_TRANSCRIPT>>>")
         if let clip = context?.clipboardText, !clip.isEmpty {
             parts.append("Recent clipboard for context:\n\(clip.prefix(2000))")
-        }
-        if let screen = context?.screenText, !screen.isEmpty {
-            parts.append("Screen context:\n\(screen.prefix(2000))")
         }
         return parts.joined(separator: "\n\n")
     }
