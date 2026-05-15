@@ -748,8 +748,8 @@ final class AgentStore: ObservableObject {
     /// every plugged-in personality's `prompt.md` (in order) and
     /// appends the agent's free-text instructions at the bottom. The
     /// daemon receives the result through `WireAgent.systemPromptResolved`
-    /// when a thread is opened; if the resolver fails the daemon
-    /// falls back to the legacy runtime-default behaviour.
+    /// when a thread is opened; empty output intentionally lets the
+    /// daemon apply its built-in runtime defaults.
     func resolvedSystemPrompt(for agent: Agent) -> String {
         var parts: [String] = []
         for pid in agent.personalityIds {

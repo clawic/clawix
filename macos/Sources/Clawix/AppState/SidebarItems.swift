@@ -10,8 +10,6 @@ extension AppState {
     static let chatSidebarsKey = "ChatSidebars"
     static let globalSidebarKey = "GlobalSidebar"
     static let hostFaviconsKey = "HostFavicons"
-    static let legacyBrowserStateKey = "BrowserTabs"
-    static let legacyBrowserActiveKey = "BrowserActiveTabId"
 
     /// UUID of the chat the user is currently viewing, if any. Returns nil
     /// for non-chat routes (home, settings, etc.) so write-time accessors
@@ -438,16 +436,6 @@ extension AppState {
                     FaviconCache.shared.prefetch(favicon)
                 }
             }
-        }
-        // Drop legacy global keys from earlier versions where browser tabs
-        // were app-wide instead of per-chat. Without an owning chat there
-        // is nowhere to migrate them to, so the cleanest path is to wipe
-        // the keys and let the user reopen what they need.
-        if defaults.object(forKey: AppState.legacyBrowserStateKey) != nil {
-            defaults.removeObject(forKey: AppState.legacyBrowserStateKey)
-        }
-        if defaults.object(forKey: AppState.legacyBrowserActiveKey) != nil {
-            defaults.removeObject(forKey: AppState.legacyBrowserActiveKey)
         }
     }
 

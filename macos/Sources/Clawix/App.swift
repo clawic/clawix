@@ -810,10 +810,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             await ClawJSServiceManager.shared.start()
         }
-        // Wire the audio catalog client + run the one-shot legacy
-        // migration the first time the supervisor publishes
-        // `.audio = .ready`. Idempotent: the marker file in the data
-        // dir prevents repeat runs.
+        // Wire the audio catalog client the first time the supervisor
+        // publishes `.audio = .ready` or `.readyFromDaemon`.
         AudioCatalogBootstrap.shared.start()
         // Tasks mini-app stops here. The hooks below either touch
         // shared LaunchAgent state or register a global hotkey, both of

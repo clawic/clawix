@@ -3697,20 +3697,6 @@
     },
     {
       "canonicality" : "hostOnly",
-      "id" : "clawix.prefs.dictation.autoEnter",
-      "key" : "dictation.autoEnter",
-      "kind" : "preferenceKey",
-      "language" : "swift",
-      "lifecycle" : "durable",
-      "name" : "Dictation auto enter",
-      "owner" : "clawix",
-      "privacy" : "userData",
-      "project" : "macos",
-      "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
-    },
-    {
-      "canonicality" : "hostOnly",
       "id" : "clawix.prefs.dictation.autoSendKey",
       "key" : "dictation.autoSendKey",
       "kind" : "appStorageKey",

@@ -142,7 +142,6 @@ final class DictationCoordinator: ObservableObject {
     /// sentinel `"auto"` means "let Whisper detect".
     nonisolated static let injectDefaultsKey = "dictation.injectText"
     nonisolated static let restoreClipboardDefaultsKey = "dictation.restoreClipboard"
-    nonisolated static let autoEnterDefaultsKey = "dictation.autoEnter"
     nonisolated static let autoSendKeyDefaultsKey = "dictation.autoSendKey"
     nonisolated static let languageDefaultsKey = "dictation.language"
     nonisolated static let restoreClipboardDelayMsKey = "dictation.restoreClipboardDelayMs"
@@ -184,12 +183,7 @@ final class DictationCoordinator: ObservableObject {
         }
 
         if defaults.object(forKey: Self.autoSendKeyDefaultsKey) == nil {
-            if let legacy = defaults.object(forKey: Self.autoEnterDefaultsKey) as? Bool {
-                let migrated: DictationAutoSendKey = legacy ? .enter : .none
-                defaults.set(migrated.rawValue, forKey: Self.autoSendKeyDefaultsKey)
-            } else {
-                defaults.set(DictationAutoSendKey.none.rawValue, forKey: Self.autoSendKeyDefaultsKey)
-            }
+            defaults.set(DictationAutoSendKey.none.rawValue, forKey: Self.autoSendKeyDefaultsKey)
         }
 
         if defaults.object(forKey: Self.restoreClipboardDelayMsKey) == nil {

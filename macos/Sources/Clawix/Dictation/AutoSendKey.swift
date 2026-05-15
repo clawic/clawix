@@ -8,9 +8,7 @@ import Carbon.HIToolbox
 /// destination: plain Return for chat fields, Shift+Return for
 /// multiline fields, Cmd+Return for command-submit fields.
 ///
-/// Persisted via UserDefaults under `dictation.autoSendKey`. The
-/// previous bool key (`dictation.autoEnter`) is migrated on app boot in
-/// `DictationCoordinator.init`: false → `.none`, true → `.enter`.
+/// Persisted via UserDefaults under `dictation.autoSendKey`.
 public enum DictationAutoSendKey: String, CaseIterable, Codable, Sendable {
     /// Don't send — leave the cursor where the paste landed.
     case none

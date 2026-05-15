@@ -830,7 +830,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.customModel", "Custom transcription model", ClawixPersistentSurfaceKeys.dictationCustomModel, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.injectText", "Dictation inject text", DictationCoordinator.injectDefaultsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.restoreClipboard", "Dictation restore clipboard", DictationCoordinator.restoreClipboardDefaultsKey, PersistentSurfaceKind.appStorageKey),
-            ("clawix.prefs.dictation.autoEnter", "Dictation auto enter", DictationCoordinator.autoEnterDefaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.autoSendKey", "Dictation auto send key", DictationCoordinator.autoSendKeyDefaultsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.language", "Dictation language", DictationCoordinator.languageDefaultsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.restoreClipboardDelayMs", "Dictation restore clipboard delay", DictationCoordinator.restoreClipboardDelayMsKey, PersistentSurfaceKind.appStorageKey),

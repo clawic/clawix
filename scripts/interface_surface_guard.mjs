@@ -325,10 +325,37 @@ for (const pattern of ["hotkeyMigratedV2", "dictation.hotkey.migratedV2", "Dicta
     fail(`PersistentSurfaceRegistry.swift exposes clean-v1 incompatible hotkey migration ${JSON.stringify(pattern)}`);
   }
 }
+for (const pattern of ["autoEnterDefaultsKey", "dictation.autoEnter", "Dictation auto enter"]) {
+  if (persistentSurfaceRegistry.includes(pattern)) {
+    fail(`PersistentSurfaceRegistry.swift exposes clean-v1 incompatible dictation auto-enter key ${JSON.stringify(pattern)}`);
+  }
+}
 
 const appSource = read("macos/Sources/Clawix/App.swift");
 if (appSource.includes("migrateLegacySidebarPrefs")) {
   fail("App.swift must not run pre-v1 sidebar preference migration");
+}
+if (appSource.includes("one-shot legacy")) {
+  fail("App.swift must not describe audio catalog bootstrap as a legacy migration");
+}
+
+const sidebarItems = read("macos/Sources/Clawix/AppState/SidebarItems.swift");
+for (const pattern of ["legacyBrowserStateKey", "legacyBrowserActiveKey", "BrowserTabs", "BrowserActiveTabId"]) {
+  if (sidebarItems.includes(pattern)) {
+    fail(`SidebarItems.swift contains clean-v1 incompatible browser-tab legacy key ${JSON.stringify(pattern)}`);
+  }
+}
+
+const dictationCoordinator = read("macos/Sources/Clawix/Dictation/DictationCoordinator.swift");
+for (const pattern of ["autoEnterDefaultsKey", "dictation.autoEnter"]) {
+  if (dictationCoordinator.includes(pattern)) {
+    fail(`DictationCoordinator.swift contains clean-v1 incompatible auto-enter migration ${JSON.stringify(pattern)}`);
+  }
+}
+
+const autoSendKey = read("macos/Sources/Clawix/Dictation/AutoSendKey.swift");
+if (autoSendKey.includes("dictation.autoEnter")) {
+  fail("AutoSendKey.swift must not document pre-v1 auto-enter migration");
 }
 
 const sidebarView = read("macos/Sources/Clawix/SidebarView.swift");
