@@ -55,7 +55,7 @@ struct PublishingHomeView: View {
             .frame(width: 220)
             if tab.wrappedValue == .calendar {
                 Button {
-                    appState.navigate(to: .publishingComposer(prefillBody: nil))
+                    appState.navigate(to: .publishingComposer(prefillBody: nil, prefillScheduleAt: nil))
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")

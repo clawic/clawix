@@ -50,7 +50,7 @@ struct ChatMessageEntryView: View {
                 appState.imagePreviewURL = url
             },
             onPushToPublishing: { body in
-                appState.navigate(to: .publishingComposer(prefillBody: body))
+                appState.navigate(to: .publishingComposer(prefillBody: body, prefillScheduleAt: nil))
             },
             publishingReady: publishingReady
         )

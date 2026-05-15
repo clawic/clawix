@@ -167,9 +167,6 @@ private struct AgentCard: View {
 // MARK: - Avatar badge
 
 /// Standardised avatar: tinted ClawixLogoIcon on a faint dark squircle.
-/// Custom-image avatars fall back to the tinted logo while the image
-/// loader is still being wired (today the user picks a tint hex; image
-/// uploads are post-MVP).
 struct AgentAvatarBadge: View {
     let avatar: AgentAvatar
     var size: CGFloat = 36

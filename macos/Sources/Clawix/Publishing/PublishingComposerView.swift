@@ -4,11 +4,13 @@ import SwiftUI
 /// Schedule). Submits a single-variant `PostSpec` to publishing and navigates
 /// back to `.publishingHome` on success. The `prefillBody` argument is set
 /// when the user pushes an assistant message into the composer via
-/// `AssistantMessageBubble`'s "Push to publishing" button.
+/// `AssistantMessageBubble`'s "Push to publishing" button; `prefillScheduleAt`
+/// is set when the user opens the composer from a calendar date.
 struct PublishingComposerView: View {
     enum ScheduleKind: String, CaseIterable { case now, datetime, draft }
 
     let prefillBody: String?
+    let prefillScheduleAt: Date?
 
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var manager: PublishingManager
@@ -62,6 +64,10 @@ struct PublishingComposerView: View {
         .onAppear {
             if let prefillBody, !prefillBody.isEmpty, self.draft.isEmpty {
                 self.draft = prefillBody
+            }
+            if let prefillScheduleAt {
+                scheduleKind = .datetime
+                scheduleAt = prefillScheduleAt
             }
             if manager.state == .idle { manager.bootstrap() }
         }

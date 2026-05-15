@@ -122,8 +122,9 @@ enum SidebarRoute: Equatable {
     /// month/week calendar of scheduled posts.
     case publishingHome
     /// Publishing composer panel. `prefillBody` is non-nil when the user
-    /// pushed an assistant message into the composer.
-    case publishingComposer(prefillBody: String?)
+    /// pushed an assistant message into the composer; `prefillScheduleAt`
+    /// is set when opening the composer from a calendar day.
+    case publishingComposer(prefillBody: String?, prefillScheduleAt: Date?)
     /// Publishing channels list. Shows every family with its connect / coming
     /// soon state.
     case publishingChannels

@@ -246,11 +246,13 @@ struct PublishingCalendarView: View {
     }
 
     private func openComposer(for date: Date) {
-        // Future: pass a default `scheduled_at` for that day at 09:00. The
-        // composer currently exposes a date+time picker that the user can
-        // overwrite; pre-populating it is a v1.1 nicety.
-        _ = date
-        appState.navigate(to: .publishingComposer(prefillBody: nil))
+        let scheduledAt = calendar.date(
+            bySettingHour: 9,
+            minute: 0,
+            second: 0,
+            of: date,
+        ) ?? date
+        appState.navigate(to: .publishingComposer(prefillBody: nil, prefillScheduleAt: scheduledAt))
     }
 
     private func reload() async {

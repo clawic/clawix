@@ -186,8 +186,8 @@ struct ContentView: View {
         case .connectionsHome: return "connections-home"
         case .connectionDetail(let id): return "connection-detail-\(id)"
         case .publishingHome: return "publishing-home"
-        case .publishingComposer(let prefill):
-            return "publishing-composer-\(prefill?.hashValue ?? 0)"
+        case .publishingComposer(let prefill, let scheduleAt):
+            return "publishing-composer-\(prefill?.hashValue ?? 0)-\(scheduleAt?.timeIntervalSince1970 ?? 0)"
         case .publishingChannels: return "publishing-channels"
         case .lifeHome: return "life-home"
         case .lifeVertical(let id): return "life-\(id)"
@@ -308,7 +308,8 @@ struct ContentView: View {
                             case .connectionsHome:            ConnectionsHomeView()
                             case .connectionDetail(let id):   ConnectionDetailView(connectionId: id)
                             case .publishingHome:                 PublishingHomeView()
-                            case .publishingComposer(let prefill): PublishingComposerView(prefillBody: prefill)
+                            case .publishingComposer(let prefill, let scheduleAt):
+                                PublishingComposerView(prefillBody: prefill, prefillScheduleAt: scheduleAt)
                             case .publishingChannels:             PublishingChannelsView()
                             case .lifeHome:                   LifeHomeScreen()
                             case .lifeVertical(let id):       LifeVerticalScreen(verticalId: id)

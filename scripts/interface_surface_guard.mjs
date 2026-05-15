@@ -668,6 +668,35 @@ for (const pattern of ["(try? await families)", "(try? await channels)"]) {
   }
 }
 
+const publishingCalendarSource = read("macos/Sources/Clawix/Publishing/PublishingCalendarView.swift");
+for (const pattern of ["Future:", "_ = date", "prefillScheduleAt: nil))"]) {
+  if (publishingCalendarSource.includes(pattern)) {
+    fail(`PublishingCalendarView.swift must prefill composer schedule dates instead of leaving calendar-cell scheduling provisional: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const publishingComposerSource = read("macos/Sources/Clawix/Publishing/PublishingComposerView.swift");
+if (!publishingComposerSource.includes("let prefillScheduleAt: Date?")) {
+  fail("PublishingComposerView.swift must accept calendar-provided schedule dates");
+}
+
+const agentModelsSource = read("macos/Sources/Clawix/Agents/AgentModels.swift");
+for (const pattern of ["customImage", "imageRelativePath"]) {
+  if (agentModelsSource.includes(pattern)) {
+    fail(`AgentModels.swift must not keep unsupported custom-image avatar schema in the v1 surface: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const agentStoreSource = read("macos/Sources/Clawix/Agents/AgentStore.swift");
+if (agentStoreSource.includes("avatarImage")) {
+  fail("AgentStore.swift must not persist unsupported custom-image avatar fields in v1 agent records");
+}
+
+const skillsViewSource = read("macos/Sources/Clawix/Skills/SkillsView.swift");
+if (skillsViewSource.includes("placeholder; full editor")) {
+  fail("SkillsView.swift must not label the v1 new-skill sheet as a placeholder");
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

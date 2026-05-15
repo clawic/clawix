@@ -406,7 +406,7 @@ private struct SkillCardView: View {
     }
 }
 
-// MARK: - New skill sheet (placeholder; full editor in SkillDetailView)
+// MARK: - New skill sheet
 
 private struct SkillNewSheet: View {
     @ObservedObject var store: SkillsStore

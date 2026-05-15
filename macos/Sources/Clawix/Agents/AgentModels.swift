@@ -88,17 +88,12 @@ struct AgentAutonomyOverride: Equatable, Codable {
 
 enum AgentAvatarKind: String, Codable {
     case logoTint
-    case customImage
 }
 
 struct AgentAvatar: Equatable, Codable {
     var kind: AgentAvatarKind = .logoTint
-    /// Hex tint applied to `ClawixLogoIcon` when `kind == .logoTint`.
+    /// Hex tint applied to `ClawixLogoIcon`.
     var tintHex: String = "#7C9CFF"
-    /// Relative path under the agent's folder (e.g. `avatar.png`)
-    /// when `kind == .customImage`. The absolute path is composed by
-    /// `AgentStore` at read time.
-    var imageRelativePath: String?
 
     var tintColor: Color {
         AgentAvatar.color(fromHex: tintHex) ?? Color(red: 0.486, green: 0.612, blue: 1.0)

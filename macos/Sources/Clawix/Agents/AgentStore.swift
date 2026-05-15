@@ -242,7 +242,6 @@ final class AgentStore: ObservableObject {
             ("model", .string(agent.model)),
             ("avatarKind", .string(agent.avatar.kind.rawValue)),
             ("avatarTintHex", .string(agent.avatar.tintHex)),
-            ("avatarImage", .string(agent.avatar.imageRelativePath ?? "")),
             ("autonomyLevel", .string(agent.autonomyLevel.rawValue)),
             ("isBuiltin", .bool(agent.isBuiltin)),
             ("createdAt", .string(iso.string(from: agent.createdAt))),
@@ -371,11 +370,7 @@ final class AgentStore: ObservableObject {
             model: SimpleYaml.string(yaml, "model", default: runtime.defaultModel),
             avatar: AgentAvatar(
                 kind: avatarKind,
-                tintHex: SimpleYaml.string(yaml, "avatarTintHex", default: "#7C9CFF"),
-                imageRelativePath: {
-                    let p = SimpleYaml.string(yaml, "avatarImage")
-                    return p.isEmpty ? nil : p
-                }()
+                tintHex: SimpleYaml.string(yaml, "avatarTintHex", default: "#7C9CFF")
             ),
             instructionsFreeText: instructions,
             personalityIds: personalityIds,
