@@ -6,11 +6,6 @@ import Combine
 /// library at `~/.claw/skills/<kind>/<slug>/SKILL.md`), but Clawix
 /// holds a hot copy here so the UI stays responsive and reflects edits
 /// the moment the user makes them.
-///
-/// Wire transport: today the store works with seed data + UserDefaults
-/// so the UI is testable end-to-end without a daemon. When the bridge
-/// frames v6 land, `bind(daemon:)` swaps the local backend for the
-/// real one and the seed becomes a no-op fallback.
 @MainActor
 final class SkillsStore: ObservableObject {
 
@@ -45,13 +40,16 @@ final class SkillsStore: ObservableObject {
 
     // MARK: - Init / seed
 
-    init(seedBuiltins: Bool = true) {
+    private let frameworkClient: ClawJSFrameworkRecordsClient?
+
+    init(seedBuiltins: Bool = true, frameworkClient: ClawJSFrameworkRecordsClient? = nil) {
+        self.frameworkClient = frameworkClient ?? .shared
         if seedBuiltins {
             installSeedCatalog()
             installSeedSyncTargets()
         }
-        loadUserCatalogFromDefaults()
-        loadActiveFromDefaults()
+        loadUserCatalogFromFramework()
+        loadActiveFromFramework()
     }
 
     // MARK: - Catalog queries
@@ -100,8 +98,9 @@ final class SkillsStore: ObservableObject {
         (activeByScope[scopeTag] ?? []).contains(where: { $0.slug == slug })
     }
 
-    /// Toggle a skill on/off at the given scope. Persists to defaults
-    /// so toggles survive relaunches even before the bridge is wired.
+    /// Toggle a skill on/off at the given scope. Persistence is mirrored
+    /// into the framework skill surface so the host does not own the
+    /// activation record.
     func setActive(slug: String, scopeTag: String, active: Bool, params: [String: SkillParamValue]? = nil) {
         guard let skill = catalog.first(where: { $0.slug == slug }) else { return }
         var current = activeByScope[scopeTag] ?? []
@@ -122,7 +121,7 @@ final class SkillsStore: ObservableObject {
         } else {
             activeByScope[scopeTag] = current
         }
-        persistActiveToDefaults()
+        persistActiveToFramework()
     }
 
     /// Resolve the effective active set for a given chat context,
@@ -149,20 +148,20 @@ final class SkillsStore: ObservableObject {
 
     // MARK: - Editing (creation / update / removal)
 
-    /// Insert or replace a skill in the catalog. The bridge will later
-    /// persist this change to the central library; for now we keep it
-    /// in memory + UserDefaults so the UI iterates while ClawJS is
-    /// still being implemented in parallel.
+    /// Insert or replace a skill in the catalog and mirror user-created
+    /// records into ClawJS. Built-ins remain seed data until ClawJS ships
+    /// them as bundled skills.
     func upsert(_ skill: SkillSpec) {
         if let index = catalog.firstIndex(where: { $0.slug == skill.slug }) {
             catalog[index] = skill
         } else {
             catalog.append(skill)
         }
-        persistUserCatalogToDefaults()
+        persistUserCatalogToFramework()
     }
 
     func remove(slug: String) {
+        let removed = skill(slug: slug)
         catalog.removeAll { $0.slug == slug }
         // Also strip from any active set so the UI doesn't carry a
         // ghost reference.
@@ -174,8 +173,11 @@ final class SkillsStore: ObservableObject {
                 activeByScope[scope] = filtered
             }
         }
-        persistUserCatalogToDefaults()
-        persistActiveToDefaults()
+        if let removed, !removed.builtin {
+            try? frameworkClient?.deleteSkillRecord(slug: slug)
+        }
+        persistUserCatalogToFramework()
+        persistActiveToFramework()
     }
 
     /// Create an instance from a parametrizable template. Returns the
@@ -244,7 +246,7 @@ final class SkillsStore: ObservableObject {
             skill.syncTo.removeAll { $0 == target }
         }
         catalog[index] = skill
-        persistUserCatalogToDefaults()
+        persistUserCatalogToFramework()
     }
 
     func registerSyncTarget(_ target: SkillSyncTarget) {
@@ -259,16 +261,19 @@ final class SkillsStore: ObservableObject {
         syncTargets.removeAll { $0.id == id }
     }
 
-    // MARK: - Persistence (local UserDefaults until bridge is wired)
+    // MARK: - Persistence (framework-owned skill records)
 
-    nonisolated static let activeKey = "ClawixSkillsActiveByScope"
-    nonisolated static let userCatalogKey = "ClawixSkillsUserCatalog"
+    private static let userSkillKind = "clawix_skill"
+    private static let stateSkillKind = "clawix_state"
+    private static let activeStateSlug = "clawix-active-skills"
 
-    private func loadUserCatalogFromDefaults() {
-        guard let data = UserDefaults.standard.data(forKey: Self.userCatalogKey),
-              let decoded = try? JSONDecoder().decode([SkillSpec].self, from: data)
-        else { return }
-        for skill in decoded where !skill.builtin {
+    private func loadUserCatalogFromFramework() {
+        guard let records = try? frameworkClient?.listSkillRecords(kind: Self.userSkillKind) else { return }
+        for record in records {
+            guard let value = record.metadata?["clawixSkill"],
+                  let data = try? JSONEncoder().encode(value),
+                  let skill = try? JSONDecoder().decode(SkillSpec.self, from: data),
+                  !skill.builtin else { continue }
             if let index = catalog.firstIndex(where: { $0.slug == skill.slug }) {
                 catalog[index] = skill
             } else {
@@ -277,19 +282,26 @@ final class SkillsStore: ObservableObject {
         }
     }
 
-    private func persistUserCatalogToDefaults() {
-        let userSkills = catalog.filter { !$0.builtin }
-        if userSkills.isEmpty {
-            UserDefaults.standard.removeObject(forKey: Self.userCatalogKey)
-            return
-        }
-        if let data = try? JSONEncoder().encode(userSkills) {
-            UserDefaults.standard.set(data, forKey: Self.userCatalogKey)
+    private func persistUserCatalogToFramework() {
+        guard let frameworkClient else { return }
+        for skill in catalog where !skill.builtin {
+            var metadata: [String: SkillJSONValue] = [:]
+            if let value = Self.jsonValue(skill) {
+                metadata["clawixSkill"] = value
+            }
+            try? frameworkClient.upsertSkillRecord(
+                slug: skill.slug,
+                name: skill.name,
+                kind: Self.userSkillKind,
+                body: skill.body,
+                metadata: metadata
+            )
         }
     }
 
-    private func loadActiveFromDefaults() {
-        guard let data = UserDefaults.standard.data(forKey: Self.activeKey),
+    private func loadActiveFromFramework() {
+        guard let record = try? frameworkClient?.listSkillRecords(kind: Self.stateSkillKind).first(where: { $0.slug == Self.activeStateSlug }),
+              let data = record.body.data(using: .utf8),
               let decoded = try? JSONDecoder().decode([String: [ActiveSkillSnapshot]].self, from: data)
         else { return }
         activeByScope = decoded.mapValues { snapshots in
@@ -305,7 +317,7 @@ final class SkillsStore: ObservableObject {
         }
     }
 
-    private func persistActiveToDefaults() {
+    private func persistActiveToFramework() {
         let snapshot = activeByScope.mapValues { states in
             states.map { state in
                 ActiveSkillSnapshot(
@@ -317,12 +329,24 @@ final class SkillsStore: ObservableObject {
                 )
             }
         }
-        if let data = try? JSONEncoder().encode(snapshot) {
-            UserDefaults.standard.set(data, forKey: Self.activeKey)
+        if let data = try? JSONEncoder().encode(snapshot),
+           let body = String(data: data, encoding: .utf8) {
+            try? frameworkClient?.upsertSkillRecord(
+                slug: Self.activeStateSlug,
+                name: "Clawix active skills",
+                kind: Self.stateSkillKind,
+                body: body,
+                metadata: ["surface": .string("skills.activeByScope")]
+            )
         }
     }
 
-    /// On-disk shape (UserDefaults) for active set. Keeps Codable
+    private static func jsonValue<T: Encodable>(_ value: T) -> SkillJSONValue? {
+        guard let data = try? JSONEncoder().encode(value) else { return nil }
+        return try? JSONDecoder().decode(SkillJSONValue.self, from: data)
+    }
+
+    /// Framework persistence shape for the active set. Keeps Codable
     /// conformance simple by storing flat structs instead of relying
     /// on ActiveSkillState's identity-derived fields.
     private struct ActiveSkillSnapshot: Codable {

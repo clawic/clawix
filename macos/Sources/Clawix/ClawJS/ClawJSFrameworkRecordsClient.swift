@@ -49,6 +49,15 @@ struct ClawJSFrameworkRecordsClient {
         }
     }
 
+    struct SkillRecord: Decodable, Equatable {
+        let id: String
+        let slug: String
+        let kind: String
+        let name: String
+        let body: String
+        let metadata: [String: SkillJSONValue]?
+    }
+
     private struct ListResponse<T: Decodable>: Decodable {
         let items: [T]
     }
@@ -104,6 +113,91 @@ struct ClawJSFrameworkRecordsClient {
         _ = try runner.run(["snippets", "delete", slug, "--json"])
     }
 
+    func listSkillRecords(kind: String? = nil) throws -> [SkillRecord] {
+        var args = ["skills", "list", "--json"]
+        if let kind, !kind.isEmpty {
+            args += ["--kind", kind]
+        }
+        let data = try runner.run(args)
+        return try Self.decoder.decode(Envelope<ListResponse<SkillRecord>>.self, from: data).data.items
+    }
+
+    func upsertSkillRecord(
+        slug: String,
+        name: String,
+        kind: String,
+        body: String,
+        metadata: [String: SkillJSONValue] = [:]
+    ) throws {
+        var args = [
+            "skills", "upsert", slug,
+            "--name", name,
+            "--kind", kind,
+            "--body", body,
+            "--json",
+        ]
+        if !metadata.isEmpty {
+            args += ["--metadata", try Self.json(metadata)]
+        }
+        _ = try runner.run(args)
+    }
+
+    func deleteSkillRecord(slug: String) throws {
+        _ = try runner.run(["skills", "delete", slug, "--json"])
+    }
+
+    func listAgents() throws -> [Agent] {
+        let data = try runner.run(["agents", "list", "--for-host", "true", "--json"])
+        return try Self.decoder.decode(Envelope<ListResponse<Agent>>.self, from: data).data.items
+    }
+
+    func upsertAgent(_ agent: Agent) throws {
+        _ = try runner.run(["agents", "upsert", agent.id, "--record", try Self.json(agent), "--for-host", "true", "--json"])
+    }
+
+    func deleteAgent(id: String) throws {
+        _ = try runner.run(["agents", "delete", id, "--for-host", "true", "--json"])
+    }
+
+    func listPersonalities() throws -> [AgentPersonality] {
+        let data = try runner.run(["personalities", "list", "--for-host", "true", "--json"])
+        return try Self.decoder.decode(Envelope<ListResponse<AgentPersonality>>.self, from: data).data.items
+    }
+
+    func upsertPersonality(_ personality: AgentPersonality) throws {
+        _ = try runner.run(["personalities", "upsert", personality.id, "--record", try Self.json(personality), "--for-host", "true", "--json"])
+    }
+
+    func deletePersonality(id: String) throws {
+        _ = try runner.run(["personalities", "delete", id, "--for-host", "true", "--json"])
+    }
+
+    func listSkillCollections() throws -> [SkillCollection] {
+        let data = try runner.run(["skill-collections", "list", "--for-host", "true", "--json"])
+        return try Self.decoder.decode(Envelope<ListResponse<SkillCollection>>.self, from: data).data.items
+    }
+
+    func upsertSkillCollection(_ collection: SkillCollection) throws {
+        _ = try runner.run(["skill-collections", "upsert", collection.id, "--record", try Self.json(collection), "--for-host", "true", "--json"])
+    }
+
+    func deleteSkillCollection(id: String) throws {
+        _ = try runner.run(["skill-collections", "delete", id, "--for-host", "true", "--json"])
+    }
+
+    func listConnections() throws -> [Connection] {
+        let data = try runner.run(["connections", "list", "--for-host", "true", "--json"])
+        return try Self.decoder.decode(Envelope<ListResponse<Connection>>.self, from: data).data.items
+    }
+
+    func upsertConnection(_ connection: Connection, secretRef: String? = nil) throws {
+        _ = try runner.run(["connections", "upsert", connection.id, "--record", try Self.connectionJson(connection, secretRef: secretRef), "--for-host", "true", "--json"])
+    }
+
+    func deleteConnection(id: String) throws {
+        _ = try runner.run(["connections", "delete", id, "--for-host", "true", "--json"])
+    }
+
     func listProviderRoutes() throws -> [ProviderRoute] {
         let data = try runner.run(["providers", "routing", "list", "--json"])
         return try JSONDecoder().decode(Envelope<ListResponse<ProviderRoute>>.self, from: data).data.items
@@ -145,6 +239,35 @@ struct ClawJSFrameworkRecordsClient {
             "--enabled", enabled ? "true" : "false",
             "--json",
         ])
+    }
+
+    private static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }()
+
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
+    private static func json<T: Encodable>(_ value: T) throws -> String {
+        let data = try encoder.encode(value)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    private static func connectionJson(_ connection: Connection, secretRef: String?) throws -> String {
+        let data = try encoder.encode(connection)
+        guard var object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return String(data: data, encoding: .utf8) ?? "{}"
+        }
+        if let secretRef {
+            object["secretRef"] = secretRef
+        }
+        let merged = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        return String(data: merged, encoding: .utf8) ?? "{}"
     }
 
     @MainActor

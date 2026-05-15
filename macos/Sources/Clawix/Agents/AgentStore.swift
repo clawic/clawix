@@ -5,10 +5,11 @@ import ClawixCore
 import SecretsModels
 import SecretsVault
 
-/// Filesystem source-of-truth for agent / personality / skill-collection
-/// / connection records. All state lives under `~/.claw/` (overridable
-/// via `CLAW_HOME` for tests) per the layout documented in the
-/// workspace plan:
+/// UI facade for framework-owned agent / personality / skill-collection
+/// / connection records. The production path delegates reads and writes
+/// to `claw agents|personalities|skill-collections|connections`; the
+/// local filesystem implementation remains only as a test fixture and
+/// emergency fallback when a custom `home` is injected.
 ///
 /// ```
 /// ~/.claw/
@@ -20,11 +21,6 @@ import SecretsVault
 /// └── presets/                 # builtins
 /// ```
 ///
-/// The store reads + writes plain text (`SimpleYaml` for the index
-/// files, `*.md` for free-text fields, JSON for structured arrays). The
-/// SQLite database keeps a small cache for fast rendering on launch
-/// (handled by `AgentRepository`), but the filesystem version always
-/// wins on conflict.
 @MainActor
 final class AgentStore: ObservableObject {
 
@@ -39,18 +35,22 @@ final class AgentStore: ObservableObject {
 
     // MARK: - Init
 
-    init(home: URL? = nil) {
+    init(home: URL? = nil, frameworkClient: ClawJSFrameworkRecordsClient? = nil) {
         if let home {
             self.home = home
         } else {
             self.home = AgentStore.defaultHome()
         }
-        ensureDirectories()
-        ensureBuiltins()
+        self.frameworkClient = frameworkClient ?? (home == nil ? .shared : nil)
+        if self.frameworkClient == nil {
+            ensureDirectories()
+            ensureBuiltins()
+        }
         reloadAll()
     }
 
     private let home: URL
+    private let frameworkClient: ClawJSFrameworkRecordsClient?
 
     private static func defaultHome() -> URL {
         if let override = ProcessInfo.processInfo.environment[ClawEnv.home],
@@ -85,6 +85,21 @@ final class AgentStore: ObservableObject {
     // MARK: - Reload
 
     func reloadAll() {
+        if let frameworkClient {
+            do {
+                agents = try frameworkClient.listAgents()
+                personalities = try frameworkClient.listPersonalities()
+                skillCollections = try frameworkClient.listSkillCollections()
+                connections = try frameworkClient.listConnections()
+                return
+            } catch {
+                agents = [Agent.defaultCodex()]
+                personalities = []
+                skillCollections = []
+                connections = []
+                return
+            }
+        }
         agents = loadAgents()
         personalities = loadPersonalities()
         skillCollections = loadCollections()
@@ -170,6 +185,13 @@ final class AgentStore: ObservableObject {
     }
 
     func upsertAgent(_ agent: Agent) {
+        if let frameworkClient {
+            var copy = agent
+            copy.updatedAt = Date()
+            try? frameworkClient.upsertAgent(copy)
+            reloadAll()
+            return
+        }
         let folder = dir(forAgent: agent.id)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         var copy = agent
@@ -194,6 +216,11 @@ final class AgentStore: ObservableObject {
 
     func deleteAgent(id: String) {
         guard let agent = agent(id: id), !agent.isBuiltin else { return }
+        if let frameworkClient {
+            try? frameworkClient.deleteAgent(id: id)
+            reloadAll()
+            return
+        }
         let folder = dir(forAgent: id)
         try? FileManager.default.removeItem(at: folder)
         reloadAll()
@@ -385,6 +412,13 @@ final class AgentStore: ObservableObject {
     }
 
     func upsertAgentPersonality(_ p: AgentPersonality) {
+        if let frameworkClient {
+            var copy = p
+            copy.updatedAt = Date()
+            try? frameworkClient.upsertPersonality(copy)
+            reloadAll()
+            return
+        }
         let folder = dir(forAgentPersonality: p.id)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         var copy = p
@@ -394,6 +428,15 @@ final class AgentStore: ObservableObject {
     }
 
     func deleteAgentPersonality(id: String) {
+        if let frameworkClient {
+            try? frameworkClient.deletePersonality(id: id)
+            for var agent in agents where agent.personalityIds.contains(id) {
+                agent.personalityIds.removeAll { $0 == id }
+                try? frameworkClient.upsertAgent(agent)
+            }
+            reloadAll()
+            return
+        }
         let folder = dir(forAgentPersonality: id)
         try? FileManager.default.removeItem(at: folder)
         // Drop references from any agent that had it plugged in.
@@ -460,6 +503,13 @@ final class AgentStore: ObservableObject {
     }
 
     func upsertCollection(_ c: SkillCollection) {
+        if let frameworkClient {
+            var copy = c
+            copy.updatedAt = Date()
+            try? frameworkClient.upsertSkillCollection(copy)
+            reloadAll()
+            return
+        }
         let folder = dir(forCollection: c.id)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         var copy = c
@@ -469,6 +519,15 @@ final class AgentStore: ObservableObject {
     }
 
     func deleteCollection(id: String) {
+        if let frameworkClient {
+            try? frameworkClient.deleteSkillCollection(id: id)
+            for var agent in agents where agent.skillCollectionIds.contains(id) {
+                agent.skillCollectionIds.removeAll { $0 == id }
+                try? frameworkClient.upsertAgent(agent)
+            }
+            reloadAll()
+            return
+        }
         let folder = dir(forCollection: id)
         try? FileManager.default.removeItem(at: folder)
         for var agent in agents where agent.skillCollectionIds.contains(id) {
@@ -529,6 +588,13 @@ final class AgentStore: ObservableObject {
     }
 
     func upsertConnection(_ c: Connection) {
+        if let frameworkClient {
+            var copy = c
+            copy.updatedAt = Date()
+            try? frameworkClient.upsertConnection(copy)
+            reloadAll()
+            return
+        }
         let folder = dir(forConnection: c.id)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         var copy = c
@@ -587,6 +653,11 @@ final class AgentStore: ObservableObject {
                 )
             )
             try? FileManager.default.removeItem(at: folder.appendingPathComponent("auth.encrypted"))
+            if var connection = connection(id: connectionId), let frameworkClient {
+                connection.updatedAt = Date()
+                try? frameworkClient.upsertConnection(connection, secretRef: "vault://connections/\(connectionId)")
+                reloadAll()
+            }
         } catch {
             return
         }
@@ -670,6 +741,15 @@ final class AgentStore: ObservableObject {
     }
 
     func deleteConnection(id: String) {
+        if let frameworkClient {
+            try? frameworkClient.deleteConnection(id: id)
+            for var agent in agents where agent.integrationBindings.contains(where: { $0.connectionId == id }) {
+                agent.integrationBindings.removeAll { $0.connectionId == id }
+                try? frameworkClient.upsertAgent(agent)
+            }
+            reloadAll()
+            return
+        }
         let folder = dir(forConnection: id)
         try? FileManager.default.removeItem(at: folder)
         for var agent in agents where agent.integrationBindings.contains(where: { $0.connectionId == id }) {
