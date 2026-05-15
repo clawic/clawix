@@ -376,7 +376,7 @@ final class DaemonEngineHost: EngineHost {
             _ = try await backend.send(
                 method: "initialize",
                 params: InitializeParams(
-                    clientInfo: InitializeClientInfo(name: "Clawix Bridge", title: "Clawix", version: "1"),
+                    clientInfo: InitializeClientIdentity(name: "Clawix Bridge", title: "Clawix", version: "1"),
                     capabilities: InitializeCapabilities(extensionFields: true, optOutNotificationMethods: nil)
                 ),
                 timeoutSeconds: initialRequestTimeoutSeconds

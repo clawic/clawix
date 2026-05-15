@@ -240,7 +240,7 @@ enum RPCID: Codable, Hashable {
     }
 }
 
-struct InitializeClientInfo: Encodable {
+struct InitializeClientIdentity: Encodable {
     let name: String
     let title: String?
     let version: String
@@ -257,7 +257,7 @@ struct InitializeCapabilities: Encodable {
 }
 
 struct InitializeParams: Encodable {
-    let clientInfo: InitializeClientInfo
+    let clientInfo: InitializeClientIdentity
     let capabilities: InitializeCapabilities?
 }
 

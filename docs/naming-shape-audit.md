@@ -11,7 +11,7 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 69.
+- Naming warnings: 67.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
 
@@ -53,6 +53,9 @@ for staged rename/split work and must not be hidden by compressing code.
   `IoTDevicesView`, `IoTDeviceDetailView`, `addDevice`, `removeDevice`).
   Daemon wire keys and event names keep `thing` only where required by the
   current ClawJS IoT contract.
+- Backend initialize vocabulary: `InitializeClientInfo` was narrowed to
+  `InitializeClientIdentity` in the app and bridge protocol wrappers. The wire
+  field remains `clientInfo` because it belongs to the runtime schema.
 
 ## Validation snapshot
 
