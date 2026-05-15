@@ -115,10 +115,12 @@ enum LifeRegistry {
     }
 
     private static func loadEntries() -> [LifeRegistryEntry] {
-        if let url = Bundle.main.url(forResource: "life-registry", withExtension: "json"),
-           let data = try? Data(contentsOf: url),
-           let envelope = try? JSONDecoder().decode(RegistryEnvelope.self, from: data) {
-            return envelope.entries
+        for bundle in [Bundle.module, Bundle.main] {
+            if let url = bundle.url(forResource: "life-registry", withExtension: "json"),
+               let data = try? Data(contentsOf: url),
+               let envelope = try? JSONDecoder().decode(RegistryEnvelope.self, from: data) {
+                return envelope.entries
+            }
         }
         // Fallback embedded subset: every product-v1 vertical so the UI is
         // never empty even when the bundled registry resource is missing.
