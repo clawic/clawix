@@ -358,6 +358,20 @@ if (autoSendKey.includes("dictation.autoEnter")) {
   fail("AutoSendKey.swift must not document pre-v1 auto-enter migration");
 }
 
+const dictationCoordinatorSource = read("macos/Sources/Clawix/Dictation/DictationCoordinator.swift");
+for (const pattern of ["legacy `cloud` enum", "legacy implementation", "legacy cloud", "new routing"]) {
+  if (dictationCoordinatorSource.includes(pattern)) {
+    fail(`DictationCoordinator.swift must classify provider fallback as stable v1, not legacy: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const enhancementService = read("macos/Sources/Clawix/Dictation/Enhancement/EnhancementService.swift");
+for (const pattern of ["legacy provider chain", "legacy chain", "legacy implementations", "new-routing", "new AIClient routing"]) {
+  if (enhancementService.includes(pattern)) {
+    fail(`EnhancementService.swift must classify provider fallback as stable v1, not legacy: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const sidebarView = read("macos/Sources/Clawix/SidebarView.swift");
 for (const pattern of ["LegacySidebarOrganizationMode", "SidebarOrganizationMode", "migrateLegacySidebarPrefs"]) {
   if (sidebarView.includes(pattern)) {

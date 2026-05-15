@@ -602,7 +602,7 @@ final class DictationCoordinator: ObservableObject {
             trace("transcribe: routed-stt ok provider=\(routed.account.providerId.rawValue) chars=\(raw.count)")
             return autoFormat ? TranscriptFormatter.format(raw) : raw
         } catch {
-            trace("transcribe: routed-stt failed, falling back: \(error.localizedDescription)")
+            trace("transcribe: routed-stt failed, trying configured cloud provider: \(error.localizedDescription)")
             return nil
         }
     }
@@ -616,10 +616,10 @@ final class DictationCoordinator: ObservableObject {
         useVAD: Bool,
         autoFormat: Bool
     ) async throws -> String {
-        // New routing: if Settings → Model Providers has a default for
-        // STT cloud, prefer it over the legacy `cloud` enum. Falls back
-        // to the legacy implementation transparently if the routed call
-        // fails or the user hasn't picked a provider yet.
+        // Framework routing has priority when Settings → Model Providers
+        // defines an STT cloud route. The per-dictation cloud provider
+        // remains a stable v1 configuration path for users who pick the
+        // provider directly in Voice to Text settings.
         if let raw = try? await Self.routedSTTTranscribe(samples: samples, language: language, autoFormat: autoFormat) {
             return raw
         }

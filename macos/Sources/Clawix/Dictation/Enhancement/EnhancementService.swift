@@ -97,9 +97,10 @@ final class EnhancementService {
         let timeoutFromDefaults = defaults.integer(forKey: EnhancementSettings.timeoutSecondsKey)
         let timeout = timeoutFromDefaults > 0 ? timeoutFromDefaults : 7
 
-        // New routing: try Settings → Model Providers selection first.
-        // The legacy provider chain stays as a fallback for users who
-        // haven't picked a provider in the new panel yet.
+        // Framework routing has priority when Settings → Model Providers
+        // defines an enhancement route. The per-enhancement provider
+        // remains a stable v1 configuration path for users who pick the
+        // provider directly in Voice to Text settings.
         if let routed = FeatureRouting.resolve(
             feature: .enhancement,
             capability: .chat,
@@ -125,8 +126,7 @@ final class EnhancementService {
                 try? AIAccountSecretsStore.shared.touch(accountId: routed.account.id)
                 return answer.isEmpty ? raw : answer
             } catch {
-                NSLog("[Clawix.Enhancement] new-routing failed, falling back: %@", String(describing: error))
-                // Fall through to legacy chain below.
+                NSLog("[Clawix.Enhancement] framework routing failed, trying configured provider: %@", String(describing: error))
             }
         }
 
@@ -183,8 +183,8 @@ final class EnhancementService {
     }
 
     /// Mirrors the message composer in `EnhancementProvider` for the
-    /// new AIClient routing path so the model sees the same wrapper
-    /// the legacy implementations produce.
+    /// framework-routed AIClient path so every provider sees the same
+    /// transcript wrapper.
     private func composeUserMessage(text: String, prompt: String, context: EnhancementContext?) -> String {
         var parts: [String] = []
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
