@@ -910,7 +910,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.screenTools.autoDetectTextLanguage", "Screen tools auto detect text language", ScreenToolSettings.autoDetectTextLanguageKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.screenTools.previousAreaRect", "Screen tools previous area rect", ScreenToolSettings.previousAreaRectKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.useAppleScriptPaste", "AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPaste, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.useAppleScriptPasteLegacy", "Legacy AppleScript paste preference", ClawixPersistentSurfaceKeys.useAppleScriptPasteLegacy, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.bearer", "Bridge bearer token reference", ClawixPersistentSurfaceKeys.bridgeBearer, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.shortCode", "Bridge short code", ClawixPersistentSurfaceKeys.bridgeShortCode, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.bridge.coordinatorURL", "Bridge coordinator URL", ClawixPersistentSurfaceKeys.bridgeCoordinatorURL, PersistentSurfaceKind.preferenceKey),
@@ -932,7 +931,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.databaseWorkbench.queryDrafts", "Database workbench query drafts", "clawix.databaseWorkbench.queryDrafts.v1", PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.databaseWorkbench.history", "Database workbench history", "clawix.databaseWorkbench.history.v1", PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.databaseWorkbench.completeKey", "Database workbench completion key", "clawix.databaseWorkbench.completeKey", PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.hotkeyMigratedV2", "Dictation hotkey migrated v2", HotkeyManager.migratedV2Key, PersistentSurfaceKind.preferenceKey),
         ].map { id, name, key, kind in
             ClawixPersistentSurface.preference(id: id, name: name, key: key, kind: kind)
         }
@@ -1014,7 +1012,6 @@ enum ClawixPersistentSurfaceKeys {
     static let dictationCustomBaseURL = "dictation.transcription.baseURL.custom"
     static let dictationCustomModel = "dictation.transcription.model.custom"
     static let useAppleScriptPaste = "useAppleScriptPaste"
-    static let useAppleScriptPasteLegacy = "UseAppleScriptPaste"
     static let bridgeDefaultsSuite = "clawix.bridge"
     static let bridgeBearer = "ClawixBridge.Bearer.v1"
     static let bridgeShortCode = "ClawixBridge.ShortCode.v1"

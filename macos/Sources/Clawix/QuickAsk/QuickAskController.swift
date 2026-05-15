@@ -17,7 +17,6 @@ final class QuickAskController: ObservableObject {
 
     private let defaults = UserDefaults.standard
     private let bottomCenterKey = "quickAsk.bottomCenter"
-    private let legacyFrameKey = "quickAsk.panelFrame"
     private let chatIdKey = "quickAsk.activeChatId"
     private let defaultModelKey = "quickAsk.defaultModel"
 
@@ -820,16 +819,6 @@ final class QuickAskController: ObservableObject {
             let point = NSPointFromString(raw)
             if isPointOnAnyScreen(point) { return point }
             return nil
-        }
-        // One-shot migration from the old "full frame" key so users
-        // who already dragged the compact HUD do not see it jump back
-        // to default placement on the first launch after this change.
-        if let legacy = defaults.string(forKey: legacyFrameKey) {
-            let rect = NSRectFromString(legacy)
-            if rect.width > 100, rect.height > 50 {
-                let point = NSPoint(x: rect.midX, y: rect.minY + Self.shadowMargin)
-                if isPointOnAnyScreen(point) { return point }
-            }
         }
         return nil
     }

@@ -104,7 +104,6 @@ final class HotkeyManager {
 
     nonisolated static let modeDefaultsKey = "dictation.hotkeyMode"
     nonisolated static let triggerDefaultsKey = "dictation.hotkeyTrigger"
-    nonisolated static let migratedV2Key = "dictation.hotkey.migratedV2"
     /// Second-binding keys. `.off` by default so existing users see
     /// no behavior change unless they opt in.
     nonisolated static let mode2DefaultsKey = "dictation.hotkey2Mode"
@@ -145,15 +144,8 @@ final class HotkeyManager {
             Binding(slot: 1, triggerKey: Self.triggerDefaultsKey, modeKey: Self.modeDefaultsKey),
             Binding(slot: 2, triggerKey: Self.trigger2DefaultsKey, modeKey: Self.mode2DefaultsKey)
         ]
-        // One-shot migration. Earlier builds defaulted the trigger to
-        // `.rightCommand`, which fires on every Right ⌘ press and felt
-        // like a runaway. Force the trigger to `.off` once so the
-        // user has to opt in from Settings; subsequent launches honor
-        // whatever they pick.
-        let migrationKey = Self.migratedV2Key
-        if !defaults.bool(forKey: migrationKey) {
+        if defaults.object(forKey: Self.triggerDefaultsKey) == nil {
             defaults.set(DictationHotkeyTrigger.off.rawValue, forKey: Self.triggerDefaultsKey)
-            defaults.set(true, forKey: migrationKey)
         }
         // Default the second slot to off explicitly so the picker has
         // a value to render on first launch.

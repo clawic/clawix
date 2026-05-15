@@ -123,14 +123,6 @@ enum SidebarViewMode: String { case grouped, chronological }
 /// `ProjectOrdersRepository`.
 enum ProjectSortMode: String { case recent, creation, name, custom }
 
-/// Legacy mode kept only for one-shot migration. Older builds wrote
-/// values from this enum into `SidebarOrganizationMode`. Removed from the
-/// UI; `migrateLegacySidebarPrefs()` translates remaining values into
-/// `SidebarViewMode` + `ProjectSortMode` on first launch.
-private enum LegacySidebarOrganizationMode: String {
-    case byProject, recentProjects, chronological
-}
-
 /// UserDefaults suite used to persist sidebar preferences across launches.
 /// Same suite already used for the main window frame and browser state.
 enum SidebarPrefs {
@@ -142,39 +134,6 @@ enum SidebarPrefs {
     static func bool(forKey key: String, default fallback: Bool) -> Bool {
         if store.object(forKey: key) == nil { return fallback }
         return store.bool(forKey: key)
-    }
-
-    /// Translate the old `SidebarOrganizationMode` value (if present) into
-    /// the new `SidebarViewMode` + `ProjectSortMode` keys, then delete the
-    /// legacy key so subsequent launches are no-ops. Idempotent.
-    /// Mappings:
-    ///   byProject       -> grouped + custom (insertion-order ≈ manual)
-    ///   recentProjects  -> grouped + recent
-    ///   chronological   -> chronological (sort key untouched)
-    static func migrateLegacySidebarPrefs() {
-        let legacyKey = "SidebarOrganizationMode"
-        guard let raw = store.string(forKey: legacyKey),
-              let legacy = LegacySidebarOrganizationMode(rawValue: raw) else {
-            return
-        }
-        // Don't clobber values the user has already set explicitly via the
-        // new UI on a previous launch.
-        let viewKey = "SidebarViewMode"
-        let sortKey = "ProjectSortMode"
-        let alreadyMigrated = store.string(forKey: viewKey) != nil
-        if !alreadyMigrated {
-            switch legacy {
-            case .byProject:
-                store.set(SidebarViewMode.grouped.rawValue, forKey: viewKey)
-                store.set(ProjectSortMode.custom.rawValue, forKey: sortKey)
-            case .recentProjects:
-                store.set(SidebarViewMode.grouped.rawValue, forKey: viewKey)
-                store.set(ProjectSortMode.recent.rawValue, forKey: sortKey)
-            case .chronological:
-                store.set(SidebarViewMode.chronological.rawValue, forKey: viewKey)
-            }
-        }
-        store.removeObject(forKey: legacyKey)
     }
 }
 
