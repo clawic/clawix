@@ -11,9 +11,7 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 60 tracked warnings. The full local working tree currently
-  reports 81 warnings because 21 warnings come from untracked UI governance
-  files; those are outside this tracked baseline until that family is accepted.
+- Naming warnings: 78.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
 
@@ -43,6 +41,10 @@ for staged rename/split work and must not be hidden by compressing code.
   provider adapters, and persistence.
 - Web bridge exports: review `web/src/bridge/frames.ts` and `wire.ts` as large
   export surfaces.
+- UI governance docs: review newly added docs JSON names for role suffixes
+  (`*.registry.json`, `*.baseline.json`, `*.manifest.json`, or
+  `*.schema.json`) where they are owned data files rather than conventional
+  tool config.
 - Design builtins and persistent registry: expand compressed lists only when
   the next edit touches that area.
 - Broad Swift symbols: review `Manager`, `Helper`, `Data`, and `Info` only when
@@ -71,6 +73,8 @@ for staged rename/split work and must not be hidden by compressing code.
 - Secrets proxy grant vocabulary: `IssuedTokenInfo` is now `IssuedGrantToken`.
   The JSON response field remains `issuedToken`; only the local Swift type was
   clarified.
+- Secrets proxy redaction test vocabulary: broad test names using `Data` and
+  `Helper` now describe payload redaction and label behavior directly.
 
 ## Validation snapshot
 
