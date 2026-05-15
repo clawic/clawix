@@ -69,6 +69,7 @@ experimental switch. Every current surface must be one of:
 | --- | --- | --- | --- | --- | --- |
 | Simulators | Host | Developer sidebar items | Launcher/preflight dev tooling | Host dev state | Release visibility tests ensure it is not product v1 |
 | iOS Skills seed catalog | Framework | Local iOS layout scratch surface only, not product navigation | Blocked until iOS consumes real `skillsList`/`skillsView` bridge frames | No product storage; seed data only | Interface guard rejects iOS product navigation to `SkillsListView` |
+| Windows WinUI shell | Host | WinUI shell with visible `Phase 4` action stubs | Bridge/Core parity only; GUI actions are not v1 product commitments | Host-local dev state | Interface guard requires explicit `dev-only` classification while stubs remain |
 
 ## Guardrails
 

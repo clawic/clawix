@@ -18,6 +18,15 @@
       "validation": "Bridge fixture round-trip tests across Swift, Android, Windows, Web"
     },
     {
+      "id": "windows.winuiShell",
+      "status": "dev-only",
+      "owner": "host",
+      "humanSurface": "Windows WinUI shell with visible Phase 4 action stubs",
+      "programmaticSurface": "Bridge/Core parity only; GUI actions are not v1 product commitments",
+      "storageOwner": "host-local-dev-state",
+      "validation": "Interface guard requires this explicit dev-only classification while Phase 4 stubs remain"
+    },
+    {
       "id": "deepLinks.session",
       "status": "stable",
       "owner": "host",

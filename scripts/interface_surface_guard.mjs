@@ -709,6 +709,30 @@ if (iosChatListSource.includes("onOpenSkills")) {
   fail("ChatListView.swift must not keep a visible iOS Skills entry until the bridge consumes real skillsList/skillsView frames");
 }
 
+const windowsPhaseStubFiles = [
+  "windows/Clawix.App/MainWindow.xaml.cs",
+  "windows/Clawix.App/ViewModels/SidebarViewModel.cs",
+  "windows/Clawix.App/ViewModels/ComposerViewModel.cs",
+  "windows/Clawix.App/Views/LoginGateView.xaml.cs",
+  "windows/Clawix.App/Views/SidebarView.xaml.cs",
+  "windows/Clawix.App/Views/ComposerView.xaml.cs",
+  "windows/Clawix.App/Views/SecretsScreen.xaml.cs",
+  "windows/Clawix.App/Views/DictationOverlay.xaml.cs",
+  "windows/Clawix.App/Views/ProjectEditorSheet.xaml.cs",
+  "windows/Clawix.App/Views/MarkdownDocumentView.xaml.cs",
+  "windows/Clawix.App/Views/Settings/GeneralPage.xaml.cs",
+];
+const windowsHasPhaseStubs = windowsPhaseStubFiles.some((relativePath) => readOptional(relativePath).includes("Phase 4"));
+const windowsShellSurface = (registry.surfaces ?? []).find((surface) => surface.id === "windows.winuiShell");
+if (windowsHasPhaseStubs) {
+  if (windowsShellSurface?.status !== "dev-only") {
+    fail("Windows WinUI shell has Phase 4 action stubs and must remain explicitly dev-only");
+  }
+  if (!read("docs/interface-matrix.md").includes("| Windows WinUI shell |")) {
+    fail("interface matrix must classify the Windows WinUI shell as dev-only while Phase 4 action stubs remain");
+  }
+}
+
 const inertSkillsBridgeFramePatterns = [
   "skillsList",
   "skillsView",
