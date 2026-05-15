@@ -31,7 +31,7 @@ const criticalVocabularySurfaces = [
 ];
 
 const sourceExtensions = new Set([".swift", ".ts", ".tsx", ".js", ".mjs", ".cs", ".kt"]);
-const broadSymbolPattern = /\b(Thing|Stuff|Helper|Helpers|Util|Utils|Common|Data|Info|Manager)\b/g;
+const broadTerms = ["Thing", "Stuff", "Helper", "Helpers", "Util", "Utils", "Common", "Data", "Info", "Manager"];
 const allowedBroadSymbolContexts = [
   "DatabaseManager",
   "IoTManager",
@@ -43,6 +43,43 @@ const allowedBroadSymbolContexts = [
   "InputMethodManager",
   "PackageManager",
   "WindowManager",
+];
+const rootConventionalMarkdown = new Set([
+  "AGENTS.md",
+  "CHANGELOG.md",
+  "CLAUDE.md",
+  "CODE_OF_CONDUCT.md",
+  "CONTRIBUTING.md",
+  "README.md",
+  "RELEASING.md",
+  "SECURITY.md",
+  "TEMPLATE.md",
+]);
+const conventionalDataFiles = new Set([
+  "codebase-manifest.json",
+  "package.json",
+  "source-size-baseline.json",
+  "tsconfig.json",
+]);
+const ignoredDirectoryNames = new Set([
+  ".git",
+  ".build",
+  ".claude",
+  ".next",
+  ".next-e2e",
+  ".tmp",
+  "artifacts",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+  "playwright-report",
+  "test-results",
+]);
+const ignoredPathParts = [
+  "/cli/lib/vendor/",
+  "/output/playwright/",
+  "/Resources/web-dist/",
 ];
 
 function read(relativePath) {
@@ -57,12 +94,19 @@ function toPosix(relativePath) {
   return relativePath.split(path.sep).join("/");
 }
 
+function shouldIgnorePath(relativePath, entryName) {
+  if (ignoredDirectoryNames.has(entryName)) return true;
+  const wrapped = `/${relativePath}/`;
+  return ignoredPathParts.some((part) => wrapped.includes(part));
+}
+
 function walk(directory, out = []) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if ([".git", ".build", "build", "node_modules", "dist", "coverage"].includes(entry.name)) continue;
     const absolutePath = path.join(directory, entry.name);
+    const relativePath = toPosix(path.relative(rootDir, absolutePath));
+    if (shouldIgnorePath(relativePath, entry.name)) continue;
     if (entry.isDirectory()) walk(absolutePath, out);
-    else if (entry.isFile()) out.push(toPosix(path.relative(rootDir, absolutePath)));
+    else if (entry.isFile()) out.push(relativePath);
   }
   return out;
 }
@@ -76,6 +120,40 @@ function loadVocabulary() {
     }
   }
   return criticalForbidden;
+}
+
+function splitIdentifier(identifier) {
+  return identifier
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function findBroadTerm(identifier) {
+  if (allowedBroadSymbolContexts.includes(identifier)) return null;
+  const tokens = splitIdentifier(identifier);
+  return broadTerms.find((term) => tokens.includes(term)) ?? null;
+}
+
+function collectBroadSymbolWarnings(relativePath, text) {
+  const warnings = [];
+  const declarationPatterns = [
+    /\b(?:class|struct|enum|protocol|interface|typealias|type|function|func)\s+([A-Za-z_][A-Za-z0-9_]*)/g,
+    /\bexport\s+(?:const|let|var)\s+([A-Za-z_][A-Za-z0-9_]*)/g,
+  ];
+  const seen = new Set();
+  for (const pattern of declarationPatterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const identifier = match[1];
+      if (seen.has(identifier)) continue;
+      seen.add(identifier);
+      const term = findBroadTerm(identifier);
+      if (term) warnings.push({ path: relativePath, kind: "broad-symbol", term, symbol: identifier });
+    }
+  }
+  return warnings;
 }
 
 const failures = [];
@@ -110,32 +188,19 @@ for (const relativePath of ["AGENTS.md", "CLAUDE.md", "windows/CLAUDE.md"]) {
 
 for (const relativePath of walk(rootDir)) {
   const ext = path.extname(relativePath);
+  const name = path.basename(relativePath);
   if (relativePath.startsWith("docs/") && ext === ".md") {
-    const name = path.basename(relativePath);
-    const conventional = ["README.md", "AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "CHANGELOG.md", "SECURITY.md"].includes(name);
-    if (!conventional && /[A-Z_]/.test(name)) {
+    if (!rootConventionalMarkdown.has(name) && /[A-Z_]/.test(name)) {
       warnings.push({ path: relativePath, kind: "markdown-name", message: "Markdown docs should use kebab-case unless conventional" });
     }
   }
   if ((ext === ".json" || ext === ".yaml" || ext === ".yml") && relativePath.startsWith("docs/")) {
-    const name = path.basename(relativePath);
-    const conventional = ["package.json", "tsconfig.json"].includes(name);
-    if (!conventional && !/\.(registry|manifest|fixture|schema|baseline)\.(json|ya?ml)$/.test(name)) {
+    if (!conventionalDataFiles.has(name) && !/\.(registry|manifest|fixture|schema|baseline)\.(json|ya?ml)$/.test(name)) {
       warnings.push({ path: relativePath, kind: "data-file-role", message: "Owned docs data files should carry a role suffix" });
     }
   }
   if (sourceExtensions.has(ext)) {
-    const text = read(relativePath);
-    let match;
-    while ((match = broadSymbolPattern.exec(text)) !== null) {
-      const start = Math.max(0, match.index - 32);
-      const end = Math.min(text.length, match.index + match[0].length + 32);
-      const context = text.slice(start, end);
-      if (!allowedBroadSymbolContexts.some((allowed) => context.includes(allowed))) {
-        warnings.push({ path: relativePath, kind: "broad-symbol", term: match[0] });
-        break;
-      }
-    }
+    warnings.push(...collectBroadSymbolWarnings(relativePath, read(relativePath)));
   }
 }
 

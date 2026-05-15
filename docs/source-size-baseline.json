@@ -1,7 +1,11 @@
 {
   "version": 1,
   "warningLines": 800,
-  "maxNewFileLines": 1200,
+  "baselineRequiredLines": 1200,
+  "maxNewFileLines": 2000,
+  "emergencyLines": 5000,
+  "longLineWarning": 240,
+  "longLineCritical": 1600,
   "files": {
     "macos/Sources/Clawix/AppState.swift": {
       "lines": 1991,

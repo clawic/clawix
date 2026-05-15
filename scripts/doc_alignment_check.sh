@@ -31,6 +31,7 @@ for file in \
   "docs/interface-surface-clawix.registry.json" \
   "docs/naming-style-guide.md" \
   "docs/agentic-naming-guide.md" \
+  "docs/naming-shape-audit.md" \
   "docs/vocabulary.md" \
   "docs/vocabulary.registry.json" \
   "docs/adr/0001-claw-framework-host-boundary.md" \
@@ -113,6 +114,14 @@ for snippet in \
   "\"preferredTerm\": \"clawix-bridge\""
 do
   require_snippet "docs/vocabulary.registry.json" "$snippet"
+done
+
+for snippet in \
+  "Status: initial report" \
+  "Critical naming failures: 0" \
+  "Cleanup families"
+do
+  require_snippet "docs/naming-shape-audit.md" "$snippet"
 done
 
 for snippet in \
