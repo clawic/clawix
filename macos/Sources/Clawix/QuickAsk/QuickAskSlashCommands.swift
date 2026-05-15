@@ -2,7 +2,7 @@ import Foundation
 
 /// Persistent store for QuickAsk slash commands. Ships with a fixed
 /// set (`/search`, `/research`, `/imagine`, `/think`) and accepts
-/// user-defined entries via `UserDefaults` for custom workflows.
+/// user-defined entries via framework-owned snippets for custom workflows.
 struct QuickAskSlashCommand: Identifiable, Codable, Equatable {
     let id: UUID
     var trigger: String
@@ -28,7 +28,8 @@ final class QuickAskSlashCommandsStore: ObservableObject {
 
     @Published private(set) var customCommands: [QuickAskSlashCommand] = []
 
-    nonisolated static let defaultsKey = "quickAsk.slashCommandsCustom"
+    nonisolated static let snippetKind = "quickask_slash"
+    nonisolated static let slugPrefix = "quickask-slash-"
 
     static let builtIn: [QuickAskSlashCommand] = [
         QuickAskSlashCommand(trigger: "/search",   description: "Search the web"),
@@ -61,18 +62,43 @@ final class QuickAskSlashCommandsStore: ObservableObject {
 
     func remove(_ id: UUID) {
         customCommands.removeAll { $0.id == id }
+        try? ClawJSFrameworkRecordsClient.shared.deleteSnippet(slug: "\(Self.slugPrefix)\(id.uuidString.lowercased())")
         save()
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: Self.defaultsKey) else { return }
-        if let decoded = try? JSONDecoder().decode([QuickAskSlashCommand].self, from: data) {
-            customCommands = decoded
+        guard let records = try? ClawJSFrameworkRecordsClient.shared.listSnippets(kind: Self.snippetKind) else { return }
+        customCommands = records.compactMap { record in
+            let rawId = record.id.replacingOccurrences(of: "snippet-", with: "")
+            guard let id = UUID(uuidString: rawId),
+                  let trigger = record.metadata?["trigger"],
+                  let description = record.metadata?["description"] else { return nil }
+            let hasExpansion = record.metadata?["hasExpansion"] == "true"
+            return QuickAskSlashCommand(
+                id: id,
+                trigger: trigger,
+                description: description,
+                expansion: hasExpansion ? record.body : nil
+            )
         }
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(customCommands) else { return }
-        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+        for command in customCommands {
+            let id = command.id.uuidString.lowercased()
+            try? ClawJSFrameworkRecordsClient.shared.upsertSnippet(
+                id: id,
+                slug: "\(Self.slugPrefix)\(id)",
+                kind: Self.snippetKind,
+                title: command.trigger,
+                body: command.expansion ?? command.trigger,
+                shortcut: command.trigger,
+                metadata: [
+                    "trigger": command.trigger,
+                    "description": command.description,
+                    "hasExpansion": command.expansion == nil ? "false" : "true",
+                ]
+            )
+        }
     }
 }

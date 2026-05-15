@@ -6,30 +6,30 @@ import Foundation
 /// punctuation, or unfamiliar terms (proper nouns, brand names) that
 /// Whisper otherwise mangles.
 ///
-/// Stored as `[String: String]` keyed by ISO 639-1 language code with
-/// a JSON blob in UserDefaults. Defaults are deliberately short and
+/// Stored as framework-owned snippets keyed by ISO 639-1 language code.
+/// Defaults are deliberately short and
 /// neutral — long prompts eat into Whisper's 244-token window.
 @MainActor
 final class WhisperPromptStore: ObservableObject {
 
     static let shared = WhisperPromptStore()
 
-    nonisolated static let defaultsKey = "dictation.whisperPrompts"
+    nonisolated static let snippetKind = "dictation_whisper_prompt"
+    nonisolated static let slugPrefix = "dictation-whisper-"
 
     @Published private(set) var prompts: [String: String] {
         didSet { persist() }
     }
 
-    private let defaults: UserDefaults
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        if let data = defaults.data(forKey: Self.defaultsKey),
-           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-            self.prompts = decoded
-        } else {
-            self.prompts = Self.builtInDefaults
+    init() {
+        var seed = Self.builtInDefaults
+        if let records = try? ClawJSFrameworkRecordsClient.shared.listSnippets(kind: Self.snippetKind) {
+            for record in records {
+                guard let language = record.metadata?["language"], !language.isEmpty else { continue }
+                seed[language] = record.body
+            }
         }
+        self.prompts = seed
     }
 
     func prompt(for language: String?) -> String? {
@@ -54,8 +54,15 @@ final class WhisperPromptStore: ObservableObject {
     }
 
     private func persist() {
-        if let data = try? JSONEncoder().encode(prompts) {
-            defaults.set(data, forKey: Self.defaultsKey)
+        for (language, prompt) in prompts {
+            try? ClawJSFrameworkRecordsClient.shared.upsertSnippet(
+                id: "\(Self.slugPrefix)\(language)",
+                slug: "\(Self.slugPrefix)\(language)",
+                kind: Self.snippetKind,
+                title: "Whisper \(language)",
+                body: prompt.isEmpty ? " " : prompt,
+                metadata: ["language": language]
+            )
         }
     }
 

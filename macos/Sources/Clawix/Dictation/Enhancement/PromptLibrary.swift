@@ -1,17 +1,16 @@
 import Foundation
 
-/// Galería de prompts para AI Enhancement. Cada entry tiene un id
-/// estable (UUID hardcoded para los built-in para que persistan
-/// identificables al exportar/importar settings) + un title visible
-/// + un par system/user prompt.
+/// Prompt gallery for AI Enhancement. Each entry has a stable id
+/// (hardcoded UUID for built-ins so import/export can identify them),
+/// a visible title, and a system/user prompt pair.
 ///
-/// Built-in entries no se pueden eliminar; el usuario puede crear
-/// custom prompts adicionales que se persisten en JSON. La activa se
-/// guarda como UUID en `EnhancementSettings.activePromptKey`.
+/// Built-in entries cannot be deleted; the user can create additional
+/// custom prompts that persist as framework-owned snippets. The active
+/// prompt is stored as a UUID in `EnhancementSettings.activePromptKey`.
 struct EnhancementPrompt: Identifiable, Codable, Equatable {
     let id: UUID
-    /// `true` para los entries built-in (no eliminables, no editables
-    /// sin clonar). El usuario puede igualmente clonar y modificar.
+    /// `true` for built-in entries, which cannot be deleted or edited
+    /// unless cloned. The user can still clone and modify them.
     var isBuiltIn: Bool
     var title: String
     var systemPrompt: String
@@ -23,18 +22,15 @@ final class PromptLibrary: ObservableObject {
 
     static let shared = PromptLibrary()
 
-    nonisolated static let customPromptsKey = "dictation.enhancement.customPrompts"
+    nonisolated static let snippetKind = "dictation_enhancement_prompt"
+    nonisolated static let slugPrefix = "dictation-enhancement-"
 
     @Published private(set) var prompts: [EnhancementPrompt]
 
-    private let defaults: UserDefaults
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    init() {
         var seed = Self.builtIns
-        if let data = defaults.data(forKey: Self.customPromptsKey),
-           let custom = try? JSONDecoder().decode([EnhancementPrompt].self, from: data) {
-            seed.append(contentsOf: custom)
+        if let records = try? ClawJSFrameworkRecordsClient.shared.listSnippets(kind: Self.snippetKind) {
+            seed.append(contentsOf: records.compactMap(Self.prompt(from:)))
         }
         self.prompts = seed
     }
@@ -47,7 +43,7 @@ final class PromptLibrary: ObservableObject {
     /// when the user hasn't picked one yet (or picked one that since
     /// got deleted).
     func activePrompt() -> EnhancementPrompt {
-        let raw = defaults.string(forKey: EnhancementSettings.activePromptKey)
+        let raw = UserDefaults.standard.string(forKey: EnhancementSettings.activePromptKey)
         if let raw, let id = UUID(uuidString: raw), let p = prompt(byId: id) {
             return p
         }
@@ -55,7 +51,7 @@ final class PromptLibrary: ObservableObject {
     }
 
     func setActive(_ id: UUID) {
-        defaults.set(id.uuidString, forKey: EnhancementSettings.activePromptKey)
+        UserDefaults.standard.set(id.uuidString, forKey: EnhancementSettings.activePromptKey)
     }
 
     @discardableResult
@@ -83,14 +79,37 @@ final class PromptLibrary: ObservableObject {
     func deleteCustom(_ id: UUID) {
         guard let entry = prompts.first(where: { $0.id == id }), !entry.isBuiltIn else { return }
         prompts.removeAll { $0.id == id }
+        try? ClawJSFrameworkRecordsClient.shared.deleteSnippet(slug: "\(Self.slugPrefix)\(id.uuidString.lowercased())")
         persistCustom()
     }
 
     private func persistCustom() {
         let custom = prompts.filter { !$0.isBuiltIn }
-        if let data = try? JSONEncoder().encode(custom) {
-            defaults.set(data, forKey: Self.customPromptsKey)
+        for prompt in custom {
+            try? ClawJSFrameworkRecordsClient.shared.upsertSnippet(
+                id: prompt.id.uuidString.lowercased(),
+                slug: "\(Self.slugPrefix)\(prompt.id.uuidString.lowercased())",
+                kind: Self.snippetKind,
+                title: prompt.title,
+                body: prompt.userPrompt,
+                metadata: [
+                    "systemPrompt": prompt.systemPrompt,
+                    "isBuiltIn": "false",
+                ]
+            )
         }
+    }
+
+    private static func prompt(from record: ClawJSFrameworkRecordsClient.SnippetRecord) -> EnhancementPrompt? {
+        let rawId = record.id.replacingOccurrences(of: "snippet-", with: "")
+        guard let id = UUID(uuidString: rawId) else { return nil }
+        return EnhancementPrompt(
+            id: id,
+            isBuiltIn: false,
+            title: record.title,
+            systemPrompt: record.metadata?["systemPrompt"] ?? "",
+            userPrompt: record.body
+        )
     }
 
     // MARK: - Built-ins

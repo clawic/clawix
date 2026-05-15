@@ -63,7 +63,8 @@ final class QuickAskMentionsStore: ObservableObject {
 
     @Published private(set) var customPrompts: [QuickAskMentionPrompt] = []
 
-    nonisolated static let defaultsKey = "quickAsk.mentionPromptsCustom"
+    nonisolated static let snippetKind = "quickask_mention"
+    nonisolated static let slugPrefix = "quickask-mention-"
 
     private init() {
         load()
@@ -100,6 +101,7 @@ final class QuickAskMentionsStore: ObservableObject {
 
     func remove(_ id: UUID) {
         customPrompts.removeAll { $0.id == id }
+        try? ClawJSFrameworkRecordsClient.shared.deleteSnippet(slug: "\(Self.slugPrefix)\(id.uuidString.lowercased())")
         save()
     }
 
@@ -143,14 +145,29 @@ final class QuickAskMentionsStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = UserDefaults.standard.data(forKey: Self.defaultsKey) else { return }
-        if let decoded = try? JSONDecoder().decode([QuickAskMentionPrompt].self, from: data) {
-            customPrompts = decoded
+        guard let records = try? ClawJSFrameworkRecordsClient.shared.listSnippets(kind: Self.snippetKind) else { return }
+        customPrompts = records.compactMap { record in
+            let rawId = record.id.replacingOccurrences(of: "snippet-", with: "")
+            guard let id = UUID(uuidString: rawId) else { return nil }
+            return QuickAskMentionPrompt(
+                id: id,
+                name: record.title,
+                description: record.metadata?["description"] ?? "",
+                body: record.body
+            )
         }
     }
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(customPrompts) else { return }
-        UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+        for prompt in customPrompts {
+            try? ClawJSFrameworkRecordsClient.shared.upsertSnippet(
+                id: prompt.id.uuidString.lowercased(),
+                slug: "\(Self.slugPrefix)\(prompt.id.uuidString.lowercased())",
+                kind: Self.snippetKind,
+                title: prompt.name,
+                body: prompt.body,
+                metadata: ["description": prompt.description]
+            )
+        }
     }
 }
