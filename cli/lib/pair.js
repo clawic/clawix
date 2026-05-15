@@ -65,10 +65,23 @@ function readPairingPayload() {
         host: lan || '0.0.0.0',
         port: BRIDGE_PORT,
         token: bearer,
-        macName: os.hostname(),
+        hostDisplayName: os.hostname(),
         shortCode: shortCode || null,
         tailscaleHost: tail || null
     };
+}
+
+function publicPairingPayload(payload, { includeShortCode = true } = {}) {
+    const out = {
+        v: payload.v,
+        host: payload.host,
+        port: payload.port,
+        token: payload.token,
+        hostDisplayName: payload.hostDisplayName
+    };
+    if (includeShortCode && payload.shortCode) out.shortCode = payload.shortCode;
+    if (payload.tailscaleHost) out.tailscaleHost = payload.tailscaleHost;
+    return out;
 }
 
 function show({ json = false } = {}) {
@@ -83,9 +96,7 @@ function show({ json = false } = {}) {
     }
 
     if (json) {
-        const out = { v: payload.v, host: payload.host, port: payload.port, token: payload.token, macName: payload.macName };
-        if (payload.shortCode) out.shortCode = payload.shortCode;
-        if (payload.tailscaleHost) out.tailscaleHost = payload.tailscaleHost;
+        const out = publicPairingPayload(payload);
         process.stdout.write(JSON.stringify(out) + '\n');
         return;
     }
@@ -101,14 +112,7 @@ function show({ json = false } = {}) {
     // the scan path (the long bearer is what authenticates), and
     // dropping it knocks ~26 bytes off the payload, so the QR fits in a
     // smaller version and therefore in narrower terminal windows.
-    const qrJson = JSON.stringify({
-        v: payload.v,
-        host: payload.host,
-        port: payload.port,
-        token: payload.token,
-        macName: payload.macName,
-        tailscaleHost: payload.tailscaleHost || undefined
-    });
+    const qrJson = JSON.stringify(publicPairingPayload(payload, { includeShortCode: false }));
     qr.generate(qrJson, { small: true });
 
     if (payload.shortCode) {
@@ -117,4 +121,4 @@ function show({ json = false } = {}) {
     }
 }
 
-module.exports = { show, readPairingPayload };
+module.exports = { show, readPairingPayload, publicPairingPayload };

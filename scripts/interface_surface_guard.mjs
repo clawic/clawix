@@ -135,6 +135,7 @@ const staleContractTargets = [
   "packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md",
   "packages/ClawixCore/Sources/ClawixCore/BridgeModels.swift",
   "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift",
+  "cli/lib/pair.js",
   "packages/ClawixEngine/Sources/ClawixEngine/EngineHost.swift",
   "packages/ClawixEngine/Sources/ClawixEngine/BridgeSession.swift",
   "packages/ClawixEngine/Sources/ClawixEngine/BridgeSessionNIO.swift",
