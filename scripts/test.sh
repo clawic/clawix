@@ -196,6 +196,7 @@ live_tests() {
 fast() {
   run bash "$ROOT_DIR/macos/scripts/public_hygiene_check.sh"
   run node "$ROOT_DIR/scripts/tracked-ignored-check.mjs"
+  run node "$ROOT_DIR/scripts/check-clawjs-skills-sync.mjs"
   run node "$ROOT_DIR/scripts/source-size-check.mjs"
   run node "$ROOT_DIR/scripts/codebase-manifest.mjs" --check
   run node "$ROOT_DIR/scripts/package_surface_guard.mjs"
