@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "sidebar-row",
+  "status": "canonical",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": [
+    "STYLE.md#64-sidebar",
+    "macos/Sources/Clawix/SidebarView.swift",
+    "macos/Sources/Clawix/Sidebar/SidebarView+Projects.swift",
+    "web/src/screens/sidebar/sidebar-view.tsx"
+  ],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": {
+    "macos": {
+      "rowHeight": 35,
+      "cornerRadius": 9,
+      "leadingPadding": 8,
+      "trailingPadding": 3,
+      "iconColumnWidth": 18,
+      "sectionBottomSpacer": 9.75
+    },
+    "ios": { "source": "platform parity mapping required before protected approval" },
+    "android": { "source": "platform parity mapping required before protected approval" },
+    "web": { "source": "platform parity mapping required before protected approval" }
+  },
+  "copy": {
+    "labelMaxWords": 4,
+    "captionMaxWords": 8,
+    "visibleNamesAreCanon": true
+  },
+  "componentExtraction": {
+    "policy": "required-when-repeated-with-state",
+    "api": "limited-slots"
+  },
+  "validation": {
+    "public": ["node scripts/ui_governance_guard.mjs"],
+    "private": ["sidebar-row geometry and screenshot baseline"]
+  }
+}

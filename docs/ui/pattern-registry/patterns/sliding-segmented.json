@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "sliding-segmented",
+  "status": "canonical",
+  "platforms": ["macos", "web", "ios", "android"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": ["STYLE.md#62-slidingsegmented-the-only-2-n-selector", "macos/Sources/Clawix/Settings/SettingsView+Controls.swift", "web/src/components/sliding-segmented.tsx"],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": { "height": 30, "outerCornerRadius": 13, "indicatorCornerRadius": 10, "fontSize": 11.5, "animationDuration": 0.32 },
+  "copy": { "labelMaxWords": 4, "visibleNamesAreCanon": true },
+  "componentExtraction": { "policy": "required", "api": "limited-slots" },
+  "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["segmented control geometry baseline"] }
+}

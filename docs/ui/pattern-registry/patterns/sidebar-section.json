@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "sidebar-section",
+  "status": "canonical",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": ["STYLE.md#64-sidebar", "macos/Sources/Clawix/SidebarView.swift"],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": { "macos": { "headerFontSize": 13.5, "headerWeight": 500, "horizontalPadding": 34, "verticalPadding": 4, "expandCollapseDuration": 0.18 } },
+  "copy": { "labelMaxWords": 4, "visibleNamesAreCanon": true },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["sidebar section state baseline"] }
+}

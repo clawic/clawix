@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "sheet-chrome",
+  "status": "mapped-needs-baseline",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": ["macos/Sources/Clawix/SheetChrome.swift", "web/src/components/ui/button.tsx"],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": { "source": "sheet buttons and surfaces must use registered button/menu/card recipes" },
+  "copy": { "primaryActionLabelMaxWords": 4, "visibleNamesAreCanon": true },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["sheet chrome state screenshots"] }
+}

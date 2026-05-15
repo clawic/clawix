@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "policy": "External references are inspiration only. They are non-canonical until the user explicitly approves a Clawix decision derived from them.",
+  "references": [
+    {
+      "id": "storybook-visual-tests",
+      "url": "https://storybook.js.org/docs/8/writing-tests/visual-testing",
+      "use": "state fixtures and visual regression workflow",
+      "canonical": false
+    },
+    {
+      "id": "playwright-snapshots",
+      "url": "https://playwright.dev/docs/test-snapshots",
+      "use": "screenshot comparison workflow",
+      "canonical": false
+    },
+    {
+      "id": "design-tokens-format",
+      "url": "https://www.w3.org/community/reports/design-tokens/CG-FINAL-format-20251028/",
+      "use": "token interchange vocabulary",
+      "canonical": false
+    },
+    {
+      "id": "style-dictionary",
+      "url": "https://styledictionary.com/info/tokens/",
+      "use": "token build-system model",
+      "canonical": false
+    },
+    {
+      "id": "shadcn-registry-mcp",
+      "url": "https://ui.shadcn.com/docs/registry/mcp",
+      "use": "agent-accessible component registry pattern",
+      "canonical": false
+    },
+    {
+      "id": "panda-slot-recipes",
+      "url": "https://panda-css.com/docs/concepts/slot-recipes",
+      "use": "slot-based component recipe strategy",
+      "canonical": false
+    }
+  ]
+}

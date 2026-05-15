@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "chat-surface",
+  "status": "mapped-needs-baseline",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": ["STYLE.md#4-chat-surface-chatviewswift", "macos/Sources/Clawix/ChatView.swift"],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": { "source": "chat bubbles and inline cards remain open work; protect current rendering until visual-authorized cleanup" },
+  "copy": { "agentAttributionIsCanon": true, "visibleNamesAreCanon": true },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["chat scroll screenshots and performance baseline"] }
+}

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "description": "Canonical UI pattern registry for Clawix interface governance.",
+  "platforms": ["macos", "ios", "android", "web"],
+  "patterns": [
+    "sidebar-section",
+    "sidebar-row",
+    "thin-scroller",
+    "dropdown-menu",
+    "icon-chip-button",
+    "composer-chrome",
+    "sliding-segmented",
+    "settings-surface",
+    "design-surface",
+    "chat-surface",
+    "sheet-chrome",
+    "toast",
+    "search-field",
+    "terminal-surface",
+    "entity-card"
+  ]
+}

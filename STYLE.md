@@ -510,6 +510,14 @@ style rules below cover the visual layer.)
 - **Squircle lint.** `macos/scripts/dev.sh` includes 4 checks (lines
   ~88–133). `ios/scripts/squircle_lint.sh` mirrors them. These run on
   every dev build and on CI.
+- **Interface governance guard.** `scripts/ui_governance_guard.mjs` validates
+  the cross-platform pattern registry, debt baseline, protected-surface
+  manifest, exception shape, and unauthorized visual/copy source diffs. The
+  fast test lane runs it.
+- **Visual mutation boundary.** UI work is classified as `functional-ui`,
+  `visual-ui`, `copy-ui`, or `mechanical-equivalent-refactor`. Only explicitly
+  authorized visual lanes may make `visual-ui` or `copy-ui` decisions.
+  Non-authorized agents report visual drift instead of repairing it.
 - **Open lint work**:
   - SF Symbols guard: a build check that flags any `Image(systemName:)`
     outside the allowlisted OS-chrome usages.

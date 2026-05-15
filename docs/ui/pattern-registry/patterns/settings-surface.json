@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "settings-surface",
+  "status": "mapped-needs-baseline",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": ["STYLE.md#13-open-work-debts-the-design-system-carries", "macos/Sources/Clawix/SettingsView.swift"],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": { "source": "settings pattern contracts must reuse registered controls and declare local geometry before protected approval" },
+  "copy": { "visibleNamesAreCanon": true, "labelMaxWords": 4, "tooltipMaxWords": 12 },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["settings surface screenshot matrix"] }
+}

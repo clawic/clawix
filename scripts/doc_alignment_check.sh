@@ -39,8 +39,17 @@ for file in \
   "docs/adr/0004-source-file-boundaries.md" \
   "docs/adr/0009-agentic-naming-and-code-structure.md" \
   "docs/adr/0007-dual-human-programmatic-surfaces.md" \
+  "docs/adr/0010-interface-governance.md" \
   "docs/adr/TEMPLATE.md" \
+  "docs/ui/README.md" \
+  "docs/ui/interface-governance.config.json" \
+  "docs/ui/pattern-registry/index.json" \
+  "docs/ui/debt-baseline.json" \
+  "docs/ui/protected-surfaces.json" \
+  "docs/ui/performance-budgets.json" \
+  "docs/ui/inspiration/index.json" \
   "scripts/naming-shape-check.mjs" \
+  "scripts/ui_governance_guard.mjs" \
   "scripts/storage_boundary_guard.mjs"
 do
   require_file "$file"
@@ -59,6 +68,11 @@ require_snippet "AGENTS.md" "docs/adr/0004-source-file-boundaries.md"
 require_snippet "CONSTITUTION.md" "Capabilities are complete only when dual-surfaced"
 require_snippet "docs/adr/TEMPLATE.md" "## Surface Parity"
 require_snippet "docs/adr/0007-dual-human-programmatic-surfaces.md" "MCP is the model-native surface"
+require_snippet "docs/adr/0010-interface-governance.md" "Only explicitly authorized visual lanes"
+require_snippet "docs/adr/0010-interface-governance.md" "Existing visual drift is recorded"
+require_snippet "docs/adr/0010-interface-governance.md" "Extract reusable components only when repeated UI carries risk"
+require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane may make"
+require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/interface-matrix.md" "This matrix is the Clawix gate for ADR 0007"
 require_snippet "docs/interface-matrix.md" "Every current surface must be one of"
 require_snippet "docs/interface-matrix.md" "EXTERNAL PENDING"

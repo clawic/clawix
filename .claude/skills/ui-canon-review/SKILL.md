@@ -1,0 +1,1 @@
+../../../skills/ui-canon-review/SKILL.md

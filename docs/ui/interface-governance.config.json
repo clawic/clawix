@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "platforms": ["macos", "ios", "android", "web"],
+  "visualAuthorizationPolicy": {
+    "mode": "private-allowlist",
+    "privateAssignment": "outside-public-repo",
+    "publicSignalEnv": "CLAWIX_UI_VISUAL_AUTHORIZED",
+    "publicSignalValue": "1"
+  },
+  "mutationClasses": ["functional-ui", "visual-ui", "copy-ui", "mechanical-equivalent-refactor"],
+  "restrictedChangeKinds": [
+    "color",
+    "spacing",
+    "size",
+    "icon",
+    "layout",
+    "animation",
+    "microcopy",
+    "visible-name",
+    "ordering",
+    "hierarchy",
+    "typography"
+  ],
+  "requiredInteractiveStates": [
+    "idle",
+    "hover-or-highlight",
+    "focused",
+    "pressed",
+    "disabled",
+    "selected",
+    "busy",
+    "error"
+  ],
+  "publicChecks": [
+    "registry-completeness",
+    "debt-baseline-shape",
+    "protected-surface-shape",
+    "exception-expiry",
+    "geometry-contract-shape",
+    "unauthorized-visual-diff"
+  ],
+  "privateArtifactsPolicy": {
+    "screenshots": "private",
+    "goldenBaselines": "private",
+    "publicRepoStores": ["manifest", "metadata", "tolerance", "command", "hash"]
+  }
+}

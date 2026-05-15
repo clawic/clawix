@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "thin-scroller",
+  "status": "canonical",
+  "platforms": ["macos", "web", "ios", "android"],
+  "mutationClass": ["visual-ui", "functional-ui"],
+  "canonicalReferences": [
+    "STYLE.md#61-thinscroller-the-only-scroller",
+    "macos/Sources/Clawix/ThinScrollbar.swift"
+  ],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": {
+    "macos": {
+      "columnWidth": 14,
+      "thumbWidth": 9,
+      "thumbInsetFromRight": 3,
+      "verticalPadding": 8,
+      "minimumThumbHeight": 40
+    },
+    "web": { "source": "must not introduce a divergent visible scrollbar without a registry update" },
+    "ios": { "source": "native scroll behavior; visual parity is platform-specific" },
+    "android": { "source": "native scroll behavior; visual parity is platform-specific" }
+  },
+  "copy": { "visibleText": false },
+  "componentExtraction": {
+    "policy": "required",
+    "api": "wrapper-plus-modifier"
+  },
+  "validation": {
+    "public": ["node scripts/ui_governance_guard.mjs"],
+    "private": ["scroller geometry and screenshot baseline"]
+  }
+}

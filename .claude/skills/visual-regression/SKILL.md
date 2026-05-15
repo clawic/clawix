@@ -1,0 +1,1 @@
+../../../skills/visual-regression/SKILL.md

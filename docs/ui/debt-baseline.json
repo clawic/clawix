@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Existing visual drift is frozen here. New or touched code must not expand it.",
+  "reviewAfter": "2026-08-15",
+  "entries": [
+    {
+      "id": "ui-debt-design-surface-raw-visual-values",
+      "scope": "macos/Sources/Clawix/Design/**",
+      "platforms": ["macos"],
+      "reason": "Existing design-surface code includes raw system icons, colors, tracking, and local component styling before interface governance existed.",
+      "owner": "interface-governance",
+      "status": "frozen-existing-debt",
+      "reviewAfter": "2026-08-15",
+      "allowedAction": "List and plan cleanup for visual-authorized model; do not opportunistically repair from unrelated work."
+    },
+    {
+      "id": "ui-debt-automations-surface-raw-visual-values",
+      "scope": "macos/Sources/Clawix/AutomationsView.swift",
+      "platforms": ["macos"],
+      "reason": "Existing surface uses direct colors and SF Symbols and needs registry-guided cleanup.",
+      "owner": "interface-governance",
+      "status": "frozen-existing-debt",
+      "reviewAfter": "2026-08-15",
+      "allowedAction": "List and plan cleanup for visual-authorized model."
+    },
+    {
+      "id": "ui-debt-plan-question-card-raw-visual-values",
+      "scope": "macos/Sources/Clawix/PlanQuestionCard.swift",
+      "platforms": ["macos"],
+      "reason": "Existing question-card surface predates visual mutation boundary and includes local visual values.",
+      "owner": "interface-governance",
+      "status": "frozen-existing-debt",
+      "reviewAfter": "2026-08-15",
+      "allowedAction": "List and plan cleanup for visual-authorized model."
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "icon-chip-button",
+  "status": "canonical",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": [
+    "STYLE.md#66-buttons-derived-prescriptive",
+    "macos/Sources/Clawix/SettingsKit.swift",
+    "web/src/components/ui/icon-chip-button.tsx"
+  ],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": {
+    "height": 28,
+    "iconOnlyHorizontalPadding": 9,
+    "labelHorizontalPadding": 11,
+    "focusRingWidth": 1
+  },
+  "copy": {
+    "labelMaxWords": 4,
+    "tooltipMaxWords": 12,
+    "visibleNamesAreCanon": true
+  },
+  "componentExtraction": {
+    "policy": "required-when-repeated-with-state",
+    "api": "limited-slots"
+  },
+  "validation": {
+    "public": ["node scripts/ui_governance_guard.mjs"],
+    "private": ["button state screenshot baseline"]
+  }
+}

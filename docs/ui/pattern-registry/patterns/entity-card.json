@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "entity-card",
+  "status": "canonical",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": ["STYLE.md#67-cards-for-domain-entities-derived-prescriptive"],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": { "denseRadius": 12, "chatRadius": 16, "heroRadius": 20, "compactPaddingVertical": 12, "compactPaddingHorizontal": 14 },
+  "copy": { "primaryIdentifierRequired": true, "metaUsesSecondaryText": true, "visibleNamesAreCanon": true },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["entity card both-ends screenshots"] }
+}

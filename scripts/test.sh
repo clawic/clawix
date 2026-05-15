@@ -197,6 +197,7 @@ fast() {
   run bash "$ROOT_DIR/macos/scripts/public_hygiene_check.sh"
   run node "$ROOT_DIR/scripts/tracked-ignored-check.mjs"
   run node "$ROOT_DIR/scripts/check-clawjs-skills-sync.mjs"
+  run node "$ROOT_DIR/scripts/ui_governance_guard.mjs"
   run node "$ROOT_DIR/scripts/naming-shape-check.mjs"
   run node "$ROOT_DIR/scripts/source-size-check.mjs"
   run node "$ROOT_DIR/scripts/codebase-manifest.mjs" --check

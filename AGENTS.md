@@ -104,6 +104,8 @@ Use the relevant skill instead of loading long instructions into context:
   `host-dependent-validation`, `performance-investigation`
 - Collaboration hygiene: `public-hygiene-review`, `docs-alignment-update`,
   `code-review-risk`, `commit-hygiene-public`
+- Interface governance: `ui-canon-review`, `ui-implementation`,
+  `visual-regression`, `ui-performance-budget`
 
 ## Invariants
 
@@ -113,6 +115,9 @@ Use the relevant skill instead of loading long instructions into context:
   resolution, domain APIs, SDK, and CLI.
 - Clawix owns native UI, visual state, host identity, review/approval surfaces,
   and host-specific operational state.
+- Clawix UI canon is governed by `docs/adr/0010-interface-governance.md` and
+  `docs/ui/`. Non-authorized agents must not change visual/copy/layout
+  decisions; they report drift and leave conceptual proposals instead.
 - Framework global data belongs under `~/.claw`; workspace framework data
   belongs under `.claw/`; Clawix host-operational state belongs under
   `~/.clawix`; `.clawjs/` is a retired pre-public path.

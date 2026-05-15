@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Only the user can declare a visual surface approved/frozen. Any visible change to a protected surface requires explicit permission.",
+  "surfaces": []
+}

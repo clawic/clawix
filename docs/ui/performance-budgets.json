@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "pending-approved-baseline-capture",
+  "policy": "Budgets are per critical flow and become strict after the user approves measured baselines.",
+  "flows": [
+    { "id": "sidebar-hover-click-expand", "platform": "macos", "baselineStatus": "pending-user-approved-baseline" },
+    { "id": "chat-scroll", "platform": "macos", "baselineStatus": "pending-user-approved-baseline" },
+    { "id": "composer-typing", "platform": "macos", "baselineStatus": "pending-user-approved-baseline" },
+    { "id": "dropdown-open", "platform": "macos", "baselineStatus": "pending-user-approved-baseline" },
+    { "id": "terminal-sidebar-switch", "platform": "macos", "baselineStatus": "pending-user-approved-baseline" },
+    { "id": "right-sidebar-browser-use", "platform": "macos", "baselineStatus": "pending-user-approved-baseline" }
+  ]
+}

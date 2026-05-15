@@ -29,7 +29,18 @@ const requiredSkills = [
   "docs-alignment-update",
   "code-review-risk",
   "commit-hygiene-public",
+  "ui-canon-review",
+  "ui-implementation",
+  "visual-regression",
+  "ui-performance-budget",
 ];
+
+const clawixLocalSkills = new Set([
+  "ui-canon-review",
+  "ui-implementation",
+  "visual-regression",
+  "ui-performance-budget",
+]);
 
 function hashFile(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
@@ -97,6 +108,26 @@ for (const entry of fs.readdirSync(projectedDir, { withFileTypes: true })) {
     continue;
   }
   parseFrontmatter(fs.readFileSync(projected, "utf8"), path.relative(rootDir, projected), errors);
+  if (clawixLocalSkills.has(entry.name)) {
+    for (const adapterRoot of adapterRoots) {
+      const adapterPath = path.join(rootDir, adapterRoot, entry.name, "SKILL.md");
+      const expectedTarget = `../../../skills/${entry.name}/SKILL.md`;
+      if (!fs.existsSync(adapterPath)) {
+        errors.push(`${adapterRoot}/${entry.name}/SKILL.md adapter is missing`);
+        continue;
+      }
+      const stat = fs.lstatSync(adapterPath);
+      if (!stat.isSymbolicLink()) {
+        errors.push(`${adapterRoot}/${entry.name}/SKILL.md must be a symlink to ${expectedTarget}`);
+        continue;
+      }
+      const target = fs.readlinkSync(adapterPath);
+      if (target !== expectedTarget) {
+        errors.push(`${adapterRoot}/${entry.name}/SKILL.md points to ${target}, expected ${expectedTarget}`);
+      }
+    }
+    continue;
+  }
   if (!fs.existsSync(canonical)) {
     errors.push(`projected skill ${entry.name} has no canonical ClawJS skill`);
     continue;
