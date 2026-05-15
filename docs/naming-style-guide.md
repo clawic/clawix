@@ -12,8 +12,13 @@ The canonical shared guide lives in the ClawJS repository at
 - `ClawJS` is the framework/product.
 - `claw` is the framework CLI.
 - `clawix` is host/bridge/install/diagnostic CLI only.
+- `clawix` stays as the product-host CLI for install/open, bridge lifecycle,
+  mobile pairing, preflight, logs, and diagnostics.
 - Do not add product/domain/framework commands to `clawix`.
 - Clawix host env vars use `CLAWIX_*`.
+- Clawix bridge env vars use `CLAWIX_BRIDGE_*`.
+- Framework env vars consumed from ClawJS use `CLAW_*`; do not introduce
+  hybrid names such as `CLAWIX_CLAW_*`.
 - The bridge service is `clawix-bridge`.
 - The service suite label is `clawix.bridge`.
 - Retire `clawix-bridged` and `CLAWIX_BRIDGED_*`.
@@ -34,6 +39,7 @@ The canonical shared guide lives in the ClawJS repository at
 - Use `threadId` only for external runtime IDs.
 - Use `schemaVersion` for data and `protocolVersion` for wire protocols.
 - Frame/event `type` strings use `lowerCamelCase`.
+- Stable error codes use `snake_case`.
 - Deep links use:
   - `clawix://auth/callback/<provider>`
   - `clawix://pair/<token>`
@@ -56,8 +62,21 @@ The canonical shared guide lives in the ClawJS repository at
 - Public Clawix reverse-DNS examples use `com.clawix...`.
 - Real bundle IDs, Team IDs, signing identities, SKUs, release credentials,
   local private paths, and maintainer configuration never enter the repo.
+- Public registries may contain placeholders for native identities; real
+  private values stay outside public repositories.
 - Release builds must fail if a real configured target is missing its ID or is
   still using a placeholder.
+
+## Packages, formats, and caches
+
+- Clawix-owned packages use `@clawix/*`, except the product-host CLI package
+  and binary `clawix`.
+- Private `/api/<app>/...` routes, package names, package exports, package
+  bins, file formats, provider mappings, enum wire values, and error codes are
+  stable surfaces.
+- Import/export/backup/snapshot formats that can be saved or imported use
+  versioned schemas and fixtures.
+- Restart-surviving caches are registered as rebuildable cache surfaces.
 
 ## Review checklist
 

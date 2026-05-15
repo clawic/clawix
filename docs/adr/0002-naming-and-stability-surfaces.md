@@ -22,6 +22,9 @@ primary source. This Clawix ADR records the host-specific consequences.
 - Framework public CLI: `claw`.
 - Clawix is the app, native UI, and signed host.
 - The `clawix` CLI is host/bridge/install/diagnostic only.
+- The `clawix` CLI must keep existing product-host duties such as install/open,
+  bridge lifecycle, mobile pairing, preflight, logs, and diagnostics. It is not
+  legacy and must not be removed.
 - Do not add domain/product/framework commands to `clawix`; they belong in
   `claw`.
 - Clawix host/bridge operational home is `~/.clawix/`.
@@ -38,6 +41,9 @@ primary source. This Clawix ADR records the host-specific consequences.
 - The LaunchAgent/service suite label is `clawix.bridge`.
 - Binary, log, and unit names use `clawix-bridge`.
 - Environment variables use `CLAWIX_BRIDGE_*`.
+- Clawix host/app env vars use `CLAWIX_*`; framework env vars consumed from
+  ClawJS use `CLAW_*`. Hybrid names such as `CLAWIX_CLAW_*` are not V1
+  surfaces.
 - `clawix-bridged` and `CLAWIX_BRIDGED_*` are retired pre-public names.
 - Bonjour/mDNS service type is `_clawix-bridge._tcp`.
 - `24080` is the stable Clawix host/bridge entrypoint.
@@ -74,8 +80,23 @@ primary source. This Clawix ADR records the host-specific consequences.
   templates.
 - Real bundle IDs, Team IDs, signing identities, SKUs, release credentials, and
   maintainer-local paths stay outside the public repo.
+- Public registries may contain placeholders for bundle IDs, Team IDs, signing
+  identities, SKUs, entitlements, Mach services, and LaunchAgent labels; real
+  private values stay outside the public repo.
 - Release builds must fail if a real target is missing its configured ID or
   still uses a placeholder.
+
+## Packages, formats, and caches
+
+- Clawix-owned packages use `@clawix/*`, except the product/host CLI package
+  and binary named `clawix`.
+- Package names, package exports, package bins, private `/api/<app>/...`
+  routes, file formats, error codes, enum wire values, and provider mappings
+  are stable surfaces and must be registered before V1.
+- Stable error codes use `snake_case`.
+- Import/export/backup/snapshot formats that can be saved or imported must
+  declare versioned schemas and fixtures.
+- Caches that survive app restart are registered as rebuildable cache surfaces.
 
 ## Shared vocabulary
 
