@@ -692,7 +692,7 @@ final class ClawJSServiceManager: ObservableObject {
     }
 
     static var mainDatabaseURL: URL {
-        mainDataDirectoryURL.appendingPathComponent(ClawixPersistentSurfacePaths.components.clawjsDatabase, isDirectory: false)
+        mainDataDirectoryURL.appendingPathComponent(ClawixPersistentSurfacePaths.components.sqlite, isDirectory: false)
     }
 
     static var mainFilesDirectoryURL: URL {
@@ -1016,9 +1016,6 @@ final class ClawJSServiceManager: ObservableObject {
             dataDirectoryURL(for: service),
             workspaceURL
                 .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawWorkspace, isDirectory: true)
-                .appendingPathComponent(service.rawValue, isDirectory: true),
-            workspaceURL
-                .appendingPathComponent(ClawixPersistentSurfacePaths.components.legacyClawWorkspace, isDirectory: true)
                 .appendingPathComponent(service.rawValue, isDirectory: true),
         ].map { $0.appendingPathComponent(".admin-token", isDirectory: false) }
     }

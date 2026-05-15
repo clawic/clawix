@@ -17,9 +17,9 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
             source.contains("for tokenURL in staleAdminTokenURLs(for: service)"),
             "Launching token-authenticated services must remove known stale .admin-token files."
         )
-        XCTAssertTrue(
-            source.contains(".appendingPathComponent(ClawixPersistentSurfacePaths.components.legacyClawWorkspace, isDirectory: true)"),
-            "Secrets launch cleanup must include legacy .clawjs sidecar token paths."
+        XCTAssertFalse(
+            source.contains("legacyClawWorkspace"),
+            "Secrets launch cleanup must not keep retired .clawjs sidecar token compatibility."
         )
         XCTAssertTrue(
             source.contains("if adminTokenEnvVar[service] != nil { return false }"),
