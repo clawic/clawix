@@ -97,7 +97,12 @@ permission, decision record, or codebase fact matters to an agent, the CLI
 must expose it through a registered, documented, testable surface. Agents
 should not need to read framework source files to learn what the framework can
 do; source remains evidence, while CLI inspection and search are the canonical
-agent-facing view.
+agent-facing view. The CLI is also the just-in-time guidance surface: when the
+command attempt itself proves that compact instructions, resource references,
+or risk notes apply, `claw` may return short `meta.guidance` hints with links
+to expandable records instead of injecting long documents into context.
+Guidance identifies relevant instructions; it never grants permissions,
+reveals secrets, or bypasses signed-host approvals.
 
 **I.6 Capabilities are complete only when dual-surfaced.** Persistent user
 value outlives any one model, provider, session, device, or app. Every
