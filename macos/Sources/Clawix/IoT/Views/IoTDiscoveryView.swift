@@ -210,8 +210,13 @@ struct IoTDiscoveryView: View {
 
     private func toggleScan() async {
         if scanning {
-            try? await manager.stopDiscovery()
-            scanning = false
+            do {
+                try await manager.stopDiscovery()
+                errorMessage = nil
+                scanning = false
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         } else {
             feed.reset()
             scanning = true

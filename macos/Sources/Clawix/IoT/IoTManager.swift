@@ -177,7 +177,7 @@ final class IoTManager: NSObject, ObservableObject {
         // snapshot refresh; we kick a manual refresh too so the UI
         // does not wait on the event round-trip when the user just
         // tapped a card.
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
         return result
     }
 
@@ -185,7 +185,7 @@ final class IoTManager: NSObject, ObservableObject {
         _ = try await performAction {
             try await client.activateScene(sceneId: scene.id, homeId: currentHomeId)
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
     }
 
     func setAutomationEnabled(_ automation: AutomationRecord, enabled: Bool) async throws {
@@ -196,21 +196,21 @@ final class IoTManager: NSObject, ObservableObject {
                 homeId: currentHomeId,
             )
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
     }
 
     func runAutomation(_ automation: AutomationRecord) async throws {
         _ = try await performAction {
             try await client.runAutomation(automationId: automation.id, homeId: currentHomeId)
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
     }
 
     func approveApproval(_ approval: ApprovalRecord) async throws -> IoTActionResult {
         let result = try await performAction {
             try await client.approveApproval(approvalId: approval.id, homeId: currentHomeId)
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
         return result
     }
 
@@ -218,7 +218,7 @@ final class IoTManager: NSObject, ObservableObject {
         _ = try await performAction {
             try await client.denyApproval(approvalId: approval.id, homeId: currentHomeId)
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
     }
 
     func addThing(input: IoTClient.AddThingInput) async throws -> ThingRecord {
@@ -227,7 +227,7 @@ final class IoTManager: NSObject, ObservableObject {
         let thing = try await performAction {
             try await client.addThing(input: input)
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
         return thing
     }
 
@@ -235,7 +235,7 @@ final class IoTManager: NSObject, ObservableObject {
         try await performAction {
             try await client.removeThing(thingId: thing.id, homeId: currentHomeId)
         }
-        Task { try? await refreshAll() }
+        scheduleRefreshAfterChange()
     }
 
     private func performAction<T>(_ operation: () async throws -> T) async throws -> T {
@@ -249,12 +249,37 @@ final class IoTManager: NSObject, ObservableObject {
         }
     }
 
+    private func scheduleRefreshAfterChange() {
+        Task { await refreshAllReportingErrors() }
+    }
+
+    private func refreshAllReportingErrors() async {
+        do {
+            try await refreshAll()
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     func startDiscovery(timeoutMs: Int? = nil) async throws {
-        try await client.startDiscovery(timeoutMs: timeoutMs)
+        do {
+            try await client.startDiscovery(timeoutMs: timeoutMs)
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
     }
 
     func stopDiscovery() async throws {
-        try await client.stopDiscovery()
+        do {
+            try await client.stopDiscovery()
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
     }
 
     // MARK: - Protocol helpers
@@ -392,11 +417,11 @@ final class IoTManager: NSObject, ObservableObject {
     fileprivate func handleSSEEvent(type: String, payload: [String: Any]?) {
         switch type {
         case "iot.action.executed":
-            Task { try? await refreshAll() }
+            scheduleRefreshAfterChange()
         case "iot.approval.created":
-            Task { try? await refreshAll() }
+            scheduleRefreshAfterChange()
         case "iot.thing.added", "iot.thing.removed":
-            Task { try? await refreshAll() }
+            scheduleRefreshAfterChange()
         case "iot.adapter.failed":
             if let payload, let note = payload["note"] as? String {
                 lastAdapterFailure = note
