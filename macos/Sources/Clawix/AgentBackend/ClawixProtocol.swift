@@ -132,9 +132,9 @@ struct InitializeClientInfo: Encodable {
 }
 
 struct InitializeCapabilities: Encodable {
-    /// Opt into experimental API methods and fields (e.g. `collaborationMode`
-    /// on `turn/start` and `thread/start`). Without this, the daemon rejects
-    /// turn/start with -32600 "requires experimentalApi capability".
+    /// Upstream capability name required by the daemon for extension fields
+    /// such as `collaborationMode`. Clawix treats the integration itself as
+    /// stable; the wire key remains `experimentalApi` for compatibility.
     let experimentalApi: Bool?
     let optOutNotificationMethods: [String]?
 }
@@ -161,8 +161,8 @@ struct ThreadStartParams: Encodable {
     /// prepends the compiled fragment to the system prompt before
     /// dispatching to Codex.
     let activeSkills: [ActiveSkill]?
-    /// EXPERIMENTAL. Switches the session into collaboration mode
-    /// machinery. `mode = "plan"` arms the agent to consult the user via
+    /// Switches the session into collaboration mode machinery.
+    /// `mode = "plan"` arms the agent to consult the user via
     /// `item/tool/requestUserInput`; `mode = "default"` is execute-as-you-go.
     let collaborationMode: CollaborationModePayload?
 }
@@ -192,9 +192,9 @@ struct ActiveSkill: Encodable {
     let params: [String: JSONValue]?
 }
 
-/// EXPERIMENTAL. Recent runtimes accept this payload on
-/// thread/start and turn/start to switch the session into plan mode.
-/// Older daemons silently ignore the unknown key.
+/// Payload accepted by current runtimes on thread/start and turn/start
+/// to switch the session into plan mode. Older daemons silently ignore
+/// the unknown key.
 struct CollaborationModePayload: Encodable {
     let mode: String                 // "plan" | "default"
     let settings: CollaborationModeSettingsPayload
@@ -290,8 +290,8 @@ struct TurnStartParams: Encodable {
     /// a skill after the thread has booted; the next turn carries the
     /// fresh list and the daemon recomputes the prompt prelude.
     let activeSkills: [ActiveSkill]?
-    /// EXPERIMENTAL. Same shape as on ThreadStartParams; per-turn override
-    /// so the user can flip plan mode on/off without restarting the thread.
+    /// Same shape as on ThreadStartParams; per-turn override so the user
+    /// can flip plan mode on/off without restarting the thread.
     let collaborationMode: CollaborationModePayload?
 }
 
