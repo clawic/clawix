@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "description": "Canonical UI pattern registry for Clawix interface governance.",
   "platforms": ["macos", "ios", "android", "web"],
+  "notesPath": "docs/ui/pattern-registry/patterns/NOTES.md",
   "patterns": [
     "sidebar-section",
     "sidebar-row",

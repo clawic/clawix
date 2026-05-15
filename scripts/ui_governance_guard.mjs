@@ -104,12 +104,17 @@ for (const state of requiredStates) {
 
 const indexPath = "docs/ui/pattern-registry/patterns.registry.json";
 const registry = readJson(indexPath);
-requireFields(registry, indexPath, ["schemaVersion", "platforms", "patterns"]);
+requireFields(registry, indexPath, ["schemaVersion", "platforms", "notesPath", "patterns"]);
 const registryPatterns = requireArray(registry, indexPath, "patterns");
 const registryPlatforms = new Set(requireArray(registry, indexPath, "platforms"));
 for (const platform of requiredPlatforms) {
   if (!registryPlatforms.has(platform)) fail(`${indexPath}.platforms must include ${platform}`);
 }
+
+const notesPath = registry?.notesPath || "";
+const notesAbsolutePath = path.join(rootDir, notesPath);
+const patternNotes = fs.existsSync(notesAbsolutePath) ? fs.readFileSync(notesAbsolutePath, "utf8") : "";
+if (!patternNotes) fail(`${indexPath}.notesPath must point to a Markdown notes file`);
 
 for (const patternId of registryPatterns) {
   const patternPath = `docs/ui/pattern-registry/patterns/${patternId}.pattern.json`;
@@ -143,6 +148,77 @@ for (const patternId of registryPatterns) {
   }
   if (!["limited-slots", "wrapper-plus-modifier", "local-composition"].includes(extraction.api)) {
     fail(`${patternPath}.componentExtraction.api must encode the agreed component API strategy`);
+  }
+  if (!patternNotes.includes(`## ${patternId}`)) {
+    fail(`${notesPath} must include a Markdown note for ${patternId}`);
+  }
+}
+
+const decisionPath = "docs/ui/decision-verification.json";
+const decisionVerification = readJson(decisionPath);
+requireFields(decisionVerification, decisionPath, [
+  "schemaVersion",
+  "conversationId",
+  "goalReference",
+  "sourceSession",
+  "completionRule",
+  "decisions",
+]);
+const expectedDecisionIds = [
+  "initial_scope",
+  "enforcement_mode",
+  "canonical_source",
+  "debt_strategy",
+  "canon_approval",
+  "visual_baselines_location",
+  "canon_unit",
+  "agent_ui_workflow",
+  "performance_budget_style",
+  "alignment_validation",
+  "state_coverage",
+  "human_visual_review",
+  "governance_location",
+  "skills_shape",
+  "external_references_policy",
+  "gate_surface",
+  "exception_policy",
+  "copy_governance",
+  "v1_pattern_set",
+  "ci_visual_strategy",
+  "perf_budget_source",
+  "v1_delivery_goal",
+  "registry_format",
+  "skill_naming_style",
+  "component_extraction_rule",
+  "component_api_style",
+  "size_contracts",
+  "visual_mutation_permission",
+  "approved_surface_protection",
+  "ui_debt_fix_policy",
+  "visual_model_gate",
+  "mechanical_refactor_visual_safety",
+  "visual_change_scope_limit",
+  "ui_change_classification",
+  "visual_guard_behavior",
+  "visual_proposal_flow",
+  "implementation_split",
+  "approved_baseline_authority",
+  "critical_cleanup_owner",
+];
+const decisions = requireArray(decisionVerification, decisionPath, "decisions");
+if (decisions.length !== expectedDecisionIds.length) {
+  fail(`${decisionPath}.decisions must contain ${expectedDecisionIds.length} decision records`);
+}
+for (const [index, expectedId] of expectedDecisionIds.entries()) {
+  const decision = decisions[index];
+  const label = `${decisionPath}.decisions[${index}]`;
+  requireFields(decision, label, ["index", "id", "choice", "status", "publicEvidence", "remaining"]);
+  if (!decision) continue;
+  if (decision.index !== index + 1) fail(`${label}.index must be ${index + 1}`);
+  if (decision.id !== expectedId) fail(`${label}.id must be ${expectedId}`);
+  if (!["open", "verified-complete"].includes(decision.status)) fail(`${label}.status is invalid`);
+  if (decision.status === "verified-complete" && decision.remaining?.length > 0) {
+    fail(`${label} cannot be verified-complete while remaining work is listed`);
   }
 }
 
@@ -235,7 +311,9 @@ if (visualLines.length > 0 && !visualAuthorized) {
 const requiredDocs = [
   "docs/adr/0010-interface-governance.md",
   "docs/ui/README.md",
+  "docs/ui/decision-verification.json",
   "docs/ui/pattern-registry/README.md",
+  "docs/ui/pattern-registry/patterns/NOTES.md",
   "docs/ui/interface-governance.config.json",
   "docs/ui/debt.baseline.json",
   "docs/ui/protected-surfaces.registry.json",

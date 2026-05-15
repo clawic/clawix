@@ -1,0 +1,20 @@
+name: UI governance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  public-ui-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate UI governance manifests
+        run: node scripts/ui_governance_guard.mjs
+      - name: Validate documentation alignment
+        run: bash scripts/doc_alignment_check.sh
