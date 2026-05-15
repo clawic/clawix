@@ -29,4 +29,12 @@ enum StableProjectID {
         )
         return UUID(uuidString: text) ?? UUID()
     }
+
+    static func uuid(forResourceId resourceId: String) -> UUID {
+        uuid(for: "claw.resource:\(resourceId)")
+    }
+
+    static func newResourceId() -> String {
+        "res_" + UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "")
+    }
 }

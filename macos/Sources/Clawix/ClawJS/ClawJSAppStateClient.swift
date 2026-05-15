@@ -14,6 +14,7 @@ struct ClawJSAppStateSidebarSnapshot: Encodable, Sendable {
 struct ClawJSAppStateSnapshot: Decodable, Sendable {
     struct Project: Decodable, Sendable {
         let id: String
+        let resourceId: String?
         let name: String
         let path: String
         let sortOrder: Int64?
@@ -67,12 +68,20 @@ struct ClawJSAppStateSnapshot: Decodable, Sendable {
 
 @MainActor
 enum ClawJSAppStateClient {
-    static func upsertProject(id: String, name: String, path: String, sortOrder: Int64? = nil) {
+    static func upsertProject(id: String, resourceId: String? = nil, name: String, path: String, sortOrder: Int64? = nil) {
         var args = ["app-state", "project", "upsert", id, "--name", name, "--path", path, "--json"]
+        if let resourceId, !resourceId.isEmpty {
+            args += ["--resource-id", resourceId]
+        }
         if let sortOrder {
             args += ["--sort-order", String(sortOrder)]
         }
         runBestEffort(args)
+    }
+
+    static func registerProjectResource(id: String, path: String, label: String) {
+        guard !id.isEmpty, !path.isEmpty else { return }
+        runBestEffort(["resources", "register", path, "--id", id, "--kind", "project", "--label", label, "--json"])
     }
 
     static func deleteProject(id: String) {

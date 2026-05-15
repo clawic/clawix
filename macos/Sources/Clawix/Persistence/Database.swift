@@ -284,6 +284,15 @@ final class Database {
             """)
         }
 
+        migrator.registerMigration("v9_project_resource_ids") { db in
+            try db.execute(sql: "ALTER TABLE projects ADD COLUMN resource_id TEXT")
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX projects_resource_id_idx
+                    ON projects(resource_id)
+                    WHERE resource_id IS NOT NULL AND resource_id <> ''
+            """)
+        }
+
         return migrator
     }
 }

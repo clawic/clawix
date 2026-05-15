@@ -23,15 +23,20 @@ final class ProjectsRepository {
         let existing = try? db.read { try ProjectRecord.fetchOne($0, key: project.id.uuidString) }
         let createdAt = existing?.createdAt ?? now
         let row = ProjectRecord(id: project.id.uuidString,
-                             name: project.name,
-                             path: project.path,
-                             createdAt: createdAt)
+                                resourceId: project.resourceId,
+                                name: project.name,
+                                path: project.path,
+                                createdAt: createdAt)
         try? db.write { try row.upsert($0) }
         ClawJSAppStateClient.upsertProject(
             id: project.id.uuidString,
+            resourceId: project.resourceId,
             name: project.name,
             path: project.path
         )
+        if let resourceId = project.resourceId {
+            ClawJSAppStateClient.registerProjectResource(id: resourceId, path: project.path, label: project.name)
+        }
     }
 
     func delete(id: UUID) {
@@ -40,18 +45,23 @@ final class ProjectsRepository {
     }
 
     func rename(id: UUID, to name: String) {
-        let path = (try? db.read { try ProjectRecord.fetchOne($0, key: id.uuidString)?.path }) ?? ""
+        let record = try? db.read { try ProjectRecord.fetchOne($0, key: id.uuidString) }
+        let path = record?.path ?? ""
         try? db.write { db in
             try db.execute(sql: "UPDATE projects SET name = ? WHERE id = ?",
                            arguments: [name, id.uuidString])
         }
-        ClawJSAppStateClient.upsertProject(id: id.uuidString, name: name, path: path)
+        ClawJSAppStateClient.upsertProject(id: id.uuidString, resourceId: record?.resourceId, name: name, path: path)
+        if let resourceId = record?.resourceId {
+            ClawJSAppStateClient.registerProjectResource(id: resourceId, path: path, label: name)
+        }
     }
 }
 
 extension Project {
     init(row: ProjectRecord) {
         self.init(id: UUID(uuidString: row.id) ?? UUID(),
+                  resourceId: row.resourceId,
                   name: row.name,
                   path: row.path)
     }

@@ -806,7 +806,10 @@ final class AppState: ObservableObject {
             let canonicalProjects = try await client.listProjects(hidden: false, archived: false)
             let nextProjects = canonicalProjects.map { project in
                 Project(
-                    id: StableProjectID.uuid(for: project.path),
+                    id: project.resourceId.map(StableProjectID.uuid(forResourceId:))
+                        ?? UUID(uuidString: project.id)
+                        ?? StableProjectID.uuid(for: project.path),
+                    resourceId: project.resourceId,
                     name: project.displayName,
                     path: project.path
                 )
@@ -1034,11 +1037,7 @@ final class AppState: ObservableObject {
         for project in projectsRepo.all() {
             guard !project.path.isEmpty, !seen.contains(project.path) else { continue }
             seen.insert(project.path)
-            result.append(Project(
-                id: StableProjectID.uuid(for: project.path),
-                name: project.name,
-                path: project.path
-            ))
+            result.append(project)
         }
         return result
     }

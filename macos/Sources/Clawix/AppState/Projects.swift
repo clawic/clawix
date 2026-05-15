@@ -128,7 +128,10 @@ extension AppState {
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().updateSession(
                     id: threadId,
-                    patch: ["projectPath": .string(project.path)]
+                    patch: [
+                        "projectId": .string(project.resourceId ?? project.id.uuidString),
+                        "projectPath": .string(project.path)
+                    ]
                 )
             }
         } else {
@@ -137,7 +140,7 @@ extension AppState {
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().updateSession(
                     id: threadId,
-                    patch: ["projectPath": .null]
+                    patch: ["projectId": .null, "projectPath": .null]
                 )
             }
         }
@@ -149,8 +152,10 @@ extension AppState {
     func createProject(name: String, path: String) -> Project {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedPath = (path as NSString).expandingTildeInPath
+        let resourceId = StableProjectID.newResourceId()
         let project = Project(
-            id: StableProjectID.uuid(for: normalizedPath.isEmpty ? UUID().uuidString : normalizedPath),
+            id: StableProjectID.uuid(forResourceId: resourceId),
+            resourceId: resourceId,
             name: trimmed.isEmpty ? "Untitled" : trimmed,
             path: normalizedPath
         )
@@ -159,6 +164,8 @@ extension AppState {
             projectsRepo.upsert(project)
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().createProject(.init(
+                    id: project.resourceId ?? project.id.uuidString,
+                    resourceId: project.resourceId,
                     displayName: project.name,
                     path: project.path,
                     hidden: false,
@@ -178,6 +185,8 @@ extension AppState {
             projectsRepo.upsert(project)
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().createProject(.init(
+                    id: project.resourceId ?? project.id.uuidString,
+                    resourceId: project.resourceId,
                     displayName: project.name,
                     path: project.path,
                     hidden: false,
@@ -190,6 +199,7 @@ extension AppState {
 
     /// Removes a project. Chats previously assigned to it become projectless.
     func deleteProject(_ projectId: UUID) {
+        let deletedProject = projects.first(where: { $0.id == projectId })
         projects.removeAll { $0.id == projectId }
         for idx in chats.indices where chats[idx].projectId == projectId {
             chats[idx].projectId = nil
@@ -200,7 +210,11 @@ extension AppState {
         Task { @MainActor in
             let client = ClawJSSessionsClient.local()
             guard let projects = try? await client.listProjects(),
-                  let project = projects.first(where: { StableProjectID.uuid(for: $0.path) == projectId })
+                  let project = projects.first(where: { candidate in
+                      if let resourceId = deletedProject?.resourceId, candidate.resourceId == resourceId { return true }
+                      if let resourceId = candidate.resourceId, StableProjectID.uuid(forResourceId: resourceId) == projectId { return true }
+                      return StableProjectID.uuid(for: candidate.path) == projectId
+                  })
             else { return }
             try? await client.deleteProject(id: project.id)
         }
@@ -212,11 +226,14 @@ extension AppState {
         guard !trimmed.isEmpty else { return }
         projects[idx].name = trimmed
         let projectPath = projects[idx].path
+        let resourceId = projects[idx].resourceId
         if selectedProject?.id == id { selectedProject = projects[idx] }
         projectsRepo.rename(id: id, to: trimmed)
         if !projectPath.isEmpty {
             Task { @MainActor in
                 try? await ClawJSSessionsClient.local().createProject(.init(
+                    id: resourceId ?? id.uuidString,
+                    resourceId: resourceId,
                     displayName: trimmed,
                     path: projectPath,
                     hidden: false,

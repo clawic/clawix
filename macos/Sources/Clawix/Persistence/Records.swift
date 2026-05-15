@@ -4,12 +4,14 @@ import GRDB
 struct ProjectRecord: Codable, FetchableRecord, PersistableRecord {
     static let databaseTableName = "projects"
     var id: String
+    var resourceId: String?
     var name: String
     var path: String
     var createdAt: Int64
 
     enum CodingKeys: String, CodingKey {
         case id, name, path
+        case resourceId = "resource_id"
         case createdAt = "created_at"
     }
 }

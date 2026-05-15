@@ -69,8 +69,7 @@ enum FileMenuActions {
         if let existing = appState.projects.first(where: { ($0.path as NSString).expandingTildeInPath == path }) {
             appState.selectedProject = existing
         } else {
-            let project = Project(id: UUID(), name: name, path: path)
-            appState.projects.insert(project, at: 0)
+            let project = appState.createProject(name: name, path: path)
             appState.selectedProject = project
         }
         appState.currentRoute = .project

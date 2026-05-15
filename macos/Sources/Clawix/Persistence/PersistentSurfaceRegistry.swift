@@ -747,7 +747,7 @@ enum ClawixPersistentSurfaceRegistry {
 
     private static var databaseSurfaceNodes: [PersistentSurfaceNode] {
         let tables: [(String, [(String, String, Bool)], [String])] = [
-            ("projects", [("id", "TEXT", false), ("name", "TEXT", false), ("path", "TEXT", false), ("created_at", "INTEGER", false)], ["projects_path_idx"]),
+            ("projects", [("id", "TEXT", false), ("resource_id", "TEXT", true), ("name", "TEXT", false), ("path", "TEXT", false), ("created_at", "INTEGER", false)], ["projects_path_idx", "projects_resource_id_idx"]),
             ("pinned_threads", [("thread_id", "TEXT", false), ("sort_order", "INTEGER", false), ("pinned_at", "INTEGER", false)], ["pinned_threads_order_idx"]),
             ("chat_project_overrides", [("thread_id", "TEXT", false), ("project_path", "TEXT", false)], []),
             ("projectless_threads", [("thread_id", "TEXT", false)], []),

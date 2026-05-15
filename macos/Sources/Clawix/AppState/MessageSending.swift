@@ -107,15 +107,17 @@ extension AppState {
         guard let idx = chats.firstIndex(where: { $0.id == chatId }) else { return false }
         let client = ClawJSSessionsClient.local()
         let sessionId = chats[idx].clawixThreadId ?? chatId.uuidString
-        let projectPath = chats[idx].projectId.flatMap { projectId in
-            projects.first(where: { $0.id == projectId })?.path
+        let project = chats[idx].projectId.flatMap { projectId in
+            projects.first(where: { $0.id == projectId })
         }
+        let projectPath = project.map(\.path)
+        let sessionProjectId = project.map { $0.resourceId ?? $0.id.uuidString }
         do {
             let response = try await client.startTurn(
                 sessionId: sessionId,
                 input: .init(
                     prompt: text,
-                    projectId: nil,
+                    projectId: sessionProjectId,
                     projectPath: projectPath,
                     cwd: projectPath,
                     title: chats[idx].title,

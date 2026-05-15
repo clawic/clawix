@@ -393,11 +393,13 @@ struct Automation: Identifiable {
 
 struct Project: Identifiable, Codable, Hashable {
     let id: UUID
+    var resourceId: String?
     var name: String
     var path: String
 
-    init(id: UUID = UUID(), name: String, path: String) {
+    init(id: UUID = UUID(), resourceId: String? = nil, name: String, path: String) {
         self.id = id
+        self.resourceId = resourceId
         self.name = name
         self.path = path
     }

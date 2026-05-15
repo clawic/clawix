@@ -52,6 +52,7 @@ struct ClawJSSessionsClient {
 
     struct Project: Codable, Identifiable, Equatable, Hashable {
         let id: String
+        let resourceId: String?
         let displayName: String
         let path: String
         let hidden: Bool
@@ -150,6 +151,8 @@ struct ClawJSSessionsClient {
     }
 
     struct CreateProjectRequest: Encodable {
+        let id: String?
+        let resourceId: String?
         let displayName: String?
         let path: String
         let hidden: Bool?

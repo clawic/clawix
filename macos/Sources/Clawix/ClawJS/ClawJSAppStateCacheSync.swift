@@ -26,6 +26,7 @@ enum ClawJSAppStateCacheSync {
         for (index, project) in projects.enumerated() {
             try ProjectRecord(
                 id: project.id,
+                resourceId: project.resourceId,
                 name: project.name,
                 path: project.path,
                 createdAt: now
