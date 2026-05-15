@@ -29,7 +29,7 @@ public struct ActivationRequest: Codable, Sendable, Hashable {
     }
 }
 
-public struct IssuedTokenInfo: Codable, Sendable, Hashable {
+public struct IssuedGrantToken: Codable, Sendable, Hashable {
     public var token: String
     public var grantId: String
     public var agent: String
@@ -302,7 +302,7 @@ public struct ProxyResponse: Codable, Sendable {
     public var sensitiveValues: [String]?
     public var redactionLabels: [String: String]?
     public var doctor: DoctorReport?
-    public var issuedToken: IssuedTokenInfo?
+    public var issuedToken: IssuedGrantToken?
     public var grants: [DescribedGrant]?
     public var grant: DescribedGrant?
 
@@ -315,7 +315,7 @@ public struct ProxyResponse: Codable, Sendable {
         sensitiveValues: [String]? = nil,
         redactionLabels: [String: String]? = nil,
         doctor: DoctorReport? = nil,
-        issuedToken: IssuedTokenInfo? = nil,
+        issuedToken: IssuedGrantToken? = nil,
         grants: [DescribedGrant]? = nil,
         grant: DescribedGrant? = nil
     ) {

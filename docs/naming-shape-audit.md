@@ -11,8 +11,8 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 61 tracked warnings. The full local working tree currently
-  reports 82 warnings because 21 warnings come from untracked UI governance
+- Naming warnings: 60 tracked warnings. The full local working tree currently
+  reports 81 warnings because 21 warnings come from untracked UI governance
   files; those are outside this tracked baseline until that family is accepted.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
@@ -68,6 +68,9 @@ for staged rename/split work and must not be hidden by compressing code.
 - Secrets XPC identity vocabulary: `SigningInfo`/`signingInfo` is now
   `CodeSignatureIdentity`/`codeSignatureIdentity`, naming the code-signing
   identity used to verify XPC callers.
+- Secrets proxy grant vocabulary: `IssuedTokenInfo` is now `IssuedGrantToken`.
+  The JSON response field remains `issuedToken`; only the local Swift type was
+  clarified.
 
 ## Validation snapshot
 
