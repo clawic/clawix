@@ -47,6 +47,9 @@ source "$SCRIPT_DIR/_emit_version.sh"
 echo "==> Compiling xcstrings"
 python3 "$SCRIPT_DIR/compile_xcstrings.py"
 
+echo "==> Building required web SPA bundle"
+bash "$SCRIPT_DIR/build_web_dist.sh" --required
+
 echo "==> Building Swift package (release)"
 cd "$PROJECT_DIR"
 # Strip absolute build paths (Swift's `#file` and DWARF debug records embed

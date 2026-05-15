@@ -144,6 +144,9 @@ fi
 echo "==> Compiling xcstrings…"
 python3 "$SCRIPT_DIR/compile_xcstrings.py"
 
+echo "==> Building web SPA bundle…"
+bash "$SCRIPT_DIR/build_web_dist.sh"
+
 # 1) Build.
 echo "==> Building Swift package…"
 swift build 2>&1
@@ -158,32 +161,6 @@ SECRETS_XPC_BIN_BUILT="$PROJECT_DIR/.build/debug/ClawixSecretsXPC"
 if [[ ! -f "$SECRETS_XPC_BIN_BUILT" ]]; then
     echo "ERROR: Secrets XPC service binary not produced at $SECRETS_XPC_BIN_BUILT"
     exit 1
-fi
-
-# 1.4) Build the web SPA (clawix/web/) and stage it inside the daemon's
-#      SwiftPM resource directory so `clawix-bridge` ships with the web
-#      client embedded. The daemon serves it on its HTTP listener
-#      (port 24081 by default). When pnpm or node is missing we skip with
-#      a warning so the macOS dev loop stays unblocked; the daemon then
-#      serves a 404 for the SPA but iOS keeps working untouched.
-WEB_PKG="$PROJECT_DIR/../web"
-WEB_DIST_SRC="$WEB_PKG/dist"
-WEB_DIST_DEST="$PROJECT_DIR/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist"
-if [[ -f "$WEB_PKG/package.json" ]] && command -v pnpm >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
-    echo "==> Building clawix/web/ SPA…"
-    (cd "$WEB_PKG" && pnpm install --silent && pnpm --silent build) || {
-        echo "WARN: web SPA build failed; daemon will keep previous bundle (or 404)" >&2
-    }
-    if [[ -d "$WEB_DIST_SRC" ]]; then
-        mkdir -p "$WEB_DIST_DEST"
-        # Mirror dist/ into the SwiftPM resource dir without leaving stale
-        # files behind from a previous build.
-        rsync -a --delete "$WEB_DIST_SRC/" "$WEB_DIST_DEST/"
-        # Keep .gitkeep so the directory is committed even when empty.
-        : > "$WEB_DIST_DEST/.gitkeep"
-    fi
-else
-    echo "==> Skipping web SPA build (pnpm/node missing or web/ absent)"
 fi
 
 # 1.45) Wire the clawjs/iot dev pointer so ClawJSServiceManager can spawn

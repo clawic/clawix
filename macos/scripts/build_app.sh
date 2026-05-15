@@ -33,6 +33,7 @@ SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 source "$SCRIPT_DIR/_emit_version.sh"
 
 python3 "$SCRIPT_DIR/compile_xcstrings.py"
+bash "$SCRIPT_DIR/build_web_dist.sh"
 
 echo "==> Building Swift package (release)…"
 cd "$PROJECT_DIR"
