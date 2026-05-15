@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Detail view for one Template. Shows a rendered preview using the
 /// currently chosen style plus the list of slots, variants and supported
-/// output formats. Read-only in Phase 2.
+/// output formats.
 struct TemplateDetailView: View {
     let templateId: String
     @EnvironmentObject var appState: AppState
@@ -10,6 +10,7 @@ struct TemplateDetailView: View {
 
     @State private var selectedStyleId: String = "claw"
     @State private var selectedVariantId: String? = nil
+    @State private var editorCreationError: String?
 
     private var template: TemplateManifest? { store.template(id: templateId) }
 
@@ -21,6 +22,13 @@ struct TemplateDetailView: View {
                     .padding(.top, 24)
                     .padding(.bottom, 14)
                 Divider().opacity(0.18)
+                if let editorCreationError {
+                    Text(editorCreationError)
+                        .font(BodyFont.system(size: 12, wght: 500))
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 32)
+                        .padding(.top, 12)
+                }
                 ScrollView {
                     HStack(alignment: .top, spacing: 28) {
                         previewColumn(template)
@@ -102,6 +110,7 @@ struct TemplateDetailView: View {
     }
 
     private func openInEditor(_ template: TemplateManifest) {
+        editorCreationError = nil
         let styleId = store.style(id: selectedStyleId) != nil ? selectedStyleId : (store.styles.first?.id ?? "claw")
         let name = "\(template.name)"
         do {
@@ -113,10 +122,7 @@ struct TemplateDetailView: View {
             )
             appState.currentRoute = .designEditor(documentId: document.id)
         } catch {
-            // Editor creation failure is rare (filesystem); fall back to
-            // staying on the template detail view. A future iteration
-            // surfaces the error inline.
-            NSLog("Editor document creation failed: \(error)")
+            editorCreationError = "Could not open the template in the editor: \(error.localizedDescription)"
         }
     }
 
@@ -394,8 +400,8 @@ struct TemplateDetailView: View {
 /// Larger version of the mini-preview used inside template cards.
 /// Renders a stylised facsimile (color/typography from the style;
 /// layout primitives from the template's slots) since the actual
-/// renderer lives in ClawJS and is reached for full-fidelity rendering
-/// from Phase 4 onward.
+/// renderer lives in ClawJS and this card keeps browsing fast inside the
+/// native template picker.
 private struct TemplatePreviewCard: View {
     let template: TemplateManifest
     let style: StyleManifest

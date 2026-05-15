@@ -4,6 +4,7 @@ struct ProfileEditor: View {
     @ObservedObject var manager: ProfileManager
     @State private var selectedTab: Tab = .identity
     @State private var mnemonicShown: String?
+    @State private var actionError: String?
 
     enum Tab: String, CaseIterable {
         case identity, handle, groups, blocks, audience, custom, recovery
@@ -105,13 +106,20 @@ struct ProfileEditor: View {
                                 )
                             Button("Generate profile") {
                                 Task {
-                                    let response = try? await manager.initProfile(alias: newAlias, mnemonic: nil)
-                                    mnemonicShown = response?.mnemonic
+                                    await runAction {
+                                        let response = try await manager.initProfile(alias: newAlias, mnemonic: nil)
+                                        mnemonicShown = response.mnemonic
+                                    }
                                 }
                             }
                             .buttonStyle(.borderedProminent)
                         }
                     }
+                }
+                if let actionError {
+                    Text(actionError)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
                 }
                 if let mnemonic = mnemonicShown {
                     MnemonicCard(mnemonic: mnemonic)
@@ -136,8 +144,19 @@ struct ProfileEditor: View {
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(Color.white.opacity(0.05))
                         )
-                    Button("Apply") { Task { try? await manager.renameHandle(to: newAlias) } }
+                    Button("Apply") {
+                        Task {
+                            await runAction {
+                                try await manager.renameHandle(to: newAlias)
+                            }
+                        }
+                    }
                         .buttonStyle(.borderedProminent)
+                }
+                if let actionError {
+                    Text(actionError)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
                 }
                 Text("Your fingerprint stays the same. Anyone who paired with you keeps the binding regardless of alias.")
                     .font(.system(size: 11.5)).foregroundStyle(Palette.textSecondary)
@@ -163,9 +182,18 @@ struct ProfileEditor: View {
                                 .fill(Color.white.opacity(0.05))
                         )
                     Button("Create group") {
-                        Task { try? await manager.createGroup(id: newGroupId) }
+                        Task {
+                            await runAction {
+                                try await manager.createGroup(id: newGroupId)
+                            }
+                        }
                     }
                     .buttonStyle(.borderedProminent)
+                }
+                if let actionError {
+                    Text(actionError)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
                 }
                 ForEach(manager.groups) { g in
                     GroupRow(group: g)
@@ -183,8 +211,17 @@ struct ProfileEditor: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(manager.ownBlocks) { block in
                     BlockRow(block: block, onDelete: {
-                        Task { try? await manager.deleteBlock(block.blockId) }
+                        Task {
+                            await runAction {
+                                try await manager.deleteBlock(block.blockId)
+                            }
+                        }
                     })
+                }
+                if let actionError {
+                    Text(actionError)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
                 }
                 if manager.ownBlocks.isEmpty {
                     Text("No blocks yet.").font(.system(size: 13)).foregroundStyle(Palette.textSecondary)
@@ -232,18 +269,29 @@ struct ProfileEditor: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Recovery phrase").font(.system(size: 13, weight: .semibold)).kerning(-0.2)
-                Text("Your mnemonic is what restores your root identity on a new device. Treat it like a password manager master key.")
+                Text("Your recovery phrase is shown when the identity is created. Keep it offline; Clawix does not reveal it again from the running profile.")
                     .font(.system(size: 12)).foregroundStyle(Palette.textSecondary)
-                Button("Reveal mnemonic") {
-                    // Real implementation calls a daemon endpoint that re-derives
-                    // the phrase from the encrypted vault; placeholder here.
+                if let mnemonic = mnemonicShown {
+                    MnemonicCard(mnemonic: mnemonic)
+                } else {
+                    Text("To restore this identity on another device, use the recovery phrase saved during creation.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Palette.textSecondary)
                 }
-                .buttonStyle(.bordered)
-                if let mnemonic = mnemonicShown { MnemonicCard(mnemonic: mnemonic) }
             }
             .padding(18)
         }
         .thinScrollers()
+    }
+
+    @MainActor
+    private func runAction(_ action: @escaping () async throws -> Void) async {
+        actionError = nil
+        do {
+            try await action()
+        } catch {
+            actionError = error.localizedDescription
+        }
     }
 }
 

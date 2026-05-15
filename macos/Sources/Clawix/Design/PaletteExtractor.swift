@@ -8,9 +8,8 @@ import Foundation
 /// best-fit semantic roles (`bg`, `surface`, `fg`, `accent`,
 /// `accent-2`).
 ///
-/// Phase 3 ships the local image path only. URL / PDF inputs fall back
-/// to a no-op until the helper daemon learns to fetch and rasterize
-/// them.
+/// v1 accepts local image files only. Remote references and document
+/// formats are rejected with an explicit unsupported-source error.
 enum PaletteExtractor {
     struct Result {
         var palette: [String]          // dominant hex strings, ordered by mass
@@ -51,7 +50,7 @@ enum PaletteExtractor {
         var errorDescription: String? {
             switch self {
             case .cannotLoadImage(let url): return "Could not read pixels from \(url.lastPathComponent)."
-            case .unsupportedSource(let kind): return "Palette extraction does not yet support '\(kind)' references."
+            case .unsupportedSource(let kind): return "Palette extraction supports local image files, not '\(kind)' references."
             }
         }
     }

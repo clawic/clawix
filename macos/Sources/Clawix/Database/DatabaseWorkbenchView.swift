@@ -196,7 +196,7 @@ struct DatabaseWorkbenchView: View {
                 .buttonStyle(.bordered)
             }
             if session.console.isEmpty {
-                Text("Dry-run messages and future execution logs appear here.")
+                Text("Dry-run messages and execution results appear here.")
                     .font(BodyFont.system(size: 12))
                     .foregroundColor(Palette.textSecondary)
             } else {

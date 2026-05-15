@@ -294,7 +294,7 @@ final class DatabaseWorkbenchSessionStore: ObservableObject {
             return DatabaseWorkbenchRunPlan(
                 status: .readyForFileProfile,
                 statementKind: kind,
-                message: "Dry run ready for \(engine.label) file profile. Execution remains disabled until a local runner is wired.",
+                message: "SQLite file profile is ready for local read-only execution.",
                 requiresWriteConfirmation: requiresConfirmation
             )
         }

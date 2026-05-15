@@ -517,6 +517,37 @@ for (const pattern of ["for v1 just swallow", "future error banner", "try? await
   }
 }
 
+const profileEditorSource = read("macos/Sources/Clawix/Profile/ProfileEditor.swift");
+for (const pattern of ["Reveal mnemonic", "placeholder here", "try? await manager."]) {
+  if (profileEditorSource.includes(pattern)) {
+    fail(`ProfileEditor.swift must not expose recovery no-ops or swallow profile action failures: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const databaseWorkbenchViewSource = read("macos/Sources/Clawix/Database/DatabaseWorkbenchView.swift");
+if (databaseWorkbenchViewSource.includes("future execution logs")) {
+  fail("DatabaseWorkbenchView.swift must describe the current v1 execution surface, not future logs");
+}
+
+const databaseWorkbenchSessionSource = read("macos/Sources/Clawix/Database/DatabaseWorkbenchSession.swift");
+if (databaseWorkbenchSessionSource.includes("Execution remains disabled until a local runner is wired")) {
+  fail("DatabaseWorkbenchSession.swift must not report local SQLite execution as unwired");
+}
+
+const templateDetailSource = read("macos/Sources/Clawix/Design/TemplateDetailView.swift");
+for (const pattern of ["A future iteration", "Phase 2", "Phase 4"]) {
+  if (templateDetailSource.includes(pattern)) {
+    fail(`TemplateDetailView.swift must surface editor errors and avoid stale phase labels: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const paletteExtractorSource = read("macos/Sources/Clawix/Design/PaletteExtractor.swift");
+for (const pattern of ["does not yet support", "Phase 3"]) {
+  if (paletteExtractorSource.includes(pattern)) {
+    fail(`PaletteExtractor.swift must describe unsupported sources as explicit v1 scope: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",
