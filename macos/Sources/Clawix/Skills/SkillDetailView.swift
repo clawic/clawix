@@ -9,6 +9,7 @@ import SwiftUI
 struct SkillDetailView: View {
     let slug: String
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject private var vault: SecretsManager
 
     @State private var editingBody = false
     @State private var bodyDraft: String = ""
@@ -264,8 +265,49 @@ struct SkillDetailView: View {
             .toggleStyle(.switch)
             .labelsHidden()
         case .secretRef:
-            Text("Secret picker (TODO: wire to Secrets)")
-                .font(.system(size: 11)).foregroundColor(.secondary)
+            secretReferenceField(param)
+        }
+    }
+
+    @ViewBuilder
+    private func secretReferenceField(_ param: SkillParam) -> some View {
+        if vault.state != .unlocked {
+            HStack(spacing: 8) {
+                Text("Unlock Secrets to choose a secret.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                Button("Open Secrets") {
+                    appState.currentRoute = .secretsHome
+                }
+                .font(.system(size: 11, weight: .semibold))
+            }
+        } else if vault.secrets.isEmpty {
+            Text("No secrets available.")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+        } else {
+            Picker("", selection: Binding(
+                get: {
+                    if case .secretRef(let id) = paramDraft[param.key] { return id }
+                    if case .secretRef(let id) = param.defaultValue { return id }
+                    return ""
+                },
+                set: { newValue in
+                    if newValue.isEmpty {
+                        paramDraft.removeValue(forKey: param.key)
+                    } else {
+                        paramDraft[param.key] = .secretRef(id: newValue)
+                    }
+                }
+            )) {
+                Text("Choose a secret").tag("")
+                ForEach(vault.secrets, id: \.internalName) { secret in
+                    Text(secret.title.isEmpty ? secret.internalName : "\(secret.title) · \(secret.internalName)")
+                        .tag(secret.internalName)
+                }
+            }
+            .labelsHidden()
+            .frame(maxWidth: 360, alignment: .leading)
         }
     }
 

@@ -503,6 +503,13 @@ for (const pattern of ["not yet wired to ClawJS Secrets HTTP backend", "BackupCo
   }
 }
 
+const skillDetailSource = read("macos/Sources/Clawix/Skills/SkillDetailView.swift");
+for (const pattern of ["TODO: wire to Secrets", "Secret picker (TODO"]) {
+  if (skillDetailSource.includes(pattern)) {
+    fail(`SkillDetailView.swift must provide a real secretRef picker instead of visible TODO text: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",
