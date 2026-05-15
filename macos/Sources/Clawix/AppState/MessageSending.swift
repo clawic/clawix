@@ -129,7 +129,7 @@ extension AppState {
                         ])
                     },
                     audioRef: nil,
-                    fakeReply: nil
+                    fixtureReply: nil
                 )
             )
             guard let currentIdx = chats.firstIndex(where: { $0.id == chatId }) else { return true }

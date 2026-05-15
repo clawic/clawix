@@ -181,7 +181,7 @@ struct ClawJSSessionsClient {
         let title: String?
         let attachments: [AnyJSON]?
         let audioRef: AudioRef?
-        let fakeReply: String?
+        let fixtureReply: String?
     }
 
     func probeHealth() async throws -> HealthResponse {
