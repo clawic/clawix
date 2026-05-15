@@ -440,9 +440,9 @@ final class BridgeClient: NSObject {
             token: creds.token,
             deviceName: deviceName(),
             clientKind: .companion,
-            clientId: nil,
-            installationId: nil,
-            deviceId: nil
+            clientId: BridgeClientIdentity.clientId,
+            installationId: BridgeClientIdentity.installationId,
+            deviceId: BridgeClientIdentity.deviceId
         ))
         send(frame, on: candidate)
     }

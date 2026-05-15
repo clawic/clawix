@@ -505,11 +505,11 @@ enum ClawixPersistentSurfaceRegistry {
             project: "core",
             surfaceClass: "protocol",
             value: "clawix-bridge",
-            version: "8",
+            version: "1",
             direction: "bidirectional",
             notes: "Shared JSON frame protocol consumed by macOS, iOS, Android, Linux, Windows and web clients."
         )
-        let bridgeFields = ["schemaVersion", "type", "clientKind", "platform", "sessionId", "threadId", "requestId"].map { field in
+        let bridgeFields = ["schemaVersion", "type", "clientKind", "clientId", "installationId", "deviceId", "sessionId", "threadId", "requestId"].map { field in
             ClawixPersistentSurface.contract(
                 id: "clawix.protocol.bridge.field.\(field)",
                 kind: .protocolField,

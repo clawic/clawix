@@ -36,10 +36,10 @@ export const ZAuth = z.object({
   type: z.literal("auth"),
   token: z.string(),
   deviceName: z.string().optional(),
-  clientKind: ZClientKind.optional(),
-  clientId: z.string().optional(),
-  installationId: z.string().optional(),
-  deviceId: z.string().optional(),
+  clientKind: ZClientKind,
+  clientId: z.string(),
+  installationId: z.string(),
+  deviceId: z.string(),
 });
 
 export const ZListSessions = z.object({ ...base, type: z.literal("listSessions") });

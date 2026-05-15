@@ -7,6 +7,7 @@ import com.example.clawix.android.core.BridgeBody
 import com.example.clawix.android.core.BridgeCoder
 import com.example.clawix.android.core.BridgeFrame
 import com.example.clawix.android.core.ClientKind
+import com.example.clawix.android.util.BridgeDeviceIdentity
 import com.example.clawix.android.util.DeviceName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +83,9 @@ class ShortCodePairingFlow(private val container: AppContainer) {
                                 token = code,
                                 deviceName = DeviceName.resolve(container.context),
                                 clientKind = ClientKind.COMPANION,
+                                clientId = BridgeDeviceIdentity.clientId,
+                                installationId = BridgeDeviceIdentity.installationId(container.context),
+                                deviceId = BridgeDeviceIdentity.deviceId(container.context),
                             )
                         )
                         webSocket.send(BridgeCoder.encode(auth))
@@ -135,4 +139,3 @@ class ShortCodePairingFlow(private val container: AppContainer) {
         return ok
     }
 }
-

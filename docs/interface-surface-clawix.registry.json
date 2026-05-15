@@ -9,7 +9,7 @@
   ],
   "surfaces": [
     {
-      "id": "bridge.v8",
+      "id": "bridge.v1",
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix pairing and companion clients",

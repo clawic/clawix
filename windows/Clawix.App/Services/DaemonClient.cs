@@ -36,9 +36,31 @@ public sealed class DaemonClient : IAsyncDisposable
         _ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
         await _ws.ConnectAsync(_endpoint, _cts.Token);
 
-        await SendAsync(new BridgeFrame(new BridgeBody.Auth(_bearer, Environment.MachineName, ClientKind.Desktop)), _cts.Token);
+        await SendAsync(new BridgeFrame(new BridgeBody.Auth(
+            _bearer,
+            Environment.MachineName,
+            ClientKind.Desktop,
+            "clawix.windows.desktop",
+            PersistentId("installation-id"),
+            PersistentId("device-id")
+        )), _cts.Token);
         _readerLoop = Task.Run(() => ReadLoopAsync(_cts.Token), _cts.Token);
         ConnectionStateChanged?.Invoke(true);
+    }
+
+    private static string PersistentId(string name)
+    {
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Clawix");
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, $"{name}.txt");
+        if (File.Exists(path))
+        {
+            var existing = File.ReadAllText(path).Trim();
+            if (existing.Length > 0) return existing;
+        }
+        var value = Guid.NewGuid().ToString("D").ToLowerInvariant();
+        File.WriteAllText(path, value);
+        return value;
     }
 
     public async Task SendAsync(BridgeFrame frame, CancellationToken ct)

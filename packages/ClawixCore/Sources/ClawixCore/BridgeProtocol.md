@@ -15,7 +15,7 @@ Clawix is still pre-public, so the complete current bridge surface is the v1
 contract. Clients refuse to talk to a daemon reporting a different
 `schemaVersion` and show an "Update Clawix" empty state.
 
-The current schema version is `8`.
+The current schema version is `1`.
 
 ## Lifecycle
 
@@ -30,8 +30,9 @@ The current schema version is `8`.
 
 ## Outbound (client -> daemon)
 
-- `auth` `{ token, deviceName?, clientKind?, clientId?, installationId?, deviceId? }`.
-  Bearer token from pairing or local bootstrap. Must be the first frame.
+- `auth` `{ token, deviceName?, clientKind, clientId, installationId, deviceId }`.
+  Bearer token from pairing or local bootstrap, plus the v1 client role and
+  stable client identity. Must be the first frame.
 - `listSessions` `{}`. Asks for a snapshot of the current sessions list. The
   server replies with `sessionsSnapshot`.
 - `openSession` `{ sessionId, limit? }`. Subscribes to a session and may request

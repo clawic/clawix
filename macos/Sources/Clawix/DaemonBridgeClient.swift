@@ -97,9 +97,9 @@ final class DaemonBridgeClient {
                 token: pairing.bearer,
                 deviceName: Host.current().localizedName,
                 clientKind: .desktop,
-                clientId: nil,
-                installationId: nil,
-                deviceId: nil
+                clientId: BridgeClientIdentity.clientId,
+                installationId: BridgeClientIdentity.installationId,
+                deviceId: BridgeClientIdentity.deviceId
             ))
         case .failed, .cancelled:
             isAuthenticated = false

@@ -166,9 +166,8 @@ public final class BridgeBus {
     /// messages so the session can reply with `messagesSnapshot`.
     /// When `limit` is set, only the trailing N messages are returned
     /// alongside `hasMore: true` if there are older messages on the
-    /// server's side. `limit == nil` preserves the legacy "ship the
-    /// whole transcript" behaviour for old peers and produces
-    /// `hasMore: false`.
+    /// server's side. `limit == nil` is the v1 whole-transcript mode
+    /// and produces `hasMore: false`.
     public func subscribe(sessionId: String, limit: Int? = nil) -> (messages: [WireMessage], hasMore: Bool) {
         subscribedChatIds.insert(sessionId)
         let all = host?.bridgeChatsCurrent.first(where: { $0.id == sessionId })?.messages ?? []

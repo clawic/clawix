@@ -12,6 +12,9 @@ describe("frames", () => {
       token: "abc",
       deviceName: "Web",
       clientKind: "companion",
+      clientId: "client-web",
+      installationId: "install-web",
+      deviceId: "device-web",
     };
     const raw = encodeFrame(body);
     const back = decodeFrame(raw);
@@ -20,6 +23,9 @@ describe("frames", () => {
       token: "abc",
       deviceName: "Web",
       clientKind: "companion",
+      clientId: "client-web",
+      installationId: "install-web",
+      deviceId: "device-web",
       schemaVersion: BRIDGE_SCHEMA_VERSION,
     });
   });

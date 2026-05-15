@@ -20,14 +20,11 @@ internal sealed partial class BridgeFrameConverter
             case BridgeBody.Auth a:
                 writer.WriteString("token", a.Token);
                 if (a.DeviceName is not null) writer.WriteString("deviceName", a.DeviceName);
-                if (a.ClientKind is not null)
-                {
-                    writer.WritePropertyName("clientKind");
-                    JsonSerializer.Serialize(writer, a.ClientKind.Value, options);
-                }
-                if (a.ClientId is not null) writer.WriteString("clientId", a.ClientId);
-                if (a.InstallationId is not null) writer.WriteString("installationId", a.InstallationId);
-                if (a.DeviceId is not null) writer.WriteString("deviceId", a.DeviceId);
+                writer.WritePropertyName("clientKind");
+                JsonSerializer.Serialize(writer, a.ClientKind, options);
+                writer.WriteString("clientId", a.ClientId);
+                writer.WriteString("installationId", a.InstallationId);
+                writer.WriteString("deviceId", a.DeviceId);
                 break;
             case BridgeBody.ListSessions:
                 break;

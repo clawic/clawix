@@ -20,7 +20,7 @@ public sealed class BridgeFrameSerializationTests
         return Assert.IsType<T>(back.Body);
     }
 
-    [Fact] public void Auth_RoundTrip() => Assert.Equal("token", RoundTrip(new BridgeBody.Auth("token", null, null)).Token);
+    [Fact] public void Auth_RoundTrip() => Assert.Equal("token", RoundTrip(new BridgeBody.Auth("token", null, ClientKind.Companion, "client-win", "install-win", "device-win")).Token);
     [Fact] public void OpenSession_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.OpenSession("c1", 60)).SessionId);
     [Fact] public void LoadOlder_RoundTrip() => Assert.Equal(40, RoundTrip(new BridgeBody.LoadOlderMessages("c1", "m1", 40)).Limit);
     [Fact] public void EditPrompt_RoundTrip() => Assert.Equal("hi", RoundTrip(new BridgeBody.EditPrompt("c1", "m1", "hi")).Text);

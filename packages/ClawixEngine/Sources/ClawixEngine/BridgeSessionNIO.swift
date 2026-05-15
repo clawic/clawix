@@ -19,6 +19,9 @@ public final class BridgeSession: Identifiable {
     public private(set) var isAuthenticated: Bool = false
     public private(set) var deviceName: String?
     public private(set) var clientKind: ClientKind?
+    public private(set) var clientId: String?
+    public private(set) var installationId: String?
+    public private(set) var deviceId: String?
     private var didTerminate = false
 
     public init(
@@ -55,8 +58,15 @@ public final class BridgeSession: Identifiable {
             return
         }
         if !isAuthenticated {
-            if case .auth(let token, let name, let kind, _, _, _) = frame.body {
-                handleAuth(token: token, deviceName: name, clientKind: kind)
+            if case .auth(let token, let name, let kind, let clientId, let installationId, let deviceId) = frame.body {
+                handleAuth(
+                    token: token,
+                    deviceName: name,
+                    clientKind: kind,
+                    clientId: clientId,
+                    installationId: installationId,
+                    deviceId: deviceId
+                )
             } else {
                 send(BridgeFrame(.authFailed(reason: "auth-required-first")))
                 close(.policyViolation)
@@ -66,7 +76,20 @@ public final class BridgeSession: Identifiable {
         BridgeIntent.dispatch(body: frame.body, host: host, bus: bus, session: self)
     }
 
-    private func handleAuth(token: String, deviceName: String?, clientKind: ClientKind?) {
+    private func handleAuth(
+        token: String,
+        deviceName: String?,
+        clientKind: ClientKind,
+        clientId: String,
+        installationId: String,
+        deviceId: String
+    ) {
+        guard [clientId, installationId, deviceId].allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            BridgeLog.write("auth-fail reason=invalid-client-identity name=\(deviceName ?? "?")")
+            send(BridgeFrame(.authFailed(reason: "invalid-client-identity")))
+            close(.policyViolation)
+            return
+        }
         let valid = pairing.acceptToken(token) || pairing.acceptShortCode(token)
         guard valid else {
             BridgeLog.write("auth-fail reason=bad-token name=\(deviceName ?? "?")")
@@ -77,12 +100,15 @@ public final class BridgeSession: Identifiable {
         isAuthenticated = true
         BridgeStats.shared.increment()
         self.deviceName = deviceName
-        self.clientKind = clientKind ?? .companion
+        self.clientKind = clientKind
+        self.clientId = clientId
+        self.installationId = installationId
+        self.deviceId = deviceId
         let hostName = ProcessInfo.processInfo.hostName
         send(BridgeFrame(.authOk(hostDisplayName: hostName)))
         send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
         send(bus.currentBridgeStateFrame())
-        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "companion") name=\(deviceName ?? "?")")
+        BridgeLog.write("peer-connect kind=\(clientKind.rawValue) clientId=\(clientId) deviceId=\(deviceId) name=\(deviceName ?? "?")")
     }
 
     public func send(_ frame: BridgeFrame) {

@@ -21,6 +21,9 @@ public final class BridgeSession: Identifiable {
     public private(set) var isAuthenticated: Bool = false
     public private(set) var deviceName: String?
     public private(set) var clientKind: ClientKind?
+    public private(set) var clientId: String?
+    public private(set) var installationId: String?
+    public private(set) var deviceId: String?
     private var didTerminate = false
 
     public init(
@@ -77,18 +80,23 @@ public final class BridgeSession: Identifiable {
             send(BridgeFrame(.errorEvent(code: "decode", message: "\(error)")))
             return
         }
-        // Strict major-version match. v1 frames decode under v2 (every
-        // new field is optional), so we only refuse frames we genuinely
-        // can't interpret. Anything else gets a `versionMismatch`
-        // before close so the client knows to update.
+        // Strict schema match for the v1 bridge. Anything newer gets a
+        // `versionMismatch` before close so the client knows to update.
         if frame.schemaVersion > bridgeSchemaVersion {
             send(BridgeFrame(.versionMismatch(serverVersion: bridgeSchemaVersion)))
             close(.protocolCode(.protocolError))
             return
         }
         if !isAuthenticated {
-            if case .auth(let token, let name, let kind, _, _, _) = frame.body {
-                handleAuth(token: token, deviceName: name, clientKind: kind)
+            if case .auth(let token, let name, let kind, let clientId, let installationId, let deviceId) = frame.body {
+                handleAuth(
+                    token: token,
+                    deviceName: name,
+                    clientKind: kind,
+                    clientId: clientId,
+                    installationId: installationId,
+                    deviceId: deviceId
+                )
             } else {
                 send(BridgeFrame(.authFailed(reason: "auth-required-first")))
                 close(.protocolCode(.policyViolation))
@@ -98,12 +106,22 @@ public final class BridgeSession: Identifiable {
         BridgeIntent.dispatch(body: frame.body, host: host, bus: bus, session: self)
     }
 
-    private func handleAuth(token: String, deviceName: String?, clientKind: ClientKind?) {
-        // The wire field stays `token` for compatibility, but the
-        // server now accepts either form: the long bearer (QR scan) or
-        // the human-typeable short code (the iOS pairing screen sends
-        // it through the same field, normalised to UTF-8 uppercase
-        // with hyphens stripped on the client side or here).
+    private func handleAuth(
+        token: String,
+        deviceName: String?,
+        clientKind: ClientKind,
+        clientId: String,
+        installationId: String,
+        deviceId: String
+    ) {
+        guard [clientId, installationId, deviceId].allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            BridgeLog.write("auth-fail reason=invalid-client-identity name=\(deviceName ?? "?")")
+            send(BridgeFrame(.authFailed(reason: "invalid-client-identity")))
+            close(.protocolCode(.policyViolation))
+            return
+        }
+        // The v1 auth field is `token`; it accepts either the long QR
+        // bearer or the human-typeable short code.
         let valid = pairing.acceptToken(token) || pairing.acceptShortCode(token)
         guard valid else {
             BridgeLog.write("auth-fail reason=bad-token name=\(deviceName ?? "?")")
@@ -114,9 +132,10 @@ public final class BridgeSession: Identifiable {
         isAuthenticated = true
         BridgeStats.shared.increment()
         self.deviceName = deviceName
-        // Absent kind = older v1 client = treat as iOS so existing
-        // iPhones keep working unchanged.
-        self.clientKind = clientKind ?? .companion
+        self.clientKind = clientKind
+        self.clientId = clientId
+        self.installationId = installationId
+        self.deviceId = deviceId
         // Tell the peer where the host is in its bootstrap so an empty
         // chats list reads as "syncing" instead of "no chats". The bus
         // also re-emits this frame on every state transition, so a
@@ -124,7 +143,7 @@ public final class BridgeSession: Identifiable {
         send(BridgeFrame(.authOk(hostDisplayName: HostIdentity.localizedName)))
         send(bus.currentBridgeStateFrame())
         send(BridgeFrame(.sessionsSnapshot(sessions: bus.currentSessions())))
-        BridgeLog.write("peer-connect kind=\(self.clientKind?.rawValue ?? "companion") name=\(deviceName ?? "?")")
+        BridgeLog.write("peer-connect kind=\(clientKind.rawValue) clientId=\(clientId) deviceId=\(deviceId) name=\(deviceName ?? "?")")
     }
 
     public func send(_ frame: BridgeFrame) {

@@ -13,8 +13,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     func testAuth() throws {
         try roundTrip(.auth(token: "deadbeef", deviceName: "iPhone Studio", clientKind: .companion, clientId: "client-1", installationId: "install-1", deviceId: "device-1"))
-        try roundTrip(.auth(token: "x", deviceName: nil, clientKind: nil, clientId: nil, installationId: nil, deviceId: nil))
-        try roundTrip(.auth(token: "y", deviceName: "macOS GUI", clientKind: .desktop, clientId: nil, installationId: nil, deviceId: nil))
+        try roundTrip(.auth(token: "y", deviceName: "macOS GUI", clientKind: .desktop, clientId: "client-mac", installationId: "install-mac", deviceId: "device-mac"))
     }
 
     func testEditPrompt() throws {
@@ -149,13 +148,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.messagesPage(sessionId: "uuid-1", messages: [], hasMore: false))
     }
 
-    /// Old peers (clients without paginated `openSession`) MUST keep
-    /// decoding cleanly under the current schema: `limit` is missing,
-    /// the field defaults to nil, and the server treats it as "send
-    /// the whole transcript". Same story for `messagesSnapshot`
-    /// missing `hasMore` — decodes as nil, the iPhone treats it as
-    /// "no scroll-up available".
-    func testOpenSessionDecodesWithoutLimit() throws {
+    func testUnpagedOpenSessionDecodesWithoutLimit() throws {
         let data = """
         {"schemaVersion":\(bridgeSchemaVersion),"type":"openSession","sessionId":"abc"}
         """.data(using: .utf8)!
@@ -163,7 +156,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         XCTAssertEqual(frame.body, .openSession(sessionId: "abc", limit: nil))
     }
 
-    func testOlderMessagesSnapshotDecodesWithoutHasMore() throws {
+    func testCompleteMessagesSnapshotDecodesWithoutHasMore() throws {
         let data = """
         {"schemaVersion":\(bridgeSchemaVersion),"type":"messagesSnapshot","sessionId":"abc","messages":[]}
         """.data(using: .utf8)!
@@ -273,19 +266,6 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.messageAppended(sessionId: "uuid-1", message: msg))
     }
 
-    /// Old peers without `kind` should decode as image attachments so
-    /// existing v2 senders keep working when v3 daemons receive them.
-    func testWireAttachmentOlderDecodeDefaultsToImage() throws {
-        let olderPayload = """
-        {"id":"att-1","mimeType":"image/jpeg","filename":"photo.jpg","dataBase64":"AAAA"}
-        """
-        let attachment = try BridgeCoder.decoder.decode(
-            WireAttachment.self,
-            from: Data(olderPayload.utf8)
-        )
-        XCTAssertEqual(attachment.kind, .image)
-    }
-
     func testWireFormatIsFlat() throws {
         let frame = BridgeFrame(.sendMessage(sessionId: "abc", text: "hello", attachments: []))
         let data = try BridgeCoder.encode(frame)
@@ -298,7 +278,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         XCTAssertFalse(json.contains("\"payload\""))
     }
 
-    func testOlderPromptFramesDecodeWithoutAttachments() throws {
+    func testAttachmentlessPromptFramesDecodeWithoutAttachmentsField() throws {
         let data = """
         {"schemaVersion":1,"type":"sendMessage","sessionId":"abc","text":"hello"}
         """.data(using: .utf8)!
@@ -306,22 +286,11 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         XCTAssertEqual(frame.body, .sendMessage(sessionId: "abc", text: "hello", attachments: []))
     }
 
-    func testAuthFrameDecodesWithoutOptionalClientFields() throws {
+    func testAuthFrameRequiresClientIdentityFields() throws {
         let currentJson = """
         {"schemaVersion":1,"type":"auth","token":"abc","deviceName":"iPhone"}
         """.data(using: .utf8)!
-        let frame = try BridgeCoder.decode(currentJson)
-        guard case .auth(let token, let device, let kind, let clientId, let installationId, let deviceId) = frame.body else {
-            XCTFail("expected auth")
-            return
-        }
-        XCTAssertEqual(token, "abc")
-        XCTAssertEqual(device, "iPhone")
-        XCTAssertNil(kind, "current auth omits clientKind, decodes as nil")
-        XCTAssertNil(clientId)
-        XCTAssertNil(installationId)
-        XCTAssertNil(deviceId)
-        XCTAssertEqual(frame.schemaVersion, bridgeSchemaVersion)
+        XCTAssertThrowsError(try BridgeCoder.decode(currentJson))
     }
 
     func testRejectsUnknownType() {
@@ -335,7 +304,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         }
     }
 
-    // MARK: - Rate limits (v5)
+    // MARK: - Rate limits
 
     func testRequestRateLimitsRoundTrip() throws {
         try roundTrip(.requestRateLimits)
@@ -375,7 +344,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         try roundTrip(.rateLimitsUpdated(snapshot: snap, byLimitId: [:]))
     }
 
-    // MARK: - v7 audio catalog
+    // MARK: - Audio catalog
 
     private func sampleAudioAssetWithTranscripts() -> WireAudioAssetWithTranscripts {
         let asset = WireAudioAsset(
@@ -441,7 +410,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             requestId: "req-1",
             audioId: "audio-1",
             transcript: WireAudioAttachTranscriptInput(
-                text: "v2 better",
+                text: "better pass",
                 role: .transcription,
                 provider: "whisper-large",
                 language: "en",
@@ -455,7 +424,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
             id: "t-2",
             audioId: "audio-1",
             role: .transcription,
-            text: "v2",
+            text: "primary pass",
             provider: "whisper-large",
             language: "en",
             createdAt: 1_750_000_001_000,

@@ -132,9 +132,9 @@ final class ShortCodePairingFlow {
             token: code,
             deviceName: UIDevice.current.name,
             clientKind: .companion,
-            clientId: nil,
-            installationId: nil,
-            deviceId: nil
+            clientId: BridgeClientIdentity.clientId,
+            installationId: BridgeClientIdentity.installationId,
+            deviceId: BridgeClientIdentity.deviceId
         ))
         guard let data = try? BridgeCoder.encode(frame) else {
             fail("Could not encode auth frame")

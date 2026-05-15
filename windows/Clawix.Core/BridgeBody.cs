@@ -15,10 +15,10 @@ public abstract record BridgeBody
     public sealed record Auth(
         string Token,
         string? DeviceName,
-        ClientKind? ClientKind,
-        string? ClientId = null,
-        string? InstallationId = null,
-        string? DeviceId = null
+        ClientKind ClientKind,
+        string ClientId,
+        string InstallationId,
+        string DeviceId
     ) : BridgeBody
     {
         public override string TypeTag => "auth";

@@ -48,10 +48,10 @@ sealed class BridgeBody {
     data class Auth(
         val token: String,
         val deviceName: String?,
-        val clientKind: ClientKind?,
-        val clientId: String? = null,
-        val installationId: String? = null,
-        val deviceId: String? = null,
+        val clientKind: ClientKind,
+        val clientId: String,
+        val installationId: String,
+        val deviceId: String,
     ) : BridgeBody() {
         override val typeTag = "auth"
     }

@@ -10,6 +10,7 @@ import com.example.clawix.android.core.BridgeFrame
 import com.example.clawix.android.core.BridgeRuntimeState
 import com.example.clawix.android.core.ClientKind
 import com.example.clawix.android.core.WireAttachment
+import com.example.clawix.android.util.BridgeDeviceIdentity
 import com.example.clawix.android.util.DeviceName
 import com.example.clawix.android.util.TailscaleHostCheck
 import kotlinx.coroutines.CompletableDeferred
@@ -332,6 +333,9 @@ class BridgeClient(
                         token = creds.token,
                         deviceName = DeviceName.resolve(appContext),
                         clientKind = ClientKind.COMPANION,
+                        clientId = BridgeDeviceIdentity.clientId,
+                        installationId = BridgeDeviceIdentity.installationId(appContext),
+                        deviceId = BridgeDeviceIdentity.deviceId(appContext),
                     )
                 )
                 ws.send(BridgeCoder.encode(auth))

@@ -3,7 +3,7 @@
  * `clawix/ios/Sources/Clawix/Bridge/BridgeClient.swift`:
  *
  *   1. open WS to `${endpoint}/ws`
- *   2. send `auth` frame (token + deviceName + clientKind)
+ *   2. send `auth` frame (token + deviceName + clientKind + stable client ids)
  *   3. wait for `authOk` (or `authFailed` / `versionMismatch`)
  *   4. push subsequent frames to listeners; reconnect with exponential
  *      backoff on close.
@@ -65,6 +65,27 @@ function defaultEndpoint(): string {
   // when served from the daemon.
   const host = window.location.host || "localhost:24080";
   return `${proto}//${host}/ws`;
+}
+
+function randomId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `web-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+}
+
+function persistedId(key: string): string {
+  if (typeof window === "undefined") return randomId();
+  const storageKey = `clawix.bridge.${key}`;
+  try {
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing) return existing;
+    const value = randomId();
+    window.localStorage.setItem(storageKey, value);
+    return value;
+  } catch {
+    return randomId();
+  }
 }
 
 export class BridgeClient {
@@ -147,6 +168,9 @@ export class BridgeClient {
           token: this.opts.token,
           deviceName: this.opts.deviceName ?? this.guessDeviceName(),
           clientKind: "companion",
+          clientId: "clawix.web.companion",
+          installationId: persistedId("installationId"),
+          deviceId: persistedId("deviceId"),
         }),
       );
       this.startHeartbeat();

@@ -28,8 +28,8 @@ public enum BridgeIntent {
             // every `notLoaded` thread shows up empty on the iPhone.
             host?.handleHydrateHistory(sessionId: uuid)
             let page = bus.subscribe(sessionId: sessionIdString, limit: limit)
-            // `hasMore: nil` for backward-compatible callers (no `limit`) so iOS
-            // clients on the old code path behave identically.
+            // `hasMore: nil` is the v1 whole-transcript response for
+            // unpaged `openSession` calls.
             session.send(BridgeFrame(.messagesSnapshot(
                 sessionId: sessionIdString,
                 messages: page.messages,
@@ -165,7 +165,7 @@ public enum BridgeIntent {
             // `rateLimitsUpdated` automatically.
             session.send(bus.currentRateLimitsFrame())
 
-        // v7 audio catalog. Routes through the host's `audioCatalogClient`
+        // Audio catalog. Routes through the host's `audioCatalogClient`
         // when configured; otherwise the default impl replies with a
         // structured error so clients surface a precise reason instead
         // of hanging on a missing response.

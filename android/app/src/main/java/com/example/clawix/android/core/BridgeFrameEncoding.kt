@@ -7,10 +7,10 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
         is BridgeBody.Auth -> {
             b.put("token", body.token)
             body.deviceName?.let { b.put("deviceName", it) }
-            body.clientKind?.let { b.put("clientKind", it.wireValue) }
-            body.clientId?.let { b.put("clientId", it) }
-            body.installationId?.let { b.put("installationId", it) }
-            body.deviceId?.let { b.put("deviceId", it) }
+            b.put("clientKind", body.clientKind.wireValue)
+            b.put("clientId", body.clientId)
+            b.put("installationId", body.installationId)
+            b.put("deviceId", body.deviceId)
         }
         BridgeBody.ListSessions -> {}
         is BridgeBody.OpenSession -> {

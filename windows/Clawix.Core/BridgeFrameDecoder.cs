@@ -55,10 +55,10 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
             "auth" => new BridgeBody.Auth(
                 GetStr("token"),
                 GetStrOpt("deviceName"),
-                Get<ClientKind?>("clientKind"),
-                GetStrOpt("clientId"),
-                GetStrOpt("installationId"),
-                GetStrOpt("deviceId")),
+                Get<ClientKind>("clientKind"),
+                GetStr("clientId"),
+                GetStr("installationId"),
+                GetStr("deviceId")),
 
             "listSessions" => new BridgeBody.ListSessions(),
             "openSession" => new BridgeBody.OpenSession(GetStr("sessionId"), GetIntOpt("limit")),

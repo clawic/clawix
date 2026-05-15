@@ -9,10 +9,10 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
     "auth" -> BridgeBody.Auth(
         token = obj.requireString("token"),
         deviceName = obj.optString("deviceName"),
-        clientKind = obj.optString("clientKind")?.let(ClientKind::fromWire),
-        clientId = obj.optString("clientId"),
-        installationId = obj.optString("installationId"),
-        deviceId = obj.optString("deviceId"),
+        clientKind = ClientKind.fromWire(obj.requireString("clientKind")),
+        clientId = obj.requireString("clientId"),
+        installationId = obj.requireString("installationId"),
+        deviceId = obj.requireString("deviceId"),
     )
     "listSessions" -> BridgeBody.ListSessions
     "openSession" -> BridgeBody.OpenSession(obj.requireString("sessionId"), obj.optInt("limit"))

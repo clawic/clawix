@@ -8,14 +8,14 @@ public let bridgeSchemaVersion: Int = 1
 /// Default count of trailing messages the server returns on
 /// `openSession(limit:)` when the client opts into pagination. 60 covers
 /// the last ~6-10 turns including their tool-call timelines and inline
-/// attachments without burning the first paint on a big chat. Older
+/// attachments without burning the first paint on a big chat. Earlier
 /// pages stream in via `loadOlderMessages` as the user scrolls up.
 public let bridgeInitialPageLimit: Int = 60
 
 /// Page size for each `loadOlderMessages` request fired by the client
 /// after the user scrolls near the top of the transcript. Smaller than
 /// the initial batch because (a) the user already saw the recent
-/// turns, (b) older history is the long tail and we want each pull to
+/// turns, (b) earlier history is the long tail and we want each pull to
 /// stay under ~300ms over LAN even when turns carry heavy timelines.
 public let bridgeOlderPageLimit: Int = 40
 
@@ -28,7 +28,7 @@ public let bridgeOlderPageLimit: Int = 40
 ///   gets the full surface (edit, archive, pin, branch switch, project
 ///   selection, pairing token issuance, auth coordinator, etc.).
 ///
-/// Clients that do not send a `clientKind` are treated as `.companion`.
+/// Clients send `clientKind` as a role, not as a platform identifier.
 public enum ClientKind: String, Codable, Equatable, Sendable {
     case companion
     case desktop
@@ -71,20 +71,19 @@ public enum BridgeBody: Equatable, Sendable {
     case auth(
         token: String,
         deviceName: String?,
-        clientKind: ClientKind?,
-        clientId: String?,
-        installationId: String?,
-        deviceId: String?
+        clientKind: ClientKind,
+        clientId: String,
+        installationId: String,
+        deviceId: String
     )
     case listSessions
     /// Open a chat for streaming. `limit` is optional: when set, the
     /// server replies with the trailing N messages and a `hasMore`
-    /// flag so the client can lazily fetch older history via
-    /// `loadOlderMessages`. Old clients omit the field and receive the
-    /// full transcript like before; old servers receiving a frame with
-    /// `limit` ignore it because the field decodes via `decodeIfPresent`.
+    /// flag so the client can lazily fetch earlier history via
+    /// `loadOlderMessages`. `limit == nil` is the current v1 request
+    /// for the whole transcript.
     case openSession(sessionId: String, limit: Int?)
-    /// Pull a window of older messages anchored at the oldest message
+    /// Pull a window of earlier messages anchored at the oldest message
     /// the client currently holds. `beforeMessageId` is exclusive
     /// (clients have it already), `limit` is how many earlier rows to
     /// fetch. Server replies with `messagesPage`.
@@ -92,9 +91,8 @@ public enum BridgeBody: Equatable, Sendable {
     /// Carries optional inline attachments alongside the prompt. The
     /// daemon writes each one to a turn-scoped temp file and forwards
     /// the resulting paths to Codex as `localImage` user input items.
-    /// Old peers that don't know about attachments omit the field; old
-    /// servers receiving a frame with attachments fall back to text
-    /// because the field is decoded with `decodeIfPresent ?? []`.
+    /// Empty attachment lists may omit the field; attachment entries
+    /// themselves must carry an explicit `kind`.
     case sendMessage(sessionId: String, text: String, attachments: [WireAttachment])
     /// New conversation kicked off from the iPhone FAB. The client
     /// pre-mints the UUID so it can route to the chat detail screen
@@ -116,11 +114,9 @@ public enum BridgeBody: Equatable, Sendable {
     case sessionsSnapshot(sessions: [WireSession])
     case sessionUpdated(session: WireSession)
     /// Replace the client's view of a chat with the server's. `hasMore`
-    /// is optional and only populated when the server honoured a paged
-    /// `openSession` (`limit != nil`); a `nil` value means "old server
-    /// path, no pagination metadata, treat as no older history". When
-    /// the client receives this it MUST reset its pagination state for
-    /// `sessionId` because every snapshot is the new baseline.
+    /// is optional: `nil` means this snapshot is the complete transcript.
+    /// When the client receives this it MUST reset its pagination state
+    /// for `sessionId` because every snapshot is the new baseline.
     case messagesSnapshot(sessionId: String, messages: [WireMessage], hasMore: Bool?)
     /// Reply to `loadOlderMessages`. `messages` is the slice prior to
     /// the cursor (chronological order, oldest first); `hasMore` is
@@ -139,7 +135,7 @@ public enum BridgeBody: Equatable, Sendable {
     )
     case errorEvent(code: String, message: String)
 
-    // MARK: - v2 outbound (desktop client -> daemon)
+    // MARK: - Desktop control outbound (desktop client -> daemon)
     /// Edit a prompt in place and re-run the turn. `sessionId` is the
     /// chat, `messageId` is the user message being rewritten, `text`
     /// is the new content. Daemon truncates the rollout at this turn,
@@ -170,7 +166,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// Reply is `fileSnapshot`.
     case readFile(path: String)
 
-    // MARK: - v2 inbound (daemon -> desktop client)
+    // MARK: - Desktop control inbound (daemon -> desktop client)
     /// Reply to `pairingStart`. The QR is what the iPhone scans; the
     /// bearer is what the daemon will accept on the next `auth` frame
     /// from a fresh iPhone.
@@ -236,7 +232,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// `syncing → ready` flip without polling.
     case bridgeState(state: String, chatCount: Int, message: String?)
 
-    // MARK: - v5 outbound (desktop client -> daemon)
+    // MARK: - Rate limits outbound (desktop client -> daemon)
     /// Ask the daemon for the current rate-limits snapshot. Reply is
     /// `rateLimitsSnapshot`. The macOS GUI sends this once after
     /// `authOk` so the "Remaining usage limits" widget hydrates as
@@ -244,7 +240,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// clients never emit it.
     case requestRateLimits
 
-    // MARK: - v5 inbound (daemon -> desktop client)
+    // MARK: - Rate limits inbound (daemon -> desktop client)
     /// Reply to `requestRateLimits` and also the shape of the push
     /// the daemon sends when Codex emits `account/rateLimits/updated`.
     /// `snapshot` is the general-account view (the same field Codex
@@ -260,7 +256,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// so clients can apply both through the same code path.
     case rateLimitsUpdated(snapshot: WireRateLimitSnapshot?, byLimitId: [String: WireRateLimitSnapshot])
 
-    // MARK: - v6 outbound (client -> daemon)
+    // MARK: - Skills outbound (client -> daemon)
     /// List skills the daemon has, optionally pre-filtered. The daemon
     /// scans `~/.claw/skills/` (single source of truth) and any
     /// configured `external_dirs` (read-only discovery). Reply is
@@ -303,7 +299,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// symlink back, and emits `skillsListResult` afterward.
     case skillsImport(dirs: [String])
 
-    // MARK: - v6 inbound (daemon -> client)
+    // MARK: - Skills inbound (daemon -> client)
     case skillsListResult(skills: [WireSkillSummary])
     case skillsViewResult(spec: WireSkillSpec?, error: String?)
     /// Daemon push: the resolved active set for `scopeTag` changed.
@@ -314,7 +310,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// and on filesystem-watch events from `~/.claw/skills/`.
     case skillsActiveChanged(scopeTag: String)
 
-    // MARK: - v7 audio catalog (outbound: client -> daemon)
+    // MARK: - Audio catalog outbound (client -> daemon)
     /// Register a new audio asset in the framework's audio catalog and
     /// optionally attach a primary transcript in the same round trip.
     /// Reply is `audioRegisterResult` carrying the inserted asset and
@@ -329,8 +325,8 @@ public enum BridgeBody: Equatable, Sendable {
     /// included; use `audioGetBytes` for the base64 payload.
     case audioGet(requestId: String, audioId: String, appId: String)
     /// Pull the raw bytes of an asset. Carried inline as base64 in the
-    /// reply (`audioBytesResult`). v1 only; v2 may add a path+token
-    /// handoff for same-machine clients.
+    /// reply (`audioBytesResult`). Current v1 uses inline base64; a
+    /// future same-machine optimization can add a path+token handoff.
     case audioGetBytes(requestId: String, audioId: String, appId: String)
     /// List assets matching the filter. `appId` is required so apps
     /// don't accidentally see each other's audio.
@@ -339,7 +335,7 @@ public enum BridgeBody: Equatable, Sendable {
     /// and unlinks the blob from disk.
     case audioDelete(requestId: String, audioId: String, appId: String)
 
-    // MARK: - v7 audio catalog (inbound: daemon -> client)
+    // MARK: - Audio catalog inbound (daemon -> client)
     case audioRegisterResult(requestId: String, asset: WireAudioAssetWithTranscripts?, errorMessage: String?)
     case audioAttachTranscriptResult(requestId: String, transcript: WireAudioTranscript?, errorMessage: String?)
     case audioGetResult(requestId: String, asset: WireAudioAssetWithTranscripts?, errorMessage: String?)
@@ -348,13 +344,13 @@ public enum BridgeBody: Equatable, Sendable {
     case audioDeleteResult(requestId: String, deleted: Bool, errorMessage: String?)
 
     fileprivate var typeTag: String {
-        // Split into base bridge, v6 (skills) and v7 (audio) helpers
+        // Split into base bridge, skills, and audio helpers
         // so the Swift type-checker doesn't time out on a single
         // ~70-case switch ("compiler is unable to type-check this
         // expression in reasonable time"). Each helper covers a
-        // disjoint set; the dispatcher tries v7 -> v6 -> base.
-        if let tag = v7AudioTypeTag { return tag }
-        if let tag = v6TypeTag { return tag }
+        // disjoint set; the dispatcher tries audio -> skills -> base.
+        if let tag = audioTypeTag { return tag }
+        if let tag = skillsTypeTag { return tag }
         return baseTypeTag
     }
 
@@ -401,14 +397,14 @@ public enum BridgeBody: Equatable, Sendable {
         case .rateLimitsUpdated:  return "rateLimitsUpdated"
         default:
             // Unreachable: every base bridge case is enumerated above
-            // and v6 cases are handled by `v6TypeTag` before this branch.
+            // and skills cases are handled by `skillsTypeTag` before this branch.
             // If a new case is added without updating either helper this
             // will trip in tests, which is the desired behaviour.
             preconditionFailure("BridgeBody.baseTypeTag missing case for \(self)")
         }
     }
 
-    private var v7AudioTypeTag: String? {
+    private var audioTypeTag: String? {
         switch self {
         case .audioRegister:               return "audioRegister"
         case .audioAttachTranscript:       return "audioAttachTranscript"
@@ -427,7 +423,7 @@ public enum BridgeBody: Equatable, Sendable {
         }
     }
 
-    private var v6TypeTag: String? {
+    private var skillsTypeTag: String? {
         switch self {
         case .skillsList:           return "skillsList"
         case .skillsView:           return "skillsView"
@@ -467,21 +463,21 @@ public enum BridgeBody: Equatable, Sendable {
         case limit, beforeMessageId, hasMore
         case state, chatCount
         case rateLimits, rateLimitsByLimitId
-        // v6 (Skills)
+        // Skills
         case slug, kind, scopeKind, scopeTag, tag, query, tags
         case filter, skills, spec, input, patch
         case dirs, targets, target, processed, total
         case paramsJSON
-        // v7 (Audio catalog)
+        // Audio catalog
         case appId, request, transcript, asset, list, durationMs, deleted
     }
 
     fileprivate func encodePayload(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: FlatKeys.self)
-        // Helpers split by version so the Swift type-checker doesn't
-        // time out on a single ~70-case switch. Try v7 -> v6 -> base.
-        if try encodeV7AudioPayload(into: &c) { return }
-        if try encodeV6Payload(into: &c) { return }
+        // Helpers split by domain so the Swift type-checker doesn't
+        // time out on a single ~70-case switch. Try audio -> skills -> base.
+        if try encodeAudioPayload(into: &c) { return }
+        if try encodeSkillsPayload(into: &c) { return }
         try encodeBasePayload(into: &c)
     }
 
@@ -490,10 +486,10 @@ public enum BridgeBody: Equatable, Sendable {
         case .auth(let token, let deviceName, let clientKind, let clientId, let installationId, let deviceId):
             try c.encode(token, forKey: .token)
             try c.encodeIfPresent(deviceName, forKey: .deviceName)
-            try c.encodeIfPresent(clientKind, forKey: .clientKind)
-            try c.encodeIfPresent(clientId, forKey: .clientId)
-            try c.encodeIfPresent(installationId, forKey: .installationId)
-            try c.encodeIfPresent(deviceId, forKey: .deviceId)
+            try c.encode(clientKind, forKey: .clientKind)
+            try c.encode(clientId, forKey: .clientId)
+            try c.encode(installationId, forKey: .installationId)
+            try c.encode(deviceId, forKey: .deviceId)
         case .listSessions:
             break
         case .openSession(let sessionId, let limit):
@@ -607,7 +603,7 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encodeIfPresent(snapshot, forKey: .rateLimits)
             try c.encode(byLimitId, forKey: .rateLimitsByLimitId)
         default:
-            // v6 cases are handled in encodeV6Payload, called before
+            // Skills cases are handled in encodeSkillsPayload, called before
             // this method by the encodePayload dispatcher. Unknown
             // base cases would be a programming error caught by the
             // round-trip tests.
@@ -615,7 +611,7 @@ public enum BridgeBody: Equatable, Sendable {
         }
     }
 
-    private func encodeV7AudioPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {
+    private func encodeAudioPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {
         switch self {
         case .audioRegister(let requestId, let request):
             try c.encode(requestId, forKey: .requestId)
@@ -671,7 +667,7 @@ public enum BridgeBody: Equatable, Sendable {
         return true
     }
 
-    private func encodeV6Payload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {
+    private func encodeSkillsPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws -> Bool {
         switch self {
         case .skillsList(let filter):
             try c.encodeIfPresent(filter, forKey: .filter)
@@ -724,13 +720,13 @@ public enum BridgeBody: Equatable, Sendable {
 
     fileprivate static func decode(type: String, from decoder: Decoder) throws -> BridgeBody {
         let c = try decoder.container(keyedBy: FlatKeys.self)
-        // Helpers split by version. Try v7 -> v6 -> base.
-        if let body = try decodeV7Audio(type: type, from: c) { return body }
-        if let body = try decodeV6(type: type, from: c) { return body }
+        // Helpers split by domain. Try audio -> skills -> base.
+        if let body = try decodeAudio(type: type, from: c) { return body }
+        if let body = try decodeSkills(type: type, from: c) { return body }
         return try decodeBase(type: type, from: c)
     }
 
-    private static func decodeV7Audio(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
+    private static func decodeAudio(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
         switch type {
         case "audioRegister":
             return .audioRegister(
@@ -815,10 +811,10 @@ public enum BridgeBody: Equatable, Sendable {
             return .auth(
                 token: try c.decode(String.self, forKey: .token),
                 deviceName: try c.decodeIfPresent(String.self, forKey: .deviceName),
-                clientKind: try c.decodeIfPresent(ClientKind.self, forKey: .clientKind),
-                clientId: try c.decodeIfPresent(String.self, forKey: .clientId),
-                installationId: try c.decodeIfPresent(String.self, forKey: .installationId),
-                deviceId: try c.decodeIfPresent(String.self, forKey: .deviceId)
+                clientKind: try c.decode(ClientKind.self, forKey: .clientKind),
+                clientId: try c.decode(String.self, forKey: .clientId),
+                installationId: try c.decode(String.self, forKey: .installationId),
+                deviceId: try c.decode(String.self, forKey: .deviceId)
             )
         case "listSessions":
             return .listSessions
@@ -980,7 +976,7 @@ public enum BridgeBody: Equatable, Sendable {
         }
     }
 
-    private static func decodeV6(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
+    private static func decodeSkills(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
         switch type {
         case "skillsList":
             return .skillsList(filter: try c.decodeIfPresent(WireSkillListFilter.self, forKey: .filter))
@@ -1092,8 +1088,8 @@ public enum BridgeRuntimeState: Equatable, Sendable {
 
 /// Single rate-limit window (primary or secondary). Mirrors the shape
 /// Codex returns under `account/rateLimits/read.rateLimits.primary`.
-/// `windowDurationMins` and `resetsAt` are optional because older
-/// daemons / future buckets may omit them.
+/// `windowDurationMins` and `resetsAt` are optional because the account
+/// endpoint can omit window metadata for non-windowed buckets.
 public struct WireRateLimitWindow: Codable, Equatable, Sendable {
     public let usedPercent: Int
     public let resetsAt: Int64?
@@ -1168,7 +1164,7 @@ public enum BridgeCoder {
     }
 }
 
-// MARK: - v6 wire types (Skills)
+// MARK: - Skills wire types
 
 /// Filter for `skillsList`. All fields optional; nil filter means
 /// "give me everything". Encoded as a small object so callers don't
@@ -1230,8 +1226,8 @@ public struct WireSkillSummary: Codable, Equatable, Sendable {
 /// Full SKILL.md view. `frontmatterJSON` carries `metadata.claw.*`
 /// as a compact JSON string so the bridge doesn't need a Swift mirror
 /// for every new frontmatter field ClawJS adds. The macOS UI parses
-/// this into typed model on receipt; iPhone v1 doesn't unpack it
-/// (read-only catalog), v2 will when it adds editing.
+/// this into typed model on receipt; read-only catalog clients can
+/// keep it opaque while editing clients parse it when needed.
 public struct WireSkillSpec: Codable, Equatable, Sendable {
     public let slug: String
     public let name: String

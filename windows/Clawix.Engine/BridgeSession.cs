@@ -77,8 +77,17 @@ public sealed class BridgeSession
             await _socket.CloseAsync((WebSocketCloseStatus)1008, "bad token", ct);
             return;
         }
+        if (string.IsNullOrWhiteSpace(auth.ClientId) ||
+            string.IsNullOrWhiteSpace(auth.InstallationId) ||
+            string.IsNullOrWhiteSpace(auth.DeviceId))
+        {
+            await SendAsync(new BridgeFrame(new BridgeBody.AuthFailed("invalid-client-identity")), ct);
+            await _socket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "invalid client identity", ct);
+            return;
+        }
+
         _authenticated = true;
-        _clientKind = auth.ClientKind ?? ClientKind.Companion;
+        _clientKind = auth.ClientKind;
         await SendAsync(new BridgeFrame(new BridgeBody.AuthOk(_pairing.BonjourServiceName)), ct);
         var state = _host.BridgeStateCurrent;
         await SendAsync(new BridgeFrame(new BridgeBody.BridgeState(

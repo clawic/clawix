@@ -18,25 +18,29 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void Auth_Frame_RoundTrip()
     {
-        var frame = new BridgeFrame(new BridgeBody.Auth("token-abc", "iPhone 15", ClientKind.Companion));
+        var frame = new BridgeFrame(new BridgeBody.Auth("token-abc", "iPhone 15", ClientKind.Companion, "client-win", "install-win", "device-win"));
         var json = BridgeCoder.Encode(frame);
         Assert.Contains("\"schemaVersion\":1", json);
         Assert.Contains("\"type\":\"auth\"", json);
         Assert.Contains("\"token\":\"token-abc\"", json);
         Assert.Contains("\"deviceName\":\"iPhone 15\"", json);
         Assert.Contains("\"clientKind\":\"companion\"", json);
+        Assert.Contains("\"clientId\":\"client-win\"", json);
+        Assert.Contains("\"installationId\":\"install-win\"", json);
+        Assert.Contains("\"deviceId\":\"device-win\"", json);
 
         var decoded = BridgeCoder.Decode(json);
         Assert.Equal(frame, decoded);
     }
 
     [Fact]
-    public void Auth_Frame_OmitsOptionalFields()
+    public void Auth_Frame_RequiresIdentityFields()
     {
-        var frame = new BridgeFrame(new BridgeBody.Auth("t", null, null));
+        var frame = new BridgeFrame(new BridgeBody.Auth("t", null, ClientKind.Companion, "client-win", "install-win", "device-win"));
         var json = BridgeCoder.Encode(frame);
         Assert.DoesNotContain("\"deviceName\"", json);
-        Assert.DoesNotContain("\"clientKind\"", json);
+        Assert.Contains("\"clientKind\":\"companion\"", json);
+        Assert.Contains("\"clientId\":\"client-win\"", json);
         var decoded = BridgeCoder.Decode(json);
         Assert.Equal(frame, decoded);
     }

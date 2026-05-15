@@ -52,16 +52,18 @@ class BridgeFrameRoundtripTest {
 
     @Test fun auth_flat_envelope() {
         val raw = BridgeCoder.encode(
-            BridgeFrame(body = BridgeBody.Auth("tok", "iPhone", ClientKind.COMPANION))
+            BridgeFrame(body = BridgeBody.Auth("tok", "iPhone", ClientKind.COMPANION, "client-android", "install-android", "device-android"))
         )
         assertFlatEnvelope(raw, "auth", "token")
         assertTrue(raw.contains("\"deviceName\":\"iPhone\""))
         assertTrue(raw.contains("\"clientKind\":\"companion\""))
+        assertTrue(raw.contains("\"clientId\":\"client-android\""))
+        assertTrue(raw.contains("\"installationId\":\"install-android\""))
+        assertTrue(raw.contains("\"deviceId\":\"device-android\""))
     }
 
     @Test fun roundtrip_outbound_v1() {
-        roundtrip(BridgeBody.Auth("tok", "iPhone", ClientKind.COMPANION))
-        roundtrip(BridgeBody.Auth("tok", null, null))
+        roundtrip(BridgeBody.Auth("tok", "iPhone", ClientKind.COMPANION, "client-android", "install-android", "device-android"))
         roundtrip(BridgeBody.ListSessions)
         roundtrip(BridgeBody.OpenSession("chat-1", null))
         roundtrip(BridgeBody.OpenSession("chat-1", 60))

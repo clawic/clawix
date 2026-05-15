@@ -5,14 +5,13 @@ public enum WireRole: String, Codable, Equatable, Sendable {
     case assistant
 }
 
-/// What an attachment represents on the wire. `.image` is the legacy
-/// kind: the daemon spools the bytes and forwards the path to Codex as
-/// a `localImage` user input item. `.audio` means the attachment is a
-/// voice clip belonging to the user message; the daemon transcribes it
-/// with Whisper, uses the transcript as the prompt text Codex sees, and
+/// What an attachment represents on the wire. `.image` means the daemon
+/// spools the bytes and forwards the path to Codex as a `localImage`
+/// user input item. `.audio` means the attachment is a voice clip
+/// belonging to the user message; the daemon transcribes it with
+/// Whisper, uses the transcript as the prompt text Codex sees, and
 /// stores the audio for later replay so the chat history shows a
-/// playable bubble. Old peers without `kind` decode as `.image` so
-/// existing image-only flows keep working unchanged.
+/// playable bubble.
 public enum WireAttachmentKind: String, Codable, Equatable, Sendable {
     case image
     case audio
@@ -26,9 +25,8 @@ public enum WireAttachmentKind: String, Codable, Equatable, Sendable {
 ///
 /// `filename` is advisory: the daemon uses its extension when picking
 /// the on-disk suffix, defaulting to `.jpg` for images and `.m4a` for
-/// audio if none is supplied. Old peers that don't carry attachments
-/// simply omit the field entirely; new peers receiving a frame without
-/// it default to an empty array.
+/// audio if none is supplied. Empty attachment lists may omit the frame
+/// field; attachment entries themselves must carry an explicit `kind`.
 public struct WireAttachment: Codable, Equatable, Sendable {
     public let id: String
     public let kind: WireAttachmentKind
@@ -50,18 +48,6 @@ public struct WireAttachment: Codable, Equatable, Sendable {
         self.dataBase64 = dataBase64
     }
 
-    private enum CodingKeys: String, CodingKey {
-        case id, kind, mimeType, filename, dataBase64
-    }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try c.decode(String.self, forKey: .id)
-        self.kind = try c.decodeIfPresent(WireAttachmentKind.self, forKey: .kind) ?? .image
-        self.mimeType = try c.decode(String.self, forKey: .mimeType)
-        self.filename = try c.decodeIfPresent(String.self, forKey: .filename)
-        self.dataBase64 = try c.decode(String.self, forKey: .dataBase64)
-    }
 }
 
 /// Project descriptor exposed to the desktop client when it asks the
@@ -120,23 +106,23 @@ public struct WireSession: Codable, Equatable, Sendable, Identifiable {
     /// order and project membership from `BackendStateReader` when
     /// the daemon owns Codex (otherwise that metadata would be lost
     /// on the way across the bridge — see `applyDaemonChats`).
-    /// Optional + decodeIfPresent so older clients keep parsing.
+    /// Optional because some current v1 snapshots are assembled before
+    /// Codex rollout metadata has been reconciled.
     public var threadId: String?
 
     /// Originating agent runtime for this chat. Identifies which
     /// agent owns the conversation so sidebars and routing can
-    /// filter / badge by origin. Defaults to "codex" for legacy
-    /// payloads. Other values include "openclaw", "hermes" and
-    /// any future runtime registered with the bridge daemon.
+    /// filter / badge by origin. Defaults to "codex" for snapshots
+    /// produced before runtime routing has annotated the session.
+    /// Other values include "openclaw", "hermes" and any future
+    /// runtime registered with the bridge daemon.
     public var agent: String
-    /// v8 reference to the owning `Agent.id` (e.g.
-    /// `agent.default.codex`). Optional + decodeIfPresent so v7
-    /// peers keep parsing; when missing, the daemon falls back to
-    /// `Agent.defaultCodexId` so existing chats keep routing to the
-    /// built-in Codex agent. Distinct from `agent` (which still
-    /// carries the runtime tag for legacy badging) because we want
-    /// to be able to migrate agent identity over time without
-    /// breaking the schema for older clients.
+    /// Reference to the owning `Agent.id` (for example
+    /// `agent.default.codex`). Optional because v1 snapshots can be
+    /// emitted before agent registry hydration finishes; when missing,
+    /// the daemon falls back to `Agent.defaultCodexId` so the session
+    /// still routes to the built-in Codex agent. Distinct from `agent`,
+    /// which carries the runtime tag used for filtering and badges.
     public var agentId: String?
 
     public init(
@@ -171,11 +157,9 @@ public struct WireSession: Codable, Equatable, Sendable, Identifiable {
         self.agentId = agentId
     }
 
-    /// Decode tolerant of legacy payloads (without `lastTurnInterrupted`).
-    /// Old Macs talking to a new iPhone (or vice versa during a phased
-    /// rollout) still parse cleanly. Same applies to `agent`, which
-    /// defaults to "codex" when missing so pre-multi-runtime payloads
-    /// keep their semantics.
+    /// Optional v1 fields default to the same baseline state the daemon
+    /// uses while rollout metadata and runtime annotations are still
+    /// being loaded.
     private enum CodingKeys: String, CodingKey {
         case id, title, createdAt, isPinned, isArchived, hasActiveTurn
         case lastMessageAt, lastMessagePreview, branch, cwd, lastTurnInterrupted
@@ -241,9 +225,8 @@ public struct WireWorkItem: Codable, Equatable, Sendable {
     /// stores them under `~/.codex/generated_images/<session>/<id>.png`).
     /// Clients pass this path back to `requestGeneratedImage` to fetch
     /// the bytes; the daemon validates the path stays inside its
-    /// generated_images sandbox before reading. Optional so old peers
-    /// without the field decode cleanly and so streaming-only items
-    /// (where the rollout hasn't been parsed yet) can still flow.
+    /// generated_images sandbox before reading. Optional because
+    /// streaming-only items may arrive before the rollout has been parsed.
     public var generatedImagePath: String?
 
     public init(
@@ -368,7 +351,6 @@ public struct WireMessage: Codable, Equatable, Sendable {
     /// a rollout that referenced images on disk: the daemon reads the
     /// bytes, base64-encodes them, and ships them so the client can
     /// render the same `[image]` thumbnails the user originally saw.
-    /// Old peers that don't know about this field decode an empty array.
     public var attachments: [WireAttachment]
 
     public init(
@@ -397,10 +379,8 @@ public struct WireMessage: Codable, Equatable, Sendable {
         self.attachments = attachments
     }
 
-    // Decodes legacy payloads (without `timeline` / `workSummary` /
-    // `audioRef` / `attachments`) gracefully. Each new field defaults
-    // so an old Mac talking to a new iPhone (or vice versa during a
-    // phased rollout) still works.
+    // Optional fields are current v1 surface area: streamed messages may
+    // arrive before timeline/work-summary/audio/attachment enrichment.
     private enum CodingKeys: String, CodingKey {
         case id, role, content, reasoningText, streamingFinished, isError, timestamp, timeline, workSummary, audioRef, attachments
     }
@@ -717,15 +697,15 @@ public struct WireAudioListResult: Codable, Equatable, Sendable {
     }
 }
 
-// MARK: - v8 agents · personalities · skill collections · connections
+// MARK: - Agents · personalities · skill collections · connections
 //
-// Wire shape of the four new entities described in
-// the v8 agents implementation plan.
+// Wire shape of the agent domain entities exposed by the current v1
+// bridge surface.
 // macOS keeps the filesystem (`~/.claw/`) as the source of truth; the
 // daemon serializes records into these structs on `agentList` / push
-// frames so cross-device clients see the same roster. Every field is
-// either non-optional or carries an explicit default so v7 peers
-// decode v8 payloads cleanly via `decodeIfPresent`.
+// frames so cross-device clients see the same roster. Optional fields
+// are current v1 metadata that may be absent while the daemon is still
+// hydrating the framework registry.
 
 public struct WireAgentIntegrationBinding: Codable, Equatable, Sendable, Identifiable {
     public let id: String
