@@ -200,8 +200,8 @@ final class LifeManager: ObservableObject {
         ), !stored.isEmpty {
             return stored
         }
-        // Default: every Phase-1 vertical visible the first time the app
-        // launches. The remaining 70 are reachable from `LifeSettingsView`.
+        // Default: every stable product-v1 vertical visible the first time the
+        // app launches. Dev-only verticals stay behind the developer switch.
         return [
             "health", "sleep", "workouts", "emotions", "journal",
             "habits", "time-tracking", "goals", "finance", "nutrition"

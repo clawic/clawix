@@ -6,6 +6,7 @@ import SwiftUI
 struct LifeHomeScreen: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var manager = LifeManager.shared
+    @StateObject private var flags = FeatureFlags.shared
 
     private let columns: [GridItem] = Array(
         repeating: GridItem(.flexible(), spacing: 12),
@@ -18,7 +19,7 @@ struct LifeHomeScreen: View {
                 header
 
                 ForEach(LifeCategory.allCases, id: \.self) { category in
-                    let entries = LifeRegistry.entries(in: category)
+                    let entries = LifeRegistry.entries(in: category, includeDevOnly: flags.developerSurfaces)
                     if !entries.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(category.label)

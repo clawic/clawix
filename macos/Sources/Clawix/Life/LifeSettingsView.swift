@@ -5,6 +5,7 @@ import SwiftUI
 struct LifeSettingsView: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var manager = LifeManager.shared
+    @StateObject private var flags = FeatureFlags.shared
 
     @State private var enabledOrder: [String] = []
     @State private var search: String = ""
@@ -62,7 +63,7 @@ struct LifeSettingsView: View {
 
     private func filteredEntries(in category: LifeCategory) -> [LifeRegistryEntry] {
         let q = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let all = LifeRegistry.entries(in: category)
+        let all = LifeRegistry.entries(in: category, includeDevOnly: flags.developerSurfaces)
         guard !q.isEmpty else { return all }
         return all.filter {
             $0.label.lowercased().contains(q) || $0.description.lowercased().contains(q)
@@ -107,14 +108,12 @@ struct LifeSettingsView: View {
         let text: String
         let color: Color
         switch status {
-        case .planned:
-            text = "PLANNED"; color = Color.white.opacity(0.30)
-        case .alpha:
-            text = "ALPHA"; color = Color.white.opacity(0.55)
         case .stable:
             text = "STABLE"; color = Color.white.opacity(0.80)
-        case .deprecated:
-            text = "DEPRECATED"; color = Color.red.opacity(0.55)
+        case .devOnly:
+            text = "DEV"; color = Color.white.opacity(0.45)
+        case .removed:
+            text = "REMOVED"; color = Color.red.opacity(0.55)
         }
         return Text(text)
             .font(.system(size: 9, weight: .semibold))

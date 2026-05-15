@@ -6,6 +6,7 @@ import SwiftUI
 struct LifeSidebarSection: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var manager = LifeManager.shared
+    @StateObject private var flags = FeatureFlags.shared
 
     @AppStorage(ClawixPersistentSurfaceKeys.sidebarLifeExpanded, store: SidebarPrefs.store)
     private var expanded: Bool = true
@@ -85,8 +86,8 @@ struct LifeSidebarSection: View {
                     .font(.system(size: 12))
                     .foregroundColor(selected ? Palette.textPrimary : Palette.textSecondary)
                 Spacer()
-                if entry.status == .planned {
-                    Text("PLAN")
+                if entry.status == .devOnly {
+                    Text("DEV")
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundColor(Color.white.opacity(0.35))
                 }
@@ -104,7 +105,7 @@ struct LifeSidebarSection: View {
         let hidden = manager.hiddenVerticalIds
         return ids.compactMap { id in
             guard !hidden.contains(id) else { return nil }
-            return LifeRegistry.entry(byId: id)
+            return LifeRegistry.entry(byId: id, includeDevOnly: flags.developerSurfaces)
         }
     }
 

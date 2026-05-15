@@ -2,10 +2,33 @@ import Foundation
 
 /// Status of a vertical in the ClawJS tracking registry.
 enum LifeVerticalStatus: String, Codable {
-    case planned
-    case alpha
     case stable
-    case deprecated
+    case devOnly = "dev-only"
+    case removed
+
+    init(from decoder: Decoder) throws {
+        let rawValue = try decoder.singleValueContainer().decode(String.self)
+        switch rawValue {
+        case "stable", "alpha":
+            self = .stable
+        case "dev-only", "planned":
+            self = .devOnly
+        case "removed", "deprecated":
+            self = .removed
+        default:
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Unknown life vertical status: \(rawValue)"
+                )
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 /// One of the ten top-level groupings that the Life sidebar uses to lay
@@ -68,11 +91,19 @@ enum LifeRegistry {
     static let entries: [LifeRegistryEntry] = loadEntries()
 
     static func entry(byId id: String) -> LifeRegistryEntry? {
-        entries.first { $0.id == id }
+        entries.first { $0.id == id && $0.status == .stable }
     }
 
-    static func entries(in category: LifeCategory) -> [LifeRegistryEntry] {
-        entries.filter { $0.category == category }
+    static func entry(byId id: String, includeDevOnly: Bool) -> LifeRegistryEntry? {
+        entries.first { entry in
+            entry.id == id && (includeDevOnly || entry.status == .stable)
+        }
+    }
+
+    static func entries(in category: LifeCategory, includeDevOnly: Bool = false) -> [LifeRegistryEntry] {
+        entries.filter { entry in
+            entry.category == category && (includeDevOnly || entry.status == .stable)
+        }
     }
 
     private static func loadEntries() -> [LifeRegistryEntry] {
@@ -81,7 +112,7 @@ enum LifeRegistry {
            let envelope = try? JSONDecoder().decode(RegistryEnvelope.self, from: data) {
             return envelope.entries
         }
-        // Fallback embedded subset: every Phase-1 vertical so the UI is
+        // Fallback embedded subset: every product-v1 vertical so the UI is
         // never empty even when the bundled registry resource is missing.
         return embeddedFallback
     }
@@ -90,52 +121,52 @@ enum LifeRegistry {
         LifeRegistryEntry(id: "health", label: "Health", category: .bodyHealth,
                           description: "General HealthKit-style metrics",
                           catalogSize: 120, hasSessions: false, healthkitMapping: true,
-                          sensitive: true, status: .alpha,
+                          sensitive: true, status: .stable,
                           packageName: "@clawjs/health", servicePort: 4700, iconHint: "heart"),
         LifeRegistryEntry(id: "sleep", label: "Sleep", category: .bodyHealth,
                           description: "Sleep duration, stages, quality, naps",
                           catalogSize: 10, hasSessions: true, healthkitMapping: true,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/sleep", servicePort: 4701, iconHint: "moon"),
         LifeRegistryEntry(id: "workouts", label: "Workouts", category: .bodyHealth,
                           description: "Workouts with parent sessions + child observations",
                           catalogSize: 35, hasSessions: true, healthkitMapping: true,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/workouts", servicePort: 4713, iconHint: "dumbbell"),
         LifeRegistryEntry(id: "emotions", label: "Emotions", category: .mindEmotions,
                           description: "Mood, anxiety, energy, joy, stress",
                           catalogSize: 12, hasSessions: false, healthkitMapping: false,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/emotions", servicePort: 4714, iconHint: "smile"),
         LifeRegistryEntry(id: "journal", label: "Journal", category: .mindEmotions,
                           description: "Long-form reflections with prompts",
                           catalogSize: 6, hasSessions: true, healthkitMapping: false,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/journal", servicePort: 4715, iconHint: "book"),
         LifeRegistryEntry(id: "habits", label: "Habits", category: .timeProductivity,
                           description: "Daily habits, streaks and targets",
                           catalogSize: 18, hasSessions: false, healthkitMapping: false,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/habits", servicePort: 4723, iconHint: "check"),
         LifeRegistryEntry(id: "time-tracking", label: "Time tracking", category: .timeProductivity,
                           description: "Manual pomodoros and focus sessions",
                           catalogSize: 12, hasSessions: true, healthkitMapping: false,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/time-tracking", servicePort: 4724, iconHint: "timer"),
         LifeRegistryEntry(id: "goals", label: "Goals", category: .metaReflection,
                           description: "Long-term aspirations and milestones",
                           catalogSize: 8, hasSessions: false, healthkitMapping: false,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/goals", servicePort: 4762, iconHint: "flag"),
         LifeRegistryEntry(id: "finance", label: "Finance", category: .careerMoney,
                           description: "Transactions, budgets, savings, accounts, net worth",
                           catalogSize: 60, hasSessions: false, healthkitMapping: false,
-                          sensitive: true, status: .alpha,
+                          sensitive: true, status: .stable,
                           packageName: "@clawjs/finance", servicePort: 4760, iconHint: "wallet"),
         LifeRegistryEntry(id: "nutrition", label: "Nutrition", category: .bodyHealth,
                           description: "Macros and foods consumed",
                           catalogSize: 230, hasSessions: false, healthkitMapping: true,
-                          sensitive: false, status: .alpha,
+                          sensitive: false, status: .stable,
                           packageName: "@clawjs/nutrition", servicePort: 4702, iconHint: "apple")
     ]
 }
