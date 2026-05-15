@@ -17,7 +17,15 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         XCTAssertTrue(nodes.contains { $0.id == "clawix.web.storage.currentRoute" && $0.key == "ui.route" })
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.apps" && $0.owner == "claw" && $0.path == "~/.claw/apps" })
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.design" && $0.owner == "claw" && $0.path == "~/.claw/design" })
-        XCTAssertFalse(nodes.contains { $0.id == "clawix.apps" || $0.id == "clawix.design" })
+        XCTAssertTrue(nodes.contains { $0.id == "claw.framework.audio" && $0.owner == "claw" && $0.path == "~/.claw/audio" })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.dictationAudioDebug" && $0.path == "~/.clawix/tmp/dictation-audio-debug" })
+        XCTAssertFalse(nodes.contains {
+            $0.id == "clawix.apps" ||
+            $0.id == "clawix.design" ||
+            $0.id == "clawix.audioCatalog" ||
+            $0.id == "clawix.audioCatalogMetadata" ||
+            $0.id == "clawix.dictationAudio"
+        })
 
         let manifest = ClawixPersistentSurfaceRegistry.manifest
         let data = try Self.manifestEncoder().encode(manifest)

@@ -21,6 +21,8 @@ const requiredSnippets = [
   ["ios/Sources/Clawix/Design/DesignStore.swift", ".appendingPathComponent(frameworkRootName"],
   ["ios/Sources/Clawix/Design/EditorStore.swift", ".appendingPathComponent(frameworkRootName"],
   ["macos/Sources/Clawix/Apps/AGENT_CONTRACT.md", "~/.claw/apps/"],
+  ["macos/Sources/Clawix/Persistence/TranscriptionsRepository.swift", "frameworkGlobalChild(ClawixPersistentSurfacePaths.components.audio"],
+  ["macos/Sources/Clawix/Audio/UserAudioBubble.swift", "framework audio catalog only"],
   ["docs/interface-matrix.md", "Reject App Support as canonical Apps path"],
   ["docs/interface-matrix.md", "Framework workspace storage"],
 ];
@@ -41,7 +43,12 @@ const forbiddenByPath = new Map([
   ["ios/Sources/Clawix/Design/DesignStore.swift", ["Application Support/Clawix/Design", "Library/Application Support/Clawix/Design"]],
   ["ios/Sources/Clawix/Design/EditorStore.swift", ["Application Support/Clawix/Design", "Library/Application Support/Clawix/Design"]],
   ["ios/Sources/Clawix/Design/EditorDocument.swift", ["Application Support/Clawix/Design", "Library/Application Support/Clawix/Design"]],
-  ["docs/persistent-surface-clawix.manifest.json", ["Application Support/Clawix/Apps", "Application Support/Clawix/Design"]],
+  ["macos/Sources/Clawix/Persistence/TranscriptionsRepository.swift", ["Application Support/Clawix/dictation-audio", "Application Support/Clawix/dictation-audio-debug"]],
+  ["macos/Sources/Clawix/AppState/MessageSending.swift", ["AudioMessageStore.shared.ingest", "legacy store is still the source of truth"]],
+  ["macos/Sources/Clawix/AppState/EngineHost.swift", ["AudioMessageStore.shared.data", "Fall through to legacy"]],
+  ["macos/Sources/Clawix/Audio/UserAudioBubble.swift", ["AudioMessageStore.shared.data", "Fall through to legacy"]],
+  ["macos/Helpers/Bridged/Sources/clawix-bridge/main.swift", ["AudioMessageStore.shared.ingest", "AudioMessageStore.shared.data", "Fall through to legacy"]],
+  ["docs/persistent-surface-clawix.manifest.json", ["Application Support/Clawix/Apps", "Application Support/Clawix/Design", "Application Support/Clawix/dictation-audio", "Application Support/Clawix/audio-meta.json"]],
 ]);
 
 for (const [relativePath, patterns] of forbiddenByPath) {
@@ -58,6 +65,7 @@ const nodes = new Map(manifest.nodes.map((node) => [node.id, node]));
 for (const [id, expectedPath] of [
   ["claw.framework.apps", "~/.claw/apps"],
   ["claw.framework.design", "~/.claw/design"],
+  ["claw.framework.audio", "~/.claw/audio"],
 ]) {
   const node = nodes.get(id);
   if (!node) {
@@ -70,7 +78,7 @@ for (const [id, expectedPath] of [
   if (node.canonicality !== "frameworkCanonical") fail(`${id} canonicality must be frameworkCanonical`);
 }
 
-for (const staleId of ["clawix.apps", "clawix.design"]) {
+for (const staleId of ["clawix.apps", "clawix.design", "clawix.audioCatalog", "clawix.audioCatalogMetadata", "clawix.dictationAudio"]) {
   if (nodes.has(staleId)) fail(`persistent surface manifest still exposes retired host-owned node ${staleId}`);
 }
 
