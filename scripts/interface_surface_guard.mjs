@@ -312,6 +312,80 @@ for (const pattern of [
   }
 }
 
+const dictationHotkeyManager = read("macos/Sources/Clawix/Dictation/HotkeyManager.swift");
+for (const pattern of ["migratedV2", "dictation.hotkey.migratedV2", "One-shot migration"]) {
+  if (dictationHotkeyManager.includes(pattern)) {
+    fail(`HotkeyManager.swift contains clean-v1 incompatible hotkey migration ${JSON.stringify(pattern)}`);
+  }
+}
+
+const persistentSurfaceRegistry = read("macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift");
+for (const pattern of ["hotkeyMigratedV2", "dictation.hotkey.migratedV2", "Dictation hotkey migrated v2"]) {
+  if (persistentSurfaceRegistry.includes(pattern)) {
+    fail(`PersistentSurfaceRegistry.swift exposes clean-v1 incompatible hotkey migration ${JSON.stringify(pattern)}`);
+  }
+}
+
+const appSource = read("macos/Sources/Clawix/App.swift");
+if (appSource.includes("migrateLegacySidebarPrefs")) {
+  fail("App.swift must not run pre-v1 sidebar preference migration");
+}
+
+const sidebarView = read("macos/Sources/Clawix/SidebarView.swift");
+for (const pattern of ["LegacySidebarOrganizationMode", "SidebarOrganizationMode", "migrateLegacySidebarPrefs"]) {
+  if (sidebarView.includes(pattern)) {
+    fail(`SidebarView.swift contains clean-v1 incompatible sidebar migration ${JSON.stringify(pattern)}`);
+  }
+}
+
+const quickAskController = read("macos/Sources/Clawix/QuickAsk/QuickAskController.swift");
+for (const pattern of ["legacyFrameKey", "quickAsk.panelFrame"]) {
+  if (quickAskController.includes(pattern)) {
+    fail(`QuickAskController.swift contains clean-v1 incompatible panel-frame fallback ${JSON.stringify(pattern)}`);
+  }
+}
+
+const textInjector = read("macos/Sources/Clawix/Dictation/TextInjector.swift");
+if (textInjector.includes("useAppleScriptPasteLegacy")) {
+  fail("TextInjector.swift must not fall back to the pre-v1 AppleScript paste preference");
+}
+for (const pattern of ["useAppleScriptPasteLegacy", "UseAppleScriptPaste", "Legacy AppleScript paste preference"]) {
+  if (persistentSurfaceRegistry.includes(pattern)) {
+    fail(`PersistentSurfaceRegistry.swift exposes clean-v1 incompatible AppleScript paste legacy key ${JSON.stringify(pattern)}`);
+  }
+}
+for (const pattern of ["legacyKeychainPurged", "clawix.legacyKeychainPurged.v1", "Legacy keychain purge gate"]) {
+  if (persistentSurfaceRegistry.includes(pattern)) {
+    fail(`PersistentSurfaceRegistry.swift exposes clean-v1 incompatible keychain purge gate ${JSON.stringify(pattern)}`);
+  }
+}
+
+const appDelegateSource = read("macos/Sources/Clawix/App.swift");
+if (appDelegateSource.includes("LegacyKeychainPurge.runOnce")) {
+  fail("App.swift must not run pre-v1 Keychain cleanup at launch");
+}
+if (fs.existsSync(path.join(rootDir, "macos/Sources/Clawix/Bootstrap/LegacyKeychainPurge.swift"))) {
+  fail("LegacyKeychainPurge.swift must not ship in clean v1");
+}
+
+const secretsManager = read("macos/Sources/Clawix/Secrets/SecretsManager.swift");
+if (secretsManager.includes("migrateLegacyConnectionAuths")) {
+  fail("SecretsManager.swift must not migrate pre-v1 connection auth files");
+}
+
+const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
+for (const pattern of [
+  "migrateLegacyConnectionAuth",
+  "readLegacyConnectionAuth",
+  "legacyConnectionAuthURL",
+  "readConnectionAuth",
+  "auth.encrypted",
+]) {
+  if (agentStore.includes(pattern)) {
+    fail(`AgentStore.swift contains clean-v1 incompatible connection auth legacy path ${JSON.stringify(pattern)}`);
+  }
+}
+
 if (violations.length > 0) {
   console.error("Interface surface guard failed:");
   for (const violation of violations) console.error(`- ${violation}`);
