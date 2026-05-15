@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Pair with a peer by exchanging a `clawix://pair?...` link or scanning a QR.
+/// Pair with a peer by exchanging an opaque pairing payload or scanning a QR.
 /// The macOS surface focuses on:
 ///   - Generating my own pairing link / QR (server-side; this view just shows
 ///     what the daemon already produced).
@@ -55,7 +55,7 @@ struct PairingScreen: View {
 
     private var peerCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Peer pairing link").font(.system(size: 12, weight: .semibold)).kerning(-0.2)
+            Text("Peer pairing payload").font(.system(size: 12, weight: .semibold)).kerning(-0.2)
                 .foregroundStyle(Palette.textSecondary)
             TextEditor(text: $pastedLink)
                 .font(.system(size: 12, design: .monospaced))

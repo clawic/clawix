@@ -129,6 +129,7 @@ const staleContractTargets = [
   "android/app/src/test/java/com/example/clawix/android/BridgeFrameRoundtripTest.kt",
   "ios/Sources/Clawix/Bridge/BridgeClient.swift",
   "ios/Sources/Clawix/Pairing/ShortCodePairingFlow.swift",
+  "ios/Sources/Clawix/Pairing/PeerPairingView.swift",
   "web/src/bridge/frames.ts",
   "web/src/bridge/client.ts",
   "web/src/screens/shell/version-mismatch.tsx",
@@ -155,6 +156,7 @@ const staleContractTargets = [
   "macos/Sources/Clawix/ContentChrome.swift",
   "macos/Sources/Clawix/SidebarChatContextMenu.swift",
   "macos/Sources/Clawix/SidebarView.swift",
+  "macos/Sources/Clawix/Pairing/PairingScreen.swift",
   "macos/scripts/build_app.sh",
   "macos/Tests/ClawixMeshTests/PersistentSurfaceRegistryTests.swift",
   "macos/Helpers/Bridged/Sources/clawix-bridge/main.swift",
@@ -188,6 +190,7 @@ const stalePatterns = [
   { pattern: "clawix://chat", reason: "session deep link is clawix://session/<sessionId>" },
   { pattern: "clawix://oauth-callback", reason: "OAuth deep link is clawix://auth/callback/<provider>" },
   { pattern: "clawix://pair/{token}", reason: "stable pairing contract is JSON QR" },
+  { pattern: "clawix://pair?", reason: "stable pairing contract is JSON QR" },
 ];
 
 for (const relativePath of staleContractTargets) {

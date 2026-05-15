@@ -1,7 +1,7 @@
 import SwiftUI
 import AVFoundation
 
-/// QR scanner specialised to consume `clawix://pair?v=1&d=…` links.
+/// QR scanner specialised to consume opaque peer pairing payloads.
 /// Sits alongside the existing `PairingView`/`QRScannerView` which are used
 /// for pairing iOS with the macOS bridge; this view is for pairing two peers
 /// at the Profile layer.
@@ -41,8 +41,8 @@ struct PeerPairingView: View {
 
     private func handleResult(_ payload: String) {
         Task {
-            guard payload.hasPrefix("clawix://pair?") else {
-                error = "Not a Clawix pairing link."
+            guard !payload.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                error = "Not a Clawix pairing payload."
                 return
             }
             if let handle = await store.pair(link: payload) {
