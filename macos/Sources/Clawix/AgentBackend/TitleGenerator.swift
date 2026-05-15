@@ -19,7 +19,7 @@ final class TitleGenerator {
         let onTitle: @MainActor (String) -> Void
     }
 
-    private let binary: ClawixBinaryInfo
+    private let binary: ClawixBinaryResolution
     private var inFlight: Set<String> = []
     private var pending: [PendingJob] = []
     private var active: Int = 0
@@ -30,7 +30,7 @@ final class TitleGenerator {
     /// app launch retries.
     private let timeoutSeconds: Double = 25
 
-    init(binary: ClawixBinaryInfo) {
+    init(binary: ClawixBinaryResolution) {
         self.binary = binary
     }
 

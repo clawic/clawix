@@ -12,7 +12,7 @@ import Combine
 /// in another terminal, OAuth callback that just landed) flip the UI in
 /// near real time without polling.
 final class BackendAuthCoordinator: ObservableObject {
-    @Published private(set) var info: BackendAuthInfo? = nil
+    @Published private(set) var accountProfile: BackendAccountProfile? = nil
     @Published private(set) var loginInProgress: Bool = false
     @Published private(set) var loginError: String? = nil
 
@@ -20,7 +20,7 @@ final class BackendAuthCoordinator: ObservableObject {
     private var watchSource: DispatchSourceFileSystemObject?
     private var dirHandle: Int32 = -1
 
-    var isLoggedIn: Bool { info != nil }
+    var isLoggedIn: Bool { accountProfile != nil }
 
     func bootstrap() {
         ensureBackendDirectoryExists()
@@ -28,17 +28,17 @@ final class BackendAuthCoordinator: ObservableObject {
         // reflects the real auth state. Any async dispatch here lets the UI
         // paint LoginGateView for one frame even when credentials exist.
         let initial = BackendAuthReader.read()
-        self.info = initial.email != nil ? initial : nil
+        self.accountProfile = initial.email != nil ? initial : nil
         startWatchingAuthFile()
     }
 
     /// Re-reads `auth.json` and republishes the result on the main queue.
     func refresh() {
         let next = BackendAuthReader.read()
-        let newInfo = next.email != nil ? next : nil
+        let newProfile = next.email != nil ? next : nil
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            if self.info != newInfo { self.info = newInfo }
+            if self.accountProfile != newProfile { self.accountProfile = newProfile }
         }
     }
 
@@ -46,7 +46,7 @@ final class BackendAuthCoordinator: ObservableObject {
 
     /// Spawns runtime login and lets the user finish OAuth in the browser.
     /// Auth state flips via the file watcher when `auth.json` lands.
-    func startLogin(binary: ClawixBinaryInfo) {
+    func startLogin(binary: ClawixBinaryResolution) {
         guard !loginInProgress else { return }
         DispatchQueue.main.async {
             self.loginError = nil
@@ -79,7 +79,7 @@ final class BackendAuthCoordinator: ObservableObject {
                 self.refresh()
                 let exitedWithError = p.terminationStatus != 0
                     && p.terminationReason != .uncaughtSignal
-                if self.info == nil, exitedWithError {
+                if self.accountProfile == nil, exitedWithError {
                     let stderr = String(data: errData, encoding: .utf8)?
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     self.loginError = (stderr?.isEmpty == false ? stderr : nil)
@@ -115,9 +115,9 @@ final class BackendAuthCoordinator: ObservableObject {
     /// Runs runtime logout, which deletes `auth.json`. We optimistically
     /// clear the UI state so the login screen appears instantly even if
     /// the runtime CLI is slow to spin up; the file watcher will reconfirm.
-    func logout(binary: ClawixBinaryInfo) {
+    func logout(binary: ClawixBinaryResolution) {
         DispatchQueue.main.async {
-            self.info = nil
+            self.accountProfile = nil
             self.loginError = nil
         }
 

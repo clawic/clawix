@@ -47,7 +47,7 @@ actor ClawixClient {
     private let backendHomeEnvName = ["CO", "DEX_HOME"].joined()
     private let backendProcessName = ["co", "dex"].joined()
 
-    private let binary: ClawixBinaryInfo
+    private let binary: ClawixBinaryResolution
     private var process: Process?
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
@@ -63,7 +63,7 @@ actor ClawixClient {
 
     private let nonisolatedEventsContinuationBox: ContinuationBox
 
-    init(binary: ClawixBinaryInfo) {
+    init(binary: ClawixBinaryResolution) {
         self.binary = binary
         let box = ContinuationBox()
         var captured: AsyncStream<ClawixServerEvent>.Continuation!

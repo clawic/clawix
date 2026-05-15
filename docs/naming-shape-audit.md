@@ -11,7 +11,7 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 67.
+- Naming warnings: 65.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
 
@@ -56,6 +56,10 @@ for staged rename/split work and must not be hidden by compressing code.
 - Backend initialize vocabulary: `InitializeClientInfo` was narrowed to
   `InitializeClientIdentity` in the app and bridge protocol wrappers. The wire
   field remains `clientInfo` because it belongs to the runtime schema.
+- Backend runtime vocabulary: `BackendAuthInfo` is now
+  `BackendAccountProfile`, and `ClawixBinaryInfo` is now
+  `ClawixBinaryResolution`. These are local app concepts: a parsed account
+  profile and the resolved runtime executable path/version.
 
 ## Validation snapshot
 

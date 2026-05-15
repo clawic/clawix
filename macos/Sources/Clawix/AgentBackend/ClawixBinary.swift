@@ -4,7 +4,7 @@ import Foundation
 // resolution because the user's nvm shell function can shadow the real
 // binary in non-interactive zsh.
 
-struct ClawixBinaryInfo {
+struct ClawixBinaryResolution {
     let path: URL
     let version: String?
 }
@@ -12,7 +12,7 @@ struct ClawixBinaryInfo {
 enum ClawixBinary {
     private static let backendExecutableName = "codex"
 
-    static func resolve() -> ClawixBinaryInfo? {
+    static func resolve() -> ClawixBinaryResolution? {
         for candidate in candidatePaths() {
             if FileManager.default.isExecutableFile(atPath: candidate.path) {
                 // Skipping the synchronous version probe here on purpose:
@@ -21,7 +21,7 @@ enum ClawixBinary {
                 // and trip an `AG::Graph::value_set` precondition (the
                 // app aborts before the first frame). The `.version`
                 // field has no consumers in this target.
-                return ClawixBinaryInfo(path: candidate, version: nil)
+                return ClawixBinaryResolution(path: candidate, version: nil)
             }
         }
         return nil

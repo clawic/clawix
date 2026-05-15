@@ -1,13 +1,13 @@
 import Foundation
 import ClawixCore
 
-struct BackendAuthInfo: Equatable {
+struct BackendAccountProfile: Equatable {
     var email: String?
     var accountLabel: String?
     var planType: String?
     var name: String?
 
-    static let empty = BackendAuthInfo(email: nil, accountLabel: nil, planType: nil, name: nil)
+    static let empty = BackendAccountProfile(email: nil, accountLabel: nil, planType: nil, name: nil)
 }
 
 enum BackendAuthReader {
@@ -19,10 +19,10 @@ enum BackendAuthReader {
             .appendingPathComponent("\(backendDirectoryName)/auth.json")
     }
 
-    static func read() -> BackendAuthInfo {
+    static func read() -> BackendAccountProfile {
         let environment = ProcessInfo.processInfo.environment
         if environment[ClawixEnv.disableBackend] == "1" || environment[ClawixEnv.dummyMode] == "1" {
-            return BackendAuthInfo(
+            return BackendAccountProfile(
                 email: "account@example.com",
                 accountLabel: String(localized: "Demo account", bundle: AppLocale.bundle, locale: AppLocale.current),
                 planType: nil,
@@ -50,7 +50,7 @@ enum BackendAuthReader {
             }
         }
 
-        return BackendAuthInfo(
+        return BackendAccountProfile(
             email: email,
             accountLabel: orgTitle.map(accountLabel(forOrgTitle:)),
             planType: planType,

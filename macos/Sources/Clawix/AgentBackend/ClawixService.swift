@@ -47,7 +47,7 @@ final class ClawixService: ObservableObject {
         var reasoningMessageId: UUID?
     }
 
-    init(binary: ClawixBinaryInfo) {
+    init(binary: ClawixBinaryResolution) {
         self.client = ClawixClient(binary: binary)
     }
 

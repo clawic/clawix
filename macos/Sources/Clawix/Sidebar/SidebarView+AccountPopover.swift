@@ -50,7 +50,7 @@ struct SettingsAccountPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            SettingsAccountRow(title: appState.auth.info?.email ?? L10n.t("Connected account"),
+            SettingsAccountRow(title: appState.auth.accountProfile?.email ?? L10n.t("Connected account"),
                                icon: "person.circle",
                                trailing: nil)
             MenuStandardDivider()

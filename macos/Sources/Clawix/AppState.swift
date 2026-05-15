@@ -336,7 +336,7 @@ final class AppState: ObservableObject {
     let availableModels = ["5.5", "5.4"]
     let otherModels = ["5.4-Mini", "5.3-Pro", "5.3-Pro-Spark", "5.2"]
 
-    let clawixBinary: ClawixBinaryInfo?
+    let clawixBinary: ClawixBinaryResolution?
     let clawix: ClawixService?
     let auth = BackendAuthCoordinator()
     private var authObserver: AnyCancellable?
