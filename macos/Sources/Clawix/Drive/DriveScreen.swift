@@ -607,14 +607,26 @@ struct DriveItemDetailPane: View {
         }
         .task(id: item.id) {
             await manager.markViewed(item.id)
-            self.exif = try? await manager.client.getExif(item.id)
+            var detailErrors: [String] = []
+            if item.mimeType?.hasPrefix("image/") == true {
+                do {
+                    self.exif = try await manager.client.getExif(item.id)
+                } catch {
+                    self.exif = nil
+                    detailErrors.append("EXIF: \(error.localizedDescription)")
+                }
+            } else {
+                self.exif = nil
+            }
             do {
                 self.shares = try await manager.client.listAllShares(item.id)
-                self.detailError = nil
             } catch {
-                self.detailError = error.localizedDescription
-                manager.lastError = error.localizedDescription
+                self.shares = nil
+                detailErrors.append("Sharing: \(error.localizedDescription)")
             }
+            let message = detailErrors.isEmpty ? nil : detailErrors.joined(separator: "\n")
+            self.detailError = message
+            manager.lastError = message
         }
         .alert("Delete item?", isPresented: $confirmDelete) {
             Button("Delete", role: .destructive) {
