@@ -18,13 +18,22 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.apps" && $0.owner == "claw" && $0.path == "~/.claw/apps" })
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.design" && $0.owner == "claw" && $0.path == "~/.claw/design" })
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.audio" && $0.owner == "claw" && $0.path == "~/.claw/audio" })
+        XCTAssertTrue(nodes.contains { $0.id == "claw.framework.snippets" && $0.owner == "claw" && $0.path == "~/.claw/core.sqlite#snippets" })
+        XCTAssertTrue(nodes.contains { $0.id == "claw.framework.providerRouting" && $0.owner == "claw" && $0.path == "~/.claw/core.sqlite#provider_routing,provider_settings" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.dictationAudioDebug" && $0.path == "~/.clawix/tmp/dictation-audio-debug" })
         XCTAssertFalse(nodes.contains {
             $0.id == "clawix.apps" ||
             $0.id == "clawix.design" ||
             $0.id == "clawix.audioCatalog" ||
             $0.id == "clawix.audioCatalogMetadata" ||
-            $0.id == "clawix.dictationAudio"
+            $0.id == "clawix.dictationAudio" ||
+            $0.id == "clawix.prefs.quickAsk.slashCommands" ||
+            $0.id == "clawix.prefs.quickAsk.mentionPrompts" ||
+            $0.id == "clawix.prefs.provider.featureAccount" ||
+            $0.id == "clawix.prefs.provider.featureModel" ||
+            $0.id == "clawix.prefs.provider.enabled" ||
+            $0.id == "clawix.prefs.dictation.whisperPrompts" ||
+            $0.id == "clawix.prefs.dictation.enhancement.customPrompts"
         })
 
         let manifest = ClawixPersistentSurfaceRegistry.manifest

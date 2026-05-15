@@ -23,6 +23,11 @@ const requiredSnippets = [
   ["macos/Sources/Clawix/Apps/AGENT_CONTRACT.md", "~/.claw/apps/"],
   ["macos/Sources/Clawix/Persistence/TranscriptionsRepository.swift", "frameworkGlobalChild(ClawixPersistentSurfacePaths.components.audio"],
   ["macos/Sources/Clawix/Audio/UserAudioBubble.swift", "framework audio catalog only"],
+  ["macos/Sources/Clawix/QuickAsk/QuickAskSlashCommands.swift", "framework-owned snippets"],
+  ["macos/Sources/Clawix/QuickAsk/QuickAskMentions.swift", "ClawJSFrameworkRecordsClient.shared.listSnippets"],
+  ["macos/Sources/Clawix/Dictation/WhisperPromptStore.swift", "framework-owned snippets"],
+  ["macos/Sources/Clawix/Dictation/Enhancement/PromptLibrary.swift", "framework-owned snippets"],
+  ["macos/Sources/Clawix/Providers/FeatureRouting.swift", "framework stores only opaque account refs"],
   ["docs/interface-matrix.md", "Reject App Support as canonical Apps path"],
   ["docs/interface-matrix.md", "Framework workspace storage"],
 ];
@@ -48,7 +53,24 @@ const forbiddenByPath = new Map([
   ["macos/Sources/Clawix/AppState/EngineHost.swift", ["AudioMessageStore.shared.data", "Fall through to legacy"]],
   ["macos/Sources/Clawix/Audio/UserAudioBubble.swift", ["AudioMessageStore.shared.data", "Fall through to legacy"]],
   ["macos/Helpers/Bridged/Sources/clawix-bridge/main.swift", ["AudioMessageStore.shared.ingest", "AudioMessageStore.shared.data", "Fall through to legacy"]],
-  ["docs/persistent-surface-clawix.manifest.json", ["Application Support/Clawix/Apps", "Application Support/Clawix/Design", "Application Support/Clawix/dictation-audio", "Application Support/Clawix/audio-meta.json"]],
+  ["macos/Sources/Clawix/QuickAsk/QuickAskSlashCommands.swift", ["UserDefaults.standard.set", "UserDefaults.standard.data", "quickAsk.slashCommandsCustom"]],
+  ["macos/Sources/Clawix/QuickAsk/QuickAskMentions.swift", ["UserDefaults.standard.set", "UserDefaults.standard.data", "quickAsk.mentionPromptsCustom"]],
+  ["macos/Sources/Clawix/Dictation/WhisperPromptStore.swift", ["UserDefaults.standard.set", "UserDefaults.standard.data", "dictation.whisperPrompts"]],
+  ["macos/Sources/Clawix/Dictation/Enhancement/PromptLibrary.swift", ["dictation.enhancement.customPrompts"]],
+  ["macos/Sources/Clawix/Providers/FeatureRouting.swift", ["providerAccountKey", "modelKey(", "providerEnabledKey", "feature.<feature>.providerAccountId", "feature.<feature>.modelId", "provider.<provider>.enabled"]],
+  ["docs/persistent-surface-clawix.manifest.json", [
+    "Application Support/Clawix/Apps",
+    "Application Support/Clawix/Design",
+    "Application Support/Clawix/dictation-audio",
+    "Application Support/Clawix/audio-meta.json",
+    "quickAsk.slashCommandsCustom",
+    "quickAsk.mentionPromptsCustom",
+    "dictation.whisperPrompts",
+    "dictation.enhancement.customPrompts",
+    "feature.<feature>.providerAccountId",
+    "feature.<feature>.modelId",
+    "provider.<provider>.enabled",
+  ]],
 ]);
 
 for (const [relativePath, patterns] of forbiddenByPath) {
@@ -66,6 +88,8 @@ for (const [id, expectedPath] of [
   ["claw.framework.apps", "~/.claw/apps"],
   ["claw.framework.design", "~/.claw/design"],
   ["claw.framework.audio", "~/.claw/audio"],
+  ["claw.framework.snippets", "~/.claw/core.sqlite#snippets"],
+  ["claw.framework.providerRouting", "~/.claw/core.sqlite#provider_routing,provider_settings"],
 ]) {
   const node = nodes.get(id);
   if (!node) {

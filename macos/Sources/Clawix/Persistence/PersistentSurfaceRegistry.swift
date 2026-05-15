@@ -361,6 +361,20 @@ enum ClawixPersistentSurfaceRegistry {
                 parentId: nil,
                 notes: "Framework-owned design styles, templates, references, and editor documents consumed by Clawix UI."
             ),
+            ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.snippets",
+                name: "Snippets",
+                path: "~/.claw/core.sqlite#snippets",
+                parentId: nil,
+                notes: "Framework-owned QuickAsk slash commands, mention prompts, dictation prompts, and prompt templates."
+            ),
+            ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.providerRouting",
+                name: "Provider routing",
+                path: "~/.claw/core.sqlite#provider_routing,provider_settings",
+                parentId: nil,
+                notes: "Framework-owned provider/model routing and provider enabled state. Secret material stays in the host vault; records store opaque refs only."
+            ),
             ClawixPersistentSurface.folder(
                 id: "clawix.clawjs",
                 name: "Embedded ClawJS",
@@ -779,16 +793,11 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.localModels.contextLength", "Local models context length", LocalModelsService.contextLengthKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.updater.pendingBuild", "Pending update build", UpdaterController.pendingBuildKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.updater.pendingDisplay", "Pending update display", UpdaterController.pendingDisplayKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.quickAsk.slashCommands", "Quick Ask custom slash commands", QuickAskSlashCommandsStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.quickAsk.mentionPrompts", "Quick Ask custom mention prompts", QuickAskMentionsStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.quickAsk.hotkey", "Quick Ask hotkey", QuickAskHotkeyManager.defaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.quickAsk.clipboardLastSeen", "Quick Ask clipboard last seen", QuickAskClipboardSniffer.lastSeenKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.quickAsk.clipboardLastSeenAt", "Quick Ask clipboard last seen at", QuickAskClipboardSniffer.lastSeenAtKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.skills.activeByScope", "Active skills by scope", SkillsStore.activeKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.skills.userCatalog", "User skills catalog", SkillsStore.userCatalogKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.provider.featureAccount", "Provider account selection pattern", ClawixPersistentSurfaceKeys.featureProviderAccountPattern, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.provider.featureModel", "Provider model selection pattern", ClawixPersistentSurfaceKeys.featureProviderModelPattern, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.provider.enabled", "Provider enabled pattern", ClawixPersistentSurfaceKeys.providerEnabledPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.secrets.deviceId", "Secrets device id", SecretsPaths.deviceIdKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.customBaseUrl", "Custom transcription base URL", ClawixPersistentSurfaceKeys.dictationCustomBaseURL, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.customModel", "Custom transcription model", ClawixPersistentSurfaceKeys.dictationCustomModel, PersistentSurfaceKind.preferenceKey),
@@ -824,7 +833,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.hotkey2Mode", "Dictation second hotkey mode", HotkeyManager.mode2DefaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.hotkey2Trigger", "Dictation second hotkey trigger", HotkeyManager.trigger2DefaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.vocabulary", "Dictation vocabulary", VocabularyManager.defaultsKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.whisperPrompts", "Dictation Whisper prompts", WhisperPromptStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.powerModeEnabled", "Dictation power mode enabled", PowerModeManager.enabledKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.powerModeConfigs", "Dictation power mode configs", PowerModeManager.configsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.microphoneMode", "Dictation microphone mode", MicrophonePreferences.modeKey, PersistentSurfaceKind.preferenceKey),
@@ -842,7 +850,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.enhancement.timeoutPolicy", "Enhancement timeout policy", EnhancementSettings.timeoutPolicyKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.clipboardContext", "Enhancement clipboard context", EnhancementSettings.clipboardContextKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.screenContext", "Enhancement screen context", EnhancementSettings.screenContextKey, PersistentSurfaceKind.appStorageKey),
-            ("clawix.prefs.dictation.enhancement.customPrompts", "Enhancement custom prompts", PromptLibrary.customPromptsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.enhancement.model", "Enhancement model pattern", ClawixPersistentSurfaceKeys.enhancementModelPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.enhancement.baseUrl", "Enhancement base URL pattern", ClawixPersistentSurfaceKeys.enhancementBaseURLPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.cloudModel", "Cloud transcription model pattern", ClawixPersistentSurfaceKeys.cloudTranscriptionModelPattern, PersistentSurfaceKind.preferenceKey),
@@ -992,9 +999,6 @@ enum ClawixPersistentSurfaceKeys {
     static let bridgeDictationActiveModel = "ClawixBridge.Dictation.ActiveModel"
     static let agentRuntime = "ClawixAgentRuntime"
     static let openCodeModel = "ClawixOpenCodeModel"
-    static let featureProviderAccountPattern = "feature.<feature>.providerAccountId"
-    static let featureProviderModelPattern = "feature.<feature>.modelId"
-    static let providerEnabledPattern = "provider.<provider>.enabled"
     static let enhancementModelPattern = "dictation.enhancement.model.<provider>"
     static let enhancementBaseURLPattern = "dictation.enhancement.baseURL.<provider>"
     static let cloudTranscriptionModelPattern = "dictation.transcription.model.<provider>"
