@@ -19,6 +19,6 @@ Use public commit hygiene only.
 
 ## Constraints
 
-- Do not include maintainer-private `commit de todo`, ledger, timestamp, Claude-context, or automation procedures.
+- Do not include maintainer-private commit-manager, ledger, timestamp, external-session-review, or automation procedures.
 - Do not publish secrets, local paths, signing identities, bundle IDs, Team IDs, or private workflow details in commits.
 - Do not rewrite public history unless the project's public contribution docs explicitly allow it.

@@ -189,6 +189,5 @@ Public commit hygiene only:
 - Push, publish, upload, tagging, and release actions require explicit
   approval.
 
-Maintainer-private commit automation, timestamp planning, ledger workflows,
-Claude-context review, and personal push policy do not belong in this public
-repo.
+Maintainer-private commit automation, local history rewriting procedures,
+ledger workflows, and personal push policy do not belong in this public repo.
