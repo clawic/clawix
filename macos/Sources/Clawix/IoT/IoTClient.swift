@@ -2,14 +2,12 @@ import Foundation
 
 /// HTTP client for the clawjs-iot daemon.
 ///
-/// Phase 1 surface is intentionally narrow:
+/// The stable surface includes:
 ///   - `health()` confirms the daemon is reachable on its loopback port.
 ///   - `listTools()` mirrors `GET /v1/tools/list`.
 ///   - `invokeTool(id:arguments:)` mirrors `POST /v1/tools/:id/invoke`.
-///
-/// Phase 2 will add typed accessors (`listHomes`, `listThings`,
-/// `getThing`, scene/automation mutators) once adapters land; for the
-/// foundation pass everything flows through the tools registry.
+///   - typed accessors for homes, things, scenes, automations, approvals,
+///     and audited action paths.
 ///
 /// Mirrors `DatabaseClient` enough that they can be merged into a
 /// shared HTTP helper if the duplication outgrows its usefulness.
@@ -41,9 +39,7 @@ struct IoTClient {
     /// every consumer.
     let origin: URL
 
-    /// Bearer token for the future authenticated routes. Phase 1 always
-    /// nil; populated by `IoTAdminToken.currentAdminToken()` once the
-    /// daemon learns to authenticate writes.
+    /// Bearer token for deployments that require authenticated routes.
     var bearerToken: String?
 
     init(origin: URL? = nil, bearerToken: String? = nil) {
@@ -151,9 +147,9 @@ struct IoTClient {
 
     // MARK: - Tool-backed actions
 
-    /// Phase 2 connector adapters surface adding/removing things and
-    /// driving discovery as tool invocations rather than REST routes;
-    /// using the tool endpoint keeps a single audit trail in
+    /// Connector adapters surface adding/removing things and driving
+    /// discovery as tool invocations rather than REST routes; using the
+    /// tool endpoint keeps a single audit trail in
     /// command_log for both UI and agent paths.
     func addThing(input: AddThingInput) async throws -> ThingRecord {
         let result = try await invokeTool(id: "iot.things.add", arguments: input.toToolArguments())

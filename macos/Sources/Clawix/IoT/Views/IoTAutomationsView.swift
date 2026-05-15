@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Automations tab. List + enable / disable / run controls. Visual
-/// authoring (block-based trigger / condition / action editor) lands
-/// in Phase 4 once the trigger taxonomy stabilises; for Phase 3 the
-/// agent and CLI own the create path (via `iot.automations.create`).
+/// Automations tab. List + enable / disable / run controls. Creation is owned
+/// by the agent and CLI path via `iot.automations.create`; this native panel
+/// handles inspection and execution.
 struct IoTAutomationsView: View {
     @EnvironmentObject private var manager: IoTManager
     @State private var inFlightId: String?

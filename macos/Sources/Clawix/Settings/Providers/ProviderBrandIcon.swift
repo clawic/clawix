@@ -3,8 +3,7 @@ import SwiftUI
 
 /// Squircle background filled with the provider's brand color, with
 /// the monogram overlaid in white. v1 ships these as monograms instead
-/// of remote SVGs to avoid bundling third-party logos. The design
-/// brief calls for a custom hand-drawn set; this is the placeholder.
+/// of remote SVGs to avoid bundling third-party logos.
 struct ProviderBrandIcon: View {
     let brand: ProviderBrand
     var size: CGFloat = 28

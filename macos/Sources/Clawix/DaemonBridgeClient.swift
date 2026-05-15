@@ -63,7 +63,7 @@ final class DaemonBridgeClient {
     /// Fetch the next page of older messages for `chatId`. The cursor
     /// is the id of the oldest message the desktop currently has; the
     /// daemon replies with `messagesPage` carrying the slice prior to
-    /// it (oldest first). No-op when not yet authenticated.
+    /// it (oldest first). No-op until authenticated.
     @discardableResult
     func loadOlderMessages(chatId: UUID, beforeMessageId: String) -> Bool {
         send(.loadOlderMessages(

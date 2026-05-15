@@ -94,8 +94,8 @@ final class AppURLSchemeHandler: NSObject, WKURLSchemeHandler {
 
     /// CSP that locks the app to its own scheme by default and only
     /// relaxes `connect-src` to https when the user has granted internet
-    /// access. Inline JS is allowed because v1 apps are vanilla and
-    /// often inline their boot logic; tighten in a future iteration.
+    /// access. Inline JS is allowed by the v1 app contract because apps
+    /// are packaged vanilla documents that boot from their own bundle.
     static func cspHeader(allowsInternet: Bool, slug: String) -> String {
         let connectSrc = allowsInternet
             ? "connect-src 'self' https: wss:"

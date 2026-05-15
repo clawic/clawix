@@ -2,9 +2,9 @@ import AIProviders
 import Foundation
 
 /// Cursor's API is OpenAI-compatible at `/v1/chat/completions` with a
-/// bearer API key. OAuth flow is not yet public; users generate a key
-/// in cursor.com → Settings → API. This client is a thin alias around
-/// the OpenAI-compatible body shape.
+/// bearer API key. Cursor users generate a key in cursor.com → Settings
+/// → API; OAuth is not part of Cursor's public provider contract. This
+/// client is a thin alias around the OpenAI-compatible body shape.
 struct CursorClient: AIClient {
     let account: ProviderAccount
     let model: ModelDefinition

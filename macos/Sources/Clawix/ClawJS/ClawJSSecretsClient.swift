@@ -1,9 +1,9 @@
 import Foundation
 
 /// HTTP client for the bundled ClawJS Secrets server. Mirrors the surface
-/// described in `~/.claude/plans/clawjs-en-mi-desktop-tranquil-swing.md`
-/// Phase 8.B.2: secrets lifecycle (setup/unlock/lock/recover/change pw),
-/// secret CRUD, reveal, brokered execution, audit query+integrity.
+/// described by the v1 Secrets contract: setup/unlock/lock/recover/change
+/// password, secret CRUD, reveal, brokered execution, and audit
+/// query+integrity.
 ///
 /// Stateless: every method opens a new URLSession request. The session
 /// state (locked/unlocked) lives inside the Node server; this client

@@ -67,7 +67,7 @@ extension AppState {
         guard projectId != beforeProjectId else { return }
         // Build a complete ordering of the currently-visible projects so
         // the persisted list stays a superset of the live one. Projects
-        // not yet in `manualProjectOrder` keep their natural order from
+        // absent from `manualProjectOrder` keep their natural order from
         // `projects` (creation/insertion order from `mergedProjects`).
         var order = manualProjectOrder
         let knownIds = Set(order)

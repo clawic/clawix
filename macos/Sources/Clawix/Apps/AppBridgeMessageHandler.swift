@@ -174,7 +174,7 @@ final class AppBridgeMessageHandler: NSObject, WKScriptMessageHandler {
         }
     }
 
-    // MARK: - Agent integration (v1: chat send only)
+    // MARK: - Agent integration
 
     private func sendMessageToOriginatingChat(_ text: String) throws {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -185,10 +185,8 @@ final class AppBridgeMessageHandler: NSObject, WKScriptMessageHandler {
             // the JS Promise still resolves; the SDK is best-effort.
             return
         }
-        // Mirror the path "user types into composer in chat X". We
-        // don't have a public API on AppState to inject a synthetic
-        // user message without a UI roundtrip, so for v1 we just route
-        // the agent message through the standard sendMessage path.
+        // Mirror the path "user types into composer in chat X" by routing
+        // the app-originated text through the standard chat send path.
         appState.dispatchAppMessage(text, toChatId: chatId)
     }
 

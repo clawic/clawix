@@ -434,9 +434,9 @@ enum RolloutReader {
                 )
 
             case ("response_item", "custom_tool_call"):
-                // Newer Codex Desktop serialises `apply_patch` as a
+                // Current Codex Desktop serialises `apply_patch` as a
                 // custom_tool_call (with the patch body in `input`) rather
-                // than the legacy `patch_apply_end` event. Extract the
+                // than the older `patch_apply_end` event. Extract the
                 // touched paths from the patch headers so the timeline
                 // gets the same `.fileChange` row and the trailing
                 // ChangedFileCard pills appear.
@@ -518,7 +518,7 @@ enum RolloutReader {
                 // Route those by JS-flavour classification so the timeline
                 // reads `Used the browser` / `Used Node Repl` exactly the
                 // way Codex's own UI does. Other MCP servers fall through
-                // to the legacy image-aware path below.
+                // to the image-aware fallback path below.
                 if server == "node_repl" {
                     let pendingCall = pendingJS.removeValue(forKey: callId)
                     let kind: WorkItemKind

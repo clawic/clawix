@@ -1,17 +1,15 @@
 import Foundation
 
-/// Minimal HTTP client for the `@clawjs/database` service that Phase 2's
-/// supervisor will spawn on the registered database port once `ClawJSServiceManager`
-/// gets a non-nil `commandLine(for:)`. The endpoint paths and request
-/// shapes mirror what `@clawjs/database@\(ClawJSRuntime.expectedVersion)`
-/// exposes in `packages/clawjs-database/src/app.ts`.
+/// Minimal HTTP client for the `@clawjs/database` service on the registered
+/// database port. The endpoint paths and request shapes mirror what
+/// `@clawjs/database@\(ClawJSRuntime.expectedVersion)` exposes in
+/// `packages/clawjs-database/src/app.ts`.
 ///
-/// Phase 4 keeps this client deliberately small: only the surface a
-/// thin-slice consumer actually needs (health probe, list namespaces,
-/// list collection records). Auth, mutation, files, tokens, and the
-/// `/v1/realtime` WebSocket subscription stay out until a real consumer
-/// drives the requirement, so we don't ship dead code that diverges
-/// from the upstream contract before anyone exercises it.
+/// This client is deliberately small: only the surface current consumers need
+/// (health probe, list namespaces, list collection records). Auth, mutation,
+/// files, tokens, and the `/v1/realtime` WebSocket subscription stay out until
+/// a real consumer drives the requirement, so we don't ship dead code that
+/// diverges from the upstream contract before anyone exercises it.
 struct ClawJSDatabaseClient {
 
     enum Error: Swift.Error, LocalizedError {
@@ -152,8 +150,7 @@ struct ClawJSDatabaseClient {
 }
 
 /// Minimal type-erased JSON value. Lives here (rather than in a shared
-/// utilities module) because Phase 4 is the only consumer today and we
-/// can promote it later if another caller needs the same shape.
+/// utilities module) because this file is the only consumer today.
 indirect enum AnyJSON: Codable, Hashable, Equatable {
     case null
     case bool(Bool)

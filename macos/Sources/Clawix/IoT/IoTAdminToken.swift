@@ -2,15 +2,10 @@ import Foundation
 
 /// Resolves the per-session admin token for the clawjs-iot daemon.
 ///
-/// Phase 1 ships read-only tools that the daemon serves without
-/// authentication, so this resolver returns nil and `IoTClient`
-/// short-circuits the `Authorization` header. Phase 2 introduces
-/// mutating tools (control, scene activation, automation run) gated by
-/// `IoTRiskLevel`; when that lands, the daemon will start writing a
-/// 0600 admin-token file under its data dir and this resolver returns
-/// its contents so every Clawix client (Mac, iOS, CLI) authenticates
-/// with the same token, even when they share a daemon already owned by
-/// the background bridge helper.
+/// The current daemon serves its tool surface on loopback without a per-session
+/// token, so this resolver returns nil and `IoTClient` omits the
+/// `Authorization` header. Token-backed deployments can fill this resolver
+/// from the daemon data dir without changing the client call sites.
 ///
 /// Mirrors `DatabaseAdminToken` so the two surfaces stay easy to compare
 /// when we extract a generic admin-token resolver later.

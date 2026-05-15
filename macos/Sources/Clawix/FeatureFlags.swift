@@ -3,8 +3,8 @@ import SwiftUI
 
 // User-facing visibility tiers for the v1 surface. Product surfaces are either
 // stable or explicitly developer-only. A surface may not remain hidden merely
-// because it was previously beta or experimental; the developer switch is only
-// for tools that are not product v1.
+// because it predates the v1 cut; the developer switch is only for tools that
+// are not product v1.
 //
 // Stored under `appPrefsSuite` so prefs follow the same UserDefaults
 // suite as the rest of the app (sidebar prefs, sync settings, language).

@@ -3,8 +3,8 @@ import Foundation
 /// Locates the ClawJS runtime that `bundle_clawjs.sh` plants under
 /// `Clawix.app/Contents/Resources/clawjs/`. The version is pinned in
 /// `macos/CLAWJS_VERSION` and surfaced through the generated
-/// `Info.plist` as `ClawJSVersion`. Phase 2's `ClawJSServiceManager`
-/// will spawn `nodeBinaryURL cliScriptURL open <service> ...`.
+/// `Info.plist` as `ClawJSVersion`; `ClawJSServiceManager` launches the
+/// bundled runtime from these paths.
 enum ClawJSRuntime {
     /// The `@clawjs/cli` release this build is integrated against, read
     /// from the Info.plist key `ClawJSVersion`. Never hardcode the

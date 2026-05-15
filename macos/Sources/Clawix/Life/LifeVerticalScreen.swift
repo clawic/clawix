@@ -334,7 +334,7 @@ struct GenericVerticalScreen: View {
     }
 }
 
-// MARK: - Override screens (placeholders that delegate to generic for now)
+// MARK: - Specialized entry points backed by the generic vertical surface
 
 struct JournalLifeScreen: View {
     let verticalId: String

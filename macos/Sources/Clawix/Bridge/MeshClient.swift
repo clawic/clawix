@@ -40,8 +40,8 @@ struct MeshClient {
     /// Daemon default. Mirrors `CLAWIX_BRIDGE_HTTP_PORT` in
     /// `clawix-bridge/main.swift`. We never poke the heartbeat file
     /// for this; if the user runs the daemon on a non-default port
-    /// they set the override below from the menu bar Dev tooling
-    /// (out of scope for v1) or via E2E tests.
+    /// they set the override below from the menu bar Dev tooling or
+    /// via E2E tests.
     static let defaultHTTPPort: UInt16 = 24081
 
     let baseURL: URL

@@ -6,10 +6,9 @@ import Foundation
 /// (or the snapshot of its WKWebView) and writes one of four output
 /// formats to disk: HTML, SVG, PNG, PDF.
 ///
-/// Phase 4 ships these four since they can be produced 100% in
-/// Swift / AppKit without external deps. The Playwright-backed
-/// full-fidelity PDF and the OpenXML PPTX path land later when the
-/// daemon picks up the renderer pipeline from ClawJS.
+/// These formats are produced locally in Swift / AppKit without external
+/// dependencies. Higher-fidelity renderer outputs belong to the ClawJS
+/// renderer pipeline and stay outside this native export helper.
 @MainActor
 enum EditorExport {
     enum Format: String, CaseIterable, Identifiable {

@@ -1,14 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Settings page that surfaces the state of the three ClawJS sidecar
-/// services (database / memory / drive). Phase 3 wires the manager's
-/// snapshots to the UI without consuming any service data yet; that
-/// happens in Phase 4.
-///
-/// Today every service publishes `.blocked` because `@clawjs/cli` does
-/// not expose a service-launch surface. The page renders that block
-/// reason directly so the gap is visible to anyone investigating.
+/// Settings page that surfaces the state of the ClawJS sidecar services.
+/// The manager owns launch/probe state; this page renders every ready,
+/// blocked, crashed, and daemon-owned service state directly.
 struct ClawJSSettingsPage: View {
 
     @StateObject private var manager = ClawJSServiceManager.shared
@@ -46,7 +41,7 @@ struct ClawJSSettingsPage: View {
             Text("ClawJS")
                 .font(BodyFont.system(size: 22, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
-            Text("Sidecar services that back upcoming database, memory, and drive features.")
+            Text("Sidecar services backing framework-owned storage, integrations, and domain APIs.")
                 .font(BodyFont.system(size: 12.5))
                 .foregroundColor(Palette.textSecondary)
         }
@@ -137,9 +132,6 @@ struct ClawJSSettingsPage: View {
 
     /// Smoke-test row for the database service: hits `/v1/health`
     /// (unauthenticated) and renders the response or the error inline.
-    /// The first concrete consumer of `ClawJSDatabaseClient`; Phase 4
-    /// proper (a Tasks panel that lists records) builds on top of this
-    /// once the home layout is the right place to host it.
     @ViewBuilder
     private var databaseProbeRow: some View {
         HStack(spacing: 12) {

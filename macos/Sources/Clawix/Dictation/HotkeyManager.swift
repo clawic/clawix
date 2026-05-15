@@ -202,8 +202,8 @@ final class HotkeyManager {
         defaults.set(value.rawValue, forKey: binding(forSlot: slot).triggerKey)
         // If the user just enabled a trigger and the coordinator is
         // already known, retry registration. The global monitor may
-        // have been skipped at bootstrap (Input Monitoring not yet
-        // granted) and the user may have just granted it.
+        // have been skipped at bootstrap while Input Monitoring was
+        // unavailable, and the user may have just granted it.
         if value != .off, let coordinator {
             register(coordinator: coordinator)
         }

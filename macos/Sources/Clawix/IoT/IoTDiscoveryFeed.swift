@@ -2,15 +2,13 @@ import Foundation
 import SwiftUI
 
 /// Live feed of devices the daemon's discovery orchestrator surfaces
-/// while a scan window is open. Drives the future "Add device" wizard
-/// (Phase 3): the user opens the wizard, taps "Scan", and the feed
-/// fills with cards as devices arrive over the SSE stream.
+/// while a scan window is open. The user opens the wizard, starts a scan,
+/// and the feed fills with cards as devices arrive over the SSE stream.
 ///
 /// Subscribes to `GET /v1/events/stream` and filters on `event:
 /// iot.discovery.found` envelopes. The same stream carries `iot.action.*`
-/// and `iot.approval.*` events; future managers will share this
-/// transport. For Phase 2 we keep one client per consumer to avoid
-/// coupling the two state machines.
+/// and `iot.approval.*` events; each consumer owns its subscription to keep
+/// the state machines independent.
 @MainActor
 final class IoTDiscoveryFeed: NSObject, ObservableObject {
 

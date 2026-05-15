@@ -29,12 +29,12 @@ final class IoTManager: NSObject, ObservableObject {
     @Published private(set) var state: State = .loading
     @Published private(set) var lastError: String?
 
-    /// Tool catalog (Phase 1).
+    /// Tool catalog exposed by the daemon.
     @Published private(set) var availableTools: [RemoteToolDescriptor] = []
     @Published private(set) var catalogGeneratedAt: Date?
 
-    /// Phase 3 cached collections. The supervisor refresh path replaces
-    /// each one wholesale; SSE deltas trigger targeted re-fetches.
+    /// Cached collections. The supervisor refresh path replaces each one
+    /// wholesale; SSE deltas trigger targeted re-fetches.
     @Published private(set) var homes: [HomeRecord] = []
     @Published private(set) var currentHomeId: String?
     @Published private(set) var areas: [AreaRecord] = []
@@ -219,7 +219,7 @@ final class IoTManager: NSObject, ObservableObject {
         try await client.stopDiscovery()
     }
 
-    // MARK: - Phase 4 protocol helpers
+    // MARK: - Protocol helpers
 
     func commissionMatter(pairingCode: String, label: String?) async throws -> [String: Any] {
         var args: [String: Any] = ["pairingCode": pairingCode]
@@ -251,7 +251,7 @@ final class IoTManager: NSObject, ObservableObject {
         try result.throwIfFailed()
     }
 
-    // MARK: - Phase 5 cloud helpers
+    // MARK: - Cloud helpers
 
     func connectTuya(appKey: String, appSecret: String, baseUrl: String?) async throws -> [String: Any] {
         var args: [String: Any] = ["appKey": appKey, "appSecret": appSecret]

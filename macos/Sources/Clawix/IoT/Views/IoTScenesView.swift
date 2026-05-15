@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Scenes tab. Activate-only surface in Phase 3; scene authoring lands
-/// in the Phase 4 editor.
+/// Scenes tab. The native panel lists scenes and activates them; authoring is
+/// owned by the agent and CLI path.
 struct IoTScenesView: View {
     @EnvironmentObject private var manager: IoTManager
     @State private var activatingId: String?

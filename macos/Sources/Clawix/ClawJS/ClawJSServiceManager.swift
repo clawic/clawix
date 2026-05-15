@@ -19,8 +19,8 @@ final class ClawJSServiceManager: ObservableObject {
 
     static let shared = ClawJSServiceManager()
 
-    /// Per-service published state. Phase 3's UI observes this dict;
-    /// Phase 4 consumers read `state == .ready(_, port)` to know they
+    /// Per-service published state. UI observes this dictionary and
+    /// feature consumers read `state == .ready(_, port)` to know they
     /// can connect.
     @Published private(set) var snapshots: [ClawJSService: ClawJSServiceSnapshot]
 
@@ -215,9 +215,9 @@ final class ClawJSServiceManager: ObservableObject {
         guard await preparePortForLocalLaunch(service) else { return }
 
         // IoT runs from the clawjs/iot package, not from @clawjs/cli, so
-        // it bypasses the bundled-runtime guard below. Phase 1 reads the
-        // location from a dev pointer dev.sh writes; production builds
-        // will substitute a bundled copy under Contents/Resources/.
+        // it bypasses the bundled-runtime guard below. Development reads
+        // the location from a dev pointer dev.sh writes; production builds
+        // substitute a bundled copy under Contents/Resources/.
         if service == .iot {
             guard let projectDir = iotProjectDirectory() else {
                 update(service) {
@@ -1093,7 +1093,7 @@ final class ClawJSServiceManager: ObservableObject {
         }
     }
 
-    /// Resolves the on-disk clawjs/iot project directory. Phase 1 reads
+    /// Resolves the on-disk clawjs/iot project directory. Development reads
     /// a dev pointer dev.sh writes; production builds substitute a
     /// bundled copy under Contents/Resources/clawjs-iot/. Returns nil
     /// when neither location is present or the dist/server.js is

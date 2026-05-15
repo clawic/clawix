@@ -1,9 +1,8 @@
 import Foundation
 
-/// The ClawJS services Phase 2 supervises in-process. Each is a
-/// long-lived HTTP server bound to loopback. Ports are stable across
-/// launches so Phase 3 (Settings UI) and Phase 4 (feature consumers)
-/// can hardcode endpoints.
+/// ClawJS services supervised in-process or discovered from the daemon.
+/// Each service is a long-lived HTTP server bound to loopback. Ports are
+/// stable across launches so UI and feature consumers can share endpoints.
 enum ClawJSService: String, CaseIterable, Identifiable {
     case database
     case memory
@@ -50,11 +49,8 @@ enum ClawJSService: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Path the supervisor probes to confirm liveness. Database and Drive
-    /// both expose `/v1/health`; Memory does not yet expose a health
-    /// route in the source, so we fall back to the same path on the
-    /// expectation that ClawJS will normalize. Publishing publishes `/healthz`
-    /// directly (it does not yet share the `/v1/health` convention).
+    /// Path the supervisor probes to confirm liveness. Framework services use
+    /// `/v1/health`; Publishing keeps its own `/healthz` process endpoint.
     var healthPath: String {
         switch self {
         case .publishing: return "/healthz"
@@ -63,7 +59,7 @@ enum ClawJSService: String, CaseIterable, Identifiable {
     }
 }
 
-/// Lifecycle state Phase 3's UI binds to. Keep this enum small and the
+/// Lifecycle state the settings UI binds to. Keep this enum small and the
 /// transitions obvious; the manager is the only writer.
 enum ClawJSServiceState: Equatable {
     /// Manager has not attempted to launch this service yet (e.g.
