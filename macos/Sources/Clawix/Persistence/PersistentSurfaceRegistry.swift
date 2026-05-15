@@ -369,6 +369,20 @@ enum ClawixPersistentSurfaceRegistry {
                 notes: "Framework-owned QuickAsk slash commands, mention prompts, dictation prompts, and prompt templates."
             ),
             ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.agents",
+                name: "Agents",
+                path: "~/.claw/agents,~/.claw/personalities,~/.claw/skill-collections,~/.claw/connections",
+                parentId: nil,
+                notes: "Framework-owned agent identity, personalities, skill collections, and connection records. Clawix is a UI facade; secret material stays in the host vault."
+            ),
+            ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.skills",
+                name: "Skills",
+                path: "~/.claw/core.sqlite#skills",
+                parentId: nil,
+                notes: "Framework-owned skill catalog records and active skill state consumed by Clawix UI."
+            ),
+            ClawixPersistentSurface.frameworkFolder(
                 id: "claw.framework.providerRouting",
                 name: "Provider routing",
                 path: "~/.claw/core.sqlite#provider_routing,provider_settings",
@@ -796,8 +810,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.quickAsk.hotkey", "Quick Ask hotkey", QuickAskHotkeyManager.defaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.quickAsk.clipboardLastSeen", "Quick Ask clipboard last seen", QuickAskClipboardSniffer.lastSeenKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.quickAsk.clipboardLastSeenAt", "Quick Ask clipboard last seen at", QuickAskClipboardSniffer.lastSeenAtKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.skills.activeByScope", "Active skills by scope", SkillsStore.activeKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.skills.userCatalog", "User skills catalog", SkillsStore.userCatalogKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.secrets.deviceId", "Secrets device id", SecretsPaths.deviceIdKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.customBaseUrl", "Custom transcription base URL", ClawixPersistentSurfaceKeys.dictationCustomBaseURL, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.customModel", "Custom transcription model", ClawixPersistentSurfaceKeys.dictationCustomModel, PersistentSurfaceKind.preferenceKey),

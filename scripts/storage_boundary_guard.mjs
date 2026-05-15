@@ -28,6 +28,10 @@ const requiredSnippets = [
   ["macos/Sources/Clawix/Dictation/WhisperPromptStore.swift", "framework-owned snippets"],
   ["macos/Sources/Clawix/Dictation/Enhancement/PromptLibrary.swift", "framework-owned snippets"],
   ["macos/Sources/Clawix/Providers/FeatureRouting.swift", "framework stores only opaque account refs"],
+  ["macos/Sources/Clawix/Agents/AgentStore.swift", "production path delegates reads and writes"],
+  ["macos/Sources/Clawix/Agents/AgentStore.swift", "frameworkClient.listAgents"],
+  ["macos/Sources/Clawix/Skills/SkillsStore.swift", "Source of truth lives in ClawJS"],
+  ["macos/Sources/Clawix/Skills/SkillsStore.swift", "frameworkClient?.upsertSkillRecord"],
   ["docs/interface-matrix.md", "Reject App Support as canonical Apps path"],
   ["docs/interface-matrix.md", "Framework workspace storage"],
 ];
@@ -58,6 +62,8 @@ const forbiddenByPath = new Map([
   ["macos/Sources/Clawix/Dictation/WhisperPromptStore.swift", ["UserDefaults.standard.set", "UserDefaults.standard.data", "dictation.whisperPrompts"]],
   ["macos/Sources/Clawix/Dictation/Enhancement/PromptLibrary.swift", ["dictation.enhancement.customPrompts"]],
   ["macos/Sources/Clawix/Providers/FeatureRouting.swift", ["providerAccountKey", "modelKey(", "providerEnabledKey", "feature.<feature>.providerAccountId", "feature.<feature>.modelId", "provider.<provider>.enabled"]],
+  ["macos/Sources/Clawix/Agents/AgentStore.swift", ["Filesystem source-of-truth"]],
+  ["macos/Sources/Clawix/Skills/SkillsStore.swift", ["UserDefaults.standard", "ClawixSkillsActiveByScope", "ClawixSkillsUserCatalog", "bridge frames v6", "seed data + UserDefaults"]],
   ["docs/persistent-surface-clawix.manifest.json", [
     "Application Support/Clawix/Apps",
     "Application Support/Clawix/Design",
@@ -70,6 +76,8 @@ const forbiddenByPath = new Map([
     "feature.<feature>.providerAccountId",
     "feature.<feature>.modelId",
     "provider.<provider>.enabled",
+    "ClawixSkillsActiveByScope",
+    "ClawixSkillsUserCatalog",
   ]],
 ]);
 
@@ -89,6 +97,8 @@ for (const [id, expectedPath] of [
   ["claw.framework.design", "~/.claw/design"],
   ["claw.framework.audio", "~/.claw/audio"],
   ["claw.framework.snippets", "~/.claw/core.sqlite#snippets"],
+  ["claw.framework.agents", "~/.claw/agents,~/.claw/personalities,~/.claw/skill-collections,~/.claw/connections"],
+  ["claw.framework.skills", "~/.claw/core.sqlite#skills"],
   ["claw.framework.providerRouting", "~/.claw/core.sqlite#provider_routing,provider_settings"],
 ]) {
   const node = nodes.get(id);
