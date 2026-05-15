@@ -44,6 +44,7 @@ for file in \
   "docs/ui/README.md" \
   "docs/ui/decision-verification.json" \
   "docs/ui/interface-governance.config.json" \
+  "docs/ui/visible-surfaces.inventory.json" \
   "docs/ui/pattern-registry/patterns.registry.json" \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
   "docs/ui/debt.baseline.json" \
@@ -51,6 +52,7 @@ for file in \
   "docs/ui/performance-budgets.registry.json" \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
+  "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_governance_guard.mjs" \
   "scripts/storage_boundary_guard.mjs"
 do
@@ -75,8 +77,11 @@ require_snippet "docs/adr/0010-interface-governance.md" "Existing visual drift i
 require_snippet "docs/adr/0010-interface-governance.md" "Extract reusable components only when repeated UI carries risk"
 require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane may make"
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
+require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
 require_snippet "docs/ui/decision-verification.json" "critical_cleanup_owner"
+require_snippet "docs/ui/visible-surfaces.inventory.json" "Every current visible UI candidate"
+require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-composer"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## sidebar-row"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## terminal-surface"
 require_snippet "docs/interface-matrix.md" "This matrix is the Clawix gate for ADR 0007"

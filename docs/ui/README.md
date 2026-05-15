@@ -24,6 +24,7 @@ the public repo.
 
 - `interface-governance.config.json`: global guard configuration.
 - `pattern-registry/`: pattern manifests and human notes.
+- `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `debt.baseline.json`: frozen existing visual drift.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
 - `performance-budgets.registry.json`: critical-flow budget registry.
@@ -39,3 +40,4 @@ the public repo.
 5. If a guard finds unrelated drift, list it. Do not fix it as a side effect.
 6. If a component is extracted, prove visual equivalence or leave it as a
    conceptual proposal.
+7. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
