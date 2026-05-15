@@ -32,6 +32,9 @@ final class LocalModelsService: ObservableObject {
     /// service collapses them into a single 0..1 progress for the UI.
     @Published private(set) var downloads: [String: Download] = [:]
 
+    /// Last non-download action failure, surfaced by the Models card.
+    @Published private(set) var actionError: String?
+
     /// Daemon's reported version (the upstream tag), filled once the
     /// daemon is up. Used by the UI to surface "Runtime version: …".
     @Published private(set) var runtimeVersion: String?
@@ -173,21 +176,31 @@ final class LocalModelsService: ObservableObject {
         }
     }
 
+    func dismissActionError() {
+        actionError = nil
+    }
+
     func delete(model: String) async {
         guard daemon.isRunning else { return }
         do {
             try await client.delete(model: model)
             if defaultModel == model { defaultModel = nil }
+            actionError = nil
             await refreshModelList()
         } catch {
-            // Surface via a future error banner; for v1 just swallow.
+            actionError = "Could not delete \(model): \(error.localizedDescription)"
         }
     }
 
     func unload(model: String) async {
         guard daemon.isRunning else { return }
-        try? await client.unload(model: model)
-        await refreshModelList()
+        do {
+            try await client.unload(model: model)
+            actionError = nil
+            await refreshModelList()
+        } catch {
+            actionError = "Could not unload \(model): \(error.localizedDescription)"
+        }
     }
 
     func setDefault(model: String) {

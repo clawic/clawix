@@ -510,6 +510,13 @@ for (const pattern of ["TODO: wire to Secrets", "Secret picker (TODO"]) {
   }
 }
 
+const localModelsServiceSource = read("macos/Sources/Clawix/LocalModels/LocalModelsService.swift");
+for (const pattern of ["for v1 just swallow", "future error banner", "try? await client.unload"]) {
+  if (localModelsServiceSource.includes(pattern)) {
+    fail(`LocalModelsService.swift must surface local model action failures in v1: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

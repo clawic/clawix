@@ -10,6 +10,19 @@ extension LocalModelsPage {
                         .foregroundColor(Palette.textSecondary)
                 }
 
+                if let actionError = service.actionError {
+                    HStack(spacing: 8) {
+                        Text(actionError)
+                            .font(BodyFont.system(size: 11))
+                            .foregroundColor(Color(red: 0.94, green: 0.45, blue: 0.45))
+                            .lineLimit(3)
+                        Spacer()
+                        Button("Dismiss") { service.dismissActionError() }
+                            .buttonStyle(.borderless)
+                            .font(BodyFont.system(size: 11))
+                    }
+                }
+
                 if !service.installedModels.isEmpty {
                     VStack(spacing: 10) {
                         ForEach(service.installedModels) { model in
