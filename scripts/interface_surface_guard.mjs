@@ -241,6 +241,27 @@ for (const relativePath of [
   }
 }
 
+const clawixProtocol = read("macos/Sources/Clawix/AgentBackend/ClawixProtocol.swift");
+for (const pattern of ["EXPERIMENTAL.", "experimental API methods", "requires experimentalApi capability"]) {
+  if (clawixProtocol.includes(pattern)) {
+    fail(`ClawixProtocol.swift contains ambiguous experimental wording ${JSON.stringify(pattern)}`);
+  }
+}
+
+const bridgeProtocol = read("packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift");
+for (const pattern of ["legacy (v1-v5)", "legacyTypeTag", "encodeLegacyPayload", "decodeLegacy"]) {
+  if (bridgeProtocol.includes(pattern)) {
+    fail(`BridgeProtocol.swift contains ambiguous legacy bridge helper ${JSON.stringify(pattern)}`);
+  }
+}
+
+const databaseConnectionProfiles = read("macos/Sources/Clawix/Database/DatabaseConnectionProfiles.swift");
+for (const pattern of ["case legacy", "return \"SSH 0.9.5\""]) {
+  if (databaseConnectionProfiles.includes(pattern)) {
+    fail(`DatabaseConnectionProfiles.swift exposes ambiguous legacy SSH option ${JSON.stringify(pattern)}`);
+  }
+}
+
 if (violations.length > 0) {
   console.error("Interface surface guard failed:");
   for (const violation of violations) console.error(`- ${violation}`);
