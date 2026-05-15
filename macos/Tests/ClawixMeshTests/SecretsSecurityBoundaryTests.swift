@@ -194,25 +194,17 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         )
     }
 
-    func testConnectionAuthReadDoesNotReturnPlaintext() throws {
+    func testConnectionAuthDoesNotReadOrMigratePreV1Plaintext() throws {
         let source = try readSource("Agents/AgentStore.swift")
-        let body = try extractFunctionBody(
-            named: "func readConnectionAuth(connectionId: String) -> String?",
-            from: source,
-            until: "    func hasConnectionAuth"
-        )
 
-        XCTAssertTrue(
-            body.contains("migrateLegacyConnectionAuth"),
-            "Legacy auth may be consumed only for one-way migration into Secrets."
-        )
-        XCTAssertTrue(
-            body.contains("return nil"),
-            "Connection auth reads must not hand plaintext back to UI, agents, or integrations."
-        )
-        XCTAssertFalse(body.contains("revealField"))
-        XCTAssertFalse(body.contains("return legacy"))
-        XCTAssertFalse(body.contains("return (try?"))
+        XCTAssertFalse(source.contains("func readConnectionAuth"))
+        XCTAssertFalse(source.contains("migrateLegacyConnectionAuth"))
+        XCTAssertFalse(source.contains("readLegacyConnectionAuth"))
+        XCTAssertFalse(source.contains("legacyConnectionAuthURL"))
+        XCTAssertFalse(source.contains("auth.encrypted"))
+        XCTAssertFalse(source.contains("revealField"))
+        XCTAssertTrue(source.contains("func hasConnectionAuth(connectionId: String) -> Bool"))
+        XCTAssertTrue(source.contains("store.fetchSecret(byInternalName: internalName)"))
     }
 
     func testSystemProviderSecretsDoNotExposePlaintextReadHelpers() throws {

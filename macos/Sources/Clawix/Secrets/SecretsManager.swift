@@ -484,7 +484,6 @@ final class SecretsManager: ObservableObject {
         self.store = storeShim
         self.audit = auditShim
         self.grants = grantsShim
-        _ = AgentStore.shared.migrateLegacyConnectionAuths(store: storeShim)
         let vaults = try? await Task.detached(priority: .userInitiated) {
             try storeShim.listVaults()
         }.value

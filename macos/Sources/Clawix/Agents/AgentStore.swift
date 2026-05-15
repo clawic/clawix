@@ -605,7 +605,6 @@ final class AgentStore: ObservableObject {
 
     /// Persist the secret material for a connection (bot token, OAuth
     /// refresh token, etc.) in the canonical encrypted Secrets vault.
-    /// Legacy `auth.encrypted` files are removed after a successful write.
     func writeConnectionAuth(connectionId: String, secret: String) {
         guard let store = SecretsManager.shared.store else { return }
         writeConnectionAuth(connectionId: connectionId, secret: secret, store: store)
@@ -652,7 +651,6 @@ final class AgentStore: ObservableObject {
                     approvalMode: .everyUse
                 )
             )
-            try? FileManager.default.removeItem(at: folder.appendingPathComponent("auth.encrypted"))
             if var connection = connection(id: connectionId), let frameworkClient {
                 connection.updatedAt = Date()
                 try? frameworkClient.upsertConnection(connection, secretRef: "vault://connections/\(connectionId)")
@@ -663,69 +661,13 @@ final class AgentStore: ObservableObject {
         }
     }
 
-    @discardableResult
-    func migrateLegacyConnectionAuths(store: ClawJSSecretsStore) -> Int {
-        var migrated = 0
-        let entries = (try? FileManager.default.contentsOfDirectory(at: connectionsDir,
-                                                                    includingPropertiesForKeys: nil)) ?? []
-        for url in entries where url.hasDirectoryPath {
-            if migrateLegacyConnectionAuth(connectionId: url.lastPathComponent, store: store) {
-                migrated += 1
-            }
-        }
-        return migrated
-    }
-
-    func readConnectionAuth(connectionId: String) -> String? {
-        guard let store = SecretsManager.shared.store else { return nil }
-        _ = migrateLegacyConnectionAuth(connectionId: connectionId, store: store)
-        return nil
-    }
-
     func hasConnectionAuth(connectionId: String) -> Bool {
-        guard let store = SecretsManager.shared.store else {
-            return legacyConnectionAuthURL(connectionId: connectionId).flatMap { FileManager.default.fileExists(atPath: $0.path) } ?? false
-        }
+        guard let store = SecretsManager.shared.store else { return false }
         let internalName = connectionAuthInternalName(connectionId)
         if let secret = try? store.fetchSecret(byInternalName: internalName), secret.trashedAt == nil {
             return true
         }
-        if migrateLegacyConnectionAuth(connectionId: connectionId, store: store) {
-            return true
-        }
         return false
-    }
-
-    @discardableResult
-    private func migrateLegacyConnectionAuth(connectionId: String, store: ClawJSSecretsStore) -> Bool {
-        guard let legacyURL = legacyConnectionAuthURL(connectionId: connectionId),
-              FileManager.default.fileExists(atPath: legacyURL.path) else {
-            return false
-        }
-        let internalName = connectionAuthInternalName(connectionId)
-        if let existing = try? store.fetchSecret(byInternalName: internalName), existing.trashedAt == nil {
-            try? FileManager.default.removeItem(at: legacyURL)
-            return false
-        }
-        guard let legacy = readLegacyConnectionAuth(connectionId: connectionId) else { return false }
-        writeConnectionAuth(connectionId: connectionId, secret: legacy, store: store)
-        return !FileManager.default.fileExists(atPath: legacyURL.path)
-    }
-
-    private func readLegacyConnectionAuth(connectionId: String) -> String? {
-        let folder = dir(forConnection: connectionId)
-        guard let data = try? Data(contentsOf: folder.appendingPathComponent("auth.encrypted")) else { return nil }
-        let key = Array(connectionId.utf8)
-        guard !key.isEmpty else { return nil }
-        let bytes = [UInt8](data)
-        let xored: [UInt8] = bytes.enumerated().map { idx, byte in
-            byte ^ key[idx % key.count]
-        }
-        return String(bytes: xored, encoding: .utf8)
-    }
-
-    private func legacyConnectionAuthURL(connectionId: String) -> URL? {
-        dir(forConnection: connectionId).appendingPathComponent("auth.encrypted")
     }
 
     private func connectionAuthInternalName(_ connectionId: String) -> String {

@@ -4929,20 +4929,6 @@
     },
     {
       "canonicality" : "hostOnly",
-      "id" : "clawix.prefs.legacyKeychainPurged",
-      "key" : "clawix.legacyKeychainPurged.v1",
-      "kind" : "preferenceKey",
-      "language" : "swift",
-      "lifecycle" : "durable",
-      "name" : "Legacy keychain purge gate",
-      "owner" : "clawix",
-      "privacy" : "userData",
-      "project" : "macos",
-      "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
-    },
-    {
-      "canonicality" : "hostOnly",
       "id" : "clawix.prefs.database.filterStates",
       "key" : "clawix.database.filterStates.v1",
       "kind" : "preferenceKey",

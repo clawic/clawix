@@ -918,7 +918,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.binary.path", "Clawix binary path", ClawixPersistentSurfaceKeys.binaryPath, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.backgroundBridge.wasEnabled", "Background bridge was enabled", ClawixPersistentSurfaceKeys.backgroundBridgeWasEnabled, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.appleLanguages", "Apple languages", ClawixPersistentSurfaceKeys.appleLanguages, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.legacyKeychainPurged", "Legacy keychain purge gate", "clawix.legacyKeychainPurged.v1", PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.database.filterStates", "Database filter states", "clawix.database.filterStates.v1", PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.databaseWorkbench.operationInputPath", "Database workbench operation input path", "clawix.databaseWorkbench.operationInputPath.v1", PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.databaseWorkbench.operationOutputPath", "Database workbench operation output path", "clawix.databaseWorkbench.operationOutputPath.v1", PersistentSurfaceKind.preferenceKey),
