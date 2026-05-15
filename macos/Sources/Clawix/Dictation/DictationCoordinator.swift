@@ -1121,9 +1121,6 @@ final class DictationCoordinator: ObservableObject {
                 model: model,
                 language: language
             )
-            // Persist a local history projection and register the audio
-            // with the framework catalog. The WAV write is only a
-            // framework-owned staging copy under ~/.claw/audio.
             let id = UUID().uuidString
             let audioURL = DictationAudioStorage.writeWAV(samples: samples, id: id)
             let words = processed.split(whereSeparator: { $0.isWhitespace }).count
@@ -1150,36 +1147,11 @@ final class DictationCoordinator: ObservableObject {
             )
             Task { @MainActor in
                 await TranscriptionsRepository.shared.record(record)
-                if let audioURL, let data = try? Data(contentsOf: audioURL),
-                   let client = AudioCatalogBootstrap.shared.currentClient {
-                    let transcript = ClawJSAudioClient.RegisterTranscriptInput(
-                        text: processed,
-                        role: "transcription",
-                        provider: model?.rawValue,
-                        language: language
-                    )
-                    let metadata: [String: Any?] = [
-                        "originalText": text,
-                        "powerModeId": pmId,
-                        "enhancementProvider": enhancementProvider,
-                        "costUSD": record.costUSD,
-                    ]
-                    let metadataData = try? JSONSerialization.data(
-                        withJSONObject: metadata.compactMapValues { $0 },
-                        options: [.sortedKeys]
-                    )
-                    _ = try? await AudioCatalogRegistration.register(
-                        client: client,
-                        id: id,
-                        kind: WireAudioKind.dictation.rawValue,
-                        appId: "clawix",
-                        originActor: WireAudioOriginActor.user.rawValue,
-                        audioData: data,
-                        mimeType: "audio/wav",
-                        metadataJson: metadataData.flatMap { String(data: $0, encoding: .utf8) },
-                        transcript: transcript
-                    )
-                }
+                await DictationAudioCatalogRecorder.register(
+                    record: record, audioURL: audioURL, processedText: processed,
+                    originalText: text, model: model, language: language,
+                    enhancementProvider: enhancementProvider
+                )
             }
         }
 
