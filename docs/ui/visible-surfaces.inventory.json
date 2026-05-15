@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Every current visible UI candidate must be mapped to patterns, debt, exception, or protected-surface status. This inventory is public metadata only; it does not approve or freeze a visual surface.",
+  "reviewAfter": "2026-08-15",
+  "coverage": [
+    {
+      "id": "macos-root-chrome",
+      "platform": "macos",
+      "scopes": ["macos/Sources/Clawix/*.swift"],
+      "classification": "pattern",
+      "patterns": ["chat-surface", "composer-chrome", "sidebar-row", "sheet-chrome", "toast", "search-field", "icon-chip-button", "entity-card"],
+      "reason": "Root Swift files include app chrome, shared controls, icons, search, sheets, toast, and conversation support surfaces."
+    },
+    {
+      "id": "macos-sidebar",
+      "platform": "macos",
+      "scopes": ["macos/Sources/Clawix/Sidebar/**"],
+      "classification": "pattern",
+      "patterns": ["sidebar-section", "sidebar-row", "dropdown-menu", "thin-scroller"],
+      "reason": "Main sidebar sections, rows, project controls, filters, drag/drop, and account popover."
+    },
+    {
+      "id": "macos-chat-and-composer",
+      "platform": "macos",
+      "scopes": ["macos/Sources/Clawix/Chat/**", "macos/Sources/Clawix/QuickAsk/**"],
+      "classification": "pattern",
+      "patterns": ["chat-surface", "composer-chrome", "sheet-chrome", "entity-card", "icon-chip-button"],
+      "reason": "Primary chat, quick ask, attachments, message bubbles, and composer-adjacent chrome."
+    },
+    {
+      "id": "macos-settings-and-configuration",
+      "platform": "macos",
+      "scopes": ["macos/Sources/Clawix/Settings/**", "macos/Sources/Clawix/Providers/**", "macos/Sources/Clawix/Dictation/**"],
+      "classification": "pattern",
+      "patterns": ["settings-surface", "dropdown-menu", "sheet-chrome", "icon-chip-button", "entity-card"],
+      "reason": "Configuration, provider, identity, appearance, browser, host, dictation, and controls pages."
+    },
+    {
+      "id": "macos-domain-surfaces",
+      "platform": "macos",
+      "scopes": [
+        "macos/Sources/Clawix/Agents/**",
+        "macos/Sources/Clawix/Apps/**",
+        "macos/Sources/Clawix/Browser/**",
+        "macos/Sources/Clawix/Calendar/**",
+        "macos/Sources/Clawix/Contacts/**",
+        "macos/Sources/Clawix/Database/**",
+        "macos/Sources/Clawix/Drive/**",
+        "macos/Sources/Clawix/Feed/**",
+        "macos/Sources/Clawix/Index/**",
+        "macos/Sources/Clawix/IoT/**",
+        "macos/Sources/Clawix/Life/**",
+        "macos/Sources/Clawix/LocalModels/**",
+        "macos/Sources/Clawix/MCP/**",
+        "macos/Sources/Clawix/Marketplace/**",
+        "macos/Sources/Clawix/Memory/**",
+        "macos/Sources/Clawix/P2PChat/**",
+        "macos/Sources/Clawix/Pairing/**",
+        "macos/Sources/Clawix/Profile/**",
+        "macos/Sources/Clawix/Publishing/**",
+        "macos/Sources/Clawix/Secrets/**",
+        "macos/Sources/Clawix/SkillCollections/**",
+        "macos/Sources/Clawix/Skills/**",
+        "macos/Sources/Clawix/Telegram/**",
+        "macos/Sources/Clawix/Terminal/**"
+      ],
+      "classification": "pattern",
+      "patterns": ["settings-surface", "entity-card", "search-field", "terminal-surface", "sheet-chrome", "sidebar-section", "dropdown-menu"],
+      "reason": "Domain panes and repeated operational surfaces use existing registry patterns until a more specific approved pattern is promoted."
+    },
+    {
+      "id": "macos-design-debt",
+      "platform": "macos",
+      "scopes": ["macos/Sources/Clawix/Design/**", "macos/Sources/Clawix/AutomationsView.swift", "macos/Sources/Clawix/PlanQuestionCard.swift"],
+      "classification": "debt",
+      "debtIds": ["ui-debt-design-surface-raw-visual-values", "ui-debt-automations-surface-raw-visual-values", "ui-debt-plan-question-card-raw-visual-values"],
+      "reason": "Known existing visual drift frozen for visual-authorized cleanup."
+    },
+    {
+      "id": "macos-agent-and-bridge-support",
+      "platform": "macos",
+      "scopes": [
+        "macos/Sources/Clawix/AgentBackend/**",
+        "macos/Sources/Clawix/AppState/**",
+        "macos/Sources/Clawix/Audio/**",
+        "macos/Sources/Clawix/Bridge/**",
+        "macos/Sources/Clawix/Connections/**",
+        "macos/Sources/Clawix/MacUtilities/**",
+        "macos/Sources/Clawix/Personalities/**"
+      ],
+      "classification": "pattern",
+      "patterns": ["chat-surface", "terminal-surface", "settings-surface", "entity-card", "sheet-chrome", "search-field", "icon-chip-button"],
+      "reason": "Agent timeline, bridge pairing, audio bubbles, app-state search/sidebar helpers, utility settings, and personality panes include visible support UI."
+    },
+    {
+      "id": "macos-icon-and-visual-support",
+      "platform": "macos",
+      "scopes": ["macos/Sources/Clawix/LucideIcons/**", "macos/Sources/Clawix/ScreenTools/**", "macos/Sources/Clawix/Notifications/**"],
+      "classification": "pattern",
+      "patterns": ["icon-chip-button", "sheet-chrome", "toast", "entity-card"],
+      "reason": "Icon glyphs, screen tool panes, overlays, and notification feedback are visible support surfaces."
+    },
+    {
+      "id": "ios-chat-and-composer",
+      "platform": "ios",
+      "scopes": ["ios/Sources/Clawix/*.swift", "ios/Sources/Clawix/ChatDetail/**", "ios/Sources/Clawix/ChatList/**", "ios/Sources/Clawix/Composer/**"],
+      "classification": "pattern",
+      "patterns": ["chat-surface", "composer-chrome", "sidebar-row", "sheet-chrome", "entity-card", "icon-chip-button"],
+      "reason": "iOS app shell, chat list, detail, media viewers, timeline, and composer."
+    },
+    {
+      "id": "ios-domain-surfaces",
+      "platform": "ios",
+      "scopes": [
+        "ios/Sources/Clawix/Design/**",
+        "ios/Sources/Clawix/Feed/**",
+        "ios/Sources/Clawix/Icons/**",
+        "ios/Sources/Clawix/Index/**",
+        "ios/Sources/Clawix/Life/**",
+        "ios/Sources/Clawix/Marketplace/**",
+        "ios/Sources/Clawix/P2PChat/**",
+        "ios/Sources/Clawix/Pairing/**",
+        "ios/Sources/Clawix/Profile/**",
+        "ios/Sources/Clawix/ProjectDetail/**",
+        "ios/Sources/Clawix/Skills/**",
+        "ios/Sources/Clawix/Theme/**"
+      ],
+      "classification": "pattern",
+      "patterns": ["design-surface", "settings-surface", "entity-card", "search-field", "sheet-chrome", "icon-chip-button"],
+      "reason": "iOS secondary screens and visible support modules mapped to existing cross-platform patterns."
+    },
+    {
+      "id": "android-chat-and-composer",
+      "platform": "android",
+      "scopes": [
+        "android/app/src/main/java/com/example/clawix/android/*.kt",
+        "android/app/src/main/java/com/example/clawix/android/chatdetail/**",
+        "android/app/src/main/java/com/example/clawix/android/chatlist/**",
+        "android/app/src/main/java/com/example/clawix/android/composer/**"
+      ],
+      "classification": "pattern",
+      "patterns": ["chat-surface", "composer-chrome", "sidebar-row", "sheet-chrome", "entity-card", "icon-chip-button"],
+      "reason": "Android app shell, chat list/detail, media viewers, and composer."
+    },
+    {
+      "id": "android-domain-surfaces",
+      "platform": "android",
+      "scopes": [
+        "android/app/src/main/java/com/example/clawix/android/icons/**",
+        "android/app/src/main/java/com/example/clawix/android/pairing/**",
+        "android/app/src/main/java/com/example/clawix/android/projectdetail/**",
+        "android/app/src/main/java/com/example/clawix/android/theme/**"
+      ],
+      "classification": "pattern",
+      "patterns": ["settings-surface", "entity-card", "sheet-chrome", "icon-chip-button"],
+      "reason": "Android project, pairing, theme, and icon-visible support modules."
+    },
+    {
+      "id": "web-components-and-shell",
+      "platform": "web",
+      "scopes": ["web/src/*.tsx", "web/src/components/**", "web/src/icons/**"],
+      "classification": "pattern",
+      "patterns": ["sidebar-section", "sidebar-row", "dropdown-menu", "icon-chip-button", "sliding-segmented", "sheet-chrome", "toast", "search-field", "entity-card"],
+      "reason": "Web shell, shared controls, custom icons, and reusable UI components."
+    },
+    {
+      "id": "web-screens",
+      "platform": "web",
+      "scopes": ["web/src/screens/**"],
+      "classification": "pattern",
+      "patterns": ["chat-surface", "composer-chrome", "settings-surface", "terminal-surface", "search-field", "entity-card", "sidebar-row", "sheet-chrome"],
+      "reason": "Web route screens and page-level UI surfaces."
+    }
+  ]
+}
