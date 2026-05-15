@@ -496,6 +496,13 @@ for (const pattern of ["legacy SF Symbol", "init(lucideOrSystem", "Compatibility
   }
 }
 
+const secretsBackendSource = read("macos/Sources/Clawix/ClawJS/ClawJSSecretsBackend.swift");
+for (const pattern of ["not yet wired to ClawJS Secrets HTTP backend", "BackupContents", "Legacy types"]) {
+  if (secretsBackendSource.includes(pattern)) {
+    fail(`ClawJSSecretsBackend.swift must not expose incomplete backup compatibility methods: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

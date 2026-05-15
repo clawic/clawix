@@ -346,15 +346,6 @@ final class ClawJSSecretsStore {
         return 0
     }
 
-    func snapshotForBackup() throws -> BackupContents {
-        throw ClawJSBackendError.server("Backup export not yet wired to ClawJS Secrets HTTP backend")
-    }
-
-    func restoreBackup(_ contents: BackupContents) throws -> (created: Int, skipped: Int) {
-        _ = contents
-        throw ClawJSBackendError.server("Backup import not yet wired to ClawJS Secrets HTTP backend")
-    }
-
     private func fetchSecretById(_ id: EntityID) throws -> SecretRecord? {
         let all = try listSecrets(includeTrashed: true)
         return all.first { $0.id == id }
@@ -511,6 +502,6 @@ enum ClawJSGovernanceEncoder {
     }
 }
 
-// (Legacy types `RevealedField`, `AuditEventFilter`, `AuditIntegrityReport`,
-//  `FieldAccessPurpose`, `BackupContents` come from the SecretsVault
-//  package; we reuse them so the existing views compile unchanged.)
+// Shared types (`RevealedField`, `AuditEventFilter`, `AuditIntegrityReport`,
+// `FieldAccessPurpose`) come from the SecretsVault package so the HTTP-backed
+// stores and the SwiftUI surfaces speak the same model language.
