@@ -709,6 +709,34 @@ if (iosChatListSource.includes("onOpenSkills")) {
   fail("ChatListView.swift must not keep a visible iOS Skills entry until the bridge consumes real skillsList/skillsView frames");
 }
 
+const inertSkillsBridgeFramePatterns = [
+  "skillsList",
+  "skillsView",
+  "skillsCreate",
+  "skillsUpdate",
+  "skillsRemove",
+  "skillsActivate",
+  "skillsDeactivate",
+  "skillsSync",
+  "skillsImport",
+  "skillsListResult",
+  "skillsViewResult",
+  "skillsActiveChanged",
+];
+for (const relativePath of [
+  "packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.swift",
+  "packages/ClawixEngine/Sources/ClawixEngine/BridgeIntent.swift",
+  "macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift",
+  "docs/persistent-surface-clawix.manifest.json",
+]) {
+  const source = read(relativePath);
+  for (const pattern of inertSkillsBridgeFramePatterns) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must not expose inert Skills bridge frame ${JSON.stringify(pattern)} until it has a real dispatcher`);
+    }
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

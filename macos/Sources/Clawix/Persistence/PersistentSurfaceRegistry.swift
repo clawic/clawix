@@ -541,18 +541,6 @@ enum ClawixPersistentSurfaceRegistry {
             "requestRateLimits",
             "rateLimitsSnapshot",
             "rateLimitsUpdated",
-            "skillsList",
-            "skillsView",
-            "skillsCreate",
-            "skillsUpdate",
-            "skillsRemove",
-            "skillsActivate",
-            "skillsDeactivate",
-            "skillsSync",
-            "skillsImport",
-            "skillsListResult",
-            "skillsViewResult",
-            "skillsActiveChanged",
         ].map { type in
             ClawixPersistentSurface.contract(
                 id: "clawix.protocol.bridge.frame.\(type)",
