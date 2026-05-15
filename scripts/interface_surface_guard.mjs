@@ -697,6 +697,18 @@ if (skillsViewSource.includes("placeholder; full editor")) {
   fail("SkillsView.swift must not label the v1 new-skill sheet as a placeholder");
 }
 
+const iosClawixAppSource = read("ios/Sources/Clawix/ClawixApp.swift");
+for (const pattern of ["RootNav.skills", "case skills", "SkillsListView()"]) {
+  if (iosClawixAppSource.includes(pattern)) {
+    fail(`iOS must not expose the local seed Skills catalog as a v1 product surface: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const iosChatListSource = read("ios/Sources/Clawix/ChatList/ChatListView.swift");
+if (iosChatListSource.includes("onOpenSkills")) {
+  fail("ChatListView.swift must not keep a visible iOS Skills entry until the bridge consumes real skillsList/skillsView frames");
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

@@ -321,10 +321,7 @@ struct ActiveSkillState: Equatable, Hashable, Identifiable {
     var id: String { "\(scopeTag):\(slug)" }
 }
 
-// NOTE: iOS v1 of Skills is read/browse-only. The daemon never asks
-// iOS for activation toggles — those are owned by the Mac app and
-// arrive cross-device via `skillsActiveChanged` once the v6 bridge
-// frames land (Phase 5 daemon-side, currently TODO). When iOS gets
-// write capability, port `toWire()` from the macOS copy of this file
-// and connect it to the iOS BridgeStore. Not implemented here to
-// avoid a half-finished surface that ships before the bridge does.
+// NOTE: iOS Skills models are retained only for local/dev layout work.
+// Product iOS must consume real `skillsList` / `skillsView` bridge
+// frames before exposing this surface again, so the framework remains
+// the source of truth.

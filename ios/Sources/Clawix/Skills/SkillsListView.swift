@@ -1,16 +1,11 @@
 import SwiftUI
 
-/// Read-only catalog of Skills on iOS. Mirrors the macOS catalog page
-/// but adapted to NavigationStack. v1 is browse-only: list + detail.
-/// Edit, activation, sync target toggles ship in v2 once the v6 bridge
-/// frames land (currently macOS-only).
-///
-/// Entry point: a tab/sheet from the iOS root (wired in by the
-/// integrator in `ClawixApp.swift` or wherever the iOS root lives).
+/// Dev-only scratch catalog for iOS Skills. It is deliberately not
+/// reachable from the product root until iOS consumes real
+/// `skillsList` / `skillsView` bridge frames from the framework source
+/// of truth.
 struct SkillsListView: View {
-    /// Seed catalog used until the bridge serves the user's real
-    /// central library. Same shape as macOS to keep the eventual
-    /// refactor of these models into a shared package painless.
+    /// Seed catalog used only for local layout iteration.
     @State private var catalog: [SkillSpec] = SkillsSeedCatalogIOS.builtins
     @State private var query: String = ""
     @State private var kindFilter: SkillKind? = nil

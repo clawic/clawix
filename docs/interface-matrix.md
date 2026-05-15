@@ -36,7 +36,7 @@ experimental switch. Every current surface must be one of:
 | OAuth callback deep links | Host | OAuth callback handling | `clawix://auth/callback/<provider>` | Host route | Parser accepts auth callback and rejects `oauth-callback` |
 | Pairing QR | Host | Pairing QR sheet | JSON payload with `v`, `host`, `port`, `token` | Host runtime | Payload tests assert JSON and port `24080` |
 | Agents, Personalities, Connections | Framework | Clawix agent and connection views | ClawJS agents/integrations APIs, CLI/SDK, fixtures | Framework files plus `core.sqlite`, host secret refs | No direct Clawix canonical writes |
-| Skills and Skill Collections | Framework | Clawix skills/library UI | ClawJS skills/library APIs, CLI/SDK, MCP resources | Framework files plus `core.sqlite` | Skill fixtures and interface coverage |
+| Skills and Skill Collections | Framework | macOS Clawix skills/library UI | ClawJS skills/library APIs, CLI/SDK, MCP resources | Framework files plus `core.sqlite` | Skill fixtures and interface coverage |
 | Secrets | Host | Unlock, reveal and approvals | Host/vault APIs with opaque framework refs | Host vault | Signed-host/vault tests and plaintext negative checks |
 | MCP | Framework | MCP settings | ClawJS MCP registry through `claw`/API | Framework registry; external configs read-only | Registry tests and Codex read-only guard |
 | Provider accounts/routing | Framework + Host | Provider account/model settings | Framework config plus host vault refs | Framework config; credentials in host vault | Routing tests; no UserDefaults as canonical store |
@@ -68,6 +68,7 @@ experimental switch. Every current surface must be one of:
 | Surface | Owner | Human UI | Programmatic Surface | Boundary | Required Validation |
 | --- | --- | --- | --- | --- | --- |
 | Simulators | Host | Developer sidebar items | Launcher/preflight dev tooling | Host dev state | Release visibility tests ensure it is not product v1 |
+| iOS Skills seed catalog | Framework | Local iOS layout scratch surface only, not product navigation | Blocked until iOS consumes real `skillsList`/`skillsView` bridge frames | No product storage; seed data only | Interface guard rejects iOS product navigation to `SkillsListView` |
 
 ## Guardrails
 

@@ -25,13 +25,9 @@ struct ChatListView: View {
     let onPair: (Credentials) -> Void
     let onUnpair: () -> Void
     var onNewChat: () -> Void = {}
-    /// Optional escape hatch to push the Skills catalog onto the
-    /// parent NavigationStack. `nil` means the host doesn't expose a
-    /// Skills page (older builds); the entry button hides itself.
-    var onOpenSkills: (() -> Void)? = nil
     /// Optional callback that pushes the Design hub (Styles / Templates
-    /// / References / Drafts). Surfaced as a paint-palette button next
-    /// to "Skills" in the top bar.
+    /// / References / Drafts). Surfaced as a paint-palette button in
+    /// the top bar.
     var onOpenDesign: (() -> Void)? = nil
 
     @State private var searchActive: Bool = false
@@ -222,21 +218,6 @@ struct ChatListView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Search")
-
-            if let onOpenSkills {
-                Button(action: {
-                    Haptics.tap()
-                    onOpenSkills()
-                }) {
-                    Image(systemName: "wand.and.stars")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Palette.textPrimary)
-                        .frame(width: 48, height: 46)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Skills")
-            }
 
             if let onOpenDesign {
                 Button(action: {

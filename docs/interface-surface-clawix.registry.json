@@ -59,10 +59,19 @@
       "featureFlag": "skills",
       "status": "stable",
       "owner": "framework",
-      "humanSurface": "Clawix Skills catalog and assignment UI",
+      "humanSurface": "macOS Clawix Skills catalog and assignment UI",
       "programmaticSurface": "ClawJS skills/library APIs, CLI/SDK and MCP resources",
       "storageOwner": "framework-core-sqlite-plus-files",
       "validation": "Skills fixtures and interface matrix row"
+    },
+    {
+      "id": "skills.iosSeedCatalog",
+      "status": "dev-only",
+      "owner": "framework",
+      "humanSurface": "iOS local Skills layout scratch surface, not reachable from product navigation",
+      "programmaticSurface": "blocked until iOS consumes real skillsList/skillsView bridge frames",
+      "storageOwner": "none-local-seed-only",
+      "validation": "Interface guard rejects iOS product navigation to SkillsListView"
     },
     {
       "id": "skillCollections",
