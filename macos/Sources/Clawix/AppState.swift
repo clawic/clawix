@@ -134,12 +134,10 @@ final class AppState: ObservableObject {
     /// Persisted via `ProjectOrdersRepository`.
     @Published var manualProjectOrder: [UUID] = []
     /// Currently selected agent for the next composer send. Defaults
-    /// to the built-in Codex agent so legacy flows behave exactly like
-    /// before. The composer dropdown writes this; `ChatView` reads it
-    /// when minting a new chat. `AgentRuntimeChoice` below stays as
-    /// the internal-resolved-runtime representation: the dropdown still
-    /// derives runtime + model from the chosen agent so existing call
-    /// sites that read `selectedAgentRuntime` keep working.
+    /// to the built-in Codex agent. The composer dropdown writes this;
+    /// `ChatView` reads it when minting a new chat. `AgentRuntimeChoice`
+    /// below stays as the internal-resolved-runtime representation: the
+    /// dropdown still derives runtime + model from the chosen agent.
     @Published var selectedAgentId: String = Agent.defaultCodexId
 
     @Published var selectedAgentRuntime: AgentRuntimeChoice = .codex {
@@ -1466,9 +1464,8 @@ final class AppState: ObservableObject {
     /// wire chats coming from the daemon (which carry both via the
     /// `threadId` field added to `WireSession`) can be reconciled
     /// without first being re-wrapped as an `AgentThreadSummary`.
-    /// Returns nil when the
-    /// thread id is missing (legacy daemons that don't emit it yet),
-    /// preserving the previous "stay in flat list" behaviour.
+    /// Returns nil when the thread id is missing, keeping incomplete
+    /// session records in the flat list instead of guessing a project.
     func rootPath(threadId: String?, cwd: String?, projectByPath: [String: Project]) -> String? {
         if let threadId {
             if chatProjectsRepo.isProjectless(threadId) {
@@ -1587,8 +1584,7 @@ final class AppState: ObservableObject {
             .first(where: { arguments[$0] == "--route" && arguments.indices.contains($0 + 1) })
             .map { arguments[$0 + 1] }
         let env = ProcessInfo.processInfo.environment
-        let legacyRouteKey = ["CLAWIX", "REP" + "LICA", "ROUTE"].joined(separator: "_")
-        let route = argumentRoute ?? env["CLAWIX_ROUTE"] ?? env[legacyRouteKey] ?? ""
+        let route = argumentRoute ?? env["CLAWIX_ROUTE"] ?? ""
         switch route {
         case "search":
             currentRoute = .search

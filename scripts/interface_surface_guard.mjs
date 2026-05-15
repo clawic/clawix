@@ -357,6 +357,25 @@ if (appSource.includes("one-shot legacy")) {
   fail("App.swift must not describe audio catalog bootstrap as a legacy migration");
 }
 
+const appStateSource = read("macos/Sources/Clawix/AppState.swift");
+for (const pattern of ["legacyRouteKey", "CLAWIX_REPLICA_ROUTE", "legacy daemons", "legacy flows"]) {
+  if (appStateSource.includes(pattern)) {
+    fail(`AppState.swift contains clean-v1 incompatible launch/session compatibility wording ${JSON.stringify(pattern)}`);
+  }
+}
+
+for (const [relativePath, source] of [
+  ["macos/Sources/Clawix/Bridge/MeshStore.swift", read("macos/Sources/Clawix/Bridge/MeshStore.swift")],
+  ["macos/Sources/Clawix/Bridge/MeshClient.swift", read("macos/Sources/Clawix/Bridge/MeshClient.swift")],
+  ["macos/Sources/Clawix/AppState/ChatHydration.swift", read("macos/Sources/Clawix/AppState/ChatHydration.swift")],
+]) {
+  for (const pattern of ["legacy Swift bridge", "legacy daemons", "legacy synchronous rollout"]) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must describe daemon/in-process bridge boundaries without legacy compatibility wording`);
+    }
+  }
+}
+
 const sidebarItems = read("macos/Sources/Clawix/AppState/SidebarItems.swift");
 for (const pattern of ["legacyBrowserStateKey", "legacyBrowserActiveKey", "BrowserTabs", "BrowserActiveTabId"]) {
   if (sidebarItems.includes(pattern)) {

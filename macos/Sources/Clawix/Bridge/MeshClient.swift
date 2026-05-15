@@ -134,8 +134,8 @@ struct MeshClient {
     /// `sshSecret` is included, the daemon also persists it in its
     /// loopback SshSecretStore so subsequent `ssh.*` jobs can resolve
     /// the credential by id. Available only when the Node daemon is
-    /// the active bridge (the legacy Swift bridge does not expose
-    /// these CRUD endpoints).
+    /// the active bridge; in-process bridge modes do not expose these
+    /// CRUD endpoints.
     func upsertHost(_ host: HostInput, sshSecret: SshSecretInput? = nil) async throws -> PeerRecord {
         let body = HostUpsertInput(host: host, sshSecret: sshSecret)
         let payload: HostUpsertOutput = try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/mesh/hosts", body: body)

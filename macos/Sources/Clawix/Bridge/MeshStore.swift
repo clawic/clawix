@@ -134,8 +134,8 @@ final class MeshStore: ObservableObject {
     /// daemon. The daemon stores the host record and, if `secret` is
     /// provided, persists it in its loopback SshSecretStore so future
     /// `ssh.*` jobs resolve the credential by id. Requires the Node
-    /// bridge daemon (the legacy Swift bridge does not expose
-    /// `POST /v1/mesh/hosts`).
+    /// bridge daemon; in-process bridge modes do not expose
+    /// `POST /v1/mesh/hosts`.
     func upsertSshHost(
         displayName: String,
         kind: HostKind,

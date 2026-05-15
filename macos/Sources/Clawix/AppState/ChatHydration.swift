@@ -225,8 +225,8 @@ extension AppState {
     func hydrateHistoryFromBridge(chatId: UUID) {
         guard chat(byId: chatId) != nil else { return }
         // Bridge response composes inline; the iPhone needs messages
-        // before this returns. Keeps the legacy synchronous rollout
-        // read for that one call site.
+        // before this returns, so this call site keeps the synchronous
+        // rollout read.
         hydrateHistoryIfNeeded(chatId: chatId, blocking: true)
     }
 
@@ -361,8 +361,7 @@ extension AppState {
         guard let id = UUID(uuidString: chatId) else { return }
         // Reset pagination state regardless of where the chat lives:
         // the snapshot is the new baseline. Treat absent metadata as
-        // "no older history known" so legacy daemons keep their old
-        // eager behaviour.
+        // "no older history known" so incomplete snapshots stay eager.
         messagesPaginationByChat[id] = ChatPagination(
             oldestKnownId: messages.first?.id,
             hasMore: hasMore ?? false,
