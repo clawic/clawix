@@ -73,6 +73,7 @@ struct EnhancementSettingsSheet: View {
     @State private var modelDraft: String = ""
     @State private var baseURLDraft: String = ""
     @State private var isConnected: Bool = false
+    @State private var apiKeySaveError: String?
 
     private var provider: EnhancementProviderID {
         EnhancementProviderID(rawValue: providerRaw) ?? .openai
@@ -163,11 +164,16 @@ struct EnhancementSettingsSheet: View {
                         guard !key.isEmpty else { return }
                         let target = provider
                         Task {
-                            try? await EnhancementSecrets.setAPIKey(key, for: target)
-                            await refreshConnected()
+                            await saveAPIKey(key, for: target)
                         }
                     }
                     .disabled(vault.state != .unlocked || apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                if let apiKeySaveError {
+                    Text(apiKeySaveError)
+                        .font(BodyFont.system(size: 11, wght: 600))
+                        .foregroundColor(Color(red: 0.95, green: 0.65, blue: 0.30))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             } else if provider == .ollama {
                 TextField("Base URL", text: $baseURLDraft)
@@ -360,6 +366,17 @@ struct EnhancementSettingsSheet: View {
             return
         }
         isConnected = await EnhancementSecrets.hasAPIKey(for: provider)
+    }
+
+    private func saveAPIKey(_ key: String, for provider: EnhancementProviderID) async {
+        apiKeySaveError = nil
+        do {
+            try await EnhancementSecrets.setAPIKey(key, for: provider)
+            await refreshConnected()
+        } catch {
+            apiKeySaveError = error.localizedDescription
+            await refreshConnected()
+        }
     }
 }
 
