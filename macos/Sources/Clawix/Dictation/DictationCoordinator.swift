@@ -15,7 +15,6 @@ import ClawixEngine
 /// this shared coordinator is a straight rename in the composer.
 @MainActor
 final class DictationCoordinator: ObservableObject {
-
     enum State: Equatable {
         case idle
         case recording
