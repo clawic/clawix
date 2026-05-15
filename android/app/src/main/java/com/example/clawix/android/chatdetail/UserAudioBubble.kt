@@ -47,8 +47,7 @@ fun UserAudioBubble(
             .clickable {
                 loading = true
                 container.bridgeClient.requestAudio(audioRef.id)
-                // Real playback hooked up when AudioSnapshot arrives is
-                // wired in Phase 7. Here we just request bytes.
+                // Real playback starts when the AudioSnapshot arrives.
             }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,

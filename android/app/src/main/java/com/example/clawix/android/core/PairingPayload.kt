@@ -5,8 +5,7 @@ import kotlinx.serialization.Serializable
 /**
  * JSON payload encoded inside the QR code that the daemon emits on
  * `pairingStart`. Mirrors `PairingPayload` in
- * `clawix/ios/Sources/Clawix/Bridge/Credentials.swift`. Field set is
- * v5.
+ * `clawix/ios/Sources/Clawix/Bridge/Credentials.swift`.
  */
 @Serializable
 data class PairingPayload(

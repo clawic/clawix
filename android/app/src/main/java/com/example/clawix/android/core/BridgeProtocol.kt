@@ -98,7 +98,7 @@ sealed class BridgeBody {
     }
     data class ErrorEvent(val code: String, val message: String) : BridgeBody() { override val typeTag = "errorEvent" }
 
-    // MARK: - v2 desktop-only outbound (kept for completeness; mobile won't emit)
+    // MARK: - desktop-capable outbound (mobile will not emit)
     data class EditPrompt(val sessionId: String, val messageId: String, val text: String) : BridgeBody() { override val typeTag = "editPrompt" }
     data class ArchiveSession(val sessionId: String) : BridgeBody() { override val typeTag = "archiveSession" }
     data class UnarchiveSession(val sessionId: String) : BridgeBody() { override val typeTag = "unarchiveSession" }
@@ -109,14 +109,14 @@ sealed class BridgeBody {
     data object ListProjects : BridgeBody() { override val typeTag = "listProjects" }
     data class ReadFile(val path: String) : BridgeBody() { override val typeTag = "readFile" }
 
-    // MARK: - v2 inbound
+    // MARK: - desktop-capable inbound
     data class PairingPayload(val qrJson: String, val bearer: String) : BridgeBody() { override val typeTag = "pairingPayload" }
     data class ProjectsSnapshot(val projects: List<WireProject>) : BridgeBody() { override val typeTag = "projectsSnapshot" }
     data class FileSnapshot(val path: String, val content: String?, val isMarkdown: Boolean, val error: String?) : BridgeBody() {
         override val typeTag = "fileSnapshot"
     }
 
-    // MARK: - v3 voice notes
+    // MARK: - voice notes
     data class TranscribeAudio(val requestId: String, val audioBase64: String, val mimeType: String, val language: String?) : BridgeBody() {
         override val typeTag = "transcribeAudio"
     }
@@ -128,7 +128,7 @@ sealed class BridgeBody {
         override val typeTag = "audioSnapshot"
     }
 
-    // MARK: - v4 inline images
+    // MARK: - inline images
     data class RequestGeneratedImage(val path: String) : BridgeBody() { override val typeTag = "requestGeneratedImage" }
     data class GeneratedImageSnapshot(val path: String, val dataBase64: String?, val mimeType: String?, val errorMessage: String?) : BridgeBody() {
         override val typeTag = "generatedImageSnapshot"
@@ -139,7 +139,7 @@ sealed class BridgeBody {
         override val typeTag = "bridgeState"
     }
 
-    // MARK: - v5 rate limits
+    // MARK: - rate limits
     data object RequestRateLimits : BridgeBody() { override val typeTag = "requestRateLimits" }
     data class RateLimitsSnapshot(val snapshot: WireRateLimitSnapshot?, val byLimitId: Map<String, WireRateLimitSnapshot>) : BridgeBody() {
         override val typeTag = "rateLimitsSnapshot"

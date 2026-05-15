@@ -120,7 +120,7 @@ public protocol EngineHost: AnyObject {
     /// cancel. Mirrors the Mac composer's stop button.
     func handleInterruptTurn(sessionId: UUID)
 
-    // MARK: - v2 desktop-only hooks (LaunchAgent daemon will override)
+    // MARK: - desktop-capable hooks (LaunchAgent daemon will override)
 
     /// Edit a previous user message in place and re-run the turn.
     /// Default impl is a no-op so v1 hosts (the in-process server in
@@ -182,7 +182,7 @@ public protocol EngineHost: AnyObject {
         reply: @MainActor @escaping (_ dataBase64: String?, _ mimeType: String?, _ errorMessage: String?) -> Void
     )
 
-    // MARK: - v7 audio catalog hooks
+    // MARK: - audio catalog hooks
 
     /// Configured client for the `@clawjs/audio` service. Nil while the
     /// service is still booting (or when the host has not been wired to
@@ -278,7 +278,7 @@ public extension EngineHost {
         reply(result.dataBase64, result.mimeType, result.errorMessage)
     }
 
-    // MARK: - v7 audio catalog defaults
+    // MARK: - audio catalog defaults
 
     var audioCatalogClient: ClawJSAudioClient? { nil }
 

@@ -4,10 +4,8 @@ import ClawixCore
 #if canImport(Network)
 import Network
 
-/// Local-network WS server that exposes an `EngineHost` (the macOS
-/// `AppState` today, the LaunchAgent daemon's engine tomorrow) to the
-/// iPhone companion and to a co-located desktop client. Phase 2 is
-/// plaintext; TLS + cert pinning lands later.
+/// Local-network WS server that exposes an `EngineHost` to the iPhone
+/// companion and to a co-located desktop client.
 ///
 /// Apple-platform implementation: NWListener + NWConnection. Keeps
 /// NWPathMonitor semantics for suspend/resume. The Linux build links
@@ -26,19 +24,17 @@ public final class BridgeServer {
 
     /// - Parameter publishBonjour: when true (default), the listener
     ///   advertises itself over `_clawix-bridge._tcp` so the iPhone
-    ///   companion's `NWBrowser` discovers it. The daemon currently
-    ///   ships an `EmptyEngineHost` stub, so it skips Bonjour to
-    ///   avoid racing the GUI for the iPhone's attention until it
-    ///   owns real chat state.
+    ///   companion's `NWBrowser` discovers it. Daemon callers can
+    ///   disable Bonjour when another signed host owns discovery.
     public init(
         host: EngineHost,
         port: UInt16 = 24080,
-        pairing: PairingService = .shared,
+        pairing: PairingService? = nil,
         publishBonjour: Bool = true
     ) {
         self.host = host
         self.port = NWEndpoint.Port(rawValue: port) ?? NWEndpoint.Port(rawValue: 24080)!
-        self.pairing = pairing
+        self.pairing = pairing ?? .shared
         self.publishBonjour = publishBonjour
     }
 

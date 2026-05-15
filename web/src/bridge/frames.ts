@@ -222,7 +222,7 @@ export const ZRateLimitsUpdated = z.object({
   ...ZRateLimitsPayload.shape,
 });
 
-// v7 audio catalog frames (outbound: client -> daemon).
+// Audio catalog frames (outbound: client -> daemon).
 export const ZAudioRegister = z.object({
   ...base,
   type: z.literal("audioRegister"),
@@ -264,7 +264,7 @@ export const ZAudioDelete = z.object({
   appId: z.string(),
 });
 
-// v7 audio catalog frames (inbound: daemon -> client).
+// Audio catalog frames (inbound: daemon -> client).
 export const ZAudioRegisterResult = z.object({
   ...base,
   type: z.literal("audioRegisterResult"),
@@ -382,8 +382,8 @@ export function encodeFrame(body: FrameBody): string {
 
 /**
  * Decode a JSON text frame received over WebSocket.
- * Returns `null` if the type is unknown (forward compatibility: old web client
- * receiving v6 frames). The caller decides whether to surface "Update Clawix".
+ * Returns `null` if the type is unknown. The caller decides whether to surface
+ * "Update Clawix" for schema mismatches.
  */
 export function decodeFrame(raw: string): BridgeFrame | null {
   try {

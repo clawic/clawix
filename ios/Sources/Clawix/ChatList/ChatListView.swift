@@ -1140,7 +1140,7 @@ private struct SettingsScannerSheet: View {
 // MARK: - New chat FAB
 
 /// White floating action button anchored to the bottom-right of the
-/// chat list. Pairs the v7 ComposeIcon with a "Chat" label and reads
+/// chat list. Pairs the ComposeIcon with a "Chat" label and reads
 /// as the primary affordance for starting a new conversation.
 private struct NewChatFAB: View {
     let action: () -> Void

@@ -7,9 +7,8 @@ import Glibc
 
 /// Holds the stable bearer token the iPhone has to present during
 /// `auth`, and resolves the LAN IPv4 the QR payload should advertise.
-/// Phase 5 will move the bearer + identity into the Keychain; for now
-/// it lives in UserDefaults so the iPhone can reconnect across Mac
-/// rebuilds without re-pairing every time.
+/// The token persists so the iPhone can reconnect across Mac rebuilds
+/// without re-pairing every time.
 @MainActor
 public final class PairingService {
 
@@ -108,7 +107,7 @@ public final class PairingService {
     }
 
     /// JSON the QR encodes. The iPhone parses it, persists the host /
-    /// port / token in its keychain (Phase 6), and connects.
+    /// port / token, and connects.
     ///
     /// Includes both the LAN IPv4 (fast path when at home, on the same
     /// WiFi as the Mac) and, if Tailscale is up on the Mac, its

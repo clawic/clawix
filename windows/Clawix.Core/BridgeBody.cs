@@ -106,7 +106,7 @@ public abstract record BridgeBody
         public override string TypeTag => "errorEvent";
     }
 
-    // ===== v2 outbound (desktop client -> daemon) =====
+    // ===== desktop-capable outbound (client -> daemon) =====
 
     public sealed record EditPrompt(string SessionId, string MessageId, string Text) : BridgeBody
     {
@@ -153,7 +153,7 @@ public abstract record BridgeBody
         public override string TypeTag => "readFile";
     }
 
-    // ===== v2 inbound (daemon -> desktop client) =====
+    // ===== desktop-capable inbound (daemon -> client) =====
 
     public sealed record PairingPayload(string QrJson, string Bearer) : BridgeBody
     {
@@ -170,7 +170,7 @@ public abstract record BridgeBody
         public override string TypeTag => "fileSnapshot";
     }
 
-    // ===== v3 voice =====
+    // ===== voice =====
 
     public sealed record TranscribeAudio(string RequestId, string AudioBase64, string MimeType, string? Language) : BridgeBody
     {
@@ -192,7 +192,7 @@ public abstract record BridgeBody
         public override string TypeTag => "audioSnapshot";
     }
 
-    // ===== v4 generated images =====
+    // ===== generated images =====
 
     public sealed record RequestGeneratedImage(string Path) : BridgeBody
     {
@@ -211,7 +211,7 @@ public abstract record BridgeBody
         public override string TypeTag => "bridgeState";
     }
 
-    // ===== v5 rate limits =====
+    // ===== rate limits =====
 
     public sealed record RequestRateLimits : BridgeBody
     {

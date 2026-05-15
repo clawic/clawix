@@ -52,7 +52,7 @@ public final class BridgeSession: Identifiable {
             send(BridgeFrame(.errorEvent(code: "decode", message: "\(error)")))
             return
         }
-        if frame.schemaVersion > bridgeSchemaVersion {
+        if frame.schemaVersion != bridgeSchemaVersion {
             send(BridgeFrame(.versionMismatch(serverVersion: bridgeSchemaVersion)))
             close(.protocolError)
             return

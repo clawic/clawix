@@ -6,9 +6,8 @@ import Network
 
 /// One client of the bridge (an iPhone or a co-located desktop GUI).
 /// Owns the `NWConnection`, drives the receive loop, gates frames
-/// behind a successful `auth`. The Phase 2 build accepts any bearer
-/// matching `PairingService.shared.bearer`; TLS + cert pinning lands
-/// later.
+/// behind a successful `auth`. The bridge accepts the stable bearer
+/// or current short code minted by `PairingService`.
 @MainActor
 public final class BridgeSession: Identifiable {
     public let id = UUID()
@@ -80,9 +79,9 @@ public final class BridgeSession: Identifiable {
             send(BridgeFrame(.errorEvent(code: "decode", message: "\(error)")))
             return
         }
-        // Strict schema match for the v1 bridge. Anything newer gets a
+        // Strict schema match for the v1 bridge. Any mismatch gets a
         // `versionMismatch` before close so the client knows to update.
-        if frame.schemaVersion > bridgeSchemaVersion {
+        if frame.schemaVersion != bridgeSchemaVersion {
             send(BridgeFrame(.versionMismatch(serverVersion: bridgeSchemaVersion)))
             close(.protocolCode(.protocolError))
             return

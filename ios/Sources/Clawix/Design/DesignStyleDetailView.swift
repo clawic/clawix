@@ -2,7 +2,7 @@ import SwiftUI
 
 /// iOS Style detail (read-only). Mirrors the macOS tab layout but
 /// drops inline editing — the canonical editing flow stays on the
-/// desktop in Phase 5. iPad surfaces tokens / brand / voice / imagery
+/// desktop. iPad surfaces tokens / brand / voice / imagery
 /// so the user can review what is applied when generating.
 struct DesignStyleDetailView: View {
     let styleId: String

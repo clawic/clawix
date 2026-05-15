@@ -68,7 +68,7 @@ describe("frames", () => {
   });
 
   it("peeks the schema version without parsing", () => {
-    const raw = JSON.stringify({ schemaVersion: 6, type: "ping" });
-    expect(peekSchemaVersion(raw)).toBe(6);
+    const raw = JSON.stringify({ schemaVersion: 99, type: "ping" });
+    expect(peekSchemaVersion(raw)).toBe(99);
   });
 });

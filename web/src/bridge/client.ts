@@ -183,7 +183,7 @@ export class BridgeClient {
       if (!raw) return;
 
       const peeked = peekSchemaVersion(raw);
-      if (peeked != null && peeked > BRIDGE_SCHEMA_VERSION) {
+      if (peeked != null && peeked !== BRIDGE_SCHEMA_VERSION) {
         this.setState({ kind: "version-mismatch", serverVersion: peeked });
         try { ws.close(1000, "version-mismatch"); } catch { /* ignore */ }
         return;

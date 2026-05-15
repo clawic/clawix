@@ -9,10 +9,9 @@ namespace Clawix.Bridged;
 /// <summary>
 /// Daemon-side <see cref="IEngineHost"/>. Wraps <see cref="CodexBackend"/>
 /// and exposes the chat / message surface to the bridge sessions.
-/// Mirrors Swift <c>DaemonEngineHost</c>. Phase 2 brings up enough of
-/// this to round-trip <c>listSessions</c>, <c>openSession</c>, <c>sendMessage</c>
-/// and streaming; the rest of the surface lives behind incremental
-/// implementations as the daemon catches up to the macOS counterpart.
+/// Mirrors Swift <c>DaemonEngineHost</c> for <c>listSessions</c>,
+/// <c>openSession</c>, <c>sendMessage</c>, streaming, and the daemon-owned
+/// bridge surface.
 /// </summary>
 public sealed partial class DaemonEngineHost : IEngineHost, IAsyncDisposable
 {

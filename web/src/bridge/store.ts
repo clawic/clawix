@@ -77,7 +77,7 @@ export interface BridgeStoreState {
   requestRateLimits(): void;
   transcribeAudio(audioBase64: string, mimeType: string, language?: string): string;
 
-  /** v7 audio catalog. Each method returns the `requestId` consumers should
+  /** Audio catalog. Each method returns the `requestId` consumers should
    *  use with `client.onFrame("audioXxxResult")` to await the response.
    */
   audioRegister(request: WireAudioRegisterRequest): string;
