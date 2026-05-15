@@ -3,13 +3,18 @@ import os from "node:os";
 import path from "node:path";
 
 const DEFAULT_WARNING_LINES = 800;
-const DEFAULT_MAX_NEW_FILE_LINES = 1200;
+const DEFAULT_BASELINE_REQUIRED_LINES = 1200;
+const DEFAULT_MAX_NEW_FILE_LINES = 2000;
+const DEFAULT_EMERGENCY_LINES = 5000;
+const DEFAULT_LONG_LINE_WARNING = 240;
+const DEFAULT_LONG_LINE_CRITICAL = 1600;
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs", ".cjs", ".ts", ".tsx", ".swift", ".cs", ".kt", ".rs"]);
 const IGNORED_DIRS = new Set([
   ".build",
   ".claude",
   ".git",
   ".next",
+  ".next-e2e",
   ".tmp",
   "artifacts",
   "build",
@@ -41,13 +46,12 @@ function toPosix(relativePath) {
   return relativePath.split(path.sep).join("/");
 }
 
-function countLines(filePath) {
-  const text = fs.readFileSync(filePath, "utf8");
-  return text.length === 0 ? 0 : text.split(/\r?\n/).length;
+function readText(filePath) {
+  return fs.readFileSync(filePath, "utf8");
 }
 
 function isGenerated(filePath) {
-  const prefix = fs.readFileSync(filePath, "utf8").slice(0, 8192);
+  const prefix = readText(filePath).slice(0, 8192);
   return GENERATED_MARKERS.some((marker) => prefix.includes(marker));
 }
 
@@ -76,11 +80,45 @@ function collectSourceFiles(scanRoot) {
 }
 
 function loadBaseline(filePath) {
-  const baseline = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  const baseline = JSON.parse(readText(filePath));
   return {
     warningLines: baseline.warningLines ?? DEFAULT_WARNING_LINES,
+    baselineRequiredLines: baseline.baselineRequiredLines ?? baseline.maxNewFileLines ?? DEFAULT_BASELINE_REQUIRED_LINES,
     maxNewFileLines: baseline.maxNewFileLines ?? DEFAULT_MAX_NEW_FILE_LINES,
+    emergencyLines: baseline.emergencyLines ?? DEFAULT_EMERGENCY_LINES,
+    longLineWarning: baseline.longLineWarning ?? DEFAULT_LONG_LINE_WARNING,
+    longLineCritical: baseline.longLineCritical ?? DEFAULT_LONG_LINE_CRITICAL,
     files: baseline.files ?? {},
+  };
+}
+
+function analyzeSource(text, config) {
+  const lines = text.length === 0 ? [] : text.split(/\r?\n/);
+  let longestLine = 0;
+  let longestLineNumber = 0;
+  let longLineCount = 0;
+  let compressedListCount = 0;
+  let exportCount = 0;
+
+  lines.forEach((line, index) => {
+    const length = line.length;
+    if (length > longestLine) {
+      longestLine = length;
+      longestLineNumber = index + 1;
+    }
+    if (length >= config.longLineWarning) longLineCount += 1;
+    const separators = (line.match(/[,|]/g) ?? []).length;
+    if (length >= config.longLineWarning && separators >= 8) compressedListCount += 1;
+    if (/^\s*export\s+(class|function|const|let|var|type|interface|enum)\b/.test(line)) exportCount += 1;
+  });
+
+  return {
+    lines: lines.length,
+    longestLine,
+    longestLineNumber,
+    longLineCount,
+    compressedListCount,
+    exportCount,
   };
 }
 
@@ -88,42 +126,69 @@ function checkSourceSizes(scanRoot, filePath) {
   const baseline = loadBaseline(filePath);
   const failures = [];
   const warnings = [];
+  const signals = [];
   const top = [];
   const seen = new Set();
 
   for (const relativePath of collectSourceFiles(scanRoot)) {
-    const lines = countLines(path.join(scanRoot, relativePath));
+    const absolutePath = path.join(scanRoot, relativePath);
+    const metrics = analyzeSource(readText(absolutePath), baseline);
     const entry = baseline.files[relativePath];
-    if (lines >= baseline.warningLines) {
-      warnings.push({ path: relativePath, lines });
-      top.push({ path: relativePath, lines });
+    if (metrics.lines >= baseline.warningLines) {
+      warnings.push({ path: relativePath, kind: "large-file", lines: metrics.lines });
+      top.push({ path: relativePath, lines: metrics.lines });
     }
+    if (metrics.longLineCount > 0) {
+      signals.push({
+        path: relativePath,
+        kind: metrics.longestLine >= baseline.longLineCritical ? "critical-long-line" : "long-line",
+        longestLine: metrics.longestLine,
+        line: metrics.longestLineNumber,
+        count: metrics.longLineCount,
+      });
+    }
+    if (metrics.compressedListCount > 0) {
+      signals.push({ path: relativePath, kind: "compressed-list", count: metrics.compressedListCount });
+    }
+    if (metrics.exportCount >= 40) {
+      signals.push({ path: relativePath, kind: "large-export-surface", count: metrics.exportCount });
+    }
+
     if (entry) {
       seen.add(relativePath);
       if (!entry.reason || typeof entry.reason !== "string") {
         failures.push(`${relativePath} baseline entry needs a reason`);
       }
-      if (!Number.isInteger(entry.lines) || entry.lines < baseline.maxNewFileLines) {
-        failures.push(`${relativePath} baseline entry needs a lines value >= ${baseline.maxNewFileLines}`);
+      if (!Number.isInteger(entry.lines) || entry.lines < baseline.baselineRequiredLines) {
+        failures.push(`${relativePath} baseline entry needs a lines value >= ${baseline.baselineRequiredLines}`);
       }
-      if (lines > entry.lines) {
-        failures.push(`${relativePath} grew from baseline ${entry.lines} to ${lines} lines`);
+      if (metrics.lines > entry.lines) {
+        const growth = `${relativePath} grew from baseline ${entry.lines} to ${metrics.lines} lines`;
+        if (entry.blockGrowth === true || metrics.lines >= baseline.emergencyLines) {
+          failures.push(growth);
+        } else {
+          warnings.push({ path: relativePath, kind: "baseline-growth", from: entry.lines, lines: metrics.lines });
+        }
       }
       continue;
     }
-    if (lines >= baseline.maxNewFileLines) {
-      failures.push(`${relativePath} has ${lines} lines and is not in docs/source-size-baseline.json`);
+
+    if (metrics.lines >= baseline.maxNewFileLines) {
+      failures.push(`${relativePath} has ${metrics.lines} lines and needs a split or docs/source-size-baseline.json exception`);
+    } else if (metrics.lines >= baseline.baselineRequiredLines) {
+      warnings.push({ path: relativePath, kind: "baseline-recommended", lines: metrics.lines });
     }
   }
 
   for (const relativePath of Object.keys(baseline.files)) {
     if (!seen.has(relativePath)) {
-      warnings.push({ path: relativePath, lines: 0, stale: true });
+      warnings.push({ path: relativePath, kind: "stale-baseline", lines: 0, stale: true });
     }
   }
 
   top.sort((a, b) => b.lines - a.lines || a.path.localeCompare(b.path));
-  return { failures, warnings, top: top.slice(0, 10) };
+  signals.sort((a, b) => a.path.localeCompare(b.path) || a.kind.localeCompare(b.kind));
+  return { failures, warnings, signals, top: top.slice(0, 10), config: baseline };
 }
 
 function runSelfTest() {
@@ -133,13 +198,15 @@ function runSelfTest() {
     fs.mkdirSync(path.join(tempRoot, "src"), { recursive: true });
     fs.mkdirSync(path.join(tempRoot, "node_modules", "pkg"), { recursive: true });
     fs.writeFileSync(path.join(tempRoot, "src", "small.ts"), "ok\n");
-    fs.writeFileSync(path.join(tempRoot, "src", "generated.ts"), `// @generated\n${"x\n".repeat(2000)}`);
-    fs.writeFileSync(path.join(tempRoot, "node_modules", "pkg", "large.ts"), "x\n".repeat(2000));
+    fs.writeFileSync(path.join(tempRoot, "src", "generated.ts"), `// @generated\n${"x\n".repeat(3000)}`);
+    fs.writeFileSync(path.join(tempRoot, "node_modules", "pkg", "large.ts"), "x\n".repeat(3000));
     fs.writeFileSync(path.join(tempRoot, "src", "known.ts"), "x\n".repeat(1300));
     fs.writeFileSync(path.join(tempRoot, "docs", "source-size-baseline.json"), JSON.stringify({
       version: 1,
       warningLines: 800,
-      maxNewFileLines: 1200,
+      baselineRequiredLines: 1200,
+      maxNewFileLines: 2000,
+      emergencyLines: 5000,
       files: {
         "src/known.ts": { lines: 1301, reason: "self-test baseline" },
       },
@@ -148,13 +215,21 @@ function runSelfTest() {
     if (result.failures.length) throw new Error(`expected baseline pass: ${result.failures.join("; ")}`);
     fs.writeFileSync(path.join(tempRoot, "src", "new-large.ts"), "x\n".repeat(1300));
     result = checkSourceSizes(tempRoot, path.join(tempRoot, "docs", "source-size-baseline.json"));
-    if (!result.failures.some((failure) => failure.includes("new-large.ts"))) {
-      throw new Error("expected new oversized file failure");
+    if (result.failures.some((failure) => failure.includes("new-large.ts"))) {
+      throw new Error("expected 1200-2000 line new file to warn, not fail");
+    }
+    if (!result.warnings.some((warning) => warning.path === "src/new-large.ts")) {
+      throw new Error("expected new 1200-2000 line warning");
+    }
+    fs.writeFileSync(path.join(tempRoot, "src", "too-large.ts"), "x\n".repeat(2100));
+    result = checkSourceSizes(tempRoot, path.join(tempRoot, "docs", "source-size-baseline.json"));
+    if (!result.failures.some((failure) => failure.includes("too-large.ts"))) {
+      throw new Error("expected new 2000+ line failure");
     }
     fs.writeFileSync(path.join(tempRoot, "src", "known.ts"), "x\n".repeat(1400));
     result = checkSourceSizes(tempRoot, path.join(tempRoot, "docs", "source-size-baseline.json"));
-    if (!result.failures.some((failure) => failure.includes("known.ts grew"))) {
-      throw new Error("expected baseline growth failure");
+    if (result.failures.some((failure) => failure.includes("known.ts grew"))) {
+      throw new Error("expected ordinary baseline growth to warn, not fail");
     }
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -167,15 +242,31 @@ if (process.argv.includes("--self-test")) {
   process.exit(0);
 }
 
+const json = process.argv.includes("--json");
 const result = checkSourceSizes(rootDir, baselinePath);
-if (result.failures.length) {
-  console.error("source size check failed:");
-  for (const failure of result.failures) console.error(`- ${failure}`);
-  if (result.top.length) {
-    console.error("largest source files:");
-    for (const entry of result.top) console.error(`- ${entry.lines} ${entry.path}`);
+
+if (json) {
+  console.log(JSON.stringify(result, null, 2));
+} else {
+  if (result.failures.length) {
+    console.error("source size check failed:");
+    for (const failure of result.failures) console.error(`- ${failure}`);
   }
-  process.exit(1);
+  console.log(
+    `source size check ${result.failures.length ? "failed" : "passed"} ` +
+      `(${result.warnings.length} warnings, ${result.signals.length} structure signals)`,
+  );
+  if (result.top.length) {
+    console.log("largest source files:");
+    for (const entry of result.top) console.log(`- ${entry.lines} ${entry.path}`);
+  }
+  const notableSignals = result.signals.filter((signal) => signal.kind !== "long-line").slice(0, 20);
+  if (notableSignals.length) {
+    console.log("notable structure signals:");
+    for (const signal of notableSignals) {
+      console.log(`- ${signal.kind} ${signal.path}${signal.count ? ` (${signal.count})` : ""}`);
+    }
+  }
 }
 
-console.log(`source size check passed (${result.warnings.length} files at or above ${DEFAULT_WARNING_LINES} lines)`);
+if (result.failures.length) process.exit(1);

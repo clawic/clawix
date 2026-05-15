@@ -30,11 +30,16 @@ for file in \
   "docs/interface-matrix.md" \
   "docs/interface-surface-clawix.registry.json" \
   "docs/naming-style-guide.md" \
+  "docs/agentic-naming-guide.md" \
+  "docs/vocabulary.md" \
+  "docs/vocabulary.registry.json" \
   "docs/adr/0001-claw-framework-host-boundary.md" \
   "docs/adr/0002-naming-and-stability-surfaces.md" \
   "docs/adr/0004-source-file-boundaries.md" \
+  "docs/adr/0009-agentic-naming-and-code-structure.md" \
   "docs/adr/0007-dual-human-programmatic-surfaces.md" \
   "docs/adr/TEMPLATE.md" \
+  "scripts/naming-shape-check.mjs" \
   "scripts/storage_boundary_guard.mjs"
 do
   require_file "$file"
@@ -44,6 +49,9 @@ require_snippet "CLAUDE.md" "AGENTS.md"
 require_snippet "CLAUDE.md" "docs/host-ownership.md"
 require_snippet "CLAUDE.md" "docs/data-storage-boundary.md"
 require_snippet "CLAUDE.md" "docs/decision-map.md"
+require_snippet "CLAUDE.md" "docs/naming-style-guide.md"
+require_snippet "CLAUDE.md" "docs/agentic-naming-guide.md"
+require_snippet "CLAUDE.md" "docs/vocabulary.md"
 require_snippet "CLAUDE.md" "docs/adr/0001-claw-framework-host-boundary.md"
 require_snippet "AGENTS.md" "docs/decision-map.md"
 require_snippet "AGENTS.md" "docs/adr/0004-source-file-boundaries.md"
@@ -74,9 +82,37 @@ for snippet in \
   "\`>2000\` lines" \
   "Clawix app views split root layout" \
   "scripts/source-size-check.mjs" \
-  "docs/source-size-baseline.json"
+  "docs/source-size-baseline.json" \
+  "compressed enum/union/list patterns"
 do
   require_snippet "docs/adr/0004-source-file-boundaries.md" "$snippet"
+done
+
+for snippet in \
+  "Status: accepted" \
+  "ClawJS remains canonical for shared framework vocabulary" \
+  "docs/vocabulary.registry.json" \
+  "scripts/naming-shape-check.mjs" \
+  "Use \`session\` / \`sessionId\` in bridge"
+do
+  require_snippet "docs/adr/0009-agentic-naming-and-code-structure.md" "$snippet"
+done
+
+for snippet in \
+  "Stable bridge, protocol, storage, cache, and framework-facing names use" \
+  "Do not add new stable bridge fields such as \`chatId\`" \
+  "JSON/YAML owned by Clawix"
+do
+  require_snippet "docs/agentic-naming-guide.md" "$snippet"
+done
+
+for snippet in \
+  "\"schemaVersion\": 1" \
+  "\"owner\": \"clawix\"" \
+  "\"preferredTerm\": \"session\"" \
+  "\"preferredTerm\": \"clawix-bridge\""
+do
+  require_snippet "docs/vocabulary.registry.json" "$snippet"
 done
 
 for snippet in \
@@ -108,7 +144,8 @@ for snippet in \
   "The bridge service is \`clawix-bridge\`" \
   "The stable bridge port is \`24080\`" \
   "Use \`sessionId\`, not stable \`chatId\`" \
-  "Clawix operational home is \`~/.clawix/\`"
+  "Clawix operational home is \`~/.clawix/\`" \
+  "docs/agentic-naming-guide.md"
 do
   require_snippet "docs/naming-style-guide.md" "$snippet"
 done

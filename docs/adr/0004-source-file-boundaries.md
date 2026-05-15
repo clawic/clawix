@@ -48,8 +48,11 @@ command behavior belongs in command modules.
 
 `scripts/source-size-check.mjs` audits hand-authored source files. It ignores
 generated, build, cache, vendor, and fixture-like paths. The check warns at 800
-lines, requires entries in `docs/source-size-baseline.json` at 1200 lines, and
-fails if a baselined file grows beyond its recorded line count.
+lines, reports missing baseline rationale at 1200 lines, fails new 2000+ line
+files unless they have an explicit exception, and fails emergency-debt or
+explicitly locked baseline growth. It also reports pathological long lines,
+compressed enum/union/list patterns, and large export surfaces so agents do
+not game the check by squeezing code onto fewer lines.
 
 Existing oversized files are listed in `docs/source-size-baseline.json` with a
 reason. Updating that baseline is a deliberate architecture decision, not a
