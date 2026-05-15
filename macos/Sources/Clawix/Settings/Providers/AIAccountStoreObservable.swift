@@ -95,12 +95,7 @@ final class AIAccountStoreObservable: ObservableObject {
     func delete(id: UUID) {
         do {
             try store.deleteAccount(id: id)
-            for feature in FeatureRouting.FeatureID.allCases {
-                let key = FeatureRouting.providerAccountKey(feature)
-                if UserDefaults.standard.string(forKey: key) == id.uuidString.lowercased() {
-                    FeatureRouting.clearSelection(feature: feature)
-                }
-            }
+            FeatureRouting.clearSelections(forAccountId: id)
             refresh()
         } catch {
             lastError = humanize(error)

@@ -1,10 +1,10 @@
 import AIProviders
 import Foundation
 
-/// Centralized UserDefaults keys used by features to remember which
-/// `(provider account, model)` they last picked. Keeps every key in one
-/// place so JSON-export, factory-reset, and "feature uses provider"
-/// audits can enumerate them.
+/// Centralized framework routing for the `(provider account, model)`
+/// each feature should use. Credentials remain in the host vault; the
+/// framework stores only opaque account refs and policy/config records.
+@MainActor
 enum FeatureRouting {
 
     /// Identifier of an in-app feature that consumes a provider.
@@ -14,18 +14,14 @@ enum FeatureRouting {
         case enhancement
         case sttCloud
         case ttsCloud
-    }
 
-    static func providerAccountKey(_ feature: FeatureID) -> String {
-        "feature.\(feature.rawValue).providerAccountId"
-    }
-
-    static func modelKey(_ feature: FeatureID) -> String {
-        "feature.\(feature.rawValue).modelId"
-    }
-
-    static func providerEnabledKey(_ provider: ProviderID) -> String {
-        "provider.\(provider.rawValue).enabled"
+        var defaultCapability: Capability {
+            switch self {
+            case .enhancement: return .chat
+            case .sttCloud: return .stt
+            case .ttsCloud: return .tts
+            }
+        }
     }
 
     /// Resolves the last selected `(account, model)` for a feature,
@@ -39,9 +35,9 @@ enum FeatureRouting {
         capability: Capability,
         store: AIAccountStore
     ) -> (account: ProviderAccount, model: ModelDefinition)? {
-        let defaults = UserDefaults.standard
-        guard let accountIdString = defaults.string(forKey: providerAccountKey(feature)),
-              let accountId = UUID(uuidString: accountIdString) else {
+        guard let route = route(feature: feature, capability: capability),
+              let accountRef = route.accountRef,
+              let accountId = parseAccountId(from: accountRef) else {
             return nil
         }
         guard let accounts = try? store.listAccounts(),
@@ -51,7 +47,7 @@ enum FeatureRouting {
         else {
             return nil
         }
-        let modelId = defaults.string(forKey: modelKey(feature))
+        let modelId = route.model
             ?? ProviderCatalog.defaultModel(for: capability, in: account.providerId)?.id
         guard let modelId,
               let model = ProviderCatalog.model(providerId: account.providerId, modelId: modelId),
@@ -67,26 +63,55 @@ enum FeatureRouting {
         accountId: UUID,
         modelId: String
     ) {
-        let defaults = UserDefaults.standard
-        defaults.set(accountId.uuidString.lowercased(), forKey: providerAccountKey(feature))
-        defaults.set(modelId, forKey: modelKey(feature))
+        guard let accounts = try? AIAccountSecretsStore.shared.listAccounts(),
+              let account = accounts.first(where: { $0.id == accountId }) else { return }
+        try? ClawJSFrameworkRecordsClient.shared.setProviderRoute(
+            feature: feature.rawValue,
+            capability: feature.defaultCapability.rawValue,
+            provider: account.providerId.rawValue,
+            model: modelId,
+            accountRef: accountRef(provider: account.providerId, accountId: accountId)
+        )
     }
 
     static func clearSelection(feature: FeatureID) {
-        let defaults = UserDefaults.standard
-        defaults.removeObject(forKey: providerAccountKey(feature))
-        defaults.removeObject(forKey: modelKey(feature))
+        try? ClawJSFrameworkRecordsClient.shared.deleteProviderRoute(
+            feature: feature.rawValue,
+            capability: feature.defaultCapability.rawValue
+        )
+    }
+
+    static func clearSelections(forAccountId accountId: UUID) {
+        guard let routes = try? ClawJSFrameworkRecordsClient.shared.listProviderRoutes() else { return }
+        for route in routes where parseAccountId(from: route.accountRef ?? "") == accountId {
+            guard let feature = FeatureID(rawValue: route.feature) else { continue }
+            try? ClawJSFrameworkRecordsClient.shared.deleteProviderRoute(
+                feature: feature.rawValue,
+                capability: route.capability
+            )
+        }
     }
 
     static func isProviderEnabled(_ provider: ProviderID) -> Bool {
-        let key = providerEnabledKey(provider)
-        if UserDefaults.standard.object(forKey: key) == nil {
-            return true
-        }
-        return UserDefaults.standard.bool(forKey: key)
+        guard let settings = try? ClawJSFrameworkRecordsClient.shared.listProviderSettings(),
+              let setting = settings.first(where: { $0.provider == provider.rawValue }) else { return true }
+        return setting.enabled
     }
 
     static func setProviderEnabled(_ provider: ProviderID, enabled: Bool) {
-        UserDefaults.standard.set(enabled, forKey: providerEnabledKey(provider))
+        try? ClawJSFrameworkRecordsClient.shared.setProviderEnabled(provider.rawValue, enabled: enabled)
+    }
+
+    private static func route(feature: FeatureID, capability: Capability) -> ClawJSFrameworkRecordsClient.ProviderRoute? {
+        guard let routes = try? ClawJSFrameworkRecordsClient.shared.listProviderRoutes() else { return nil }
+        return routes.first { $0.feature == feature.rawValue && $0.capability == capability.rawValue }
+    }
+
+    private static func accountRef(provider: ProviderID, accountId: UUID) -> String {
+        "vault://providers/\(provider.rawValue)/\(accountId.uuidString.lowercased())"
+    }
+
+    private static func parseAccountId(from accountRef: String) -> UUID? {
+        UUID(uuidString: accountRef.split(separator: "/").last.map(String.init) ?? "")
     }
 }

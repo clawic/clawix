@@ -14,15 +14,12 @@ struct ProviderDetailPane: View {
     @State private var devicePresented: DeviceCodeFlavorBox?
     @State private var editingAccount: ProviderAccount?
 
-    @AppStorage private var providerEnabled: Bool
+    @State private var providerEnabled: Bool
 
     init(provider: ProviderDefinition, onBack: @escaping () -> Void) {
         self.provider = provider
         self.onBack = onBack
-        self._providerEnabled = AppStorage(
-            wrappedValue: true,
-            FeatureRouting.providerEnabledKey(provider.id)
-        )
+        self._providerEnabled = State(initialValue: FeatureRouting.isProviderEnabled(provider.id))
     }
 
     private var accounts: [ProviderAccount] {
@@ -63,6 +60,12 @@ struct ProviderDetailPane: View {
         }
         .sheet(item: $editingAccount) { account in
             EditAccountSheet(account: account, provider: provider)
+        }
+        .onAppear {
+            providerEnabled = FeatureRouting.isProviderEnabled(provider.id)
+        }
+        .onChange(of: providerEnabled) { value in
+            FeatureRouting.setProviderEnabled(provider.id, enabled: value)
         }
     }
 
