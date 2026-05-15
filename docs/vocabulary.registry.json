@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "owner": "clawix",
+  "imports": [
+    {
+      "owner": "clawjs",
+      "source": "ClawJS docs/vocabulary.registry.json",
+      "reason": "ClawJS owns shared framework vocabulary."
+    }
+  ],
+  "description": "Clawix host and UI vocabulary extensions for the shared ClawJS naming standard.",
+  "terms": [
+    {
+      "preferredTerm": "session",
+      "definition": "Framework/bridge conversation identity when Clawix talks to ClawJS or durable protocol surfaces.",
+      "scope": ["bridge", "protocol", "storage", "cache", "framework-facing code"],
+      "allowedSurfaces": ["bridge protocol", "snapshot cache", "runtime reconciliation", "deep links"],
+      "contextOnlySynonyms": [
+        {
+          "term": "chat",
+          "contexts": ["visible UI copy", "UI-local models", "localization", "external provider APIs"],
+          "reason": "Chat is current product UI vocabulary, but session is the stable framework/protocol word."
+        }
+      ],
+      "forbiddenSynonyms": [
+        {
+          "term": "chatId",
+          "severity": "critical",
+          "contexts": ["new bridge protocol fields", "new durable framework-facing cache schemas"],
+          "reason": "Use sessionId for framework/bridge conversation identity."
+        },
+        {
+          "term": "openChat",
+          "severity": "critical",
+          "contexts": ["new bridge protocol commands"],
+          "reason": "Use session/open-session language for stable bridge commands."
+        }
+      ],
+      "externalExceptions": ["UI-local Chat model during staged cleanup", "provider-native chat APIs"],
+      "examples": {
+        "correct": ["sessionId in bridge commands", "threadId beside sessionId for runtime reconciliation"],
+        "incorrect": ["chatId as a new bridge protocol field"]
+      }
+    },
+    {
+      "preferredTerm": "clawix-bridge",
+      "definition": "Stable Clawix host bridge service name.",
+      "scope": ["host", "bridge", "diagnostics", "launch"],
+      "allowedSurfaces": ["service labels", "logs", "diagnostics", "host CLI"],
+      "contextOnlySynonyms": [],
+      "forbiddenSynonyms": [
+        {
+          "term": "clawix-bridged",
+          "severity": "critical",
+          "contexts": ["host bridge service names", "agent instructions", "public docs"],
+          "reason": "The accepted service name is clawix-bridge."
+        }
+      ],
+      "externalExceptions": [],
+      "examples": {
+        "correct": ["clawix-bridge", "CLAWIX_BRIDGE_PORT"],
+        "incorrect": ["clawix-bridged", "CLAWIX_BRIDGED_PORT"]
+      }
+    },
+    {
+      "preferredTerm": "host",
+      "definition": "Signed native owner of Clawix operational state and sensitive native capabilities.",
+      "scope": ["permissions", "approvals", "native execution", "audit"],
+      "allowedSurfaces": ["host ownership docs", "permission surfaces", "approval UI"],
+      "contextOnlySynonyms": [],
+      "forbiddenSynonyms": [
+        {
+          "term": "node owner",
+          "severity": "critical",
+          "contexts": ["sensitive native permissions", "approvals", "grants", "secrets"],
+          "reason": "Sensitive native authority belongs to the signed host, not Node."
+        }
+      ],
+      "externalExceptions": [],
+      "examples": {
+        "correct": ["host approval", "signed host"],
+        "incorrect": ["Node-owned native permission grant"]
+      }
+    }
+  ]
+}

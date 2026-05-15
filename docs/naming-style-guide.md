@@ -5,6 +5,10 @@ protocol, docs, tests, scripts, and public repository hygiene.
 
 The canonical shared guide lives in the ClawJS repository at
 `docs/naming-style-guide.md`.
+For files, Markdown, JSON/YAML role suffixes, internal classes/functions, source
+shape, and agent-oriented rename workflow, also read
+`docs/agentic-naming-guide.md`, `docs/vocabulary.md`, and
+`docs/adr/0009-agentic-naming-and-code-structure.md`.
 
 ## Clawix-specific rules
 

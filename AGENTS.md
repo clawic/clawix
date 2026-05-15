@@ -22,7 +22,9 @@ Read the relevant canonical docs before changing their surfaces:
   `docs/adr/0001-claw-framework-host-boundary.md`
 - Storage/data placement: `docs/data-storage-boundary.md`
 - Naming/stability: `docs/naming-style-guide.md`,
-  `docs/adr/0002-naming-and-stability-surfaces.md`
+  `docs/agentic-naming-guide.md`, `docs/vocabulary.md`,
+  `docs/adr/0002-naming-and-stability-surfaces.md`,
+  `docs/adr/0009-agentic-naming-and-code-structure.md`
 - Testing and validation: `docs/adr/0003-testing-architecture.md`,
   `docs/adr/0005-integration-qa-lab.md`, `playbooks/testing.md`,
   `playbooks/testing-matrix.md`
@@ -128,9 +130,10 @@ Use the relevant skill instead of loading long instructions into context:
   GUI-owned backend or bridge.
 - Capabilities are complete only when human and programmatic surfaces are
   registered or their gaps are explicitly classified.
-- New hand-authored files at 1200+ lines require a split plan or baseline
-  exception; files above 2000 lines must not grow except for extraction or
-  explicit architecture approval.
+- New hand-authored files at 1200+ lines need a split plan or baseline
+  rationale; new 2000+ line files are blocked unless explicitly exempted.
+  Emergency-debt files above 5000 lines must not grow except for extraction,
+  deletion, or compatibility-preserving split work.
 
 ## Validation
 
