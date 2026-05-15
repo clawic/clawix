@@ -7,9 +7,7 @@ import ClawixEngine
 /// own dictation behaviour without manual switching.
 ///
 /// Many fields are overrides: when nil/empty, dictation falls back to
-/// the global defaults; when set, they win. The fields that depend on
-/// not-yet-implemented features (enhancement, full-key-combo hotkeys)
-/// are persisted but inert until those modules land.
+/// the global defaults; when set, they win.
 struct PowerModeConfig: Identifiable, Codable, Equatable {
     /// Stable random ID. Generated on insert; never reused even after
     /// rename/edit so settings sync (#26) can match across machines.
@@ -41,17 +39,9 @@ struct PowerModeConfig: Identifiable, Codable, Equatable {
     /// global prompt set in `WhisperPromptStore`. nil = use global.
     var whisperPromptOverride: String?
 
-    // MARK: Enhancement overrides (#21 — wired but inert until Enhancement lands)
+    // MARK: Enhancement overrides
 
     var enhancementEnabled: Bool
-    var enhancementProvider: String?
-    var enhancementModel: String?
-    /// Identifier of the enhancement prompt from the future
-    /// `PromptLibrary` (#21).
-    var enhancementPromptId: String?
-    /// Bundle clipboard / screen-capture context with the enhancement
-    /// request. Inert until #21.
-    var contextAwareness: Bool
 
     // MARK: Output overrides
 
@@ -82,10 +72,6 @@ struct PowerModeConfig: Identifiable, Codable, Equatable {
             languageOverride: nil,
             whisperPromptOverride: nil,
             enhancementEnabled: false,
-            enhancementProvider: nil,
-            enhancementModel: nil,
-            enhancementPromptId: nil,
-            contextAwareness: false,
             autoSendKeyOverride: nil,
             isDefault: false,
             enabled: true
@@ -110,10 +96,6 @@ enum PowerModePresets {
             languageOverride: nil,
             whisperPromptOverride: nil,
             enhancementEnabled: false,
-            enhancementProvider: nil,
-            enhancementModel: nil,
-            enhancementPromptId: nil,
-            contextAwareness: false,
             autoSendKeyOverride: DictationAutoSendKey.cmdEnter.rawValue,
             isDefault: false,
             enabled: true
@@ -128,10 +110,6 @@ enum PowerModePresets {
             languageOverride: nil,
             whisperPromptOverride: nil,
             enhancementEnabled: false,
-            enhancementProvider: nil,
-            enhancementModel: nil,
-            enhancementPromptId: nil,
-            contextAwareness: false,
             autoSendKeyOverride: DictationAutoSendKey.enter.rawValue,
             isDefault: false,
             enabled: true
@@ -146,10 +124,6 @@ enum PowerModePresets {
             languageOverride: nil,
             whisperPromptOverride: "This is a technical text. Code keywords like `func`, `let`, `var`, `if`, `else`, `return`, `for`, `while`, `nil`, `true`, `false` are written verbatim.",
             enhancementEnabled: false,
-            enhancementProvider: nil,
-            enhancementModel: nil,
-            enhancementPromptId: nil,
-            contextAwareness: false,
             autoSendKeyOverride: DictationAutoSendKey.none.rawValue,
             isDefault: false,
             enabled: true
@@ -164,10 +138,6 @@ enum PowerModePresets {
             languageOverride: nil,
             whisperPromptOverride: nil,
             enhancementEnabled: false,
-            enhancementProvider: nil,
-            enhancementModel: nil,
-            enhancementPromptId: nil,
-            contextAwareness: false,
             autoSendKeyOverride: DictationAutoSendKey.none.rawValue,
             isDefault: false,
             enabled: true

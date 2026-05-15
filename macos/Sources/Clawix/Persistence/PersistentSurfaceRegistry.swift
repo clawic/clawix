@@ -875,7 +875,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.enhancement.timeoutSeconds", "Enhancement timeout seconds", EnhancementSettings.timeoutSecondsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.timeoutPolicy", "Enhancement timeout policy", EnhancementSettings.timeoutPolicyKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.clipboardContext", "Enhancement clipboard context", EnhancementSettings.clipboardContextKey, PersistentSurfaceKind.appStorageKey),
-            ("clawix.prefs.dictation.enhancement.screenContext", "Enhancement screen context", EnhancementSettings.screenContextKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.model", "Enhancement model pattern", ClawixPersistentSurfaceKeys.enhancementModelPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.enhancement.baseUrl", "Enhancement base URL pattern", ClawixPersistentSurfaceKeys.enhancementBaseURLPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.cloudModel", "Cloud transcription model pattern", ClawixPersistentSurfaceKeys.cloudTranscriptionModelPattern, PersistentSurfaceKind.preferenceKey),
