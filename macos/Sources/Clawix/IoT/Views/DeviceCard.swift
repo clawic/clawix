@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// Per-thing card. The visual canon for IoT devices: squircle
+/// Per-device card. The visual canon for IoT devices: squircle
 /// background, kind icon, label, area pill, status badge, and an
 /// inline control surface (toggle / slider / lock button) when the
-/// thing's primary capability supports it. Long-tap or chevron opens
+/// device's primary capability supports it. Long-tap or chevron opens
 /// the full detail view.
-struct ThingCard: View {
-    let thing: ThingRecord
+struct DeviceCard: View {
+    let device: IoTDeviceRecord
     var onTap: () -> Void
 
     @EnvironmentObject private var manager: IoTManager
@@ -18,15 +18,15 @@ struct ThingCard: View {
             HStack(alignment: .center, spacing: 10) {
                 kindIcon
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: thing.label)
+                    Text(verbatim: device.label)
                         .font(BodyFont.system(size: 13, weight: .medium))
                         .foregroundColor(Palette.textPrimary)
                         .lineLimit(1)
                     HStack(spacing: 4) {
-                        Text(verbatim: thing.kind.rawValue.capitalized)
+                        Text(verbatim: device.kind.rawValue.capitalized)
                             .font(BodyFont.system(size: 10))
                             .foregroundColor(Palette.textTertiary)
-                        if let areaLabel = manager.areaLabel(forId: thing.areaId) {
+                        if let areaLabel = manager.areaLabel(forId: device.areaId) {
                             Text(verbatim: "·")
                                 .foregroundColor(Palette.textTertiary)
                             Text(verbatim: areaLabel)
@@ -66,7 +66,7 @@ struct ThingCard: View {
     // MARK: - Kind icon
 
     private var kindSymbol: String {
-        switch thing.kind {
+        switch device.kind {
         case .light: return "lightbulb"
         case .switchKind: return "switch.2"
         case .climate: return "thermometer.medium"
@@ -99,7 +99,7 @@ struct ThingCard: View {
     @ViewBuilder
     private var riskBadge: some View {
         let (label, color): (String, Color) = {
-            switch thing.risk {
+            switch device.risk {
             case .safe: return ("safe", Color.green.opacity(0.55))
             case .caution: return ("caution", Color.orange.opacity(0.65))
             case .restricted: return ("restricted", Color.red.opacity(0.65))
@@ -151,7 +151,7 @@ struct ThingCard: View {
                         .tint(Palette.textTertiary)
                 }
             }
-        } else if thing.kind == .lock {
+        } else if device.kind == .lock {
             HStack {
                 Button {
                     let locked = lockCapability?.observedString == "locked"
@@ -170,7 +170,7 @@ struct ThingCard: View {
                 .buttonStyle(.plain)
                 Spacer()
             }
-        } else if thing.kind == .sensor {
+        } else if device.kind == .sensor {
             Text(verbatim: primaryNumericCapability?.observedDouble.map { "\($0)" } ?? "—")
                 .font(BodyFont.system(size: 18, weight: .semibold))
                 .foregroundColor(Palette.textPrimary)
@@ -182,19 +182,19 @@ struct ThingCard: View {
     // MARK: - Capability helpers
 
     private var powerCapability: CapabilityRecord? {
-        thing.capabilities.first(where: { $0.key == "power" || $0.key == "on" })
+        device.capabilities.first(where: { $0.key == "power" || $0.key == "on" })
     }
 
     private var brightnessCapability: CapabilityRecord? {
-        thing.capabilities.first(where: { $0.key == "brightness" })
+        device.capabilities.first(where: { $0.key == "brightness" })
     }
 
     private var lockCapability: CapabilityRecord? {
-        thing.capabilities.first(where: { $0.key == "lock_state" || $0.key == "locked" })
+        device.capabilities.first(where: { $0.key == "lock_state" || $0.key == "locked" })
     }
 
     private var primaryNumericCapability: CapabilityRecord? {
-        thing.capabilities.first(where: { $0.observedDouble != nil })
+        device.capabilities.first(where: { $0.observedDouble != nil })
     }
 
     private var isOn: Bool {
@@ -212,7 +212,7 @@ struct ThingCard: View {
             capability: capability,
             action: action,
             value: value.map { ToolJSONValue($0) },
-            targets: [thing.id],
+            targets: [device.id],
         )
         dispatching = true
         Task {

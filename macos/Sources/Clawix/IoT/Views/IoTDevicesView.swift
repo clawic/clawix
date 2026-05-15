@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Devices tab inside `IoTScreen`. Renders the things grouped by area
+/// Devices tab inside `IoTScreen`. Renders the devices grouped by area
 /// (rooms / zones). Each section is a `AreaSection`; each card is a
-/// `ThingCard`. Filterable by text search.
-struct IoTThingsView: View {
+/// `DeviceCard`. Filterable by text search.
+struct IoTDevicesView: View {
     @EnvironmentObject private var manager: IoTManager
     @EnvironmentObject private var appState: AppState
     @State private var query: String = ""
@@ -13,13 +13,13 @@ struct IoTThingsView: View {
             searchBar
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 24) {
-                    if filteredThings.isEmpty {
+                    if filteredDevices.isEmpty {
                         emptyState
                             .padding(.top, 60)
                     } else {
                         ForEach(grouped, id: \.0) { section in
-                            AreaSection(label: section.0, things: section.1) { thing in
-                                appState.currentRoute = .iotThingDetail(id: thing.id)
+                            AreaSection(label: section.0, devices: section.1) { device in
+                                appState.currentRoute = .iotDeviceDetail(id: device.id)
                             }
                         }
                     }
@@ -32,24 +32,24 @@ struct IoTThingsView: View {
         }
     }
 
-    private var filteredThings: [ThingRecord] {
+    private var filteredDevices: [IoTDeviceRecord] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !trimmed.isEmpty else { return manager.things }
-        return manager.things.filter { thing in
-            thing.label.lowercased().contains(trimmed)
-                || thing.aliases.contains(where: { $0.lowercased().contains(trimmed) })
-                || thing.kind.rawValue.lowercased().contains(trimmed)
+        guard !trimmed.isEmpty else { return manager.devices }
+        return manager.devices.filter { device in
+            device.label.lowercased().contains(trimmed)
+                || device.aliases.contains(where: { $0.lowercased().contains(trimmed) })
+                || device.kind.rawValue.lowercased().contains(trimmed)
         }
     }
 
-    /// Returns `(label, things)` pairs ordered so the user's home areas
-    /// appear in alphabetic order and any thing without an area lands
+    /// Returns `(label, devices)` pairs ordered so the user's home areas
+    /// appear in alphabetic order and any device without an area lands
     /// at the bottom under "Unassigned".
-    private var grouped: [(String, [ThingRecord])] {
-        var byArea: [String: [ThingRecord]] = [:]
-        for thing in filteredThings {
-            let label = manager.areaLabel(forId: thing.areaId) ?? "Unassigned"
-            byArea[label, default: []].append(thing)
+    private var grouped: [(String, [IoTDeviceRecord])] {
+        var byArea: [String: [IoTDeviceRecord]] = [:]
+        for device in filteredDevices {
+            let label = manager.areaLabel(forId: device.areaId) ?? "Unassigned"
+            byArea[label, default: []].append(device)
         }
         let ordered = byArea
             .map { ($0.key, $0.value.sorted { $0.label < $1.label }) }
@@ -105,7 +105,7 @@ struct IoTThingsView: View {
             Text(verbatim: "No devices yet")
                 .font(BodyFont.system(size: 14, weight: .medium))
                 .foregroundColor(Palette.textSecondary)
-            Text(verbatim: "Switch to the Add device tab to discover or register a thing.")
+            Text(verbatim: "Switch to the Add device tab to discover or register a device.")
                 .font(BodyFont.system(size: 11))
                 .foregroundColor(Palette.textTertiary)
                 .multilineTextAlignment(.center)

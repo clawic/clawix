@@ -1,27 +1,27 @@
 import SwiftUI
 
-/// Full-page detail for one IoT thing. Reached from a card tap on
-/// `IoTScreen` (route `SidebarRoute.iotThingDetail`). Shows every
-/// capability, raw state, the thing's connector metadata, and a
+/// Full-page detail for one IoT device. Reached from a card tap on
+/// `IoTScreen` (route `SidebarRoute.iotDeviceDetail`). Shows every
+/// capability, raw state, the device's connector metadata, and a
 /// "Remove" action gated by the approval flow.
-struct IoTThingDetailView: View {
-    let thingId: String
+struct IoTDeviceDetailView: View {
+    let deviceId: String
     @EnvironmentObject private var manager: IoTManager
     @EnvironmentObject private var appState: AppState
 
     @State private var removing = false
     @State private var errorMessage: String?
 
-    private var thing: ThingRecord? { manager.thing(byId: thingId) }
+    private var device: IoTDeviceRecord? { manager.device(byId: deviceId) }
 
     var body: some View {
         ZStack {
             Palette.background.ignoresSafeArea()
             ScrollView {
-                if let thing {
-                    content(for: thing)
+                if let device {
+                    content(for: device)
                 } else {
-                    Text(verbatim: "Thing not found.")
+                    Text(verbatim: "Device not found.")
                         .font(BodyFont.system(size: 13))
                         .foregroundColor(Palette.textTertiary)
                         .padding(.top, 80)
@@ -34,7 +34,7 @@ struct IoTThingDetailView: View {
     }
 
     @ViewBuilder
-    private func content(for thing: ThingRecord) -> some View {
+    private func content(for device: IoTDeviceRecord) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 10) {
                 Button {
@@ -53,24 +53,24 @@ struct IoTThingDetailView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(verbatim: thing.label)
+                Text(verbatim: device.label)
                     .font(BodyFont.system(size: 22, weight: .semibold))
                     .foregroundColor(Palette.textPrimary)
-                Text(verbatim: "\(thing.kind.rawValue.capitalized) · risk \(thing.risk.rawValue) · connector \(thing.connectorId)")
+                Text(verbatim: "\(device.kind.rawValue.capitalized) · risk \(device.risk.rawValue) · connector \(device.connectorId)")
                     .font(BodyFont.system(size: 11))
                     .foregroundColor(Palette.textTertiary)
             }
 
-            ThingCard(thing: thing, onTap: {})
+            DeviceCard(device: device, onTap: {})
 
             section(title: "Capabilities") {
                 VStack(spacing: 6) {
-                    if thing.capabilities.isEmpty {
+                    if device.capabilities.isEmpty {
                         Text(verbatim: "(none declared)")
                             .font(BodyFont.system(size: 11))
                             .foregroundColor(Palette.textTertiary)
                     }
-                    ForEach(thing.capabilities) { capability in
+                    ForEach(device.capabilities) { capability in
                         capabilityRow(capability)
                     }
                 }
@@ -78,10 +78,10 @@ struct IoTThingDetailView: View {
 
             section(title: "Targeting") {
                 VStack(alignment: .leading, spacing: 4) {
-                    detailRow("ID", thing.id)
-                    detailRow("Target ref", thing.targetRef)
-                    detailRow("Aliases", thing.aliases.joined(separator: ", "))
-                    detailRow("Area", manager.areaLabel(forId: thing.areaId) ?? "(unassigned)")
+                    detailRow("ID", device.id)
+                    detailRow("Target ref", device.targetRef)
+                    detailRow("Aliases", device.aliases.joined(separator: ", "))
+                    detailRow("Area", manager.areaLabel(forId: device.areaId) ?? "(unassigned)")
                 }
             }
 
@@ -94,7 +94,7 @@ struct IoTThingDetailView: View {
             HStack {
                 Spacer()
                 Button {
-                    Task { await remove(thing) }
+                    Task { await remove(device) }
                 } label: {
                     HStack(spacing: 4) {
                         if removing {
@@ -179,11 +179,11 @@ struct IoTThingDetailView: View {
         }
     }
 
-    private func remove(_ thing: ThingRecord) async {
+    private func remove(_ device: IoTDeviceRecord) async {
         removing = true
         defer { removing = false }
         do {
-            try await manager.removeThing(thing)
+            try await manager.removeDevice(device)
             appState.currentRoute = .iotHome
         } catch {
             errorMessage = error.localizedDescription

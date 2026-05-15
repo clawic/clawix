@@ -7,7 +7,7 @@ import Combine
 /// Owns:
 ///   - The HTTP client (`IoTClient`).
 ///   - The realtime SSE event stream (`/v1/events/stream`).
-///   - The cached snapshots the UI binds against: homes, areas, things,
+///   - The cached snapshots the UI binds against: homes, areas, devices,
 ///     scenes, automations, approvals.
 ///   - The downloaded tool catalog (`availableTools`).
 ///
@@ -38,7 +38,7 @@ final class IoTManager: NSObject, ObservableObject {
     @Published private(set) var homes: [HomeRecord] = []
     @Published private(set) var currentHomeId: String?
     @Published private(set) var areas: [AreaRecord] = []
-    @Published private(set) var things: [ThingRecord] = []
+    @Published private(set) var devices: [IoTDeviceRecord] = []
     @Published private(set) var scenes: [SceneRecord] = []
     @Published private(set) var automations: [AutomationRecord] = []
     @Published private(set) var approvals: [ApprovalRecord] = []
@@ -78,7 +78,7 @@ final class IoTManager: NSObject, ObservableObject {
                 }
             case .crashed, .blocked, .idle, .daemonUnavailable:
                 self.disconnectSSE()
-                self.things = []
+                self.devices = []
                 self.areas = []
                 self.scenes = []
                 self.automations = []
@@ -129,12 +129,12 @@ final class IoTManager: NSObject, ObservableObject {
 
     func refreshAll() async throws {
         let homeId = currentHomeId
-        async let thingsTask = client.listThings(homeId: homeId)
+        async let devicesTask = client.listDevices(homeId: homeId)
         async let areasTask = client.listAreas(homeId: homeId)
         async let scenesTask = client.listScenes(homeId: homeId)
         async let automationsTask = client.listAutomations(homeId: homeId)
         async let approvalsTask = client.listApprovals(homeId: homeId)
-        self.things = try await thingsTask
+        self.devices = try await devicesTask
         self.areas = try await areasTask
         self.scenes = try await scenesTask
         self.automations = try await automationsTask
@@ -221,19 +221,19 @@ final class IoTManager: NSObject, ObservableObject {
         scheduleRefreshAfterChange()
     }
 
-    func addThing(input: IoTClient.AddThingInput) async throws -> ThingRecord {
+    func addDevice(input: IoTClient.AddDeviceInput) async throws -> IoTDeviceRecord {
         var input = input
         if input.homeId == nil { input.homeId = currentHomeId }
-        let thing = try await performAction {
-            try await client.addThing(input: input)
+        let device = try await performAction {
+            try await client.addDevice(input: input)
         }
         scheduleRefreshAfterChange()
-        return thing
+        return device
     }
 
-    func removeThing(_ thing: ThingRecord) async throws {
+    func removeDevice(_ device: IoTDeviceRecord) async throws {
         try await performAction {
-            try await client.removeThing(thingId: thing.id, homeId: currentHomeId)
+            try await client.removeDevice(deviceId: device.id, homeId: currentHomeId)
         }
         scheduleRefreshAfterChange()
     }
@@ -388,12 +388,12 @@ final class IoTManager: NSObject, ObservableObject {
         return areas.first(where: { $0.id == id })?.label
     }
 
-    func thing(byId id: String) -> ThingRecord? {
-        things.first(where: { $0.id == id })
+    func device(byId id: String) -> IoTDeviceRecord? {
+        devices.first(where: { $0.id == id })
     }
 
-    func capability(thing: ThingRecord, key: String) -> CapabilityRecord? {
-        thing.capabilities.first(where: { $0.key == key })
+    func capability(device: IoTDeviceRecord, key: String) -> CapabilityRecord? {
+        device.capabilities.first(where: { $0.key == key })
     }
 
     // MARK: - Realtime SSE

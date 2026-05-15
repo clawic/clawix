@@ -6,7 +6,7 @@ import Foundation
 ///   - `health()` confirms the daemon is reachable on its loopback port.
 ///   - `listTools()` mirrors `GET /v1/tools/list`.
 ///   - `invokeTool(id:arguments:)` mirrors `POST /v1/tools/:id/invoke`.
-///   - typed accessors for homes, things, scenes, automations, approvals,
+///   - typed accessors for homes, devices, scenes, automations, approvals,
 ///     and audited action paths.
 ///
 /// Mirrors `DatabaseClient` enough that they can be merged into a
@@ -78,9 +78,9 @@ struct IoTClient {
         try await getJSON(path: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes", as: HomesResponse.self).homes
     }
 
-    func listThings(homeId: String? = nil) async throws -> [ThingRecord] {
+    func listDevices(homeId: String? = nil) async throws -> [IoTDeviceRecord] {
         let path = homeId.map { "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/homes/\($0)/things" } ?? "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/things"
-        return try await getJSON(path: path, as: ThingsResponse.self).things
+        return try await getJSON(path: path, as: DevicesResponse.self).things
     }
 
     func listAreas(homeId: String? = nil) async throws -> [AreaRecord] {
@@ -147,19 +147,19 @@ struct IoTClient {
 
     // MARK: - Tool-backed actions
 
-    /// Connector adapters surface adding/removing things and driving
+    /// Connector adapters surface adding/removing devices and driving
     /// discovery as tool invocations rather than REST routes; using the
     /// tool endpoint keeps a single audit trail in
     /// command_log for both UI and agent paths.
-    func addThing(input: AddThingInput) async throws -> ThingRecord {
+    func addDevice(input: AddDeviceInput) async throws -> IoTDeviceRecord {
         let result = try await invokeTool(id: "iot.things.add", arguments: input.toToolArguments())
         try result.throwIfFailed()
-        let envelope = try Self.decode(result.value, as: ThingEnvelope.self)
+        let envelope = try Self.decode(result.value, as: DeviceEnvelope.self)
         return envelope.thing
     }
 
-    func removeThing(thingId: String, homeId: String? = nil) async throws {
-        var args: [String: Any] = ["thingId": thingId]
+    func removeDevice(deviceId: String, homeId: String? = nil) async throws {
+        var args: [String: Any] = ["thingId": deviceId]
         if let homeId { args["homeId"] = homeId }
         let result = try await invokeTool(id: "iot.things.remove", arguments: args)
         try result.throwIfFailed()
@@ -177,10 +177,10 @@ struct IoTClient {
         try result.throwIfFailed()
     }
 
-    struct AddThingInput {
+    struct AddDeviceInput {
         var fingerprint: String?
         var label: String?
-        var kind: IoTThingKind?
+        var kind: IoTDeviceKind?
         var connectorId: String?
         var targetRef: String?
         var areaId: String?
@@ -271,7 +271,7 @@ struct IoTClient {
 // MARK: - Response envelopes
 
 private struct HomesResponse: Codable { let homes: [HomeRecord] }
-private struct ThingsResponse: Codable { let things: [ThingRecord] }
+private struct DevicesResponse: Codable { let things: [IoTDeviceRecord] }
 private struct AreasResponse: Codable { let areas: [AreaRecord] }
 private struct ScenesResponse: Codable { let scenes: [SceneRecord] }
 private struct AutomationsResponse: Codable { let automations: [AutomationRecord] }
@@ -279,7 +279,7 @@ private struct ApprovalsResponse: Codable { let approvals: [ApprovalRecord] }
 private struct ActionResponse: Codable { let result: IoTActionResult }
 private struct AutomationResponse: Codable { let automation: AutomationRecord }
 private struct ApprovalDenyResponse: Codable { let approval: ApprovalRecord }
-private struct ThingEnvelope: Codable { let thing: ThingRecord }
+private struct DeviceEnvelope: Codable { let thing: IoTDeviceRecord }
 
 extension RemoteToolInvocationResult {
     /// Convenience helper to bubble daemon-side errors as Swift throws.

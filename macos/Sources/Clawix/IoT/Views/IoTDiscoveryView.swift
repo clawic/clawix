@@ -19,7 +19,7 @@ struct IoTDiscoveryView: View {
     @State private var manualFormOpen = false
 
     @State private var manualLabel: String = ""
-    @State private var manualKind: IoTThingKind = .switchKind
+    @State private var manualKind: IoTDeviceKind = .switchKind
     @State private var manualConnectorId: String = "mock-simulator"
     @State private var manualTargetRef: String = ""
 
@@ -154,7 +154,7 @@ struct IoTDiscoveryView: View {
                     .foregroundColor(Palette.textTertiary)
                     .frame(width: 80, alignment: .leading)
                 Picker("", selection: $manualKind) {
-                    ForEach(IoTThingKind.allCases, id: \.self) { kind in
+                    ForEach(IoTDeviceKind.allCases, id: \.self) { kind in
                         Text(verbatim: kind.rawValue.capitalized).tag(kind)
                     }
                 }
@@ -238,9 +238,9 @@ struct IoTDiscoveryView: View {
         addingFingerprint = device.fingerprint
         defer { addingFingerprint = nil }
         do {
-            var input = IoTClient.AddThingInput()
+            var input = IoTClient.AddDeviceInput()
             input.fingerprint = device.fingerprint
-            _ = try await manager.addThing(input: input)
+            _ = try await manager.addDevice(input: input)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -249,12 +249,12 @@ struct IoTDiscoveryView: View {
 
     private func addManual() async {
         do {
-            var input = IoTClient.AddThingInput()
+            var input = IoTClient.AddDeviceInput()
             input.label = manualLabel
             input.kind = manualKind
             input.connectorId = manualConnectorId
             input.targetRef = manualTargetRef
-            _ = try await manager.addThing(input: input)
+            _ = try await manager.addDevice(input: input)
             manualLabel = ""
             manualTargetRef = ""
             errorMessage = nil

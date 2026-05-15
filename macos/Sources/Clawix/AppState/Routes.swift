@@ -80,8 +80,8 @@ enum SidebarRoute: Equatable {
     /// IoT home — sidebar entry "Home". Renders the Home Assistant–
     /// style screen (Devices / Scenes / Automations / Approvals / Add).
     case iotHome
-    /// Detail panel for a single IoT thing. Reached from a card tap.
-    case iotThingDetail(id: String)
+    /// Detail panel for a single IoT device. Reached from a card tap.
+    case iotDeviceDetail(id: String)
     /// Design surface: Styles landing (grid of moodboards).
     case designStylesHome
     /// Design surface: Style detail (tokens, brand, voice, imagery,
@@ -159,7 +159,7 @@ extension SidebarRoute {
             return .contacts
         case .skills, .skillDetail:
             return .skills
-        case .iotHome, .iotThingDetail:
+        case .iotHome, .iotDeviceDetail:
             return .iotHome
         case .designStylesHome, .designStyleDetail, .designTemplatesHome,
              .designTemplateDetail, .designReferencesHome, .designEditor:

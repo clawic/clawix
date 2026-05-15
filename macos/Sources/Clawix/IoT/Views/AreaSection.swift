@@ -1,19 +1,19 @@
 import SwiftUI
 
-/// Grouper for `IoTThingsView`. Header with area label + count;
-/// adaptive grid of `ThingCard`s underneath. Collapsible on header
+/// Grouper for `IoTDevicesView`. Header with area label + count;
+/// adaptive grid of `DeviceCard`s underneath. Collapsible on header
 /// tap (state stored in `@AppStorage` so the user's preference
 /// survives relaunches).
 struct AreaSection: View {
     let label: String
-    let things: [ThingRecord]
-    var onSelect: (ThingRecord) -> Void
+    let devices: [IoTDeviceRecord]
+    var onSelect: (IoTDeviceRecord) -> Void
 
     @AppStorage private var collapsed: Bool
 
-    init(label: String, things: [ThingRecord], onSelect: @escaping (ThingRecord) -> Void) {
+    init(label: String, devices: [IoTDeviceRecord], onSelect: @escaping (IoTDeviceRecord) -> Void) {
         self.label = label
-        self.things = things
+        self.devices = devices
         self.onSelect = onSelect
         let key = "clawix.iot.area.collapsed.\(label.replacingOccurrences(of: " ", with: "_"))"
         self._collapsed = AppStorage(wrappedValue: false, key)
@@ -34,7 +34,7 @@ struct AreaSection: View {
                     Text(verbatim: label)
                         .font(BodyFont.system(size: 13, weight: .semibold))
                         .foregroundColor(Palette.textPrimary)
-                    Text(verbatim: "\(things.count)")
+                    Text(verbatim: "\(devices.count)")
                         .font(BodyFont.system(size: 11))
                         .foregroundColor(Palette.textTertiary)
                     Spacer()
@@ -48,8 +48,8 @@ struct AreaSection: View {
                     columns: [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: 12)],
                     spacing: 12,
                 ) {
-                    ForEach(things) { thing in
-                        ThingCard(thing: thing, onTap: { onSelect(thing) })
+                    ForEach(devices) { device in
+                        DeviceCard(device: device, onTap: { onSelect(device) })
                     }
                 }
             }

@@ -11,7 +11,7 @@ enum IoTRiskLevel: String, Codable, Equatable {
     case restricted
 }
 
-enum IoTThingKind: String, Codable, Equatable, CaseIterable {
+enum IoTDeviceKind: String, Codable, Equatable, CaseIterable {
     case light
     case switchKind = "switch"
     case climate
@@ -61,13 +61,13 @@ struct CapabilityRecord: Codable, Identifiable, Equatable {
     let observedAt: String?
 }
 
-struct ThingRecord: Codable, Identifiable, Equatable {
+struct IoTDeviceRecord: Codable, Identifiable, Equatable {
     let id: String
     let homeId: String
     let areaId: String?
     let label: String
     let aliases: [String]
-    let kind: IoTThingKind
+    let kind: IoTDeviceKind
     let risk: IoTRiskLevel
     let connectorId: String
     let targetRef: String
@@ -127,7 +127,7 @@ struct IoTActionResult: Codable, Equatable {
     struct ActionTarget: Codable, Equatable {
         let id: String
         let label: String
-        let kind: IoTThingKind
+        let kind: IoTDeviceKind
         let areaId: String?
     }
 

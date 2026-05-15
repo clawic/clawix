@@ -113,11 +113,11 @@ struct IoTScreen: View {
         case .loading: return "Loading"
         case .bootstrapping: return "Connecting to daemon"
         case .ready:
-            let thingCount = manager.things.count
+            let deviceCount = manager.devices.count
             let approvalsBadge = manager.pendingApprovalsCount > 0
                 ? " · \(manager.pendingApprovalsCount) pending approval\(manager.pendingApprovalsCount == 1 ? "" : "s")"
                 : ""
-            return "\(thingCount) device\(thingCount == 1 ? "" : "s")\(approvalsBadge)"
+            return "\(deviceCount) device\(deviceCount == 1 ? "" : "s")\(approvalsBadge)"
         case .failed(let reason): return reason
         }
     }
@@ -137,7 +137,7 @@ struct IoTScreen: View {
         switch manager.state {
         case .ready:
             switch selectedTab.wrappedValue {
-            case .devices: IoTThingsView()
+            case .devices: IoTDevicesView()
             case .scenes: IoTScenesView()
             case .automations: IoTAutomationsView()
             case .approvals: IoTApprovalsView()
