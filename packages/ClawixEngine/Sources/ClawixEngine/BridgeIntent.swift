@@ -28,7 +28,7 @@ public enum BridgeIntent {
             // every `notLoaded` thread shows up empty on the iPhone.
             host?.handleHydrateHistory(sessionId: uuid)
             let page = bus.subscribe(sessionId: sessionIdString, limit: limit)
-            // `hasMore: nil` for legacy callers (no `limit`) so iOS
+            // `hasMore: nil` for backward-compatible callers (no `limit`) so iOS
             // clients on the old code path behave identically.
             session.send(BridgeFrame(.messagesSnapshot(
                 sessionId: sessionIdString,

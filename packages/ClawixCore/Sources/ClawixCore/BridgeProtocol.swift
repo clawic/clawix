@@ -348,17 +348,17 @@ public enum BridgeBody: Equatable, Sendable {
     case audioDeleteResult(requestId: String, deleted: Bool, errorMessage: String?)
 
     fileprivate var typeTag: String {
-        // Split into legacy (v1-v5), v6 (skills) and v7 (audio) helpers
+        // Split into base bridge, v6 (skills) and v7 (audio) helpers
         // so the Swift type-checker doesn't time out on a single
         // ~70-case switch ("compiler is unable to type-check this
         // expression in reasonable time"). Each helper covers a
-        // disjoint set; the dispatcher tries v7 -> v6 -> legacy.
+        // disjoint set; the dispatcher tries v7 -> v6 -> base.
         if let tag = v7AudioTypeTag { return tag }
         if let tag = v6TypeTag { return tag }
-        return legacyTypeTag
+        return baseTypeTag
     }
 
-    private var legacyTypeTag: String {
+    private var baseTypeTag: String {
         switch self {
         case .auth:               return "auth"
         case .listSessions:          return "listSessions"
@@ -400,11 +400,11 @@ public enum BridgeBody: Equatable, Sendable {
         case .rateLimitsSnapshot: return "rateLimitsSnapshot"
         case .rateLimitsUpdated:  return "rateLimitsUpdated"
         default:
-            // Unreachable: every legacy (v1-v5) case is enumerated above
+            // Unreachable: every base bridge case is enumerated above
             // and v6 cases are handled by `v6TypeTag` before this branch.
             // If a new case is added without updating either helper this
             // will trip in tests, which is the desired behaviour.
-            preconditionFailure("BridgeBody.legacyTypeTag missing case for \(self)")
+            preconditionFailure("BridgeBody.baseTypeTag missing case for \(self)")
         }
     }
 
@@ -479,13 +479,13 @@ public enum BridgeBody: Equatable, Sendable {
     fileprivate func encodePayload(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: FlatKeys.self)
         // Helpers split by version so the Swift type-checker doesn't
-        // time out on a single ~70-case switch. Try v7 -> v6 -> legacy.
+        // time out on a single ~70-case switch. Try v7 -> v6 -> base.
         if try encodeV7AudioPayload(into: &c) { return }
         if try encodeV6Payload(into: &c) { return }
-        try encodeLegacyPayload(into: &c)
+        try encodeBasePayload(into: &c)
     }
 
-    private func encodeLegacyPayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws {
+    private func encodeBasePayload(into c: inout KeyedEncodingContainer<FlatKeys>) throws {
         switch self {
         case .auth(let token, let deviceName, let clientKind, let clientId, let installationId, let deviceId):
             try c.encode(token, forKey: .token)
@@ -609,7 +609,7 @@ public enum BridgeBody: Equatable, Sendable {
         default:
             // v6 cases are handled in encodeV6Payload, called before
             // this method by the encodePayload dispatcher. Unknown
-            // legacy cases would be a programming error caught by the
+            // base cases would be a programming error caught by the
             // round-trip tests.
             break
         }
@@ -724,10 +724,10 @@ public enum BridgeBody: Equatable, Sendable {
 
     fileprivate static func decode(type: String, from decoder: Decoder) throws -> BridgeBody {
         let c = try decoder.container(keyedBy: FlatKeys.self)
-        // Helpers split by version. Try v7 -> v6 -> legacy.
+        // Helpers split by version. Try v7 -> v6 -> base.
         if let body = try decodeV7Audio(type: type, from: c) { return body }
         if let body = try decodeV6(type: type, from: c) { return body }
-        return try decodeLegacy(type: type, from: c)
+        return try decodeBase(type: type, from: c)
     }
 
     private static func decodeV7Audio(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody? {
@@ -809,7 +809,7 @@ public enum BridgeBody: Equatable, Sendable {
         }
     }
 
-    private static func decodeLegacy(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody {
+    private static func decodeBase(type: String, from c: KeyedDecodingContainer<FlatKeys>) throws -> BridgeBody {
         switch type {
         case "auth":
             return .auth(

@@ -114,7 +114,7 @@ public final class BridgeSession: Identifiable {
         isAuthenticated = true
         BridgeStats.shared.increment()
         self.deviceName = deviceName
-        // Absent kind = legacy v1 client = treat as iOS so existing
+        // Absent kind = older v1 client = treat as iOS so existing
         // iPhones keep working unchanged.
         self.clientKind = clientKind ?? .companion
         // Tell the peer where the host is in its bootstrap so an empty

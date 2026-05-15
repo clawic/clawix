@@ -163,7 +163,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         XCTAssertEqual(frame.body, .openSession(sessionId: "abc", limit: nil))
     }
 
-    func testLegacyMessagesSnapshotDecodesWithoutHasMore() throws {
+    func testOlderMessagesSnapshotDecodesWithoutHasMore() throws {
         let data = """
         {"schemaVersion":\(bridgeSchemaVersion),"type":"messagesSnapshot","sessionId":"abc","messages":[]}
         """.data(using: .utf8)!
@@ -275,13 +275,13 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     /// Old peers without `kind` should decode as image attachments so
     /// existing v2 senders keep working when v3 daemons receive them.
-    func testWireAttachmentLegacyDecodeDefaultsToImage() throws {
-        let legacy = """
+    func testWireAttachmentOlderDecodeDefaultsToImage() throws {
+        let olderPayload = """
         {"id":"att-1","mimeType":"image/jpeg","filename":"photo.jpg","dataBase64":"AAAA"}
         """
         let attachment = try BridgeCoder.decoder.decode(
             WireAttachment.self,
-            from: Data(legacy.utf8)
+            from: Data(olderPayload.utf8)
         )
         XCTAssertEqual(attachment.kind, .image)
     }
@@ -298,7 +298,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
         XCTAssertFalse(json.contains("\"payload\""))
     }
 
-    func testLegacyPromptFramesDecodeWithoutAttachments() throws {
+    func testOlderPromptFramesDecodeWithoutAttachments() throws {
         let data = """
         {"schemaVersion":1,"type":"sendMessage","sessionId":"abc","text":"hello"}
         """.data(using: .utf8)!
