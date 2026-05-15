@@ -1,18 +1,17 @@
 # Clawix Apps · Agent contract
 
-This file documents the on-disk contract that any agent (Codex, ClawJS,
-shell, manual) must follow to publish a Clawix App that the user will
-see in the sidebar Apps section. The contract is filesystem-only on
-purpose: any process that can write files to the user's home folder
-can create or update an app with no daemon, no bridge, and no
-authentication.
+This file documents the framework-owned on-disk contract that any agent
+(Codex, ClawJS, shell, manual) must follow to publish a Claw App that
+Clawix renders in the sidebar Apps section. The contract is filesystem-only
+on purpose: any process that can write files to the user's framework root
+can create or update an app with no daemon, no bridge, and no authentication.
 
 ## Layout
 
 All apps live under:
 
 ```
-~/Library/Application Support/Clawix/Apps/
+~/.claw/apps/
 └── <slug>/
     ├── manifest.json           ← single source of truth for metadata
     ├── index.html              ← entry point, loaded as clawix-app://<slug>/
@@ -58,7 +57,7 @@ If you can run shell commands, the minimum recipe is:
 
 ```bash
 SLUG=pomodoro
-ROOT="$HOME/Library/Application Support/Clawix/Apps/$SLUG"
+ROOT="$HOME/.claw/apps/$SLUG"
 mkdir -p "$ROOT"
 cat > "$ROOT/manifest.json" <<'JSON'
 { "id": "<uuid>", "slug": "pomodoro", "name": "Pomodoro",

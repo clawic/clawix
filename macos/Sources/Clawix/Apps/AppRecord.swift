@@ -2,7 +2,7 @@ import Foundation
 
 /// One mini-app the user can open from the sidebar. Created by an agent
 /// (or imported by the user). Persisted as a manifest.json plus loose
-/// files under `~/Library/Application Support/Clawix/Apps/<slug>/`.
+/// files under `~/.claw/apps/<slug>/`.
 ///
 /// The split between manifest metadata and on-disk files keeps two
 /// concerns separate: the manifest is the index the sidebar/grid read

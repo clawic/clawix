@@ -3,7 +3,7 @@ import Foundation
 
 /// Single source of truth for the design system surfaced by Clawix:
 /// Styles, Templates and References. Each resource lives as its own
-/// directory under `~/Library/Application Support/Clawix/Design/` so
+/// framework-owned directory under `~/.claw/design/` so
 /// the agent (which can be any process writing files there) and the
 /// GUI share a contract: write a `STYLE.md` / `TEMPLATE.md` /
 /// `REFERENCE.md` and the sidebar picks it up.
@@ -18,9 +18,8 @@ import Foundation
 @MainActor
 final class DesignStore: ObservableObject {
     static let shared = DesignStore()
-    private static let fallbackApplicationSupportPath = "Library/Application Support"
-    private static let appSupportRootName = "Clawix"
-    private static let designRootName = "Design"
+    private static let frameworkRootName = ".claw"
+    private static let designRootName = "design"
 
     @Published private(set) var styles: [StyleManifest] = []
     @Published private(set) var templates: [TemplateManifest] = []
@@ -44,15 +43,9 @@ final class DesignStore: ObservableObject {
     }
 
     static func defaultRootURL(fileManager: FileManager = .default) -> URL {
-        let support = (try? fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(fallbackApplicationSupportPath)
-        return support
-            .appendingPathComponent(appSupportRootName)
-            .appendingPathComponent(designRootName)
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent(frameworkRootName, isDirectory: true)
+            .appendingPathComponent(designRootName, isDirectory: true)
     }
 
     var stylesRootURL: URL { rootURL.appendingPathComponent("styles") }

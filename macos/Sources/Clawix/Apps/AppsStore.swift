@@ -3,7 +3,7 @@ import Combine
 import Foundation
 
 /// Single source of truth for the user's installed Apps. Persists each
-/// app as a folder under `~/Library/Application Support/Clawix/Apps/<slug>/`
+/// app as a framework-owned folder under `~/.claw/apps/<slug>/`
 /// with a `manifest.json` next to the actual web files (`index.html`,
 /// `app.js`, `style.css`, ...). The store watches the parent dir on a
 /// timer and reloads the index when the agent writes new files from a
@@ -45,18 +45,10 @@ final class AppsStore: ObservableObject {
         pollingTimer?.invalidate()
     }
 
-    /// `~/Library/Application Support/Clawix/Apps`. Mirrors what the
-    /// rest of the app does for chat databases, dictionaries, etc.
+    /// `~/.claw/apps`. Apps are framework resources; Clawix only renders
+    /// the human UI and app webview shell.
     static func defaultRootURL(fileManager: FileManager = .default) -> URL {
-        let support = (try? fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        return support
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.apps, isDirectory: true)
+        ClawixPersistentSurfacePaths.frameworkGlobalChild("apps", isDirectory: true)
     }
 
     /// Bring `apps` in sync with whatever currently lives on disk. Cheap
@@ -342,7 +334,7 @@ final class AppsStore: ObservableObject {
         </style></head><body>
         <div class="wrap">
         <h1>\(escapedName)</h1>
-        <p>This app has no content yet. Ask the agent to build it, or drop files into <code>Application Support/Clawix/Apps/</code>.</p>
+        <p>This app has no content yet. Ask the agent to build it, or drop files into <code>~/.claw/apps/</code>.</p>
         </div></body></html>
         """
     }

@@ -3,15 +3,14 @@ import Foundation
 import UIKit
 
 /// iOS port of the editor document store. Same on-disk shape as the
-/// desktop store (`~/Library/Application Support/Clawix/Design/documents/<id>/document.json`),
+/// desktop store (`~/.claw/design/documents/<id>/document.json`),
 /// only difference is image dimension probing uses `UIImage` instead of
 /// `NSImage`.
 @MainActor
 final class EditorStore: ObservableObject {
     static let shared = EditorStore()
-    private static let fallbackApplicationSupportPath = "Library/Application Support"
-    private static let appSupportRootName = "Clawix"
-    private static let designRootName = "Design"
+    private static let frameworkRootName = ".claw"
+    private static let designRootName = "design"
     private static let documentsRootName = "documents"
 
     @Published private(set) var documents: [EditorDocument] = []
@@ -27,16 +26,10 @@ final class EditorStore: ObservableObject {
     }
 
     static func defaultRootURL(fileManager: FileManager = .default) -> URL {
-        let support = (try? fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(fallbackApplicationSupportPath)
-        return support
-            .appendingPathComponent(appSupportRootName)
-            .appendingPathComponent(designRootName)
-            .appendingPathComponent(documentsRootName)
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent(frameworkRootName, isDirectory: true)
+            .appendingPathComponent(designRootName, isDirectory: true)
+            .appendingPathComponent(documentsRootName, isDirectory: true)
     }
 
     func documentDir(for id: String) -> URL { rootURL.appendingPathComponent(id) }

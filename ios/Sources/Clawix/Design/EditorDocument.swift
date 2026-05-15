@@ -2,7 +2,7 @@ import Foundation
 
 /// One open edit session. Combines a Template (skeleton), a Style
 /// (visual tokens) and a value bag for each slot. Persisted as a single
-/// JSON file under `~/Library/Application Support/Clawix/Design/documents/<id>/document.json`.
+/// JSON file under `~/.claw/design/documents/<id>/document.json`.
 /// Lives outside the template + style directories so opening, editing
 /// and exporting an instance never mutates the underlying recipe.
 struct EditorDocument: Codable, Identifiable, Hashable {

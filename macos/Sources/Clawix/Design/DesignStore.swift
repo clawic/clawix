@@ -4,7 +4,7 @@ import Foundation
 
 /// Single source of truth for the design system surfaced by Clawix:
 /// Styles, Templates and References. Each resource lives as its own
-/// directory under `~/Library/Application Support/Clawix/Design/` so
+/// framework-owned directory under `~/.claw/design/` so
 /// the agent (which can be any process writing files there) and the
 /// GUI share a contract: write a `STYLE.md` / `TEMPLATE.md` /
 /// `REFERENCE.md` and the sidebar picks it up.
@@ -42,15 +42,7 @@ final class DesignStore: ObservableObject {
     }
 
     static func defaultRootURL(fileManager: FileManager = .default) -> URL {
-        let support = (try? fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        return support
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.design, isDirectory: true)
+        ClawixPersistentSurfacePaths.frameworkGlobalChild("design", isDirectory: true)
     }
 
     var stylesRootURL: URL { rootURL.appendingPathComponent("styles") }

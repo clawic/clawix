@@ -15,6 +15,9 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         XCTAssertTrue(nodes.contains { $0.id == "clawix.api.mesh.post.mesh.jobs" && $0.route == "/v1/mesh/jobs" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.event.remoteJob.completed" && $0.value == "completed" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.web.storage.currentRoute" && $0.key == "ui.route" })
+        XCTAssertTrue(nodes.contains { $0.id == "claw.framework.apps" && $0.owner == "claw" && $0.path == "~/.claw/apps" })
+        XCTAssertTrue(nodes.contains { $0.id == "claw.framework.design" && $0.owner == "claw" && $0.path == "~/.claw/design" })
+        XCTAssertFalse(nodes.contains { $0.id == "clawix.apps" || $0.id == "clawix.design" })
 
         let manifest = ClawixPersistentSurfaceRegistry.manifest
         let data = try Self.manifestEncoder().encode(manifest)
@@ -31,6 +34,14 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         let fixtureData = try Data(contentsOf: manifestURL)
         let expected = try JSONDecoder().decode(PersistentSurfaceManifest.self, from: fixtureData)
         XCTAssertEqual(expected, ClawixPersistentSurfaceRegistry.manifest)
+    }
+
+    @MainActor
+    func testAppsAndDesignDefaultStoresUseFrameworkRoot() throws {
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        XCTAssertEqual(AppsStore.defaultRootURL().standardizedFileURL.path, home.appendingPathComponent(".claw/apps", isDirectory: true).standardizedFileURL.path)
+        XCTAssertEqual(DesignStore.defaultRootURL().standardizedFileURL.path, home.appendingPathComponent(".claw/design", isDirectory: true).standardizedFileURL.path)
+        XCTAssertEqual(EditorStore.defaultRootURL().standardizedFileURL.path, home.appendingPathComponent(".claw/design/documents", isDirectory: true).standardizedFileURL.path)
     }
 
     private func writeManifestExportIfRequested(_ data: Data) throws {

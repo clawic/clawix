@@ -142,6 +142,25 @@ enum ClawixPersistentSurface {
         node(id: id, kind: .folder, name: name, path: path, storageClass: storageClass, parentId: parentId)
     }
 
+    static func frameworkFolder(id: String, name: String, path: String, parentId: String? = nil, notes: String? = nil) -> PersistentSurfaceNode {
+        node(
+            id: id,
+            kind: .folder,
+            name: name,
+            path: path,
+            storageClass: "frameworkGlobal",
+            canonicality: "frameworkCanonical",
+            privacy: "userData",
+            lifecycle: "durable",
+            parentId: parentId,
+            project: "framework",
+            notes: notes,
+            owner: "claw",
+            repo: "clawjs",
+            language: "cross-platform"
+        )
+    }
+
     static func preference(id: String, name: String, key: String, kind: PersistentSurfaceKind = .preferenceKey, notes: String? = nil) -> PersistentSurfaceNode {
         node(id: id, kind: kind, name: name, key: key, storageClass: "nativeAppData", notes: notes)
     }
@@ -232,15 +251,18 @@ enum ClawixPersistentSurface {
         dataType: String? = nil,
         nullable: Bool? = nil,
         notes: String? = nil,
-        warnings: [String]? = nil
+        warnings: [String]? = nil,
+        owner: String = "clawix",
+        repo: String = "Clawix",
+        language: String = "swift"
     ) -> PersistentSurfaceNode {
         PersistentSurfaceNode(
             id: id,
             kind: kind,
-            owner: "clawix",
-            repo: "Clawix",
+            owner: owner,
+            repo: repo,
             project: project,
-            language: "swift",
+            language: language,
             name: name,
             path: path,
             key: key,
@@ -336,17 +358,19 @@ enum ClawixPersistentSurfaceRegistry {
                 path: "<tmp>/clawix-vault-<uuid>.sqlite",
                 parentId: nil
             ),
-            ClawixPersistentSurface.folder(
-                id: "clawix.apps",
+            ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.apps",
                 name: "Apps",
-                path: "~/Library/Application Support/Clawix/Apps",
-                parentId: "clawix.applicationSupport"
+                path: "~/.claw/apps",
+                parentId: nil,
+                notes: "Framework-owned app manifests and static app files consumed by Clawix UI."
             ),
-            ClawixPersistentSurface.folder(
-                id: "clawix.design",
+            ClawixPersistentSurface.frameworkFolder(
+                id: "claw.framework.design",
                 name: "Design",
-                path: "~/Library/Application Support/Clawix/Design",
-                parentId: "clawix.applicationSupport"
+                path: "~/.claw/design",
+                parentId: nil,
+                notes: "Framework-owned design styles, templates, references, and editor documents consumed by Clawix UI."
             ),
             ClawixPersistentSurface.folder(
                 id: "clawix.clawjs",
@@ -1007,6 +1031,15 @@ enum ClawixPersistentSurfacePaths {
             .appendingPathComponent(child, isDirectory: isDirectory)
     }
 
+    static func frameworkGlobalRoot() -> URL {
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent(components.clawHome, isDirectory: true)
+    }
+
+    static func frameworkGlobalChild(_ child: String, isDirectory: Bool = true) -> URL {
+        frameworkGlobalRoot().appendingPathComponent(child, isDirectory: isDirectory)
+    }
+
     static func logsRoot() throws -> URL {
         try FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent(components.logs, isDirectory: true)
@@ -1025,6 +1058,7 @@ enum ClawixPersistentSurfacePaths {
 
     enum components {
         static let clawix = "Clawix"
+        static let clawHome = ".claw"
         static let clawixHome = ".clawix"
         static let clawWorkspace = ".claw"
         static let bridgeState = "state"

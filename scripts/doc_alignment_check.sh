@@ -34,7 +34,8 @@ for file in \
   "docs/adr/0002-naming-and-stability-surfaces.md" \
   "docs/adr/0004-source-file-boundaries.md" \
   "docs/adr/0007-dual-human-programmatic-surfaces.md" \
-  "docs/adr/TEMPLATE.md"
+  "docs/adr/TEMPLATE.md" \
+  "scripts/storage_boundary_guard.mjs"
 do
   require_file "$file"
 done
@@ -230,6 +231,10 @@ done
 
 if ! node "$ROOT_DIR/scripts/interface_surface_guard.mjs"; then
   fail "interface surface guard failed"
+fi
+
+if ! node "$ROOT_DIR/scripts/storage_boundary_guard.mjs"; then
+  fail "storage boundary guard failed"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

@@ -3,7 +3,7 @@ import Combine
 import Foundation
 
 /// Single source of truth for EditorDocuments. Persists every document
-/// in its own directory under `~/Library/Application Support/Clawix/Design/documents/<id>/`
+/// in its own directory under `~/.claw/design/documents/<id>/`
 /// with `document.json` plus loose asset files (`logo.png`, `hero.jpg`,
 /// `<slot>.png`, ...). Lives next to `DesignStore` but stays separate
 /// so opening / saving an instance never touches the Style or
@@ -25,16 +25,8 @@ final class EditorStore: ObservableObject {
     }
 
     static func defaultRootURL(fileManager: FileManager = .default) -> URL {
-        let support = (try? fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )) ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        return support
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.clawix, isDirectory: true)
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.design, isDirectory: true)
-            .appendingPathComponent("documents")
+        ClawixPersistentSurfacePaths.frameworkGlobalChild("design", isDirectory: true)
+            .appendingPathComponent("documents", isDirectory: true)
     }
 
     func documentDir(for id: String) -> URL { rootURL.appendingPathComponent(id) }
