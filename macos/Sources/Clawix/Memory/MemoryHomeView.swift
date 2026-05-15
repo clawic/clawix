@@ -13,6 +13,7 @@ struct MemoryHomeView: View {
     @State private var searchText: String = ""
     @State private var editTarget: ClawJSMemoryClient.MemoryNote? = nil
     @State private var deleteTarget: ClawJSMemoryClient.MemoryNote? = nil
+    @State private var actionError: String?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -73,10 +74,17 @@ struct MemoryHomeView: View {
                 guard let note = deleteTarget else { return }
                 let id = note.id
                 Task {
-                    _ = try? await manager.delete(id: id)
-                    await MainActor.run {
-                        if selectedNoteId == id { selectedNoteId = nil }
-                        deleteTarget = nil
+                    do {
+                        _ = try await manager.delete(id: id)
+                        await MainActor.run {
+                            if selectedNoteId == id { selectedNoteId = nil }
+                            deleteTarget = nil
+                        }
+                    } catch {
+                        await MainActor.run {
+                            actionError = error.localizedDescription
+                            deleteTarget = nil
+                        }
                     }
                 }
             }
@@ -85,6 +93,16 @@ struct MemoryHomeView: View {
             }
         } message: {
             Text(deleteTarget.map { "This permanently deletes \"\($0.title)\" from Memory." } ?? "")
+        }
+        .alert("Memory action failed", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) {
+                actionError = nil
+            }
+        } message: {
+            Text(actionError ?? "")
         }
     }
 

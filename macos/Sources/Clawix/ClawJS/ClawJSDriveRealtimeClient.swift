@@ -99,7 +99,9 @@ final class ClawJSDriveRealtimeClient {
             let data = try JSONEncoder().encode(payload)
             let message = URLSessionWebSocketTask.Message.string(String(data: data, encoding: .utf8) ?? "")
             task.send(message) { _ in }
-        } catch { /* ignored */ }
+        } catch {
+            onDisconnect?(error)
+        }
     }
 
     private func receive() {
