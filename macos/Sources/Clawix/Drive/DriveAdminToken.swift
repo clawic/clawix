@@ -8,6 +8,6 @@ enum DriveAdminToken {
         if let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .drive) {
             return token
         }
-        return try ClawJSServiceManager.adminTokenFromDataDir(for: .drive)
+        return try ClawJSServiceManager.adminTokenFromTokenFile(for: .drive)
     }
 }

@@ -57,7 +57,7 @@ final class AudioCatalogBootstrap: ObservableObject {
         if let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .audio) {
             return token
         }
-        return try? ClawJSServiceManager.adminTokenFromDataDir(for: .audio)
+        return try? ClawJSServiceManager.adminTokenFromTokenFile(for: .audio)
     }
 
 }

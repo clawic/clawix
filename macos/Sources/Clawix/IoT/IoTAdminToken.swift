@@ -15,6 +15,6 @@ enum IoTAdminToken {
         if let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .iot) {
             return token
         }
-        return try? ClawJSServiceManager.adminTokenFromDataDir(for: .iot)
+        return try? ClawJSServiceManager.adminTokenFromTokenFile(for: .iot)
     }
 }

@@ -31,7 +31,7 @@ final class MarketplaceManager: ObservableObject {
 
     init() {
         let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .index)
-            ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .index))
+            ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .index))
         let index = ClawJSIndexClient(bearerToken: token)
         self.marketplace = ClawJSMarketplaceClient(indexClient: index)
     }
@@ -39,7 +39,7 @@ final class MarketplaceManager: ObservableObject {
     func ensureToken() {
         if marketplace.indexClient.bearerToken == nil {
             let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .index)
-                ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .index))
+                ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .index))
             marketplace.indexClient.bearerToken = token
         }
     }

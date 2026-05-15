@@ -254,7 +254,7 @@ public struct ClawJSAudioClient: Sendable {
     /// Reads the per-session bearer token the supervisor wrote to disk
     /// when it spawned the audio service. Returns nil when the file is
     /// missing or empty (e.g. service has never run on this machine).
-    public static func tokenFromDataDir(_ url: URL) -> String? {
+    public static func tokenFromAdminTokenFile(_ url: URL) -> String? {
         let tokenURL = url.appendingPathComponent(".admin-token", isDirectory: false)
         guard let raw = try? String(contentsOf: tokenURL, encoding: .utf8) else { return nil }
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)

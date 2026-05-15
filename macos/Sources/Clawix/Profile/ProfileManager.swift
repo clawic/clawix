@@ -31,7 +31,7 @@ final class ProfileManager: ObservableObject {
 
     init() {
         let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .index)
-            ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .index))
+            ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .index))
         let index = ClawJSIndexClient(bearerToken: token)
         self.client = ClawJSProfileClient(indexClient: index)
     }
@@ -39,7 +39,7 @@ final class ProfileManager: ObservableObject {
     func ensureToken() {
         if client.indexClient.bearerToken == nil {
             let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .index)
-                ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .index))
+                ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .index))
             client.indexClient.bearerToken = token
         }
     }

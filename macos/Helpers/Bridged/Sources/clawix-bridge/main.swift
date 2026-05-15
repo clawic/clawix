@@ -608,7 +608,7 @@ final class DaemonEngineHost: EngineHost {
         if didProbeAudioCatalog { return cachedAudioCatalogClient }
         didProbeAudioCatalog = true
         let tokenDir = Self.audioCatalogTokenDir
-        guard let token = ClawJSAudioClient.tokenFromDataDir(tokenDir) else {
+        guard let token = ClawJSAudioClient.tokenFromAdminTokenFile(tokenDir) else {
             return nil
         }
         cachedAudioCatalogClient = ClawJSAudioClient(bearerToken: token)

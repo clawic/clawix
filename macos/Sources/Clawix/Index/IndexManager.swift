@@ -34,7 +34,7 @@ final class IndexManager: ObservableObject {
 
     init() {
         let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .index)
-            ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .index))
+            ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .index))
         self.client = ClawJSIndexClient(bearerToken: token)
         attachSupervisorObserver()
     }
@@ -53,7 +53,7 @@ final class IndexManager: ObservableObject {
     func ensureToken() {
         if client.bearerToken == nil {
             let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .index)
-                ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .index))
+                ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .index))
             client.bearerToken = token
         }
     }

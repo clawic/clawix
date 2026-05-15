@@ -6,7 +6,7 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         let source = try readSource("ClawJS/ClawJSServiceManager.swift")
 
         XCTAssertFalse(
-            source.contains("adminTokenFromDataDir(for: .secrets)"),
+            source.contains("adminTokenFromTokenFile(for: .secrets)"),
             "Secrets clients must not recover bearer/admin tokens from disk."
         )
         XCTAssertFalse(
@@ -32,7 +32,7 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         let environmentBody = try extractFunctionBody(
             named: "private static func environment(",
             from: source,
-            until: "    private static func secretsBootstrapData"
+            until: "    private static func secretsBootstrapPayload"
         )
 
         XCTAssertTrue(
@@ -66,11 +66,11 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         let environmentBody = try extractFunctionBody(
             named: "private static func environment(",
             from: source,
-            until: "    private static func secretsBootstrapData"
+            until: "    private static func secretsBootstrapPayload"
         )
 
         XCTAssertTrue(
-            source.contains("localAdminBootstrapData(adminToken: adminToken)"),
+            source.contains("localAdminBootstrapPayload(adminToken: adminToken)"),
             "Database, Drive, Index, Audio, Sessions, and Publishing tokens must be sent through anonymous stdin bootstrap."
         )
         XCTAssertTrue(
@@ -207,7 +207,7 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         XCTAssertTrue(source.contains("store.fetchSecret(byInternalName: internalName)"))
     }
 
-    func testSystemProviderSecretsDoNotExposePlaintextReadHelpers() throws {
+    func testSystemProviderSecretsDoNotExposePlaintextReads() throws {
         let source = try readSource("Secrets/SystemSecrets.swift")
 
         XCTAssertFalse(

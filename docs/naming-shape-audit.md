@@ -11,7 +11,9 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 57.
+- Naming warnings: 51 tracked warnings. The full local working tree currently
+  reports 53 warnings because two warnings come from untracked UI governance
+  notes/decision files.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
 
@@ -73,6 +75,12 @@ for staged rename/split work and must not be hidden by compressing code.
   clarified.
 - Secrets proxy redaction test vocabulary: broad test names using `Data` and
   `Helper` now describe payload redaction and label behavior directly.
+- ClawJS local bootstrap vocabulary: `secretsBootstrapData` and
+  `localAdminBootstrapData` are now `secretsBootstrapPayload` and
+  `localAdminBootstrapPayload`; token-file readers now name the `.admin-token`
+  file contract instead of the broader data directory.
+- Secrets security boundary test vocabulary: plaintext provider-secret coverage
+  now describes the prohibited read behavior instead of generic helper names.
 
 ## Validation snapshot
 

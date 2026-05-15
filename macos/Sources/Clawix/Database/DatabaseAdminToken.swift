@@ -13,6 +13,6 @@ enum DatabaseAdminToken {
         if let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .database) {
             return token
         }
-        return try ClawJSServiceManager.adminTokenFromDataDir(for: .database)
+        return try ClawJSServiceManager.adminTokenFromTokenFile(for: .database)
     }
 }

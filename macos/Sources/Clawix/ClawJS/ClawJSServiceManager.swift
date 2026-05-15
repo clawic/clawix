@@ -513,7 +513,7 @@ final class ClawJSServiceManager: ObservableObject {
             let bootstrapData: Data?
             if service == .secrets {
                 bootstrapPipe = Pipe()
-                bootstrapData = try Self.secretsBootstrapData(
+                bootstrapData = try Self.secretsBootstrapPayload(
                     adminToken: adminToken,
                     signedHostToken: signedHostToken,
                     hostAssertionKeyBase64: hostAssertionKey,
@@ -522,7 +522,7 @@ final class ClawJSServiceManager: ObservableObject {
                 process.standardInput = bootstrapPipe
             } else if let adminToken {
                 bootstrapPipe = Pipe()
-                bootstrapData = try Self.localAdminBootstrapData(adminToken: adminToken)
+                bootstrapData = try Self.localAdminBootstrapPayload(adminToken: adminToken)
                 process.standardInput = bootstrapPipe
             } else {
                 bootstrapPipe = nil
@@ -834,7 +834,7 @@ final class ClawJSServiceManager: ObservableObject {
         return env
     }
 
-    private static func secretsBootstrapData(
+    private static func secretsBootstrapPayload(
         adminToken: String?,
         signedHostToken: String?,
         hostAssertionKeyBase64: String?,
@@ -857,7 +857,7 @@ final class ClawJSServiceManager: ObservableObject {
             + Data([0x0a])
     }
 
-    private static func localAdminBootstrapData(adminToken: String) throws -> Data {
+    private static func localAdminBootstrapPayload(adminToken: String) throws -> Data {
         try JSONSerialization.data(withJSONObject: ["adminToken": adminToken], options: [])
             + Data([0x0a])
     }
@@ -917,7 +917,7 @@ final class ClawJSServiceManager: ObservableObject {
     /// token-file contract. Services in `adminTokenEnvVar` deliberately
     /// have no disk lookup: same-user local processes can read owner files,
     /// so v1 host identity must stay in-memory/native.
-    static func adminTokenFromDataDir(for service: ClawJSService) throws -> String {
+    static func adminTokenFromTokenFile(for service: ClawJSService) throws -> String {
         if adminTokenEnvVar[service] != nil {
             throw NSError(domain: "ClawJSServiceManager", code: 3, userInfo: [
                 NSLocalizedDescriptionKey: "\(service.displayName) admin token is host-session only and is never read from disk."

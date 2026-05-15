@@ -39,7 +39,7 @@ struct ClawJSSessionsClient {
     @MainActor
     static func local() -> ClawJSSessionsClient {
         let token = ClawJSServiceManager.shared.adminTokenIfSpawned(for: .sessions)
-            ?? (try? ClawJSServiceManager.adminTokenFromDataDir(for: .sessions))
+            ?? (try? ClawJSServiceManager.adminTokenFromTokenFile(for: .sessions))
         return ClawJSSessionsClient(bearerToken: token)
     }
 
