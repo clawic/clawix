@@ -7,7 +7,10 @@ import SecretsProxyCore
 let socketPath: String = {
     let home = FileManager.default.homeDirectoryForCurrentUser
     return home
-        .appendingPathComponent("Library/Application Support/Clawix/secrets/proxy.sock")
+        .appendingPathComponent(ProxySurfacePath.applicationSupport)
+        .appendingPathComponent(ProxySurfacePath.clawix)
+        .appendingPathComponent(ProxySurfacePath.secrets)
+        .appendingPathComponent(ProxySurfacePath.socket)
         .path
 }()
 
