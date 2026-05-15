@@ -24,9 +24,9 @@ the public repo.
 
 - `interface-governance.config.json`: global guard configuration.
 - `pattern-registry/`: pattern manifests and human notes.
-- `debt-baseline.json`: frozen existing visual drift.
-- `protected-surfaces.json`: user-approved frozen visual surfaces.
-- `performance-budgets.json`: critical-flow budget registry.
+- `debt.baseline.json`: frozen existing visual drift.
+- `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
+- `performance-budgets.registry.json`: critical-flow budget registry.
 - `inspiration/`: non-canonical external references.
 
 ## Required workflow

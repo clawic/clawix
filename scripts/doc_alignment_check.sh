@@ -43,11 +43,11 @@ for file in \
   "docs/adr/TEMPLATE.md" \
   "docs/ui/README.md" \
   "docs/ui/interface-governance.config.json" \
-  "docs/ui/pattern-registry/index.json" \
-  "docs/ui/debt-baseline.json" \
-  "docs/ui/protected-surfaces.json" \
-  "docs/ui/performance-budgets.json" \
-  "docs/ui/inspiration/index.json" \
+  "docs/ui/pattern-registry/patterns.registry.json" \
+  "docs/ui/debt.baseline.json" \
+  "docs/ui/protected-surfaces.registry.json" \
+  "docs/ui/performance-budgets.registry.json" \
+  "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_governance_guard.mjs" \
   "scripts/storage_boundary_guard.mjs"

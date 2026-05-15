@@ -102,7 +102,7 @@ for (const state of requiredStates) {
   if (!configuredStates.has(state)) fail(`${configPath}.requiredInteractiveStates must include ${state}`);
 }
 
-const indexPath = "docs/ui/pattern-registry/index.json";
+const indexPath = "docs/ui/pattern-registry/patterns.registry.json";
 const registry = readJson(indexPath);
 requireFields(registry, indexPath, ["schemaVersion", "platforms", "patterns"]);
 const registryPatterns = requireArray(registry, indexPath, "patterns");
@@ -112,7 +112,7 @@ for (const platform of requiredPlatforms) {
 }
 
 for (const patternId of registryPatterns) {
-  const patternPath = `docs/ui/pattern-registry/patterns/${patternId}.json`;
+  const patternPath = `docs/ui/pattern-registry/patterns/${patternId}.pattern.json`;
   const pattern = readJson(patternPath);
   requireFields(pattern, patternPath, [
     "schemaVersion",
@@ -146,7 +146,7 @@ for (const patternId of registryPatterns) {
   }
 }
 
-const debtPath = "docs/ui/debt-baseline.json";
+const debtPath = "docs/ui/debt.baseline.json";
 const debt = readJson(debtPath);
 requireFields(debt, debtPath, ["schemaVersion", "status", "policy", "entries"]);
 for (const [index, entry] of requireArray(debt, debtPath, "entries").entries()) {
@@ -157,7 +157,7 @@ for (const [index, entry] of requireArray(debt, debtPath, "entries").entries()) 
   }
 }
 
-const protectedPath = "docs/ui/protected-surfaces.json";
+const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
 requireFields(protectedSurfaces, protectedPath, ["schemaVersion", "status", "policy", "surfaces"]);
 for (const [index, surface] of requireArray(protectedSurfaces, protectedPath, "surfaces", { nonEmpty: false }).entries()) {
@@ -165,7 +165,7 @@ for (const [index, surface] of requireArray(protectedSurfaces, protectedPath, "s
   requireFields(surface, label, ["id", "scope", "approvedBy", "approvedAt", "contract", "privateBaselineReference"]);
 }
 
-const budgetsPath = "docs/ui/performance-budgets.json";
+const budgetsPath = "docs/ui/performance-budgets.registry.json";
 const budgets = readJson(budgetsPath);
 requireFields(budgets, budgetsPath, ["schemaVersion", "status", "policy", "flows"]);
 const requiredFlows = [
@@ -186,7 +186,7 @@ for (const flow of requiredFlows) {
   if (!seenFlows.has(flow)) fail(`${budgetsPath}.flows must include ${flow}`);
 }
 
-const inspirationPath = "docs/ui/inspiration/index.json";
+const inspirationPath = "docs/ui/inspiration/references.registry.json";
 const inspiration = readJson(inspirationPath);
 requireFields(inspiration, inspirationPath, ["schemaVersion", "policy", "references"]);
 for (const [index, reference] of requireArray(inspiration, inspirationPath, "references").entries()) {
@@ -237,10 +237,10 @@ const requiredDocs = [
   "docs/ui/README.md",
   "docs/ui/pattern-registry/README.md",
   "docs/ui/interface-governance.config.json",
-  "docs/ui/debt-baseline.json",
-  "docs/ui/protected-surfaces.json",
-  "docs/ui/performance-budgets.json",
-  "docs/ui/inspiration/index.json",
+  "docs/ui/debt.baseline.json",
+  "docs/ui/protected-surfaces.registry.json",
+  "docs/ui/performance-budgets.registry.json",
+  "docs/ui/inspiration/references.registry.json",
 ];
 for (const relativePath of requiredDocs) {
   if (!fs.existsSync(path.join(rootDir, relativePath))) {

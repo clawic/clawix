@@ -24,9 +24,9 @@ The canonical interface source is a pattern registry plus references and
 contracts under `docs/ui/`. `STYLE.md` remains the prose style canon, while the
 registry is the machine-readable contract surface for agents and checks.
 
-Existing visual drift is recorded in `docs/ui/debt-baseline.json`. New or
+Existing visual drift is recorded in `docs/ui/debt.baseline.json`. New or
 touched code must not expand that baseline. Approved visual surfaces are frozen
-in `docs/ui/protected-surfaces.json`; only the user can declare a surface
+in `docs/ui/protected-surfaces.registry.json`; only the user can declare a surface
 approved/frozen.
 
 UI work is classified into four mutation classes:

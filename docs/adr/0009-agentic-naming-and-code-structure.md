@@ -56,7 +56,8 @@ Swift source follows the language idiom, normally `PascalCase` for files that
 contain primary types. TypeScript/JavaScript source uses `kebab-case`.
 Markdown docs and playbooks use `kebab-case` except conventional root docs.
 Owned JSON/YAML files use role suffixes such as `.registry.json`,
-`.manifest.json`, `.fixture.json`, `.schema.json`, or `.baseline.json`.
+`.manifest.json`, `.fixture.json`, `.schema.json`, `.baseline.json`,
+`.config.json`, or `.pattern.json`.
 
 Internal Swift and TypeScript symbols are in scope. Types use domain + role,
 such as `BridgeSessionStore`, `SnapshotCacheReader`, or

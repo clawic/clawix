@@ -22,7 +22,7 @@ or UI-local code.
 | Swift source | Language idiom, normally `PascalCase` | `BridgeSessionStore.swift` |
 | TS/JS source | `kebab-case`, except conventional configs/tests/declarations | `bridge-status-client.ts` |
 | Markdown docs/playbooks | `kebab-case` except conventional root docs | `agentic-naming-guide.md`, `README.md` |
-| JSON/YAML owned by Clawix | Role suffix | `vocabulary.registry.json`, `interface-surface-clawix.registry.json` |
+| JSON/YAML owned by Clawix | Role suffix | `vocabulary.registry.json`, `interface-surface-clawix.registry.json`, `toast.pattern.json` |
 | External config | External convention | `package.json`, `tsconfig.json` |
 
 ## Symbols

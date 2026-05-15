@@ -4,7 +4,7 @@
   "status": "mapped-existing-debt",
   "platforms": ["macos"],
   "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
-  "canonicalReferences": ["docs/ui/debt-baseline.json#ui-debt-design-surface-raw-visual-values", "macos/Sources/Clawix/Design"],
+  "canonicalReferences": ["docs/ui/debt.baseline.json#ui-debt-design-surface-raw-visual-values", "macos/Sources/Clawix/Design"],
   "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
   "geometry": { "source": "blocked from opportunistic cleanup; requires visual-authorized cleanup plan" },
   "copy": { "visibleNamesAreCanon": true, "labelMaxWords": 4, "tooltipMaxWords": 12 },

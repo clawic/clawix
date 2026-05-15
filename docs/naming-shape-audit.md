@@ -11,7 +11,7 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 78.
+- Naming warnings: 57.
 - Source-size warnings: 35.
 - Source-structure signals: 27.
 
@@ -41,10 +41,8 @@ for staged rename/split work and must not be hidden by compressing code.
   provider adapters, and persistence.
 - Web bridge exports: review `web/src/bridge/frames.ts` and `wire.ts` as large
   export surfaces.
-- UI governance docs: review newly added docs JSON names for role suffixes
-  (`*.registry.json`, `*.baseline.json`, `*.manifest.json`, or
-  `*.schema.json`) where they are owned data files rather than conventional
-  tool config.
+- UI governance docs: owned JSON files now use role suffixes, including
+  `*.registry.json`, `*.baseline.json`, `*.config.json`, and `*.pattern.json`.
 - Design builtins and persistent registry: expand compressed lists only when
   the next edit touches that area.
 - Broad Swift symbols: review `Manager`, `Helper`, `Data`, and `Info` only when
