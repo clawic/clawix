@@ -2,7 +2,7 @@ import Foundation
 
 private struct ProfileEmptyResponse: Decodable {}
 
-/// HTTP client for the marketplace/2.0.0 Profile surface exposed by `@clawjs/index`.
+/// HTTP client for the Profile surface exposed by `@clawjs/index`.
 /// Wraps `/v1/profile/*`, `/v1/feed`, `/v1/chats/*`, `/v1/marketplace/*` and
 /// `/v1/peers/*`. The daemon-side `@clawjs/profile` package owns all crypto;
 /// this client only ferries already-serialised payloads.

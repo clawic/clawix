@@ -64,7 +64,7 @@ const requiredFeatureFlags = new Set([
   "simulators",
 ]);
 const requiredIds = new Set([
-  "bridge.v8",
+  "bridge.v1",
   "deepLinks.session",
   "deepLinks.authCallback",
   "pairing.qrJson",
@@ -254,11 +254,61 @@ for (const pattern of ["legacy (v1-v5)", "legacyTypeTag", "encodeLegacyPayload",
     fail(`BridgeProtocol.swift contains ambiguous legacy bridge helper ${JSON.stringify(pattern)}`);
   }
 }
+for (const pattern of [
+  "clientKind: ClientKind?",
+  "clientId: String?",
+  "installationId: String?",
+  "deviceId: String?",
+  "decodeIfPresent(ClientKind.self, forKey: .clientKind)",
+  "decodeIfPresent(String.self, forKey: .clientId)",
+  "try c.encodeIfPresent(clientKind, forKey: .clientKind)",
+]) {
+  if (bridgeProtocol.includes(pattern)) {
+    fail(`BridgeProtocol.swift keeps auth identity optional: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const bridgeProtocolDoc = read("packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md");
+for (const snippet of [
+  "The current schema version is `1`.",
+  "`auth` `{ token, deviceName?, clientKind, clientId, installationId, deviceId }`",
+]) {
+  if (!bridgeProtocolDoc.includes(snippet)) {
+    fail(`BridgeProtocol.md is missing auth v1 contract snippet ${JSON.stringify(snippet)}`);
+  }
+}
 
 const databaseConnectionProfiles = read("macos/Sources/Clawix/Database/DatabaseConnectionProfiles.swift");
-for (const pattern of ["case legacy", "return \"SSH 0.9.5\""]) {
+for (const pattern of ["case legacy", "compat-0.9.5", "return \"SSH 0.9.5\""]) {
   if (databaseConnectionProfiles.includes(pattern)) {
     fail(`DatabaseConnectionProfiles.swift exposes ambiguous legacy SSH option ${JSON.stringify(pattern)}`);
+  }
+}
+
+if (fs.existsSync(path.join(rootDir, "macos/Sources/Clawix/Marketplace/MarketplaceScreenV2.swift"))) {
+  fail("MarketplaceScreenV2.swift must not ship while Marketplace v1 is the registered public surface");
+}
+
+const clawJSProfileClient = read("macos/Sources/Clawix/ClawJS/ClawJSProfileClient.swift");
+if (clawJSProfileClient.includes("marketplace/2.0.0")) {
+  fail("ClawJSProfileClient.swift must not describe the Profile client as marketplace/2.0.0");
+}
+
+const bridgeModels = read("packages/ClawixCore/Sources/ClawixCore/BridgeModels.swift");
+for (const pattern of [
+  "legacy payloads",
+  "old peers",
+  "Old peers",
+  "old Mac",
+  "Old Macs",
+  "phased rollout",
+  "pre-multi-runtime",
+  "legacy badging",
+  "v7 peers",
+  "v8 reference",
+]) {
+  if (bridgeModels.includes(pattern)) {
+    fail(`BridgeModels.swift contains compatibility-only wording ${JSON.stringify(pattern)}`);
   }
 }
 

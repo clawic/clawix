@@ -66,7 +66,7 @@ const forbiddenByPath = new Map([
   ["macos/Sources/Clawix/Dictation/Enhancement/PromptLibrary.swift", ["dictation.enhancement.customPrompts"]],
   ["macos/Sources/Clawix/Providers/FeatureRouting.swift", ["providerAccountKey", "modelKey(", "providerEnabledKey", "feature.<feature>.providerAccountId", "feature.<feature>.modelId", "provider.<provider>.enabled"]],
   ["macos/Sources/Clawix/Agents/AgentStore.swift", ["Filesystem source-of-truth"]],
-  ["macos/Sources/Clawix/Skills/SkillsStore.swift", ["UserDefaults.standard", "ClawixSkillsActiveByScope", "ClawixSkillsUserCatalog", "bridge frames v6", "seed data + UserDefaults"]],
+  ["macos/Sources/Clawix/Skills/SkillsStore.swift", ["UserDefaults.standard", "ClawixSkillsActiveByScope", "ClawixSkillsUserCatalog", "seed data + UserDefaults"]],
   ["docs/persistent-surface-clawix.manifest.json", [
     "Application Support/Clawix/Apps",
     "Application Support/Clawix/Design",
