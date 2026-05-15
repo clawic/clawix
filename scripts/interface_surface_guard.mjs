@@ -477,6 +477,25 @@ if (hostsPageSource.includes("typealias MachinesPage = HostsPage")) {
   fail("HostsPage.swift must not keep the pre-v1 MachinesPage alias");
 }
 
+const settingsControlsSource = read("macos/Sources/Clawix/Settings/SettingsView+Controls.swift");
+for (const pattern of ["fillsWidth", "source compatibility"]) {
+  if (settingsControlsSource.includes(pattern)) {
+    fail(`SettingsView+Controls.swift must not keep no-op compatibility parameters: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const secretKindIconSource = read("macos/Sources/Clawix/Secrets/SecretKindIcon.swift");
+if (secretKindIconSource.includes("source compatibility")) {
+  fail("SecretKindIcon.swift must not keep no-op compatibility parameters");
+}
+
+const lucideBridgeSource = read("macos/Sources/Clawix/LucideBridge.swift");
+for (const pattern of ["legacy SF Symbol", "init(lucideOrSystem", "Compatibility shim"]) {
+  if (lucideBridgeSource.includes(pattern)) {
+    fail(`LucideBridge.swift must not keep pre-v1 icon compatibility shims: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

@@ -104,7 +104,7 @@ struct SecretDetailPane: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                 )
-            SecretKindIcon(kind: secret.kind, size: 28, lineWidth: 1.4, color: Palette.textPrimary)
+            SecretKindIcon(kind: secret.kind, size: 28, color: Palette.textPrimary)
         }
         .frame(width: 60, height: 60)
     }

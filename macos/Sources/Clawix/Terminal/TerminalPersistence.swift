@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-/// GRDB row type for the `terminal_tabs` table (v8 migration). The split
+/// GRDB row type for the `terminal_tabs` table. The split
 /// tree is stored as a JSON blob so the schema doesn't need to know
 /// about its recursive shape; encode/decode happens in the repository.
 struct TerminalTabRecord: Codable, FetchableRecord, MutablePersistableRecord, Equatable {

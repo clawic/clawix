@@ -8,9 +8,6 @@ import SecretsModels
 struct SecretKindIcon: View {
     let kind: SecretKind
     var size: CGFloat = 18
-    /// Kept for source compatibility with older call sites; Lucide is a
-    /// font, so stroke weight comes from the glyph itself.
-    var lineWidth: CGFloat = 1.3
     var color: Color = Color(white: 0.86)
 
     var body: some View {

@@ -88,10 +88,6 @@ struct SettingsDropdown<T: Hashable>: View {
     /// this if its content (longest option's text + icon + chevron +
     /// padding) requires it.
     var minWidth: CGFloat = 160
-    /// Kept for source compatibility with existing call sites; the
-    /// trigger now sizes adaptively to its content, so this flag is a
-    /// no-op. It can be deleted once nothing references it.
-    var fillsWidth: Bool = false
 
     @State private var isOpen = false
     @State private var hovered = false

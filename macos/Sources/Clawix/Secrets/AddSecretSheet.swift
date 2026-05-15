@@ -75,7 +75,6 @@ struct AddSecretSheet: View {
                     SecretKindIcon(
                         kind: kind,
                         size: 50,
-                        lineWidth: 1.4,
                         color: Color(white: 0.93)
                     )
                 }

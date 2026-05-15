@@ -3,16 +3,12 @@ import SwiftUI
 import Combine
 
 /// Aggregates tool catalogs from every feature manager that publishes
-/// one (today: `IoTManager`; future: a migrated `DatabaseManager`,
-/// `NotesManager`, `CalendarManager`, ...). The aggregated list is the
-/// surface a runtime adapter hands to the LLM as available functions,
-/// and the source the future `.iotHome` debug pane reads to render
-/// per-feature catalogs.
+/// one. The aggregated list is the surface a runtime adapter hands to
+/// the LLM as available functions, and the source debug panes read to
+/// render per-feature catalogs.
 ///
-/// Phase 1 wires the IoT feed only. The class lives in `Tools/` so the
-/// migration of `DatabaseTools.swift` (plan F1.h notes it as the next
-/// migration target) plugs in by passing a database catalog publisher
-/// here without touching IoT-specific code.
+/// Feature managers plug in by passing their catalog publisher here
+/// without touching other domains' code.
 @MainActor
 final class RemoteToolsRegistry: ObservableObject {
 

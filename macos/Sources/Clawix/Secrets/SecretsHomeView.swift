@@ -204,7 +204,7 @@ private struct SecretListRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 10) {
-                SecretKindIcon(kind: secret.kind, size: 18, lineWidth: 1.3, color: Color(white: 0.86))
+                SecretKindIcon(kind: secret.kind, size: 18, color: Color(white: 0.86))
                     .frame(width: 22, height: 22)
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {

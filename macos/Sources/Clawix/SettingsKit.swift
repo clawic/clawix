@@ -130,8 +130,7 @@ struct DropdownRow<T: Hashable>: View {
                 selection: $selection,
                 iconForOption: iconForOption,
                 descriptionForOption: descriptionForOption,
-                minWidth: minWidth,
-                fillsWidth: true
+                minWidth: minWidth
             )
         }
         .liftWhenSettingsDropdownOpen()

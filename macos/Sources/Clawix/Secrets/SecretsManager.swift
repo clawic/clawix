@@ -7,9 +7,8 @@ import SecretsProxyCore
 
 /// SecretsManager owns the lifecycle of the local Secrets UI but delegates
 /// every cryptographic and storage operation to the bundled ClawJS Vault
-/// HTTP server. It keeps the surface that the existing SwiftUI views
-/// consume (`store`, `audit`, `grants`, `vaults`, `secrets`, ...) so the
-/// migration to ClawJS Vault is invisible to them.
+/// HTTP server. Its published state is the v1 SwiftUI contract consumed by
+/// the Secrets screens (`store`, `audit`, `grants`, `vaults`, `secrets`, ...).
 ///
 /// Auth model: Clawix uses the per-session bearer token minted by the
 /// signed host supervisor. Loopback alone is not trusted for Secrets.
@@ -57,7 +56,7 @@ final class SecretsManager: ObservableObject {
         case openFailed(String)
     }
 
-    // MARK: - Published surface (compatible with existing SwiftUI views)
+    // MARK: - Published surface
 
     @Published private(set) var state: State = .loading
     @Published private(set) var lastError: String?

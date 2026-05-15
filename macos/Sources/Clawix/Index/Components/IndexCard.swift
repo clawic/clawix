@@ -49,8 +49,7 @@ struct IndexEntityCard: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 6) {
-                            Image(lucideOrSystem: meta.lucideName)
-                                .font(.system(size: 11, weight: .medium))
+                            LucideIcon.auto(meta.lucideName, size: 11)
                                 .foregroundColor(meta.accent)
                             Text(meta.typeName.capitalized)
                                 .font(BodyFont.system(size: 10.5, wght: 500))
@@ -101,8 +100,7 @@ struct IndexEntityCard: View {
                     endPoint: .bottomTrailing
                 )
                 .overlay(
-                    Image(lucideOrSystem: meta.lucideName)
-                        .font(.system(size: 30, weight: .light))
+                    LucideIcon.auto(meta.lucideName, size: 30)
                         .foregroundColor(.white.opacity(0.6))
                 )
             }
@@ -122,8 +120,7 @@ struct IndexEntityCard: View {
                 }
                 if let ratingLabel = ratingLabel {
                     HStack(spacing: 3) {
-                        Image(lucideOrSystem: "star")
-                            .font(.system(size: 9, weight: .semibold))
+                        LucideIcon.auto("star", size: 9)
                         Text(ratingLabel)
                             .font(BodyFont.system(size: 11.5, wght: 600))
                     }

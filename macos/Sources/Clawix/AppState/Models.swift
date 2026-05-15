@@ -289,10 +289,9 @@ struct Chat: Identifiable, Equatable {
     /// reference via a `SidebarItem.chat` entry.
     var isSideChat: Bool = false
     /// Owning `Agent.id`. Default = built-in Codex agent
-    /// (`Agent.defaultCodexId`), which preserves the legacy "every chat
-    /// is a Codex chat" semantics. Surfaced on the new Agents tabs and
-    /// in the composer dropdown so the user knows which agent will pick
-    /// up the next turn.
+    /// (`Agent.defaultCodexId`). Surfaced on the Agents tabs and in the
+    /// composer dropdown so the user knows which agent will pick up the
+    /// next turn.
     var agentId: String = Agent.defaultCodexId
     /// Last activity timestamp; used by `AgentDetailView.chatsTab` to
     /// sort chats and by the surfaces that show the agent roster.

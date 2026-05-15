@@ -57,7 +57,6 @@ enum IndexTypeCatalog {
 
     static func lucideImage(for typeName: String, size: CGFloat = 14) -> some View {
         let meta = meta(for: typeName)
-        return Image(lucideOrSystem: meta.lucideName)
-            .font(.system(size: size, weight: .medium))
+        return LucideIcon.auto(meta.lucideName, size: size)
     }
 }

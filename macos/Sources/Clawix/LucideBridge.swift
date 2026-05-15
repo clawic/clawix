@@ -208,7 +208,7 @@ struct LucideIcon: View {
         .accessibilityHidden(true)
     }
 
-    /// Maps a legacy SF Symbol name to a Lucide kind. Used by the
+    /// Maps an SF Symbol-style name to a Lucide kind. Used by the
     /// `auto(_:)` helper at sites where the icon name is computed at
     /// runtime (settings categories, plugin metadata, permission modes).
     static func sfMapped(_ symbol: String) -> Kind? {
@@ -327,17 +327,5 @@ struct LucideIcon: View {
             Image(systemName: systemName)
                 .font(.system(size: size))
         }
-    }
-}
-
-extension Image {
-    /// Compatibility shim used by call sites that pass an SF Symbol
-    /// name string for parity with platforms that haven't been migrated
-    /// to the `LucideIcon` enum yet. Routes everything through
-    /// `Image(systemName:)`; sites that need Lucide rendering should
-    /// use `LucideIcon.auto(_:)` instead, which this `Image` extension
-    /// can't reach because `Image` is a fixed concrete type.
-    init(lucideOrSystem name: String) {
-        self.init(systemName: name)
     }
 }

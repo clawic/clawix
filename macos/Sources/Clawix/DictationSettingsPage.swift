@@ -787,8 +787,7 @@ private struct MicrophoneSelectorRow: View {
                         AnyView(
                             MicLevelTinyMeter(meter: meter, active: isMeterActive)
                         )
-                    },
-                    fillsWidth: true
+                    }
                 )
             }
         }

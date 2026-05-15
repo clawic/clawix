@@ -185,9 +185,8 @@ struct Agent: Identifiable, Equatable, Codable {
     var updatedAt: Date
 
     /// Whether this agent is a built-in template the editor keeps
-    /// read-only. The default Codex agent is the only one today; it
-    /// shadows the previous `AgentRuntimeChoice` behaviour so existing
-    /// chats keep working without a migration.
+    /// read-only. The default Codex agent is the built-in owner for
+    /// chats that do not choose a custom agent.
     var isBuiltin: Bool
 
     static let defaultCodexId: String = "agent.default.codex"
