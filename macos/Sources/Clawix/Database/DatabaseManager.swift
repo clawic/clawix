@@ -226,18 +226,22 @@ final class DatabaseManager: ObservableObject {
         id: String,
         data: [String: DBJSON]
     ) async throws -> DBRecord {
-        let updated = try await client.updateRecord(
-            namespaceId: currentNamespace,
-            collection: name,
-            id: id,
-            data: data
-        )
+        let updated = try await performMutation {
+            try await client.updateRecord(
+                namespaceId: currentNamespace,
+                collection: name,
+                id: id,
+                data: data
+            )
+        }
         upsertRecordInCache(updated, collection: name)
         return updated
     }
 
     func deleteRecord(collection name: String, id: String) async throws {
-        try await client.deleteRecord(namespaceId: currentNamespace, collection: name, id: id)
+        _ = try await performMutation {
+            try await client.deleteRecord(namespaceId: currentNamespace, collection: name, id: id)
+        }
         if var current = recordsByCollection[name] {
             current.removeAll { $0.id == id }
             recordsByCollection[name] = current
@@ -259,6 +263,17 @@ final class DatabaseManager: ObservableObject {
             id: id,
             data: ["archivedAt": .null]
         )
+    }
+
+    private func performMutation<T>(_ operation: () async throws -> T) async throws -> T {
+        do {
+            let value = try await operation()
+            lastError = nil
+            return value
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
     }
 
     /// Returns a flat list of records with the current filter applied

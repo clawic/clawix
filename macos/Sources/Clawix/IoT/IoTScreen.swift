@@ -32,6 +32,9 @@ struct IoTScreen: View {
             Palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 header
+                if case .ready = manager.state, let lastError = manager.lastError {
+                    errorBanner(lastError)
+                }
                 tabContent
             }
         }
@@ -75,7 +78,7 @@ struct IoTScreen: View {
                 Menu {
                     ForEach(manager.homes) { home in
                         Button {
-                            // Future: manager.switchHome(home.id)
+                            Task { await manager.switchHome(home.id) }
                         } label: {
                             Text(verbatim: home.label)
                         }
@@ -117,6 +120,16 @@ struct IoTScreen: View {
             return "\(thingCount) device\(thingCount == 1 ? "" : "s")\(approvalsBadge)"
         case .failed(let reason): return reason
         }
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        Text(verbatim: message)
+            .font(BodyFont.system(size: 11.5, weight: .medium))
+            .foregroundColor(.orange)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.10))
     }
 
     @ViewBuilder

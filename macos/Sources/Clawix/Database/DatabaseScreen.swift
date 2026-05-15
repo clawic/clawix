@@ -24,7 +24,12 @@ struct DatabaseScreen: View {
             case .failed(let reason):
                 failedPlaceholder(reason: reason)
             case .ready:
-                content
+                VStack(spacing: 0) {
+                    if let lastError = manager.lastError {
+                        errorBanner(lastError)
+                    }
+                    content
+                }
             }
         }
         .background(Palette.background)
@@ -38,6 +43,16 @@ struct DatabaseScreen: View {
                 .foregroundColor(Palette.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        Text(message)
+            .font(BodyFont.system(size: 11.5, wght: 500))
+            .foregroundColor(.orange)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.10))
     }
 
     private func failedPlaceholder(reason: String) -> some View {

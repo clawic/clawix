@@ -143,6 +143,17 @@ final class IoTManager: NSObject, ObservableObject {
         self.pendingApprovalsCount = approvals.filter { $0.status == "pending" }.count
     }
 
+    func switchHome(_ homeId: String) async {
+        guard currentHomeId != homeId else { return }
+        currentHomeId = homeId
+        do {
+            try await refreshAll()
+            lastError = nil
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
     func refreshCatalog() async {
         guard case .ready = state else { return }
         do {
@@ -159,7 +170,9 @@ final class IoTManager: NSObject, ObservableObject {
 
     @discardableResult
     func runAction(_ request: IoTActionRequest) async throws -> IoTActionResult {
-        let result = try await client.runAction(request, homeId: currentHomeId)
+        let result = try await performAction {
+            try await client.runAction(request, homeId: currentHomeId)
+        }
         // After a successful action the SSE event will re-trigger our
         // snapshot refresh; we kick a manual refresh too so the UI
         // does not wait on the event round-trip when the user just
@@ -169,46 +182,71 @@ final class IoTManager: NSObject, ObservableObject {
     }
 
     func activateScene(_ scene: SceneRecord) async throws {
-        _ = try await client.activateScene(sceneId: scene.id, homeId: currentHomeId)
+        _ = try await performAction {
+            try await client.activateScene(sceneId: scene.id, homeId: currentHomeId)
+        }
         Task { try? await refreshAll() }
     }
 
     func setAutomationEnabled(_ automation: AutomationRecord, enabled: Bool) async throws {
-        _ = try await client.setAutomationEnabled(
-            automationId: automation.id,
-            enabled: enabled,
-            homeId: currentHomeId,
-        )
+        _ = try await performAction {
+            try await client.setAutomationEnabled(
+                automationId: automation.id,
+                enabled: enabled,
+                homeId: currentHomeId,
+            )
+        }
         Task { try? await refreshAll() }
     }
 
     func runAutomation(_ automation: AutomationRecord) async throws {
-        _ = try await client.runAutomation(automationId: automation.id, homeId: currentHomeId)
+        _ = try await performAction {
+            try await client.runAutomation(automationId: automation.id, homeId: currentHomeId)
+        }
         Task { try? await refreshAll() }
     }
 
     func approveApproval(_ approval: ApprovalRecord) async throws -> IoTActionResult {
-        let result = try await client.approveApproval(approvalId: approval.id, homeId: currentHomeId)
+        let result = try await performAction {
+            try await client.approveApproval(approvalId: approval.id, homeId: currentHomeId)
+        }
         Task { try? await refreshAll() }
         return result
     }
 
     func denyApproval(_ approval: ApprovalRecord) async throws {
-        _ = try await client.denyApproval(approvalId: approval.id, homeId: currentHomeId)
+        _ = try await performAction {
+            try await client.denyApproval(approvalId: approval.id, homeId: currentHomeId)
+        }
         Task { try? await refreshAll() }
     }
 
     func addThing(input: IoTClient.AddThingInput) async throws -> ThingRecord {
         var input = input
         if input.homeId == nil { input.homeId = currentHomeId }
-        let thing = try await client.addThing(input: input)
+        let thing = try await performAction {
+            try await client.addThing(input: input)
+        }
         Task { try? await refreshAll() }
         return thing
     }
 
     func removeThing(_ thing: ThingRecord) async throws {
-        try await client.removeThing(thingId: thing.id, homeId: currentHomeId)
+        try await performAction {
+            try await client.removeThing(thingId: thing.id, homeId: currentHomeId)
+        }
         Task { try? await refreshAll() }
+    }
+
+    private func performAction<T>(_ operation: () async throws -> T) async throws -> T {
+        do {
+            let value = try await operation()
+            lastError = nil
+            return value
+        } catch {
+            lastError = error.localizedDescription
+            throw error
+        }
     }
 
     func startDiscovery(timeoutMs: Int? = nil) async throws {

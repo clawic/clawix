@@ -589,6 +589,23 @@ for (const pattern of ["future approved run", "future approved connection"]) {
   }
 }
 
+const iotScreenSource = read("macos/Sources/Clawix/IoT/IoTScreen.swift");
+for (const pattern of ["Future: manager.switchHome", "Button {\n                            //"]) {
+  if (iotScreenSource.includes(pattern)) {
+    fail(`IoTScreen.swift must not expose no-op multi-home controls: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const databaseManagerSource = read("macos/Sources/Clawix/Database/DatabaseManager.swift");
+if (!databaseManagerSource.includes("private func performMutation")) {
+  fail("DatabaseManager.swift must route record mutation failures into lastError");
+}
+
+const iotManagerSource = read("macos/Sources/Clawix/IoT/IoTManager.swift");
+if (!iotManagerSource.includes("private func performAction")) {
+  fail("IoTManager.swift must route IoT action failures into lastError");
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",
