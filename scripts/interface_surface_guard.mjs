@@ -548,6 +548,47 @@ for (const pattern of ["does not yet support", "Phase 3"]) {
   }
 }
 
+const agentsHomeSource = read("macos/Sources/Clawix/Agents/AgentsHomeView.swift");
+for (const pattern of ["Importer is wired in as a stub", "importPicker", "tray.and.arrow.down"]) {
+  if (agentsHomeSource.includes(pattern)) {
+    fail(`AgentsHomeView.swift must not expose a non-functional import affordance: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const eventInspectorSource = read("macos/Sources/Clawix/Calendar/Views/EventInspectorPanel.swift");
+for (const pattern of ["Add invitees", "Repeat: never", "Alert: 15 minutes before", "placeholder: true"]) {
+  if (eventInspectorSource.includes(pattern)) {
+    fail(`EventInspectorPanel.swift must not render calendar fields absent from the v1 event model: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const powerModeEditorSource = read("macos/Sources/Clawix/Dictation/PowerMode/PowerModeEditor.swift");
+for (const pattern of ["coming soon", "not active yet", "nothing fires", "contextAwareness"]) {
+  if (powerModeEditorSource.includes(pattern)) {
+    fail(`PowerModeEditor.swift must not expose inert enhancement controls: ${JSON.stringify(pattern)}`);
+  }
+}
+const localizableStringsSource = read("macos/Sources/Clawix/Resources/Localizable.xcstrings");
+for (const pattern of ["Enhancement (coming soon)", "nothing fires until the Enhancement module ships"]) {
+  if (localizableStringsSource.includes(pattern)) {
+    fail(`Localizable.xcstrings must not keep stale visible v1 placeholder copy: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const generalSettingsSource = read("macos/Sources/Clawix/Settings/SettingsView+GeneralPage.swift");
+for (const pattern of ["upcoming", "stub helper", "won't have your chats yet"]) {
+  if (generalSettingsSource.includes(pattern)) {
+    fail(`SettingsView+GeneralPage.swift must describe the current bridge contract, not a stub future: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const databaseWorkbenchSettingsSource = read("macos/Sources/Clawix/Database/DatabaseWorkbenchSettingsPage.swift");
+for (const pattern of ["future approved run", "future approved connection"]) {
+  if (databaseWorkbenchSettingsSource.includes(pattern)) {
+    fail(`DatabaseWorkbenchSettingsPage.swift must use explicit approval language instead of future placeholders: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

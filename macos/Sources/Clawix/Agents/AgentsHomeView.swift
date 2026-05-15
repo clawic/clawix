@@ -11,7 +11,6 @@ struct AgentsHomeView: View {
     @EnvironmentObject private var appState: AppState
     @State private var showNewMenu: Bool = false
     @State private var editorAgent: Agent?
-    @State private var importPicker: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,17 +29,6 @@ struct AgentsHomeView: View {
                 appState.navigate(to: .agentDetail(id: saved.id))
             }
         }
-        .fileImporter(isPresented: $importPicker,
-                      allowedContentTypes: [.zip],
-                      allowsMultipleSelection: false) { result in
-            // Importer is wired in as a stub: the on-disk layout per
-            // `~/.claw/agents/<id>/` is already a directory we can zip
-            // and unzip with the OS. Wiring this end-to-end (zip parse,
-            // id collision resolution, re-derive defaults) is part of
-            // MVP step 7 — fileImporter handles the file selection so
-            // the surface is ready when the unpack helper lands.
-            _ = result
-        }
     }
 
     // MARK: - Header
@@ -56,9 +44,6 @@ struct AgentsHomeView: View {
                     .foregroundColor(Palette.textSecondary)
             }
             Spacer()
-            IconChipButton(symbol: "tray.and.arrow.down",
-                           label: "Import",
-                           action: { importPicker = true })
             IconChipButton(symbol: "plus",
                            label: "New agent",
                            isPrimary: true,

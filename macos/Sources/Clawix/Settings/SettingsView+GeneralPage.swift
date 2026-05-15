@@ -115,7 +115,7 @@ struct GeneralPage: View {
                 CardDivider()
                 ToggleRow(
                     title: "Run bridge in background",
-                    detail: "Registers a LaunchAgent helper that keeps a bridge process alive even after Clawix is fully quit. Closing the window already keeps the in-process bridge alive thanks to the menu bar item; this toggle is a foundation for the upcoming \"daemon owns chat state\" mode and currently registers a stub helper that won't have your chats yet. Status: \(backgroundBridge.statusLabel)\(backgroundBridge.lastError.map { " — \($0)" } ?? "")",
+                    detail: "Registers the LaunchAgent bridge so the daemon can stay alive after Clawix quits. Status: \(backgroundBridge.statusLabel)\(backgroundBridge.lastError.map { " — \($0)" } ?? "")",
                     isOn: Binding(
                         get: { backgroundBridge.isEnabled },
                         set: { backgroundBridge.toggle($0) }

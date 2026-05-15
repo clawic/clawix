@@ -11,12 +11,7 @@ struct EventInspectorPanel: View {
             dateLine
             if let location = event.location, !location.isEmpty {
                 iconRow(icon: .link, text: location)
-            } else {
-                iconRow(icon: .link, text: "Add location", placeholder: true)
             }
-            iconRow(icon: .messageCircle, text: "Add invitees", placeholder: true)
-            iconRow(icon: .rotateCw, text: "Repeat: never", placeholder: true)
-            iconRow(icon: .clock, text: "Alert: 15 minutes before", placeholder: true)
             notesBlock
             Spacer(minLength: 0)
             footer
@@ -73,14 +68,14 @@ struct EventInspectorPanel: View {
         }
     }
 
-    private func iconRow(icon: LucideIcon.Kind, text: String, placeholder: Bool = false) -> some View {
+    private func iconRow(icon: LucideIcon.Kind, text: String) -> some View {
         HStack(spacing: 8) {
             LucideIcon(icon, size: 12)
                 .foregroundColor(CalendarTokens.Ink.secondary)
                 .frame(width: 18, alignment: .center)
             Text(text)
                 .font(.system(size: CalendarTokens.TypeSize.inspectorLabel))
-                .foregroundColor(placeholder ? CalendarTokens.Ink.tertiary : CalendarTokens.Ink.primary)
+                .foregroundColor(CalendarTokens.Ink.primary)
             Spacer()
         }
     }

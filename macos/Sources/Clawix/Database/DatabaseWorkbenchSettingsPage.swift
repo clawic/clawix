@@ -63,7 +63,7 @@ struct DatabaseWorkbenchSettingsPage: View {
                 CardDivider()
                 TextFieldRow(title: "Search term", detail: "Term used by database search.", text: $operations.searchTerm)
                 CardDivider()
-                MultilineTextRow(title: "Plugin script", detail: "Local script staged for a future approved run.", text: $operations.pluginScript)
+                MultilineTextRow(title: "Plugin script", detail: "Local script staged for an explicitly approved run.", text: $operations.pluginScript)
             }
 
             SectionLabel(title: "Operation actions")
@@ -510,7 +510,7 @@ private struct DatabaseConnectionProfileEditorSheet: View {
                         CardDivider()
                         ToggleRow(title: "Disable channel binding", detail: "Compatibility option for older servers and proxies.", isOn: $draft.disableChannelBinding)
                         CardDivider()
-                        MultilineTextRow(title: "Bootstrap commands", detail: "SQL run after a future approved connection opens.", text: $draft.bootstrapSQL)
+                        MultilineTextRow(title: "Bootstrap commands", detail: "SQL run after an explicitly approved connection opens.", text: $draft.bootstrapSQL)
                     }
                 }
                 .padding(.horizontal, 20)

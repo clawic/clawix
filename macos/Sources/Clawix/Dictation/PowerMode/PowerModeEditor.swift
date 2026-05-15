@@ -135,8 +135,8 @@ struct PowerModeEditor: View {
     }
 
     private var enhancementSection: some View {
-        EditorSection(title: "Enhancement (coming soon)") {
-            Text("AI Enhancement integration is wired in the data model but not active yet. Toggling here only persists the value; nothing fires until the Enhancement module ships.")
+        EditorSection(title: "Enhancement") {
+            Text("When enabled for this profile, global AI Enhancement can process matching transcripts. When disabled, matching transcripts pass through unchanged.")
                 .font(BodyFont.system(size: 11, wght: 500))
                 .foregroundColor(Palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -144,11 +144,6 @@ struct PowerModeEditor: View {
                 EditorLabel(text: "Enhance transcripts")
                 Spacer()
                 PillToggle(isOn: $config.enhancementEnabled)
-            }
-            EditorRow {
-                EditorLabel(text: "Bundle clipboard + screen context")
-                Spacer()
-                PillToggle(isOn: $config.contextAwareness)
             }
         }
     }
