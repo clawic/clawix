@@ -15,6 +15,15 @@ ownership decisions, read [`docs/host-ownership.md`](docs/host-ownership.md),
 and [`docs/adr/0004-source-file-boundaries.md`](docs/adr/0004-source-file-boundaries.md)
 before editing.
 
+For non-trivial questions or plans about framework behavior, agents start with
+a `claw` discovery pass before relying on direct source reads. Use
+`claw search <topic> --json`, then the relevant `claw inspect
+commands|why|database|schemas|storage|codebase` command. For data model work,
+use `claw collections list`, `claw collections <collection> schema`, and
+`claw db <collection> list|query`; source files are evidence after the CLI map.
+Do not perform writes, cost-bearing calls, secret access, native permissions,
+or real service actions without explicit approval or dry-run isolation.
+
 ## Repository layout
 
 ```

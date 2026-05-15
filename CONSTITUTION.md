@@ -97,12 +97,15 @@ permission, decision record, or codebase fact matters to an agent, the CLI
 must expose it through a registered, documented, testable surface. Agents
 should not need to read framework source files to learn what the framework can
 do; source remains evidence, while CLI inspection and search are the canonical
-agent-facing view. The CLI is also the just-in-time guidance surface: when the
-command attempt itself proves that compact instructions, resource references,
-or risk notes apply, `claw` may return short `meta.guidance` hints with links
-to expandable records instead of injecting long documents into context.
-Guidance identifies relevant instructions; it never grants permissions,
-reveals secrets, or bypasses signed-host approvals.
+agent-facing view. Before answering a non-trivial project question or planning
+work against the framework, agents do a `claw` discovery pass unless the task
+is trivial, the CLI is unavailable, or the relevant fact is explicitly outside
+the framework contract. The CLI is also the just-in-time guidance surface: when
+the command attempt itself proves that compact instructions, resource
+references, or risk notes apply, `claw` may return short `meta.guidance` hints
+with links to expandable records instead of injecting long documents into
+context. Guidance identifies relevant instructions; it never grants
+permissions, reveals secrets, or bypasses signed-host approvals.
 
 **I.6 Capabilities are complete only when dual-surfaced.** Persistent user
 value outlives any one model, provider, session, device, or app. Every
@@ -262,6 +265,15 @@ automations, workflows, or delegated runs. Agents have their own identity for
 inspection and accountability, but their authority is derived from explicit
 human or organizational authorization. If the system cannot explain who
 authorized an action and why it was allowed, the action is not governable.
+
+**IV.5 External reporting is consentful and structured.** When agents help a
+user send diagnostics, bug reports, feature demand, translation feedback, PR
+proposals, or security findings to GitHub or another external system, the
+framework must redact private local context, block low-quality and public
+security disclosures, show a human preview, require explicit approval, and use
+a traceable user-owned connector identity. Automation may classify, score,
+dedupe, label, and recommend, but it must not publish, close, lock, or suppress
+without human authorization.
 
 ### V. Architecture between human and agent
 

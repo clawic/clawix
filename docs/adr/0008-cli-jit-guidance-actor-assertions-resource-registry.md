@@ -29,8 +29,16 @@ resource-backed `resourceId/projectId`, while `project_path` remains a mutable
 locator. Clawix may show a minimal human surface for registered resources,
 guidance, and status using existing visual patterns.
 
+ClawJS ADR 0007 defines the operational discovery protocol: agents use `claw`
+search and inspect surfaces before treating source files as the primary map for
+non-trivial framework questions, with `claw collections` and `claw db` as the
+agent-facing local data catalog.
+
 ## Rules
 
+- Agents working in Clawix follow the ClawJS CLI discovery protocol whenever a
+  change or question crosses into framework contracts, storage, data models,
+  host integration, permissions, grants, approvals, or audit.
 - Guidance never grants permissions and never bypasses signed-host approvals,
   grants, policies, audit, native permission prompts, or secret brokering.
 - Compact hints do not contain long documents, plaintext secrets, or private
