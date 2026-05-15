@@ -156,6 +156,7 @@ android_unit_tests() {
 }
 
 bridge_fixture_tests() {
+  run python3 "$ROOT_DIR/macos/scripts/compile_xcstrings.py"
   run bash "$ROOT_DIR/macos/scripts/e2e_validate.sh"
 }
 
@@ -194,8 +195,10 @@ live_tests() {
 
 fast() {
   run bash "$ROOT_DIR/macos/scripts/public_hygiene_check.sh"
+  run node "$ROOT_DIR/scripts/tracked-ignored-check.mjs"
   run node "$ROOT_DIR/scripts/source-size-check.mjs"
   run node "$ROOT_DIR/scripts/codebase-manifest.mjs" --check
+  run node "$ROOT_DIR/scripts/package_surface_guard.mjs"
   policy_guard
   mapfile -t packages < <(fast_swift_packages)
   swift_package_tests "${packages[@]}"
@@ -204,6 +207,7 @@ fast() {
 
 integration() {
   fast "$@"
+  run python3 "$ROOT_DIR/macos/scripts/compile_xcstrings.py"
   mapfile -t packages < <(integration_swift_packages)
   swift_package_tests "${packages[@]}"
 }

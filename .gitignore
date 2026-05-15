@@ -11,8 +11,8 @@ artifacts/
 coverage/
 .tmp/
 .tmp-*/
+docs/codebase-manifest.json
 packages/*/.build/
-*.app/
 *.xcodeproj/
 DerivedData/
 .swiftpm/
@@ -33,3 +33,7 @@ xcuserdata/
 macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/**
 !macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/
 !macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/.gitkeep
+
+# Generated from macOS Sources/Clawix/Resources/Localizable.xcstrings.
+macos/Sources/Clawix/Resources/*.lproj/Localizable.strings
+macos/Sources/Clawix/Resources/*.lproj/Localizable.stringsdict

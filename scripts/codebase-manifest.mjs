@@ -223,6 +223,57 @@ function stableJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function validateManifest(manifest) {
+  const failures = [];
+  if (manifest.schemaVersion !== 1) failures.push("schemaVersion must be 1");
+  if (manifest.root !== ".") failures.push("root must be '.'");
+  if (manifest.scope !== "repository") failures.push("scope must be 'repository'");
+  if (!manifest.summary || typeof manifest.summary !== "object") failures.push("summary must be an object");
+  if (!Array.isArray(manifest.files)) failures.push("files must be an array");
+  if (failures.length) return failures;
+
+  const paths = new Set();
+  const languages = { typescript: 0, javascript: 0, swift: 0 };
+  let tests = 0;
+  let entrypoints = 0;
+  let previousPath = "";
+
+  for (const file of manifest.files) {
+    if (!file || typeof file !== "object") {
+      failures.push("each file record must be an object");
+      continue;
+    }
+    if (typeof file.path !== "string" || file.path.length === 0) {
+      failures.push("each file record needs a path");
+      continue;
+    }
+    if (file.path < previousPath) failures.push(`files are not sorted near ${file.path}`);
+    previousPath = file.path;
+    if (paths.has(file.path)) failures.push(`duplicate file path ${file.path}`);
+    paths.add(file.path);
+    if (file.path.includes("/web-dist/")) failures.push(`generated web-dist path included: ${file.path}`);
+    if (!SOURCE_EXTENSIONS.has(path.extname(file.path))) failures.push(`unexpected source extension: ${file.path}`);
+    if (!(file.language in languages)) failures.push(`unexpected language for ${file.path}: ${file.language}`);
+    else languages[file.language] += 1;
+    if (!Number.isInteger(file.lines) || file.lines < 0) failures.push(`invalid line count for ${file.path}`);
+    if (file.test === true) tests += 1;
+    if (file.entrypoint === true) entrypoints += 1;
+    for (const key of ["imports", "exports", "declarations"]) {
+      if (!Array.isArray(file[key])) failures.push(`${file.path} ${key} must be an array`);
+    }
+  }
+
+  if (manifest.summary.files !== manifest.files.length) failures.push("summary.files does not match files length");
+  if (manifest.summary.tests !== tests) failures.push("summary.tests does not match files");
+  if (manifest.summary.entrypoints !== entrypoints) failures.push("summary.entrypoints does not match files");
+  for (const language of Object.keys(languages)) {
+    if (manifest.summary.languages?.[language] !== languages[language]) {
+      failures.push(`summary.languages.${language} does not match files`);
+    }
+  }
+  return failures;
+}
+
 function runSelfTest() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-codebase-manifest-"));
   try {
@@ -252,7 +303,8 @@ if (process.argv.includes("--self-test")) {
   process.exit(0);
 }
 
-const generated = stableJson(buildCodebaseManifest(rootDir));
+const manifest = buildCodebaseManifest(rootDir);
+const generated = stableJson(manifest);
 
 if (process.argv.includes("--write")) {
   fs.writeFileSync(manifestPath, generated);
@@ -261,12 +313,13 @@ if (process.argv.includes("--write")) {
 }
 
 if (process.argv.includes("--check")) {
-  const current = fs.existsSync(manifestPath) ? fs.readFileSync(manifestPath, "utf8") : "";
-  if (current !== generated) {
-    console.error("docs/codebase-manifest.json is stale. Regenerate it with `node scripts/codebase-manifest.mjs --write`.");
+  const failures = validateManifest(manifest);
+  if (failures.length) {
+    console.error("codebase manifest check failed:");
+    for (const failure of failures) console.error(`- ${failure}`);
     process.exit(1);
   }
-  console.log("codebase manifest check passed");
+  console.log(`codebase manifest check passed (${manifest.summary.files} files)`);
   process.exit(0);
 }
 
