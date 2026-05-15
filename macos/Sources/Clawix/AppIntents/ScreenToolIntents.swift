@@ -8,7 +8,7 @@ enum ScreenToolsIntentError: Error, CustomLocalizedStringResourceConvertible {
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .disabled:
-            return "Screen Tools is currently disabled. Enable the experimental feature in Clawix settings to use this action."
+            return "Screen Tools is currently unavailable in this Clawix build."
         }
     }
 }

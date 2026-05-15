@@ -24,6 +24,18 @@ final class ScreenToolService: ObservableObject {
         FeatureFlags.shared.isVisible(.screenTools)
     }
 
+    private func authorize(_ action: String, origin: HostActionOrigin = .userInterface) -> Bool {
+        let authorization = HostActionPolicy.authorize(
+            surface: .screenTools,
+            action: action,
+            origin: origin
+        )
+        if !authorization.allowed {
+            ToastCenter.shared.show(authorization.reason ?? "Action blocked by host policy", icon: .warning)
+        }
+        return authorization.allowed
+    }
+
     enum CaptureMode {
         case area
         case previousArea
@@ -133,6 +145,7 @@ final class ScreenToolService: ObservableObject {
 
     func showAllInOneMenu() {
         guard featureVisible else { return }
+        guard authorize("showAllInOneMenu") else { return }
         let menu = NSMenu()
         let target = ScreenToolMenuActionTarget { [weak self] action in
             guard let self else { return }
@@ -206,6 +219,7 @@ final class ScreenToolService: ObservableObject {
 
     func captureArea() {
         guard featureVisible else { return }
+        guard authorize("captureArea") else { return }
         selectArea { [weak self] selection in
             guard let self else { return }
             if let frozenSnapshot = selection.frozenSnapshot, ScreenToolSettings.imageFormat != .pdf {
@@ -218,6 +232,7 @@ final class ScreenToolService: ObservableObject {
 
     func capturePreviousArea() {
         guard featureVisible else { return }
+        guard authorize("capturePreviousArea") else { return }
         guard let rect = ScreenToolSettings.previousAreaRect else {
             ToastCenter.shared.show("No previous area", icon: .warning)
             return
@@ -227,16 +242,19 @@ final class ScreenToolService: ObservableObject {
 
     func captureFullscreen() {
         guard featureVisible else { return }
+        guard authorize("captureFullscreen") else { return }
         runCapture(mode: .fullscreen)
     }
 
     func captureWindow() {
         guard featureVisible else { return }
+        guard authorize("captureWindow") else { return }
         runCapture(mode: .window)
     }
 
     func captureScrolling() {
         guard featureVisible else { return }
+        guard authorize("captureScrolling") else { return }
         selectArea { [weak self] selection in
             self?.runScrollingCapture(rect: selection.rect)
         }
@@ -244,11 +262,13 @@ final class ScreenToolService: ObservableObject {
 
     func captureSelfTimer() {
         guard featureVisible else { return }
+        guard authorize("captureSelfTimer") else { return }
         runCapture(mode: .selfTimer)
     }
 
     func recordScreen() {
         guard featureVisible else { return }
+        guard authorize("recordScreen") else { return }
         guard Self.ensureScreenCaptureAccess() else { return }
         guard recordingCountdownTask == nil else { return }
 
@@ -306,6 +326,7 @@ final class ScreenToolService: ObservableObject {
 
     func captureText(keepLineBreaks: Bool = ScreenToolSettings.keepTextLineBreaks) {
         guard featureVisible else { return }
+        guard authorize("captureText") else { return }
         guard Self.ensureScreenCaptureAccess() else { return }
         let url = outputURL(prefix: "text", extension: "png")
         Self.runScreencapture(args: interactiveArgs(mode: .area, output: url)) { result in
@@ -321,6 +342,7 @@ final class ScreenToolService: ObservableObject {
 
     func recognizeLastCaptureText(keepLineBreaks: Bool = ScreenToolSettings.keepTextLineBreaks) {
         guard featureVisible else { return }
+        guard authorize("recognizeLastCaptureText") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to recognize", icon: .warning)
             return
@@ -332,6 +354,7 @@ final class ScreenToolService: ObservableObject {
 
     func pinLastCapture() {
         guard featureVisible else { return }
+        guard authorize("pinLastCapture") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to pin", icon: .warning)
             return
@@ -341,6 +364,7 @@ final class ScreenToolService: ObservableObject {
 
     func showLastCaptureOverlay() {
         guard featureVisible else { return }
+        guard authorize("showLastCaptureOverlay") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to show", icon: .warning)
             return
@@ -350,6 +374,7 @@ final class ScreenToolService: ObservableObject {
 
     func restoreLastCapture() {
         guard featureVisible else { return }
+        guard authorize("restoreLastCapture") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to restore", icon: .warning)
             return
@@ -360,6 +385,7 @@ final class ScreenToolService: ObservableObject {
 
     func copyLastCapture() {
         guard featureVisible else { return }
+        guard authorize("copyLastCapture") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to copy", icon: .warning)
             return
@@ -369,6 +395,7 @@ final class ScreenToolService: ObservableObject {
 
     func markupLastCapture() {
         guard featureVisible else { return }
+        guard authorize("markupLastCapture") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to mark up", icon: .warning)
             return
@@ -378,6 +405,7 @@ final class ScreenToolService: ObservableObject {
 
     func chooseAndPinImage() {
         guard featureVisible else { return }
+        guard authorize("chooseAndPinImage") else { return }
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
@@ -392,6 +420,7 @@ final class ScreenToolService: ObservableObject {
 
     func chooseAndOpenImage() {
         guard featureVisible else { return }
+        guard authorize("chooseAndOpenImage") else { return }
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
@@ -408,12 +437,16 @@ final class ScreenToolService: ObservableObject {
     }
 
     func closeAllPins() {
+        guard featureVisible else { return }
+        guard authorize("closeAllPins") else { return }
         pins.forEach { $0.close() }
         pins.removeAll()
         ToastCenter.shared.show("Pins closed")
     }
 
     func closeAllOverlays() {
+        guard featureVisible else { return }
+        guard authorize("closeAllOverlays") else { return }
         overlays.forEach { $0.close() }
         overlays.removeAll()
         ToastCenter.shared.show("Overlays closed")
@@ -421,6 +454,7 @@ final class ScreenToolService: ObservableObject {
 
     func openCaptureHistory() {
         guard featureVisible else { return }
+        guard authorize("openCaptureHistory") else { return }
         let urls = captureHistoryURLs(limit: 30)
         let window = ScreenToolHistoryWindow(
             urls: urls,
@@ -440,6 +474,7 @@ final class ScreenToolService: ObservableObject {
 
     func revealCaptureFolder() {
         guard featureVisible else { return }
+        guard authorize("revealCaptureFolder") else { return }
         let dir = ScreenToolSettings.exportDirectoryURL
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         NSWorkspace.shared.activateFileViewerSelecting([dir])
@@ -447,6 +482,7 @@ final class ScreenToolService: ObservableObject {
 
     func openLastCapture() {
         guard featureVisible else { return }
+        guard authorize("openLastCapture") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to open", icon: .warning)
             return
@@ -456,6 +492,7 @@ final class ScreenToolService: ObservableObject {
 
     func revealLastCapture() {
         guard featureVisible else { return }
+        guard authorize("revealLastCapture") else { return }
         guard let url = recentCaptureURL() else {
             ToastCenter.shared.show("No recent capture to reveal", icon: .warning)
             return
@@ -588,6 +625,7 @@ final class ScreenToolService: ObservableObject {
 
     func copyFileAndImage(_ url: URL) {
         guard featureVisible else { return }
+        guard authorize("copyFileAndImage") else { return }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         if let image = NSImage(contentsOf: url) {
@@ -600,6 +638,7 @@ final class ScreenToolService: ObservableObject {
 
     func pin(url: URL) {
         guard featureVisible else { return }
+        guard authorize("pin") else { return }
         guard let image = NSImage(contentsOf: url) else {
             ToastCenter.shared.show("Could not pin image", icon: .error)
             return
@@ -613,6 +652,8 @@ final class ScreenToolService: ObservableObject {
     }
 
     func reveal(url: URL) {
+        guard featureVisible else { return }
+        guard authorize("reveal") else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 

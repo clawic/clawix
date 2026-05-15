@@ -216,6 +216,15 @@ final class MacUtilitiesController: ObservableObject {
 
     func perform(_ action: MacUtilityActionID) {
         guard FeatureFlags.shared.isVisible(.macUtilities) else { return }
+        let authorization = HostActionPolicy.authorize(
+            surface: .macUtilities,
+            action: action.id,
+            origin: .userInterface
+        )
+        guard authorization.allowed else {
+            ToastCenter.shared.show(authorization.reason ?? "Action blocked by host policy", icon: .warning)
+            return
+        }
         do {
             switch action {
             case .hideAllWindows:
