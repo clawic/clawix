@@ -77,4 +77,12 @@ final class DatabaseConnectionProfileStoreTests: XCTestCase {
         XCTAssertTrue(errors.contains("Host is required."))
         XCTAssertTrue(errors.contains("Port must be between 1 and 65535."))
     }
+
+    func test_sshCompatibilityVersionDecodesOldStoredValueButReencodesCurrentValue() throws {
+        let decoded = try JSONDecoder().decode(DatabaseConnectionSSHVersion.self, from: Data(#""legacy""#.utf8))
+        XCTAssertEqual(decoded, .compat095)
+
+        let encoded = try JSONEncoder().encode(decoded)
+        XCTAssertEqual(String(data: encoded, encoding: .utf8), #""compat-0.9.5""#)
+    }
 }

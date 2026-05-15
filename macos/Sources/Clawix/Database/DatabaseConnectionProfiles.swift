@@ -57,14 +57,36 @@ enum DatabaseConnectionNegotiation: String, Codable, CaseIterable, Identifiable 
 
 enum DatabaseConnectionSSHVersion: String, Codable, CaseIterable, Identifiable {
     case current
-    case legacy
+    case compat095 = "compat-0.9.5"
+
+    init(from decoder: Decoder) throws {
+        let rawValue = try decoder.singleValueContainer().decode(String.self)
+        switch rawValue {
+        case "current":
+            self = .current
+        case "compat-0.9.5", "legacy":
+            self = .compat095
+        default:
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Unknown SSH version: \(rawValue)"
+                )
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .current: return "SSH 0.11"
-        case .legacy:  return "SSH 0.9.5"
+        case .current:   return "SSH 0.11"
+        case .compat095: return "SSH 0.9.5 compatibility"
         }
     }
 }
