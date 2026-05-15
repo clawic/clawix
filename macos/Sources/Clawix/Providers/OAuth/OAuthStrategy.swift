@@ -8,7 +8,7 @@ struct OAuthAuthorization: Sendable {
     let url: URL
     let state: String
     let codeVerifier: String
-    /// Scheme + host the strategy expects in the callback (`clawix://oauth-callback/<provider>`).
+    /// Scheme + host the strategy expects in the callback (`clawix://auth/callback/<provider>`).
     let callbackHost: String
 }
 

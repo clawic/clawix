@@ -16,7 +16,7 @@ struct AnthropicOAuthStrategy: OAuthStrategy {
     private static let authorizeURL = URL(string: "https://claude.ai/oauth/authorize")!
     private static let tokenURL = URL(string: "https://console.anthropic.com/v1/oauth/token")!
     private static let scopes = "org:create_api_key user:profile user:inference"
-    private static let redirectURI = "clawix://oauth-callback/anthropic"
+    private static let redirectURI = "clawix://auth/callback/anthropic"
 
     func startAuthorization() -> OAuthAuthorization {
         let verifier = PKCE.makeCodeVerifier()
@@ -36,7 +36,7 @@ struct AnthropicOAuthStrategy: OAuthStrategy {
             url: components.url!,
             state: state,
             codeVerifier: verifier,
-            callbackHost: "oauth-callback"
+            callbackHost: "auth"
         )
     }
 

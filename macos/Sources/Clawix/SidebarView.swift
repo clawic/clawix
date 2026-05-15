@@ -1588,7 +1588,7 @@ func makeRecentChatCallbacks(appState: AppState, chat: Chat, archived: Bool) -> 
         },
         onCopyDeeplink: {
             guard let id = chatSnapshot.clawixThreadId else { return }
-            copySidebarStringToPasteboard("clawix://chat/\(id)")
+            copySidebarStringToPasteboard("clawix://session/\(id)")
         },
         onForkLocal: {
             _ = appState.forkConversation(chatId: chatId, sourceSnapshot: chatSnapshot)

@@ -447,7 +447,7 @@ struct PinnedRow: View {
                 copyToPasteboard(item.id.uuidString)
             }
             Button("Copy direct link") {
-                copyToPasteboard("clawix://chat/\(item.id.uuidString)")
+                copyToPasteboard("clawix://session/\(item.id.uuidString)")
             }
             Divider()
             Button("Fork to local")         {}

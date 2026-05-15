@@ -9,14 +9,23 @@ extension Notification.Name {
 }
 
 enum ClawixDeepLink: Equatable {
-    case chat(String)
+    case session(String)
+    case authCallback(provider: String)
 
     static func parse(_ url: URL) -> ClawixDeepLink? {
         guard url.scheme?.lowercased() == "clawix" else { return nil }
-        guard url.host?.lowercased() == "chat" else { return nil }
+        guard let host = url.host?.lowercased() else { return nil }
         let parts = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
-        guard parts.count == 1 else { return nil }
-        return .chat(parts[0])
+        switch host {
+        case "session":
+            guard parts.count == 1 else { return nil }
+            return .session(parts[0])
+        case "auth":
+            guard parts.count == 2, parts[0].lowercased() == "callback" else { return nil }
+            return .authCallback(provider: parts[1])
+        default:
+            return nil
+        }
     }
 }
 

@@ -249,7 +249,7 @@ struct ContentTopChrome: View {
                             }
                         },
                         onCopyDirectLink: {
-                            setChatActionsPasteboard("clawix://chat/\(chat.clawixThreadId ?? chat.id.uuidString)")
+                            setChatActionsPasteboard("clawix://session/\(chat.clawixThreadId ?? chat.id.uuidString)")
                         },
                         onCopyMarkdown: {
                             setChatActionsPasteboard(markdownTranscript(for: chat))

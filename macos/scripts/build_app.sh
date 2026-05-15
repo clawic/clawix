@@ -166,7 +166,7 @@ cat > "$BUNDLE_DIR/Contents/Info.plist" << PLIST
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
-            <key>CFBundleURLName</key>    <string>${BUNDLE_ID}.oauth-callback</string>
+            <key>CFBundleURLName</key>    <string>${BUNDLE_ID}.auth-callback</string>
             <key>CFBundleURLSchemes</key> <array><string>clawix</string></array>
         </dict>
     </array>

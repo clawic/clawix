@@ -330,7 +330,7 @@ final class SidebarChatContextMenuPanel: NSObject {
             },
             onCopyDeeplink: {
                 if let id = chat.clawixThreadId {
-                    setPasteboardString("clawix://chat/\(id)")
+                    setPasteboardString("clawix://session/\(id)")
                 }
                 dismiss()
             },
