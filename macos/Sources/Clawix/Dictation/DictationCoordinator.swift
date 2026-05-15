@@ -2,6 +2,7 @@ import AIProviders
 import Foundation
 import AppKit
 import SwiftUI
+import ClawixCore
 import ClawixEngine
 
 /// Single owner of the dictation state machine. Both the in-composer
@@ -827,7 +828,7 @@ final class DictationCoordinator: ObservableObject {
     }
 
     static func enhanceFailOpen(raw: String, powerMode: PowerModeConfig?) async -> String {
-        if ProcessInfo.processInfo.environment["CLAWIX_E2E_ENHANCEMENT_FAIL"] == "1" {
+        if ClawixEnv.isEnabled(ClawixEnv.e2eEnhancementFail) {
             trace("enhancement: e2e forced failure, using raw")
             return raw
         }
@@ -838,7 +839,7 @@ final class DictationCoordinator: ObservableObject {
     }
 
     private static func canRunLocalFallback(model: DictationModel) -> Bool {
-        if ProcessInfo.processInfo.environment["CLAWIX_E2E_TRANSCRIPTION_TEXT"] != nil {
+        if ClawixEnv.value(ClawixEnv.e2eTranscriptionText) != nil {
             return true
         }
         return DictationModelManager.installedFolder(for: model) != nil

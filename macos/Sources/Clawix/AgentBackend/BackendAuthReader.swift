@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 struct BackendAuthInfo: Equatable {
     var email: String?
@@ -20,7 +21,7 @@ enum BackendAuthReader {
 
     static func read() -> BackendAuthInfo {
         let environment = ProcessInfo.processInfo.environment
-        if environment["CLAWIX_DISABLE_BACKEND"] == "1" || environment["CLAWIX_DUMMY_MODE"] == "1" {
+        if environment[ClawixEnv.disableBackend] == "1" || environment[ClawixEnv.dummyMode] == "1" {
             return BackendAuthInfo(
                 email: "account@example.com",
                 accountLabel: String(localized: "Demo account", bundle: AppLocale.bundle, locale: AppLocale.current),

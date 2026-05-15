@@ -25,7 +25,7 @@ final class MeshClientTests: XCTestCase {
         let identity = MeshTestFixtures.nodeIdentity()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("GET", "/v1/mesh/identity"):
+            case ("GET", ClawixMeshRoute.identity):
                 return try! .json(identity)
             default:
                 return .text("not found", status: 404)
@@ -42,7 +42,7 @@ final class MeshClientTests: XCTestCase {
         let peer = MeshTestFixtures.peer()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("GET", "/v1/mesh/peers"):
+            case ("GET", ClawixMeshRoute.peers):
                 return try! .json(["peers": [peer]])
             default:
                 return .text("not found", status: 404)
@@ -58,7 +58,7 @@ final class MeshClientTests: XCTestCase {
         let ws = MeshTestFixtures.workspace()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("GET", "/v1/mesh/workspaces"):
+            case ("GET", ClawixMeshRoute.workspaces):
                 return try! .json(["workspaces": [ws]])
             default:
                 return .text("not found", status: 404)
@@ -76,7 +76,7 @@ final class MeshClientTests: XCTestCase {
         var sawLinkBody: Data?
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/v1/mesh/link"):
+            case ("POST", ClawixMeshRoute.link):
                 sawLinkBody = req.body
                 return try! .json(["peer": peer])
             default:
@@ -97,7 +97,7 @@ final class MeshClientTests: XCTestCase {
         let added = MeshTestFixtures.workspace(path: "/tmp/foo", label: "scratch")
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/v1/mesh/workspaces"):
+            case ("POST", ClawixMeshRoute.workspaces):
                 return try! .json(["workspace": added])
             default:
                 return .text("not found", status: 404)
@@ -131,9 +131,9 @@ final class MeshClientTests: XCTestCase {
         let stage = AtomicCounter()
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/v1/mesh/remote-jobs"):
+            case ("POST", ClawixMeshRoute.remoteJobs):
                 return try! .json(["job": initialJob])
-            case ("GET", "/v1/mesh/jobs/job-1"):
+            case ("GET", "\(ClawixMeshRoute.jobsPrefix)job-1"):
                 let calls = stage.incrementAndGet()
                 if calls == 1 {
                     return try! .json(JobSnapshot(job: initialJob, events: [evt]))
@@ -178,7 +178,7 @@ final class MeshClientTests: XCTestCase {
     func test_workspaceDenied_isMappedToTypedError() async throws {
         try bootDaemon { req in
             switch (req.method, req.path) {
-            case ("POST", "/v1/mesh/remote-jobs"):
+            case ("POST", ClawixMeshRoute.remoteJobs):
                 return .text("workspace is denied on this host", status: 400)
             default:
                 return .text("not found", status: 404)

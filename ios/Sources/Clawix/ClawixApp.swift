@@ -71,13 +71,13 @@ struct ClawixApp: App {
         // the QR pairing flow and render the chat list / detail
         // surfaces with mock data so we can iterate on the visual
         // design without a paired Mac in the loop.
-        if ProcessInfo.processInfo.environment["CLAWIX_MOCK"] == "1" {
+        if ClawixEnv.isEnabled(ClawixEnv.mock) {
             let mock = BridgeStore.mock()
             store.connection = mock.connection
             store.chats = mock.chats
             store.messagesByChat = mock.messagesByChat
             creds = Credentials(host: "127.0.0.1", port: 24080, token: "mock", hostDisplayName: "studio Mac", tailscaleHost: nil)
-            if ProcessInfo.processInfo.environment["CLAWIX_MOCK_OPEN_FIRST_CHAT"] == "1",
+            if ClawixEnv.isEnabled(ClawixEnv.mockOpenFirstChat),
                let first = store.chats.first {
                 store.openChatId = first.id
             }

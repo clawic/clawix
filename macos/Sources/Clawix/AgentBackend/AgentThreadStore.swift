@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 struct AgentThreadSummary: Codable, Identifiable, Hashable {
     let id: String
@@ -93,7 +94,7 @@ private extension KeyedDecodingContainer where Key == AgentThreadSummary.DecodeK
 enum AgentThreadStore {
     static func fixtureThreads() -> [AgentThreadSummary]? {
         guard
-            let raw = ProcessInfo.processInfo.environment["CLAWIX_THREAD_FIXTURE"],
+            let raw = ClawixEnv.value(ClawixEnv.threadFixture),
             !raw.isEmpty
         else { return nil }
         let url = URL(fileURLWithPath: (raw as NSString).expandingTildeInPath)

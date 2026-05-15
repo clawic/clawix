@@ -1,5 +1,6 @@
 import Foundation
 import os.signpost
+import ClawixCore
 
 /// Centralised performance signpost taxonomy.
 ///
@@ -37,7 +38,7 @@ enum PerfSignpost: String, CaseIterable {
     /// Master kill switch. Read once at process start; flipping it at
     /// runtime would require restarting the app.
     static let isSuppressed: Bool = {
-        ProcessInfo.processInfo.environment["CLAWIX_DISABLE_SIGNPOSTS"] == "1"
+        ClawixEnv.isEnabled(ClawixEnv.disableSignposts)
     }()
 
     private static let signposters: [PerfSignpost: OSSignposter] = {

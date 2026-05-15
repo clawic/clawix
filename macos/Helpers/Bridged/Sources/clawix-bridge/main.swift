@@ -201,10 +201,10 @@ enum BridgeHeartbeat {
 
     private static func write(pid: Int, port: UInt16, boundAt: String, hostBox: HostBox) {
         let stateDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".clawix/state", isDirectory: true)
+            .appendingPathComponent(ClawixPathSurface.bridgeStateDirectory, isDirectory: true)
         try? FileManager.default.createDirectory(at: stateDir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        let target = stateDir.appendingPathComponent("bridge-status.json")
-        let tmp = stateDir.appendingPathComponent("bridge-status.json.tmp")
+        let target = stateDir.appendingPathComponent(ClawixPathSurface.bridgeStatusFile)
+        let tmp = stateDir.appendingPathComponent(ClawixPathSurface.bridgeStatusTempFile)
 
         // Reading host state requires hopping to MainActor. Doing it
         // inline from the timer's utility queue would deadlock if the
@@ -278,7 +278,7 @@ struct BackendBinary {
     let path: URL
 
     static func resolve(environment: [String: String]) -> BackendBinary? {
-        if let override = environment["CLAWIX_BRIDGE_BACKEND_PATH"], !override.isEmpty {
+        if let override = environment[ClawixEnv.bridgeBackendPath], !override.isEmpty {
             let url = URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
             if FileManager.default.isExecutableFile(atPath: url.path) {
                 return BackendBinary(path: url)
@@ -292,7 +292,7 @@ struct BackendBinary {
 
     private static func candidatePaths() -> [URL] {
         var out: [URL] = []
-        if let manual = UserDefaults.standard.string(forKey: "ClawixBinaryPath"), !manual.isEmpty {
+        if let manual = UserDefaults.standard.string(forKey: ClawixDefaultsSurface.binaryPath), !manual.isEmpty {
             out.append(URL(fileURLWithPath: manual))
         }
         out.append(URL(fileURLWithPath: "/Applications/Codex.app/Contents/Resources/codex"))
@@ -576,7 +576,7 @@ final class DaemonEngineHost: EngineHost {
         let normalizedTranscript = providedTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
         var fallbackTranscript: String? = nil
         if normalizedTranscript.isEmpty {
-            let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DEFAULTS_SUITE"]
+            let suiteName = ClawixEnv.value(ClawixEnv.bridgeDefaultsSuite)
             let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
             let activeRaw = defaults.string(forKey: DictationModelManager.activeModelDefaultsKey) ?? ""
             let model = DictationModel(rawValue: activeRaw) ?? .default
@@ -697,16 +697,16 @@ final class DaemonEngineHost: EngineHost {
     private static var audioCatalogTokenDir: URL {
         let env = ProcessInfo.processInfo.environment
         let root: URL
-        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAW_ROOT"], !custom.isEmpty {
+        if env[ClawixEnv.dummyMode] == "1", let custom = env[ClawixEnv.backendHome], !custom.isEmpty {
             root = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
             root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Clawix/clawjs", isDirectory: true)
+                .appendingPathComponent(ClawixPathSurface.embeddedClawJS, isDirectory: true)
         }
         return root
-            .appendingPathComponent("workspace", isDirectory: true)
-            .appendingPathComponent(".claw", isDirectory: true)
-            .appendingPathComponent("audio", isDirectory: true)
+            .appendingPathComponent(ClawixPathSurface.workspace, isDirectory: true)
+            .appendingPathComponent(ClawixPathSurface.clawWorkspace, isDirectory: true)
+            .appendingPathComponent(ClawixPathSurface.audio, isDirectory: true)
     }
 
     func handleTranscribeAudio(
@@ -721,7 +721,7 @@ final class DaemonEngineHost: EngineHost {
         // bridge frame because the WebSocket transport is text-only.
         // Spool to a per-request file in the same /tmp tree the image
         // attachment path uses, then hand the file to WhisperKit.
-        let suiteName = ProcessInfo.processInfo.environment["CLAWIX_BRIDGE_DEFAULTS_SUITE"]
+        let suiteName = ClawixEnv.value(ClawixEnv.bridgeDefaultsSuite)
         let defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
         let activeRaw = defaults.string(forKey: DictationModelManager.activeModelDefaultsKey) ?? ""
         let model = DictationModel(rawValue: activeRaw) ?? .default

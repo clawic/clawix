@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 import SecretsModels
 import SecretsVault
 
@@ -32,7 +33,7 @@ enum SecretsFixtureLoader {
         vaults: [VaultRecord]
     ) {
         guard
-            let raw = ProcessInfo.processInfo.environment["CLAWIX_SECRETS_FIXTURE"],
+            let raw = ClawixEnv.value(ClawixEnv.secretsFixture),
             !raw.isEmpty
         else { return }
         let url = URL(fileURLWithPath: (raw as NSString).expandingTildeInPath)

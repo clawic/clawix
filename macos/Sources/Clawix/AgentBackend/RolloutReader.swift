@@ -811,7 +811,7 @@ enum RolloutReader {
         }
 
         guard let arr = raw as? [[String: Any]], !arr.isEmpty,
-              let dirString = ProcessInfo.processInfo.environment["CLAWIX_IMAGE_FIXTURE_DIR"],
+              let dirString = ClawixEnv.value(ClawixEnv.imageFixtureDir),
               !dirString.isEmpty else {
             return out
         }

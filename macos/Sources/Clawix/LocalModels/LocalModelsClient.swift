@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 /// Thin async wrapper over the daemon's REST API. Talks only to the
 /// loopback port owned by `LocalModelsDaemon`; nothing here is
@@ -90,30 +91,30 @@ struct LocalModelsClient {
     // MARK: - Endpoints
 
     func version() async throws -> String {
-        try await getJSON("/api/version", as: VersionResponse.self).version
+        try await getJSON(OllamaAPIRoute.version, as: VersionResponse.self).version
     }
 
     func tags() async throws -> [ModelTag] {
         struct Response: Decodable { let models: [ModelTag] }
-        return try await getJSON("/api/tags", as: Response.self).models
+        return try await getJSON(OllamaAPIRoute.tags, as: Response.self).models
     }
 
     func ps() async throws -> [RunningModel] {
         struct Response: Decodable { let models: [RunningModel] }
-        return try await getJSON("/api/ps", as: Response.self).models
+        return try await getJSON(OllamaAPIRoute.ps, as: Response.self).models
     }
 
     func show(model: String) async throws -> ShowResponse {
         struct Body: Encodable { let model: String }
-        return try await postJSON("/api/show", body: Body(model: model), as: ShowResponse.self)
+        return try await postJSON(OllamaAPIRoute.show, body: Body(model: model), as: ShowResponse.self)
     }
 
     func delete(model: String) async throws {
         struct Body: Encodable { let model: String }
-        var req = makeRequest(path: "/api/delete", method: "DELETE")
+        var req = makeRequest(path: OllamaAPIRoute.delete, method: "DELETE")
         req.httpBody = try JSONEncoder().encode(Body(model: model))
         let (_, response) = try await URLSession.shared.data(for: req)
-        try Self.assertOK(response, path: "/api/delete")
+        try Self.assertOK(response, path: OllamaAPIRoute.delete)
     }
 
     /// Hits `/api/generate` with `keep_alive: 0` to force the daemon to
@@ -125,12 +126,12 @@ struct LocalModelsClient {
             let prompt: String
             let keep_alive: Int
         }
-        var req = makeRequest(path: "/api/generate", method: "POST")
+        var req = makeRequest(path: OllamaAPIRoute.generate, method: "POST")
         req.httpBody = try JSONEncoder().encode(
             Body(model: model, prompt: "", keep_alive: 0)
         )
         let (_, response) = try await URLSession.shared.data(for: req)
-        try Self.assertOK(response, path: "/api/generate")
+        try Self.assertOK(response, path: OllamaAPIRoute.generate)
     }
 
     /// Streaming chat. Yields the assistant's text content as it
@@ -149,12 +150,12 @@ struct LocalModelsClient {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    var req = makeRequest(path: "/api/chat", method: "POST")
+                    var req = makeRequest(path: OllamaAPIRoute.chat, method: "POST")
                     req.httpBody = try JSONEncoder().encode(
                         Body(model: model, messages: messages, stream: true)
                     )
                     let (bytes, response) = try await URLSession.shared.bytes(for: req)
-                    try Self.assertOK(response, path: "/api/chat")
+                    try Self.assertOK(response, path: OllamaAPIRoute.chat)
 
                     let decoder = JSONDecoder()
                     for try await line in bytes.lines {
@@ -196,10 +197,10 @@ struct LocalModelsClient {
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    var req = makeRequest(path: "/api/pull", method: "POST")
+                    var req = makeRequest(path: OllamaAPIRoute.pull, method: "POST")
                     req.httpBody = try JSONEncoder().encode(Body(model: model, stream: true))
                     let (bytes, response) = try await URLSession.shared.bytes(for: req)
-                    try Self.assertOK(response, path: "/api/pull")
+                    try Self.assertOK(response, path: OllamaAPIRoute.pull)
 
                     let decoder = JSONDecoder()
                     for try await line in bytes.lines {

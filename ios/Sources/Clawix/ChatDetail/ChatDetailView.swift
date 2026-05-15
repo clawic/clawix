@@ -140,7 +140,7 @@ struct ChatDetailView: View {
         hasOverflow && !isAtBottom
     }
     private var shouldAutofocusComposer: Bool {
-        ProcessInfo.processInfo.environment["CLAWIX_DISABLE_AUTOFOCUS"] != "1" && (isFreshChat ?? false)
+        !ClawixEnv.isEnabled(ClawixEnv.disableAutofocus) && (isFreshChat ?? false)
     }
 
     var body: some View {

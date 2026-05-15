@@ -1,6 +1,7 @@
 import Foundation
 import CoreFoundation
 import os
+import ClawixCore
 
 /// DEBUG-only main-thread hang detector.
 ///
@@ -31,7 +32,7 @@ enum HangDetector {
     private static let guardQueue = DispatchQueue(label: "clawix.diag.hang", qos: .utility)
 
     static let thresholdMs: Double = {
-        if let raw = ProcessInfo.processInfo.environment["CLAWIX_HANG_MS"],
+        if let raw = ClawixEnv.value(ClawixEnv.hangMs),
            let value = Double(raw), value > 0 {
             return value
         }
@@ -48,7 +49,7 @@ enum HangDetector {
         // always-on detection in release means every customer device
         // pays the runloop observer cost. Gate explicitly.
         #if !DEBUG
-        let force = ProcessInfo.processInfo.environment["CLAWIX_FORCE_HANG_DETECTOR"] == "1"
+        let force = ClawixEnv.isEnabled(ClawixEnv.forceHangDetector)
         guard force else { return }
         #endif
 

@@ -1,6 +1,7 @@
 #if canImport(AVFoundation)
 import Foundation
 import AVFoundation
+import ClawixCore
 import ClawixEngine
 
 /// One-shot migration from the legacy on-disk `AudioMessageStore`
@@ -103,7 +104,7 @@ enum AudioCatalogMigration {
     static func defaultMarkerURL() -> URL {
         let env = ProcessInfo.processInfo.environment
         let root: URL
-        if env["CLAWIX_DUMMY_MODE"] == "1", let custom = env["CLAWIX_CLAW_ROOT"], !custom.isEmpty {
+        if env[ClawixEnv.dummyMode] == "1", let custom = env[ClawixEnv.backendHome], !custom.isEmpty {
             root = URL(fileURLWithPath: custom, isDirectory: true)
         } else {
             root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

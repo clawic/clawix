@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ClawixCore
 import SecretsModels
 import SecretsVault
 import SecretsProxyCore
@@ -138,7 +139,7 @@ final class SecretsManager: ObservableObject {
             let info = try await client.state()
             if !info.initialized {
                 #if DEBUG
-                if ProcessInfo.processInfo.environment["CLAWIX_DUMMY_MODE"] == "1" {
+                if ClawixEnv.isEnabled(ClawixEnv.dummyMode) {
                     await autoBootstrapDummyVault()
                     return
                 }
@@ -515,7 +516,7 @@ final class SecretsManager: ObservableObject {
     }
 
     private static var isDisabledForLaunch: Bool {
-        ProcessInfo.processInfo.environment["CLAWIX_SECRETS_DISABLE"] == "1"
+        ClawixEnv.isEnabled(ClawixEnv.secretsDisable)
     }
 }
 

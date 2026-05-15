@@ -1,11 +1,12 @@
 import Foundation
 import AppKit
+import ClawixCore
 import ClawixEngine
 
 @MainActor
 enum DictationE2ERunner {
     static func runIfRequested() {
-        guard ProcessInfo.processInfo.environment["CLAWIX_E2E_DICTATION_REPORT"] != nil else { return }
+        guard ClawixEnv.value(ClawixEnv.e2eDictationReport) != nil else { return }
         Task { @MainActor in
             await run()
             NSApp.terminate(nil)

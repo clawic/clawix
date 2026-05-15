@@ -319,7 +319,7 @@ public enum BridgeFileReader {
         let fileManager = FileManager.default
         var isDirectory = ObjCBool(false)
         let onDisk = fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
-        let fixtureDir = ProcessInfo.processInfo.environment["CLAWIX_FILE_FIXTURE_DIR"]
+        let fixtureDir = ClawixEnv.value(ClawixEnv.fileFixtureDir)
             .flatMap { $0.isEmpty ? nil : $0 }
 
         if onDisk {

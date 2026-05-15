@@ -529,18 +529,49 @@ enum ClawixPersistentSurfaceRegistry {
             )
         }
         let envSurfaces = [
-            "CLAWIX_HOME",
-            "CLAWIX_DATABASE_FILE",
-            "CLAWIX_BRIDGE_PORT",
-            "CLAWIX_BRIDGE_HTTP_PORT",
-            "CLAWIX_BRIDGE_HOST",
+            "CLAWIX_AGENT_RUNTIME",
+            "CLAWIX_BACKEND_HOME",
+            "CLAWIX_BRIDGE_BACKEND_PATH",
             "CLAWIX_BRIDGE_BEARER",
             "CLAWIX_BRIDGE_DEFAULTS_SUITE",
             "CLAWIX_BRIDGE_DISABLE",
             "CLAWIX_BRIDGE_DISABLE_BONJOUR",
+            "CLAWIX_BRIDGE_HOST",
+            "CLAWIX_BRIDGE_HTTP_PORT",
+            "CLAWIX_BRIDGE_INITIAL_TIMEOUT_SECONDS",
+            "CLAWIX_BRIDGE_PORT",
+            "CLAWIX_BRIDGE_RATE_LIMITS_TIMEOUT_SECONDS",
+            "CLAWIX_BRIDGE_THREAD_LIST_TIMEOUT_SECONDS",
+            "CLAWIX_DATABASE_DISABLE",
+            "CLAWIX_DATABASE_FILE",
+            "CLAWIX_DEEPSEEK_SECRET_NAME",
+            "CLAWIX_DISABLE_AUTOFOCUS",
+            "CLAWIX_DISABLE_BACKEND",
+            "CLAWIX_DISABLE_SIGNPOSTS",
             "CLAWIX_DUMMY_MODE",
+            "CLAWIX_E2E_DICTATION_REPORT",
+            "CLAWIX_E2E_ENHANCEMENT_FAIL",
+            "CLAWIX_E2E_TRANSCRIPTION_TEXT",
+            "CLAWIX_EXPERIMENTAL_FEATURES",
+            "CLAWIX_FILE_FIXTURE_DIR",
+            "CLAWIX_FIXTURE_SEEDING",
+            "CLAWIX_FORCE_HANG_DETECTOR",
+            "CLAWIX_HANG_MS",
+            "CLAWIX_HOME",
+            "CLAWIX_IMAGE_FIXTURE_DIR",
+            "CLAWIX_MESH_HOME",
+            "CLAWIX_MOCK",
+            "CLAWIX_MOCK_OPEN_FIRST_CHAT",
+            "CLAWIX_OPENCODE_BASE_URL",
+            "CLAWIX_OPENCODE_MODEL",
+            "CLAWIX_OPENCODE_PATH",
+            "CLAWIX_OPENCODE_PORT",
             "CLAWIX_PERMISSION_MODE",
             "CLAWIX_PERSISTENT_SURFACE_MANIFEST_OUT",
+            "CLAWIX_SECRETS_DISABLE",
+            "CLAWIX_SECRETS_FIXTURE",
+            "CLAWIX_SECRETS_PROXY_PATH",
+            "CLAWIX_THREAD_FIXTURE",
         ].map { key in
             ClawixPersistentSurface.contract(
                 id: "clawix.env.\(key.lowercased())",
@@ -607,6 +638,14 @@ enum ClawixPersistentSurfaceRegistry {
             ("audio", "POST", "/v1/audio", "Register audio"),
             ("audio", "POST", "/v1/audio/{audioId}/transcripts", "Attach audio transcript"),
             ("audio", "DELETE", "/v1/audio/{audioId}", "Delete audio catalog item"),
+            ("localModels", "GET", "/api/version", "Ollama version"),
+            ("localModels", "GET", "/api/tags", "Ollama model tags"),
+            ("localModels", "GET", "/api/ps", "Ollama running models"),
+            ("localModels", "POST", "/api/show", "Ollama show model"),
+            ("localModels", "DELETE", "/api/delete", "Ollama delete model"),
+            ("localModels", "POST", "/api/generate", "Ollama generate/unload model"),
+            ("localModels", "POST", "/api/chat", "Ollama chat"),
+            ("localModels", "POST", "/api/pull", "Ollama pull model"),
         ]
         let routeNodes = apiRoutes.map { domain, method, route, name in
             let routeId = String(route.dropFirst(4))
@@ -937,6 +976,9 @@ enum ClawixPersistentSurfaceKeys {
     static let bridgeIrohNodeID = "ClawixBridge.Iroh.NodeID.v1"
     static let bridgeHost = "ClawixBridge.Host.v1"
     static let dictationActiveModel = "dictation.activeModel"
+    static let bridgeDictationActiveModel = "ClawixBridge.Dictation.ActiveModel"
+    static let agentRuntime = "ClawixAgentRuntime"
+    static let openCodeModel = "ClawixOpenCodeModel"
     static let featureProviderAccountPattern = "feature.<feature>.providerAccountId"
     static let featureProviderModelPattern = "feature.<feature>.modelId"
     static let providerEnabledPattern = "provider.<provider>.enabled"

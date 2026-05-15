@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 
 /// Ollama provider. No API key — just a local base URL. Default
 /// `http://localhost:11434` which is what `ollama serve` listens on
@@ -33,7 +34,7 @@ struct OllamaEnhancementProvider: EnhancementProvider {
         guard let base = baseURL() else {
             throw EnhancementError.notConfigured
         }
-        let url = base.appendingPathComponent("/api/chat")
+        let url = base.appendingPathComponent(OllamaAPIRoute.chat)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

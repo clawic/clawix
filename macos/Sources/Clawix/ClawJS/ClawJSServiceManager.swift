@@ -1,4 +1,5 @@
 import Foundation
+import ClawixCore
 import SecretsCrypto
 
 /// In-process supervisor for the ClawJS sidecar services
@@ -678,7 +679,7 @@ final class ClawJSServiceManager: ObservableObject {
 
     static var applicationSupportRoot: URL {
         let env = ProcessInfo.processInfo.environment
-        if env["CLAWIX_DUMMY_MODE"] == "1", let root = env["CLAWIX_CLAW_ROOT"], !root.isEmpty {
+        if env[ClawixEnv.dummyMode] == "1", let root = env[ClawixEnv.backendHome], !root.isEmpty {
             return URL(fileURLWithPath: root, isDirectory: true)
         }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -700,7 +701,7 @@ final class ClawJSServiceManager: ObservableObject {
 
     private static var frameworkGlobalRootURL: URL {
         let env = ProcessInfo.processInfo.environment
-        if let override = env["CLAWIX_CLAW_HOME"], !override.isEmpty {
+        if let override = env[ClawEnv.home], !override.isEmpty {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath, isDirectory: true)
         }
         return FileManager.default.homeDirectoryForCurrentUser
@@ -771,9 +772,7 @@ final class ClawJSServiceManager: ObservableObject {
         env["HOME"] = applicationSupportRoot.appendingPathComponent("home").path
         env["CLAW_WORKSPACE"] = workspaceURL.path
         env["CLAW_HOME"] = frameworkGlobalRootURL.path
-        env["CLAWIX_CLAW_HOME"] = frameworkGlobalRootURL.path
         env["CLAW_DATA_DIR"] = mainDataDirectoryURL.path
-        env["CLAWIX_CLAW_DATA_DIR"] = mainDataDirectoryURL.path
         env["CLAW_DB_PATH"] = mainDatabaseURL.path
         env["CLAW_FILES_DIR"] = mainFilesDirectoryURL.path
         env["CLAW_SERVICE_PORT"] = String(service.port)

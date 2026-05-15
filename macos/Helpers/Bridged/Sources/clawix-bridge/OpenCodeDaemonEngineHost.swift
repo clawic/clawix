@@ -21,9 +21,9 @@ enum AgentRuntimeSelection: String {
 
     static func resolve(environment: [String: String], defaults: UserDefaults) -> AgentRuntimeSelection {
         let experimentalEnabled =
-            environment["CLAWIX_EXPERIMENTAL_FEATURES"] == "1"
+            environment[ClawixEnv.experimentalFeatures] == "1"
             || (defaults.object(forKey: "FeatureFlags.experimental") as? Bool ?? false)
-        if let raw = environment["CLAWIX_AGENT_RUNTIME"]?.lowercased(),
+        if let raw = environment[ClawixEnv.agentRuntime]?.lowercased(),
            let runtime = AgentRuntimeSelection(rawValue: raw) {
             return runtime == .opencode && !experimentalEnabled ? .codex : runtime
         }
@@ -581,7 +581,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
     }
 
     private func selectedModel() -> (providerID: String, modelID: String) {
-        let raw = environment["CLAWIX_OPENCODE_MODEL"]
+        let raw = environment[ClawixEnv.openCodeModel]
             ?? defaults.string(forKey: AgentRuntimeSelection.openCodeModelKey)
             ?? AgentRuntimeSelection.defaultOpenCodeModel
         let parts = raw.split(separator: "/", maxSplits: 1).map(String.init)
@@ -590,7 +590,7 @@ final class OpenCodeDaemonEngineHost: EngineHost {
     }
 
     private func permissionRules() -> [[String: String]]? {
-        let raw = defaults.string(forKey: "ClawixPermissionMode") ?? environment["CLAWIX_PERMISSION_MODE"] ?? "defaultPermissions"
+        let raw = defaults.string(forKey: "ClawixPermissionMode") ?? environment[ClawixEnv.permissionMode] ?? "defaultPermissions"
         switch raw {
         case "fullAccess":
             return [["permission": "*", "pattern": "*", "action": "allow"]]
@@ -696,18 +696,18 @@ private final class OpenCodeClient {
     }
 
     static func start(defaults: UserDefaults, environment: [String: String]) async throws -> OpenCodeClient {
-        if let raw = environment["CLAWIX_OPENCODE_BASE_URL"], let url = URL(string: raw) {
+        if let raw = environment[ClawixEnv.openCodeBaseURL], let url = URL(string: raw) {
             return OpenCodeClient(baseURL: url, process: nil)
         }
-        let port = UInt16(environment["CLAWIX_OPENCODE_PORT"] ?? "") ?? 18473
-        let binary = environment["CLAWIX_OPENCODE_PATH"].flatMap { $0.isEmpty ? nil : $0 }
+        let port = UInt16(environment[ClawixEnv.openCodePort] ?? "") ?? 18473
+        let binary = environment[ClawixEnv.openCodePath].flatMap { $0.isEmpty ? nil : $0 }
             ?? "/opt/homebrew/bin/opencode"
         guard FileManager.default.isExecutableFile(atPath: binary) else {
             throw OpenCodeError.api("opencode binary not found")
         }
         let proc = Process()
-        let secretsProxy = environment["CLAWIX_SECRETS_PROXY_PATH"].flatMap { $0.isEmpty ? nil : $0 }
-        let deepseekSecretName = environment["CLAWIX_DEEPSEEK_SECRET_NAME"].flatMap { $0.isEmpty ? nil : $0 }
+        let secretsProxy = environment[ClawixEnv.secretsProxyPath].flatMap { $0.isEmpty ? nil : $0 }
+        let deepseekSecretName = environment[ClawixEnv.deepseekSecretName].flatMap { $0.isEmpty ? nil : $0 }
         if let secretsProxy,
            let deepseekSecretName,
            FileManager.default.isExecutableFile(atPath: secretsProxy),

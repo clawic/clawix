@@ -3,6 +3,7 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 import Foundation
 import Network
+import ClawixCore
 import ClawixEngine
 
 // `clawix-menubar` is a tiny accessory app: it adds a status item to
@@ -17,7 +18,7 @@ final class MenubarApp: NSObject, NSApplicationDelegate {
 
     private let port: UInt16 = 24080
     private let pairing = PairingService(
-        defaults: UserDefaults(suiteName: "clawix.bridge") ?? .standard,
+        defaults: UserDefaults(suiteName: ClawixDefaultsSurface.bridgeSuite) ?? .standard,
         port: 24080
     )
 
@@ -249,7 +250,7 @@ final class MenubarApp: NSObject, NSApplicationDelegate {
         // intentionally does not embed that flow so the install logic
         // lives in one place (the CLI) and the menubar stays small.
         let cli = URL(fileURLWithPath: NSHomeDirectory())
-            .appendingPathComponent(".clawix/bin/clawix")
+            .appendingPathComponent(ClawixPathSurface.cliExecutable)
         let script = """
         do shell script "'\(cli.path)' install-app" with administrator privileges
         """

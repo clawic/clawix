@@ -174,7 +174,7 @@ final class BridgeConnection {
     }
 
     private func handle(_ request: HTTPRequest) async {
-        if request.path.hasPrefix("/v1/mesh/"), let mesh {
+        if request.path.hasPrefix(ClawixMeshRoute.prefix), let mesh {
             if let response = await mesh.handle(request, isLoopback: isLoopback) {
                 send(response)
                 return

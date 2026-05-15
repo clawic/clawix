@@ -1,12 +1,13 @@
 import Foundation
 import SwiftUI
 import Combine
+import ClawixCore
 import SecretsModels
 import SecretsVault
 
 /// Filesystem source-of-truth for agent / personality / skill-collection
 /// / connection records. All state lives under `~/.claw/` (overridable
-/// via `CLAWIX_CLAW_HOME` for tests) per the layout documented in the
+/// via `CLAW_HOME` for tests) per the layout documented in the
 /// workspace plan:
 ///
 /// ```
@@ -52,7 +53,7 @@ final class AgentStore: ObservableObject {
     private let home: URL
 
     private static func defaultHome() -> URL {
-        if let override = ProcessInfo.processInfo.environment["CLAWIX_CLAW_HOME"],
+        if let override = ProcessInfo.processInfo.environment[ClawEnv.home],
            !override.isEmpty {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
         }

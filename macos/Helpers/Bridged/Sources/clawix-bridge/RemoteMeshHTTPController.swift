@@ -30,27 +30,27 @@ final class RemoteMeshHTTPController {
     func handle(_ request: HTTPRequest, isLoopback: Bool) async -> HTTPResponse? {
         do {
             switch (request.method, request.path) {
-            case ("GET", "/v1/mesh/identity"):
+            case ("GET", ClawixMeshRoute.identity):
                 return try json(identityPayload())
 
-            case ("GET", "/v1/mesh/peers") where isLoopback:
+            case ("GET", ClawixMeshRoute.peers) where isLoopback:
                 return try json(PeersOutput(peers: store.peers()))
 
-            case ("GET", "/v1/mesh/workspaces") where isLoopback:
+            case ("GET", ClawixMeshRoute.workspaces) where isLoopback:
                 return try json(WorkspacesOutput(workspaces: store.workspaces()))
 
-            case ("GET", let path) where path.hasPrefix("/v1/mesh/jobs/") && isLoopback:
-                let jobId = String(path.dropFirst("/v1/mesh/jobs/".count))
+            case ("GET", let path) where path.hasPrefix(ClawixMeshRoute.jobsPrefix) && isLoopback:
+                let jobId = String(path.dropFirst(ClawixMeshRoute.jobsPrefix.count))
                 return try json(JobOutput(job: store.job(id: jobId), events: store.events(jobId: jobId)))
 
-            case ("POST", "/v1/mesh/workspaces") where isLoopback:
+            case ("POST", ClawixMeshRoute.workspaces) where isLoopback:
                 let input = try decode(LocalWorkspaceInput.self, from: request.body)
                 let path = URL(fileURLWithPath: input.path).standardizedFileURL.path
                 let workspace = RemoteWorkspace(path: path, label: input.label ?? URL(fileURLWithPath: path).lastPathComponent)
                 store.upsert(workspace: workspace)
                 return try json(WorkspaceOutput(workspace: workspace))
 
-            case ("POST", "/v1/mesh/peers") where isLoopback:
+            case ("POST", ClawixMeshRoute.peers) where isLoopback:
                 let input = try decode(LocalPeerInput.self, from: request.body)
                 var peer = PeerRecord(
                     nodeId: input.identity.nodeId,
@@ -66,17 +66,17 @@ final class RemoteMeshHTTPController {
                 store.upsert(peer: peer)
                 return try json(PeerOutput(peer: peer))
 
-            case ("POST", "/v1/mesh/link") where isLoopback:
+            case ("POST", ClawixMeshRoute.link) where isLoopback:
                 let input = try decode(LinkInput.self, from: request.body)
                 let peer = try await linkPeer(input)
                 return try json(PeerOutput(peer: peer))
 
-            case ("POST", "/v1/mesh/remote-jobs") where isLoopback:
+            case ("POST", ClawixMeshRoute.remoteJobs) where isLoopback:
                 let input = try decode(StartRemoteJobInput.self, from: request.body)
                 let result = try await startOutboundJob(input)
                 return try json(result)
 
-            case ("POST", "/v1/mesh/pair"):
+            case ("POST", ClawixMeshRoute.pair):
                 let input = try decode(PairInput.self, from: request.body)
                 guard pairing.acceptToken(input.token) else {
                     return text(status: 403, "bad pairing token")
@@ -95,7 +95,7 @@ final class RemoteMeshHTTPController {
                 store.upsert(peer: peer)
                 return try json(PairOutput(identity: try identityPayload(), peer: peer))
 
-            case ("POST", "/v1/mesh/jobs"):
+            case ("POST", ClawixMeshRoute.jobs):
                 let envelope = try decode(RemoteMeshSignedEnvelope.self, from: request.body)
                 let peer = try verifiedPeer(envelope.senderNodeId)
                 let input = try identity.open(envelope, from: peer, as: StartJobInput.self)
@@ -106,20 +106,20 @@ final class RemoteMeshHTTPController {
                     workspacePath: input.workspacePath,
                     prompt: input.prompt
                 )
-                return try encrypted(RemoteJobResponse(job: job), to: peer, path: "/v1/mesh/jobs", method: "POST")
+                return try encrypted(RemoteJobResponse(job: job), to: peer, path: ClawixMeshRoute.jobs, method: "POST")
 
-            case ("POST", "/v1/mesh/jobs/cancel"):
+            case ("POST", ClawixMeshRoute.jobsCancel):
                 let envelope = try decode(RemoteMeshSignedEnvelope.self, from: request.body)
                 let peer = try verifiedPeer(envelope.senderNodeId)
                 let input = try identity.open(envelope, from: peer, as: CancelJobInput.self)
                 await host?.cancelRemoteJob(jobId: input.jobId)
-                return try encrypted(OkOutput(ok: true), to: peer, path: "/v1/mesh/jobs/cancel", method: "POST")
+                return try encrypted(OkOutput(ok: true), to: peer, path: ClawixMeshRoute.jobsCancel, method: "POST")
 
-            case ("POST", "/v1/mesh/jobs/events"):
+            case ("POST", ClawixMeshRoute.jobsEvents):
                 let envelope = try decode(RemoteMeshSignedEnvelope.self, from: request.body)
                 let peer = try verifiedPeer(envelope.senderNodeId)
                 let input = try identity.open(envelope, from: peer, as: JobEventsInput.self)
-                return try encrypted(JobEventsOutput(events: store.events(jobId: input.jobId)), to: peer, path: "/v1/mesh/jobs/events", method: "POST")
+                return try encrypted(JobEventsOutput(events: store.events(jobId: input.jobId)), to: peer, path: ClawixMeshRoute.jobsEvents, method: "POST")
 
             default:
                 return nil
@@ -186,8 +186,8 @@ final class RemoteMeshHTTPController {
     private func startOutboundJob(_ input: StartRemoteJobInput) async throws -> RemoteJobResponse {
         let peer = try verifiedPeer(input.peerId)
         let payload = StartJobInput(jobId: input.jobId ?? UUID().uuidString, workspacePath: input.workspacePath, prompt: input.prompt)
-        let envelope = try identity.seal(payload, for: peer, path: "/v1/mesh/jobs", method: "POST")
-        let response: RemoteMeshSignedEnvelope = try await postEncrypted(envelope, to: peer, path: "/v1/mesh/jobs")
+        let envelope = try identity.seal(payload, for: peer, path: ClawixMeshRoute.jobs, method: "POST")
+        let response: RemoteMeshSignedEnvelope = try await postEncrypted(envelope, to: peer, path: ClawixMeshRoute.jobs)
         let opened = try identity.open(response, from: peer, as: RemoteJobResponse.self)
         return opened
     }

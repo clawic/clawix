@@ -35,7 +35,6 @@ final class ClawJSMainDatabaseBoundaryTests: XCTestCase {
             "CLAW_DB_PATH",
             "CLAW_DATA_DIR",
             "CLAW_FILES_DIR",
-            "CLAWIX_CLAW_DATA_DIR",
             "state_5.sqlite",
             ".codex/session_index.jsonl",
             ".codex/sessions",

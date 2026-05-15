@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import ClawixCore
 
 /// Singleton observable manager for the bundled `@clawjs/database`
 /// daemon. Mirrors the role of `SecretsManager` for Secrets service.
@@ -57,7 +58,7 @@ final class DatabaseManager: ObservableObject {
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
-        self.isDisabled = ProcessInfo.processInfo.environment["CLAWIX_DATABASE_DISABLE"] == "1"
+        self.isDisabled = ClawixEnv.isEnabled(ClawixEnv.databaseDisable)
         loadFilterStates()
         realtime.onEvent = { [weak self] event in
             Task { @MainActor [weak self] in
