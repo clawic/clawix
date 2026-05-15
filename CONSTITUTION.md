@@ -118,6 +118,14 @@ embedded host, not the privileged only interface. If a capability exists only
 as UI, only as SDK/API, only as CLI, or only as MCP, it is incomplete until an
 explicit ADR classifies the gap as temporary, blocked, or not applicable.
 
+**I.7 AI capabilities are first-class without becoming agents.** Not every
+useful act of intelligence is an autonomous agent. Chat, media generation,
+transcription, search, analysis, transformation, direct commands, and other
+intelligence-powered capabilities can be used directly by humans, invoked by
+agents, or composed into workflows. They do not need to be modeled as
+autonomous agents to be first-class. They still obey the same constitutional
+rules for permissions, audit, state, portability, and user ownership.
+
 ### II. Sovereignty
 
 **II.1 Local-first by construction.** The user's data lives on the user's
@@ -186,6 +194,16 @@ translation burden: the user should not have to remember where each piece of
 context lives, repeat themselves across tools, or rebuild accumulated
 understanding when switching intelligence providers.
 
+**II.9 Organizational sovereignty is policy-shaped.** Claw supports
+individual users and organizations as first-class owners of shared state,
+devices, secrets, workflows, and agents. Teams, companies, departments, and
+managed groups can apply access in bulk through roles, groups, tags,
+projects, resource classes, and managed hosts, because enterprise work cannot
+be governed one checkbox at a time. Bulk policy never removes the right to
+inspect, narrow, override, or revoke access for a specific resource, secret,
+agent, action, person, or host. Organizational control is a policy layer over
+sovereignty, not a replacement for it.
+
 ### III. Openness
 
 **III.1 Open data, open local API, open source.** Three pillars. Data: open
@@ -235,6 +253,15 @@ toward an external party (email, message, public post, API call attributable
 to the user), the framework supports honest identification of the actor.
 The user picks the disclosure level per channel; defaults err toward
 transparency. Impersonation as a human is never default behavior.
+
+**IV.4 Authority is traceable through every action.** An agent never acts as
+ownerless intelligence. Every auditable action records the acting agent, the
+initiating human or organizational principal, the policy grant in force, the
+target resource, and the authority chain through any subagents,
+automations, workflows, or delegated runs. Agents have their own identity for
+inspection and accountability, but their authority is derived from explicit
+human or organizational authorization. If the system cannot explain who
+authorized an action and why it was allowed, the action is not governable.
 
 ### V. Architecture between human and agent
 
@@ -324,6 +351,14 @@ sovereignty or the agent's usefulness, but they do not become the organizing
 authority. The same local layer that gives agents reach also gives the user
 stronger guardrails: per-agent permissions, audit, containment, and review
 over access to their world.
+
+**V.13 Control is a reversible continuum.** A piece of work may move between
+direct human operation, review, steering, bounded delegation, and autonomy
+without losing its context or durable state. More autonomy remains the
+trajectory of the system, but sovereignty requires the human to be able to
+take over, interrupt, inspect, edit, approve, continue manually, or return the
+work to an agent. Changing the control level is an ordinary operation, not a
+migration between separate worlds.
 
 ### VI. Data
 
@@ -535,6 +570,25 @@ permission. It requires coordination, optional hierarchy, delegation,
 supervision, substitution, retirement, and withdrawal of trust. The user
 should be able to understand which agents exist, what they do, what they
 own, what paths they use, what they may access, and what they produced.
+
+**VII.15 No single agent archetype owns the framework.** Fully autonomous
+agents are one agency mode, not the definition of the system. The framework
+must support simple assistants, prompt responders, media generators,
+copilots, bounded task agents, project agents, channel agents, automations,
+delegated subagents, and long-running autonomous agents. These modes share a
+common house when the user allows it: skills, data, memory, permissions,
+tools, workflows, budgets, audit, and accumulated state. An agent or AI
+capability may appear through chat, app UI, voice, project surface, feed,
+CLI, automation, or external channel without duplicating its durable state or
+becoming a separate silo.
+
+**VII.16 Delegation cannot launder authority.** Subagents, delegated runs,
+automations, and composed workflows cannot turn one permitted action into
+broader access. Delegation preserves scope, provenance, budgets, audit, and
+revocation. A subagent may use authority explicitly delegated to it or
+already granted to it, but it cannot inherit vague ambient power from the
+parent run. Every link in a delegation chain remains inspectable,
+attributable, and bounded by the policy grant that allowed it.
 
 ### VIII. Sub-apps and modularity
 
@@ -845,12 +899,21 @@ together; an amendment is incomplete until both repositories carry it.
 - **Adapter**: an implementation of a generic interface for a specific
   provider. Swappable. The framework prefers adapters over hardcoded
   provider integrations.
+- **Agency mode**: the operating form through which intelligence is used or
+  delegated, from direct tool use through review, steering, bounded tasks,
+  workflows, channel agents, and full autonomy.
+- **AI capability**: an intelligence-powered capability that may be used
+  directly by a human, invoked by an agent, or composed into a workflow
+  without necessarily being an autonomous agent.
 - **Agent**: a composition of skills, secrets, connections, and
   instructions, executed by a runtime, acting on the user's behalf within
   granted permissions.
 - **Agentic capital**: reusable capability accumulated by agent work:
   instructions, defaults, data, relationships, workflows, decisions,
   validations, and knowledge that make future work better.
+- **Authority chain**: the traceable chain linking an action to the agent
+  that performed it, the human or organizational principal that authorized
+  it, the policy grant that allowed it, and any delegations in between.
 - **Automation**: an agent-authored sequence of triggers, conditions, and
   actions that runs deterministically and is audited like any other agent
   activity. Can call inference as a step but is not itself an LLM loop.
@@ -874,6 +937,8 @@ together; an amendment is incomplete until both repositories carry it.
 - **Concept**: a node within the knowledge graph that Notes supports. Has
   hierarchy, links, and queryable levels of detail (overview vs. exhaustive
   recall on the same node).
+- **Control continuum**: the reversible range between direct human
+  operation, review, steering, bounded delegation, and autonomous execution.
 - **Controlled extension**: a permissioned extension of the user's mesh
   toward another device, server, network, physical system, API, or service.
 - **Custom database**: a user-defined typed collection for niche entities
@@ -911,12 +976,18 @@ together; an amendment is incomplete until both repositories carry it.
 - **Operable life**: the user's data, tools, devices, services,
   relationships, time, money, automations, physical context, and permissions
   as a unified action surface for agents.
+- **Organizational principal**: a team, company, department, role, service
+  account, or managed group that can own or authorize access under explicit
+  policy.
 - **Pairing**: the act of trusting a client device to talk to a host. The
   basis of multi-device today.
 - **Participant**: a device that joins the mesh without running an agent
   runtime and without a user-facing UI. Sensors, IoT controllers, headless
   utilities. Exposes data or capabilities; relies on hosts for
   orchestration.
+- **Policy grant**: a permission applied through a structured rule such as
+  role, group, tag, project, resource class, host, or action scope, still
+  subject to granular inspection, override, and revocation.
 - **Runtime**: the engine that executes agentic loops. Pluggable,
   swappable, multiple supported simultaneously.
 - **Skill**: a reusable unit of agent direction (a prompt, procedure,
