@@ -18,6 +18,7 @@ struct CloudBackendsSheet: View {
     @State private var groqHidden = true
     @State private var deepgramHidden = true
     @State private var customHidden = true
+    @State private var saveError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -48,6 +49,12 @@ struct CloudBackendsSheet: View {
                             .foregroundColor(Color(red: 0.95, green: 0.65, blue: 0.30))
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    if let saveError {
+                        Text(saveError)
+                            .font(BodyFont.system(size: 11.5, wght: 600))
+                            .foregroundColor(Color(red: 0.95, green: 0.65, blue: 0.30))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     section("Groq") {
                         Text("Cloud-hosted transcription. <200 ms typical latency.")
@@ -60,7 +67,7 @@ struct CloudBackendsSheet: View {
                             saveAction: {
                                 let key = groqKey.trimmingCharacters(in: .whitespacesAndNewlines)
                                 guard !key.isEmpty else { return }
-                                Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .groq) }
+                                Task { await saveAPIKey(key, for: .groq) }
                             }
                         )
                     }
@@ -76,7 +83,7 @@ struct CloudBackendsSheet: View {
                             saveAction: {
                                 let key = deepgramKey.trimmingCharacters(in: .whitespacesAndNewlines)
                                 guard !key.isEmpty else { return }
-                                Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .deepgram) }
+                                Task { await saveAPIKey(key, for: .deepgram) }
                             }
                         )
                     }
@@ -118,7 +125,7 @@ struct CloudBackendsSheet: View {
                             saveAction: {
                                 let key = customKey.trimmingCharacters(in: .whitespacesAndNewlines)
                                 guard !key.isEmpty else { return }
-                                Task { try? await CloudTranscriptionSecrets.setAPIKey(key, for: .custom) }
+                                Task { await saveAPIKey(key, for: .custom) }
                             }
                         )
                     }
@@ -196,5 +203,14 @@ struct CloudBackendsSheet: View {
         customModel = UserDefaults.standard.string(
             forKey: ClawixPersistentSurfaceKeys.dictationCustomModel
         ) ?? "whisper-1"
+    }
+
+    private func saveAPIKey(_ key: String, for provider: CloudTranscriptionProvider) async {
+        saveError = nil
+        do {
+            try await CloudTranscriptionSecrets.setAPIKey(key, for: provider)
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 }
