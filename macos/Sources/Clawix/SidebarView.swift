@@ -1124,9 +1124,6 @@ struct SidebarView: View {
                             projectMenuOpenId = nil
                             projectRenameTarget = project
                         },
-                        onArchive: {
-                            projectMenuOpenId = nil
-                        },
                         onRemove: {
                             projectMenuOpenId = nil
                             appState.deleteProject(project.id)

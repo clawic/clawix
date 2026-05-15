@@ -33,52 +33,31 @@ struct AutomationsView: View {
     ]
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Automations")
-                            .font(BodyFont.system(size: 20, weight: .semibold))
-                            .foregroundColor(Palette.textPrimary)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Automations")
+                        .font(BodyFont.system(size: 20, weight: .semibold))
+                        .foregroundColor(Palette.textPrimary)
 
-                        HStack(spacing: 0) {
-                            Text("Schedule recurring chats so routine work runs on its own. ")
-                                .foregroundColor(Palette.textSecondary)
-                            Text("Learn more")
-                                .foregroundColor(Color(red: 0.35, green: 0.58, blue: 0.96))
-                        }
-                        .font(BodyFont.system(size: 12, wght: 500))
-                    }
-                    .padding(.bottom, 30)
-
-                    ForEach(sections) { section in
-                        AutomationSectionView(section: section)
-                            .padding(.bottom, 58)
-                    }
+                    Text("Schedule recurring chats so routine work runs on its own.")
+                        .foregroundColor(Palette.textSecondary)
+                    .font(BodyFont.system(size: 12, wght: 500))
                 }
-                .frame(width: 744, alignment: .leading)
-                .padding(.top, 73)
-                .padding(.bottom, 40)
-                .frame(maxWidth: .infinity)
-                .offset(x: 8)
-            }
-            .thinScrollers()
+                .padding(.bottom, 30)
 
-            Button {} label: {
-                HStack(spacing: 4) {
-                    LucideIcon(.plus, size: 11)
-                    Text("New automation")
-                        .font(BodyFont.system(size: 11, wght: 600))
+                ForEach(sections) { section in
+                    AutomationSectionView(section: section)
+                        .padding(.bottom, 58)
                 }
-                .foregroundColor(Color(white: 0.12))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(Color(white: 0.94)))
             }
-            .buttonStyle(.plain)
-            .padding(.top, 10)
-            .padding(.trailing, 14)
+            .frame(width: 744, alignment: .leading)
+            .padding(.top, 73)
+            .padding(.bottom, 40)
+            .frame(maxWidth: .infinity)
+            .offset(x: 8)
         }
+        .thinScrollers()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Palette.background)
     }

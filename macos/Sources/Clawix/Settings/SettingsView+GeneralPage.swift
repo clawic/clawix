@@ -204,8 +204,6 @@ struct GeneralPage: View {
                         options: [(.inline, L10n.t("Inline")), (.detached, L10n.t("Detached"))],
                         selection: $codeReview
                     )
-                    CardDivider()
-                    ImportAgentRow()
                 }
             }
 
@@ -507,51 +505,6 @@ struct WorkModeCard: View {
             )
         }
         .buttonStyle(.plain)
-    }
-}
-
-struct ImportAgentRow: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Capsule(style: .continuous)
-                    .fill(Color.white.opacity(0.06))
-                    .frame(width: 30, height: 30)
-                SettingsIcon(size: 19)
-                    .foregroundColor(Color(white: 0.86))
-                Text("2")
-                    .font(BodyFont.system(size: 9, wght: 700))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(Color(red: 0.30, green: 0.55, blue: 1.0)))
-                    .offset(x: 10, y: 10)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Import another agent configuration")
-                    .font(BodyFont.system(size: 13, wght: 500))
-                    .foregroundColor(Palette.textPrimary)
-                Text("Clawix detected useful preferences from another local agent on this Mac")
-                    .font(BodyFont.system(size: 11.5, wght: 500))
-                    .foregroundColor(Palette.textSecondary)
-            }
-            Spacer(minLength: 12)
-            Button {} label: {
-                Text("Import")
-                    .font(BodyFont.system(size: 12, wght: 600))
-                    .foregroundColor(Palette.textSecondary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Color.white.opacity(0.08))
-                    )
-            }
-            .buttonStyle(.plain)
-            .disabled(true)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
     }
 }
 

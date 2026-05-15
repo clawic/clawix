@@ -606,6 +606,39 @@ if (!iotManagerSource.includes("private func performAction")) {
   fail("IoTManager.swift must route IoT action failures into lastError");
 }
 
+const automationsViewSource = read("macos/Sources/Clawix/AutomationsView.swift");
+for (const pattern of ["Button {} label", "New automation", "Learn more"]) {
+  if (automationsViewSource.includes(pattern)) {
+    fail(`AutomationsView.swift must not expose a creation control without a v1 creation flow: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const sidebarProjectsSource = read("macos/Sources/Clawix/Sidebar/SidebarView+Projects.swift");
+for (const pattern of [
+  "struct PinnedRow",
+  "Unpin chat",
+  "Fork to local",
+  "Fork to new worktree",
+  "Open in mini window",
+  "Create a permanent worktree",
+  "Archive chats",
+]) {
+  if (sidebarProjectsSource.includes(pattern)) {
+    fail(`SidebarView+Projects.swift must not expose project or pinned-row menu actions without v1 handlers: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const configurationSettingsSource = read("macos/Sources/Clawix/Settings/SettingsView+ConfigurationPage.swift");
+if (configurationSettingsSource.includes("Button {} label")) {
+  fail("SettingsView+ConfigurationPage.swift must not keep disabled reinstall controls without a v1 action");
+}
+
+for (const pattern of ["ImportAgentRow", "Import another agent configuration", "Button {} label"]) {
+  if (generalSettingsSource.includes(pattern)) {
+    fail(`SettingsView+GeneralPage.swift must not expose disabled import-agent affordances: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

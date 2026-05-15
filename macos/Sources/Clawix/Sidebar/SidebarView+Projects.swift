@@ -392,96 +392,19 @@ struct ProjectMenuAnchorKey: PreferenceKey {
     }
 }
 
-struct PinnedRow: View {
-    let item: PinnedItem
-    @State private var hovered = false
-
-    var body: some View {
-        RenderProbe.tick("PinnedRow")
-        return HStack(spacing: 10) {
-            PinnedIcon()
-                .stroke(Color(white: 0.58),
-                        style: StrokeStyle(lineWidth: 1.1, lineCap: .round, lineJoin: .round))
-                .frame(width: 14, height: 14)
-            Text(item.title)
-                .font(BodyFont.system(size: 14, wght: 500))
-                .foregroundColor(Color(white: 0.94))
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            if hovered {
-                Button {
-                    // archivar chat
-                } label: {
-                    LucideIcon(.archive, size: 13)
-                        .foregroundColor(Color(white: 0.72))
-                        .frame(width: 18, height: 18)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(L10n.t("Archive chat"))
-            } else {
-                Text(item.age)
-                    .font(BodyFont.system(size: 11.5, wght: 500))
-                    .foregroundColor(Color(white: 0.45))
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .contentShape(Rectangle())
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(hovered ? Color.white.opacity(0.035) : Color.clear)
-        )
-        .sidebarHover { hovered = $0 }
-        .contextMenu {
-            Button("Unpin chat")     {}
-            Button("Rename chat")     {}
-            Button("Archive chat")      {}
-            Button("Mark as unread") {}
-            Divider()
-            Button("Open in Finder")            {}
-            Button("Copy working directory") {
-                copyToPasteboard("~/Projects/\(item.title)")
-            }
-            Button("Copy session ID") {
-                copyToPasteboard(item.id.uuidString)
-            }
-            Button("Copy direct link") {
-                copyToPasteboard("clawix://session/\(item.id.uuidString)")
-            }
-            Divider()
-            Button("Fork to local")         {}
-            Button("Fork to new worktree") {}
-            Divider()
-            Button("Open in mini window") {}
-        }
-    }
-
-    private func copyToPasteboard(_ value: String) {
-        let pb = NSPasteboard.general
-        pb.clearContents()
-        pb.setString(value, forType: .string)
-    }
-}
-
 struct ProjectRowMenuPopup: View {
     let project: Project
     let isCodexSourced: Bool
     @Binding var isPresented: Bool
     let onOpenInFinder: () -> Void
     let onRename: () -> Void
-    let onArchive: () -> Void
     let onRemove: () -> Void
     let onHide: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ProjectRowMenuRow(icon: "folder", label: "Open in Finder", action: onOpenInFinder)
-            ProjectRowMenuRow(icon: "arrow.triangle.branch", label: "Create a permanent worktree") {
-                isPresented = false
-            }
             ProjectRowMenuRow(icon: "pencil", label: "Rename project", action: onRename)
-            ProjectRowMenuRow(icon: "tray.and.arrow.down", label: "Archive chats", action: onArchive)
             if isCodexSourced {
                 ProjectRowMenuRow(icon: "eye.slash", label: "Hide from sidebar", action: onHide)
             } else {

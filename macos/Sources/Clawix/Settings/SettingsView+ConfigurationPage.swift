@@ -196,27 +196,6 @@ struct ReinstallRow: View {
                     .font(BodyFont.system(size: 11.5, wght: 500))
                     .foregroundColor(Palette.textSecondary)
             }
-            Spacer(minLength: 12)
-            Button {} label: {
-                HStack(spacing: 5) {
-                    LucideIcon(.arrowDown, size: 11)
-                    Text("Reinstall")
-                        .font(BodyFont.system(size: 12, wght: 600))
-                }
-                .foregroundColor(Color(red: 1.0, green: 0.55, blue: 0.45))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(Color(red: 0.30, green: 0.10, blue: 0.07))
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(Color(red: 0.55, green: 0.20, blue: 0.15), lineWidth: 0.7)
-                        )
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(true)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
