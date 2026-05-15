@@ -14,13 +14,14 @@ enum PersistentSurfaceKind: String, Codable {
     case preferenceKey
     case appStorageKey
     case browserStorageKey
+    case envVar
     case envOverride
     case cache
     case fixture
     case persistentTemp
-    case legacyPath
     case externalReadOnlySource
     case apiRoute
+    case privateApiRoute
     case apiMethod
     case apiParameter
     case webhook
@@ -31,6 +32,11 @@ enum PersistentSurfaceKind: String, Codable {
     case jsonField
     case enumValue
     case errorCode
+    case packageName
+    case packageExport
+    case packageBin
+    case nativeIdentity
+    case fileFormat
     case cliCommand
     case cliFlag
     case cliOutputField
@@ -150,10 +156,6 @@ enum ClawixPersistentSurface {
 
     static func persistentTemp(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
         node(id: id, kind: .persistentTemp, name: name, path: path, storageClass: "nativeAppData", canonicality: "generated", parentId: parentId)
-    }
-
-    static func legacyPath(id: String, name: String, path: String, warnings: [String]) -> PersistentSurfaceNode {
-        node(id: id, kind: .legacyPath, name: name, path: path, storageClass: "workspace", canonicality: "legacyReadOnly", lifecycle: "legacy", warnings: warnings)
     }
 
     static func contract(
@@ -291,12 +293,6 @@ enum ClawixPersistentSurfaceRegistry {
                 name: "Clawix home",
                 path: "~/.clawix",
                 storageClass: "hostOperational"
-            ),
-            ClawixPersistentSurface.legacyPath(
-                id: "clawix.legacy.workspace.clawjs",
-                name: "Legacy ClawJS workspace root",
-                path: ClawixPersistentSurfacePaths.components.legacyClawWorkspace,
-                warnings: ["Read only for stale token cleanup and compatibility checks."]
             ),
             ClawixPersistentSurface.database(
                 id: localDatabaseId,
@@ -475,10 +471,32 @@ enum ClawixPersistentSurfaceRegistry {
             "versionMismatch",
             "sessionsSnapshot",
             "openSession",
+            "loadOlderMessages",
             "sendMessage",
-            "sessionDelta",
-            "skillsSnapshot",
-            "remoteJobSnapshot",
+            "newSession",
+            "interruptTurn",
+            "messagesSnapshot",
+            "messagesPage",
+            "messageAppended",
+            "messageStreaming",
+            "errorEvent",
+            "pairingStart",
+            "pairingPayload",
+            "requestRateLimits",
+            "rateLimitsSnapshot",
+            "rateLimitsUpdated",
+            "skillsList",
+            "skillsView",
+            "skillsCreate",
+            "skillsUpdate",
+            "skillsRemove",
+            "skillsActivate",
+            "skillsDeactivate",
+            "skillsSync",
+            "skillsImport",
+            "skillsListResult",
+            "skillsViewResult",
+            "skillsActiveChanged",
         ].map { type in
             ClawixPersistentSurface.contract(
                 id: "clawix.protocol.bridge.frame.\(type)",
@@ -489,6 +507,85 @@ enum ClawixPersistentSurfaceRegistry {
                 surfaceClass: "protocol",
                 value: type,
                 schemaId: "clawix-bridge",
+                direction: "bidirectional"
+            )
+        }
+        let packageSurfaces = [
+            ("clawix.package.cli", PersistentSurfaceKind.packageName, "clawix", "Product CLI package"),
+            ("clawix.package.web", .packageName, "@clawix/web", "Embedded web client package"),
+            ("clawix.package.linux", .packageName, "@clawix/linux-app", "Linux desktop package"),
+            ("clawix.package.bin.clawix", .packageBin, "clawix", "Product host CLI bin"),
+        ].map { id, kind, value, name in
+            ClawixPersistentSurface.contract(
+                id: id,
+                kind: kind,
+                name: name,
+                parentId: "claw.contracts.packages",
+                project: "core",
+                surfaceClass: "package",
+                value: value,
+                direction: "outbound",
+                notes: value == "clawix" ? "Allowed product-host CLI/package name; must not expose framework domain commands." : nil
+            )
+        }
+        let envSurfaces = [
+            "CLAWIX_HOME",
+            "CLAWIX_DATABASE_FILE",
+            "CLAWIX_BRIDGE_PORT",
+            "CLAWIX_BRIDGE_HTTP_PORT",
+            "CLAWIX_BRIDGE_HOST",
+            "CLAWIX_BRIDGE_BEARER",
+            "CLAWIX_BRIDGE_DEFAULTS_SUITE",
+            "CLAWIX_BRIDGE_DISABLE",
+            "CLAWIX_BRIDGE_DISABLE_BONJOUR",
+            "CLAWIX_DUMMY_MODE",
+            "CLAWIX_PERMISSION_MODE",
+            "CLAWIX_PERSISTENT_SURFACE_MANIFEST_OUT",
+        ].map { key in
+            ClawixPersistentSurface.contract(
+                id: "clawix.env.\(key.lowercased())",
+                kind: .envVar,
+                name: key,
+                parentId: "claw.contracts.config",
+                project: "core",
+                surfaceClass: "config",
+                key: key,
+                direction: "inbound"
+            )
+        }
+        let nativeSurfaces = [
+            ("clawix.native.bundle.placeholder", "com.example.clawix", "Public placeholder bundle id"),
+            ("clawix.native.bridge.process", "clawix.bridge", "Bridge daemon process"),
+            ("clawix.native.bridge.binary", "clawix-bridge", "Bridge daemon binary"),
+            ("clawix.native.bonjour.bridge", "_clawix-bridge._tcp", "Bridge Bonjour service"),
+        ].map { id, value, name in
+            ClawixPersistentSurface.contract(
+                id: id,
+                kind: .nativeIdentity,
+                name: name,
+                parentId: "claw.contracts.native",
+                project: "core",
+                surfaceClass: "native",
+                value: value,
+                direction: "outbound",
+                notes: value == "com.example.clawix" ? "Real signing identities stay private; public repos only carry placeholders." : nil
+            )
+        }
+        let formatSurfaces = [
+            ("clawix.format.design-document", "clawix-design-document", "Design document JSON"),
+            ("clawix.format.life-registry", "life-registry.json", "Life registry JSON"),
+            ("clawix.format.snapshot-cache", "snapshot.json", "Android bridge snapshot cache"),
+            ("clawix.format.host-bootstrap", "clawix-host-bootstrap", "Host bootstrap registry JSON"),
+        ].map { id, value, name in
+            ClawixPersistentSurface.contract(
+                id: id,
+                kind: .fileFormat,
+                name: name,
+                parentId: "claw.contracts.formats",
+                project: "core",
+                surfaceClass: "format",
+                value: value,
+                version: "1",
                 direction: "bidirectional"
             )
         }
@@ -552,7 +649,7 @@ enum ClawixPersistentSurfaceRegistry {
             key: "ui.route",
             direction: "local"
         )
-        let deepLinks = ["clawix://auth/callback/{provider}", "clawix://pair/{token}", "clawix://session/{sessionId}", "clawix://settings/{section}"].map { link in
+        let deepLinks = ["clawix://auth/callback/{provider}", "clawix://session/{sessionId}", "clawix://settings/{section}"].map { link in
             ClawixPersistentSurface.contract(
                 id: "clawix.deeplink.\(link.replacingOccurrences(of: "://", with: ".").replacingOccurrences(of: "/", with: ".").replacingOccurrences(of: "{", with: "").replacingOccurrences(of: "}", with: ""))",
                 kind: .deepLink,
@@ -564,7 +661,17 @@ enum ClawixPersistentSurfaceRegistry {
                 direction: "inbound"
             )
         }
-        return [bridgeProtocol] + bridgeFields + frameTypes + routeNodes + remoteJobEvents + [webStorage] + deepLinks
+        return [bridgeProtocol]
+            + bridgeFields
+            + frameTypes
+            + packageSurfaces
+            + envSurfaces
+            + nativeSurfaces
+            + formatSurfaces
+            + routeNodes
+            + remoteJobEvents
+            + [webStorage]
+            + deepLinks
     }
 
     private static var preferenceSurfaceNodes: [PersistentSurfaceNode] {

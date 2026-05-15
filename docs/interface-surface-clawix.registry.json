@@ -1,0 +1,357 @@
+{
+  "version": 1,
+  "sourceGoal": "private-workspace:clawix-v1-surface-closure-plan-2026-05-15",
+  "sourceConversationId": "019e2727-cf2b-7c41-9feb-1fd2b5c77554",
+  "allowedStatuses": [
+    "stable",
+    "dev-only",
+    "removed"
+  ],
+  "surfaces": [
+    {
+      "id": "bridge.v1",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix pairing and companion clients",
+      "programmaticSurface": "Swift BridgeProtocol plus JSON fixtures; Android and Windows parity",
+      "storageOwner": "framework-contract",
+      "validation": "Bridge fixture round-trip tests across Swift, Android, Windows, Web"
+    },
+    {
+      "id": "deepLinks.session",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Open/copy session links in Clawix",
+      "programmaticSurface": "clawix://session/<sessionId>",
+      "storageOwner": "host-route",
+      "validation": "Deep-link parser tests reject clawix://chat"
+    },
+    {
+      "id": "deepLinks.authCallback",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Provider OAuth callback handling",
+      "programmaticSurface": "clawix://auth/callback/<provider>",
+      "storageOwner": "host-route",
+      "validation": "OAuth callback parser tests reject oauth-callback"
+    },
+    {
+      "id": "pairing.qrJson",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Clawix pairing QR",
+      "programmaticSurface": "JSON payload with v, host, port and token",
+      "storageOwner": "host-runtime",
+      "validation": "Pairing payload tests assert JSON contract and port 24080"
+    },
+    {
+      "id": "agents",
+      "featureFlag": "agents",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Agents, Personalities and Connections views",
+      "programmaticSurface": "ClawJS agents APIs, CLI/SDK and fixtures",
+      "storageOwner": "framework-core-sqlite-plus-files",
+      "validation": "Framework agent fixtures plus Clawix store boundary tests"
+    },
+    {
+      "id": "skills",
+      "featureFlag": "skills",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Skills catalog and assignment UI",
+      "programmaticSurface": "ClawJS skills/library APIs, CLI/SDK and MCP resources",
+      "storageOwner": "framework-core-sqlite-plus-files",
+      "validation": "Skills fixtures and interface matrix row"
+    },
+    {
+      "id": "skillCollections",
+      "featureFlag": "skillCollections",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Skill Collections",
+      "programmaticSurface": "ClawJS agents/library APIs",
+      "storageOwner": "framework-core-sqlite-plus-files",
+      "validation": "Collection fixtures and no direct Clawix writes"
+    },
+    {
+      "id": "connections",
+      "featureFlag": "agents",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Connections and integration bindings",
+      "programmaticSurface": "ClawJS integrations/channel APIs and QA matrix",
+      "storageOwner": "framework-core-sqlite-with-host-secret-refs",
+      "validation": "Connection fixtures; plaintext secret guard"
+    },
+    {
+      "id": "secrets",
+      "featureFlag": "secrets",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Clawix Secrets unlock, reveal and approval UI",
+      "programmaticSurface": "Host/vault APIs with opaque framework refs",
+      "storageOwner": "host-vault",
+      "validation": "Signed-host/vault tests; framework plaintext negative checks"
+    },
+    {
+      "id": "mcp",
+      "featureFlag": "mcp",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix MCP settings page",
+      "programmaticSurface": "ClawJS MCP registry through claw/API; external configs read-only import",
+      "storageOwner": "framework-registry",
+      "validation": "MCP registry tests and Codex read-only guard"
+    },
+    {
+      "id": "providers.routing",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix provider account and model selection UI",
+      "programmaticSurface": "Framework provider account/routing config with host vault refs",
+      "storageOwner": "framework-config-plus-host-vault",
+      "validation": "Provider routing tests; no UserDefaults as canonical store"
+    },
+    {
+      "id": "quickAsk.snippets",
+      "featureFlag": "quickAsk",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "QuickAsk slash commands and mention prompt templates",
+      "programmaticSurface": "Framework snippets/prompts/skills",
+      "storageOwner": "framework-snippets",
+      "validation": "Snippet migration tests; QuickAsk host prefs remain local"
+    },
+    {
+      "id": "voiceToText.audio",
+      "featureFlag": "voiceToText",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix dictation and audio catalog UI",
+      "programmaticSurface": "@clawjs/audio API/CLI/fixtures",
+      "storageOwner": "framework-audio-sidecar",
+      "validation": "Audio catalog/transcript tests; host temp/debug exception checks"
+    },
+    {
+      "id": "apps",
+      "featureFlag": "apps",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Apps catalog and app surface",
+      "programmaticSurface": "ClawJS apps/resource APIs and workspace storage",
+      "storageOwner": "framework-workspace",
+      "validation": "Apps storage boundary tests reject Application Support canonical path"
+    },
+    {
+      "id": "design",
+      "featureFlag": "design",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Design styles, templates, references and editor",
+      "programmaticSurface": "Design resource types in common registry/runtime",
+      "storageOwner": "framework-workspace",
+      "validation": "Design resource fixtures and storage boundary tests"
+    },
+    {
+      "id": "browserUsage",
+      "featureFlag": "browserUsage",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Clawix browser/right-sidebar tool",
+      "programmaticSurface": "Host browser policy/API/audit surface",
+      "storageOwner": "host-policy-plus-ui-cache",
+      "validation": "Browser policy tests and approval audit fixtures"
+    },
+    {
+      "id": "screenTools",
+      "featureFlag": "screenTools",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Clawix screen capture tools",
+      "programmaticSurface": "Host screen policy/API/audit surface",
+      "storageOwner": "host-policy-plus-ui-prefs",
+      "validation": "Screen policy tests; signed-host permission validation"
+    },
+    {
+      "id": "macUtilities",
+      "featureFlag": "macUtilities",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Clawix Mac Utilities tool UI",
+      "programmaticSurface": "Host native action policy/API/audit surface",
+      "storageOwner": "host-policy",
+      "validation": "Mac utility approval/audit tests"
+    },
+    {
+      "id": "git",
+      "featureFlag": "git",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix git affordances in agent workflow",
+      "programmaticSurface": "Framework git/resource APIs with host policy for sensitive actions",
+      "storageOwner": "framework-resource-plus-host-policy",
+      "validation": "Git action policy fixtures"
+    },
+    {
+      "id": "remoteMesh",
+      "featureFlag": "remoteMesh",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix remote mesh target selector and status",
+      "programmaticSurface": "Framework mesh APIs and bridge fixtures",
+      "storageOwner": "framework-runtime-plus-host-state",
+      "validation": "Mesh API tests and bridge fixture parity"
+    },
+    {
+      "id": "openCode",
+      "featureFlag": "openCode",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix runtime adapter selector",
+      "programmaticSurface": "Framework runtime adapter registry and host policy",
+      "storageOwner": "framework-runtime",
+      "validation": "Runtime adapter registry tests"
+    },
+    {
+      "id": "localModels",
+      "featureFlag": "localModels",
+      "status": "stable",
+      "owner": "host",
+      "humanSurface": "Clawix local model availability and selection UI",
+      "programmaticSurface": "Framework capability records; binaries remain host-local",
+      "storageOwner": "host-cache-plus-framework-capability",
+      "validation": "Capability tests; no synced model blob guard"
+    },
+    {
+      "id": "telegram",
+      "featureFlag": "telegram",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Telegram settings and QA state",
+      "programmaticSurface": "ClawJS integration QA lab and Telegram API matrix",
+      "storageOwner": "framework-integration-with-host-secret-refs",
+      "validation": "Hermetic QA tests; live checks recorded as EXTERNAL PENDING without approval"
+    },
+    {
+      "id": "publishing",
+      "featureFlag": "publishing",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Publishing calendar/composer/channels",
+      "programmaticSurface": "ClawJS publishing API/CLI/fixtures",
+      "storageOwner": "framework-publishing",
+      "validation": "Publishing contract fixtures and matrix row"
+    },
+    {
+      "id": "database",
+      "featureFlag": "database",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix database explorer",
+      "programmaticSurface": "ClawJS database API/CLI/fixtures",
+      "storageOwner": "framework-database",
+      "validation": "Database service fixtures and UI boundary tests"
+    },
+    {
+      "id": "databaseWorkbench",
+      "featureFlag": "databaseWorkbench",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix database workbench",
+      "programmaticSurface": "Framework database connection/profile APIs with host secret refs",
+      "storageOwner": "framework-database-plus-host-vault",
+      "validation": "Workbench profile fixtures and secret ref tests"
+    },
+    {
+      "id": "index",
+      "featureFlag": "index",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Index catalog, searches, monitors and alerts",
+      "programmaticSurface": "Resource registry/search APIs and fixtures",
+      "storageOwner": "framework-resource-registry",
+      "validation": "Index/search resource fixtures"
+    },
+    {
+      "id": "marketplace",
+      "featureFlag": "marketplace",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Marketplace offers/wants/prospects/receipts",
+      "programmaticSurface": "ClawJS marketplace API/CLI/fixtures",
+      "storageOwner": "framework-marketplace",
+      "validation": "Marketplace contract fixtures"
+    },
+    {
+      "id": "iotHome",
+      "featureFlag": "iotHome",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Home/IoT devices, scenes and approvals",
+      "programmaticSurface": "ClawJS IoT/home API/CLI/fixtures",
+      "storageOwner": "framework-iot-plus-host-policy",
+      "validation": "IoT contract fixtures; physical devices EXTERNAL PENDING"
+    },
+    {
+      "id": "calendar",
+      "featureFlag": "calendar",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Calendar mini-app",
+      "programmaticSurface": "Resource registry/runtime calendar contract",
+      "storageOwner": "framework-resource-registry",
+      "validation": "Calendar resource fixtures"
+    },
+    {
+      "id": "contacts",
+      "featureFlag": "contacts",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Contacts mini-app",
+      "programmaticSurface": "Resource registry/runtime contacts contract",
+      "storageOwner": "framework-resource-registry",
+      "validation": "Contacts resource fixtures"
+    },
+    {
+      "id": "life",
+      "featureFlag": "life",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Life vertical explorer",
+      "programmaticSurface": "Resource registry/runtime life/signal vertical contract",
+      "storageOwner": "framework-resource-registry",
+      "validation": "Life vertical resource fixtures"
+    },
+    {
+      "id": "identity",
+      "featureFlag": "identity",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix identity/profile settings",
+      "programmaticSurface": "Framework profile/identity resource APIs",
+      "storageOwner": "framework-core-sqlite",
+      "validation": "Identity/profile fixtures"
+    },
+    {
+      "id": "claw",
+      "featureFlag": "claw",
+      "status": "stable",
+      "owner": "framework",
+      "humanSurface": "Clawix Claw framework settings/status",
+      "programmaticSurface": "claw CLI, SDK and host status APIs",
+      "storageOwner": "framework-global-plus-host-state",
+      "validation": "Host/framework status tests"
+    },
+    {
+      "id": "simulators",
+      "featureFlag": "simulators",
+      "status": "dev-only",
+      "owner": "host",
+      "humanSurface": "Developer simulator sidebar items",
+      "programmaticSurface": "Launcher/preflight dev tooling only",
+      "storageOwner": "host-dev-state",
+      "validation": "Release visibility tests ensure not product v1"
+    }
+  ]
+}

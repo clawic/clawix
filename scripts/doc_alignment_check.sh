@@ -27,6 +27,8 @@ for file in \
   "docs/host-ownership.md" \
   "docs/data-storage-boundary.md" \
   "docs/decision-map.md" \
+  "docs/interface-matrix.md" \
+  "docs/interface-surface-clawix.registry.json" \
   "docs/naming-style-guide.md" \
   "docs/adr/0001-claw-framework-host-boundary.md" \
   "docs/adr/0002-naming-and-stability-surfaces.md" \
@@ -47,6 +49,9 @@ require_snippet "AGENTS.md" "docs/adr/0004-source-file-boundaries.md"
 require_snippet "CONSTITUTION.md" "Capabilities are complete only when dual-surfaced"
 require_snippet "docs/adr/TEMPLATE.md" "## Surface Parity"
 require_snippet "docs/adr/0007-dual-human-programmatic-surfaces.md" "MCP is the model-native surface"
+require_snippet "docs/interface-matrix.md" "This matrix is the Clawix gate for ADR 0007"
+require_snippet "docs/interface-matrix.md" "Every current surface must be one of"
+require_snippet "docs/interface-matrix.md" "EXTERNAL PENDING"
 require_snippet "CONTRIBUTING.md" "docs/decision-map.md"
 require_snippet "STANDARDS.md" "docs/decision-map.md"
 require_snippet "playbooks/README.md" "docs/decision-map.md"
@@ -222,6 +227,10 @@ do
     echo "$output" >&2
   fi
 done
+
+if ! node "$ROOT_DIR/scripts/interface_surface_guard.mjs"; then
+  fail "interface surface guard failed"
+fi
 
 if [[ "$FAIL" -ne 0 ]]; then
   exit 1
