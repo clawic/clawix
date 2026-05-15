@@ -222,7 +222,7 @@ public final class AuditStore {
         timestamp explicitTimestamp: Timestamp,
         accountId: Int64 = 0
     ) throws -> AuditEventRecord? {
-        guard ProcessInfo.processInfo.environment["CLAWIX_FIXTURE_SEEDING"] == "1" else { return nil }
+        guard ProcessInfo.processInfo.environment[SecretsVaultEnv.fixtureSeeding] == "1" else { return nil }
         let id = EntityID.newID()
         let eventKeyBytes = SecureRandom.bytes(32)
         let eventKey = LockableSecret(bytes: eventKeyBytes)

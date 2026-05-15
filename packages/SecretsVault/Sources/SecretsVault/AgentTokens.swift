@@ -254,7 +254,7 @@ public final class AgentGrantStore {
         usedCount: Int = 0,
         lastUsedAt: Timestamp? = nil
     ) throws -> AgentGrantRecord? {
-        guard ProcessInfo.processInfo.environment["CLAWIX_FIXTURE_SEEDING"] == "1" else { return nil }
+        guard ProcessInfo.processInfo.environment[SecretsVaultEnv.fixtureSeeding] == "1" else { return nil }
         let scopeData = try? JSONEncoder().encode(scope)
         let scopeJson = scopeData.flatMap { String(data: $0, encoding: .utf8) }
         let tokenHash = AgentTokenIssuer.hash(AgentTokenIssuer.generateToken())

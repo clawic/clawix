@@ -553,7 +553,7 @@ public final class SecretsStore {
         readOnly: Bool? = nil,
         isLocked: Bool? = nil
     ) throws {
-        guard ProcessInfo.processInfo.environment["CLAWIX_FIXTURE_SEEDING"] == "1" else { return }
+        guard ProcessInfo.processInfo.environment[SecretsVaultEnv.fixtureSeeding] == "1" else { return }
         try database.write { db in
             guard var secret = try SecretRecord.fetchOne(db, key: secretId.uuidString.uppercased()) else {
                 throw SecretsStoreError.secretNotFound
