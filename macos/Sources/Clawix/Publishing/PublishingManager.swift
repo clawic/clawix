@@ -65,8 +65,10 @@ final class PublishingManager: ObservableObject {
                 try await self.ensureDefaultWorkspace()
                 async let families = self.client.listFamilies()
                 async let channels = self.client.listChannels(workspaceId: self.workspaceId ?? "")
-                self.families = (try? await families) ?? []
-                self.channels = (try? await channels) ?? []
+                let resolvedFamilies = try await families
+                let resolvedChannels = try await channels
+                self.families = resolvedFamilies
+                self.channels = resolvedChannels
                 self.state = .ready
                 self.lastError = nil
             } catch {

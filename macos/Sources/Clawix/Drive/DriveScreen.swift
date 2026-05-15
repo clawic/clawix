@@ -536,6 +536,7 @@ struct DriveItemDetailPane: View {
     let manager: DriveManager
     @State private var exif: ClawJSDriveClient.ExifRecord?
     @State private var shares: ClawJSDriveClient.AllSharesResponse?
+    @State private var detailError: String?
     @State private var confirmDelete = false
 
     var body: some View {
@@ -562,18 +563,20 @@ struct DriveItemDetailPane: View {
                 }
                 Divider()
                 Text("Sharing").font(.subheadline.bold())
+                if let detailError {
+                    Text(detailError)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
                 HStack {
                     Button("Share via Tailnet") {
-                        Task { _ = try? await manager.client.createTailnetShare(item.id); shares = try? await manager.client.listAllShares(item.id) }
+                        Task { await createTailnetShare() }
                     }
                     Button("Public link") {
-                        Task { _ = try? await manager.client.createTunnelShare(item.id); shares = try? await manager.client.listAllShares(item.id) }
+                        Task { await createTunnelShare() }
                     }
                     Button("Agent token") {
-                        Task {
-                            _ = try? await manager.client.createAgentShare(item.id, capabilityKind: "drive.item.read", ttlMinutes: 10, reason: nil, agentName: "agent")
-                            shares = try? await manager.client.listAllShares(item.id)
-                        }
+                        Task { await createAgentShare() }
                     }
                 }
                 if let shares {
@@ -605,7 +608,13 @@ struct DriveItemDetailPane: View {
         .task(id: item.id) {
             await manager.markViewed(item.id)
             self.exif = try? await manager.client.getExif(item.id)
-            self.shares = try? await manager.client.listAllShares(item.id)
+            do {
+                self.shares = try await manager.client.listAllShares(item.id)
+                self.detailError = nil
+            } catch {
+                self.detailError = error.localizedDescription
+                manager.lastError = error.localizedDescription
+            }
         }
         .alert("Delete item?", isPresented: $confirmDelete) {
             Button("Delete", role: .destructive) {
@@ -614,6 +623,51 @@ struct DriveItemDetailPane: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This permanently deletes \"\(item.name)\" from Drive.")
+        }
+    }
+
+    @MainActor
+    private func createTailnetShare() async {
+        do {
+            _ = try await manager.client.createTailnetShare(item.id)
+            shares = try await manager.client.listAllShares(item.id)
+            detailError = nil
+            manager.lastError = nil
+        } catch {
+            detailError = error.localizedDescription
+            manager.lastError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func createTunnelShare() async {
+        do {
+            _ = try await manager.client.createTunnelShare(item.id)
+            shares = try await manager.client.listAllShares(item.id)
+            detailError = nil
+            manager.lastError = nil
+        } catch {
+            detailError = error.localizedDescription
+            manager.lastError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func createAgentShare() async {
+        do {
+            _ = try await manager.client.createAgentShare(
+                item.id,
+                capabilityKind: "drive.item.read",
+                ttlMinutes: 10,
+                reason: nil,
+                agentName: "agent",
+            )
+            shares = try await manager.client.listAllShares(item.id)
+            detailError = nil
+            manager.lastError = nil
+        } catch {
+            detailError = error.localizedDescription
+            manager.lastError = error.localizedDescription
         }
     }
 }

@@ -94,12 +94,21 @@ final class MarketplaceManager: ObservableObject {
 
     func markRead(messageId: String) async {
         ensureToken()
-        do { try await marketplace.markRead(messageId: messageId) } catch {}
+        do {
+            try await marketplace.markRead(messageId: messageId)
+        } catch {
+            state = .error(error.localizedDescription)
+        }
     }
 
     func updateIntentStatus(id: String, status: String) async {
         ensureToken()
-        do { try await marketplace.updateIntentStatus(id: id, status: status) } catch {}
+        do {
+            try await marketplace.updateIntentStatus(id: id, status: status)
+        } catch {
+            state = .error(error.localizedDescription)
+            return
+        }
         await refresh()
     }
 }

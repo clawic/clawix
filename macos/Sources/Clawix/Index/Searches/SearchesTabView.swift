@@ -62,7 +62,13 @@ struct SearchesTabView: View {
                                 isSelected: selectedSearchId == search.id,
                                 onSelect: { selectedSearchId = search.id },
                                 onRun: {
-                                    Task { _ = try? await manager.runSearch(id: search.id) }
+                                    Task {
+                                        do {
+                                            _ = try await manager.runSearch(id: search.id)
+                                        } catch {
+                                            manager.surfaceActionError(error)
+                                        }
+                                    }
                                 },
                                 onDelete: {
                                     Task { await manager.deleteSearch(id: search.id) }

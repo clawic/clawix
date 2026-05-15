@@ -58,6 +58,10 @@ final class IndexManager: ObservableObject {
         }
     }
 
+    func surfaceActionError(_ error: Error) {
+        state = .error(error.localizedDescription)
+    }
+
     func refresh() async {
         ensureToken()
         state = .loading

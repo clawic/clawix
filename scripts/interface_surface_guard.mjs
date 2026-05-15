@@ -639,6 +639,35 @@ for (const pattern of ["ImportAgentRow", "Import another agent configuration", "
   }
 }
 
+const driveScreenSource = read("macos/Sources/Clawix/Drive/DriveScreen.swift");
+for (const pattern of ["try? await manager.client.createTailnetShare", "try? await manager.client.createTunnelShare", "try? await manager.client.createAgentShare", "shares = try? await manager.client.listAllShares"]) {
+  if (driveScreenSource.includes(pattern)) {
+    fail(`DriveScreen.swift must surface Drive detail action failures instead of swallowing them: ${JSON.stringify(pattern)}`);
+  }
+}
+
+const indexSearchesSource = read("macos/Sources/Clawix/Index/Searches/SearchesTabView.swift");
+if (indexSearchesSource.includes("try? await manager.runSearch")) {
+  fail("SearchesTabView.swift must surface saved-search run failures");
+}
+
+const indexMonitorsSource = read("macos/Sources/Clawix/Index/Monitors/MonitorsTabView.swift");
+if (indexMonitorsSource.includes("try? await manager.fireMonitor")) {
+  fail("MonitorsTabView.swift must surface monitor fire failures");
+}
+
+const marketplaceManagerSource = read("macos/Sources/Clawix/Marketplace/MarketplaceManager.swift");
+if (marketplaceManagerSource.includes("catch {}")) {
+  fail("MarketplaceManager.swift must not swallow marketplace mutation failures");
+}
+
+const publishingManagerSource = read("macos/Sources/Clawix/Publishing/PublishingManager.swift");
+for (const pattern of ["(try? await families)", "(try? await channels)"]) {
+  if (publishingManagerSource.includes(pattern)) {
+    fail(`PublishingManager.swift must not silently turn bootstrap list failures into empty v1 surfaces: ${JSON.stringify(pattern)}`);
+  }
+}
+
 const agentStore = read("macos/Sources/Clawix/Agents/AgentStore.swift");
 for (const pattern of [
   "migrateLegacyConnectionAuth",

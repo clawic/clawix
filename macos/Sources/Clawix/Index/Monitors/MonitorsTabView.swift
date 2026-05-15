@@ -62,7 +62,15 @@ struct MonitorsTabView: View {
                                 searchName: manager.searches.first { $0.id == monitor.searchId }?.name ?? monitor.searchId,
                                 isSelected: selectedMonitorId == monitor.id,
                                 onSelect: { selectedMonitorId = monitor.id },
-                                onFire: { Task { _ = try? await manager.fireMonitor(id: monitor.id) } }
+                                onFire: {
+                                    Task {
+                                        do {
+                                            _ = try await manager.fireMonitor(id: monitor.id)
+                                        } catch {
+                                            manager.surfaceActionError(error)
+                                        }
+                                    }
+                                }
                             )
                             CardDivider()
                         }
