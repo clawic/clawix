@@ -6256,5 +6256,100 @@
       "storageClass" : "nativeAppData"
     }
   ],
+  "edges" : [
+    {
+      "contractId" : "clawix.protocol.bridge",
+      "fromId" : "clawix.ui.chat",
+      "id" : "clawix.edge.chat.ui.consumes.bridge",
+      "notes" : "Host-side mirror of the canonical ClawJS chat.localDesktop route edge.",
+      "owner" : "clawix",
+      "toId" : "clawix.bridge.local",
+      "transport" : "local bridge RPC",
+      "type" : "consumes",
+      "validation" : "macOS bridge daemon E2E fixture",
+      "visibility" : "internal"
+    },
+    {
+      "contractId" : "clawix.protocol.bridge",
+      "fromId" : "clawix.companion.client",
+      "id" : "clawix.edge.companion.consumes.bridge",
+      "owner" : "clawix",
+      "toId" : "clawix.bridge.local",
+      "transport" : "WebSocket localhost:24080",
+      "type" : "consumes",
+      "validation" : "Bridge frame round-trip tests across Swift, Android, Windows, Web",
+      "visibility" : "public"
+    }
+  ],
+  "routes" : [
+    {
+      "adrs" : [
+        "docs/adr/0011-surface-route-graph.md"
+      ],
+      "docs" : [
+        "docs/adr/0011-surface-route-graph.md",
+        "docs/host-ownership.md"
+      ],
+      "fromId" : "clawix.ui.chat",
+      "id" : "chat.localDesktop.clawixHost",
+      "name" : "Clawix host leg of local desktop chat",
+      "owner" : "clawix",
+      "steps" : [
+        {
+          "contractId" : "clawix.protocol.bridge",
+          "edgeId" : "clawix.edge.chat.ui.consumes.bridge",
+          "edgeType" : "consumes",
+          "fromId" : "clawix.ui.chat",
+          "owner" : "clawix",
+          "toId" : "clawix.bridge.local",
+          "transport" : "local bridge RPC",
+          "validation" : "macOS bridge daemon E2E fixture",
+          "visibility" : "internal"
+        }
+      ],
+      "summary" : "Clawix UI enters the local bridge before the framework-owned daemon/runtime/session route continues in ClawJS.",
+      "tests" : [
+        "macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"
+      ],
+      "toId" : "clawix.bridge.local",
+      "transport" : "local bridge RPC",
+      "validation" : "macOS bridge daemon E2E fixture",
+      "visibility" : "internal"
+    },
+    {
+      "adrs" : [
+        "docs/adr/0011-surface-route-graph.md"
+      ],
+      "docs" : [
+        "docs/adr/0011-surface-route-graph.md",
+        "packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md"
+      ],
+      "fromId" : "clawix.companion.client",
+      "id" : "chat.companionBridge.clawixHost",
+      "name" : "Clawix host leg of companion chat",
+      "owner" : "clawix",
+      "steps" : [
+        {
+          "contractId" : "clawix.protocol.bridge",
+          "edgeId" : "clawix.edge.companion.consumes.bridge",
+          "edgeType" : "consumes",
+          "fromId" : "clawix.companion.client",
+          "owner" : "clawix",
+          "toId" : "clawix.bridge.local",
+          "transport" : "WebSocket localhost:24080",
+          "validation" : "Cross-platform bridge frame round-trip tests",
+          "visibility" : "public"
+        }
+      ],
+      "summary" : "Companion clients enter the local bridge over the stable bridge protocol on port 24080 before framework routing continues.",
+      "tests" : [
+        "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"
+      ],
+      "toId" : "clawix.bridge.local",
+      "transport" : "WebSocket localhost:24080",
+      "validation" : "Cross-platform bridge frame round-trip tests",
+      "visibility" : "public"
+    }
+  ],
   "version" : 1
 }
