@@ -674,6 +674,11 @@ if (secretKindIconSource.includes("source compatibility")) {
   fail("SecretKindIcon.swift must not keep no-op compatibility parameters");
 }
 
+const macosPackage = read("macos/Package.swift");
+if (macosPackage.includes("legacy JSON blob store")) {
+  fail("macos/Package.swift must describe current persistence without legacy blob-store wording");
+}
+
 const lucideBridgeSource = read("macos/Sources/Clawix/LucideBridge.swift");
 for (const pattern of ["legacy SF Symbol", "init(lucideOrSystem", "Compatibility shim"]) {
   if (lucideBridgeSource.includes(pattern)) {
