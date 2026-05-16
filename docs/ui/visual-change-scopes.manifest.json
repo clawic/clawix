@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Visual, copy, layout, hierarchy, icon, spacing, typography, animation, ordering, and visible-name changes require an explicit approved scope plus the private visual model allowlist. This public file records safe scope metadata only.",
+  "privateModelAssignment": "outside-public-repo",
+  "defaultAuthorized": false,
+  "scopeStatuses": ["proposed", "approved", "expired", "revoked"],
+  "requiredApprovalFields": [
+    "id",
+    "status",
+    "platforms",
+    "surfaces",
+    "patterns",
+    "changeKinds",
+    "approvedBy",
+    "approvedAt",
+    "expiresAt",
+    "privateApprovalReference"
+  ],
+  "activeScopes": []
+}

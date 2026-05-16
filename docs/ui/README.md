@@ -26,6 +26,8 @@ the public repo.
 - `pattern-registry/`: pattern manifests and human notes.
 - `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `copy.inventory.json`: copy canon policy and private snapshot requirements.
+- `visual-change-scopes.manifest.json`: public-safe approved scope metadata for
+  visual/copy/layout work.
 - `debt.baseline.json`: frozen existing visual drift.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
 - `performance-budgets.registry.json`: critical-flow budget registry.
@@ -47,9 +49,11 @@ the public repo.
    conceptual proposal.
 7. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
 8. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-9. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-10. Keep private baseline coverage current with
+9. Keep visual authorization scopes current with
+   `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
+10. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+11. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-11. When the lane is not visual-authorized, use
+12. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

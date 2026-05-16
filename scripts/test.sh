@@ -200,6 +200,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_governance_guard.mjs"
   run node "$ROOT_DIR/scripts/ui_geometry_contract_check.mjs"
   run node "$ROOT_DIR/scripts/ui_copy_governance_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_visual_scope_check.mjs"
   run node "$ROOT_DIR/scripts/ui_surface_inventory_check.mjs"
   run node "$ROOT_DIR/scripts/ui_private_baseline_manifest_check.mjs"
   run node "$ROOT_DIR/scripts/naming-shape-check.mjs"

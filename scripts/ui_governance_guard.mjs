@@ -420,6 +420,7 @@ const requiredDocs = [
   "docs/ui/interface-governance.config.json",
   "docs/ui/visible-surfaces.inventory.json",
   "docs/ui/copy.inventory.json",
+  "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/debt.baseline.json",
   "docs/ui/protected-surfaces.registry.json",
   "docs/ui/performance-budgets.registry.json",
