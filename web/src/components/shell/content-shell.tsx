@@ -4,9 +4,8 @@
 //
 // Radius 14 is small enough that a CSS border-radius is visually close to
 // Apple's continuous corner; for any region where the difference is
-// visible we'd switch to a figma-squircle clip-path. Uneven per-corner
-// radii preclude figma-squircle's single cornerRadius API, so the shell
-// uses native CSS here.
+// visible we'd use a custom clip-path. Uneven per-corner radii keep this
+// shell on native CSS here.
 import type { ReactNode } from "react";
 
 interface Props {

@@ -27,7 +27,7 @@ Source session: private session, not published
 - Status: PARTIAL
 - Tool: Knip 6.14.0 through `scripts/code-hygiene-knip.mjs`.
 - Config: `web/knip.json`.
-- Latest summary: 33 files with issues; 218 total findings across files, dependencies, devDependencies, binaries, exports, and types.
+- Latest summary: 28 files with issues; 209 total export/type findings after the first web cleanup lot removed 4 unused files, 2 unused dependencies, and 2 unused package-script binaries; Tailwind was retained as calibrated build dependency.
 - Mode: report-only; cleanup and baselining pending before blocking gate activation.
 
 ## 2026-05-17 - Periphery report-only setup

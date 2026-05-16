@@ -2,8 +2,6 @@
 //   primary     -> SheetPrimaryButtonStyle (white solid, radius 10, 14x9, 13.5/wght 500)
 //   cancel      -> SheetCancelButtonStyle (text + outline, hover white 18%)
 //   destructive -> SheetDestructiveButtonStyle (#F26B6B, radius 9, 14x8, 13/wght 600)
-//
-// GlassPill (components/glass-pill.tsx) coexists for floating buttons over media.
 import { ButtonHTMLAttributes, forwardRef } from "react";
 import cx from "../../lib/cx";
 

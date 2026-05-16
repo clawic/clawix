@@ -356,7 +356,7 @@ function applyFrame(set: Set, get: Get, frame: BridgeFrame): void {
       });
       break;
     case "bridgeState":
-      set({ bridge: { state: frame.state, chatCount: frame.sessionCount, message: frame.message } });
+      set({ bridge: { state: frame.state, chatCount: frame.chatCount, message: frame.message } });
       break;
     case "rateLimitsSnapshot":
     case "rateLimitsUpdated":

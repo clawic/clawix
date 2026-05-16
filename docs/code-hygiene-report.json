@@ -14,13 +14,9 @@
     "unreferencedAssetCandidates": 21
   },
   "knipSummary": {
-    "filesWithIssues": 33,
-    "totalIssues": 218,
+    "filesWithIssues": 28,
+    "totalIssues": 209,
     "issueTypes": {
-      "files": 4,
-      "binaries": 2,
-      "dependencies": 2,
-      "devDependencies": 1,
       "exports": 184,
       "types": 25
     }
@@ -42,6 +38,8 @@
   "notes": [
     "Initial bootstrap report. Full cleanup campaign still required before goal completion.",
     "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
-    "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available."
+    "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available.",
+    "Initial Clawix web cleanup removed 4 unused files, 2 unused dependencies, and 2 unused package-script binaries from the Knip report.",
+    "Tailwind is kept as calibrated dependency because the web build uses the Vite plugin and CSS import."
   ]
 }

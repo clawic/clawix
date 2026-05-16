@@ -15,8 +15,8 @@ with concrete evidence.
 | `baseline_governance` | Motivo + caducidad | implemented | Baseline schema and checker require expiry metadata. |
 | `autofix_policy` | Solo sugerir cambios | documented | Audit/cleanup skills prohibit default destructive autofix. |
 | `export_policy` | API publica se conserva | documented | ADR 0016 public contract retention rule. |
-| `unused_files` | Entrypoints configurados primero | partially implemented | Knip config declares explicit entry/project scope and report-only file findings; cleanup campaign pending. |
-| `dependency_policy` | Normalizar por workspace | partially implemented | Knip report records dependency findings in report-only mode; cleanup campaign pending. |
+| `unused_files` | Entrypoints configurados primero | partially implemented | Knip config declares explicit entry/project scope; first Clawix web lot removed 4 unused files and cleared file findings. |
+| `dependency_policy` | Normalizar por workspace | partially implemented | First Clawix web lot removed 2 unused dependencies and 2 unused package-script binaries; Tailwind retained as calibrated build dependency. |
 | `swift_tooling` | Periphery calibrado | partially implemented | Periphery 3.7.4 runner and report pair exist with Swift retention flags; local binary install remains `EXTERNAL PENDING`. |
 | `swift_public` | Conservar como contrato | documented | ADR 0016 public Swift retention rule. |
 | `swiftui_dynamic` | Retener por patron | documented | ADR 0016 semantic report-only rule. |

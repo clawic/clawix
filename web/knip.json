@@ -17,5 +17,8 @@
   ],
   "ignoreFiles": [
     "src/**/*.d.ts"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss"
   ]
 }

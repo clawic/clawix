@@ -12,13 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "check:wire": "tsx scripts/check-wire-parity.ts"
   },
   "dependencies": {
-    "@tanstack/react-router": "^1.95.0",
-    "figma-squircle": "^1.0.0",
     "framer-motion": "^11.15.0",
     "hash-wasm": "^4.12.0",
     "lucide-react": "^0.469.0",
