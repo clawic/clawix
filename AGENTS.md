@@ -31,6 +31,8 @@ Read the relevant canonical docs before changing their surfaces:
 - Source file boundaries: `docs/adr/0004-source-file-boundaries.md`
 - Human/programmatic parity: `docs/interface-matrix.md`,
   `docs/adr/0007-dual-human-programmatic-surfaces.md`
+- Surface routes: `docs/adr/0011-surface-route-graph.md` and sibling ClawJS
+  `docs/adr/0012-surface-route-graph.md`
 - CLI guidance/resource assertions: `docs/adr/0008-cli-jit-guidance-actor-assertions-resource-registry.md`
 - Platform procedures: `playbooks/README.md` and the relevant platform
   playbook.
@@ -96,7 +98,8 @@ Use the relevant skill instead of loading long instructions into context:
   `architecture-drift-repair`, `adr-to-guardrail`,
   `decision-map-maintenance`
 - Stable surfaces: `naming-surface-audit`, `surface-registry-alignment`,
-  `cli-agent-surface-work`, `source-file-boundary-refactor`
+  `surface-route-work`, `cli-agent-surface-work`,
+  `source-file-boundary-refactor`
 - Data/storage: `canonical-catalog-expansion`,
   `data-storage-boundary-review`
 - Host/security/validation: `host-boundary-review`,
@@ -135,6 +138,8 @@ Use the relevant skill instead of loading long instructions into context:
   GUI-owned backend or bridge.
 - Capabilities are complete only when human and programmatic surfaces are
   registered or their gaps are explicitly classified.
+- Runtime-critical bridge, companion, chat, host, and remote work starts from
+  `claw inspect show|neighbors|routes|route` plus the Clawix manifest.
 - New hand-authored files at 1200+ lines need a split plan or baseline
   rationale; new 2000+ line files are blocked unless explicitly exempted.
   Emergency-debt files above 5000 lines must not grow except for extraction,

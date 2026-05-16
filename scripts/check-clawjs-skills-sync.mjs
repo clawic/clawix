@@ -16,6 +16,7 @@ const requiredSkills = [
   "decision-map-maintenance",
   "naming-surface-audit",
   "surface-registry-alignment",
+  "surface-route-work",
   "cli-agent-surface-work",
   "source-file-boundary-refactor",
   "canonical-catalog-expansion",
