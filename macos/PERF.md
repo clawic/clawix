@@ -39,9 +39,11 @@ Never start optimizing without a trace. Guessing at hot paths in a
 the needle.
 
 Interface performance budgets are tracked by critical flow in
-`../docs/ui/performance-budgets.json`. A budget becomes enforceable only after
-the user approves the measured baseline. Until then, captures are evidence for
-baseline approval, not permission to redesign or retune visible UI.
+`../docs/ui/performance-budgets.registry.json`, with private evidence tracked
+through `../docs/ui/private-baselines.manifest.json`. A budget becomes
+enforceable only after the user approves the measured baseline. Until then,
+captures are evidence for baseline approval, not permission to redesign or
+retune visible UI.
 
 If the trace does not contain enough evidence to separate UI rendering,
 state publication, IPC/daemon latency, backend latency, disk IO and

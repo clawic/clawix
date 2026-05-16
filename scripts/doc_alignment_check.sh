@@ -134,6 +134,8 @@ require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-base
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"
+require_snippet "macos/PERF.md" "docs/ui/performance-budgets.registry.json"
+require_snippet "skills/ui-performance-budget/SKILL.md" "docs/ui/performance-budgets.registry.json"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## sidebar-row"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## terminal-surface"
 require_snippet "docs/interface-matrix.md" "This matrix is the Clawix gate for ADR 0007"
