@@ -600,6 +600,7 @@ const requiredDocs = [
   "docs/ui/implementation-evidence.manifest.json",
   "docs/ui/state-coverage.manifest.json",
   "docs/ui/surface-references.manifest.json",
+  "docs/ui/surface-baseline-coverage.manifest.json",
   "docs/ui/visual-model-allowlist.manifest.json",
   "docs/ui/component-extraction.manifest.json",
   "docs/ui/mechanical-equivalence.manifest.json",

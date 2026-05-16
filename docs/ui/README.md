@@ -29,6 +29,8 @@ the public repo.
   contract for visible UI scopes.
 - `surface-references.manifest.json`: public-safe reference contract for every
   visible surface coverage entry.
+- `surface-baseline-coverage.manifest.json`: public-safe private baseline,
+  rendered geometry, and copy snapshot references for visible surface coverage.
 - `visual-model-allowlist.manifest.json`: explicit visual model gate for
   visual/copy/layout mutation authority.
 - `component-extraction.manifest.json`: reusable component extraction policy
@@ -97,40 +99,43 @@ the public repo.
 15. Keep visible surface references current with
    `scripts/ui_surface_reference_check.mjs`; pattern references must resolve to
    public-safe repo files or docs anchors.
-16. Keep rendered geometry evidence contracts current with
+16. Keep visible surface baseline coverage current with
+   `scripts/ui_surface_baseline_coverage_check.mjs`; every inventory entry must
+   have private baseline, rendered geometry, and copy snapshot references.
+17. Keep rendered geometry evidence contracts current with
    `scripts/ui_rendered_geometry_manifest_check.mjs`.
-17. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-18. Keep performance budget contracts current with
+18. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
+19. Keep performance budget contracts current with
    `scripts/ui_performance_budget_check.mjs`; budget flow references must match
    private baseline references.
-19. Keep component extraction APIs current with
+20. Keep component extraction APIs current with
    `scripts/ui_component_extraction_check.mjs`.
-20. Keep mechanical refactor evidence current with
+21. Keep mechanical refactor evidence current with
    `scripts/ui_mechanical_equivalence_check.mjs`.
-21. Keep visual authorization scopes current with
+22. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default, and
    approved scopes must declare files plus a change budget.
-22. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
-23. Keep visual model authorization current with
+23. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
+24. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
    identify an allowlisted visual model.
-24. Keep visual guard failure diagnostics current with
+25. Keep visual guard failure diagnostics current with
    `scripts/ui_visual_guard_failure_check.mjs`.
-25. Keep conceptual visual proposal records current with
+26. Keep conceptual visual proposal records current with
    `scripts/ui_visual_proposal_check.mjs`.
-26. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-27. Keep private baseline coverage current with
+27. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+28. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-28. Keep aggregate private visual validation current with
+29. Keep aggregate private visual validation current with
     `scripts/ui_private_visual_validation_manifest_check.mjs`.
-29. When all private roots are available, verify visual evidence end to end with
+30. When all private roots are available, verify visual evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-30. When private geometry evidence is available, verify it with
+31. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-31. When private baselines are available, verify them with
+32. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-32. When private copy snapshots are available, verify them with
+33. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-33. When the lane is not visual-authorized, use
+34. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

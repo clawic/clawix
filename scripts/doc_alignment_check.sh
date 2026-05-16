@@ -47,6 +47,7 @@ for file in \
   "docs/ui/implementation-evidence.manifest.json" \
   "docs/ui/state-coverage.manifest.json" \
   "docs/ui/surface-references.manifest.json" \
+  "docs/ui/surface-baseline-coverage.manifest.json" \
   "docs/ui/visual-model-allowlist.manifest.json" \
   "docs/ui/component-extraction.manifest.json" \
   "docs/ui/mechanical-equivalence.manifest.json" \
@@ -79,6 +80,7 @@ for file in \
   "scripts/ui_implementation_evidence_check.mjs" \
   "scripts/ui_state_coverage_check.mjs" \
   "scripts/ui_surface_reference_check.mjs" \
+  "scripts/ui_surface_baseline_coverage_check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_performance_budget_check.mjs" \
@@ -133,6 +135,8 @@ require_snippet "docs/ui/README.md" "state-coverage.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_state_coverage_check.mjs"
 require_snippet "docs/ui/README.md" "surface-references.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_reference_check.mjs"
+require_snippet "docs/ui/README.md" "surface-baseline-coverage.manifest.json"
+require_snippet "docs/ui/README.md" "scripts/ui_surface_baseline_coverage_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
@@ -192,6 +196,8 @@ require_snippet "docs/ui/state-coverage.manifest.json" "android-domain-surfaces"
 require_snippet "docs/ui/state-coverage.manifest.json" "pending-implementation-evidence"
 require_snippet "docs/ui/surface-references.manifest.json" "Every visible surface coverage entry"
 require_snippet "docs/ui/surface-references.manifest.json" "forbidAbsolutePath"
+require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "macos-root-chrome"
+require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
