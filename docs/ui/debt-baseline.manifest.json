@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "status": "alias",
+  "policy": "Compatibility manifest for the original interface-governance plan term docs/ui/debt-baseline.*. The canonical debt baseline source remains docs/ui/debt.baseline.json.",
+  "canonicalBaseline": "docs/ui/debt.baseline.json",
+  "reportRegistry": "docs/ui/debt-report.registry.json"
+}

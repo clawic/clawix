@@ -73,6 +73,11 @@ for (const [index, entry] of debtEntries.entries()) {
   if (entry.reviewAfter < today) fail(`${label} expired on ${entry.reviewAfter}`);
 }
 
+const aliasPath = "docs/ui/debt-baseline.manifest.json";
+const alias = readJson(aliasPath);
+requireFields(alias, aliasPath, ["schemaVersion", "status", "policy", "canonicalBaseline", "reportRegistry"]);
+if (alias?.canonicalBaseline !== debtPath) fail(`${aliasPath}.canonicalBaseline must be ${debtPath}`);
+
 const reportPath = "docs/ui/debt-report.registry.json";
 const report = readJson(reportPath);
 requireFields(report, reportPath, [
@@ -84,6 +89,7 @@ requireFields(report, reportPath, [
   "pendingItems",
 ]);
 if (report?.sourceBaseline !== debtPath) fail(`${reportPath}.sourceBaseline must be ${debtPath}`);
+if (alias?.reportRegistry !== reportPath) fail(`${aliasPath}.reportRegistry must be ${reportPath}`);
 
 const reportStatuses = new Set(requireArray(report, reportPath, "reportStatusValues"));
 for (const status of ["pending-visual-authorized-cleanup", "blocked-without-private-baseline", "resolved"]) {

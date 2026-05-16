@@ -257,6 +257,11 @@ for (const [index, entry] of requireArray(debt, debtPath, "entries").entries()) 
   }
 }
 
+const debtAliasPath = "docs/ui/debt-baseline.manifest.json";
+const debtAlias = readJson(debtAliasPath);
+requireFields(debtAlias, debtAliasPath, ["schemaVersion", "status", "policy", "canonicalBaseline", "reportRegistry"]);
+if (debtAlias?.canonicalBaseline !== debtPath) fail(`${debtAliasPath}.canonicalBaseline must be ${debtPath}`);
+
 const debtReportPath = "docs/ui/debt-report.registry.json";
 const debtReport = readJson(debtReportPath);
 requireFields(debtReport, debtReportPath, [
@@ -502,6 +507,7 @@ const requiredDocs = [
   "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/visual-change-detectors.manifest.json",
   "docs/ui/debt.baseline.json",
+  "docs/ui/debt-baseline.manifest.json",
   "docs/ui/debt-report.registry.json",
   "docs/ui/protected-surfaces.registry.json",
   "docs/ui/canon-promotions.registry.json",

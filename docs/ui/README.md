@@ -35,6 +35,8 @@ the public repo.
 - `visual-change-detectors.manifest.json`: platform-specific source tokens for
   unauthorized visual/copy/layout diffs.
 - `debt.baseline.json`: frozen existing visual drift.
+- `debt-baseline.manifest.json`: compatibility alias for the original plan term
+  `docs/ui/debt-baseline.*`; `debt.baseline.json` remains canonical.
 - `debt-report.registry.json`: report-only pending items derived from the debt
   baseline.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
