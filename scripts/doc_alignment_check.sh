@@ -53,6 +53,7 @@ for file in \
   "docs/ui/pattern-registry/patterns.registry.json" \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
   "docs/ui/debt.baseline.json" \
+  "docs/ui/debt-baseline.manifest.json" \
   "docs/ui/debt-report.registry.json" \
   "docs/ui/protected-surfaces.registry.json" \
   "docs/ui/canon-promotions.registry.json" \
@@ -122,6 +123,8 @@ require_snippet "docs/ui/component-extraction.manifest.json" "unbounded-prop-bag
 require_snippet "docs/ui/component-extraction.manifest.json" "minimumCallSites"
 require_snippet "docs/ui/canon-promotions.registry.json" "Only the user can promote"
 require_snippet "docs/ui/canon-promotions.registry.json" "private-codex-ui-approval"
+require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt-baseline.*"
+require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt.baseline.json"
 require_snippet "docs/ui/debt-report.registry.json" "Report only."
 require_snippet "docs/ui/debt-report.registry.json" "pending-visual-authorized-cleanup"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
