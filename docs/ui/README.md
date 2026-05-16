@@ -32,6 +32,8 @@ the public repo.
   geometry evidence.
 - `visual-change-scopes.manifest.json`: public-safe approved scope metadata for
   visual/copy/layout work.
+- `visual-change-detectors.manifest.json`: platform-specific source tokens for
+  unauthorized visual/copy/layout diffs.
 - `debt.baseline.json`: frozen existing visual drift.
 - `debt-report.registry.json`: report-only pending items derived from the debt
   baseline.
@@ -68,15 +70,16 @@ the public repo.
    `scripts/ui_component_extraction_check.mjs`.
 13. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
-14. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-15. Keep private baseline coverage current with
+14. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
+15. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+16. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-16. When private geometry evidence is available, verify it with
+17. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-17. When private baselines are available, verify them with
+18. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-18. When private copy snapshots are available, verify them with
+19. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-19. When the lane is not visual-authorized, use
+20. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

@@ -392,21 +392,43 @@ for (const [index, reference] of requireArray(inspiration, inspirationPath, "ref
 }
 
 const changedBase = process.env.CLAWIX_UI_GUARD_DIFF_BASE;
-const sourcePaths = [
-  "macos/Sources",
-  "ios/Sources",
-  "android/app/src/main",
-  "web/src",
-];
+const visualDetectorsPath = "docs/ui/visual-change-detectors.manifest.json";
+const visualDetectors = readJson(visualDetectorsPath);
+requireFields(visualDetectors, visualDetectorsPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "sourceRoots",
+  "requiredChangeKinds",
+  "detectors",
+]);
+const sourcePaths = requireArray(visualDetectors, visualDetectorsPath, "sourceRoots");
+const compiledVisualDetectors = [];
+for (const [index, detector] of requireArray(visualDetectors, visualDetectorsPath, "detectors").entries()) {
+  const label = `${visualDetectorsPath}.detectors[${index}]`;
+  requireFields(detector, label, ["id", "changeKind", "pattern", "reason"]);
+  try {
+    compiledVisualDetectors.push({
+      id: detector.id,
+      changeKind: detector.changeKind,
+      regex: new RegExp(detector.pattern),
+    });
+  } catch (error) {
+    fail(`${label}.pattern is not a valid regex: ${error.message}`);
+  }
+}
 const diffArgs = changedBase
   ? ["diff", "--unified=0", changedBase, "--", ...sourcePaths]
   : ["diff", "--unified=0", "--", ...sourcePaths];
 const stagedDiffArgs = ["diff", "--cached", "--unified=0", "--", ...sourcePaths];
 
-const visualPattern = /\b(Color|Palette|MenuStyle|Typography|AppLayout|Image\(systemName:|LucideIcon|RoundedRectangle|Capsule|Circle|HStack|VStack|ZStack|Spacer|Text\("|font\(|foregroundColor|foregroundStyle|background|padding|frame|cornerRadius|opacity|tracking|textCase|animation|transition|lineLimit|help\("|accessibilityLabel\()/;
 const visualAuthorizationEnv = String(visualAuthorization.publicSignalEnv || "");
 const visualAuthorizationValue = String(visualAuthorization.publicSignalValue || "");
 const visualAuthorized = Boolean(visualAuthorizationEnv) && process.env[visualAuthorizationEnv] === visualAuthorizationValue;
+
+function matchingVisualDetector(line) {
+  return compiledVisualDetectors.find((detector) => detector.regex.test(line));
+}
 
 function visualDiffHits(diffText, sourceLabel) {
   const hits = [];
@@ -426,11 +448,14 @@ function visualDiffHits(diffText, sourceLabel) {
     }
 
     if (line.startsWith("+") && !line.startsWith("+++")) {
-      if (visualPattern.test(line)) {
+      const detector = matchingVisualDetector(line);
+      if (detector) {
         hits.push({
           path: currentPath,
           line: nextNewLine || "?",
           source: sourceLabel,
+          detector: detector.id,
+          changeKind: detector.changeKind,
           text: line.slice(1, 241),
         });
       }
@@ -456,7 +481,9 @@ if (visualHits.length > 0 && !visualAuthorized) {
       "unauthorized visual/copy/layout source edit detected",
       `set ${visualAuthorizationEnv}=${visualAuthorizationValue} only when the task has explicit visual authorization from the private policy`,
       "non-authorized agents must leave a conceptual proposal instead of editing visible presentation",
-      ...visualHits.slice(0, 20).map((hit) => `  ${hit.path}:${hit.line} [${hit.source}] ${hit.text}`),
+      ...visualHits
+        .slice(0, 20)
+        .map((hit) => `  ${hit.path}:${hit.line} [${hit.source}/${hit.detector}/${hit.changeKind}] ${hit.text}`),
     ].join("\n"),
   );
 }
@@ -473,6 +500,7 @@ const requiredDocs = [
   "docs/ui/rendered-geometry.manifest.json",
   "docs/ui/copy.inventory.json",
   "docs/ui/visual-change-scopes.manifest.json",
+  "docs/ui/visual-change-detectors.manifest.json",
   "docs/ui/debt.baseline.json",
   "docs/ui/debt-report.registry.json",
   "docs/ui/protected-surfaces.registry.json",

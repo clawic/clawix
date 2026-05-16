@@ -49,6 +49,7 @@ for file in \
   "docs/ui/copy.inventory.json" \
   "docs/ui/rendered-geometry.manifest.json" \
   "docs/ui/visual-change-scopes.manifest.json" \
+  "docs/ui/visual-change-detectors.manifest.json" \
   "docs/ui/pattern-registry/patterns.registry.json" \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
   "docs/ui/debt.baseline.json" \
@@ -69,6 +70,7 @@ for file in \
   "scripts/ui_rendered_geometry_manifest_check.mjs" \
   "scripts/ui_private_geometry_verify.mjs" \
   "scripts/ui_visual_scope_check.mjs" \
+  "scripts/ui_visual_detector_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
@@ -106,6 +108,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_component_extraction_check.mjs"
 require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_scope_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_visual_detector_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
@@ -125,6 +128,8 @@ require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rend
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "privateModelAssignment"
+require_snippet "docs/ui/visual-change-detectors.manifest.json" "platform-specific source tokens"
+require_snippet "docs/ui/visual-change-detectors.manifest.json" "swiftui-layout"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"

@@ -30,6 +30,8 @@ jobs:
         run: node scripts/ui_component_extraction_check.mjs
       - name: Validate UI visual scope policy
         run: node scripts/ui_visual_scope_check.mjs
+      - name: Validate UI visual detector policy
+        run: node scripts/ui_visual_detector_check.mjs
       - name: Validate visible UI surface inventory
         run: node scripts/ui_surface_inventory_check.mjs
       - name: Validate private baseline manifest contract

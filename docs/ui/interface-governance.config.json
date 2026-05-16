@@ -45,6 +45,7 @@
     "copy-governance-contract-check",
     "component-extraction-policy-check",
     "visual-scope-policy-check",
+    "visual-detector-policy-check",
     "private-baseline-manifest-shape",
     "performance-budget-platform-coverage",
     "unauthorized-visual-diff"

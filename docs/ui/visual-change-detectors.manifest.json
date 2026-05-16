@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Unauthorized visual, copy, and layout edits are detected from platform-specific source tokens. Detector changes are governance changes and must stay public-safe.",
+  "sourceRoots": ["macos/Sources", "ios/Sources", "android/app/src/main", "web/src"],
+  "requiredChangeKinds": [
+    "color",
+    "spacing",
+    "size",
+    "icon",
+    "layout",
+    "animation",
+    "microcopy",
+    "visible-name",
+    "ordering",
+    "hierarchy",
+    "typography"
+  ],
+  "detectors": [
+    { "id": "swiftui-color", "platforms": ["macos", "ios"], "changeKind": "color", "pattern": "\\b(Color|Palette|foregroundColor|foregroundStyle|background)\\b", "reason": "SwiftUI color and background tokens affect presentation." },
+    { "id": "swiftui-icon", "platforms": ["macos", "ios"], "changeKind": "icon", "pattern": "Image\\(systemName:", "reason": "SF Symbol selection is a visual decision." },
+    { "id": "swiftui-layout", "platforms": ["macos", "ios"], "changeKind": "layout", "pattern": "\\b(HStack|VStack|ZStack|Spacer|frame\\(|padding|lineLimit)\\b", "reason": "SwiftUI layout tokens affect placement and density." },
+    { "id": "swiftui-shape", "platforms": ["macos", "ios"], "changeKind": "size", "pattern": "\\b(RoundedRectangle|Capsule|Circle|cornerRadius|opacity)\\b", "reason": "Shape, radius, and opacity tokens affect visual geometry." },
+    { "id": "swiftui-typography", "platforms": ["macos", "ios"], "changeKind": "typography", "pattern": "\\b(Text\\(\"|font\\(|tracking|textCase)\\b", "reason": "Text styling and visible strings need UI authorization." },
+    { "id": "swiftui-accessible-copy", "platforms": ["macos", "ios"], "changeKind": "microcopy", "pattern": "\\b(help\\(\"|accessibilityLabel\\()\\b", "reason": "Tooltip and accessibility copy are governed copy." },
+    { "id": "swiftui-motion", "platforms": ["macos", "ios"], "changeKind": "animation", "pattern": "\\b(animation|transition)\\b", "reason": "Motion changes are visual behavior." },
+    { "id": "compose-layout", "platforms": ["android"], "changeKind": "layout", "pattern": "\\b(Modifier\\.(padding|size|height|width)|Row\\(|Column\\(|Box\\()\\b", "reason": "Compose layout tokens affect placement and density." },
+    { "id": "compose-color", "platforms": ["android"], "changeKind": "color", "pattern": "\\b(MaterialTheme|Color\\(|background\\(|tint\\s*=)\\b", "reason": "Compose color tokens affect presentation." },
+    { "id": "compose-icon", "platforms": ["android"], "changeKind": "icon", "pattern": "\\b(Icon\\(|Icons\\.)\\b", "reason": "Compose icon selection is a visual decision." },
+    { "id": "compose-typography", "platforms": ["android"], "changeKind": "typography", "pattern": "\\b(Text\\(|fontSize|fontWeight)\\b", "reason": "Compose text styling and visible strings are governed." },
+    { "id": "web-class-style", "platforms": ["web"], "changeKind": "layout", "pattern": "\\b(className=|style=|display:|grid|flex|gap|padding|margin)\\b", "reason": "Web class and style tokens affect presentation." },
+    { "id": "web-color", "platforms": ["web"], "changeKind": "color", "pattern": "\\b(color:|background:|bg-|text-|border-)\\b", "reason": "Web color tokens affect presentation." },
+    { "id": "web-icon", "platforms": ["web"], "changeKind": "icon", "pattern": "\\b(LucideIcon|Icon\\(|aria-label=)\\b", "reason": "Icon selection and accessible labels are governed." },
+    { "id": "web-motion", "platforms": ["web"], "changeKind": "animation", "pattern": "\\b(animation|transition|duration-|ease-)\\b", "reason": "Web motion tokens are visual behavior." },
+    { "id": "cross-ordering", "platforms": ["macos", "ios", "android", "web"], "changeKind": "ordering", "pattern": "\\b(sort\\(|sorted\\(|order|position)\\b", "reason": "Visible ordering can change hierarchy." },
+    { "id": "cross-visible-name", "platforms": ["macos", "ios", "android", "web"], "changeKind": "visible-name", "pattern": "\\b(title|label|placeholder|emptyState|errorMessage)\\b", "reason": "Visible names and placeholders are governed copy." },
+    { "id": "cross-hierarchy", "platforms": ["macos", "ios", "android", "web"], "changeKind": "hierarchy", "pattern": "\\b(section|header|footer|sidebar|toolbar|menu)\\b", "reason": "Visible hierarchy changes need UI authorization." },
+    { "id": "cross-spacing", "platforms": ["macos", "ios", "android", "web"], "changeKind": "spacing", "pattern": "\\b(spacing|inset|offset|gap|padding|margin)\\b", "reason": "Spacing changes are visual decisions." }
+  ]
+}
