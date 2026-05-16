@@ -458,6 +458,7 @@ for (const [relativePath, phrases] of [
 }
 
 for (const relativePath of [
+  "STANDARDS.md",
   "cli/README.md",
   "cli/bin/clawix.js",
   "cli/lib/doctor.js",

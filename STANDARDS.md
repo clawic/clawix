@@ -185,9 +185,9 @@ container.
   every settings page.
 - Feature flag values do not persist across release builds (compile-time
   guards make them unreachable, see §16).
-- Sensitive data (auth tokens, pairing bearers) persists where the
+- Sensitive data (auth tokens, pairing tokens) persists where the
   platform mandates (Keychain `[macOS]/[iOS]`, `~/Library/Preferences`
-  for non-secret bearers documented in `CLAUDE.md`).
+  for non-secret tokens documented in `CLAUDE.md`).
 
 ## 8. Forms and inputs
 
