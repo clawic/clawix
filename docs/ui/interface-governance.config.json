@@ -49,6 +49,7 @@
     "surface-reference-contract-check",
     "surface-baseline-coverage-check",
     "rendered-drift-report-check",
+    "release-gate-contract-check",
     "rendered-geometry-manifest-shape",
     "copy-governance-contract-check",
     "component-extraction-policy-check",

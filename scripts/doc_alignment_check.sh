@@ -49,6 +49,7 @@ for file in \
   "docs/ui/surface-references.manifest.json" \
   "docs/ui/surface-baseline-coverage.manifest.json" \
   "docs/ui/rendered-drift.manifest.json" \
+  "docs/ui/gate-surface.manifest.json" \
   "docs/ui/visual-model-allowlist.manifest.json" \
   "docs/ui/component-extraction.manifest.json" \
   "docs/ui/mechanical-equivalence.manifest.json" \
@@ -83,6 +84,7 @@ for file in \
   "scripts/ui_surface_reference_check.mjs" \
   "scripts/ui_surface_baseline_coverage_check.mjs" \
   "scripts/ui_rendered_drift_check.mjs" \
+  "scripts/ui_release_gate_check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_performance_budget_check.mjs" \
@@ -141,6 +143,8 @@ require_snippet "docs/ui/README.md" "surface-baseline-coverage.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_baseline_coverage_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-drift.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_drift_check.mjs"
+require_snippet "docs/ui/README.md" "gate-surface.manifest.json"
+require_snippet "docs/ui/README.md" "scripts/ui_release_gate_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
@@ -204,6 +208,8 @@ require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "macos-root-ch
 require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-drift.manifest.json" "private-codex-ui-rendered-drift"
 require_snippet "docs/ui/rendered-drift.manifest.json" "drift-detected"
+require_snippet "docs/ui/gate-surface.manifest.json" "releaseLaneRequires"
+require_snippet "docs/ui/gate-surface.manifest.json" "scripts/ui_release_gate_check.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"

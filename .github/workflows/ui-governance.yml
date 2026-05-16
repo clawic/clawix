@@ -38,6 +38,8 @@ jobs:
         run: node scripts/ui_surface_baseline_coverage_check.mjs
       - name: Validate UI rendered drift reports
         run: node scripts/ui_rendered_drift_check.mjs
+      - name: Validate UI release gate wiring
+        run: node scripts/ui_release_gate_check.mjs
       - name: Validate rendered geometry manifest
         run: node scripts/ui_rendered_geometry_manifest_check.mjs
       - name: Validate UI copy governance

@@ -209,6 +209,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_surface_reference_check.mjs"
   run node "$ROOT_DIR/scripts/ui_surface_baseline_coverage_check.mjs"
   run node "$ROOT_DIR/scripts/ui_rendered_drift_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_release_gate_check.mjs"
   run node "$ROOT_DIR/scripts/ui_rendered_geometry_manifest_check.mjs"
   run node "$ROOT_DIR/scripts/ui_copy_governance_check.mjs"
   run node "$ROOT_DIR/scripts/ui_performance_budget_check.mjs"
