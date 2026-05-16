@@ -139,6 +139,7 @@ require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rend
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "privateModelAssignment"
+require_snippet "docs/ui/visual-change-scopes.manifest.json" "changeBudget"
 require_snippet "docs/ui/visual-change-detectors.manifest.json" "platform-specific source tokens"
 require_snippet "docs/ui/visual-change-detectors.manifest.json" "swiftui-layout"
 require_snippet "docs/ui/visual-model-allowlist.manifest.json" "claude-opus-4.7"

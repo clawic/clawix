@@ -77,7 +77,8 @@ the public repo.
 13. Keep mechanical refactor evidence current with
    `scripts/ui_mechanical_equivalence_check.mjs`.
 14. Keep visual authorization scopes current with
-   `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
+   `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default, and
+   approved scopes must declare files plus a change budget.
 15. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
 16. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must

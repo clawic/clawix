@@ -102,7 +102,7 @@ for (const status of ["proposed", "approved", "expired", "revoked"]) {
 
 const requiredApprovalFields = requireArray(manifest, manifestPath, "requiredApprovalFields");
 const requiredApprovalFieldSet = new Set(requiredApprovalFields);
-for (const field of ["approvedBy", "approvedAt", "expiresAt", "privateApprovalReference"]) {
+for (const field of ["files", "changeBudget", "approvedBy", "approvedAt", "expiresAt", "privateApprovalReference"]) {
   if (!requiredApprovalFieldSet.has(field)) fail(`${manifestPath}.requiredApprovalFields must include ${field}`);
 }
 
@@ -119,6 +119,23 @@ for (const [index, scope] of scopes.entries()) {
   }
   for (const kind of requireArray(scope, label, "changeKinds")) {
     if (!requiredChangeKinds.has(kind)) fail(`${label}.changeKinds contains unsupported ${kind}`);
+  }
+  for (const file of requireArray(scope, label, "files")) {
+    if (typeof file !== "string" || file.startsWith("/") || file.includes("..")) {
+      fail(`${label}.files entries must be public repo relative paths`);
+    }
+  }
+  const changeBudget = scope.changeBudget || {};
+  requireFields(changeBudget, `${label}.changeBudget`, ["maxFiles", "maxLines", "allowedChangeKinds"]);
+  if (!Number.isInteger(changeBudget.maxFiles) || changeBudget.maxFiles < 1) {
+    fail(`${label}.changeBudget.maxFiles must be a positive integer`);
+  }
+  if (!Number.isInteger(changeBudget.maxLines) || changeBudget.maxLines < 1) {
+    fail(`${label}.changeBudget.maxLines must be a positive integer`);
+  }
+  for (const kind of requireArray(changeBudget, `${label}.changeBudget`, "allowedChangeKinds")) {
+    if (!requiredChangeKinds.has(kind)) fail(`${label}.changeBudget.allowedChangeKinds contains unsupported ${kind}`);
+    if (!scope.changeKinds.includes(kind)) fail(`${label}.changeBudget.allowedChangeKinds must be within scope.changeKinds`);
   }
   if (!String(scope.privateApprovalReference || "").startsWith("private-codex-ui-approval:")) {
     fail(`${label}.privateApprovalReference must use private-codex-ui-approval:`);
