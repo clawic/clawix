@@ -103,6 +103,7 @@ for file in \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
+  "scripts/ui_private_performance_budget_verify.mjs" \
   "scripts/ui_private_visual_verify.mjs" \
   "scripts/ui_private_drift_verify.mjs" \
   "scripts/ui_private_visual_validation_manifest_check.mjs" \
@@ -165,6 +166,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_visual_proposal_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_artifact_boundary_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_private_visual_verify.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_private_performance_budget_verify.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_drift_verify.mjs"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
@@ -224,6 +226,8 @@ require_snippet "docs/ui/gate-surface.manifest.json" "scripts/ui_release_gate_ch
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
+require_snippet "docs/ui/performance-budgets.registry.json" "performance-evidence.json"
+require_snippet "docs/ui/performance-budgets.registry.json" "ui_private_performance_budget_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_visual_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_drift_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "EXTERNAL PENDING"

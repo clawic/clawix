@@ -59,10 +59,29 @@ const allowedBudgetStatuses = new Set(["pending-approved-measurement", "enforced
 
 const budgetsPath = "docs/ui/performance-budgets.registry.json";
 const budgets = readJson(budgetsPath);
-requireFields(budgets, budgetsPath, ["schemaVersion", "status", "policy", "requiredMetrics", "flows"]);
+requireFields(budgets, budgetsPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "requiredMetrics",
+  "requiredEvidenceFields",
+  "evidenceFilename",
+  "verificationCommand",
+  "flows",
+]);
+if (budgets?.evidenceFilename !== "performance-evidence.json") {
+  fail(`${budgetsPath}.evidenceFilename must be performance-evidence.json`);
+}
+if (!String(budgets?.verificationCommand || "").includes("scripts/ui_private_performance_budget_verify.mjs --require-approved")) {
+  fail(`${budgetsPath}.verificationCommand must run scripts/ui_private_performance_budget_verify.mjs --require-approved`);
+}
 const topLevelMetrics = new Set(requireArray(budgets, budgetsPath, "requiredMetrics"));
 for (const metric of requiredMetrics) {
   if (!topLevelMetrics.has(metric)) fail(`${budgetsPath}.requiredMetrics must include ${metric}`);
+}
+const evidenceFields = new Set(requireArray(budgets, budgetsPath, "requiredEvidenceFields"));
+for (const field of ["flowId", "platform", "privateBaselineReference", "metrics", "measurementHash", "measuredAt", "approvedByUserAt"]) {
+  if (!evidenceFields.has(field)) fail(`${budgetsPath}.requiredEvidenceFields must include ${field}`);
 }
 
 const privateBaselinesPath = "docs/ui/private-baselines.manifest.json";

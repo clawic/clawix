@@ -149,9 +149,11 @@ the public repo.
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
 36. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-37. When private copy snapshots are available, verify them with
+37. When private performance measurements are available, verify them with
+    `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved`.
+38. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-38. When private rendered drift reports are available, verify them with
+39. When private rendered drift reports are available, verify them with
     `CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_drift_verify.mjs --require-approved`.
-39. When the lane is not visual-authorized, use
+40. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

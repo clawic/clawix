@@ -3,6 +3,9 @@
   "status": "pending-approved-baseline-capture",
   "policy": "Budgets are per critical flow and per governed platform. They become strict only after the user approves measured private baselines.",
   "requiredMetrics": ["interactionLatencyMs", "p95FrameTimeMs", "hitchCount", "memoryDeltaMb"],
+  "requiredEvidenceFields": ["flowId", "platform", "privateBaselineReference", "metrics", "measurementHash", "measuredAt", "approvedByUserAt"],
+  "evidenceFilename": "performance-evidence.json",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved",
   "flows": [
     { "id": "sidebar-hover-click-expand", "platform": "macos", "baselineStatus": "pending-user-approved-baseline", "measurementSource": "private-baseline", "privateBaselineReference": "private-codex-ui-baselines:macos/sidebar-hover-click-expand", "requiredMetrics": ["interactionLatencyMs", "p95FrameTimeMs", "hitchCount", "memoryDeltaMb"], "budgetStatus": "pending-approved-measurement" },
     { "id": "chat-scroll", "platform": "macos", "baselineStatus": "pending-user-approved-baseline", "measurementSource": "private-baseline", "privateBaselineReference": "private-codex-ui-baselines:macos/chat-scroll", "requiredMetrics": ["interactionLatencyMs", "p95FrameTimeMs", "hitchCount", "memoryDeltaMb"], "budgetStatus": "pending-approved-measurement" },
