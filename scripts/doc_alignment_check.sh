@@ -72,6 +72,7 @@ for file in \
   ".github/PULL_REQUEST_TEMPLATE.md" \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_canon_promotion_check.mjs" \
+  "scripts/ui_decision_verification_check.mjs" \
   "scripts/ui_debt_report_check.mjs" \
   "scripts/ui_exception_check.mjs" \
   "scripts/ui_protected_surface_check.mjs" \
@@ -150,6 +151,8 @@ require_snippet "docs/ui/README.md" "scripts/ui_private_visual_verify.mjs"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
 require_snippet "docs/ui/decision-verification.json" "critical_cleanup_owner"
+require_snippet "docs/ui/README.md" "scripts/ui_decision_verification_check.mjs"
+require_snippet "scripts/ui_decision_verification_check.mjs" "39 records"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "Every current visible UI candidate"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-composer"
 require_snippet "docs/ui/copy.inventory.json" "private-codex-ui-copy-snapshots"

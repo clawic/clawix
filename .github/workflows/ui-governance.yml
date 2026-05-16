@@ -18,6 +18,8 @@ jobs:
         run: node scripts/ui_governance_guard.mjs
       - name: Validate UI canon promotion records
         run: node scripts/ui_canon_promotion_check.mjs
+      - name: Validate UI decision verification
+        run: node scripts/ui_decision_verification_check.mjs
       - name: Validate UI debt report
         run: node scripts/ui_debt_report_check.mjs
       - name: Validate UI exception registry
