@@ -124,8 +124,30 @@ function summarizeKnip(knipJson) {
   return {
     filesWithIssues: files.size,
     totalIssues,
-    issueTypes
+    issueTypes,
+    topFiles: topIssueFiles(knipJson.issues ?? [])
   };
+}
+
+function topIssueFiles(issues) {
+  return issues
+    .map((issue) => {
+      const issueCounts = {};
+      let total = 0;
+      for (const [key, value] of Object.entries(issue)) {
+        if (key === "file" || !Array.isArray(value) || value.length === 0) continue;
+        issueCounts[key] = value.length;
+        total += value.length;
+      }
+      return {
+        file: issue.file,
+        totalIssues: total,
+        issueCounts
+      };
+    })
+    .filter((entry) => entry.file && entry.totalIssues > 0)
+    .sort((left, right) => right.totalIssues - left.totalIssues || left.file.localeCompare(right.file))
+    .slice(0, 20);
 }
 
 function renderMarkdown(report) {
@@ -145,6 +167,11 @@ function renderMarkdown(report) {
   ];
   for (const [type, count] of Object.entries(report.summary.issueTypes).sort()) {
     lines.push(`- ${type}: ${count}`);
+  }
+  lines.push("", "## Top Files", "");
+  for (const entry of report.summary.topFiles ?? []) {
+    const counts = Object.entries(entry.issueCounts).map(([type, count]) => `${type}:${count}`).join(", ");
+    lines.push(`- ${entry.file}: ${entry.totalIssues} (${counts})`);
   }
   lines.push("", "This report does not authorize automatic deletion; cleanup still requires category review.");
   return `${lines.join("\n")}\n`;

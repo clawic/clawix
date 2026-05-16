@@ -102,9 +102,11 @@ if (knipReport.toolVersion !== "6.14.0") fail("code hygiene Knip report must use
 if (knipReport.mode !== "report-only") fail("code hygiene Knip report must be report-only");
 if (knipReport.config !== knipConfigPath) fail(`code hygiene Knip report config must be ${knipConfigPath}`);
 if (typeof knipReport.summary?.totalIssues !== "number") fail("code hygiene Knip report must include numeric totalIssues");
+if (!Array.isArray(knipReport.summary?.topFiles)) fail("code hygiene Knip report must include topFiles");
 if (!knipReportMarkdown.includes("This report does not authorize automatic deletion")) {
   fail("code hygiene Knip Markdown report must state cleanup safety");
 }
+if (!knipReportMarkdown.includes("## Top Files")) fail("code hygiene Knip Markdown report must include top files");
 if (peripheryReport.schemaVersion !== 1) fail("code hygiene Periphery report schemaVersion must be 1");
 if (peripheryReport.program !== "code-hygiene") fail("code hygiene Periphery report program must be code-hygiene");
 if (peripheryReport.tool !== "periphery") fail("code hygiene Periphery report tool must be periphery");

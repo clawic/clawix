@@ -3,7 +3,7 @@
   "program": "code-hygiene",
   "tool": "knip",
   "toolVersion": "6.14.0",
-  "generatedAt": "2026-05-16T23:16:43.191Z",
+  "generatedAt": "2026-05-16T23:22:23.115Z",
   "mode": "report-only",
   "config": "web/knip.json",
   "cwd": "web",
@@ -13,6 +13,150 @@
     "issueTypes": {
       "exports": 180,
       "types": 17
-    }
+    },
+    "topFiles": [
+      {
+        "file": "src/icons/index.tsx",
+        "totalIssues": 71,
+        "issueCounts": {
+          "exports": 71
+        }
+      },
+      {
+        "file": "src/bridge/frames.ts",
+        "totalIssues": 56,
+        "issueCounts": {
+          "exports": 54,
+          "types": 2
+        }
+      },
+      {
+        "file": "src/bridge/wire.ts",
+        "totalIssues": 30,
+        "issueCounts": {
+          "exports": 15,
+          "types": 15
+        }
+      },
+      {
+        "file": "src/components/ui/index.ts",
+        "totalIssues": 15,
+        "issueCounts": {
+          "exports": 15
+        }
+      },
+      {
+        "file": "src/components/ui/menu.tsx",
+        "totalIssues": 4,
+        "issueCounts": {
+          "exports": 4
+        }
+      },
+      {
+        "file": "src/components/ui/sheet.tsx",
+        "totalIssues": 4,
+        "issueCounts": {
+          "exports": 4
+        }
+      },
+      {
+        "file": "src/components/ui/filter-chip.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/components/ui/hover-hint.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/components/ui/icon-chip-button.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/components/ui/info-banner.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/components/ui/toggle-row.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/bot.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/corner-brackets.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/cursor.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/external-link.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/folder-stack.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/local-models.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/mcp.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/open-in-app.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      },
+      {
+        "file": "src/icons/custom/sign-out.tsx",
+        "totalIssues": 1,
+        "issueCounts": {
+          "exports": 1
+        }
+      }
+    ]
   }
 }
