@@ -169,6 +169,7 @@ const staleContractTargets = [
   "docs/persistent-surface-clawix.manifest.json",
   "macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift",
   "macos/Sources/Clawix/FeatureFlags.swift",
+  "macos/scripts/e2e_feature_flags_fixture.sh",
   "macos/Sources/Clawix/AppState/Routes.swift",
   "macos/Sources/Clawix/AppState/DeepLinks.swift",
   "macos/Sources/Clawix/Providers/OAuth/OAuthStrategy.swift",

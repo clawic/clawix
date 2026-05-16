@@ -1547,7 +1547,8 @@ final class AppState: ObservableObject {
             "pinnedCount": chats.filter { $0.isPinned }.count,
             "archivedCount": chats.filter { $0.isArchived }.count,
             "featureVisibility": [
-                "remoteMesh": FeatureFlags.shared.isVisible(.remoteMesh)
+                "remoteMesh": FeatureFlags.shared.isVisible(.remoteMesh),
+                "simulators": FeatureFlags.shared.isVisible(.simulators)
             ],
             "visibleSettingsCategories": SettingsCategory.visibleCases(isVisible: FeatureFlags.shared.isVisible).map(\.rawValue),
             "selectedMeshTarget": selectedMeshTarget.isLocal ? "local" : "peer"

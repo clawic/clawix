@@ -7,8 +7,7 @@ TMP_DIR="$(mktemp -d)"
 APP_BINARY="$PROJECT_DIR/.build/debug/Clawix"
 REPORT="$TMP_DIR/report.json"
 PREF_DOMAIN="clawix.desktop"
-PREV_EXPERIMENTAL="$TMP_DIR/prev-experimental.txt"
-PREV_BETA="$TMP_DIR/prev-beta.txt"
+PREV_DEVELOPER_SURFACES="$TMP_DIR/prev-developer-surfaces.txt"
 
 save_pref() {
   local key="$1"
@@ -35,16 +34,13 @@ restore_pref() {
 
 cleanup() {
   pkill -x Clawix >/dev/null 2>&1 || true
-  restore_pref FeatureFlags.experimental "$PREV_EXPERIMENTAL"
-  restore_pref FeatureFlags.beta "$PREV_BETA"
+  restore_pref FeatureFlags.developerSurfaces "$PREV_DEVELOPER_SURFACES"
   rm -rf "$TMP_DIR"
 }
 trap cleanup EXIT
 
-save_pref FeatureFlags.experimental "$PREV_EXPERIMENTAL"
-save_pref FeatureFlags.beta "$PREV_BETA"
-defaults write "$PREF_DOMAIN" FeatureFlags.experimental -bool false
-defaults write "$PREF_DOMAIN" FeatureFlags.beta -bool false
+save_pref FeatureFlags.developerSurfaces "$PREV_DEVELOPER_SURFACES"
+defaults write "$PREF_DOMAIN" FeatureFlags.developerSurfaces -bool false
 
 cat > "$TMP_DIR/desktop.json" <<'JSON'
 {
@@ -84,8 +80,9 @@ import json, sys
 with open(sys.argv[1]) as f:
     data = json.load(f)
 
-assert data["featureVisibility"]["remoteMesh"] is False, data
-assert "machines" not in data["visibleSettingsCategories"], data
+assert data["featureVisibility"]["remoteMesh"] is True, data
+assert data["featureVisibility"]["simulators"] is False, data
+assert "machines" in data["visibleSettingsCategories"], data
 assert data["selectedMeshTarget"] == "local", data
 PY
 
