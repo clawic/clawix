@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "status": "pending-private-capture",
+  "policy": "Rendered drift reports are produced from private visual, geometry, copy, and performance evidence. The public repo records only private report aliases, drift categories, statuses, and coverage mapping.",
+  "surfaceBaselineCoveragePath": "docs/ui/surface-baseline-coverage.manifest.json",
+  "privateDriftAlias": "private-codex-ui-rendered-drift",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
+  "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"],
+  "reportStatuses": ["pending-private-evidence", "no-drift", "drift-detected", "approved-drift"],
+  "requiredReportFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reviewAfter"],
+  "reports": [
+    { "coverageId": "macos-root-chrome", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-root-chrome", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-sidebar", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-sidebar", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-chat-and-composer", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-chat-and-composer", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-settings-and-configuration", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-settings-and-configuration", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-domain-surfaces", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-domain-surfaces", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-design-debt", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-design-debt", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-agent-and-bridge-support", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-agent-and-bridge-support", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "macos-icon-and-visual-support", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-icon-and-visual-support", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "ios-chat-and-composer", "platform": "ios", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/ios/ios-chat-and-composer", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "ios-domain-surfaces", "platform": "ios", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/ios/ios-domain-surfaces", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "android-chat-and-composer", "platform": "android", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/android/android-chat-and-composer", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "android-domain-surfaces", "platform": "android", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/android/android-domain-surfaces", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "web-components-and-shell", "platform": "web", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/web/web-components-and-shell", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
+    { "coverageId": "web-screens", "platform": "web", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/web/web-screens", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" }
+  ]
+}
