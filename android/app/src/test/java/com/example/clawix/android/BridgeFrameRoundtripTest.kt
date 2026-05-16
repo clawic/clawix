@@ -121,7 +121,7 @@ class BridgeFrameRoundtripTest {
         )
     }
 
-    @Test fun roundtrip_chat_management_v2() {
+    @Test fun roundtrip_session_management_v1() {
         roundtrip(BridgeBody.ArchiveSession("c-1"))
         roundtrip(BridgeBody.UnarchiveSession("c-1"))
         roundtrip(BridgeBody.PinSession("c-1"))
@@ -130,7 +130,7 @@ class BridgeFrameRoundtripTest {
         roundtrip(BridgeBody.RenameSession("c-1", ""))
     }
 
-    @Test fun roundtrip_voice_v3() {
+    @Test fun roundtrip_voice_v1() {
         roundtrip(BridgeBody.TranscribeAudio("req-1", "AAA=", "audio/m4a", "en"))
         roundtrip(BridgeBody.TranscribeAudio("req-1", "AAA=", "audio/m4a", null))
         roundtrip(BridgeBody.TranscriptionResult("req-1", "hello world", null))
@@ -140,7 +140,7 @@ class BridgeFrameRoundtripTest {
         roundtrip(BridgeBody.AudioSnapshot("a-1", null, null, "not found"))
     }
 
-    @Test fun roundtrip_images_v4() {
+    @Test fun roundtrip_images_v1() {
         roundtrip(BridgeBody.RequestGeneratedImage("/path/to/img.png"))
         roundtrip(BridgeBody.GeneratedImageSnapshot("/path/img.png", "BBB=", "image/png", null))
         roundtrip(BridgeBody.GeneratedImageSnapshot("/path/img.png", null, null, "denied"))
@@ -193,7 +193,7 @@ class BridgeFrameRoundtripTest {
         assertTrue("expected no limit field, got $raw", !raw.contains("\"limit\""))
     }
 
-    @Test fun chat_decodes_with_legacy_payload_missing_optional_fields() {
+    @Test fun sessions_snapshot_decodes_with_missing_optional_fields() {
         val raw = """
             {"schemaVersion":1,"type":"sessionsSnapshot",
              "sessions":[{"id":"c-1","title":"t","createdAt":"2026-05-01T12:00:00Z"}]}

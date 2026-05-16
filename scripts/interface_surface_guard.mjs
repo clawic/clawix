@@ -398,6 +398,19 @@ for (const [relativePath, requiredSnippets, staleSnippets] of [
   }
 }
 
+const androidBridgeRoundtripTest = read("android/app/src/test/java/com/example/clawix/android/BridgeFrameRoundtripTest.kt");
+for (const pattern of [
+  "roundtrip_chat_management_v2",
+  "roundtrip_voice_v3",
+  "roundtrip_images_v4",
+  "legacy_payload",
+  "legacy payload",
+]) {
+  if (androidBridgeRoundtripTest.includes(pattern)) {
+    fail(`Android bridge round-trip tests must classify current frame families as v1, found ${JSON.stringify(pattern)}`);
+  }
+}
+
 for (const relativePath of [
   "cli/README.md",
   "cli/bin/clawix.js",
