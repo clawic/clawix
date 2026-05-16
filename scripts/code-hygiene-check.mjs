@@ -52,6 +52,7 @@ for (const entry of baseline.entries ?? []) {
   if (!entry.ownerArea) fail("code hygiene baseline entry is missing ownerArea");
   if (!entry.reference) fail("code hygiene baseline entry is missing reference");
   if (!entry.expiresAt) fail("code hygiene baseline entry is missing expiresAt");
+  if (entry.category && !baseline.categories.includes(entry.category)) fail(`code hygiene baseline entry ${entry.id ?? "(unknown)"} has unknown category`);
 }
 
 if (tools.schemaVersion !== 1) fail("code hygiene tools schemaVersion must be 1");
@@ -78,12 +79,15 @@ if (report.schemaVersion !== 1) fail("code hygiene report schemaVersion must be 
 if (report.program !== "code-hygiene") fail("code hygiene report program must be code-hygiene");
 if (!report.generatedAt) fail("code hygiene report must include generatedAt");
 if (!report.lastAuditSummary) fail("code hygiene report must include lastAuditSummary");
+if (typeof report.baselinedFindings !== "number") fail("code hygiene report must include baselinedFindings");
+if (report.baselinedFindings !== (baseline.entries ?? []).length) fail("code hygiene report baselinedFindings must match baseline entry count");
 for (const field of ["scannedFiles", "todoFindings", "duplicateAssetGroups", "duplicateAssetFiles", "unreferencedAssetCandidates"]) {
   if (typeof report.lastAuditSummary?.[field] !== "number") {
     fail(`code hygiene report lastAuditSummary must include numeric ${field}`);
   }
 }
 if (report.knipSummary?.totalIssues !== knipReport.summary?.totalIssues) fail("code hygiene report Knip summary must match the Knip report");
+if (report.baselinedFindings !== (baseline.entries?.length ?? 0)) fail("code hygiene report baselinedFindings must match baseline entries");
 if (typeof report.peripherySummary?.packageCount !== "number") fail("code hygiene report must include Periphery packageCount");
 if (report.peripherySummary?.status !== peripheryReport.status) fail("code hygiene report Periphery status must match the Periphery report");
 if (peripheryReport.status === "external-pending" && !report.externalPending?.some((entry) => entry.id === "periphery-binary-unavailable")) {

@@ -28,7 +28,7 @@ import type {
 import { storage, StorageKeys } from "../lib/storage";
 import { uuidv4 } from "../lib/uuid";
 
-export interface BridgeRuntime {
+interface BridgeRuntime {
   /** "booting" | "syncing" | "ready" | "error" */
   state: string;
   chatCount: number;

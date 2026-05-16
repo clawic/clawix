@@ -27,8 +27,9 @@ Source session: private session, not published
 - Status: PARTIAL
 - Tool: Knip 6.14.0 through `scripts/code-hygiene-knip.mjs`.
 - Config: `web/knip.json`.
-- Latest summary: 28 files with issues; 209 total export/type findings after the first web cleanup lot removed 4 unused files, 2 unused dependencies, and 2 unused package-script binaries; Tailwind was retained as calibrated build dependency.
-- Mode: report-only; cleanup and baselining pending before blocking gate activation.
+- Latest summary: 23 files with issues; 197 export/type findings after two web cleanup lots removed unused files, dependencies, package-script binaries, and clear private export/type findings; Tailwind was retained as calibrated build dependency.
+- Baseline: remaining Clawix web export/type findings are covered by 3 entries with owner, reason, reference, and 2026-08-15 expiry.
+- Mode: report-only; ClawJS cleanup and cross-repo release gate proof remain pending before blocking gate activation.
 
 ## 2026-05-17 - Periphery report-only setup
 

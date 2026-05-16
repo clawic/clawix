@@ -5,7 +5,7 @@
   "status": "bootstrap",
   "blockingFindings": 0,
   "reportOnlyFindings": 52,
-  "baselinedFindings": 0,
+  "baselinedFindings": 3,
   "lastAuditSummary": {
     "scannedFiles": 1801,
     "todoFindings": 24,
@@ -14,11 +14,11 @@
     "unreferencedAssetCandidates": 21
   },
   "knipSummary": {
-    "filesWithIssues": 28,
-    "totalIssues": 209,
+    "filesWithIssues": 23,
+    "totalIssues": 197,
     "issueTypes": {
-      "exports": 184,
-      "types": 25
+      "exports": 180,
+      "types": 17
     }
   },
   "peripherySummary": {
@@ -40,6 +40,8 @@
     "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
     "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available.",
     "Initial Clawix web cleanup removed 4 unused files, 2 unused dependencies, and 2 unused package-script binaries from the Knip report.",
-    "Tailwind is kept as calibrated dependency because the web build uses the Vite plugin and CSS import."
+    "Second Clawix web cleanup removed clear private export/type findings and reduced Knip export/type findings to 197 total findings across 23 files.",
+    "Tailwind is kept as calibrated dependency because the web build uses the Vite plugin and CSS import.",
+    "Remaining Clawix web Knip findings are protocol/UI/icon export-type surfaces and are covered by 3 baseline entries with owner, reason, reference, and 2026-08-15 expiry."
   ]
 }

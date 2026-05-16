@@ -6,7 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import cx from "../lib/cx";
 
-export interface SegmentedOption<T extends string> {
+interface SegmentedOption<T extends string> {
   value: T;
   label: string;
   icon?: React.ReactNode;

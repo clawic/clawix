@@ -17,5 +17,69 @@
     "duplicate_report_only",
     "enum_report_only"
   ],
-  "entries": []
+  "entries": [
+    {
+      "id": "clawix-web-bridge-protocol-exports-2026-05-17",
+      "category": "protocol_compat",
+      "paths": [
+        "web/src/bridge/frames.ts",
+        "web/src/bridge/wire.ts"
+      ],
+      "findingTypes": [
+        "exports",
+        "types"
+      ],
+      "reason": "Bridge frame and wire schemas are compatibility contract with Swift bridge protocol and external frame validation; unused export/type findings stay report-only until protocol consumers are re-audited.",
+      "ownerArea": "web-bridge",
+      "reference": "docs/adr/0016-code-hygiene-program.md#decision",
+      "expiresAt": "2026-08-15"
+    },
+    {
+      "id": "clawix-web-ui-component-barrel-2026-05-17",
+      "category": "public_api",
+      "paths": [
+        "web/src/components/ui/index.ts",
+        "web/src/components/ui/toggle-row.tsx",
+        "web/src/components/ui/icon-chip-button.tsx",
+        "web/src/components/ui/filter-chip.tsx",
+        "web/src/components/ui/info-banner.tsx",
+        "web/src/components/ui/hover-hint.tsx",
+        "web/src/components/ui/menu.tsx",
+        "web/src/components/ui/sheet.tsx"
+      ],
+      "findingTypes": [
+        "exports"
+      ],
+      "reason": "UI components mirror native Clawix chrome and are retained as a reviewed web component surface; unused exports require design/component ownership review before removal.",
+      "ownerArea": "web-ui",
+      "reference": "docs/adr/0016-code-hygiene-program.md#decision",
+      "expiresAt": "2026-08-15"
+    },
+    {
+      "id": "clawix-web-icon-barrel-2026-05-17",
+      "category": "asset_public",
+      "paths": [
+        "web/src/icons/index.tsx",
+        "web/src/icons/custom/bot.tsx",
+        "web/src/icons/custom/corner-brackets.tsx",
+        "web/src/icons/custom/cursor.tsx",
+        "web/src/icons/custom/external-link.tsx",
+        "web/src/icons/custom/folder-stack.tsx",
+        "web/src/icons/custom/local-models.tsx",
+        "web/src/icons/custom/mcp.tsx",
+        "web/src/icons/custom/open-in-app.tsx",
+        "web/src/icons/custom/sign-out.tsx",
+        "web/src/icons/custom/usage.tsx",
+        "web/src/icons/custom/word-wrap.tsx",
+        "web/src/icons/custom/wrench.tsx"
+      ],
+      "findingTypes": [
+        "exports"
+      ],
+      "reason": "Custom icons mirror native Swift symbols and are retained as asset/public visual surface; removal needs a separate icon inventory review.",
+      "ownerArea": "web-icons",
+      "reference": "docs/adr/0016-code-hygiene-program.md#decision",
+      "expiresAt": "2026-08-15"
+    }
+  ]
 }

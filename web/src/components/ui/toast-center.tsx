@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CircleCheck, CircleAlert, X } from "lucide-react";
 
-export type ToastIcon = "checkCircle" | "info" | "warning" | "error" | "none";
+type ToastIcon = "checkCircle" | "info" | "warning" | "error" | "none";
 
 interface ToastItem {
   id: number;
@@ -23,7 +23,7 @@ function setCurrent(item: ToastItem | null) {
   for (const l of listeners) l(item);
 }
 
-export const Toast = {
+const Toast = {
   show(message: string, icon: ToastIcon = "checkCircle", durationMs = 2400) {
     const item: ToastItem = { id: nextId++, message, icon };
     if (dismissTimer != null) window.clearTimeout(dismissTimer);

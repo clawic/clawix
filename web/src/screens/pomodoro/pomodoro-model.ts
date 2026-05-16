@@ -1,4 +1,4 @@
-export type TimerMode = "idle" | "focus" | "paused" | "break" | "ended";
+type TimerMode = "idle" | "focus" | "paused" | "break" | "ended";
 
 export type Mood = "focused" | "neutral" | "distracted";
 
@@ -31,7 +31,7 @@ export interface BlockerRule {
   entries: string;
 }
 
-export interface AppBlockerRule {
+interface AppBlockerRule {
   enabled: boolean;
   apps: string[];
 }
@@ -98,7 +98,7 @@ export interface PomodoroSettings {
   developerTodoPreview: boolean;
 }
 
-export interface WindowTrackerRule {
+interface WindowTrackerRule {
   id: string;
   appName: string;
   windowTitle: string;
@@ -140,7 +140,7 @@ export interface PomodoroLog {
   abandoned?: boolean;
 }
 
-export interface PomodoroActiveTimer {
+interface PomodoroActiveTimer {
   mode: TimerMode;
   kind?: "focus" | "break";
   intention: string;
@@ -155,7 +155,7 @@ export interface PomodoroActiveTimer {
   notes: string;
 }
 
-export interface PomodoroNotice {
+interface PomodoroNotice {
   id: string;
   at: number;
   title: string;
@@ -543,7 +543,7 @@ export function runTimerEndMainAction(
   return saved;
 }
 
-export function nextBreakMinutes(state: PomodoroState): number {
+function nextBreakMinutes(state: PomodoroState): number {
   const totalFocusMinutes = totalFocusSeconds(state, state.selectedDate) / 60;
   if (totalFocusMinutes >= state.settings.longBreakAfterFocusMinutes) {
     return state.settings.longBreakMinutes;
