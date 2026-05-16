@@ -512,6 +512,20 @@ for (const pattern of ["legacy SF Symbol", "init(lucideOrSystem", "Compatibility
   }
 }
 
+for (const [relativePath, patterns] of [
+  ["ios/Sources/Clawix/ChatDetail/ChatDetailView.swift", ["legacy stop(_:)"]],
+  ["ios/Sources/Clawix/ClawixApp.swift", ["legacy `openChatId` flag"]],
+  ["ios/Sources/Clawix/Bridge/BridgeStore.swift", ["legacy daemon", "legacy peers"]],
+  ["ios/Sources/Clawix/Theme/LucideBridge.swift", ["legacy SF Symbol"]],
+]) {
+  const source = read(relativePath);
+  for (const pattern of patterns) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must not describe current iOS v1 paths with legacy wording: ${JSON.stringify(pattern)}`);
+    }
+  }
+}
+
 const secretsBackendSource = read("macos/Sources/Clawix/ClawJS/ClawJSSecretsBackend.swift");
 for (const pattern of ["not yet wired to ClawJS Secrets HTTP backend", "BackupContents", "Legacy types"]) {
   if (secretsBackendSource.includes(pattern)) {

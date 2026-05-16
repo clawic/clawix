@@ -197,7 +197,7 @@ struct LucideIcon: View {
     // which iterates every `.ttf` in `Bundle.module` (including
     // `Resources/Fonts/lucide.ttf`). No per-view registration needed.
 
-    /// Maps a legacy SF Symbol name to a Lucide kind. Used by the
+    /// Maps an SF Symbol name to a Lucide kind. Used by the
     /// `auto(_:)` helper at sites where the icon name is computed at
     /// runtime (settings categories, plugin metadata, permission modes).
     static func sfMapped(_ symbol: String) -> Kind? {

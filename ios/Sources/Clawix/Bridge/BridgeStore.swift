@@ -93,8 +93,8 @@ final class BridgeStore {
     /// scroll-up sentinel and triggers `loadOlderMessages` when it
     /// materializes. Reset on every `messagesSnapshot` (the snapshot is
     /// the new baseline). Absent / `false` is treated as "no older
-    /// history known" — covers chats we just opened, chats the legacy
-    /// daemon served without pagination metadata, and chats hydrated
+    /// history known" — covers chats we just opened, chats served by
+    /// daemons without pagination metadata, and chats hydrated
     /// from the on-disk snapshot cache before reconnect.
     var hasMoreByChat: [String: Bool] = [:]
     /// `true` while a `loadOlderMessages` round trip is in flight for
@@ -504,10 +504,10 @@ final class BridgeStore {
     func applyMessagesSnapshot(chatId: String, messages: [WireMessage], hasMore: Bool? = nil) {
         // Reset pagination state regardless: the snapshot is the new
         // baseline. Done before the equality short-circuit because
-        // `hasMore` may have flipped (legacy daemon → paged daemon
-        // mid-session, or vice versa) without the message array
+        // `hasMore` may have flipped (daemon without page metadata →
+        // paged daemon mid-session, or vice versa) without the message array
         // changing. Treat absent metadata as "no older history known"
-        // so legacy peers keep their old eager behaviour.
+        // so peers without page metadata keep eager behaviour.
         hasMoreByChat[chatId] = hasMore ?? false
         loadingOlderByChat[chatId] = false
         oldestKnownIdByChat[chatId] = messages.first?.id

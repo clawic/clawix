@@ -337,7 +337,7 @@ private struct RootView: View {
                         .preferredColorScheme(.dark)
                 }
                 .onChange(of: path) { _, newValue in
-                    // Keep the legacy `openChatId` flag in sync: when the
+                    // Keep the `openChatId` state in sync: when the
                     // user pops every screen and we're back at the home
                     // (path empty), clear the open-chat state so the
                     // store treats the chat as closed.

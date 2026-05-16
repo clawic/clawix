@@ -820,7 +820,7 @@ struct ChatDetailView: View {
         // sendAsAudio: keep the m4a around long enough to ship it as
         // an attachment alongside the transcript. The bridge dispatcher
         // is in charge of deleting the file after the encode is done.
-        // Other purposes use the legacy stop(_:) which deletes inline.
+        // Other purposes use stop(_:), which deletes inline.
         if purpose == .sendAsAudio && autoSend {
             voiceRecorder.stopAndKeep { transcript, audioURL in
                 guard token == transcriptionToken else { return }
