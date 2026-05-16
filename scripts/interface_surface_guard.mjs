@@ -411,6 +411,13 @@ for (const pattern of [
   }
 }
 
+const deepLinkRoutingTests = read("macos/Tests/ClawixMeshTests/DeepLinkRoutingTests.swift");
+for (const pattern of ["LegacyChatDeepLink", "LegacyOAuthCallbackDeepLink"]) {
+  if (deepLinkRoutingTests.includes(pattern)) {
+    fail(`Deep link routing tests must describe removed v1 routes as retired, found ${JSON.stringify(pattern)}`);
+  }
+}
+
 for (const relativePath of [
   "cli/README.md",
   "cli/bin/clawix.js",
