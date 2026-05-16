@@ -5,7 +5,7 @@ import Darwin
 import Glibc
 #endif
 
-/// Holds the stable bearer token the iPhone has to present during
+/// Holds the stable pairing token the iPhone has to present during
 /// `auth`, and resolves the LAN IPv4 the QR payload should advertise.
 /// The token persists so the iPhone can reconnect across Mac rebuilds
 /// without re-pairing every time.

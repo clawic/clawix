@@ -10,7 +10,7 @@ namespace Clawix.Engine.Pairing;
 
 /// <summary>
 /// Port of <c>packages/ClawixEngine/PairingService.swift</c>. Holds the
-/// stable bearer the iPhone presents on <c>auth</c>, generates the QR
+/// stable pairing token the iPhone presents on <c>auth</c>, generates the QR
 /// payload identical to the macOS app, and resolves the LAN + Tailscale
 /// IPv4 addresses to advertise.
 /// </summary>
@@ -56,7 +56,7 @@ public sealed class PairingService
 
     /// <summary>
     /// 9-character short code in <c>XXX-XXX-XXX</c> form. Persisted in
-    /// the same store as the bearer so daemon and GUI agree.
+/// the same store as the pairing token so daemon and GUI agree.
     /// </summary>
     public string ShortCode
     {
@@ -79,7 +79,7 @@ public sealed class PairingService
     }
 
     /// <summary>
-    /// Constant-time-ish bearer comparison. Length first, then byte
+/// Constant-time-ish token comparison. Length first, then byte
     /// compare. Mirrors <c>acceptToken</c> in Swift.
     /// </summary>
     public bool AcceptToken(string candidate)

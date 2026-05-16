@@ -478,6 +478,21 @@ for (const relativePath of [
   }
 }
 
+for (const [relativePath, phrases] of [
+  ["STANDARDS.md", ["QR code, bearer token"]],
+  ["windows/Clawix.Engine/Pairing/PairingService.cs", ["stable bearer", "same store as the bearer", "bearer comparison"]],
+  ["packages/ClawixEngine/Sources/ClawixEngine/PairingService.swift", ["stable bearer token"]],
+  ["packages/ClawixEngine/Sources/ClawixEngine/BridgeSession.swift", ["stable bearer"]],
+  ["macos/Sources/Clawix/AppState/SidebarItems.swift", ["host, port, bearer", "The bearer is"]],
+]) {
+  const source = read(relativePath);
+  for (const phrase of phrases) {
+    if (source.includes(phrase)) {
+      fail(`${relativePath} exposes stale pairing bearer wording ${JSON.stringify(phrase)}`);
+    }
+  }
+}
+
 const databaseConnectionProfiles = read("macos/Sources/Clawix/Database/DatabaseConnectionProfiles.swift");
 for (const pattern of ["case legacy", "compat-0.9.5", "return \"SSH 0.9.5\""]) {
   if (databaseConnectionProfiles.includes(pattern)) {

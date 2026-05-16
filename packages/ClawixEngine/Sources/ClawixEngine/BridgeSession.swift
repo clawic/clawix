@@ -6,7 +6,7 @@ import Network
 
 /// One client of the bridge (an iPhone or a co-located desktop GUI).
 /// Owns the `NWConnection`, drives the receive loop, gates frames
-/// behind a successful `auth`. The bridge accepts the stable bearer
+/// behind a successful `auth`. The bridge accepts the stable pairing token
 /// or current short code minted by `PairingService`.
 @MainActor
 public final class BridgeSession: Identifiable {

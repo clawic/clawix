@@ -251,7 +251,7 @@ works without a relaunch.
 - A long-running operation that completes while the user is on a
   different surface surfaces a non-modal notice (badge, toast,
   notification) so the user can return when ready.
-- The pairing flow (QR code, bearer token) is robust against
+- The pairing flow (QR code, pairing token) is robust against
   re-pairings: re-installing the app does not strand the paired iOS
   device.
 

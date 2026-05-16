@@ -511,10 +511,10 @@ extension AppState {
         url.host == "www.google.com" && url.path == "/s2/favicons"
     }
 
-    /// Publishes the current pairing payload (host, port, bearer, optional
+    /// Publishes the current pairing payload (host, port, token, optional
     /// Tailscale host, etc.) to `~/Library/Caches/Clawix-Dev/pairing.json`
     /// so external dev tools (the `Dev` menu-bar agent, scripts) can pre-pair
-    /// the iOS Simulator without scanning the on-screen QR. The bearer is
+    /// the iOS Simulator without scanning the on-screen QR. The token is
     /// stable across rebuilds, but the LAN IP is not, so this rewrites on
     /// every launch. Silent on failure: this is a developer convenience and
     /// must never block the bridge from coming up.
