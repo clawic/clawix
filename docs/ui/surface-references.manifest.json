@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Every visible surface coverage entry must resolve to public-safe canonical references. Pattern references must point to existing repo files or docs anchors; debt, protected, and exception mappings must point to registered records.",
+  "inventoryPath": "docs/ui/visible-surfaces.inventory.json",
+  "patternRegistryPath": "docs/ui/pattern-registry/patterns.registry.json",
+  "debtRegistryPath": "docs/ui/debt.baseline.json",
+  "protectedSurfaceRegistryPath": "docs/ui/protected-surfaces.registry.json",
+  "exceptionRegistryPath": "docs/ui/exceptions.registry.json",
+  "requiredReferenceKinds": ["pattern", "debt", "protected", "exception"],
+  "publicReferencePolicy": {
+    "allowRepoRelativePath": true,
+    "allowMarkdownAnchor": true,
+    "forbidAbsolutePath": true,
+    "forbidHomePath": true,
+    "forbidPrivateRootAlias": true
+  }
+}
