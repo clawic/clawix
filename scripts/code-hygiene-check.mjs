@@ -83,6 +83,7 @@ for (const field of ["scannedFiles", "todoFindings", "duplicateAssetGroups", "du
     fail(`code hygiene report lastAuditSummary must include numeric ${field}`);
   }
 }
+if (report.knipSummary?.totalIssues !== knipReport.summary?.totalIssues) fail("code hygiene report Knip summary must match the Knip report");
 if (typeof report.peripherySummary?.packageCount !== "number") fail("code hygiene report must include Periphery packageCount");
 if (report.peripherySummary?.status !== peripheryReport.status) fail("code hygiene report Periphery status must match the Periphery report");
 if (peripheryReport.status === "external-pending" && !report.externalPending?.some((entry) => entry.id === "periphery-binary-unavailable")) {
