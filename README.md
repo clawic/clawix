@@ -109,14 +109,14 @@ For notarized DMG distribution use `macos/scripts/build_release_app.sh`, which r
 
 The marketing version lives in [`macos/VERSION`](./macos/VERSION). It is the single source of truth: build scripts read it at compile time and inject it into `CFBundleShortVersionString`.
 
-## Experimental Status
+## V1 Support Boundary
 
 > [!WARNING]
-> Clawix is currently experimental, pre-beta software. Expect severe breaking changes without notice, including changes to UI, configuration, persisted preferences and the integration contract with the underlying CLI.
+> Clawix surfaces are classified explicitly in the interface matrix. Current surfaces must be `stable`, `dev-only`, or `removed`; beta and experimental labels do not exempt a surface from ownership, fixtures, parity, or validation.
 >
-> Do not use Clawix in production. Do not connect it to sensitive systems, real user data, paid APIs, security-critical services, or important integrations.
+> Do not connect `dev-only` surfaces to sensitive systems, real user data, paid APIs, security-critical services, or important integrations.
 >
-> Use it only for local evaluation, ideally on an isolated machine, VM, or sandboxed environment. Assume things can fail, data can break, and migrations may not exist yet.
+> Pre-public compatibility is not preserved unless an ADR grants a bounded exception; obsolete beta, experimental, or legacy paths are removed or hidden during the v1 surface closure.
 
 ## Privacy guarantee for contributors
 
