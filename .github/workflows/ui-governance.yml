@@ -62,6 +62,8 @@ jobs:
         run: node scripts/ui_visual_guard_failure_check.mjs
       - name: Validate UI visual proposals
         run: node scripts/ui_visual_proposal_check.mjs
+      - name: Validate UI private artifact boundary
+        run: node scripts/ui_private_artifact_boundary_check.mjs
       - name: Validate visible UI surface inventory
         run: node scripts/ui_surface_inventory_check.mjs
       - name: Validate private baseline manifest contract

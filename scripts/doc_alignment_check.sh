@@ -99,6 +99,7 @@ for file in \
   "scripts/ui_visual_model_allowlist_check.mjs" \
   "scripts/ui_visual_guard_failure_check.mjs" \
   "scripts/ui_visual_proposal_check.mjs" \
+  "scripts/ui_private_artifact_boundary_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
@@ -160,6 +161,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_visual_model_allowlist_check.mjs
 require_snippet "docs/ui/README.md" "scripts/ui_visual_guard_failure_check.mjs"
 require_snippet "docs/ui/README.md" "visual-proposals.registry.json"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_proposal_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_private_artifact_boundary_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_private_visual_verify.mjs"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
@@ -201,6 +203,8 @@ require_snippet "docs/ui/visual-model-allowlist.manifest.json" "CLAWIX_UI_VISUAL
 require_snippet "scripts/ui_visual_guard_failure_check.mjs" "simulate-unauthorized-visual-diff"
 require_snippet "docs/ui/visual-proposals.registry.json" "A proposal record never approves implementation"
 require_snippet "docs/ui/visual-proposals.registry.json" "conceptual-only"
+require_snippet "scripts/ui_private_artifact_boundary_check.mjs" "private-codex-ui-baselines"
+require_snippet "scripts/ui_private_artifact_boundary_check.mjs" "outside-public-repo"
 require_snippet "docs/ui/implementation-evidence.manifest.json" ".github/PULL_REQUEST_TEMPLATE.md"
 require_snippet ".github/PULL_REQUEST_TEMPLATE.md" "## UI governance evidence"
 require_snippet ".github/PULL_REQUEST_TEMPLATE.md" "Pattern/debt/protected/exception mapping:"

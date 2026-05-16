@@ -134,19 +134,22 @@ the public repo.
    `scripts/ui_visual_guard_failure_check.mjs`.
 29. Keep conceptual visual proposal records current with
    `scripts/ui_visual_proposal_check.mjs`.
-30. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-31. Keep private baseline coverage current with
+30. Keep private artifacts out of the public repo with
+   `scripts/ui_private_artifact_boundary_check.mjs`; public files may store
+   aliases, manifests, hashes, and runner contracts only.
+31. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+32. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-32. Keep aggregate private visual validation current with
+33. Keep aggregate private visual validation current with
     `scripts/ui_private_visual_validation_manifest_check.mjs`.
-33. When all private roots are available, verify visual evidence end to end with
+34. When all private roots are available, verify visual evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-34. When private geometry evidence is available, verify it with
+35. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-35. When private baselines are available, verify them with
+36. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-36. When private copy snapshots are available, verify them with
+37. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-37. When the lane is not visual-authorized, use
+38. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.
