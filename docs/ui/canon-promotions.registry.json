@@ -17,8 +17,11 @@
     "approvedAt",
     "privateApprovalReference",
     "privateBaselineReference",
+    "privateBaselineHash",
     "copySnapshotReference",
+    "copySnapshotHash",
     "geometryEvidenceReference",
+    "geometryEvidenceHash",
     "protectedSurfaceId"
   ],
   "promotions": []

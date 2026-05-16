@@ -133,6 +133,7 @@ require_snippet "docs/ui/mechanical-equivalence.manifest.json" "beforeSnapshotRe
 require_snippet "docs/ui/mechanical-equivalence.manifest.json" "private-codex-ui-mechanical-equivalence"
 require_snippet "docs/ui/canon-promotions.registry.json" "Only the user can promote"
 require_snippet "docs/ui/canon-promotions.registry.json" "private-codex-ui-approval"
+require_snippet "docs/ui/canon-promotions.registry.json" "geometryEvidenceHash"
 require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt-baseline.*"
 require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt.baseline.json"
 require_snippet "docs/ui/debt-report.registry.json" "Report only."

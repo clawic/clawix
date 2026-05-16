@@ -66,6 +66,12 @@ function requireAlias(value, alias, label) {
   }
 }
 
+function requireHash(value, label) {
+  if (typeof value !== "string" || !/^[a-f0-9]{64}$/i.test(value)) {
+    fail(`${label} must be a 64-character hex hash`);
+  }
+}
+
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
 const manifestPath = "docs/ui/canon-promotions.registry.json";
 const manifest = readJson(manifestPath);
@@ -108,8 +114,11 @@ for (const field of [
   "approvedAt",
   "privateApprovalReference",
   "privateBaselineReference",
+  "privateBaselineHash",
   "copySnapshotReference",
+  "copySnapshotHash",
   "geometryEvidenceReference",
+  "geometryEvidenceHash",
   "protectedSurfaceId",
 ]) {
   if (!requiredPromotionFieldSet.has(field)) fail(`${manifestPath}.requiredPromotionFields must include ${field}`);
@@ -117,8 +126,8 @@ for (const field of [
 
 const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
-const protectedSurfaceIds = new Set(
-  requireArray(protectedSurfaces, protectedPath, "surfaces", { nonEmpty: false }).map((surface) => surface.id),
+const protectedSurfaceById = new Map(
+  requireArray(protectedSurfaces, protectedPath, "surfaces", { nonEmpty: false }).map((surface) => [surface.id, surface]),
 );
 
 const promotions = requireArray(manifest, manifestPath, "promotions", { nonEmpty: false });
@@ -133,8 +142,30 @@ for (const [index, promotion] of promotions.entries()) {
   requireAlias(promotion.privateBaselineReference, manifest.privateBaselineAlias, `${label}.privateBaselineReference`);
   requireAlias(promotion.copySnapshotReference, manifest.privateCopyAlias, `${label}.copySnapshotReference`);
   requireAlias(promotion.geometryEvidenceReference, manifest.privateGeometryAlias, `${label}.geometryEvidenceReference`);
-  if (promotion.status === "approved" && !protectedSurfaceIds.has(promotion.protectedSurfaceId)) {
-    fail(`${label}.protectedSurfaceId must reference an approved protected surface`);
+  requireHash(promotion.privateBaselineHash, `${label}.privateBaselineHash`);
+  requireHash(promotion.copySnapshotHash, `${label}.copySnapshotHash`);
+  requireHash(promotion.geometryEvidenceHash, `${label}.geometryEvidenceHash`);
+  if (promotion.status === "approved") {
+    const protectedSurface = protectedSurfaceById.get(promotion.protectedSurfaceId);
+    if (!protectedSurface) {
+      fail(`${label}.protectedSurfaceId must reference an approved protected surface`);
+      continue;
+    }
+    for (const field of [
+      "privateBaselineReference",
+      "privateBaselineHash",
+      "copySnapshotReference",
+      "copySnapshotHash",
+      "geometryEvidenceReference",
+      "geometryEvidenceHash",
+    ]) {
+      if (promotion[field] !== protectedSurface[field]) {
+        fail(`${label}.${field} must match protected surface ${promotion.protectedSurfaceId}`);
+      }
+    }
+    if (promotion.platform !== protectedSurface.platform) {
+      fail(`${label}.platform must match protected surface ${promotion.protectedSurfaceId}`);
+    }
   }
 }
 
