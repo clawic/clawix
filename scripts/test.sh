@@ -204,6 +204,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_rendered_geometry_manifest_check.mjs"
   run node "$ROOT_DIR/scripts/ui_copy_governance_check.mjs"
   run node "$ROOT_DIR/scripts/ui_component_extraction_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_mechanical_equivalence_check.mjs"
   run node "$ROOT_DIR/scripts/ui_visual_scope_check.mjs"
   run node "$ROOT_DIR/scripts/ui_visual_detector_check.mjs"
   run node "$ROOT_DIR/scripts/ui_surface_inventory_check.mjs"

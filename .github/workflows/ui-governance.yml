@@ -28,6 +28,8 @@ jobs:
         run: node scripts/ui_copy_governance_check.mjs
       - name: Validate UI component extraction governance
         run: node scripts/ui_component_extraction_check.mjs
+      - name: Validate UI mechanical equivalence governance
+        run: node scripts/ui_mechanical_equivalence_check.mjs
       - name: Validate UI visual scope policy
         run: node scripts/ui_visual_scope_check.mjs
       - name: Validate UI visual detector policy

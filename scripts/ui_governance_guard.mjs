@@ -296,6 +296,19 @@ requireFields(promotions, promotionPath, [
   "promotions",
 ]);
 
+const mechanicalEquivalencePath = "docs/ui/mechanical-equivalence.manifest.json";
+const mechanicalEquivalence = readJson(mechanicalEquivalencePath);
+requireFields(mechanicalEquivalence, mechanicalEquivalencePath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "privateEvidenceAlias",
+  "requiredEvidenceFields",
+  "allowedTokenDiffStatuses",
+  "equivalenceStatuses",
+  "records",
+]);
+
 const budgetsPath = "docs/ui/performance-budgets.registry.json";
 const budgets = readJson(budgetsPath);
 requireFields(budgets, budgetsPath, ["schemaVersion", "status", "policy", "flows"]);
@@ -501,6 +514,7 @@ const requiredDocs = [
   "docs/ui/pattern-registry/patterns/NOTES.md",
   "docs/ui/interface-governance.config.json",
   "docs/ui/component-extraction.manifest.json",
+  "docs/ui/mechanical-equivalence.manifest.json",
   "docs/ui/visible-surfaces.inventory.json",
   "docs/ui/rendered-geometry.manifest.json",
   "docs/ui/copy.inventory.json",
