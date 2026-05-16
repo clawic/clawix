@@ -320,7 +320,7 @@ final class ContactsManager: ObservableObject {
         await reload()
     }
 
-    func vCardData(for contact: Contact) -> Data? {
+    func encodeVCard(for contact: Contact) -> Data? {
         var lines: [String] = ["BEGIN:VCARD", "VERSION:3.0"]
         lines.append("N:\(contact.familyName);\(contact.givenName);;;")
         lines.append("FN:\(contact.fullName)")

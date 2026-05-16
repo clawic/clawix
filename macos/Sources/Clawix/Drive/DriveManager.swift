@@ -156,7 +156,7 @@ final class DriveManager: ObservableObject {
 
     func uploadPasted(_ data: Data, suggestedName: String, mimeType: String, parentId: String?) async {
         do {
-            _ = try await client.uploadData(data, fileName: suggestedName, mimeType: mimeType, parentId: parentId ?? currentParentId)
+            _ = try await client.uploadBytes(data, fileName: suggestedName, mimeType: mimeType, parentId: parentId ?? currentParentId)
             await refresh()
         } catch {
             self.lastError = error.localizedDescription
@@ -234,7 +234,7 @@ final class DriveManager: ObservableObject {
     func thumbnail(for itemId: String, size: Int = 256) async -> Data? {
         if let cached = thumbnailCache[itemId] { return cached }
         do {
-            let data = try await client.thumbnailData(itemId, size: size)
+            let data = try await client.loadThumbnailBytes(itemId, size: size)
             thumbnailCache[itemId] = data
             return data
         } catch {

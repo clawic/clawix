@@ -145,7 +145,7 @@ struct ContactsToolbar: View {
     }
 
     private func shareSelected() {
-        guard let c = manager.selectedContact, let data = manager.vCardData(for: c) else { return }
+        guard let c = manager.selectedContact, let data = manager.encodeVCard(for: c) else { return }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(c.fullName).vcf")
         do {

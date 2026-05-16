@@ -339,7 +339,7 @@ final class ClawJSDriveClient {
         return try JSONDecoder().decode(DriveItemDetail.self, from: data)
     }
 
-    func uploadData(_ data: Data, fileName: String, mimeType: String, parentId: String?) async throws -> DriveItemDetail {
+    func uploadBytes(_ data: Data, fileName: String, mimeType: String, parentId: String?) async throws -> DriveItemDetail {
         let tmpURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + "-" + fileName)
         try data.write(to: tmpURL)
         defer { try? FileManager.default.removeItem(at: tmpURL) }
@@ -360,7 +360,7 @@ final class ClawJSDriveClient {
         try FileManager.default.moveItem(at: tempURL, to: destination)
     }
 
-    func thumbnailData(_ id: String, size: Int = 256) async throws -> Data {
+    func loadThumbnailBytes(_ id: String, size: Int = 256) async throws -> Data {
         guard let url = URL(string: "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/items/\(id)/thumbnail?size=\(size)", relativeTo: origin) else { throw Error.invalidURL }
         var request = URLRequest(url: url)
         if let token = bearerToken { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }

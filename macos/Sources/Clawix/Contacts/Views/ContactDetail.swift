@@ -166,7 +166,7 @@ struct ContactDetail: View {
     }
 
     private var vCardURL: URL? {
-        guard let data = manager.vCardData(for: contact) else { return nil }
+        guard let data = manager.encodeVCard(for: contact) else { return nil }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(contact.fullName).vcf")
         try? data.write(to: url)
@@ -174,7 +174,7 @@ struct ContactDetail: View {
     }
 
     private func shareVCard() {
-        guard let data = manager.vCardData(for: contact) else { return }
+        guard let data = manager.encodeVCard(for: contact) else { return }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(contact.fullName).vcf")
         do {

@@ -11,7 +11,7 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 48 in the current local tree. In-progress governance and
+- Naming warnings: 46 in the current local tree. In-progress governance and
   code-hygiene files still account for part of the cleanup inventory.
 - Source-size warnings: 35.
 - Source-structure signals: 29.
@@ -87,6 +87,9 @@ for staged rename/split work and must not be hidden by compressing code.
   `DatabaseManagerStatusRow`, `InfoIcon`, `InfoBanner`, and WPF `DataGrid` are
   now matched as phrases inside longer identifiers instead of exact-only
   symbols.
+- Drive and contacts byte vocabulary: local Swift helpers now use
+  `uploadBytes`, `loadThumbnailBytes`, and `encodeVCard` instead of broad
+  `*Data` names.
 
 ## Validation snapshot
 

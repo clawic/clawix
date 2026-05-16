@@ -352,26 +352,61 @@ const diffArgs = changedBase
   ? ["diff", "--unified=0", changedBase, "--", ...sourcePaths]
   : ["diff", "--unified=0", "--", ...sourcePaths];
 const stagedDiffArgs = ["diff", "--cached", "--unified=0", "--", ...sourcePaths];
-const combinedDiff = `${git(diffArgs)}\n${changedBase ? "" : git(stagedDiffArgs)}`;
 
 const visualPattern = /\b(Color|Palette|MenuStyle|Typography|AppLayout|Image\(systemName:|LucideIcon|RoundedRectangle|Capsule|Circle|HStack|VStack|ZStack|Spacer|Text\("|font\(|foregroundColor|foregroundStyle|background|padding|frame|cornerRadius|opacity|tracking|textCase|animation|transition|lineLimit|help\("|accessibilityLabel\()/;
 const visualAuthorizationEnv = String(visualAuthorization.publicSignalEnv || "");
 const visualAuthorizationValue = String(visualAuthorization.publicSignalValue || "");
 const visualAuthorized = Boolean(visualAuthorizationEnv) && process.env[visualAuthorizationEnv] === visualAuthorizationValue;
-const visualLines = [];
-for (const line of combinedDiff.split("\n")) {
-  if (!line.startsWith("+") || line.startsWith("+++")) continue;
-  if (visualPattern.test(line)) {
-    visualLines.push(line.slice(0, 240));
+
+function visualDiffHits(diffText, sourceLabel) {
+  const hits = [];
+  let currentPath = "<unknown>";
+  let nextNewLine = 0;
+
+  for (const line of diffText.split("\n")) {
+    if (line.startsWith("+++ b/")) {
+      currentPath = line.slice("+++ b/".length);
+      continue;
+    }
+
+    if (line.startsWith("@@ ")) {
+      const match = /\+(\d+)(?:,\d+)?/.exec(line);
+      nextNewLine = match ? Number(match[1]) : 0;
+      continue;
+    }
+
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      if (visualPattern.test(line)) {
+        hits.push({
+          path: currentPath,
+          line: nextNewLine || "?",
+          source: sourceLabel,
+          text: line.slice(1, 241),
+        });
+      }
+      nextNewLine += 1;
+      continue;
+    }
+
+    if (line.startsWith(" ") || line === "\\ No newline at end of file") {
+      nextNewLine += 1;
+    }
   }
+
+  return hits;
 }
-if (visualLines.length > 0 && !visualAuthorized) {
+
+const visualHits = [
+  ...visualDiffHits(git(diffArgs), changedBase ? `diff against ${changedBase}` : "working tree"),
+  ...(changedBase ? [] : visualDiffHits(git(stagedDiffArgs), "staged")),
+];
+if (visualHits.length > 0 && !visualAuthorized) {
   fail(
     [
       "unauthorized visual/copy/layout source edit detected",
       `set ${visualAuthorizationEnv}=${visualAuthorizationValue} only when the task has explicit visual authorization from the private policy`,
       "non-authorized agents must leave a conceptual proposal instead of editing visible presentation",
-      ...visualLines.slice(0, 20).map((line) => `  ${line}`),
+      ...visualHits.slice(0, 20).map((hit) => `  ${hit.path}:${hit.line} [${hit.source}] ${hit.text}`),
     ].join("\n"),
   );
 }
