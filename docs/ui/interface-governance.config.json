@@ -52,6 +52,7 @@
     "visual-scope-policy-check",
     "visual-detector-policy-check",
     "visual-model-allowlist-check",
+    "visual-guard-failure-self-test",
     "private-baseline-manifest-shape",
     "private-visual-validation-manifest-shape",
     "performance-budget-platform-coverage",

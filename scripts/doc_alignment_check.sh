@@ -86,6 +86,7 @@ for file in \
   "scripts/ui_visual_scope_check.mjs" \
   "scripts/ui_visual_detector_check.mjs" \
   "scripts/ui_visual_model_allowlist_check.mjs" \
+  "scripts/ui_visual_guard_failure_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
@@ -135,6 +136,7 @@ require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_scope_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_detector_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_model_allowlist_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_visual_guard_failure_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_private_visual_verify.mjs"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
@@ -169,6 +171,7 @@ require_snippet "docs/ui/visual-change-detectors.manifest.json" "platform-specif
 require_snippet "docs/ui/visual-change-detectors.manifest.json" "swiftui-layout"
 require_snippet "docs/ui/visual-model-allowlist.manifest.json" "claude-opus-4.7"
 require_snippet "docs/ui/visual-model-allowlist.manifest.json" "CLAWIX_UI_VISUAL_MODEL"
+require_snippet "scripts/ui_visual_guard_failure_check.mjs" "simulate-unauthorized-visual-diff"
 require_snippet "docs/ui/implementation-evidence.manifest.json" ".github/PULL_REQUEST_TEMPLATE.md"
 require_snippet ".github/PULL_REQUEST_TEMPLATE.md" "## UI governance evidence"
 require_snippet ".github/PULL_REQUEST_TEMPLATE.md" "Pattern/debt/protected/exception mapping:"

@@ -46,6 +46,8 @@ jobs:
         run: node scripts/ui_visual_detector_check.mjs
       - name: Validate UI visual model allowlist
         run: node scripts/ui_visual_model_allowlist_check.mjs
+      - name: Validate UI visual guard failure
+        run: node scripts/ui_visual_guard_failure_check.mjs
       - name: Validate visible UI surface inventory
         run: node scripts/ui_surface_inventory_check.mjs
       - name: Validate private baseline manifest contract

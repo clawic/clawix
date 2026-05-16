@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const today = new Date().toISOString().slice(0, 10);
+const simulateUnauthorizedVisualDiff = process.argv.includes("--simulate-unauthorized-visual-diff");
 const errors = [];
 
 function fail(message) {
@@ -559,10 +560,18 @@ function visualDiffHits(diffText, sourceLabel) {
   return hits;
 }
 
-const visualHits = [
-  ...visualDiffHits(git(diffArgs), changedBase ? `diff against ${changedBase}` : "working tree"),
-  ...(changedBase ? [] : visualDiffHits(git(stagedDiffArgs), "staged")),
-];
+const simulatedVisualDiff = [
+  "diff --git a/web/src/simulated-visual-diff.tsx b/web/src/simulated-visual-diff.tsx",
+  "+++ b/web/src/simulated-visual-diff.tsx",
+  "@@ -0,0 +1 @@",
+  '+<button className="gap-2 text-red-500" aria-label="Rename">Rename</button>',
+].join("\n");
+const visualHits = simulateUnauthorizedVisualDiff
+  ? visualDiffHits(simulatedVisualDiff, "simulated unauthorized visual diff")
+  : [
+      ...visualDiffHits(git(diffArgs), changedBase ? `diff against ${changedBase}` : "working tree"),
+      ...(changedBase ? [] : visualDiffHits(git(stagedDiffArgs), "staged")),
+    ];
 if (visualHits.length > 0 && !visualAuthorized) {
   fail(
     [
