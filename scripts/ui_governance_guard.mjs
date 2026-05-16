@@ -257,6 +257,17 @@ for (const [index, entry] of requireArray(debt, debtPath, "entries").entries()) 
   }
 }
 
+const debtReportPath = "docs/ui/debt-report.registry.json";
+const debtReport = readJson(debtReportPath);
+requireFields(debtReport, debtReportPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "sourceBaseline",
+  "reportStatusValues",
+  "pendingItems",
+]);
+
 const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
 requireFields(protectedSurfaces, protectedPath, ["schemaVersion", "status", "policy", "surfaces"]);
@@ -463,6 +474,7 @@ const requiredDocs = [
   "docs/ui/copy.inventory.json",
   "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/debt.baseline.json",
+  "docs/ui/debt-report.registry.json",
   "docs/ui/protected-surfaces.registry.json",
   "docs/ui/canon-promotions.registry.json",
   "docs/ui/performance-budgets.registry.json",

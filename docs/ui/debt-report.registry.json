@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "UI debt findings are report-only until a visual-authorized lane receives explicit scope. Non-authorized agents list these items and must not fix them opportunistically.",
+  "sourceBaseline": "docs/ui/debt.baseline.json",
+  "reportStatusValues": ["pending-visual-authorized-cleanup", "blocked-without-private-baseline", "resolved"],
+  "pendingItems": [
+    {
+      "id": "pending-ui-debt-design-surface-raw-visual-values",
+      "debtId": "ui-debt-design-surface-raw-visual-values",
+      "status": "pending-visual-authorized-cleanup",
+      "scope": "macos/Sources/Clawix/Design/**",
+      "platforms": ["macos"],
+      "requiredAuthorization": "visual-authorized-lane",
+      "requiredEvidence": ["private-baseline", "copy-snapshot", "rendered-geometry"],
+      "allowedCurrentAction": "Report only."
+    },
+    {
+      "id": "pending-ui-debt-automations-surface-raw-visual-values",
+      "debtId": "ui-debt-automations-surface-raw-visual-values",
+      "status": "pending-visual-authorized-cleanup",
+      "scope": "macos/Sources/Clawix/AutomationsView.swift",
+      "platforms": ["macos"],
+      "requiredAuthorization": "visual-authorized-lane",
+      "requiredEvidence": ["private-baseline", "copy-snapshot", "rendered-geometry"],
+      "allowedCurrentAction": "Report only."
+    },
+    {
+      "id": "pending-ui-debt-plan-question-card-raw-visual-values",
+      "debtId": "ui-debt-plan-question-card-raw-visual-values",
+      "status": "pending-visual-authorized-cleanup",
+      "scope": "macos/Sources/Clawix/PlanQuestionCard.swift",
+      "platforms": ["macos"],
+      "requiredAuthorization": "visual-authorized-lane",
+      "requiredEvidence": ["private-baseline", "copy-snapshot", "rendered-geometry"],
+      "allowedCurrentAction": "Report only."
+    }
+  ]
+}

@@ -199,6 +199,7 @@ fast() {
   run node "$ROOT_DIR/scripts/check-clawjs-skills-sync.mjs"
   run node "$ROOT_DIR/scripts/ui_governance_guard.mjs"
   run node "$ROOT_DIR/scripts/ui_canon_promotion_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_debt_report_check.mjs"
   run node "$ROOT_DIR/scripts/ui_geometry_contract_check.mjs"
   run node "$ROOT_DIR/scripts/ui_rendered_geometry_manifest_check.mjs"
   run node "$ROOT_DIR/scripts/ui_copy_governance_check.mjs"

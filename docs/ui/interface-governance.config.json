@@ -35,6 +35,7 @@
   "publicChecks": [
     "registry-completeness",
     "debt-baseline-shape",
+    "debt-report-coverage",
     "protected-surface-shape",
     "canon-promotion-record-check",
     "exception-expiry",

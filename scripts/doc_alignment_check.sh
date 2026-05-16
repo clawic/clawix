@@ -52,6 +52,7 @@ for file in \
   "docs/ui/pattern-registry/patterns.registry.json" \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
   "docs/ui/debt.baseline.json" \
+  "docs/ui/debt-report.registry.json" \
   "docs/ui/protected-surfaces.registry.json" \
   "docs/ui/canon-promotions.registry.json" \
   "docs/ui/performance-budgets.registry.json" \
@@ -60,6 +61,7 @@ for file in \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_canon_promotion_check.mjs" \
+  "scripts/ui_debt_report_check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_component_extraction_check.mjs" \
@@ -96,6 +98,7 @@ require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane m
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_canon_promotion_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_debt_report_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
@@ -116,6 +119,8 @@ require_snippet "docs/ui/component-extraction.manifest.json" "unbounded-prop-bag
 require_snippet "docs/ui/component-extraction.manifest.json" "minimumCallSites"
 require_snippet "docs/ui/canon-promotions.registry.json" "Only the user can promote"
 require_snippet "docs/ui/canon-promotions.registry.json" "private-codex-ui-approval"
+require_snippet "docs/ui/debt-report.registry.json" "Report only."
+require_snippet "docs/ui/debt-report.registry.json" "pending-visual-authorized-cleanup"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
