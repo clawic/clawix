@@ -4,6 +4,8 @@
   "policy": "Visible names, labels, placeholders, tooltips, messages, empty/loading/error text, and copy hierarchy are governed UI. Public manifests store copy rules and private aliases; extracted text snapshots stay outside the public repo until explicitly approved for release.",
   "patternCopySource": "docs/ui/pattern-registry/patterns/*.pattern.json",
   "privateSnapshotAlias": "private-codex-ui-copy-snapshots",
+  "evidenceFilename": "copy-evidence.json",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved",
   "protectedSurfaceRequirement": {
     "copySnapshotReferenceRequired": true,
     "approvedCopyHashRequired": true,

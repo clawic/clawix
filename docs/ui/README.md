@@ -57,5 +57,7 @@ the public repo.
    safe hashes, aliases, tolerances, and runner IDs.
 12. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-13. When the lane is not visual-authorized, use
+13. When private copy snapshots are available, verify them with
+    `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
+14. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

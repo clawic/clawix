@@ -18,6 +18,10 @@ Use when deciding whether a UI change should become Clawix canon.
 3. If the change affects `visual-ui` or `copy-ui`, verify explicit user
    approval and the private visual authorization policy. Non-authorized agents
    stop at a conceptual proposal.
+   For approved copy, verify private copy snapshot evidence:
+   ```
+   CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved
+   ```
 4. Decide whether the change maps to an existing pattern, creates a new
    pattern, extends debt, needs a timed exception, or requires protected-surface
    approval.

@@ -57,6 +57,7 @@ for file in \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
+  "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
   "scripts/ui_visual_scope_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
@@ -99,6 +100,7 @@ require_snippet "docs/ui/visible-surfaces.inventory.json" "Every current visible
 require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-composer"
 require_snippet "docs/ui/copy.inventory.json" "private-codex-ui-copy-snapshots"
 require_snippet "docs/ui/copy.inventory.json" "approvalBlockedWithoutSnapshot"
+require_snippet "docs/ui/copy.inventory.json" "ui_private_copy_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "privateModelAssignment"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"

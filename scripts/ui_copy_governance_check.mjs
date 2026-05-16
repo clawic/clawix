@@ -56,6 +56,8 @@ requireFields(copyInventory, copyPath, [
   "policy",
   "patternCopySource",
   "privateSnapshotAlias",
+  "evidenceFilename",
+  "verificationCommand",
   "protectedSurfaceRequirement",
   "restrictedCopyKinds",
   "requiredEvidenceFields",
@@ -72,6 +74,12 @@ const requiredCopyKinds = [
   "error-state",
   "copy-hierarchy",
 ];
+if (copyInventory?.evidenceFilename !== "copy-evidence.json") {
+  fail(`${copyPath}.evidenceFilename must be copy-evidence.json`);
+}
+if (!String(copyInventory?.verificationCommand || "").includes("scripts/ui_private_copy_verify.mjs")) {
+  fail(`${copyPath}.verificationCommand must run scripts/ui_private_copy_verify.mjs`);
+}
 const copyKinds = new Set(requireArray(copyInventory, copyPath, "restrictedCopyKinds"));
 for (const kind of requiredCopyKinds) {
   if (!copyKinds.has(kind)) fail(`${copyPath}.restrictedCopyKinds must include ${kind}`);
