@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Only explicitly allowlisted visual models may make visual-ui, copy-ui, or mechanical-equivalent-refactor changes. Non-allowlisted agents must stop at a conceptual proposal.",
+  "privateAssignment": "outside-public-repo",
+  "authorizationSignal": {
+    "env": "CLAWIX_UI_VISUAL_AUTHORIZED",
+    "value": "1"
+  },
+  "modelSignal": {
+    "env": "CLAWIX_UI_VISUAL_MODEL",
+    "requiredForVisualMutation": true
+  },
+  "proposalPath": "docs/ui/visual-change-proposal.template.md",
+  "allowedVisualModels": [
+    {
+      "id": "claude-opus-4.7",
+      "label": "Claude Opus 4.7",
+      "status": "active",
+      "allowedMutationClasses": ["visual-ui", "copy-ui", "mechanical-equivalent-refactor"],
+      "scopeSource": "docs/ui/visual-change-scopes.manifest.json",
+      "privateApprovalRequired": true
+    }
+  ]
+}
