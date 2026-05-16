@@ -41,6 +41,7 @@
     "geometry-contract-clause-check",
     "rendered-geometry-manifest-shape",
     "copy-governance-contract-check",
+    "component-extraction-policy-check",
     "visual-scope-policy-check",
     "private-baseline-manifest-shape",
     "performance-budget-platform-coverage",

@@ -102,6 +102,26 @@ for (const state of requiredStates) {
   if (!configuredStates.has(state)) fail(`${configPath}.requiredInteractiveStates must include ${state}`);
 }
 
+const componentExtractionPath = "docs/ui/component-extraction.manifest.json";
+const componentExtraction = readJson(componentExtractionPath);
+requireFields(componentExtraction, componentExtractionPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "minimumCallSites",
+  "requiredRiskSignals",
+  "allowedPolicies",
+  "allowedApis",
+]);
+const allowedExtractionApis = new Set(
+  requireArray(componentExtraction, componentExtractionPath, "allowedApis").map((api) => api?.id).filter(Boolean),
+);
+const extractionPolicyApis = new Map();
+for (const policy of requireArray(componentExtraction, componentExtractionPath, "allowedPolicies")) {
+  if (!policy?.id) continue;
+  extractionPolicyApis.set(policy.id, new Set(Array.isArray(policy.allowedApis) ? policy.allowedApis : []));
+}
+
 const indexPath = "docs/ui/pattern-registry/patterns.registry.json";
 const registry = readJson(indexPath);
 requireFields(registry, indexPath, ["schemaVersion", "platforms", "notesPath", "patterns"]);
@@ -143,11 +163,15 @@ for (const patternId of registryPatterns) {
     fail(`${patternPath}.platforms must include at least one governed platform`);
   }
   const extraction = pattern.componentExtraction || {};
-  if (!["required", "required-when-repeated-with-state", "allowed", "forbidden"].includes(extraction.policy)) {
-    fail(`${patternPath}.componentExtraction.policy is invalid`);
+  if (!extractionPolicyApis.has(extraction.policy)) {
+    fail(`${patternPath}.componentExtraction.policy must be defined in ${componentExtractionPath}`);
   }
-  if (!["limited-slots", "wrapper-plus-modifier", "local-composition"].includes(extraction.api)) {
-    fail(`${patternPath}.componentExtraction.api must encode the agreed component API strategy`);
+  if (!allowedExtractionApis.has(extraction.api)) {
+    fail(`${patternPath}.componentExtraction.api must encode a governed component API strategy`);
+  }
+  const allowedForPolicy = extractionPolicyApis.get(extraction.policy);
+  if (allowedForPolicy && !allowedForPolicy.has(extraction.api)) {
+    fail(`${patternPath}.componentExtraction.api ${extraction.api} is not allowed for policy ${extraction.policy}`);
   }
   if (!patternNotes.includes(`## ${patternId}`)) {
     fail(`${notesPath} must include a Markdown note for ${patternId}`);
@@ -418,6 +442,7 @@ const requiredDocs = [
   "docs/ui/pattern-registry/README.md",
   "docs/ui/pattern-registry/patterns/NOTES.md",
   "docs/ui/interface-governance.config.json",
+  "docs/ui/component-extraction.manifest.json",
   "docs/ui/visible-surfaces.inventory.json",
   "docs/ui/rendered-geometry.manifest.json",
   "docs/ui/copy.inventory.json",

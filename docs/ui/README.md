@@ -23,6 +23,8 @@ the public repo.
 ## Files
 
 - `interface-governance.config.json`: global guard configuration.
+- `component-extraction.manifest.json`: reusable component extraction policy
+  and bounded API audit rules.
 - `pattern-registry/`: pattern manifests and human notes.
 - `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `copy.inventory.json`: copy canon policy and private snapshot requirements.
@@ -53,17 +55,19 @@ the public repo.
 8. Keep rendered geometry evidence contracts current with
    `scripts/ui_rendered_geometry_manifest_check.mjs`.
 9. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-10. Keep visual authorization scopes current with
+10. Keep component extraction APIs current with
+   `scripts/ui_component_extraction_check.mjs`.
+11. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
-11. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-12. Keep private baseline coverage current with
+12. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+13. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-13. When private geometry evidence is available, verify it with
+14. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-14. When private baselines are available, verify them with
+15. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-15. When private copy snapshots are available, verify them with
+16. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-16. When the lane is not visual-authorized, use
+17. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

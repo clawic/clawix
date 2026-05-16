@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Reusable UI components are extracted only when repeated UI carries state, interaction, geometry, accessibility, or performance risk. Extracted APIs must keep presentation bounded by limited slots or a wrapper plus modifier contract.",
+  "minimumCallSites": 2,
+  "requiredRiskSignals": ["state", "interaction", "geometry", "accessibility", "performance"],
+  "allowedPolicies": [
+    {
+      "id": "required",
+      "description": "The pattern is canonical enough that repeated use must go through a bounded component.",
+      "allowedApis": ["limited-slots", "wrapper-plus-modifier"]
+    },
+    {
+      "id": "required-when-repeated-with-state",
+      "description": "The pattern becomes a component when it appears in at least two call sites and carries state or interaction risk.",
+      "allowedApis": ["limited-slots", "wrapper-plus-modifier"]
+    },
+    {
+      "id": "allowed",
+      "description": "Extraction is allowed only with proof of visual equivalence.",
+      "allowedApis": ["limited-slots", "wrapper-plus-modifier", "local-composition"]
+    },
+    {
+      "id": "forbidden",
+      "description": "Extraction would hide local composition or create an unsafe visual abstraction.",
+      "allowedApis": ["local-composition"]
+    }
+  ],
+  "allowedApis": [
+    {
+      "id": "limited-slots",
+      "shape": "A small named slot set whose visual contract is owned by the pattern manifest.",
+      "forbids": ["unbounded-prop-bag", "presentation-config-bag", "style-dictionary"]
+    },
+    {
+      "id": "wrapper-plus-modifier",
+      "shape": "A wrapper component with narrow modifiers for measured state, geometry, or accessibility behavior.",
+      "forbids": ["unbounded-prop-bag", "presentation-config-bag", "style-dictionary"]
+    },
+    {
+      "id": "local-composition",
+      "shape": "Keep the composition local when extraction would make visual intent less explicit.",
+      "forbids": ["shared-visual-wrapper", "unbounded-prop-bag"]
+    }
+  ],
+  "forbiddenApiSignals": [
+    {
+      "id": "typescript-any-props",
+      "pattern": "\\bprops\\s*:\\s*any\\b",
+      "reason": "Component APIs must not accept unbounded props bags."
+    },
+    {
+      "id": "typescript-any-visual-config",
+      "pattern": "\\b(style|appearance|configuration|visualConfig)\\s*:\\s*any\\b",
+      "reason": "Visual configuration must be encoded as a governed pattern contract."
+    },
+    {
+      "id": "typescript-record-visual-config",
+      "pattern": "\\b(style|props|appearance|configuration)\\s*:\\s*Record\\s*<\\s*string\\s*,\\s*(any|unknown)\\s*>",
+      "reason": "Record-based visual bags bypass limited-slot APIs."
+    },
+    {
+      "id": "swift-any-visual-dictionary",
+      "pattern": "\\b(let|var)\\s+(style|props|appearance|configuration)\\s*:\\s*\\[\\s*String\\s*:\\s*Any\\s*\\]",
+      "reason": "Swift visual dictionaries bypass measured geometry and copy contracts."
+    },
+    {
+      "id": "kotlin-any-visual-map",
+      "pattern": "\\b(val|var)\\s+(style|props|appearance|configuration)\\s*:\\s*Map\\s*<\\s*String\\s*,\\s*Any\\s*>",
+      "reason": "Kotlin visual maps bypass measured geometry and copy contracts."
+    }
+  ],
+  "sourceAudit": {
+    "roots": ["macos/Sources", "ios/Sources", "android/app/src/main", "web/src"],
+    "fileExtensions": [".swift", ".kt", ".kts", ".tsx", ".ts", ".jsx", ".js"],
+    "skippedDirectories": ["node_modules", ".build", "build", "DerivedData"]
+  }
+}

@@ -44,6 +44,7 @@ for file in \
   "docs/ui/README.md" \
   "docs/ui/decision-verification.json" \
   "docs/ui/interface-governance.config.json" \
+  "docs/ui/component-extraction.manifest.json" \
   "docs/ui/visible-surfaces.inventory.json" \
   "docs/ui/copy.inventory.json" \
   "docs/ui/rendered-geometry.manifest.json" \
@@ -59,6 +60,7 @@ for file in \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
+  "scripts/ui_component_extraction_check.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
   "scripts/ui_rendered_geometry_manifest_check.mjs" \
   "scripts/ui_private_geometry_verify.mjs" \
@@ -95,6 +97,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_component_extraction_check.mjs"
 require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_scope_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
@@ -106,6 +109,8 @@ require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-compos
 require_snippet "docs/ui/copy.inventory.json" "private-codex-ui-copy-snapshots"
 require_snippet "docs/ui/copy.inventory.json" "approvalBlockedWithoutSnapshot"
 require_snippet "docs/ui/copy.inventory.json" "ui_private_copy_verify.mjs"
+require_snippet "docs/ui/component-extraction.manifest.json" "unbounded-prop-bag"
+require_snippet "docs/ui/component-extraction.manifest.json" "minimumCallSites"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
