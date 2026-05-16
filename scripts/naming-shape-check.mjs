@@ -44,6 +44,17 @@ const allowedBroadSymbolContexts = [
   "PackageManager",
   "WindowManager",
 ];
+// Ecosystem/UI terms where the broad word is part of the precise domain phrase.
+const allowedBroadSymbolPhrases = [
+  ["Database", "Manager"],
+  ["File", "Manager"],
+  ["Input", "Method", "Manager"],
+  ["Package", "Manager"],
+  ["Window", "Manager"],
+  ["Info", "Banner"],
+  ["Info", "Icon"],
+  ["Data", "Grid"],
+];
 const rootConventionalMarkdown = new Set([
   "AGENTS.md",
   "CHANGELOG.md",
@@ -133,7 +144,17 @@ function splitIdentifier(identifier) {
 function findBroadTerm(identifier) {
   if (allowedBroadSymbolContexts.includes(identifier)) return null;
   const tokens = splitIdentifier(identifier);
+  if (hasAllowedBroadPhrase(tokens)) return null;
   return broadTerms.find((term) => tokens.includes(term)) ?? null;
+}
+
+function hasAllowedBroadPhrase(tokens) {
+  return allowedBroadSymbolPhrases.some((phrase) => {
+    if (phrase.length > tokens.length) return false;
+    return tokens.some((_, index) => {
+      return phrase.every((term, offset) => tokens[index + offset] === term);
+    });
+  });
 }
 
 function collectBroadSymbolWarnings(relativePath, text) {

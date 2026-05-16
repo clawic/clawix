@@ -11,7 +11,8 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 51.
+- Naming warnings: 48 in the current local tree. In-progress governance and
+  code-hygiene files still account for part of the cleanup inventory.
 - Source-size warnings: 35.
 - Source-structure signals: 29.
 
@@ -82,6 +83,10 @@ for staged rename/split work and must not be hidden by compressing code.
 - Browser storage vocabulary: browser cleanup code now names the WebKit
   removable storage contract (`BrowserStorageKind`, `clearBrowserStorage`)
   instead of broad browsing-data symbols.
+- Naming check false positives: platform and UI phrases such as
+  `DatabaseManagerStatusRow`, `InfoIcon`, `InfoBanner`, and WPF `DataGrid` are
+  now matched as phrases inside longer identifiers instead of exact-only
+  symbols.
 
 ## Validation snapshot
 
