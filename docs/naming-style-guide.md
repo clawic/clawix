@@ -46,9 +46,10 @@ shape, and agent-oriented rename workflow, also read
 - Stable error codes use `snake_case`.
 - Deep links use:
   - `clawix://auth/callback/<provider>`
-  - `clawix://pair/<token>`
   - `clawix://session/<sessionId>`
   - `clawix://settings/<section>`
+- Pairing QR codes use a JSON payload with `v`, `host`, `port`, `token`,
+  and related metadata; pair-token deep links are not stable v1 routes.
 - `claw://` is reserved for future framework-level links.
 
 ## Identifier rules
@@ -56,7 +57,7 @@ shape, and agent-oriented rename workflow, also read
 - `hostId` for this product is `clawix`.
 - `platform` is separate from `hostId`.
 - Distinguish `deviceId`, `installationId`, and `clientId`.
-- Use `clientKind` for client role.
+- Use `clientKind` for client role: `companion` or `desktop`.
 - Use `runtimeId`, `agentId`, `providerId`, `modelId`, and `account` with the
   same meanings as ClawJS.
 
