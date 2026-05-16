@@ -72,6 +72,7 @@ for file in \
   "scripts/ui_protected_surface_check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
+  "scripts/ui_performance_budget_check.mjs" \
   "scripts/ui_component_extraction_check.mjs" \
   "scripts/ui_mechanical_equivalence_check.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
@@ -118,6 +119,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_performance_budget_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_component_extraction_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_mechanical_equivalence_check.mjs"
 require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
