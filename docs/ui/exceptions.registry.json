@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "UI exceptions are temporary, scoped, owned, and expire. They do not approve visual direction and cannot expand without explicit user approval.",
+  "exceptionStatuses": ["active", "expired", "resolved", "revoked"],
+  "requiredExceptionFields": [
+    "id",
+    "status",
+    "scope",
+    "platforms",
+    "owner",
+    "reason",
+    "createdAt",
+    "reviewAfter",
+    "expiresAt",
+    "allowedAction",
+    "privateApprovalReference"
+  ],
+  "exceptions": []
+}

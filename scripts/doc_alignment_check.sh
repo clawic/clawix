@@ -57,6 +57,7 @@ for file in \
   "docs/ui/debt.baseline.json" \
   "docs/ui/debt-baseline.manifest.json" \
   "docs/ui/debt-report.registry.json" \
+  "docs/ui/exceptions.registry.json" \
   "docs/ui/protected-surfaces.registry.json" \
   "docs/ui/canon-promotions.registry.json" \
   "docs/ui/performance-budgets.registry.json" \
@@ -66,6 +67,7 @@ for file in \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_canon_promotion_check.mjs" \
   "scripts/ui_debt_report_check.mjs" \
+  "scripts/ui_exception_check.mjs" \
   "scripts/ui_protected_surface_check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
@@ -107,6 +109,7 @@ require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the cu
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_canon_promotion_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_debt_report_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_exception_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_protected_surface_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
@@ -138,6 +141,8 @@ require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt-baseline.*"
 require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt.baseline.json"
 require_snippet "docs/ui/debt-report.registry.json" "Report only."
 require_snippet "docs/ui/debt-report.registry.json" "pending-visual-authorized-cleanup"
+require_snippet "docs/ui/exceptions.registry.json" "UI exceptions are temporary"
+require_snippet "docs/ui/exceptions.registry.json" "expiresAt"
 require_snippet "docs/ui/protected-surfaces.registry.json" "requiredFreezeFields"
 require_snippet "docs/ui/protected-surfaces.registry.json" "geometryEvidenceReference"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"

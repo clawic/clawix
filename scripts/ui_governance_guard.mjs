@@ -303,6 +303,17 @@ requireFields(debtReport, debtReportPath, [
   "pendingItems",
 ]);
 
+const exceptionsPath = "docs/ui/exceptions.registry.json";
+const exceptions = readJson(exceptionsPath);
+requireFields(exceptions, exceptionsPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "exceptionStatuses",
+  "requiredExceptionFields",
+  "exceptions",
+]);
+
 const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
 requireFields(protectedSurfaces, protectedPath, [
@@ -576,6 +587,7 @@ const requiredDocs = [
   "docs/ui/debt.baseline.json",
   "docs/ui/debt-baseline.manifest.json",
   "docs/ui/debt-report.registry.json",
+  "docs/ui/exceptions.registry.json",
   "docs/ui/protected-surfaces.registry.json",
   "docs/ui/canon-promotions.registry.json",
   "docs/ui/performance-budgets.registry.json",

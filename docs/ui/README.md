@@ -43,6 +43,8 @@ the public repo.
   `docs/ui/debt-baseline.*`; `debt.baseline.json` remains canonical.
 - `debt-report.registry.json`: report-only pending items derived from the debt
   baseline.
+- `exceptions.registry.json`: temporary scoped exceptions with owner, reason,
+  review date, and expiry.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
 - `canon-promotions.registry.json`: public-safe records for user-approved canon
   promotions.
@@ -68,32 +70,34 @@ the public repo.
    promotion.
 8. Keep UI debt reports current with `scripts/ui_debt_report_check.mjs`; debt
    items are report-only outside a visual-authorized cleanup scope.
-9. Keep protected surface freeze contracts current with
+9. Keep UI exceptions current with `scripts/ui_exception_check.mjs`; active
+   exceptions must be owned, approved, reviewed, and expiring.
+10. Keep protected surface freeze contracts current with
    `scripts/ui_protected_surface_check.mjs`.
-10. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
-11. Keep rendered geometry evidence contracts current with
+11. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
+12. Keep rendered geometry evidence contracts current with
    `scripts/ui_rendered_geometry_manifest_check.mjs`.
-12. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-13. Keep component extraction APIs current with
+13. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
+14. Keep component extraction APIs current with
    `scripts/ui_component_extraction_check.mjs`.
-14. Keep mechanical refactor evidence current with
+15. Keep mechanical refactor evidence current with
    `scripts/ui_mechanical_equivalence_check.mjs`.
-15. Keep visual authorization scopes current with
+16. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default, and
    approved scopes must declare files plus a change budget.
-16. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
-17. Keep visual model authorization current with
+17. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
+18. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
    identify an allowlisted visual model.
-18. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-19. Keep private baseline coverage current with
+19. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+20. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-20. When private geometry evidence is available, verify it with
+21. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-21. When private baselines are available, verify them with
+22. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-22. When private copy snapshots are available, verify them with
+23. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-23. When the lane is not visual-authorized, use
+24. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

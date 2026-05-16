@@ -117,6 +117,9 @@ const debtIds = new Set(requireArray(debt, "docs/ui/debt.baseline.json", "entrie
 const protectedSurfaces = readJson("docs/ui/protected-surfaces.registry.json");
 const protectedIds = new Set(requireArray(protectedSurfaces, "docs/ui/protected-surfaces.registry.json", "surfaces", { nonEmpty: false }).map((entry) => entry.id));
 
+const exceptions = readJson("docs/ui/exceptions.registry.json");
+const exceptionIds = new Set(requireArray(exceptions, "docs/ui/exceptions.registry.json", "exceptions", { nonEmpty: false }).map((entry) => entry.id));
+
 const inventoryPath = "docs/ui/visible-surfaces.inventory.json";
 const inventory = readJson(inventoryPath);
 requireFields(inventory, inventoryPath, ["schemaVersion", "status", "policy", "reviewAfter", "coverage"]);
@@ -157,8 +160,9 @@ for (const [index, entry] of coverage.entries()) {
     }
   }
   if (entry.classification === "exception") {
-    requireFields(entry, label, ["owner", "reviewAfter", "allowedAction"]);
-    if (entry.reviewAfter && entry.reviewAfter < today) fail(`${label}.reviewAfter expired on ${entry.reviewAfter}`);
+    for (const exceptionId of requireArray(entry, label, "exceptionIds")) {
+      if (!exceptionIds.has(exceptionId)) fail(`${label}.exceptionIds references unknown exception ${exceptionId}`);
+    }
   }
   compiledCoverage.push({
     id: entry.id,
