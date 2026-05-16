@@ -18,6 +18,19 @@ ROOT = Path(__file__).resolve().parents[1]
 BIN = ROOT / ".build" / "debug" / "clawix-bridge"
 
 
+def auth_frame(token: str, device_name: str, client_kind: str, identity: str) -> dict:
+    return {
+        "schemaVersion": 1,
+        "type": "auth",
+        "token": token,
+        "deviceName": device_name,
+        "clientKind": client_kind,
+        "clientId": f"clawix.e2e.{identity}",
+        "installationId": f"install-{identity}",
+        "deviceId": f"device-{identity}",
+    }
+
+
 def build():
     subprocess.run(["swift", "build"], cwd=ROOT, check=True)
 
@@ -195,17 +208,17 @@ def main():
                 _, err = daemon.communicate(timeout=1)
                 raise AssertionError(err)
 
-            ws.send_json({"schemaVersion": 1, "type": "auth", "token": token, "deviceName": "E2E iPhone", "clientKind": "companion"})
+            ws.send_json(auth_frame(token, "E2E iPhone", "companion", "iphone"))
             ws.recv_until(lambda f: f["type"] == "authOk")
 
             desktop = WebSocket(port)
-            desktop.send_json({"schemaVersion": 1, "type": "auth", "token": token, "deviceName": "E2E Mac", "clientKind": "desktop"})
+            desktop.send_json(auth_frame(token, "E2E Mac", "desktop", "desktop"))
             desktop.recv_until(lambda f: f["type"] == "authOk")
             desktop.send_json({"schemaVersion": 1, "type": "pairingStart"})
             pairing = desktop.recv_until(lambda f: f["type"] == "pairingPayload")
             qr = json.loads(pairing["qrJson"])
             qr_ws = WebSocket(port)
-            qr_ws.send_json({"schemaVersion": 1, "type": "auth", "token": qr["token"], "deviceName": "QR iPhone", "clientKind": "companion"})
+            qr_ws.send_json(auth_frame(qr["token"], "QR iPhone", "companion", "qr-iphone"))
             qr_ws.recv_until(lambda f: f["type"] == "authOk")
             qr_ws.close()
             desktop.close()
@@ -299,7 +312,7 @@ def main():
                 if timeout_ws is None:
                     _, err = timeout_daemon.communicate(timeout=1)
                     raise AssertionError(err)
-                timeout_ws.send_json({"schemaVersion": 1, "type": "auth", "token": token, "deviceName": "Timeout iPhone", "clientKind": "companion"})
+                timeout_ws.send_json(auth_frame(token, "Timeout iPhone", "companion", "timeout-iphone"))
                 timeout_ws.recv_until(lambda f: f["type"] == "authOk")
                 timeout_ws.recv_until(lambda f: f["type"] == "bridgeState" and f["state"] == "ready", timeout=5)
             finally:

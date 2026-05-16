@@ -7,6 +7,7 @@
 use anyhow::{anyhow, Context, Result};
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -107,10 +108,7 @@ impl DaemonClient {
             .write_tx
             .as_ref()
             .ok_or_else(|| anyhow!("daemon not connected"))?;
-        let frame = serde_json::json!({
-            "schemaVersion": BRIDGE_SCHEMA_VERSION,
-            "body": body
-        });
+        let frame = bridge_frame(body)?;
         tx.send(Message::Text(frame.to_string()))
             .await
             .map_err(|e| anyhow!("send: {e}"))?;
@@ -134,12 +132,13 @@ pub async fn connect_and_run(client: Arc<Mutex<DaemonClient>>, app: AppHandle) -
                 if let Ok(bearer) = read_bearer() {
                     let auth = serde_json::json!({
                         "schemaVersion": BRIDGE_SCHEMA_VERSION,
-                        "body": {
-                            "type": "auth",
-                            "token": bearer,
-                            "deviceName": hostname(),
-                            "clientKind": "desktop"
-                        }
+                        "type": "auth",
+                        "token": bearer,
+                        "deviceName": hostname(),
+                        "clientKind": "desktop",
+                        "clientId": "clawix.linux.desktop",
+                        "installationId": persisted_id("bridge-installation-id"),
+                        "deviceId": persisted_id("bridge-device-id")
                     });
                     let _ = write.send(Message::Text(auth.to_string())).await;
                 }
@@ -210,6 +209,30 @@ fn state_dir() -> PathBuf {
     dirs::home_dir()
         .map(|h| h.join(".clawix").join("state"))
         .unwrap_or_else(|| PathBuf::from("/tmp"))
+}
+
+fn bridge_frame(body: Value) -> Result<Value> {
+    let mut object = body
+        .as_object()
+        .cloned()
+        .ok_or_else(|| anyhow!("bridge frame body must be a JSON object"))?;
+    object.insert("schemaVersion".to_string(), Value::from(BRIDGE_SCHEMA_VERSION));
+    Ok(Value::Object(object))
+}
+
+fn persisted_id(name: &str) -> String {
+    let dir = state_dir();
+    let path = dir.join(name);
+    if let Ok(existing) = std::fs::read_to_string(&path) {
+        let trimmed = existing.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    let value = uuid_v4();
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = std::fs::write(path, format!("{value}\n"));
+    value
 }
 
 fn hostname() -> String {

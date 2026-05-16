@@ -151,6 +151,8 @@ const staleContractTargets = [
   "web/src/bridge/client.ts",
   "web/src/screens/shell/version-mismatch.tsx",
   "web/tests/unit/wire.test.ts",
+  "linux/app/src-tauri/src/daemon_client.rs",
+  "linux/app/src/lib/daemon_ws.ts",
   "windows/CLAUDE.md",
   "windows/Clawix.Core/BridgeBody.cs",
   "windows/Clawix.Core/BridgeFrame.cs",
@@ -233,6 +235,18 @@ for (const relativePath of staleContractTargets) {
   for (const { pattern, reason } of stalePatterns) {
     if (text.includes(pattern)) {
       fail(`${relativePath} contains stale v1 surface ${JSON.stringify(pattern)}: ${reason}`);
+    }
+  }
+}
+
+for (const relativePath of [
+  "linux/app/src-tauri/src/daemon_client.rs",
+  "linux/app/src/lib/daemon_ws.ts",
+]) {
+  const text = read(relativePath);
+  for (const pattern of ["\"body\": {", "frame.body"]) {
+    if (text.includes(pattern)) {
+      fail(`${relativePath} must use flat bridge v1 frames, found ${JSON.stringify(pattern)}`);
     }
   }
 }

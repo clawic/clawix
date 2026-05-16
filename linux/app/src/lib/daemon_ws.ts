@@ -4,7 +4,8 @@ import { createSignal, onCleanup, onMount } from "solid-js";
 
 export interface BridgeFrame {
   schemaVersion: number;
-  body: { type: string; [k: string]: unknown };
+  type: string;
+  [k: string]: unknown;
 }
 
 const [chats, setChats] = createSignal<unknown[]>([]);
@@ -25,27 +26,27 @@ export function useDaemonStream(): void {
   onMount(async () => {
     const unlisten = await listen<BridgeFrame[]>("bridge:frames", (event) => {
       for (const frame of event.payload) {
-        switch (frame.body.type) {
+        switch (frame.type) {
           case "sessionsSnapshot":
-            setChats((frame.body.sessions as unknown[]) ?? []);
+            setChats((frame.sessions as unknown[]) ?? []);
             break;
           case "messagesSnapshot":
             setStreamingMessages((prev) => ({
               ...prev,
-              [frame.body.sessionId as string]: frame.body.messages
+              [frame.sessionId as string]: frame.messages
             }));
             break;
           case "messageStreaming":
             setStreamingMessages((prev) => {
-              const id = frame.body.sessionId as string;
+              const id = frame.sessionId as string;
               const list = (prev[id] as Array<Record<string, unknown>>) ?? [];
               const updated = list.map((m) =>
-                m.id === frame.body.messageId
+                m.id === frame.messageId
                   ? {
                       ...m,
-                      content: frame.body.content,
-                      reasoningText: frame.body.reasoningText,
-                      streamingFinished: frame.body.finished
+                      content: frame.content,
+                      reasoningText: frame.reasoningText,
+                      streamingFinished: frame.finished
                     }
                   : m
               );
@@ -53,7 +54,7 @@ export function useDaemonStream(): void {
             });
             break;
           case "bridgeState":
-            setBridgeState((frame.body.state as string) ?? "booting");
+            setBridgeState((frame.state as string) ?? "booting");
             break;
           default:
             break;

@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from e2e_bridge_daemon import BIN, ROOT, WebSocket, build
+from e2e_bridge_daemon import BIN, ROOT, WebSocket, auth_frame, build
 
 
 class FakeOpenCode:
@@ -340,7 +340,7 @@ def main():
                 _, err = daemon.communicate(timeout=1)
                 raise AssertionError(err)
 
-            ws.send_json({"schemaVersion": 1, "type": "auth", "token": token, "deviceName": "E2E", "clientKind": "companion"})
+            ws.send_json(auth_frame(token, "E2E", "companion", "opencode"))
             ws.recv_until(lambda f: f["type"] == "authOk")
             snapshot = ws.recv_until(lambda f: f["type"] == "sessionsSnapshot" and f["sessions"])
             chat_id = snapshot["sessions"][0]["id"]
