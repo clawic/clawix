@@ -3,8 +3,8 @@ import SwiftUI
 /// Month / week calendar of scheduled posts. Each cell shows a date label
 /// and a stack of chip-style entries for the posts scheduled that day.
 /// Clicking an empty cell opens the composer pre-filled with that day at
-/// 09:00; clicking a chip opens a detail popover (post detail UI lands in
-/// v2). The view polls `PublishingManager.refreshCalendar` every 30s while
+/// 09:00; clicking a chip opens a detail popover once post detail UI is
+/// wired. The view polls `PublishingManager.refreshCalendar` every 30s while
 /// visible; realtime WebSocket can replace it later without UI changes.
 struct PublishingCalendarView: View {
     enum CalendarMode: String, CaseIterable { case month, week }

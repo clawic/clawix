@@ -495,8 +495,8 @@ final class SkillsStore: ObservableObject {
 enum SkillsSeedCatalog {
     static let builtins: [SkillSpec] = [
         // ── Personalities (3 of the 14 ClawJS presets, the rest seed in
-        // the same shape once ClawJS skills-v2 lands and ships them
-        // properly under ~/.claw/skills/personality/_builtin/).
+        // the same shape once ClawJS ships them under
+        // ~/.claw/skills/personality/_builtin/).
         SkillSpec(
             slug: "ceo-pragmatic",
             name: "CEO · Pragmatic",

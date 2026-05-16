@@ -8,8 +8,8 @@ import Foundation
 //   - Correlate request `id` with awaitable continuations.
 //   - Forward server notifications and server-initiated requests as
 //     AsyncStreams the service layer can consume.
-//   - Auto-decline server-initiated approvals in v1 (the layer is in
-//     place for v2 to wire UI prompts here).
+//   - Auto-decline server-initiated approvals until UI prompt routing is
+//     wired through the service layer.
 
 enum ClawixClientError: Error, CustomStringConvertible {
     case binaryNotFound

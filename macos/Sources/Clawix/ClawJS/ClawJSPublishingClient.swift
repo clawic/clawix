@@ -151,9 +151,9 @@ final class ClawJSPublishingClient {
     struct PostScheduleResponse: Decodable { let post: Post }
 
     /// Spec the composer hands to `createPost`. Mirrors `PostSpec` from
-    /// `clawjs/publishing/src/shared/types.ts`, narrowed to the fields the v1
+    /// `clawjs/publishing/src/shared/types.ts`, narrowed to the fields the
     /// composer needs (single original variant; per-account variant
-    /// override goes through a separate `variants` endpoint in v2).
+    /// overrides use the separate `variants` endpoint).
     struct PostSpec: Encodable {
         let accounts: [String]
         let editorialStatus: String?

@@ -443,6 +443,20 @@ for (const relativePath of [
   }
 }
 
+for (const [relativePath, phrases] of [
+  ["macos/Sources/Clawix/AgentBackend/ClawixClient.swift", ["place for v2"]],
+  ["macos/Sources/Clawix/Publishing/PublishingCalendarView.swift", ["lands in\n/// v2", "lands in v2"]],
+  ["macos/Sources/Clawix/Skills/SkillsStore.swift", ["skills-v2 lands"]],
+  ["macos/Sources/Clawix/ClawJS/ClawJSPublishingClient.swift", ["fields the v1", "endpoint in v2"]],
+]) {
+  const source = read(relativePath);
+  for (const phrase of phrases) {
+    if (source.includes(phrase)) {
+      fail(`${relativePath} must describe current/future work without internal version placeholder wording ${JSON.stringify(phrase)}`);
+    }
+  }
+}
+
 for (const relativePath of [
   "cli/README.md",
   "cli/bin/clawix.js",
