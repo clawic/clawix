@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Visual, copy, or layout proposals from non-authorized lanes are conceptual records only. A proposal record never approves implementation; approval must still come from the user and an allowlisted visual model lane.",
+  "templatePath": "docs/ui/visual-change-proposal.template.md",
+  "proposalStatuses": ["conceptual-only", "user-approved-for-visual-lane", "rejected", "expired"],
+  "requiredProposalFields": [
+    "id",
+    "status",
+    "requestedBy",
+    "mutationClass",
+    "changeKinds",
+    "surfaces",
+    "platforms",
+    "proposalReference",
+    "userApprovalStatus",
+    "implementationStatus",
+    "reviewAfter"
+  ],
+  "proposals": []
+}

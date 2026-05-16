@@ -607,6 +607,7 @@ const requiredDocs = [
   "docs/ui/copy.inventory.json",
   "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/visual-change-detectors.manifest.json",
+  "docs/ui/visual-proposals.registry.json",
   "docs/ui/debt.baseline.json",
   "docs/ui/debt-baseline.manifest.json",
   "docs/ui/debt-report.registry.json",
