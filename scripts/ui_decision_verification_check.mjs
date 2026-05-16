@@ -94,6 +94,9 @@ for (const [index, decision] of decisions.entries()) {
   if (decision.status === "verified-complete" && decision.remaining.length > 0) {
     fail(`${label} cannot be verified-complete while remaining work is listed`);
   }
+  if (decision.status === "open" && decision.remaining.length === 0) {
+    fail(`${label} must be verified-complete when no remaining work is listed`);
+  }
   for (const [evidenceIndex, evidence] of requireArray(decision, label, "publicEvidence").entries()) {
     const evidenceLabel = `${label}.publicEvidence[${evidenceIndex}]`;
     if (!isPublicEvidenceReference(evidence)) {
