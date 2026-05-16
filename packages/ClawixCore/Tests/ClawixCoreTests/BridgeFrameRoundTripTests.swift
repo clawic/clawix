@@ -29,7 +29,11 @@ final class BridgeFrameRoundTripTests: XCTestCase {
 
     func testPairingHandshake() throws {
         try roundTrip(.pairingStart)
-        try roundTrip(.pairingPayload(qrJson: "{\"v\":1}", bearer: "abc"))
+        try roundTrip(.pairingPayload(
+            qrJson: "{\"v\":1,\"host\":\"127.0.0.1\",\"port\":24080,\"token\":\"abc\"}",
+            token: "abc",
+            shortCode: "ABC-234-XYZ"
+        ))
     }
 
     func testProjectsSnapshot() throws {

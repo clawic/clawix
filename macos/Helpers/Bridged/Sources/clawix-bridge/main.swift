@@ -781,8 +781,8 @@ final class DaemonEngineHost: EngineHost {
         }
     }
 
-    func handlePairingStart() -> (qrJson: String, bearer: String)? {
-        return (pairing.qrPayload(), pairing.bearer)
+    func handlePairingStart() -> (qrJson: String, token: String, shortCode: String)? {
+        return (pairing.qrPayload(), pairing.bearer, pairing.shortCode)
     }
 
     func startRemoteJob(

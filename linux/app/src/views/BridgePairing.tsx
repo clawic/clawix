@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import QRCode from "qrcode";
 
 interface PairingPayload {
-  bearer: string;
+  token: string;
   shortCode: string;
   qrJson: string;
 }

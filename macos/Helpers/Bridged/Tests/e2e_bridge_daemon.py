@@ -217,6 +217,12 @@ def main():
             desktop.send_json({"schemaVersion": 1, "type": "pairingStart"})
             pairing = desktop.recv_until(lambda f: f["type"] == "pairingPayload")
             qr = json.loads(pairing["qrJson"])
+            assert pairing["token"] == qr["token"]
+            assert pairing["shortCode"] == qr["shortCode"]
+            assert "bearer" not in pairing
+            assert "bearer" not in qr
+            assert qr["v"] == 1
+            assert qr["port"] == port
             qr_ws = WebSocket(port)
             qr_ws.send_json(auth_frame(qr["token"], "QR iPhone", "companion", "qr-iphone"))
             qr_ws.recv_until(lambda f: f["type"] == "authOk")

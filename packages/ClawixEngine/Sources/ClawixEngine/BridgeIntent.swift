@@ -103,7 +103,11 @@ public enum BridgeIntent {
 
         case .pairingStart:
             if let payload = host?.handlePairingStart() {
-                session.send(BridgeFrame(.pairingPayload(qrJson: payload.qrJson, bearer: payload.bearer)))
+                session.send(BridgeFrame(.pairingPayload(
+                    qrJson: payload.qrJson,
+                    token: payload.token,
+                    shortCode: payload.shortCode
+                )))
             } else {
                 session.send(BridgeFrame(.errorEvent(
                     code: "notImplemented",

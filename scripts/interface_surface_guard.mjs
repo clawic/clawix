@@ -302,6 +302,10 @@ for (const pattern of [
   "clientId: String?",
   "installationId: String?",
   "deviceId: String?",
+  "pairingPayload(qrJson: String, bearer: String)",
+  "case qrJson, bearer",
+  "bearer: try c.decode(String.self, forKey: .bearer)",
+  "try c.encode(bearer, forKey: .bearer)",
   "decodeIfPresent(ClientKind.self, forKey: .clientKind)",
   "decodeIfPresent(String.self, forKey: .clientId)",
   "try c.encodeIfPresent(clientKind, forKey: .clientKind)",
@@ -315,9 +319,32 @@ const bridgeProtocolDoc = read("packages/ClawixCore/Sources/ClawixCore/BridgePro
 for (const snippet of [
   "The current schema version is `1`.",
   "`auth` `{ token, deviceName?, clientKind, clientId, installationId, deviceId }`",
+  "`pairingPayload` `{ qrJson, token, shortCode }`",
 ]) {
   if (!bridgeProtocolDoc.includes(snippet)) {
     fail(`BridgeProtocol.md is missing auth v1 contract snippet ${JSON.stringify(snippet)}`);
+  }
+}
+
+const linuxDaemonClient = read("linux/app/src-tauri/src/daemon_client.rs");
+for (const snippet of [
+  '"v": BRIDGE_SCHEMA_VERSION',
+  '"host": pairing_host()',
+  '"port": DEFAULT_PORT',
+  '"token": &token',
+]) {
+  if (!linuxDaemonClient.includes(snippet)) {
+    fail(`linux daemon pairing QR is missing stable payload snippet ${JSON.stringify(snippet)}`);
+  }
+}
+for (const pattern of [
+  'pub bearer: String',
+  '"bearer":"',
+  '"bearer":',
+  '"host":"local"',
+]) {
+  if (linuxDaemonClient.includes(pattern)) {
+    fail(`linux daemon pairing QR contains stale payload field ${JSON.stringify(pattern)}`);
   }
 }
 

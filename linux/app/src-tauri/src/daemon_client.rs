@@ -1,6 +1,6 @@
 // WebSocket client to the local `clawix-bridge` daemon. Mirrors what
 // the Mac GUI's DaemonBridgeClient does: connects to ws://127.0.0.1:24080,
-// sends the auth frame with the bearer token from
+// sends the auth frame with the bridge token from
 // `~/.clawix/state/bridge-token`, and dispatches inbound frames as Tauri
 // events the SolidJS frontend subscribes to.
 
@@ -27,8 +27,9 @@ pub struct DaemonClient {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct PairingPayload {
-    pub bearer: String,
+    pub token: String,
     pub short_code: String,
     pub qr_json: String,
 }
@@ -47,7 +48,8 @@ impl DaemonClient {
     }
 
     pub async fn get_chats(&self) -> Result<Vec<crate::commands::WireSessionBrief>> {
-        self.send_intent(serde_json::json!({ "type": "listSessions" })).await?;
+        self.send_intent(serde_json::json!({ "type": "listSessions" }))
+            .await?;
         Ok(Vec::new())
     }
 
@@ -59,7 +61,11 @@ impl DaemonClient {
         .await
     }
 
-    pub async fn send_prompt(&self, chat_id: Option<&str>, text: &str) -> Result<serde_json::Value> {
+    pub async fn send_prompt(
+        &self,
+        chat_id: Option<&str>,
+        text: &str,
+    ) -> Result<serde_json::Value> {
         let body = if let Some(id) = chat_id {
             serde_json::json!({ "type": "sendMessage", "sessionId": id, "text": text })
         } else {
@@ -86,20 +92,28 @@ impl DaemonClient {
         // The frame round-trips back as `pairingPayload`; the WS reader
         // task forwards that to a oneshot channel keyed by request id.
         // For the v1 scaffold we read straight from `~/.clawix/state/`
-        // where the daemon already persists the bearer + short code.
+        // where the daemon already persists the bridge token + short code.
         let state_dir = state_dir();
-        let bearer = std::fs::read_to_string(state_dir.join("bridge-token"))
-            .with_context(|| "reading bearer from ~/.clawix/state/bridge-token")?
+        let token = std::fs::read_to_string(state_dir.join("bridge-token"))
+            .with_context(|| "reading bridge token from ~/.clawix/state/bridge-token")?
             .trim()
             .to_string();
         let short_code = std::fs::read_to_string(state_dir.join("bridge-shortcode"))
             .unwrap_or_default()
             .trim()
             .to_string();
+        let qr_json = serde_json::json!({
+            "v": BRIDGE_SCHEMA_VERSION,
+            "host": pairing_host(),
+            "port": DEFAULT_PORT,
+            "token": &token,
+            "shortCode": &short_code,
+        })
+        .to_string();
         Ok(PairingPayload {
-            bearer: bearer.clone(),
+            token,
             short_code,
-            qr_json: format!(r#"{{"v":1,"bearer":"{bearer}","host":"local"}}"#),
+            qr_json,
         })
     }
 
@@ -216,7 +230,10 @@ fn bridge_frame(body: Value) -> Result<Value> {
         .as_object()
         .cloned()
         .ok_or_else(|| anyhow!("bridge frame body must be a JSON object"))?;
-    object.insert("schemaVersion".to_string(), Value::from(BRIDGE_SCHEMA_VERSION));
+    object.insert(
+        "schemaVersion".to_string(),
+        Value::from(BRIDGE_SCHEMA_VERSION),
+    );
     Ok(Value::Object(object))
 }
 
@@ -240,6 +257,16 @@ fn hostname() -> String {
         .ok()
         .and_then(|s| s.into_string().ok())
         .unwrap_or_else(|| "linux".to_string())
+}
+
+fn pairing_host() -> String {
+    std::net::UdpSocket::bind("0.0.0.0:0")
+        .and_then(|socket| {
+            let _ = socket.connect("8.8.8.8:80");
+            socket.local_addr()
+        })
+        .map(|addr| addr.ip().to_string())
+        .unwrap_or_else(|_| "127.0.0.1".to_string())
 }
 
 fn uuid_v4() -> String {

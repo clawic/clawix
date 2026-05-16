@@ -138,7 +138,7 @@ public protocol EngineHost: AnyObject {
     /// Mint a new pairing payload (token + QR JSON) and return it via
     /// the completion. The bridge translates this into a
     /// `pairingPayload` frame back to the requesting client.
-    func handlePairingStart() -> (qrJson: String, bearer: String)?
+    func handlePairingStart() -> (qrJson: String, token: String, shortCode: String)?
 
     /// Snapshot of projects the daemon knows about. Returned as the
     /// reply to `listProjects`. Default impl returns empty so the
@@ -235,7 +235,7 @@ public extension EngineHost {
     func handleArchiveSession(sessionId: UUID, archived: Bool) {}
     func handlePinSession(sessionId: UUID, pinned: Bool) {}
     func handleRenameSession(sessionId: UUID, title: String) {}
-    func handlePairingStart() -> (qrJson: String, bearer: String)? { nil }
+    func handlePairingStart() -> (qrJson: String, token: String, shortCode: String)? { nil }
     func currentProjects() -> [WireProject] { [] }
     func handleNewSession(sessionId: UUID, text: String, attachments: [WireAttachment]) {}
     func handleInterruptTurn(sessionId: UUID) {}

@@ -168,9 +168,9 @@ public enum BridgeBody: Equatable, Sendable {
 
     // MARK: - Desktop control inbound (daemon -> desktop client)
     /// Reply to `pairingStart`. The QR is what the iPhone scans; the
-    /// bearer is what the daemon will accept on the next `auth` frame
+    /// token is what the daemon will accept on the next `auth` frame
     /// from a fresh iPhone.
-    case pairingPayload(qrJson: String, bearer: String)
+    case pairingPayload(qrJson: String, token: String, shortCode: String)
     /// Reply to `listProjects`.
     case projectsSnapshot(projects: [WireProject])
     /// Reply to `readFile`. Either `content` is set with the UTF-8
@@ -375,7 +375,7 @@ public enum BridgeBody: Equatable, Sendable {
         case sessions, session, messages, message
         case content, reasoningText, finished
         case code
-        case qrJson, bearer
+        case qrJson, shortCode
         case projects
         case path, isMarkdown, error
         case attachments
@@ -471,9 +471,10 @@ public enum BridgeBody: Equatable, Sendable {
             try c.encode(title, forKey: .title)
         case .pairingStart, .listProjects:
             break
-        case .pairingPayload(let qrJson, let bearer):
+        case .pairingPayload(let qrJson, let token, let shortCode):
             try c.encode(qrJson, forKey: .qrJson)
-            try c.encode(bearer, forKey: .bearer)
+            try c.encode(token, forKey: .token)
+            try c.encode(shortCode, forKey: .shortCode)
         case .projectsSnapshot(let projects):
             try c.encode(projects, forKey: .projects)
         case .readFile(let path):
@@ -770,7 +771,8 @@ public enum BridgeBody: Equatable, Sendable {
         case "pairingPayload":
             return .pairingPayload(
                 qrJson: try c.decode(String.self, forKey: .qrJson),
-                bearer: try c.decode(String.self, forKey: .bearer)
+                token: try c.decode(String.self, forKey: .token),
+                shortCode: try c.decode(String.self, forKey: .shortCode)
             )
         case "listProjects":
             return .listProjects

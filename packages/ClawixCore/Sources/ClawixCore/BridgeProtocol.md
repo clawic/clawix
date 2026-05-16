@@ -51,6 +51,9 @@ The current schema version is `1`.
 - `authFailed` `{ reason }`. Generic reason string for debugging.
 - `versionMismatch` `{ serverVersion }`. Sent before close when the daemon
   detects an incompatible `schemaVersion`.
+- `pairingPayload` `{ qrJson, token, shortCode }`. Reply to `pairingStart`;
+  `qrJson` is the stable QR payload and contains `v`, `host`, `port`, `token`
+  and optional routing hints.
 - `sessionsSnapshot` `{ sessions: [WireSession] }`. Full list of sessions visible
   on the Mac.
 - `sessionUpdated` `{ session: WireSession }`. Single session changed (title,

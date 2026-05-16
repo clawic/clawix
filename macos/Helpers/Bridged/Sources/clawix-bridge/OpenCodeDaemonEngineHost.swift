@@ -213,8 +213,8 @@ final class OpenCodeDaemonEngineHost: EngineHost {
         }
     }
 
-    func handlePairingStart() -> (qrJson: String, bearer: String)? {
-        (pairing.qrPayload(), pairing.bearer)
+    func handlePairingStart() -> (qrJson: String, token: String, shortCode: String)? {
+        (pairing.qrPayload(), pairing.bearer, pairing.shortCode)
     }
 
     func currentProjects() -> [WireProject] {
