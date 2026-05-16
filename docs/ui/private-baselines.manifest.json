@@ -3,6 +3,8 @@
   "status": "pending-private-capture",
   "policy": "Private screenshots, videos, traces, and golden artifacts stay outside the public repo. This public manifest records only safe baseline references, required evidence, tolerances, and runner contracts.",
   "privateRootAlias": "private-codex-ui-baselines",
+  "evidenceFilename": "evidence.json",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved",
   "privateArtifactPolicy": {
     "screenshots": "private-only",
     "videos": "private-only",

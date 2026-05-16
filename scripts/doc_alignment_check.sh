@@ -61,6 +61,7 @@ for file in \
   "scripts/ui_visual_scope_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
+  "scripts/ui_private_baseline_verify.mjs" \
   "scripts/ui_governance_guard.mjs" \
   "scripts/storage_boundary_guard.mjs"
 do
@@ -101,6 +102,7 @@ require_snippet "docs/ui/copy.inventory.json" "approvalBlockedWithoutSnapshot"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "privateModelAssignment"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
+require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## sidebar-row"

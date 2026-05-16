@@ -55,5 +55,7 @@ the public repo.
 11. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-12. When the lane is not visual-authorized, use
+12. When private baselines are available, verify them with
+    `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
+13. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

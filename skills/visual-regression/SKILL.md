@@ -18,7 +18,10 @@ Use when validating that UI has not drifted.
    node scripts/ui_private_baseline_manifest_check.mjs
    ```
 3. When private visual baselines are available, run the private/local screenshot
-   and geometry comparison for the changed surface.
+   and geometry comparison for the changed surface:
+   ```
+   CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved
+   ```
 4. Classify findings as protected-surface drift, new visual debt, expired
    exception, missing registry mapping, or non-visual false positive.
 5. Report out-of-scope drift; do not repair it unless the active model and task

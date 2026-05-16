@@ -85,6 +85,8 @@ requireFields(manifest, manifestPath, [
   "status",
   "policy",
   "privateRootAlias",
+  "evidenceFilename",
+  "verificationCommand",
   "privateArtifactPolicy",
   "requiredEvidenceFields",
   "flows",
@@ -92,6 +94,12 @@ requireFields(manifest, manifestPath, [
 
 if (manifest?.privateRootAlias !== "private-codex-ui-baselines") {
   fail(`${manifestPath}.privateRootAlias must use the public-safe private alias`);
+}
+if (manifest?.evidenceFilename !== "evidence.json") {
+  fail(`${manifestPath}.evidenceFilename must be evidence.json`);
+}
+if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_baseline_verify.mjs")) {
+  fail(`${manifestPath}.verificationCommand must run scripts/ui_private_baseline_verify.mjs`);
 }
 
 const evidenceFields = new Set(requireArray(manifest, manifestPath, "requiredEvidenceFields"));
