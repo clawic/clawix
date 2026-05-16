@@ -28,6 +28,10 @@ the public repo.
 - `debt.baseline.json`: frozen existing visual drift.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
 - `performance-budgets.registry.json`: critical-flow budget registry.
+- `private-baselines.manifest.json`: public contract for private visual,
+  geometry, and performance baselines.
+- `visual-change-proposal.template.md`: conceptual-only proposal template for
+  non-authorized visual/copy/layout changes.
 - `inspiration/`: non-canonical external references.
 
 ## Required workflow
@@ -41,3 +45,8 @@ the public repo.
 6. If a component is extracted, prove visual equivalence or leave it as a
    conceptual proposal.
 7. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+8. Keep private baseline coverage current with
+   `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
+   safe hashes, aliases, tolerances, and runner IDs.
+9. When the lane is not visual-authorized, use
+   `visual-change-proposal.template.md` instead of changing presentation.

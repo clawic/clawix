@@ -19,7 +19,10 @@ accessibility behavior.
    layout, hierarchy, animations, or visible copy unless explicitly authorized.
 4. If a guard reports out-of-scope visual debt, list it as pending. Do not fix
    it in the current change.
-5. Run `node scripts/ui_governance_guard.mjs` and the focused functional tests.
+5. For visual/copy/layout work without authorization, fill
+   `docs/ui/visual-change-proposal.template.md` as a conceptual proposal and
+   stop before editing presentation.
+6. Run `node scripts/ui_governance_guard.mjs` and the focused functional tests.
 
 ## Constraints
 

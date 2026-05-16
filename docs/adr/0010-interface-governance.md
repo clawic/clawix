@@ -65,9 +65,14 @@ authorization signals, exceptions, and safe source patterns. Private screenshot
 baselines remain outside the public repo; public manifests store only safe
 metadata, references, tolerances, and commands.
 
+The public private-baseline manifest must cover every governed platform and
+critical flow. It records runner IDs, private aliases, evidence fields, hashes,
+and tolerances, but never stores raw screenshots, videos, traces, local paths,
+or signing information.
+
 Performance budgets are defined by critical flow, starting from approved
-measured baselines. Static reading alone is not enough to optimize a perceived
-performance issue.
+measured baselines, and the registry is platform-scoped from the start. Static
+reading alone is not enough to optimize a perceived performance issue.
 
 ## Consequences
 

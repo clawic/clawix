@@ -253,13 +253,81 @@ const requiredFlows = [
   "right-sidebar-browser-use",
 ];
 const seenFlows = new Set();
+const seenFlowPlatforms = new Set();
+const requiredPerformanceMetrics = new Set([
+  "interactionLatencyMs",
+  "p95FrameTimeMs",
+  "hitchCount",
+  "memoryDeltaMb",
+]);
 for (const [index, flow] of requireArray(budgets, budgetsPath, "flows").entries()) {
   const label = `${budgetsPath}.flows[${index}]`;
-  requireFields(flow, label, ["id", "platform", "baselineStatus"]);
+  requireFields(flow, label, [
+    "id",
+    "platform",
+    "baselineStatus",
+    "measurementSource",
+    "privateBaselineReference",
+    "requiredMetrics",
+    "budgetStatus",
+  ]);
   seenFlows.add(flow.id);
+  seenFlowPlatforms.add(`${flow.platform}:${flow.id}`);
+  if (!requiredPlatforms.includes(flow.platform)) fail(`${label}.platform is not governed`);
+  if (flow.measurementSource !== "private-baseline") fail(`${label}.measurementSource must be private-baseline`);
+  if (!String(flow.privateBaselineReference || "").startsWith("private-codex-ui-baselines:")) {
+    fail(`${label}.privateBaselineReference must use the private baseline alias`);
+  }
+  const metrics = new Set(requireArray(flow, label, "requiredMetrics"));
+  for (const metric of requiredPerformanceMetrics) {
+    if (!metrics.has(metric)) fail(`${label}.requiredMetrics must include ${metric}`);
+  }
 }
 for (const flow of requiredFlows) {
   if (!seenFlows.has(flow)) fail(`${budgetsPath}.flows must include ${flow}`);
+}
+for (const platform of requiredPlatforms) {
+  for (const flow of requiredFlows) {
+    if (!seenFlowPlatforms.has(`${platform}:${flow}`)) {
+      fail(`${budgetsPath}.flows must include ${platform}:${flow}`);
+    }
+  }
+}
+
+const privateBaselinesPath = "docs/ui/private-baselines.manifest.json";
+const privateBaselines = readJson(privateBaselinesPath);
+requireFields(privateBaselines, privateBaselinesPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "privateRootAlias",
+  "privateArtifactPolicy",
+  "requiredEvidenceFields",
+  "flows",
+]);
+if (privateBaselines?.privateRootAlias !== "private-codex-ui-baselines") {
+  fail(`${privateBaselinesPath}.privateRootAlias must be private-codex-ui-baselines`);
+}
+const baselineCoverage = new Set();
+for (const [index, flow] of requireArray(privateBaselines, privateBaselinesPath, "flows").entries()) {
+  const label = `${privateBaselinesPath}.flows[${index}]`;
+  requireFields(flow, label, [
+    "id",
+    "platform",
+    "baselineStatus",
+    "privateBaselineReference",
+    "runnerId",
+    "requiredEvidence",
+    "tolerance",
+  ]);
+  baselineCoverage.add(`${flow.platform}:${flow.id}`);
+}
+for (const platform of requiredPlatforms) {
+  for (const flow of requiredFlows) {
+    if (!baselineCoverage.has(`${platform}:${flow}`)) {
+      fail(`${privateBaselinesPath}.flows must include ${platform}:${flow}`);
+    }
+  }
 }
 
 const inspirationPath = "docs/ui/inspiration/references.registry.json";
@@ -319,6 +387,8 @@ const requiredDocs = [
   "docs/ui/debt.baseline.json",
   "docs/ui/protected-surfaces.registry.json",
   "docs/ui/performance-budgets.registry.json",
+  "docs/ui/private-baselines.manifest.json",
+  "docs/ui/visual-change-proposal.template.md",
   "docs/ui/inspiration/references.registry.json",
 ];
 for (const relativePath of requiredDocs) {

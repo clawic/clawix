@@ -15,6 +15,7 @@ Use when validating that UI has not drifted.
 2. Run public checks:
    ```
    node scripts/ui_governance_guard.mjs
+   node scripts/ui_private_baseline_manifest_check.mjs
    ```
 3. When private visual baselines are available, run the private/local screenshot
    and geometry comparison for the changed surface.

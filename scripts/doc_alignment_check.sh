@@ -50,9 +50,12 @@ for file in \
   "docs/ui/debt.baseline.json" \
   "docs/ui/protected-surfaces.registry.json" \
   "docs/ui/performance-budgets.registry.json" \
+  "docs/ui/private-baselines.manifest.json" \
+  "docs/ui/visual-change-proposal.template.md" \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
+  "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_governance_guard.mjs" \
   "scripts/storage_boundary_guard.mjs"
 do
@@ -78,10 +81,15 @@ require_snippet "docs/adr/0010-interface-governance.md" "Extract reusable compon
 require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane may make"
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
+require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
+require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
 require_snippet "docs/ui/decision-verification.json" "critical_cleanup_owner"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "Every current visible UI candidate"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-composer"
+require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
+require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
+require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## sidebar-row"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## terminal-surface"
 require_snippet "docs/interface-matrix.md" "This matrix is the Clawix gate for ADR 0007"

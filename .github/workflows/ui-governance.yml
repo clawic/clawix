@@ -18,5 +18,7 @@ jobs:
         run: node scripts/ui_governance_guard.mjs
       - name: Validate visible UI surface inventory
         run: node scripts/ui_surface_inventory_check.mjs
+      - name: Validate private baseline manifest contract
+        run: node scripts/ui_private_baseline_manifest_check.mjs
       - name: Validate documentation alignment
         run: bash scripts/doc_alignment_check.sh
