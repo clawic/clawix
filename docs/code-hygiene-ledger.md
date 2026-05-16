@@ -29,3 +29,11 @@ Source session: private session, not published
 - Config: `web/knip.json`.
 - Latest summary: 33 files with issues; 218 total findings across files, dependencies, devDependencies, binaries, exports, and types.
 - Mode: report-only; cleanup and baselining pending before blocking gate activation.
+
+## 2026-05-17 - Periphery report-only setup
+
+- Status: EXTERNAL PENDING
+- Tool: Periphery 3.7.4 through `scripts/code-hygiene-periphery.mjs`.
+- Latest summary: 13 Swift packages discovered; local Periphery binary not installed on PATH, so no Swift findings have been calibrated yet.
+- Retention rules: public API, SwiftUI previews, Objective-C-accessible declarations, and Codable properties retained by default.
+- Mode: report-only; no automatic removal and no blocking gate yet.

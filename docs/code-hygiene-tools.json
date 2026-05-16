@@ -13,8 +13,13 @@
       "purpose": "TypeScript and JavaScript unused files, exports, dependencies, enum members, and duplicate candidates after entrypoint calibration."
     },
     "periphery": {
-      "version": "3.x",
-      "mode": "versioned-swift-tool-report-only-until-calibrated",
+      "version": "3.7.4",
+      "mode": "versioned-homebrew-report-only-until-calibrated",
+      "runner": "scripts/code-hygiene-periphery.mjs",
+      "reportJson": "docs/code-hygiene-periphery-report.json",
+      "reportMarkdown": "docs/code-hygiene-periphery-report.md",
+      "install": "brew install periphery",
+      "destructiveDefault": false,
       "purpose": "Swift unused declaration scanner with public API, SwiftUI, Codable, selector, resource, and dynamic-use retain rules."
     }
   }

@@ -25,9 +25,23 @@
       "types": 25
     }
   },
-  "externalPending": [],
+  "peripherySummary": {
+    "status": "external-pending",
+    "packageCount": 13,
+    "scannedPackages": 0,
+    "failedPackages": 0,
+    "totalFindings": 0
+  },
+  "externalPending": [
+    {
+      "id": "periphery-binary-unavailable",
+      "tool": "periphery",
+      "message": "Periphery 3.7.4 is pinned and report-only, but the binary is not installed on PATH for the calibration scan."
+    }
+  ],
   "notes": [
     "Initial bootstrap report. Full cleanup campaign still required before goal completion.",
-    "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings."
+    "Use scripts/code-hygiene-audit.mjs for report-only TODO, duplicate asset, and unreferenced asset candidate findings.",
+    "Use scripts/code-hygiene-periphery.mjs for report-only Swift package calibration once the pinned binary is available."
   ]
 }

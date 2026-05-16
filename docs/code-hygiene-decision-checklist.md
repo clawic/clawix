@@ -17,7 +17,7 @@ with concrete evidence.
 | `export_policy` | API publica se conserva | documented | ADR 0016 public contract retention rule. |
 | `unused_files` | Entrypoints configurados primero | partially implemented | Knip config declares explicit entry/project scope and report-only file findings; cleanup campaign pending. |
 | `dependency_policy` | Normalizar por workspace | partially implemented | Knip report records dependency findings in report-only mode; cleanup campaign pending. |
-| `swift_tooling` | Periphery calibrado | documented | Tool registry records Periphery report-only. |
+| `swift_tooling` | Periphery calibrado | partially implemented | Periphery 3.7.4 runner and report pair exist with Swift retention flags; local binary install remains `EXTERNAL PENDING`. |
 | `swift_public` | Conservar como contrato | documented | ADR 0016 public Swift retention rule. |
 | `swiftui_dynamic` | Retener por patron | documented | ADR 0016 semantic report-only rule. |
 | `semantic_placeholders` | Issue/backlog o ADR | documented | ADR 0016 future-intent rule. |
@@ -39,5 +39,5 @@ with concrete evidence.
 | `expiry_window` | 90 dias | implemented | Baseline default and checker. |
 | `cleanup_safety` | Checks verdes por lote | documented | Cleanup skill procedure. |
 | `knip_install` | Dev dependency fija | implemented | Package metadata, lockfile, Knip config, exact-version runner, and report-only summary. |
-| `periphery_install` | Tool versionada | documented | `docs/code-hygiene-tools.json`; install/calibration pending. |
+| `periphery_install` | Tool versionada | partially implemented | Periphery is pinned to 3.7.4 with a report-only runner and explicit external pending until the binary is installed. |
 | `new_deps_policy` | Solo herramientas justificadas | documented | Tool registry and ADR 0016. |

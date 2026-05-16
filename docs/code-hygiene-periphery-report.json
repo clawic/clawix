@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "program": "code-hygiene",
+  "tool": "periphery",
+  "toolVersion": "3.7.4",
+  "mode": "report-only",
+  "runner": "scripts/code-hygiene-periphery.mjs",
+  "status": "external-pending",
+  "generatedAt": "2026-05-16T23:04:54.790Z",
+  "install": {
+    "homebrew": "brew install periphery",
+    "source": "https://github.com/peripheryapp/periphery/releases/tag/3.7.4"
+  },
+  "scanArgs": [
+    "scan",
+    "--format",
+    "json",
+    "--retain-public",
+    "--retain-swift-ui-previews",
+    "--retain-objc-accessible",
+    "--retain-codable-properties"
+  ],
+  "retainRules": {
+    "publicApi": true,
+    "swiftUiPreviews": true,
+    "objcAccessible": true,
+    "codableProperties": true
+  },
+  "externalPending": [
+    {
+      "id": "periphery-binary-unavailable",
+      "message": "Periphery is not installed on PATH. Install the pinned Homebrew formula before calibration scans."
+    }
+  ],
+  "packagePaths": [
+    "macos",
+    "macos/Helpers/Bridged",
+    "macos/Helpers/Menubar",
+    "macos/Helpers/SecretsProxy",
+    "packages/AIProviders",
+    "packages/ClawixArgon2",
+    "packages/ClawixCore",
+    "packages/ClawixEngine",
+    "packages/SecretsCrypto",
+    "packages/SecretsModels",
+    "packages/SecretsPersistence",
+    "packages/SecretsProxyCore",
+    "packages/SecretsVault"
+  ],
+  "packages": [],
+  "summary": {
+    "packageCount": 13,
+    "scannedPackages": 0,
+    "failedPackages": 0,
+    "packagesWithFindings": 0,
+    "totalFindings": 0,
+    "issueTypes": {}
+  }
+}

@@ -8,7 +8,9 @@ Status: PARTIAL bootstrap.
 - Full cleanup campaign: pending.
 - Report-only audit command: `node scripts/code-hygiene-audit.mjs`.
 - Report-only Knip command: `node scripts/code-hygiene-knip.mjs`.
+- Report-only Periphery command: `node scripts/code-hygiene-periphery.mjs`.
 - Latest audit summary: 1,801 files scanned; 24 TODO/FIXME/HACK/XXX findings; 7 duplicate asset groups covering 14 files; 21 unreferenced asset candidates.
 - Latest Knip summary: 33 files with issues; 218 total findings.
+- Latest Periphery summary: external pending; 13 Swift packages discovered; Periphery 3.7.4 binary not installed on PATH.
 
 This report is the human-readable pair for `docs/code-hygiene-report.json`.

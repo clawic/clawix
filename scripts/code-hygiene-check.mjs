@@ -21,8 +21,10 @@ const baseline = readJson("docs/code-hygiene-baseline.json");
 const tools = readJson("docs/code-hygiene-tools.json");
 const report = readJson("docs/code-hygiene-report.json");
 const knipReport = readJson("docs/code-hygiene-knip-report.json");
+const peripheryReport = readJson("docs/code-hygiene-periphery-report.json");
 const reportMarkdown = readText("docs/code-hygiene-report.md");
 const knipReportMarkdown = readText("docs/code-hygiene-knip-report.md");
+const peripheryReportMarkdown = readText("docs/code-hygiene-periphery-report.md");
 const ledger = readText("docs/code-hygiene-ledger.md");
 const decisionChecklist = readText("docs/code-hygiene-decision-checklist.md");
 const knipConfigPath = fs.existsSync(path.join(rootDir, "web", "knip.json")) ? "web/knip.json" : "knip.json";
@@ -60,7 +62,12 @@ if (tools.tools?.knip?.config !== knipConfigPath) fail(`code hygiene Knip config
 if (tools.tools?.knip?.reportJson !== "docs/code-hygiene-knip-report.json") fail("code hygiene Knip JSON report path must be documented");
 if (tools.tools?.knip?.reportMarkdown !== "docs/code-hygiene-knip-report.md") fail("code hygiene Knip Markdown report path must be documented");
 if (tools.tools?.knip?.destructiveDefault !== false) fail("code hygiene Knip destructive default must be false");
-if (!tools.tools?.periphery?.version) fail("code hygiene Periphery version must be documented");
+if (tools.tools?.periphery?.version !== "3.7.4") fail("code hygiene Periphery version must be 3.7.4");
+if (tools.tools?.periphery?.mode !== "versioned-homebrew-report-only-until-calibrated") fail("code hygiene Periphery mode must be report-only");
+if (tools.tools?.periphery?.runner !== "scripts/code-hygiene-periphery.mjs") fail("code hygiene Periphery runner must be documented");
+if (tools.tools?.periphery?.reportJson !== "docs/code-hygiene-periphery-report.json") fail("code hygiene Periphery JSON report path must be documented");
+if (tools.tools?.periphery?.reportMarkdown !== "docs/code-hygiene-periphery-report.md") fail("code hygiene Periphery Markdown report path must be documented");
+if (tools.tools?.periphery?.destructiveDefault !== false) fail("code hygiene Periphery destructive default must be false");
 const packageCandidates = ["package.json", "web/package.json"];
 const hasKnipDependency = packageCandidates
   .filter((relativePath) => fs.existsSync(path.join(rootDir, relativePath)))
@@ -76,6 +83,11 @@ for (const field of ["scannedFiles", "todoFindings", "duplicateAssetGroups", "du
     fail(`code hygiene report lastAuditSummary must include numeric ${field}`);
   }
 }
+if (typeof report.peripherySummary?.packageCount !== "number") fail("code hygiene report must include Periphery packageCount");
+if (report.peripherySummary?.status !== peripheryReport.status) fail("code hygiene report Periphery status must match the Periphery report");
+if (peripheryReport.status === "external-pending" && !report.externalPending?.some((entry) => entry.id === "periphery-binary-unavailable")) {
+  fail("code hygiene report must record Periphery external pending separately");
+}
 if (!reportMarkdown.includes("docs/code-hygiene-report.json")) fail("code hygiene Markdown report must link the JSON pair");
 if (!reportMarkdown.includes("unreferenced asset candidates")) fail("code hygiene Markdown report must mention unreferenced asset candidates");
 if (knipReport.schemaVersion !== 1) fail("code hygiene Knip report schemaVersion must be 1");
@@ -87,6 +99,16 @@ if (knipReport.config !== knipConfigPath) fail(`code hygiene Knip report config 
 if (typeof knipReport.summary?.totalIssues !== "number") fail("code hygiene Knip report must include numeric totalIssues");
 if (!knipReportMarkdown.includes("This report does not authorize automatic deletion")) {
   fail("code hygiene Knip Markdown report must state cleanup safety");
+}
+if (peripheryReport.schemaVersion !== 1) fail("code hygiene Periphery report schemaVersion must be 1");
+if (peripheryReport.program !== "code-hygiene") fail("code hygiene Periphery report program must be code-hygiene");
+if (peripheryReport.tool !== "periphery") fail("code hygiene Periphery report tool must be periphery");
+if (peripheryReport.toolVersion !== "3.7.4") fail("code hygiene Periphery report must use Periphery 3.7.4");
+if (peripheryReport.mode !== "report-only") fail("code hygiene Periphery report must be report-only");
+if (!["scanned", "external-pending"].includes(peripheryReport.status)) fail("code hygiene Periphery report status is invalid");
+if (typeof peripheryReport.summary?.packageCount !== "number") fail("code hygiene Periphery report must include numeric packageCount");
+if (!peripheryReportMarkdown.includes("This report does not authorize automatic deletion")) {
+  fail("code hygiene Periphery Markdown report must state cleanup safety");
 }
 if (!ledger.includes("private session, not published")) fail("code hygiene ledger must not publish private session paths");
 if (!decisionChecklist.includes("rollout_model")) fail("code hygiene decision checklist must include rollout_model");
@@ -103,8 +125,11 @@ for (const relativePath of [
   "docs/code-hygiene-report.md",
   "docs/code-hygiene-knip-report.json",
   "docs/code-hygiene-knip-report.md",
+  "docs/code-hygiene-periphery-report.json",
+  "docs/code-hygiene-periphery-report.md",
   "scripts/code-hygiene-audit.mjs",
   "scripts/code-hygiene-knip.mjs",
+  "scripts/code-hygiene-periphery.mjs",
   knipConfigPath,
   "skills/code-hygiene-audit/SKILL.md",
   "skills/code-hygiene-cleanup/SKILL.md",
