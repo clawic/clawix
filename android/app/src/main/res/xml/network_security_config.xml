@@ -2,7 +2,7 @@
 <network-security-config>
     <!-- Permit cleartext for any IP. The bridge daemon listens on
          loopback/LAN/Tailscale IPs without TLS (Phase 2 has no local
-         TLS yet). Pairing payload validates with bearer token. -->
+         TLS yet). Pairing payload validates with a token. -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />

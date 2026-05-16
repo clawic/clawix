@@ -27,7 +27,7 @@ public sealed class BridgeFrameSerializationTests
     [Fact] public void RenameSession_RoundTrip() => Assert.Equal("New title", RoundTrip(new BridgeBody.RenameSession("c1", "New title")).Title);
     [Fact] public void Archive_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.ArchiveSession("c1")).SessionId);
     [Fact] public void Pin_RoundTrip() => Assert.Equal("c1", RoundTrip(new BridgeBody.PinSession("c1")).SessionId);
-    [Fact] public void PairingPayload_RoundTrip() => Assert.Equal("{}", RoundTrip(new BridgeBody.PairingPayload("{}", "tok")).QrJson);
+    [Fact] public void PairingPayload_RoundTrip() => Assert.Equal("{}", RoundTrip(new BridgeBody.PairingPayload("{}", "tok", "ABC-234-XYZ")).QrJson);
     [Fact] public void Bridgestate_RoundTrip() => Assert.Equal("ready", RoundTrip(new BridgeBody.BridgeState("ready", 5, null)).State);
 
     [Fact]

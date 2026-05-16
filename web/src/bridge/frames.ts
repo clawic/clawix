@@ -153,7 +153,8 @@ export const ZPairingPayload = z.object({
   ...base,
   type: z.literal("pairingPayload"),
   qrJson: z.string(),
-  bearer: z.string(),
+  token: z.string(),
+  shortCode: z.string(),
 });
 
 export const ZProjectsSnapshot = z.object({

@@ -40,6 +40,17 @@ describe("frames", () => {
     expect(decodeFrame(raw)).toMatchObject({ type: "sessionsSnapshot", sessions: [] });
   });
 
+  it("decodes pairingPayload with token and shortCode", () => {
+    const raw = JSON.stringify({
+      schemaVersion: BRIDGE_SCHEMA_VERSION,
+      type: "pairingPayload",
+      qrJson: "{\"v\":1,\"host\":\"127.0.0.1\",\"port\":24080,\"token\":\"tok\"}",
+      token: "tok",
+      shortCode: "ABC-234-XYZ",
+    });
+    expect(decodeFrame(raw)).toMatchObject({ type: "pairingPayload", token: "tok", shortCode: "ABC-234-XYZ" });
+  });
+
   it("decodes a messagesSnapshot with messages", () => {
     const raw = JSON.stringify({
       schemaVersion: BRIDGE_SCHEMA_VERSION,

@@ -68,7 +68,11 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
     "pairingStart" -> BridgeBody.PairingStart
     "listProjects" -> BridgeBody.ListProjects
     "readFile" -> BridgeBody.ReadFile(obj.requireString("path"))
-    "pairingPayload" -> BridgeBody.PairingPayload(obj.requireString("qrJson"), obj.requireString("bearer"))
+    "pairingPayload" -> BridgeBody.PairingPayload(
+        obj.requireString("qrJson"),
+        obj.requireString("token"),
+        obj.requireString("shortCode"),
+    )
     "projectsSnapshot" -> BridgeBody.ProjectsSnapshot(obj.requireList("projects", WireProject.listSerializer))
     "fileSnapshot" -> BridgeBody.FileSnapshot(
         path = obj.requireString("path"),

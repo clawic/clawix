@@ -54,7 +54,7 @@ windows/
 - **Wire protocol** (`Clawix.Core`): the JSON shape on the wire is
   bit-identical to Swift. Tests in `Clawix.Tests` round-trip the
   fixtures from the Swift test suite, so any drift fails fast.
-- **Pairing** (`Clawix.Engine.Pairing`): bearer + short code generated
+- **Pairing** (`Clawix.Engine.Pairing`): token + short code generated
   with the same algorithm as macOS. Stored in
   `%APPDATA%\Clawix\pairing.json`. The QR JSON is identical: an iPhone
   paired against this PC sees the same payload it would see paired

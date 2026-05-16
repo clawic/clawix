@@ -8,15 +8,15 @@ const { BRIDGE_LABEL } = require('./platform');
 const SUITE = 'clawix.bridge';
 const KEYS = ['ClawixBridge.Bearer.v1', 'ClawixBridge.ShortCode.v1'];
 
-// Wipe the pairing bearer + short code from the shared UserDefaults
+// Wipe the pairing token + short code from the shared UserDefaults
 // suite, then bounce the daemon. The daemon's eager-trigger at startup
-// generates a fresh bearer + fresh short code, so any iPhone (or other
+// generates a fresh token + fresh short code, so any iPhone (or other
 // device) holding the previous pair can no longer authenticate.
 //
 // We use the `defaults` command instead of PlistBuddy so cfprefsd
 // notices the change and forwards it to running processes that have
 // the same suite open. This avoids a race where the daemon would still
-// honour the old in-memory bearer until restart.
+// honour the old in-memory token until restart.
 function unpair() {
     const wasLoaded = daemon.status ? false : true; // unused; kept for future
     const initiallyLoaded = isLaunchAgentLoaded();

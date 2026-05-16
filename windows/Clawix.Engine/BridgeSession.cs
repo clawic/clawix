@@ -142,7 +142,7 @@ public sealed class BridgeSession
                 await _host.HandleRenameAsync(rc.SessionId, rc.Title, ct); break;
 
             case BridgeBody.PairingStart when _clientKind == ClientKind.Desktop:
-                await SendAsync(new BridgeFrame(new BridgeBody.PairingPayload(_pairing.QrPayload(), _pairing.Bearer)), ct);
+                await SendAsync(new BridgeFrame(new BridgeBody.PairingPayload(_pairing.QrPayload(), _pairing.Bearer, _pairing.ShortCode)), ct);
                 break;
 
             case BridgeBody.ListProjects when _clientKind == ClientKind.Desktop:

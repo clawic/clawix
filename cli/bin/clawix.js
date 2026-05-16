@@ -31,7 +31,7 @@ ${ui.bold('commands')}
   restart          restart the bridge
   status           bridge state, port, peers, app presence
   pair             show pairing QR + short code
-  unpair           rotate bearer + short code (kicks every paired device)
+  unpair           rotate pairing token + short code (kicks every paired device)
   doctor           run health checks across the whole environment
   logs [-f]        tail bridge logs
   install-app      install /Applications/Clawix.app from the latest release
@@ -52,7 +52,7 @@ ${ui.bold('paths')}
   ~/.clawix/bin/                              ${ui.dim('binaries fetched by postinstall')}
   ~/.clawix/state/bridge-status.json          ${ui.dim('daemon heartbeat')}
   ~/Library/LaunchAgents/clawix.bridge.plist  ${ui.dim('launchd registration')}
-  ~/Library/Preferences/clawix.bridge.plist   ${ui.dim('pairing bearer + short code')}
+  ~/Library/Preferences/clawix.bridge.plist   ${ui.dim('pairing token + short code')}
   /tmp/clawix-bridge.{out,err}               ${ui.dim('daemon logs')}
 `);
 }

@@ -83,7 +83,8 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
         BridgeBody.PairingStart, BridgeBody.ListProjects, BridgeBody.RequestRateLimits -> {}
         is BridgeBody.PairingPayload -> {
             b.put("qrJson", body.qrJson)
-            b.put("bearer", body.bearer)
+            b.put("token", body.token)
+            b.put("shortCode", body.shortCode)
         }
         is BridgeBody.ProjectsSnapshot -> b.put("projects", BridgeJson.encodeToJsonElement(WireProject.listSerializer, body.projects))
         is BridgeBody.ReadFile -> b.put("path", body.path)

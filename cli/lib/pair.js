@@ -89,7 +89,7 @@ function show({ json = false } = {}) {
     if (!payload) {
         ui.fail(
             'pairing token not found.',
-            'the bridge daemon has not generated a pairing bearer yet.',
+            'the bridge daemon has not generated a pairing token yet.',
             'start it with `clawix start`, then run `clawix pair` again.'
         );
         process.exit(1);
@@ -109,7 +109,7 @@ function show({ json = false } = {}) {
 
     ui.section('scan with the Clawix iOS app');
     // shortCode is intentionally omitted from the QR. iOS ignores it on
-    // the scan path (the long bearer is what authenticates), and
+    // the scan path (the long token is what authenticates), and
     // dropping it knocks ~26 bytes off the payload, so the QR fits in a
     // smaller version and therefore in narrower terminal windows.
     const qrJson = JSON.stringify(publicPairingPayload(payload, { includeShortCode: false }));

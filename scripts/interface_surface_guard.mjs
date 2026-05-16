@@ -348,6 +348,75 @@ for (const pattern of [
   }
 }
 
+for (const [relativePath, requiredSnippets, staleSnippets] of [
+  [
+    "android/app/src/main/java/com/example/clawix/android/core/BridgeProtocol.kt",
+    ["PairingPayload(val qrJson: String, val token: String, val shortCode: String)"],
+    ["PairingPayload(val qrJson: String, val bearer: String)"],
+  ],
+  [
+    "android/app/src/main/java/com/example/clawix/android/core/BridgeFrameEncoding.kt",
+    ['b.put("token", body.token)', 'b.put("shortCode", body.shortCode)'],
+    ['b.put("bearer", body.bearer)'],
+  ],
+  [
+    "android/app/src/main/java/com/example/clawix/android/core/BridgeFrameDecoding.kt",
+    ['obj.requireString("token")', 'obj.requireString("shortCode")'],
+    ['obj.requireString("bearer")'],
+  ],
+  [
+    "web/src/bridge/frames.ts",
+    ["token: z.string(),", "shortCode: z.string(),"],
+    ["bearer: z.string(),"],
+  ],
+  [
+    "windows/Clawix.Core/BridgeBody.cs",
+    ["PairingPayload(string QrJson, string Token, string ShortCode)"],
+    ["PairingPayload(string QrJson, string Bearer)"],
+  ],
+  [
+    "windows/Clawix.Core/BridgeFrameEncoder.cs",
+    ['writer.WriteString("token", pp.Token);', 'writer.WriteString("shortCode", pp.ShortCode);'],
+    ['writer.WriteString("bearer", pp.Bearer);'],
+  ],
+  [
+    "windows/Clawix.Core/BridgeFrameDecoder.cs",
+    ['GetStr("token")', 'GetStr("shortCode")'],
+    ['GetStr("bearer")'],
+  ],
+]) {
+  const source = read(relativePath);
+  for (const snippet of requiredSnippets) {
+    if (!source.includes(snippet)) {
+      fail(`${relativePath} is missing pairingPayload token contract snippet ${JSON.stringify(snippet)}`);
+    }
+  }
+  for (const snippet of staleSnippets) {
+    if (source.includes(snippet)) {
+      fail(`${relativePath} contains stale pairingPayload bearer contract ${JSON.stringify(snippet)}`);
+    }
+  }
+}
+
+for (const relativePath of [
+  "cli/README.md",
+  "cli/bin/clawix.js",
+  "cli/lib/doctor.js",
+  "cli/lib/pair.js",
+  "cli/lib/unpair.js",
+  "android/app/src/main/java/com/example/clawix/android/bridge/Credentials.kt",
+  "android/app/src/main/res/xml/network_security_config.xml",
+  "windows/README.md",
+  "windows/Clawix.App/Views/Settings/PairingPage.xaml",
+]) {
+  const source = read(relativePath);
+  for (const phrase of ["pairing bearer", "Rotate bearer token", "bearer token authorises", "validates with bearer"]) {
+    if (source.includes(phrase)) {
+      fail(`${relativePath} exposes stale public pairing bearer wording ${JSON.stringify(phrase)}`);
+    }
+  }
+}
+
 const databaseConnectionProfiles = read("macos/Sources/Clawix/Database/DatabaseConnectionProfiles.swift");
 for (const pattern of ["case legacy", "compat-0.9.5", "return \"SSH 0.9.5\""]) {
   if (databaseConnectionProfiles.includes(pattern)) {

@@ -7,7 +7,7 @@ import com.example.clawix.android.core.PairingPayload
 
 /**
  * Pairing credentials persisted between app launches. Mirrors iOS
- * `Credentials.swift`. The bearer token authorises the WebSocket; the
+ * `Credentials.swift`. The pairing token authorises the WebSocket; the
  * host/port and Tailscale fallback are used by the multi-path racer.
  */
 data class Credentials(

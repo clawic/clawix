@@ -235,7 +235,7 @@ cp -R "$SPARKLE_FW" "$BUNDLE_DIR/Contents/Frameworks/Sparkle.framework"
 # and a machine that swaps CLI for GUI (or vice versa) hands ownership
 # over without two daemons fighting for the loopback port. The same
 # rationale picks `clawix.bridge` as the UserDefaults suite so the
-# pairing bearer survives the swap.
+# pairing token survives the swap.
 if [[ -n "$BRIDGED_BINARY" ]]; then
     mkdir -p "$BUNDLE_DIR/Contents/Helpers" "$BUNDLE_DIR/Contents/Library/LaunchAgents"
     cp "$BRIDGED_BINARY" "$BUNDLE_DIR/Contents/Helpers/clawix-bridge"

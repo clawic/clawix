@@ -105,7 +105,7 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
             "renameSession" => new BridgeBody.RenameSession(GetStr("sessionId"), GetStr("title")),
             "pairingStart" => new BridgeBody.PairingStart(),
             "listProjects" => new BridgeBody.ListProjects(),
-            "pairingPayload" => new BridgeBody.PairingPayload(GetStr("qrJson"), GetStr("bearer")),
+            "pairingPayload" => new BridgeBody.PairingPayload(GetStr("qrJson"), GetStr("token"), GetStr("shortCode")),
             "projectsSnapshot" => new BridgeBody.ProjectsSnapshot(GetReq<List<WireProject>>("projects")),
             "readFile" => new BridgeBody.ReadFile(GetStr("path")),
 

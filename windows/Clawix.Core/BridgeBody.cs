@@ -155,7 +155,7 @@ public abstract record BridgeBody
 
     // ===== desktop-capable inbound (daemon -> client) =====
 
-    public sealed record PairingPayload(string QrJson, string Bearer) : BridgeBody
+    public sealed record PairingPayload(string QrJson, string Token, string ShortCode) : BridgeBody
     {
         public override string TypeTag => "pairingPayload";
     }

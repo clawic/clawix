@@ -110,7 +110,9 @@ sealed class BridgeBody {
     data class ReadFile(val path: String) : BridgeBody() { override val typeTag = "readFile" }
 
     // MARK: - desktop-capable inbound
-    data class PairingPayload(val qrJson: String, val bearer: String) : BridgeBody() { override val typeTag = "pairingPayload" }
+    data class PairingPayload(val qrJson: String, val token: String, val shortCode: String) : BridgeBody() {
+        override val typeTag = "pairingPayload"
+    }
     data class ProjectsSnapshot(val projects: List<WireProject>) : BridgeBody() { override val typeTag = "projectsSnapshot" }
     data class FileSnapshot(val path: String, val content: String?, val isMarkdown: Boolean, val error: String?) : BridgeBody() {
         override val typeTag = "fileSnapshot"

@@ -68,7 +68,7 @@ struct BridgeMain {
             defaults.set(bearer, forKey: "ClawixBridge.Bearer.v1")
         }
         let pairing = PairingService(defaults: defaults, port: port)
-        // Force the bearer + short code to materialize at startup so
+        // Force the pairing token + short code to materialize at startup so
         // external surfaces (the npm CLI's `clawix pair`, the menubar
         // helper, a future iOS app reading the suite directly) can pull
         // the QR payload without first opening a websocket. Both are

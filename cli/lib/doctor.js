@@ -188,11 +188,11 @@ function run() {
     const bearer = diag.plistBuddyRead(prefs, 'ClawixBridge.Bearer.v1');
     const shortCode = diag.plistBuddyRead(prefs, 'ClawixBridge.ShortCode.v1');
     if (!bearer) {
-        checks.push(check('pairing-bearer', 'warn',
-            'pairing bearer not yet generated.',
+        checks.push(check('pairing-token', 'warn',
+            'pairing token not yet generated.',
             'start the bridge with `clawix start`; the daemon eagerly materialises it.'));
     } else {
-        checks.push(check('pairing-bearer', 'ok', 'bearer materialised in clawix.bridge suite', null));
+        checks.push(check('pairing-token', 'ok', 'pairing token materialised in clawix.bridge suite', null));
     }
     if (!shortCode) {
         checks.push(check('pairing-shortcode', 'warn',

@@ -107,6 +107,13 @@ class BridgeFrameRoundtripTest {
         roundtrip(BridgeBody.MessageStreaming("c-1", "m-2", "complete", "", true))
         roundtrip(BridgeBody.ErrorEvent("E_NET", "WebSocket closed"))
         roundtrip(
+            BridgeBody.PairingPayload(
+                """{"v":1,"host":"127.0.0.1","port":24080,"token":"tok","shortCode":"ABC-234-XYZ"}""",
+                "tok",
+                "ABC-234-XYZ",
+            )
+        )
+        roundtrip(
             BridgeBody.MessagesSnapshot("c-1", listOf(msg), hasMore = false)
         )
         roundtrip(

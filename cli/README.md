@@ -53,11 +53,11 @@ watching… press Ctrl+C to stop watching (the bridge keeps running).
 | `clawix restart` | Restart the bridge daemon. |
 | `clawix status` | Bridge state, port, paired-device count, app presence. |
 | `clawix pair` | Re-print pairing QR + short code. |
-| `clawix unpair` | Rotate bearer + short code; every previously paired device must scan a fresh QR. |
+| `clawix unpair` | Rotate pairing token + short code; every previously paired device must scan a fresh QR. |
 | `clawix doctor` | Run a battery of health checks (codex, port, firewall, signature, plist, heartbeat…) and tell you what's wrong if anything. |
 | `clawix logs [-f]` | Tail bridge logs. `-f` to follow. |
 | `clawix install-app` | Download Clawix.app from the latest release and install it into `/Applications`. |
-| `clawix uninstall` | Bootout the launchd agents and remove `~/.clawix/bin`. Add `--purge` to also wipe the pairing bearer. |
+| `clawix uninstall` | Bootout the launchd agents and remove `~/.clawix/bin`. Add `--purge` to also wipe the pairing token. |
 
 Flags supported across commands where it makes sense:
 
@@ -85,7 +85,7 @@ It checks the things that go wrong in real life:
 - LAN IPv4 detected
 - Tailscale presence (info only)
 - macOS Application Firewall not blocking incoming connections
-- Pairing bearer + short code generated
+- Pairing token + short code generated
 - Daemon heartbeat fresh
 
 Each check shows `●` ok, `⚠` warning, or `✗` failure with a specific suggested fix below it.
@@ -94,7 +94,7 @@ For automation, add `--json`.
 
 ## Coexistence with Clawix.app
 
-If you also install the macOS app (`clawix install-app`), both surfaces register the same launchd agent label (`clawix.bridge`) and share the same `UserDefaults` suite for the pairing bearer. Whoever holds the agent slot serves; the other defers. You can install one, both, or neither and switch back and forth without re-pairing your phone.
+If you also install the macOS app (`clawix install-app`), both surfaces register the same launchd agent label (`clawix.bridge`) and share the same `UserDefaults` suite for the pairing token. Whoever holds the agent slot serves; the other defers. You can install one, both, or neither and switch back and forth without re-pairing your phone.
 
 The CLI does not require the GUI, and the GUI does not require the CLI.
 
@@ -107,11 +107,11 @@ The CLI does not require the GUI, and the GUI does not require the CLI.
 ~/.clawix/state/bridge-status.json               daemon heartbeat
 ~/Library/LaunchAgents/clawix.bridge.plist       daemon registration
 ~/Library/LaunchAgents/clawix.menubar.plist      menu bar registration
-~/Library/Preferences/clawix.bridge.plist        pairing bearer + short code (shared with the GUI)
+~/Library/Preferences/clawix.bridge.plist        pairing token + short code (shared with the GUI)
 /tmp/clawix-bridge.{out,err}                    daemon logs
 ```
 
-`clawix uninstall` cleans everything except the pairing bearer; `--purge` also wipes that.
+`clawix uninstall` cleans everything except the pairing token; `--purge` also wipes that.
 
 ## Privacy
 

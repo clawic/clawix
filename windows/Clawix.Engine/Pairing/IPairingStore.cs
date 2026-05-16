@@ -1,7 +1,7 @@
 namespace Clawix.Engine.Pairing;
 
 /// <summary>
-/// Persistence backend for the bearer + short code. Lets the same
+/// Persistence backend for the pairing token + short code. Lets the same
 /// <see cref="PairingService"/> work with file storage in production
 /// and in-memory storage in tests.
 /// </summary>

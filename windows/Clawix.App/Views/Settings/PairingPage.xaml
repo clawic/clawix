@@ -10,7 +10,7 @@
       <views:PairingView />
       <Expander Header="Advanced" IsExpanded="False">
         <StackPanel Spacing="12" Padding="0,8,0,0">
-          <Button Content="Rotate bearer token" Click="Rotate_Click" />
+          <Button Content="Rotate pairing token" Click="Rotate_Click" />
           <Button Content="Copy QR JSON" Click="CopyQr_Click" />
           <ToggleSwitch Header="Publish via Bonjour" IsOn="True" />
         </StackPanel>

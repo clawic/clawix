@@ -129,7 +129,8 @@ internal sealed partial class BridgeFrameConverter
                 break;
             case BridgeBody.PairingPayload pp:
                 writer.WriteString("qrJson", pp.QrJson);
-                writer.WriteString("bearer", pp.Bearer);
+                writer.WriteString("token", pp.Token);
+                writer.WriteString("shortCode", pp.ShortCode);
                 break;
             case BridgeBody.ProjectsSnapshot ps:
                 writer.WritePropertyName("projects");

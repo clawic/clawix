@@ -332,7 +332,7 @@ shopt -u nullglob
 #      from a template here. The Label is the literal `clawix.bridge`,
 #      public and shared with the standalone npm CLI so both surfaces
 #      register the same agent slot. The defaults suite is also the
-#      literal `clawix.bridge` so the pairing bearer is shared between
+#      literal `clawix.bridge` so the pairing token is shared between
 #      the GUI's PairingService and the daemon.
 if [[ -n "$BRIDGED_BIN_BUILT" ]]; then
     mkdir -p "$BUNDLE/Contents/Helpers" "$BUNDLE/Contents/Library/LaunchAgents"

@@ -10,7 +10,7 @@ import PackageDescription
 // GUI.
 //
 // Like the daemon, this target depends on ClawixEngine + ClawixCore
-// so the QR payload, pairing bearer storage and bonjour name share a
+// so the QR payload, pairing token storage and bonjour name share a
 // single implementation across surfaces.
 
 let package = Package(
