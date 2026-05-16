@@ -46,6 +46,7 @@ for file in \
   "docs/ui/interface-governance.config.json" \
   "docs/ui/visible-surfaces.inventory.json" \
   "docs/ui/copy.inventory.json" \
+  "docs/ui/rendered-geometry.manifest.json" \
   "docs/ui/visual-change-scopes.manifest.json" \
   "docs/ui/pattern-registry/patterns.registry.json" \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
@@ -59,6 +60,8 @@ for file in \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
+  "scripts/ui_rendered_geometry_manifest_check.mjs" \
+  "scripts/ui_private_geometry_verify.mjs" \
   "scripts/ui_visual_scope_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
@@ -89,6 +92,8 @@ require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane m
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
+require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
+require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
 require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_visual_scope_check.mjs"
@@ -101,6 +106,8 @@ require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-compos
 require_snippet "docs/ui/copy.inventory.json" "private-codex-ui-copy-snapshots"
 require_snippet "docs/ui/copy.inventory.json" "approvalBlockedWithoutSnapshot"
 require_snippet "docs/ui/copy.inventory.json" "ui_private_copy_verify.mjs"
+require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
+require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "privateModelAssignment"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"

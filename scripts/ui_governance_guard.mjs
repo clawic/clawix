@@ -419,6 +419,7 @@ const requiredDocs = [
   "docs/ui/pattern-registry/patterns/NOTES.md",
   "docs/ui/interface-governance.config.json",
   "docs/ui/visible-surfaces.inventory.json",
+  "docs/ui/rendered-geometry.manifest.json",
   "docs/ui/copy.inventory.json",
   "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/debt.baseline.json",

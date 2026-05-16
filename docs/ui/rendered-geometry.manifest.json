@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "pending-private-capture",
+  "policy": "Rendered geometry evidence is captured outside the public repo. The public repo stores only the verifier contract, private alias, required fields, and safe hash metadata.",
+  "patternSource": "docs/ui/pattern-registry/patterns.registry.json",
+  "privateGeometryAlias": "private-codex-ui-rendered-geometry",
+  "evidenceFilename": "geometry-evidence.json",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved",
+  "requiredEvidenceFields": [
+    "patternId",
+    "platform",
+    "geometryHash",
+    "captureCommand",
+    "approvedByUserAt",
+    "approvedScope"
+  ],
+  "publicRepoMustNotStore": [
+    "raw-geometry-dump",
+    "raw-screenshot",
+    "local-absolute-path",
+    "secret",
+    "signing-identity"
+  ]
+}

@@ -39,6 +39,7 @@
     "exception-expiry",
     "geometry-contract-shape",
     "geometry-contract-clause-check",
+    "rendered-geometry-manifest-shape",
     "copy-governance-contract-check",
     "visual-scope-policy-check",
     "private-baseline-manifest-shape",

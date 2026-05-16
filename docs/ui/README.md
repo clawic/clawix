@@ -26,6 +26,8 @@ the public repo.
 - `pattern-registry/`: pattern manifests and human notes.
 - `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `copy.inventory.json`: copy canon policy and private snapshot requirements.
+- `rendered-geometry.manifest.json`: public contract for private rendered
+  geometry evidence.
 - `visual-change-scopes.manifest.json`: public-safe approved scope metadata for
   visual/copy/layout work.
 - `debt.baseline.json`: frozen existing visual drift.
@@ -48,16 +50,20 @@ the public repo.
 6. If a component is extracted, prove visual equivalence or leave it as a
    conceptual proposal.
 7. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
-8. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-9. Keep visual authorization scopes current with
+8. Keep rendered geometry evidence contracts current with
+   `scripts/ui_rendered_geometry_manifest_check.mjs`.
+9. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
+10. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
-10. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-11. Keep private baseline coverage current with
+11. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+12. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-12. When private baselines are available, verify them with
+13. When private geometry evidence is available, verify it with
+    `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
+14. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-13. When private copy snapshots are available, verify them with
+15. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-14. When the lane is not visual-authorized, use
+16. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.
