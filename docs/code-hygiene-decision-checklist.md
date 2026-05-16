@@ -22,10 +22,10 @@ with concrete evidence.
 | `swiftui_dynamic` | Retener por patron | documented | ADR 0016 semantic report-only rule. |
 | `semantic_placeholders` | Issue/backlog o ADR | documented | ADR 0016 future-intent rule. |
 | `enum_members` | Report-only con canon | documented | ADR 0016 semantic report-only rule. |
-| `todo_policy` | Si, con categorias | documented | ADR 0016 scope; detailed scanner pending. |
-| `duplication_scope` | Codigo + assets obvios | documented | ADR 0016 scope; duplicate scan pending. |
+| `todo_policy` | Si, con categorias | partially implemented | Report-only `code-hygiene-audit` scans TODO/FIXME/HACK/XXX and records categories; cleanup classification pending. |
+| `duplication_scope` | Codigo + assets obvios | partially implemented | Report-only `code-hygiene-audit` detects byte-identical duplicate assets; code duplicate scan pending. |
 | `duplicate_severity` | Report-only al inicio | documented | ADR 0016 semantic report-only rule. |
-| `asset_policy` | Eliminar si no referenciado | documented | ADR 0016 scope; asset cleanup pending. |
+| `asset_policy` | Eliminar si no referenciado | partially implemented | Report-only audit now detects duplicate assets and unreferenced asset candidates; removal remains pending cleanup review. |
 | `test_code_policy` | Si, pero con fixtures protegidas | documented | Cleanup skill procedure. |
 | `generated_policy` | Manifest + marcadores | documented | ADR 0016 generated/vendor rule. |
 | `docs_references` | Solo docs canonicas | documented | ADR 0016 public/canonical retention rule. |

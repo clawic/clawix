@@ -212,6 +212,7 @@ fast() {
   run node "$ROOT_DIR/scripts/source-size-check.mjs"
   run node "$ROOT_DIR/scripts/code-hygiene-check.mjs"
   run node "$ROOT_DIR/scripts/code-hygiene-check.mjs" --self-test
+  run node "$ROOT_DIR/scripts/code-hygiene-audit.mjs" --self-test
   run node "$ROOT_DIR/scripts/codebase-manifest.mjs" --check
   run node "$ROOT_DIR/scripts/package_surface_guard.mjs"
   policy_guard

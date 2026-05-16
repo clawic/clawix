@@ -61,7 +61,14 @@ if (!hasKnipDependency) fail("Knip must be pinned as a dev dependency");
 if (report.schemaVersion !== 1) fail("code hygiene report schemaVersion must be 1");
 if (report.program !== "code-hygiene") fail("code hygiene report program must be code-hygiene");
 if (!report.generatedAt) fail("code hygiene report must include generatedAt");
+if (!report.lastAuditSummary) fail("code hygiene report must include lastAuditSummary");
+for (const field of ["scannedFiles", "todoFindings", "duplicateAssetGroups", "duplicateAssetFiles", "unreferencedAssetCandidates"]) {
+  if (typeof report.lastAuditSummary?.[field] !== "number") {
+    fail(`code hygiene report lastAuditSummary must include numeric ${field}`);
+  }
+}
 if (!reportMarkdown.includes("docs/code-hygiene-report.json")) fail("code hygiene Markdown report must link the JSON pair");
+if (!reportMarkdown.includes("unreferenced asset candidates")) fail("code hygiene Markdown report must mention unreferenced asset candidates");
 if (!ledger.includes("private session, not published")) fail("code hygiene ledger must not publish private session paths");
 if (!decisionChecklist.includes("rollout_model")) fail("code hygiene decision checklist must include rollout_model");
 if (!decisionChecklist.includes("Cleanup campaign is pending")) fail("code hygiene decision checklist must record pending cleanup campaign");
@@ -75,6 +82,7 @@ for (const relativePath of [
   "docs/code-hygiene-ledger.md",
   "docs/code-hygiene-report.json",
   "docs/code-hygiene-report.md",
+  "scripts/code-hygiene-audit.mjs",
   "skills/code-hygiene-audit/SKILL.md",
   "skills/code-hygiene-cleanup/SKILL.md",
 ]) {
