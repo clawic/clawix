@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "program": "code-hygiene",
+  "sourceConversationId": "019e2bee-b635-7c51-b569-bd31b3cca875",
+  "sourceSessionRef": "private-session-not-published",
+  "decisionCount": 33,
+  "decisions": [
+    {
+      "id": "strictness",
+      "answer": "Fallar solo lo claro"
+    },
+    {
+      "id": "scope",
+      "answer": "Clawix + ClawJS"
+    },
+    {
+      "id": "enum_policy",
+      "answer": "Conservar si son canon"
+    },
+    {
+      "id": "rollout_model",
+      "answer": "Limpiar todo primero"
+    },
+    {
+      "id": "baseline_governance",
+      "answer": "Motivo + caducidad"
+    },
+    {
+      "id": "autofix_policy",
+      "answer": "Solo sugerir cambios"
+    },
+    {
+      "id": "export_policy",
+      "answer": "API publica se conserva"
+    },
+    {
+      "id": "unused_files",
+      "answer": "Entrypoints configurados primero"
+    },
+    {
+      "id": "dependency_policy",
+      "answer": "Normalizar por workspace"
+    },
+    {
+      "id": "swift_tooling",
+      "answer": "Periphery calibrado"
+    },
+    {
+      "id": "swift_public",
+      "answer": "Conservar como contrato"
+    },
+    {
+      "id": "swiftui_dynamic",
+      "answer": "Retener por patron"
+    },
+    {
+      "id": "semantic_placeholders",
+      "answer": "Issue/backlog o ADR"
+    },
+    {
+      "id": "enum_members",
+      "answer": "Report-only con canon"
+    },
+    {
+      "id": "todo_policy",
+      "answer": "Si, con categorias"
+    },
+    {
+      "id": "duplication_scope",
+      "answer": "Codigo + assets obvios"
+    },
+    {
+      "id": "duplicate_severity",
+      "answer": "Report-only al inicio"
+    },
+    {
+      "id": "asset_policy",
+      "answer": "Eliminar si no referenciado"
+    },
+    {
+      "id": "test_code_policy",
+      "answer": "Si, pero con fixtures protegidas"
+    },
+    {
+      "id": "generated_policy",
+      "answer": "Manifest + marcadores"
+    },
+    {
+      "id": "docs_references",
+      "answer": "Solo docs canonicas"
+    },
+    {
+      "id": "cleanup_batching",
+      "answer": "Por categoria y repo"
+    },
+    {
+      "id": "ci_gate",
+      "answer": "Changed + release"
+    },
+    {
+      "id": "report_format",
+      "answer": "JSON + Markdown"
+    },
+    {
+      "id": "skill_shape",
+      "answer": "Dos skills"
+    },
+    {
+      "id": "skill_location",
+      "answer": "ClawJS y proyectada"
+    },
+    {
+      "id": "recurrence",
+      "answer": "Cada campana + pre-release"
+    },
+    {
+      "id": "ledger",
+      "answer": "Si, compacto"
+    },
+    {
+      "id": "expiry_window",
+      "answer": "90 dias"
+    },
+    {
+      "id": "cleanup_safety",
+      "answer": "Checks verdes por lote"
+    },
+    {
+      "id": "knip_install",
+      "answer": "Dev dependency fija"
+    },
+    {
+      "id": "periphery_install",
+      "answer": "Tool versionada"
+    },
+    {
+      "id": "new_deps_policy",
+      "answer": "Solo herramientas justificadas"
+    }
+  ]
+}

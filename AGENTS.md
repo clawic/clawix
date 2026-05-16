@@ -29,6 +29,8 @@ Read the relevant canonical docs before changing their surfaces:
   `docs/adr/0005-integration-qa-lab.md`, `playbooks/testing.md`,
   `playbooks/testing-matrix.md`
 - Source file boundaries: `docs/adr/0004-source-file-boundaries.md`
+- Code hygiene and dead-code cleanup: `docs/adr/0016-code-hygiene-program.md`,
+  `docs/code-hygiene-decisions.json`
 - Human/programmatic parity: `docs/interface-matrix.md`,
   `docs/adr/0007-dual-human-programmatic-surfaces.md`
 - Surface routes: `docs/adr/0011-surface-route-graph.md` and sibling ClawJS
@@ -106,7 +108,8 @@ Use the relevant skill instead of loading long instructions into context:
   `secrets-boundary-review`, `integration-qa-lab`,
   `host-dependent-validation`, `performance-investigation`
 - Collaboration hygiene: `public-hygiene-review`, `docs-alignment-update`,
-  `code-review-risk`, `commit-hygiene-public`
+  `code-hygiene-audit`, `code-hygiene-cleanup`, `code-review-risk`,
+  `commit-hygiene-public`
 - Interface governance: `ui-canon-review`, `ui-implementation`,
   `visual-regression`, `ui-performance-budget`
 
@@ -144,6 +147,10 @@ Use the relevant skill instead of loading long instructions into context:
   rationale; new 2000+ line files are blocked unless explicitly exempted.
   Emergency-debt files above 5000 lines must not grow except for extraction,
   deletion, or compatibility-preserving split work.
+- Code hygiene is a recurring ClawJS + Clawix program. Clear mechanical dead
+  code is removed after calibrated checks; public/canonical surfaces, enum
+  states, Swift dynamic-use candidates, and duplicates are classified through
+  the code hygiene baseline and report workflow.
 
 ## Validation
 

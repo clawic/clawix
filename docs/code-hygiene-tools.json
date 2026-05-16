@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "program": "code-hygiene",
+  "tools": {
+    "knip": {
+      "version": "6.14.0",
+      "mode": "pinned-dev-dependency",
+      "purpose": "TypeScript and JavaScript unused files, exports, dependencies, enum members, and duplicate candidates after entrypoint calibration."
+    },
+    "periphery": {
+      "version": "3.x",
+      "mode": "versioned-swift-tool-report-only-until-calibrated",
+      "purpose": "Swift unused declaration scanner with public API, SwiftUI, Codable, selector, resource, and dynamic-use retain rules."
+    }
+  }
+}

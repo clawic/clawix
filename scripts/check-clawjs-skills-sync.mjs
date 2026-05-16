@@ -27,6 +27,8 @@ const requiredSkills = [
   "host-dependent-validation",
   "performance-investigation",
   "public-hygiene-review",
+  "code-hygiene-audit",
+  "code-hygiene-cleanup",
   "docs-alignment-update",
   "code-review-risk",
   "commit-hygiene-public",

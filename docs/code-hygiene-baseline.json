@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "program": "code-hygiene",
+  "defaultExpiryDays": 90,
+  "sourceConversationId": "019e2bee-b635-7c51-b569-bd31b3cca875",
+  "categories": [
+    "public_api",
+    "protocol_compat",
+    "documented_future",
+    "dynamic_runtime",
+    "generated",
+    "false_positive",
+    "external_entrypoint",
+    "fixture_contract",
+    "asset_public",
+    "swift_report_only",
+    "duplicate_report_only",
+    "enum_report_only"
+  ],
+  "entries": []
+}
