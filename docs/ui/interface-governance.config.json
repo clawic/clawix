@@ -51,6 +51,7 @@
     "visual-detector-policy-check",
     "visual-model-allowlist-check",
     "private-baseline-manifest-shape",
+    "private-visual-validation-manifest-shape",
     "performance-budget-platform-coverage",
     "unauthorized-visual-diff"
   ],

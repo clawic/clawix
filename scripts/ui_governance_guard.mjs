@@ -448,6 +448,18 @@ for (const platform of requiredPlatforms) {
   }
 }
 
+const privateVisualValidationPath = "docs/ui/private-visual-validation.manifest.json";
+const privateVisualValidation = readJson(privateVisualValidationPath);
+requireFields(privateVisualValidation, privateVisualValidationPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "verificationCommand",
+  "requiredRoots",
+  "delegates",
+  "externalPendingExitCode",
+]);
+
 const inspirationPath = "docs/ui/inspiration/references.registry.json";
 const inspiration = readJson(inspirationPath);
 requireFields(inspiration, inspirationPath, ["schemaVersion", "policy", "references"]);
@@ -592,6 +604,7 @@ const requiredDocs = [
   "docs/ui/canon-promotions.registry.json",
   "docs/ui/performance-budgets.registry.json",
   "docs/ui/private-baselines.manifest.json",
+  "docs/ui/private-visual-validation.manifest.json",
   "docs/ui/visual-change-proposal.template.md",
   "docs/ui/inspiration/references.registry.json",
 ];

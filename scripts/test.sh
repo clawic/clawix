@@ -212,6 +212,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_visual_model_allowlist_check.mjs"
   run node "$ROOT_DIR/scripts/ui_surface_inventory_check.mjs"
   run node "$ROOT_DIR/scripts/ui_private_baseline_manifest_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_private_visual_validation_manifest_check.mjs"
   run node "$ROOT_DIR/scripts/naming-shape-check.mjs"
   run node "$ROOT_DIR/scripts/source-size-check.mjs"
   run node "$ROOT_DIR/scripts/code-hygiene-check.mjs"

@@ -51,6 +51,8 @@ the public repo.
 - `performance-budgets.registry.json`: critical-flow budget registry.
 - `private-baselines.manifest.json`: public contract for private visual,
   geometry, and performance baselines.
+- `private-visual-validation.manifest.json`: public contract for the aggregate
+  private visual validation runner.
 - `visual-change-proposal.template.md`: conceptual-only proposal template for
   non-authorized visual/copy/layout changes.
 - `inspiration/`: non-canonical external references.
@@ -93,11 +95,15 @@ the public repo.
 20. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-21. When private geometry evidence is available, verify it with
+21. Keep aggregate private visual validation current with
+    `scripts/ui_private_visual_validation_manifest_check.mjs`.
+22. When all private roots are available, verify visual evidence end to end with
+    `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
+23. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-22. When private baselines are available, verify them with
+24. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-23. When private copy snapshots are available, verify them with
+25. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-24. When the lane is not visual-authorized, use
+26. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.
