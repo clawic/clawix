@@ -50,7 +50,7 @@ under the host root.
 
 Sidecars are allowed when isolation has a concrete reason: high churn, service
 lifecycle isolation, large indexes, binary/object stores, or operational logs.
-They live under the same framework global root, not under a workspace legacy
+They live under the same framework global root, not under a retired workspace
 folder.
 
 Canonical sidecars:

@@ -46,6 +46,7 @@ for (const [relativePath, snippet] of requiredSnippets) {
 }
 
 const forbiddenByPath = new Map([
+  ["docs/data-storage-boundary.md", ["workspace legacy folder"]],
   ["macos/Sources/Clawix/Apps/AppsStore.swift", ["Application Support/Clawix/Apps", "Library/Application Support/Clawix/Apps"]],
   ["macos/Sources/Clawix/Apps/AppRecord.swift", ["Application Support/Clawix/Apps", "Library/Application Support/Clawix/Apps"]],
   ["macos/Sources/Clawix/Apps/AGENT_CONTRACT.md", ["Application Support/Clawix/Apps", "Library/Application Support/Clawix/Apps"]],
