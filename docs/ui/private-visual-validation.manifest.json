@@ -1,17 +1,19 @@
 {
   "schemaVersion": 1,
   "status": "active",
-  "policy": "Private visual validation is reproducible through one public runner that delegates to private baseline, rendered geometry, and copy snapshot verifiers. Missing private roots are EXTERNAL PENDING, not success.",
-  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
+  "policy": "Private visual validation is reproducible through one public runner that delegates to private baseline, rendered geometry, copy snapshot, and rendered drift verifiers. Missing private roots are EXTERNAL PENDING, not success.",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "requiredRoots": [
     "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
     "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
-    "CLAWIX_UI_PRIVATE_COPY_ROOT"
+    "CLAWIX_UI_PRIVATE_COPY_ROOT",
+    "CLAWIX_UI_PRIVATE_DRIFT_ROOT"
   ],
   "delegates": [
     "node scripts/ui_private_baseline_verify.mjs --require-approved",
     "node scripts/ui_private_geometry_verify.mjs --require-approved",
-    "node scripts/ui_private_copy_verify.mjs --require-approved"
+    "node scripts/ui_private_copy_verify.mjs --require-approved",
+    "node scripts/ui_private_drift_verify.mjs --require-approved"
   ],
   "externalPendingExitCode": 2
 }

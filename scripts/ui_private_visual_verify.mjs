@@ -31,6 +31,12 @@ const checks = [
     script: "scripts/ui_private_copy_verify.mjs",
     args: ["--require-approved"],
   },
+  {
+    name: "private rendered drift",
+    env: "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+    script: "scripts/ui_private_drift_verify.mjs",
+    args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
+  },
 ];
 
 if (!requireApproved) {

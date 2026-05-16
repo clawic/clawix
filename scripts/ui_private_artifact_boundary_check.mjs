@@ -117,6 +117,7 @@ for (const root of [
   "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
   "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
   "CLAWIX_UI_PRIVATE_COPY_ROOT",
+  "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
 ]) {
   if (!requiredRoots.has(root)) fail("docs/ui/private-visual-validation.manifest.json.requiredRoots is missing " + root);
 }

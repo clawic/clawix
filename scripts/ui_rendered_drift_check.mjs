@@ -65,6 +65,8 @@ requireFields(manifest, manifestPath, [
   "driftCategories",
   "reportStatuses",
   "requiredReportFields",
+  "requiredEvidenceFields",
+  "evidenceFilename",
   "reports",
 ]);
 if (manifest?.status !== "pending-private-capture" && manifest?.status !== "active") {
@@ -87,6 +89,11 @@ const requiredReportFields = requireArray(manifest, manifestPath, "requiredRepor
 for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reviewAfter"]) {
   if (!requiredReportFields.includes(field)) fail(`${manifestPath}.requiredReportFields must include ${field}`);
 }
+const requiredEvidenceFields = requireArray(manifest, manifestPath, "requiredEvidenceFields");
+for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reportHash", "producedAt"]) {
+  if (!requiredEvidenceFields.includes(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
+}
+if (manifest?.evidenceFilename !== "drift-report.json") fail(`${manifestPath}.evidenceFilename must be drift-report.json`);
 
 const coveragePath = manifest?.surfaceBaselineCoveragePath || "docs/ui/surface-baseline-coverage.manifest.json";
 const coverage = readJson(coveragePath);

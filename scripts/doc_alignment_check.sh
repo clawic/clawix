@@ -104,6 +104,7 @@ for file in \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
   "scripts/ui_private_visual_verify.mjs" \
+  "scripts/ui_private_drift_verify.mjs" \
   "scripts/ui_private_visual_validation_manifest_check.mjs" \
   "scripts/ui_governance_guard.mjs" \
   "scripts/storage_boundary_guard.mjs"
@@ -164,6 +165,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_visual_proposal_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_artifact_boundary_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_private_visual_verify.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_private_drift_verify.mjs"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
 require_snippet "docs/ui/decision-verification.json" "critical_cleanup_owner"
@@ -216,12 +218,14 @@ require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "macos-root-ch
 require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-drift.manifest.json" "private-codex-ui-rendered-drift"
 require_snippet "docs/ui/rendered-drift.manifest.json" "drift-detected"
+require_snippet "docs/ui/rendered-drift.manifest.json" "drift-report.json"
 require_snippet "docs/ui/gate-surface.manifest.json" "releaseLaneRequires"
 require_snippet "docs/ui/gate-surface.manifest.json" "scripts/ui_release_gate_check.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_visual_verify.mjs"
+require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_drift_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "EXTERNAL PENDING"
 require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"
 require_snippet "macos/PERF.md" "docs/ui/performance-budgets.registry.json"

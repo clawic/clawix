@@ -4,10 +4,12 @@
   "policy": "Rendered drift reports are produced from private visual, geometry, copy, and performance evidence. The public repo records only private report aliases, drift categories, statuses, and coverage mapping.",
   "surfaceBaselineCoveragePath": "docs/ui/surface-baseline-coverage.manifest.json",
   "privateDriftAlias": "private-codex-ui-rendered-drift",
-  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"],
   "reportStatuses": ["pending-private-evidence", "no-drift", "drift-detected", "approved-drift"],
   "requiredReportFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reviewAfter"],
+  "requiredEvidenceFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reportHash", "producedAt"],
+  "evidenceFilename": "drift-report.json",
   "reports": [
     { "coverageId": "macos-root-chrome", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-root-chrome", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
     { "coverageId": "macos-sidebar", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-sidebar", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },
