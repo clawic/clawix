@@ -149,6 +149,8 @@ require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_v
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"
 require_snippet "macos/PERF.md" "docs/ui/performance-budgets.registry.json"
+require_snippet "skills/ui-implementation/SKILL.md" "Declare the UI governance evidence"
+require_snippet "skills/ui-implementation/SKILL.md" "pattern IDs or debt/protected/exception mapping"
 require_snippet "skills/ui-performance-budget/SKILL.md" "docs/ui/performance-budgets.registry.json"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## sidebar-row"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## terminal-surface"
