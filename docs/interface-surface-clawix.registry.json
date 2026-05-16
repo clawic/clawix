@@ -33,7 +33,7 @@
       "humanSurface": "Open/copy session links in Clawix",
       "programmaticSurface": "clawix://session/<sessionId>",
       "storageOwner": "host-route",
-      "validation": "Deep-link parser tests reject clawix://chat"
+      "validation": "Deep-link parser tests reject the retired chat route spelling"
     },
     {
       "id": "deepLinks.authCallback",
@@ -42,7 +42,7 @@
       "humanSurface": "Provider OAuth callback handling",
       "programmaticSurface": "clawix://auth/callback/<provider>",
       "storageOwner": "host-route",
-      "validation": "OAuth callback parser tests reject oauth-callback"
+      "validation": "OAuth callback parser tests reject the retired callback route spelling"
     },
     {
       "id": "pairing.qrJson",

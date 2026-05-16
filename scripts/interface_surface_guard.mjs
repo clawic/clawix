@@ -170,6 +170,7 @@ const staleContractTargets = [
   "playbooks/macos/settings.md",
   "docs/naming-style-guide.md",
   "docs/interface-matrix.md",
+  "docs/interface-surface-clawix.registry.json",
   "docs/persistent-surface-clawix.manifest.json",
   "macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift",
   "macos/Sources/Clawix/FeatureFlags.swift",
