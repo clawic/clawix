@@ -24,6 +24,8 @@ jobs:
         run: node scripts/ui_debt_report_check.mjs
       - name: Validate UI exception registry
         run: node scripts/ui_exception_check.mjs
+      - name: Validate UI inspiration references
+        run: node scripts/ui_inspiration_reference_check.mjs
       - name: Validate UI protected surface contract
         run: node scripts/ui_protected_surface_check.mjs
       - name: Validate UI geometry contracts

@@ -78,6 +78,7 @@ for file in \
   "scripts/ui_decision_verification_check.mjs" \
   "scripts/ui_debt_report_check.mjs" \
   "scripts/ui_exception_check.mjs" \
+  "scripts/ui_inspiration_reference_check.mjs" \
   "scripts/ui_protected_surface_check.mjs" \
   "scripts/ui_implementation_evidence_check.mjs" \
   "scripts/ui_state_coverage_check.mjs" \
@@ -131,6 +132,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_canon_promotion_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_debt_report_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_exception_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_inspiration_reference_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_protected_surface_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "implementation-evidence.manifest.json"
@@ -181,6 +183,8 @@ require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt-baseline.*"
 require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt.baseline.json"
 require_snippet "docs/ui/debt-report.registry.json" "Report only."
 require_snippet "docs/ui/debt-report.registry.json" "pending-visual-authorized-cleanup"
+require_snippet "docs/ui/inspiration/references.registry.json" "non-canonical"
+require_snippet "docs/ui/inspiration/references.registry.json" "\"canonical\": false"
 require_snippet "docs/ui/exceptions.registry.json" "UI exceptions are temporary"
 require_snippet "docs/ui/exceptions.registry.json" "expiresAt"
 require_snippet "docs/ui/protected-surfaces.registry.json" "requiredFreezeFields"

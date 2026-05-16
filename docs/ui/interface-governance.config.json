@@ -42,6 +42,7 @@
     "decision-verification-evidence-check",
     "exception-expiry",
     "exception-registry-check",
+    "inspiration-reference-policy-check",
     "geometry-contract-shape",
     "geometry-contract-clause-check",
     "implementation-evidence-contract-check",
