@@ -8,11 +8,11 @@ struct Credentials: Codable, Equatable {
     /// Tailscale CGNAT IPv4 of the Mac, if it was running Tailscale at
     /// pairing time. Used as a fallback when the LAN host is not
     /// reachable (iPhone on cellular, on a different WiFi, traveling).
-    /// Optional so old pairings without this field keep working.
+    /// Optional because stored credentials may predate this route.
     var tailscaleHost: String?
     /// Coordinator base URL the Mac advertised in its pairing payload.
     /// When present, the iPhone can fall back to a P2P/Iroh path via
-    /// the coordinator when LAN and Tailscale both fail. Old pairings
+    /// the coordinator when LAN and Tailscale both fail. Credentials
     /// without a coordinator stay LAN-only.
     var coordinatorUrl: String?
     /// Iroh node id of the Mac at pairing time. Used as the target of
@@ -78,9 +78,9 @@ struct PairingPayload: Codable {
     var hostDisplayName: String?
     var tailscaleHost: String?
     /// Optional 9-character short code the Mac embeds alongside the
-    /// long bearer in v0.1.1+. The QR scan path ignores it because
-    /// the long bearer is enough to authenticate, but parsing it
-    /// keeps the payload future-compatible.
+    /// pairing token. The QR scan path ignores it because the token is
+    /// enough to authenticate, but parsing it preserves the advertised
+    /// fields.
     var shortCode: String?
     /// Optional coordinator URL the iPhone should hit to register a
     /// device, request peers and exchange Iroh signaling envelopes.

@@ -419,6 +419,19 @@ for (const pattern of ["LegacyChatDeepLink", "LegacyOAuthCallbackDeepLink"]) {
 }
 
 for (const relativePath of [
+  "ios/Sources/Clawix/Bridge/Credentials.swift",
+  "ios/Sources/Clawix/Bridge/BridgeClient.swift",
+  "ios/Sources/Clawix/Pairing/ShortCodePairingFlow.swift",
+]) {
+  const source = read(relativePath);
+  for (const phrase of ["Old pairings", "old pairings", "very old pairing payload", "v0.1.1", "long bearer", "bearer field"]) {
+    if (source.includes(phrase)) {
+      fail(`${relativePath} exposes stale iOS pairing wording ${JSON.stringify(phrase)}`);
+    }
+  }
+}
+
+for (const relativePath of [
   "cli/README.md",
   "cli/bin/clawix.js",
   "cli/lib/doctor.js",

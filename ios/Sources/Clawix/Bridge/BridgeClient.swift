@@ -262,7 +262,8 @@ final class BridgeClient: NSObject {
         for result in results {
             guard case .service(let name, _, _, _) = result.endpoint else { continue }
             // If we know the Mac's name, only accept that service. If
-            // we don't (very old pairing payload), accept any match —
+            // the stored credentials do not include a display name,
+            // accept any match —
             // there is rarely more than one Clawix on a LAN.
             if let target, name != target { continue }
             if candidates.contains(where: { $0.endpointKey == endpointKey(for: result.endpoint) }) {

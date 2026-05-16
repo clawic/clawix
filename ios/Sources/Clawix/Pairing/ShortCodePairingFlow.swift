@@ -9,8 +9,8 @@ import ClawixCore
 /// The daemon advertises `_clawix-bridge._tcp` over Bonjour while
 /// running, so this flow can find any Mac on the same Wi-Fi without
 /// asking the user for an IP. We open a one-shot WebSocket to that
-/// service, send the typed code as the bearer in the standard auth
-/// frame (the daemon accepts either the long bearer or the short
+/// service, send the typed code as the token in the standard auth
+/// frame (the daemon accepts either the pairing token or the short
 /// code), and on `authOk` produce a `Credentials` value with `host`
 /// left empty so `BridgeClient`'s own Bonjour browser keeps resolving
 /// the Mac across DHCP and SSID changes.
@@ -76,7 +76,7 @@ final class ShortCodePairingFlow {
     }
 
     /// Open a WS to `mac`, send the auth frame with the typed code as
-    /// the bearer field, and resolve the continuation with the
+    /// the token field, and resolve the continuation with the
     /// resulting `Credentials` on `authOk`. The connection is closed
     /// either way: long-term traffic flows through `BridgeClient` once
     /// `Credentials` is persisted.
