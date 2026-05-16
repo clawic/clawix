@@ -26,6 +26,8 @@ jobs:
         run: node scripts/ui_protected_surface_check.mjs
       - name: Validate UI geometry contracts
         run: node scripts/ui_geometry_contract_check.mjs
+      - name: Validate UI implementation evidence
+        run: node scripts/ui_implementation_evidence_check.mjs
       - name: Validate rendered geometry manifest
         run: node scripts/ui_rendered_geometry_manifest_check.mjs
       - name: Validate UI copy governance

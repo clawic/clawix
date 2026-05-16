@@ -23,6 +23,8 @@ the public repo.
 ## Files
 
 - `interface-governance.config.json`: global guard configuration.
+- `implementation-evidence.manifest.json`: required UI implementation evidence
+  and PR/check output contract.
 - `visual-model-allowlist.manifest.json`: explicit visual model gate for
   visual/copy/layout mutation authority.
 - `component-extraction.manifest.json`: reusable component extraction policy
@@ -77,36 +79,40 @@ the public repo.
 10. Keep protected surface freeze contracts current with
    `scripts/ui_protected_surface_check.mjs`.
 11. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
-12. Keep rendered geometry evidence contracts current with
+12. Keep UI implementation evidence output current with
+   `scripts/ui_implementation_evidence_check.mjs`; every UI change must declare
+   mutation class, mapping, touched files, visible surfaces, state coverage, and
+   public checks.
+13. Keep rendered geometry evidence contracts current with
    `scripts/ui_rendered_geometry_manifest_check.mjs`.
-13. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-14. Keep performance budget contracts current with
+14. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
+15. Keep performance budget contracts current with
    `scripts/ui_performance_budget_check.mjs`; budget flow references must match
    private baseline references.
-15. Keep component extraction APIs current with
+16. Keep component extraction APIs current with
    `scripts/ui_component_extraction_check.mjs`.
-16. Keep mechanical refactor evidence current with
+17. Keep mechanical refactor evidence current with
    `scripts/ui_mechanical_equivalence_check.mjs`.
-17. Keep visual authorization scopes current with
+18. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default, and
    approved scopes must declare files plus a change budget.
-18. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
-19. Keep visual model authorization current with
+19. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
+20. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
    identify an allowlisted visual model.
-20. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-21. Keep private baseline coverage current with
+21. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+22. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-22. Keep aggregate private visual validation current with
+23. Keep aggregate private visual validation current with
     `scripts/ui_private_visual_validation_manifest_check.mjs`.
-23. When all private roots are available, verify visual evidence end to end with
+24. When all private roots are available, verify visual evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-24. When private geometry evidence is available, verify it with
+25. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-25. When private baselines are available, verify them with
+26. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-26. When private copy snapshots are available, verify them with
+27. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-27. When the lane is not visual-authorized, use
+28. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.
