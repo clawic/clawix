@@ -38,6 +38,7 @@
     "protected-surface-shape",
     "exception-expiry",
     "geometry-contract-shape",
+    "geometry-contract-clause-check",
     "private-baseline-manifest-shape",
     "performance-budget-platform-coverage",
     "unauthorized-visual-diff"

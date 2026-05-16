@@ -1,6 +1,6 @@
 # Pattern registry
 
-Each pattern has a machine-readable manifest in `patterns/<id>.json` and may
+Each pattern has a machine-readable manifest in `patterns/<id>.pattern.json` and may
 have short Markdown notes when prose is needed.
 
 Pattern manifests are contracts for agents and checks. They are not design
@@ -25,3 +25,7 @@ Each pattern declares:
 - performance contract if relevant;
 - validation commands or private baseline references;
 - whether component extraction is required, allowed, or forbidden.
+
+`scripts/ui_geometry_contract_check.mjs` validates that every geometry clause is
+either measured with finite non-negative numbers or explicitly pending with a
+reason. It does not approve a new visual direction.

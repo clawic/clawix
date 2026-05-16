@@ -44,9 +44,10 @@ the public repo.
 5. If a guard finds unrelated drift, list it. Do not fix it as a side effect.
 6. If a component is extracted, prove visual equivalence or leave it as a
    conceptual proposal.
-7. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-8. Keep private baseline coverage current with
+7. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
+8. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+9. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-9. When the lane is not visual-authorized, use
+10. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

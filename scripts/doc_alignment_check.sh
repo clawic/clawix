@@ -54,6 +54,7 @@ for file in \
   "docs/ui/visual-change-proposal.template.md" \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
+  "scripts/ui_geometry_contract_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_governance_guard.mjs" \
@@ -81,6 +82,7 @@ require_snippet "docs/adr/0010-interface-governance.md" "Extract reusable compon
 require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane may make"
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
