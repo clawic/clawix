@@ -305,10 +305,19 @@ requireFields(debtReport, debtReportPath, [
 
 const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
-requireFields(protectedSurfaces, protectedPath, ["schemaVersion", "status", "policy", "surfaces"]);
+requireFields(protectedSurfaces, protectedPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "privateBaselineAlias",
+  "privateCopyAlias",
+  "privateGeometryAlias",
+  "requiredFreezeFields",
+  "surfaces",
+]);
 for (const [index, surface] of requireArray(protectedSurfaces, protectedPath, "surfaces", { nonEmpty: false }).entries()) {
   const label = `${protectedPath}.surfaces[${index}]`;
-  requireFields(surface, label, ["id", "scope", "approvedBy", "approvedAt", "contract", "privateBaselineReference"]);
+  requireFields(surface, label, protectedSurfaces.requiredFreezeFields || []);
 }
 
 const promotionPath = "docs/ui/canon-promotions.registry.json";

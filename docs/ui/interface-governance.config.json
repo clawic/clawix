@@ -37,6 +37,7 @@
     "debt-baseline-shape",
     "debt-report-coverage",
     "protected-surface-shape",
+    "protected-surface-freeze-contract-check",
     "canon-promotion-record-check",
     "exception-expiry",
     "geometry-contract-shape",

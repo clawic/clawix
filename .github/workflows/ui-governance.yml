@@ -20,6 +20,8 @@ jobs:
         run: node scripts/ui_canon_promotion_check.mjs
       - name: Validate UI debt report
         run: node scripts/ui_debt_report_check.mjs
+      - name: Validate UI protected surface contract
+        run: node scripts/ui_protected_surface_check.mjs
       - name: Validate UI geometry contracts
         run: node scripts/ui_geometry_contract_check.mjs
       - name: Validate rendered geometry manifest

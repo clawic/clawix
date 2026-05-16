@@ -2,5 +2,24 @@
   "schemaVersion": 1,
   "status": "active",
   "policy": "Only the user can declare a visual surface approved/frozen. Any visible change to a protected surface requires explicit permission.",
+  "privateBaselineAlias": "private-codex-ui-baselines",
+  "privateCopyAlias": "private-codex-ui-copy-snapshots",
+  "privateGeometryAlias": "private-codex-ui-rendered-geometry",
+  "requiredFreezeFields": [
+    "id",
+    "scope",
+    "platform",
+    "patterns",
+    "approvedBy",
+    "approvedAt",
+    "contract",
+    "privateBaselineReference",
+    "privateBaselineHash",
+    "copySnapshotReference",
+    "copySnapshotHash",
+    "geometryEvidenceReference",
+    "geometryEvidenceHash",
+    "changePolicy"
+  ],
   "surfaces": []
 }
