@@ -1,5 +1,23 @@
 ## Summary
 
+## UI governance evidence
+
+Mutation class:
+
+Pattern/debt/protected/exception mapping:
+
+Touched files:
+
+Visible surfaces:
+
+Required interactive states:
+
+Public UI checks:
+
+Visual/copy/layout authorization:
+
+Conceptual proposal:
+
 ## Checklist
 
 - [ ] The branch name is scoped and short (`feat/*`, `fix/*`, `docs/*`, `chore/*`).

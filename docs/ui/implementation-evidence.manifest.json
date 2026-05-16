@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Every UI implementation change must declare governance evidence before editing and surface the same evidence in PR/check output. This manifest defines only public-safe metadata; private visual assignment and raw captures stay outside the repo.",
+  "prTemplatePath": ".github/PULL_REQUEST_TEMPLATE.md",
+  "proposalPath": "docs/ui/visual-change-proposal.template.md",
+  "requiredEvidenceFields": [
+    "mutationClass",
+    "patternOrDebtProtectedExceptionMapping",
+    "touchedFiles",
+    "visibleSurfaces",
+    "requiredInteractiveStates",
+    "publicChecks",
+    "visualCopyLayoutAuthorization"
+  ],
+  "mappingKinds": ["pattern", "debt", "protected", "exception"],
+  "allowedMutationClasses": ["functional-ui", "visual-ui", "copy-ui", "mechanical-equivalent-refactor"],
+  "requiredInteractiveStates": [
+    "idle",
+    "hover-or-highlight",
+    "focused",
+    "pressed",
+    "disabled",
+    "selected",
+    "busy",
+    "error"
+  ],
+  "requiredPublicChecks": [
+    "node scripts/ui_governance_guard.mjs",
+    "node scripts/ui_surface_inventory_check.mjs",
+    "node scripts/ui_visual_scope_check.mjs",
+    "node scripts/ui_visual_model_allowlist_check.mjs"
+  ],
+  "prTemplateRequiredSnippets": [
+    "## UI governance evidence",
+    "Mutation class:",
+    "Pattern/debt/protected/exception mapping:",
+    "Touched files:",
+    "Visible surfaces:",
+    "Required interactive states:",
+    "Public UI checks:",
+    "Visual/copy/layout authorization:",
+    "Conceptual proposal:"
+  ],
+  "privateDataPolicy": {
+    "publicRepoMayStore": ["manifest", "template", "check names", "public-safe evidence labels"],
+    "publicRepoMustNotStore": ["raw screenshot", "raw video", "raw trace", "private model assignment", "local absolute path", "secret"]
+  }
+}
