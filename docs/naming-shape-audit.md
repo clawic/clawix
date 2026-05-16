@@ -11,11 +11,9 @@ source-shape signals come from `node scripts/source-size-check.mjs --json`.
 ## Current gate status
 
 - Critical naming failures: 0.
-- Naming warnings: 51 tracked warnings. The full local working tree currently
-  reports 53 warnings because two warnings come from untracked UI governance
-  notes/decision files.
+- Naming warnings: 51.
 - Source-size warnings: 35.
-- Source-structure signals: 27.
+- Source-structure signals: 29.
 
 The current gate is intentionally critical-only. Warnings are cleanup inventory
 for staged rename/split work and must not be hidden by compressing code.
@@ -81,6 +79,9 @@ for staged rename/split work and must not be hidden by compressing code.
   file contract instead of the broader data directory.
 - Secrets security boundary test vocabulary: plaintext provider-secret coverage
   now describes the prohibited read behavior instead of generic helper names.
+- Browser storage vocabulary: browser cleanup code now names the WebKit
+  removable storage contract (`BrowserStorageKind`, `clearBrowserStorage`)
+  instead of broad browsing-data symbols.
 
 ## Validation snapshot
 

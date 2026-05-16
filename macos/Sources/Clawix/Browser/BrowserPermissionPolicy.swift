@@ -17,7 +17,7 @@ enum BrowserPermissionPolicy {
         case allowed
     }
 
-    enum BrowsingDataKind: String {
+    enum BrowserStorageKind: String {
         case all = "Clear all browsing data"
         case cache = "Clear cache"
         case cookies = "Clear cookies"
@@ -106,7 +106,7 @@ enum BrowserPermissionPolicy {
         }
     }
 
-    static func clearBrowsingData(_ kind: BrowsingDataKind, completion: @escaping () -> Void) {
+    static func clearBrowserStorage(_ kind: BrowserStorageKind, completion: @escaping () -> Void) {
         let types: Set<String>
         switch kind {
         case .all:

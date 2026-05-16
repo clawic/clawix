@@ -3,13 +3,13 @@ import SwiftUI
 struct BrowserUsagePage: View {
     @AppStorage(BrowserPermissionPolicy.approvalStorageKey) private var approval: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
     @AppStorage(ClawixPersistentSurfaceKeys.browserHistoryApproval) private var history: String = BrowserPermissionPolicy.Approval.alwaysAsk.rawValue
-    @State private var browsingData: BrowserPermissionPolicy.BrowsingDataKind = .all
+    @State private var browserStorage: BrowserPermissionPolicy.BrowserStorageKind = .all
     @State private var clearStatus: String?
     @State private var clearingBrowsingData = false
     @State private var blockedDomains: [String] = []
     @State private var allowedDomains: [String] = []
 
-    private var browsingDataOptions: [(BrowserPermissionPolicy.BrowsingDataKind, String)] {
+    private var browserStorageOptions: [(BrowserPermissionPolicy.BrowserStorageKind, String)] {
         [
             (.all, "Clear all browsing data"),
             (.cache, "Clear cache"),
@@ -43,12 +43,12 @@ struct BrowserUsagePage: View {
                 } trailing: {
                     HStack(spacing: 8) {
                         SettingsDropdown(
-                            options: browsingDataOptions,
-                            selection: $browsingData,
+                            options: browserStorageOptions,
+                            selection: $browserStorage,
                             minWidth: 190
                         )
                         Button(clearingBrowsingData ? "Clearing…" : "Clear") {
-                            clearSelectedBrowsingData()
+                            clearSelectedBrowserStorage()
                         }
                         .buttonStyle(.borderless)
                         .font(BodyFont.system(size: 11.5, wght: 600))
@@ -125,11 +125,11 @@ struct BrowserUsagePage: View {
         allowedDomains = BrowserPermissionPolicy.allowedDomains
     }
 
-    private func clearSelectedBrowsingData() {
+    private func clearSelectedBrowserStorage() {
         clearingBrowsingData = true
         clearStatus = nil
-        let selected = browsingData
-        BrowserPermissionPolicy.clearBrowsingData(selected) {
+        let selected = browserStorage
+        BrowserPermissionPolicy.clearBrowserStorage(selected) {
             clearingBrowsingData = false
             clearStatus = "\(selected.rawValue) completed."
             ToastCenter.shared.show(clearStatus ?? "Browsing data cleared")
