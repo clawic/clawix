@@ -44,6 +44,7 @@
     "geometry-contract-shape",
     "geometry-contract-clause-check",
     "implementation-evidence-contract-check",
+    "state-coverage-source-evidence",
     "rendered-geometry-manifest-shape",
     "copy-governance-contract-check",
     "component-extraction-policy-check",
