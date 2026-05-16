@@ -45,6 +45,7 @@ for file in \
   "docs/ui/decision-verification.json" \
   "docs/ui/interface-governance.config.json" \
   "docs/ui/visible-surfaces.inventory.json" \
+  "docs/ui/copy.inventory.json" \
   "docs/ui/pattern-registry/patterns.registry.json" \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
   "docs/ui/debt.baseline.json" \
@@ -54,6 +55,7 @@ for file in \
   "docs/ui/visual-change-proposal.template.md" \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
+  "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
@@ -83,12 +85,15 @@ require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane m
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "visual-change-proposal.template.md"
 require_snippet "docs/ui/decision-verification.json" "019e2b5e-fe48-7231-8e13-49411999b001"
 require_snippet "docs/ui/decision-verification.json" "critical_cleanup_owner"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "Every current visible UI candidate"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "macos-chat-and-composer"
+require_snippet "docs/ui/copy.inventory.json" "private-codex-ui-copy-snapshots"
+require_snippet "docs/ui/copy.inventory.json" "approvalBlockedWithoutSnapshot"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"

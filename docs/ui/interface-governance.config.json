@@ -39,6 +39,7 @@
     "exception-expiry",
     "geometry-contract-shape",
     "geometry-contract-clause-check",
+    "copy-governance-contract-check",
     "private-baseline-manifest-shape",
     "performance-budget-platform-coverage",
     "unauthorized-visual-diff"
