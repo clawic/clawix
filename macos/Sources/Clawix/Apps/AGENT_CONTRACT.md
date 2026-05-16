@@ -91,9 +91,9 @@ That's it. The app shows up in the sidebar in <5s.
   - `clawix.agent.sendMessage(text)` — posts a message to the chat in
     `createdByChatId` (no-op if null)
   - `clawix.agent.callTool({tool, args})` — gated by user prompt unless
-    the tool is in `permissions.allowedTools`. **v1: always rejects
-    until ClawJS tool dispatch is wired** (the prompt still records
-    the user's pre-approval for v2).
+    the tool is in `permissions.allowedTools`. Currently always rejects
+    until ClawJS tool dispatch is wired; the prompt records the user's
+    approval for that request.
   - `clawix.ui.{setTitle,setBadge,openExternal}` — best-effort UI hooks
   - `clawix.events.on('focus' | 'blur', cb)` — focus events fire from
     the SDK when the WKWebView gains/loses keyboard focus

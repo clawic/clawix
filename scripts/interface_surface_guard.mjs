@@ -432,6 +432,18 @@ for (const relativePath of [
 }
 
 for (const relativePath of [
+  "macos/Sources/Clawix/Apps/AppBridgeMessageHandler.swift",
+  "macos/Sources/Clawix/Apps/AGENT_CONTRACT.md",
+]) {
+  const source = read(relativePath);
+  for (const phrase of ["v2 concern", "pre-approval for v2"]) {
+    if (source.includes(phrase)) {
+      fail(`${relativePath} must describe Apps tool dispatch without v2 placeholder wording ${JSON.stringify(phrase)}`);
+    }
+  }
+}
+
+for (const relativePath of [
   "cli/README.md",
   "cli/bin/clawix.js",
   "cli/lib/doctor.js",

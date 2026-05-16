@@ -77,10 +77,9 @@ final class AppBridgeMessageHandler: NSObject, WKScriptMessageHandler {
             case "agent.callTool":
                 // v1: every tool call surfaces a native confirm sheet
                 // unless the app has the tool in `permissions.allowedTools`.
-                // The actual dispatch to the agent is a v2 concern (it
-                // requires a bridge frame to ClawJS); for now we just
-                // gate the permission and reject so apps fail loudly
-                // until the runtime tools are wired.
+                // Runtime tool dispatch requires a bridge frame to
+                // ClawJS; for now we gate the permission and reject so
+                // apps fail loudly until the tools are wired.
                 let tool = (payload["tool"] as? String) ?? ""
                 try gateToolCall(tool: tool, requestId: requestId)
             case "ui.setTitle":
