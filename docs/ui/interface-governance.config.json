@@ -47,6 +47,7 @@
     "mechanical-equivalence-policy-check",
     "visual-scope-policy-check",
     "visual-detector-policy-check",
+    "visual-model-allowlist-check",
     "private-baseline-manifest-shape",
     "performance-budget-platform-coverage",
     "unauthorized-visual-diff"

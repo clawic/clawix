@@ -15,8 +15,8 @@ with concrete evidence.
 | `baseline_governance` | Motivo + caducidad | implemented | Baseline schema and checker require expiry metadata. |
 | `autofix_policy` | Solo sugerir cambios | documented | Audit/cleanup skills prohibit default destructive autofix. |
 | `export_policy` | API publica se conserva | documented | ADR 0016 public contract retention rule. |
-| `unused_files` | Entrypoints configurados primero | documented | ADR 0016 and cleanup skill procedure. |
-| `dependency_policy` | Normalizar por workspace | documented | ADR 0016; cleanup campaign pending. |
+| `unused_files` | Entrypoints configurados primero | partially implemented | Knip config declares explicit entry/project scope and report-only file findings; cleanup campaign pending. |
+| `dependency_policy` | Normalizar por workspace | partially implemented | Knip report records dependency findings in report-only mode; cleanup campaign pending. |
 | `swift_tooling` | Periphery calibrado | documented | Tool registry records Periphery report-only. |
 | `swift_public` | Conservar como contrato | documented | ADR 0016 public Swift retention rule. |
 | `swiftui_dynamic` | Retener por patron | documented | ADR 0016 semantic report-only rule. |
@@ -38,6 +38,6 @@ with concrete evidence.
 | `ledger` | Si, compacto | implemented | `docs/code-hygiene-ledger.md`. |
 | `expiry_window` | 90 dias | implemented | Baseline default and checker. |
 | `cleanup_safety` | Checks verdes por lote | documented | Cleanup skill procedure. |
-| `knip_install` | Dev dependency fija | implemented | Package metadata and lockfile. |
+| `knip_install` | Dev dependency fija | implemented | Package metadata, lockfile, Knip config, exact-version runner, and report-only summary. |
 | `periphery_install` | Tool versionada | documented | `docs/code-hygiene-tools.json`; install/calibration pending. |
 | `new_deps_policy` | Solo herramientas justificadas | documented | Tool registry and ADR 0016. |

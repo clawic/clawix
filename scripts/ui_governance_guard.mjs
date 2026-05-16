@@ -87,6 +87,36 @@ if (visualAuthorization.privateAssignment !== "outside-public-repo") {
   fail(`${configPath}.visualAuthorizationPolicy.privateAssignment must stay outside-public-repo`);
 }
 
+const visualModelAllowlistPath = "docs/ui/visual-model-allowlist.manifest.json";
+const visualModelAllowlist = readJson(visualModelAllowlistPath);
+requireFields(visualModelAllowlist, visualModelAllowlistPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "privateAssignment",
+  "authorizationSignal",
+  "modelSignal",
+  "proposalPath",
+  "allowedVisualModels",
+]);
+if (visualModelAllowlist?.privateAssignment !== "outside-public-repo") {
+  fail(`${visualModelAllowlistPath}.privateAssignment must stay outside-public-repo`);
+}
+if (visualModelAllowlist?.authorizationSignal?.env !== visualAuthorization.publicSignalEnv) {
+  fail(`${visualModelAllowlistPath}.authorizationSignal.env must match ${configPath}.visualAuthorizationPolicy.publicSignalEnv`);
+}
+if (visualModelAllowlist?.authorizationSignal?.value !== visualAuthorization.publicSignalValue) {
+  fail(`${visualModelAllowlistPath}.authorizationSignal.value must match ${configPath}.visualAuthorizationPolicy.publicSignalValue`);
+}
+const activeVisualModelIds = new Set(
+  requireArray(visualModelAllowlist, visualModelAllowlistPath, "allowedVisualModels")
+    .filter((model) => model?.status === "active")
+    .map((model) => model.id),
+);
+if (!activeVisualModelIds.has("claude-opus-4.7")) {
+  fail(`${visualModelAllowlistPath}.allowedVisualModels must include active claude-opus-4.7`);
+}
+
 const requiredStates = [
   "idle",
   "hover-or-highlight",
@@ -429,6 +459,7 @@ for (const [index, detector] of requireArray(visualDetectors, visualDetectorsPat
     compiledVisualDetectors.push({
       id: detector.id,
       changeKind: detector.changeKind,
+      reason: detector.reason,
       regex: new RegExp(detector.pattern),
     });
   } catch (error) {
@@ -442,7 +473,13 @@ const stagedDiffArgs = ["diff", "--cached", "--unified=0", "--", ...sourcePaths]
 
 const visualAuthorizationEnv = String(visualAuthorization.publicSignalEnv || "");
 const visualAuthorizationValue = String(visualAuthorization.publicSignalValue || "");
-const visualAuthorized = Boolean(visualAuthorizationEnv) && process.env[visualAuthorizationEnv] === visualAuthorizationValue;
+const visualModelEnv = String(visualModelAllowlist?.modelSignal?.env || "");
+const requestedVisualModel = visualModelEnv ? String(process.env[visualModelEnv] || "") : "";
+const visualAuthorized =
+  Boolean(visualAuthorizationEnv) &&
+  process.env[visualAuthorizationEnv] === visualAuthorizationValue &&
+  Boolean(visualModelEnv) &&
+  activeVisualModelIds.has(requestedVisualModel);
 
 function matchingVisualDetector(line) {
   return compiledVisualDetectors.find((detector) => detector.regex.test(line));
@@ -474,6 +511,7 @@ function visualDiffHits(diffText, sourceLabel) {
           source: sourceLabel,
           detector: detector.id,
           changeKind: detector.changeKind,
+          reason: detector.reason,
           text: line.slice(1, 241),
         });
       }
@@ -497,11 +535,16 @@ if (visualHits.length > 0 && !visualAuthorized) {
   fail(
     [
       "unauthorized visual/copy/layout source edit detected",
-      `set ${visualAuthorizationEnv}=${visualAuthorizationValue} only when the task has explicit visual authorization from the private policy`,
+      `required permission: ${visualAuthorizationEnv}=${visualAuthorizationValue} and ${visualModelEnv}=<active visual model from ${visualModelAllowlistPath}>`,
+      `current model signal: ${visualModelEnv || "<unset>"}=${requestedVisualModel || "<unset>"}`,
+      `proposal route: ${visualModelAllowlist?.proposalPath || "docs/ui/visual-change-proposal.template.md"}`,
       "non-authorized agents must leave a conceptual proposal instead of editing visible presentation",
       ...visualHits
         .slice(0, 20)
-        .map((hit) => `  ${hit.path}:${hit.line} [${hit.source}/${hit.detector}/${hit.changeKind}] ${hit.text}`),
+        .map(
+          (hit) =>
+            `  ${hit.path}:${hit.line} [${hit.source}/${hit.detector}/${hit.changeKind}] reason=${hit.reason} text=${hit.text}`,
+        ),
     ].join("\n"),
   );
 }
@@ -513,6 +556,7 @@ const requiredDocs = [
   "docs/ui/pattern-registry/README.md",
   "docs/ui/pattern-registry/patterns/NOTES.md",
   "docs/ui/interface-governance.config.json",
+  "docs/ui/visual-model-allowlist.manifest.json",
   "docs/ui/component-extraction.manifest.json",
   "docs/ui/mechanical-equivalence.manifest.json",
   "docs/ui/visible-surfaces.inventory.json",

@@ -20,9 +20,12 @@ const decisions = readJson("docs/code-hygiene-decisions.json");
 const baseline = readJson("docs/code-hygiene-baseline.json");
 const tools = readJson("docs/code-hygiene-tools.json");
 const report = readJson("docs/code-hygiene-report.json");
+const knipReport = readJson("docs/code-hygiene-knip-report.json");
 const reportMarkdown = readText("docs/code-hygiene-report.md");
+const knipReportMarkdown = readText("docs/code-hygiene-knip-report.md");
 const ledger = readText("docs/code-hygiene-ledger.md");
 const decisionChecklist = readText("docs/code-hygiene-decision-checklist.md");
+const knipConfigPath = fs.existsSync(path.join(rootDir, "web", "knip.json")) ? "web/knip.json" : "knip.json";
 
 if (decisions.schemaVersion !== 1) fail("code hygiene decisions schemaVersion must be 1");
 if (decisions.program !== "code-hygiene") fail("code hygiene decisions program must be code-hygiene");
@@ -51,6 +54,12 @@ for (const entry of baseline.entries ?? []) {
 
 if (tools.schemaVersion !== 1) fail("code hygiene tools schemaVersion must be 1");
 if (tools.tools?.knip?.version !== "6.14.0") fail("code hygiene Knip version must be 6.14.0");
+if (tools.tools?.knip?.mode !== "pinned-dev-dependency-report-only") fail("code hygiene Knip mode must be report-only");
+if (tools.tools?.knip?.runner !== "scripts/code-hygiene-knip.mjs") fail("code hygiene Knip runner must be documented");
+if (tools.tools?.knip?.config !== knipConfigPath) fail(`code hygiene Knip config must be ${knipConfigPath}`);
+if (tools.tools?.knip?.reportJson !== "docs/code-hygiene-knip-report.json") fail("code hygiene Knip JSON report path must be documented");
+if (tools.tools?.knip?.reportMarkdown !== "docs/code-hygiene-knip-report.md") fail("code hygiene Knip Markdown report path must be documented");
+if (tools.tools?.knip?.destructiveDefault !== false) fail("code hygiene Knip destructive default must be false");
 if (!tools.tools?.periphery?.version) fail("code hygiene Periphery version must be documented");
 const packageCandidates = ["package.json", "web/package.json"];
 const hasKnipDependency = packageCandidates
@@ -69,6 +78,16 @@ for (const field of ["scannedFiles", "todoFindings", "duplicateAssetGroups", "du
 }
 if (!reportMarkdown.includes("docs/code-hygiene-report.json")) fail("code hygiene Markdown report must link the JSON pair");
 if (!reportMarkdown.includes("unreferenced asset candidates")) fail("code hygiene Markdown report must mention unreferenced asset candidates");
+if (knipReport.schemaVersion !== 1) fail("code hygiene Knip report schemaVersion must be 1");
+if (knipReport.program !== "code-hygiene") fail("code hygiene Knip report program must be code-hygiene");
+if (knipReport.tool !== "knip") fail("code hygiene Knip report tool must be knip");
+if (knipReport.toolVersion !== "6.14.0") fail("code hygiene Knip report must use Knip 6.14.0");
+if (knipReport.mode !== "report-only") fail("code hygiene Knip report must be report-only");
+if (knipReport.config !== knipConfigPath) fail(`code hygiene Knip report config must be ${knipConfigPath}`);
+if (typeof knipReport.summary?.totalIssues !== "number") fail("code hygiene Knip report must include numeric totalIssues");
+if (!knipReportMarkdown.includes("This report does not authorize automatic deletion")) {
+  fail("code hygiene Knip Markdown report must state cleanup safety");
+}
 if (!ledger.includes("private session, not published")) fail("code hygiene ledger must not publish private session paths");
 if (!decisionChecklist.includes("rollout_model")) fail("code hygiene decision checklist must include rollout_model");
 if (!decisionChecklist.includes("Cleanup campaign is pending")) fail("code hygiene decision checklist must record pending cleanup campaign");
@@ -82,7 +101,11 @@ for (const relativePath of [
   "docs/code-hygiene-ledger.md",
   "docs/code-hygiene-report.json",
   "docs/code-hygiene-report.md",
+  "docs/code-hygiene-knip-report.json",
+  "docs/code-hygiene-knip-report.md",
   "scripts/code-hygiene-audit.mjs",
+  "scripts/code-hygiene-knip.mjs",
+  knipConfigPath,
   "skills/code-hygiene-audit/SKILL.md",
   "skills/code-hygiene-cleanup/SKILL.md",
 ]) {

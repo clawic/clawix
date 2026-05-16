@@ -23,6 +23,8 @@ the public repo.
 ## Files
 
 - `interface-governance.config.json`: global guard configuration.
+- `visual-model-allowlist.manifest.json`: explicit visual model gate for
+  visual/copy/layout mutation authority.
 - `component-extraction.manifest.json`: reusable component extraction policy
   and bounded API audit rules.
 - `mechanical-equivalence.manifest.json`: before/after evidence contract for
@@ -77,15 +79,18 @@ the public repo.
 14. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
 15. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
-16. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-17. Keep private baseline coverage current with
+16. Keep visual model authorization current with
+   `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
+   identify an allowlisted visual model.
+17. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+18. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-18. When private geometry evidence is available, verify it with
+19. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-19. When private baselines are available, verify them with
+20. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-20. When private copy snapshots are available, verify them with
+21. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-21. When the lane is not visual-authorized, use
+22. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

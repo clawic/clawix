@@ -207,6 +207,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_mechanical_equivalence_check.mjs"
   run node "$ROOT_DIR/scripts/ui_visual_scope_check.mjs"
   run node "$ROOT_DIR/scripts/ui_visual_detector_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_visual_model_allowlist_check.mjs"
   run node "$ROOT_DIR/scripts/ui_surface_inventory_check.mjs"
   run node "$ROOT_DIR/scripts/ui_private_baseline_manifest_check.mjs"
   run node "$ROOT_DIR/scripts/naming-shape-check.mjs"
@@ -214,6 +215,7 @@ fast() {
   run node "$ROOT_DIR/scripts/code-hygiene-check.mjs"
   run node "$ROOT_DIR/scripts/code-hygiene-check.mjs" --self-test
   run node "$ROOT_DIR/scripts/code-hygiene-audit.mjs" --self-test
+  run node "$ROOT_DIR/scripts/code-hygiene-knip.mjs" --self-test
   run node "$ROOT_DIR/scripts/codebase-manifest.mjs" --check
   run node "$ROOT_DIR/scripts/package_surface_guard.mjs"
   policy_guard
