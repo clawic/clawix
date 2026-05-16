@@ -164,6 +164,8 @@ const staleContractTargets = [
   "windows/Clawix.App/Views/Settings/GeneralPage.xaml",
   "windows/Clawix.App/Views/Settings/UpdatesPage.xaml",
   "windows/Clawix.Tests/BridgeProtocolTests.cs",
+  "STANDARDS.md",
+  "playbooks/macos/settings.md",
   "docs/naming-style-guide.md",
   "docs/interface-matrix.md",
   "docs/persistent-surface-clawix.manifest.json",
@@ -222,6 +224,7 @@ const stalePatterns = [
   { pattern: "case experimental", reason: "v1 surfaces must be stable, dev-only, or removed" },
   { pattern: "FeatureFlags.beta", reason: "use explicit stable/dev-only classification" },
   { pattern: "FeatureFlags.experimental", reason: "use explicit stable/dev-only classification" },
+  { pattern: "experimental pages", reason: "visible v1 surfaces must use stable/dev-only labels" },
 ];
 
 for (const relativePath of staleContractTargets) {

@@ -69,7 +69,7 @@ assertions:
   - sensitive actions present confirmation or blocked state
   - host-dependent pages distinguish unavailable, starting, running, and error states
 known_risks:
-  - feature flags can hide experimental pages in release builds
+  - feature flags can hide dev-only pages in release builds
   - host permissions depend on macOS state
   - local services may already be running
   - secrets flows must never expose secret values
@@ -103,7 +103,7 @@ Verify that settings pages are navigable, visually coherent, and explicit about 
 
 | Page | Required variants |
 | --- | --- |
-| General | feature previews, language, sync toggles, local reset confirmation |
+| General | developer surfaces, language, sync toggles, local reset confirmation |
 | Voice to Text | permissions, language, model, cleanup, vocabulary, replacements, prompt editing |
 | QuickAsk | enablement, shortcut, capture, attachments, recent chat target |
 | MCP servers | create STDIO, edit STDIO, create HTTP, edit HTTP, uninstall confirmation |
@@ -135,7 +135,7 @@ Verify that settings pages are navigable, visually coherent, and explicit about 
 
 Alternate passes:
 
-1. Enable feature previews in an isolated debug build and inspect experimental pages.
+1. Enable developer surfaces in an isolated debug build and inspect dev-only pages.
 2. Exercise secondary pages as navigable pages.
 3. For host validation, repeat only the relevant page in real host mode.
 

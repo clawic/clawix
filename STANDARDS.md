@@ -358,11 +358,11 @@ For the canonical source and guardrail for each release, privacy, storage,
 host, and naming decision, start from [`docs/decision-map.md`](docs/decision-map.md).
 
 - `[macOS]` `swift build -c release` and the notarization path produce a
-  binary where every `#if DEBUG` panel is absent. The "Feature previews"
+  binary where every `#if DEBUG` panel is absent. The "Developer tools"
   card in Settings → General is not rendered.
-- `FeatureFlags.beta` and `FeatureFlags.experimental` evaluate to
-  `false` at runtime in release. There is no environment variable,
-  defaults key, plist value or launch argument that turns them on.
+- `FeatureFlags.developerSurfaces` evaluates to `false` at runtime in
+  release. There is no environment variable, defaults key, plist value
+  or launch argument that turns dev-only surfaces on.
 - Settings reset to ship defaults in a freshly installed release build.
   A stale value persisted from an earlier dev build of the same flag
   does not leak.
