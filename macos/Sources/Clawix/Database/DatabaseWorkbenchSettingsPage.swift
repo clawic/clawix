@@ -480,7 +480,7 @@ private struct DatabaseConnectionProfileEditorSheet: View {
                         CardDivider()
                         DropdownRow(
                             title: "SSH version",
-                            detail: "SSH client compatibility mode.",
+                            detail: "SSH client protocol mode.",
                             options: DatabaseConnectionSSHVersion.allCases.map { ($0, $0.label) },
                             selection: $draft.sshVersion,
                             minWidth: 170

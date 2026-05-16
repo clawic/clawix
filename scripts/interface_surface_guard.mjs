@@ -314,6 +314,11 @@ for (const pattern of ["case legacy", "compat-0.9.5", "return \"SSH 0.9.5\""]) {
   }
 }
 
+const databaseWorkbenchSettingsPage = read("macos/Sources/Clawix/Database/DatabaseWorkbenchSettingsPage.swift");
+if (databaseWorkbenchSettingsPage.includes("SSH client compatibility mode.")) {
+  fail("DatabaseWorkbenchSettingsPage.swift must describe SSH selection as a protocol mode, not a compatibility mode");
+}
+
 if (fs.existsSync(path.join(rootDir, "macos/Sources/Clawix/Marketplace/MarketplaceScreenV2.swift"))) {
   fail("MarketplaceScreenV2.swift must not ship while Marketplace v1 is the registered public surface");
 }
