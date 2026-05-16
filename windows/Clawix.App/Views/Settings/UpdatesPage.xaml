@@ -12,7 +12,7 @@
       <Expander Header="Advanced" IsExpanded="False">
         <StackPanel Spacing="12" Padding="0,8,0,0">
           <TextBox Header="Appcast URL" IsReadOnly="True" />
-          <ToggleSwitch Header="Subscribe to beta channel" />
+          <ToggleSwitch Header="Subscribe to dev-only update channel" />
         </StackPanel>
       </Expander>
     </StackPanel>

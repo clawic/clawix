@@ -20,7 +20,7 @@
       <!-- Advanced: collapsed by default per user feedback -->
       <Expander Header="Advanced" HorizontalAlignment="Stretch" IsExpanded="False">
         <StackPanel Spacing="12" Padding="0,8,0,0">
-          <ToggleSwitch Header="Use experimental Mica backdrop" />
+          <ToggleSwitch Header="Use dev-only Mica backdrop" />
           <ToggleSwitch Header="Disable hardware acceleration" />
           <ToggleSwitch Header="Send anonymous diagnostics" />
           <NumberBox Header="Bridge loopback port (advanced)" Value="24080" Minimum="1024" Maximum="65535" />
