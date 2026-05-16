@@ -16,6 +16,8 @@ jobs:
           node-version: "22"
       - name: Validate UI governance manifests
         run: node scripts/ui_governance_guard.mjs
+      - name: Validate UI canon promotion records
+        run: node scripts/ui_canon_promotion_check.mjs
       - name: Validate UI geometry contracts
         run: node scripts/ui_geometry_contract_check.mjs
       - name: Validate rendered geometry manifest

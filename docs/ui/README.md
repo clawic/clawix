@@ -34,6 +34,8 @@ the public repo.
   visual/copy/layout work.
 - `debt.baseline.json`: frozen existing visual drift.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
+- `canon-promotions.registry.json`: public-safe records for user-approved canon
+  promotions.
 - `performance-budgets.registry.json`: critical-flow budget registry.
 - `private-baselines.manifest.json`: public contract for private visual,
   geometry, and performance baselines.
@@ -51,23 +53,26 @@ the public repo.
 5. If a guard finds unrelated drift, list it. Do not fix it as a side effect.
 6. If a component is extracted, prove visual equivalence or leave it as a
    conceptual proposal.
-7. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
-8. Keep rendered geometry evidence contracts current with
+7. Keep canon promotion records current with
+   `scripts/ui_canon_promotion_check.mjs`; only the user can approve a
+   promotion.
+8. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
+9. Keep rendered geometry evidence contracts current with
    `scripts/ui_rendered_geometry_manifest_check.mjs`.
-9. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
-10. Keep component extraction APIs current with
+10. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
+11. Keep component extraction APIs current with
    `scripts/ui_component_extraction_check.mjs`.
-11. Keep visual authorization scopes current with
+12. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default.
-12. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
-13. Keep private baseline coverage current with
+13. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+14. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-14. When private geometry evidence is available, verify it with
+15. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-15. When private baselines are available, verify them with
+16. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-16. When private copy snapshots are available, verify them with
+17. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-17. When the lane is not visual-authorized, use
+18. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

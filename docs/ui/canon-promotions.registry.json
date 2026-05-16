@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Only the user can promote a visual surface into canon. Public promotion records store safe aliases, hashes, dates, and contract IDs; screenshots, approvals, and review artifacts stay private.",
+  "privateApprovalAlias": "private-codex-ui-approval",
+  "privateBaselineAlias": "private-codex-ui-baselines",
+  "privateCopyAlias": "private-codex-ui-copy-snapshots",
+  "privateGeometryAlias": "private-codex-ui-rendered-geometry",
+  "promotionStatuses": ["approved", "revoked", "superseded"],
+  "requiredPromotionFields": [
+    "id",
+    "status",
+    "surfaceId",
+    "platform",
+    "patterns",
+    "approvedBy",
+    "approvedAt",
+    "privateApprovalReference",
+    "privateBaselineReference",
+    "copySnapshotReference",
+    "geometryEvidenceReference",
+    "protectedSurfaceId"
+  ],
+  "promotions": []
+}

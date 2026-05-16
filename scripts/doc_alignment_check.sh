@@ -53,11 +53,13 @@ for file in \
   "docs/ui/pattern-registry/patterns/NOTES.md" \
   "docs/ui/debt.baseline.json" \
   "docs/ui/protected-surfaces.registry.json" \
+  "docs/ui/canon-promotions.registry.json" \
   "docs/ui/performance-budgets.registry.json" \
   "docs/ui/private-baselines.manifest.json" \
   "docs/ui/visual-change-proposal.template.md" \
   "docs/ui/inspiration/references.registry.json" \
   "scripts/naming-shape-check.mjs" \
+  "scripts/ui_canon_promotion_check.mjs" \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_component_extraction_check.mjs" \
@@ -93,6 +95,7 @@ require_snippet "docs/adr/0010-interface-governance.md" "Extract reusable compon
 require_snippet "docs/ui/README.md" "Only an explicitly authorized visual lane may make"
 require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the current authorized scope"
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_canon_promotion_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
@@ -111,6 +114,8 @@ require_snippet "docs/ui/copy.inventory.json" "approvalBlockedWithoutSnapshot"
 require_snippet "docs/ui/copy.inventory.json" "ui_private_copy_verify.mjs"
 require_snippet "docs/ui/component-extraction.manifest.json" "unbounded-prop-bag"
 require_snippet "docs/ui/component-extraction.manifest.json" "minimumCallSites"
+require_snippet "docs/ui/canon-promotions.registry.json" "Only the user can promote"
+require_snippet "docs/ui/canon-promotions.registry.json" "private-codex-ui-approval"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"

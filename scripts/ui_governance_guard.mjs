@@ -265,6 +265,21 @@ for (const [index, surface] of requireArray(protectedSurfaces, protectedPath, "s
   requireFields(surface, label, ["id", "scope", "approvedBy", "approvedAt", "contract", "privateBaselineReference"]);
 }
 
+const promotionPath = "docs/ui/canon-promotions.registry.json";
+const promotions = readJson(promotionPath);
+requireFields(promotions, promotionPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "privateApprovalAlias",
+  "privateBaselineAlias",
+  "privateCopyAlias",
+  "privateGeometryAlias",
+  "promotionStatuses",
+  "requiredPromotionFields",
+  "promotions",
+]);
+
 const budgetsPath = "docs/ui/performance-budgets.registry.json";
 const budgets = readJson(budgetsPath);
 requireFields(budgets, budgetsPath, ["schemaVersion", "status", "policy", "flows"]);
@@ -449,6 +464,7 @@ const requiredDocs = [
   "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/debt.baseline.json",
   "docs/ui/protected-surfaces.registry.json",
+  "docs/ui/canon-promotions.registry.json",
   "docs/ui/performance-budgets.registry.json",
   "docs/ui/private-baselines.manifest.json",
   "docs/ui/visual-change-proposal.template.md",

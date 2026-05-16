@@ -36,6 +36,7 @@
     "registry-completeness",
     "debt-baseline-shape",
     "protected-surface-shape",
+    "canon-promotion-record-check",
     "exception-expiry",
     "geometry-contract-shape",
     "geometry-contract-clause-check",
