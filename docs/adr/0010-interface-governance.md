@@ -41,9 +41,11 @@ UI work is classified into four mutation classes:
   rendered output is equivalent.
 
 Only explicitly authorized visual lanes may make `visual-ui` or `copy-ui`
-decisions. The concrete authorization assignment lives outside the public repo.
-Non-authorized agents may implement `functional-ui` and governance/tooling, but
-when they find visual drift they must report and list it instead of repairing it.
+decisions. The public authority contract is
+`docs/ui/visual-model-allowlist.manifest.json`; concrete private assignment
+lives outside the public repo. Non-authorized agents may implement
+`functional-ui` and governance/tooling, but when they find visual drift they
+must report and list it instead of repairing it.
 
 Mechanical refactors of UI are allowed only when equivalence is proven by
 before/after geometry plus visual baseline checks, with no token or copy change.

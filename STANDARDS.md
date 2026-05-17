@@ -24,7 +24,7 @@ Exceptions are named with their reason; silent deviations are bugs.
   refers to them by name. When `STANDARDS.md` mentions "the dropdown
   recipe", that recipe is in `STYLE.md §6.3`.
 - Machine-readable UI contracts live in `docs/ui/`. When a surface maps to a
-  registry pattern, that pattern is the auditable contract for states,
+  pattern registry entry, that pattern is the auditable contract for states,
   geometry, copy, validation, and visual mutation permissions.
 - A check is **auditable** if a contributor can produce a yes/no answer
   by running the app or grepping the source. Anything subjective ("feels

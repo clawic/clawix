@@ -13,6 +13,7 @@ Those budgets are per critical flow and per governed platform. They become
 enforceable only after the user approves measured private baselines, referenced
 through [`docs/ui/private-baselines.manifest.json`](docs/ui/private-baselines.manifest.json).
 
-Public checks validate the registry shape and baseline linkage. Private
-evidence remains outside the public repository and is verified with
+Public checks validate the registry shape and baseline linkage through
+`node scripts/ui_performance_budget_check.mjs`. Private evidence remains
+outside the public repository and is verified with
 `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved`.

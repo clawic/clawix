@@ -34,6 +34,7 @@
   ],
   "publicChecks": [
     "registry-completeness",
+    "canon-docs-alignment",
     "debt-baseline-shape",
     "debt-report-coverage",
     "debt-audit-manifest-check",

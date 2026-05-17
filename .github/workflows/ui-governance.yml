@@ -20,6 +20,8 @@ jobs:
           node-version: "22"
       - name: Validate UI governance manifests
         run: node scripts/ui_governance_guard.mjs
+      - name: Validate UI canon docs
+        run: node scripts/ui_canon_docs_check.mjs
       - name: Validate UI canon promotion records
         run: node scripts/ui_canon_promotion_check.mjs
       - name: Validate UI decision verification

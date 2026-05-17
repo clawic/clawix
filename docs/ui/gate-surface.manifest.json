@@ -16,6 +16,7 @@
   },
   "requiredPublicCheckScripts": [
     "scripts/ui_governance_guard.mjs",
+    "scripts/ui_canon_docs_check.mjs",
     "scripts/ui_canon_promotion_check.mjs",
     "scripts/ui_decision_verification_check.mjs",
     "scripts/ui_debt_report_check.mjs",
@@ -54,6 +55,7 @@
   ],
   "publicCheckCoverage": {
     "registry-completeness": ["scripts/ui_governance_guard.mjs"],
+    "canon-docs-alignment": ["scripts/ui_canon_docs_check.mjs"],
     "debt-baseline-shape": ["scripts/ui_governance_guard.mjs"],
     "debt-report-coverage": ["scripts/ui_debt_report_check.mjs"],
     "debt-audit-manifest-check": ["scripts/ui_debt_audit_manifest_check.mjs"],

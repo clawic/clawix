@@ -523,7 +523,8 @@ style rules below cover the visual layer.)
   fast test lane runs it.
 - **Visual mutation boundary.** UI work is classified as `functional-ui`,
   `visual-ui`, `copy-ui`, or `mechanical-equivalent-refactor`. Only explicitly
-  authorized visual lanes may make `visual-ui` or `copy-ui` decisions.
+  authorized visual lanes may make `visual-ui` or `copy-ui` decisions; the
+  public authorization contract is `docs/ui/visual-model-allowlist.manifest.json`.
   Non-authorized agents report visual drift instead of repairing it.
 - **Open lint work**:
   - SF Symbols guard: a build check that flags any `Image(systemName:)`
