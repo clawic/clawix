@@ -185,7 +185,7 @@ function verifyApprovedScope(value, label) {
   fail(`${label} must be a non-empty string, array, or object`);
 }
 
-function verifyApprovedScopeFields(value, requiredFields, label) {
+function verifyApprovedScopeFields(value, requiredFields, privateApprovalAlias, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     fail(`${label} must be an object with approved user scope metadata`);
     return;
@@ -194,8 +194,8 @@ function verifyApprovedScopeFields(value, requiredFields, label) {
   if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
   verifyIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
   const approvalReference = splitReference(value.privateApprovalReference);
-  if (!approvalReference || approvalReference.alias !== "private-codex-ui-approvals") {
-    fail(`${label}.privateApprovalReference must use private-codex-ui-approvals:`);
+  if (!approvalReference || approvalReference.alias !== privateApprovalAlias) {
+    fail(`${label}.privateApprovalReference must use ${privateApprovalAlias}:`);
   }
   if (typeof value.scopeId !== "string" || value.scopeId === "") {
     fail(`${label}.scopeId must be a non-empty string`);
@@ -525,6 +525,7 @@ const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKind
 const renderedGeometry = readRepoJson("docs/ui/rendered-geometry.manifest.json");
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
 const mechanicalEquivalence = readRepoJson("docs/ui/mechanical-equivalence.manifest.json");
+const approvalAuthority = readRepoJson("docs/ui/approval-authority.manifest.json");
 const driftPolicy = {
   allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
   blockingStatuses: new Set(Array.isArray(renderedDrift?.blockingReportStatuses) ? renderedDrift.blockingReportStatuses : []),
@@ -582,7 +583,12 @@ for (const item of plan.evidence || []) {
   verifyFindingItems(evidence, label, allowedFindingCategories);
   if (item.type === "mechanical-equivalence") {
     const record = publicRegistries.mechanicalEquivalenceByKey.get(`${item.platform}:${item.id}`);
-    verifyApprovedScopeFields(evidence.approvedScope, mechanicalEquivalence?.requiredApprovedScopeFields || [], `${label}.approvedScope`);
+    verifyApprovedScopeFields(
+      evidence.approvedScope,
+      mechanicalEquivalence?.requiredApprovedScopeFields || [],
+      approvalAuthority?.privateApprovalAlias,
+      `${label}.approvedScope`,
+    );
     if (record) {
       for (const field of mechanicalEquivalence?.requiredEvidenceFields || []) {
         if (!deepEqual(evidence[field], record[field])) {

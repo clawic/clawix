@@ -83,7 +83,7 @@ function requireIsoTimestamp(value, label) {
   }
 }
 
-function requireApprovedScope(value, requiredFields, label) {
+function requireApprovedScope(value, requiredFields, privateApprovalAlias, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     fail(`${label} must be an object with approved user scope metadata`);
     return;
@@ -91,7 +91,7 @@ function requireApprovedScope(value, requiredFields, label) {
   requireFields(value, label, requiredFields);
   if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
   requireIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
-  requireAlias(value.privateApprovalReference, "private-codex-ui-approvals", `${label}.privateApprovalReference`);
+  requireAlias(value.privateApprovalReference, privateApprovalAlias, `${label}.privateApprovalReference`);
   if (typeof value.scopeId !== "string" || value.scopeId === "") {
     fail(`${label}.scopeId must be a non-empty string`);
   }
@@ -99,6 +99,8 @@ function requireApprovedScope(value, requiredFields, label) {
 
 const manifestPath = "docs/ui/mechanical-equivalence.manifest.json";
 const manifest = readJson(manifestPath);
+const approvalAuthorityPath = "docs/ui/approval-authority.manifest.json";
+const approvalAuthority = readJson(approvalAuthorityPath);
 requireFields(manifest, manifestPath, [
   "schemaVersion",
   "status",
@@ -113,6 +115,7 @@ requireFields(manifest, manifestPath, [
   "equivalenceStatuses",
   "records",
 ]);
+requireFields(approvalAuthority, approvalAuthorityPath, ["privateApprovalAlias"]);
 
 if (manifest?.privateEvidenceAlias !== "private-codex-ui-mechanical-equivalence") {
   fail(`${manifestPath}.privateEvidenceAlias must be private-codex-ui-mechanical-equivalence`);
@@ -194,7 +197,7 @@ for (const [index, record] of records.entries()) {
   if (!equivalenceStatuses.has(record.status)) fail(`${label}.status is invalid`);
   if (!tokenStatuses.has(record.tokenDiffStatus)) fail(`${label}.tokenDiffStatus is invalid`);
   requireIsoTimestamp(record.approvedByUserAt, `${label}.approvedByUserAt`);
-  requireApprovedScope(record.approvedScope, requiredApprovedScopeFields, `${label}.approvedScope`);
+  requireApprovedScope(record.approvedScope, requiredApprovedScopeFields, approvalAuthority?.privateApprovalAlias, `${label}.approvedScope`);
   for (const field of [
     "beforeSnapshotReference",
     "afterSnapshotReference",
