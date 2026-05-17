@@ -5,6 +5,7 @@
   "patternSource": "docs/ui/pattern-registry/patterns.registry.json",
   "privateGeometryAlias": "private-codex-ui-rendered-geometry",
   "evidenceFilename": "geometry-evidence.json",
+  "surfaceEvidenceFilename": "surface-geometry.json",
   "verificationCommand": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved",
   "requiredEvidenceFields": [
     "patternId",

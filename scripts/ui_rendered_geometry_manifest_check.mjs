@@ -65,6 +65,7 @@ requireFields(manifest, manifestPath, [
   "patternSource",
   "privateGeometryAlias",
   "evidenceFilename",
+  "surfaceEvidenceFilename",
   "verificationCommand",
   "requiredEvidenceFields",
   "requiredSurfaceEvidenceFields",
@@ -76,6 +77,9 @@ if (manifest?.privateGeometryAlias !== "private-codex-ui-rendered-geometry") {
 }
 if (manifest?.evidenceFilename !== "geometry-evidence.json") {
   fail(`${manifestPath}.evidenceFilename must be geometry-evidence.json`);
+}
+if (manifest?.surfaceEvidenceFilename !== "surface-geometry.json") {
+  fail(`${manifestPath}.surfaceEvidenceFilename must be surface-geometry.json`);
 }
 if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_geometry_verify.mjs")) {
   fail(`${manifestPath}.verificationCommand must run scripts/ui_private_geometry_verify.mjs`);

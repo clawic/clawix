@@ -152,6 +152,7 @@ const registry = readJson(manifest?.patternSource || "docs/ui/pattern-registry/p
 const surfaceCoverage = readJson("docs/ui/surface-baseline-coverage.manifest.json");
 const privateGeometryAlias = manifest?.privateGeometryAlias || "private-codex-ui-rendered-geometry";
 const evidenceFilename = manifest?.evidenceFilename || "geometry-evidence.json";
+const surfaceEvidenceFilename = manifest?.surfaceEvidenceFilename || "surface-geometry.json";
 const requiredEvidence = Array.isArray(manifest?.requiredEvidenceFields) ? manifest.requiredEvidenceFields : [];
 const requiredSurfaceEvidence = Array.isArray(manifest?.requiredSurfaceEvidenceFields) ? manifest.requiredSurfaceEvidenceFields : [];
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
@@ -192,8 +193,8 @@ if (skipEvidence) {
     const label = `surface:${entry?.platform || "unknown"}:${entry?.coverageId || index}`;
     const suffix = splitReference(entry?.geometryEvidenceReference, privateGeometryAlias, `${label}.geometryEvidenceReference`);
     if (!suffix) continue;
-    const evidencePath = path.join(privateRoot, suffix.split("/").join(path.sep), evidenceFilename);
-    const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
+    const evidencePath = path.join(privateRoot, suffix.split("/").join(path.sep), surfaceEvidenceFilename);
+    const evidence = readJsonFile(evidencePath, `${label} ${surfaceEvidenceFilename}`);
     if (!evidence) continue;
     for (const field of requiredSurfaceEvidence) requireField(evidence, `${label} evidence`, field);
     assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
