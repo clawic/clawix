@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "The interface governance goal can only be completed after the final private completion runner verifies decision closure, the private goal/source session, and all approved private visual evidence. Public CI validates this contract without private roots.",
+  "decisionVerificationPath": "docs/ui/decision-verification.json",
+  "completionAuditPath": "docs/ui/completion-audit.md",
+  "completionSourceManifestPath": "docs/ui/completion-source.manifest.json",
+  "privateVisualValidationManifestPath": "docs/ui/private-visual-validation.manifest.json",
+  "publicCheckScript": "scripts/ui_completion_gate_check.mjs",
+  "privateVerifierScript": "scripts/ui_private_completion_verify.mjs",
+  "finalVerificationCommand": "CLAWIX_UI_PRIVATE_COMPLETION_GOAL_FILE=<private-goal-file> CLAWIX_UI_PRIVATE_COMPLETION_SOURCE_SESSION_FILE=<private-source-session-jsonl> CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_completion_verify.mjs --require-approved",
+  "requiredPublicChecks": [
+    "decision-verification-evidence-check",
+    "completion-audit-check",
+    "completion-source-contract-check",
+    "private-visual-validation-manifest-shape"
+  ],
+  "goalUpdateRule": "Call update_goal only after scripts/ui_private_completion_verify.mjs --require-approved exits 0.",
+  "externalPendingExitCode": 2
+}

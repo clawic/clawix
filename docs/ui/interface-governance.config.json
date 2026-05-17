@@ -47,6 +47,7 @@
     "decision-verification-evidence-check",
     "completion-audit-check",
     "completion-source-contract-check",
+    "completion-final-gate-check",
     "exception-expiry",
     "exception-registry-check",
     "inspiration-reference-policy-check",
