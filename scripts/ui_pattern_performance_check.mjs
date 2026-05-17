@@ -79,6 +79,7 @@ for (const [index, mapping] of requireArray(manifest, manifestPath, "requiredFlo
   requireFields(mapping, label, ["flowId", "patterns"]);
   if (!budgetFlows.has(mapping?.flowId)) fail(`${label}.flowId must exist in ${budgetsPath}`);
   mappedFlows.add(mapping?.flowId);
+  const mappingPlatforms = new Set();
   for (const patternId of requireArray(mapping, label, "patterns")) {
     if (!patternIds.has(patternId)) {
       fail(`${label}.patterns references unknown pattern ${patternId}`);
@@ -86,6 +87,7 @@ for (const [index, mapping] of requireArray(manifest, manifestPath, "requiredFlo
     }
     const patternPath = `docs/ui/pattern-registry/patterns/${patternId}.pattern.json`;
     const pattern = readJson(patternPath);
+    for (const platform of requireArray(pattern, patternPath, "platforms")) mappingPlatforms.add(platform);
     const performance = pattern?.performance || {};
     requireFields(performance, `${patternPath}.performance`, [
       "criticalFlows",
@@ -101,6 +103,11 @@ for (const [index, mapping] of requireArray(manifest, manifestPath, "requiredFlo
     const criticalFlows = new Set(requireArray(performance, `${patternPath}.performance`, "criticalFlows", { nonEmpty: false }));
     if (!criticalFlows.has(mapping.flowId)) {
       fail(`${patternPath}.performance.criticalFlows must include ${mapping.flowId}`);
+    }
+  }
+  for (const platform of budgetPlatforms.get(mapping.flowId) || []) {
+    if (!mappingPlatforms.has(platform)) {
+      fail(`${label}.patterns must include at least one pattern declared for ${platform}`);
     }
   }
 }
