@@ -116,14 +116,40 @@ const publicCiValidates = new Set(requireArray(publicCiStrategy, `${manifestPath
 for (const required of ["lints", "geometry", "manifests"]) {
   if (!publicCiValidates.has(required)) fail(`${manifestPath}.publicCiStrategy.validates must include ${required}`);
 }
+if (!publicCiValidates.has("visual-diff")) {
+  fail(`${manifestPath}.publicCiStrategy.validates must include visual-diff`);
+}
 if (publicCiStrategy.forbidsPrivateRoots !== true) {
   fail(`${manifestPath}.publicCiStrategy.forbidsPrivateRoots must be true`);
+}
+if (publicCiStrategy.diffBaseEnv !== "CLAWIX_UI_GUARD_DIFF_BASE") {
+  fail(`${manifestPath}.publicCiStrategy.diffBaseEnv must be CLAWIX_UI_GUARD_DIFF_BASE`);
+}
+const diffBaseConsumers = new Set(
+  requireArray(publicCiStrategy, `${manifestPath}.publicCiStrategy`, "diffBaseConsumers"),
+);
+for (const script of ["scripts/ui_governance_guard.mjs", "scripts/ui_pattern_mutation_guard.mjs"]) {
+  if (!diffBaseConsumers.has(script)) {
+    fail(`${manifestPath}.publicCiStrategy.diffBaseConsumers must include ${script}`);
+  }
+  const source = read(script);
+  if (!source.includes(publicCiStrategy.diffBaseEnv)) {
+    fail(`${script} must consume ${publicCiStrategy.diffBaseEnv}`);
+  }
 }
 if (publicCiStrategy.privateEvidenceMode !== "external-pending-contract") {
   fail(`${manifestPath}.publicCiStrategy.privateEvidenceMode must be external-pending-contract`);
 }
 if (/CLAWIX_UI_PRIVATE_[A-Z_]+_ROOT/.test(workflow)) {
   fail(`${manifest.publicWorkflow} must not require private evidence roots`);
+}
+for (const snippet of [
+  "fetch-depth: 0",
+  "CLAWIX_UI_GUARD_DIFF_BASE",
+  "github.event.pull_request.base.sha",
+  "github.event.before",
+]) {
+  if (!workflow.includes(snippet)) fail(`${manifest.publicWorkflow} must wire UI visual diff base: ${snippet}`);
 }
 
 const lanes = new Set(requireArray(manifest, manifestPath, "requiredLanes"));

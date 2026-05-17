@@ -8,8 +8,10 @@
   "releaseLaneRequires": ["integration", "e2e", "device", "host"],
   "publicCiStrategy": {
     "job": "public-ui-governance",
-    "validates": ["lints", "geometry", "manifests"],
+    "validates": ["lints", "geometry", "manifests", "visual-diff"],
     "forbidsPrivateRoots": true,
+    "diffBaseEnv": "CLAWIX_UI_GUARD_DIFF_BASE",
+    "diffBaseConsumers": ["scripts/ui_governance_guard.mjs", "scripts/ui_pattern_mutation_guard.mjs"],
     "privateEvidenceMode": "external-pending-contract"
   },
   "requiredPublicCheckScripts": [

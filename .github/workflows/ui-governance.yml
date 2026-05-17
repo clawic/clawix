@@ -9,8 +9,12 @@ on:
 jobs:
   public-ui-governance:
     runs-on: ubuntu-latest
+    env:
+      CLAWIX_UI_GUARD_DIFF_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
