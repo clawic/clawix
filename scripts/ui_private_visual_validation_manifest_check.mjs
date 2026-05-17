@@ -59,6 +59,9 @@ requireFields(manifest, manifestPath, [
 if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_visual_verify.mjs")) {
   fail(`${manifestPath}.verificationCommand must run scripts/ui_private_visual_verify.mjs`);
 }
+if (!String(manifest?.verificationCommand || "").includes("--require-approved")) {
+  fail(`${manifestPath}.verificationCommand must require approved private evidence`);
+}
 if (manifest?.externalPendingExitCode !== 2) {
   fail(`${manifestPath}.externalPendingExitCode must be 2`);
 }
@@ -72,6 +75,9 @@ for (const root of [
   "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
 ]) {
   if (!roots.has(root)) fail(`${manifestPath}.requiredRoots must include ${root}`);
+  if (!String(manifest?.verificationCommand || "").includes(root)) {
+    fail(`${manifestPath}.verificationCommand must include ${root}`);
+  }
 }
 
 const delegates = requireArray(manifest, manifestPath, "delegates");
@@ -84,8 +90,13 @@ for (const script of [
   "scripts/ui_private_debt_audit_verify.mjs",
   "scripts/ui_private_performance_budget_verify.mjs",
 ]) {
-  if (!delegates.some((delegate) => String(delegate).includes(script))) {
+  const delegate = delegates.find((delegate) => String(delegate).includes(script));
+  if (!delegate) {
     fail(`${manifestPath}.delegates must include ${script}`);
+    continue;
+  }
+  if (!String(delegate).includes("--require-approved")) {
+    fail(`${manifestPath}.delegates entry for ${script} must include --require-approved`);
   }
 }
 
