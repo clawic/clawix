@@ -8,6 +8,16 @@ conversation before the v1 surface closure goal can be closed. It mirrors the
 37 binding answers from the private source without publishing private paths or
 private local files.
 
+Source extraction:
+
+- 39 `request_user_input` prompts were reviewed.
+- 37 binding answers are mirrored in `docs/v1-surface-closure-decisions.json`.
+- 2 excluded prompts are documented: `bridge_manifest_source` had no output
+  after rollback, and the first `bridge_version_field` request failed in
+  Default mode before the later answered prompt.
+- The free-form `apps_design_storage` concern is retained as the inventory
+  requirement for the later `apps_design_contract_status` move-now decision.
+
 Status vocabulary:
 
 - `verified`: current repository evidence proves the decision is implemented or intentionally documented.

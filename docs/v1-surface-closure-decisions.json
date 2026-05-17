@@ -9,6 +9,64 @@
     "A rolled-back bridge_manifest_source prompt and a failed Default-mode request are excluded from the binding count.",
     "The early bridge_contract_v1 answer is retained as an additional binding decision and is implemented by the clean v1 bridge contract."
   ],
+  "sourceExtraction": {
+    "requestUserInputPrompts": 39,
+    "bindingAnswers": 37,
+    "excludedPrompts": [
+      {
+        "id": "bridge_manifest_source",
+        "reason": "rolled-back prompt had no function_call_output"
+      },
+      {
+        "id": "bridge_version_field",
+        "reason": "Default-mode request_user_input failed and was superseded by the later answered prompt"
+      }
+    ],
+    "bindingSourceQuestionIds": [
+      "bridge_contract_v1",
+      "bridge_version_field",
+      "bridge_source_of_truth",
+      "bridge_target_scope",
+      "framework_store_ownership",
+      "surface_parity_gate",
+      "deep_link_shape",
+      "oauth_deeplink_shape",
+      "pairing_qr_contract",
+      "surface_registry_shape",
+      "bridge_v1_frame_scope",
+      "bridge_send_frame_name",
+      "bridge_chat_vocabulary",
+      "mac_name_field",
+      "client_kind_values",
+      "client_identity_fields",
+      "apps_design_storage",
+      "storage_bucket_policy",
+      "apps_design_contract_status",
+      "audio_dictation_storage",
+      "agent_skill_storage_format",
+      "project_identity_storage",
+      "secrets_storage_boundary",
+      "local_models_storage",
+      "host_action_policy_storage",
+      "quickask_prompts_storage",
+      "provider_config_owner",
+      "external_integrations_policy",
+      "mcp_config_policy",
+      "experimental_surface_policy",
+      "domain_verticals_policy",
+      "vertical_completion_depth",
+      "agent_tools_policy",
+      "migration_policy_no_users",
+      "repo_scope",
+      "missing_domain_contracts",
+      "execution_batching"
+    ],
+    "normalizationNotes": [
+      "`apps_design_storage` records the user's inventory concern; `apps_design_contract_status` records the final move-now choice.",
+      "`host_action_policy_storage` is reviewed with Browser, Screen Tools, Mac Utilities, Git, Remote Mesh, OpenCode, and Simulators policy coverage.",
+      "Several source ids are normalized to plan vocabulary, for example `bridge_target_scope` to `active_target_scope` and `deep_link_shape` to `session_deep_link`."
+    ]
+  },
   "decisions": [
     { "id": "bridge_contract_v1", "answer": "Align all current bridge contracts as v1" },
     { "id": "bridge_version_field", "answer": "Keep schemaVersion" },
