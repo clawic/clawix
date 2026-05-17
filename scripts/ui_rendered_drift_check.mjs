@@ -66,6 +66,7 @@ requireFields(manifest, manifestPath, [
   "reportStatuses",
   "requiredReportFields",
   "requiredEvidenceFields",
+  "failureOutputRequirements",
   "evidenceFilename",
   "reports",
 ]);
@@ -92,6 +93,10 @@ for (const field of ["coverageId", "platform", "privateDriftReportReference", "d
 const requiredEvidenceFields = requireArray(manifest, manifestPath, "requiredEvidenceFields");
 for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reportHash", "producedAt"]) {
   if (!requiredEvidenceFields.includes(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
+}
+const failureOutputRequirements = requireArray(manifest, manifestPath, "failureOutputRequirements");
+for (const field of ["route", "reason", "required permission", "privateDriftReportReference"]) {
+  if (!failureOutputRequirements.includes(field)) fail(`${manifestPath}.failureOutputRequirements must include ${field}`);
 }
 if (manifest?.evidenceFilename !== "drift-report.json") fail(`${manifestPath}.evidenceFilename must be drift-report.json`);
 

@@ -9,6 +9,7 @@
   "reportStatuses": ["pending-private-evidence", "no-drift", "drift-detected", "approved-drift"],
   "requiredReportFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reviewAfter"],
   "requiredEvidenceFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reportHash", "producedAt"],
+  "failureOutputRequirements": ["route", "reason", "required permission", "privateDriftReportReference"],
   "evidenceFilename": "drift-report.json",
   "reports": [
     { "coverageId": "macos-root-chrome", "platform": "macos", "privateDriftReportReference": "private-codex-ui-rendered-drift:surfaces/macos/macos-root-chrome", "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"], "status": "pending-private-evidence", "reviewAfter": "2026-08-15" },

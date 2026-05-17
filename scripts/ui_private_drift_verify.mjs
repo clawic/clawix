@@ -59,6 +59,16 @@ function assertHash(value, label) {
   }
 }
 
+function failReport(report, label, reason) {
+  fail([
+    `${label} rendered drift evidence is not approved`,
+    `route: ${report.coverageId || label}`,
+    `privateDriftReportReference: ${report.privateDriftReportReference || "missing"}`,
+    `reason: ${reason}`,
+    "required permission: approved private rendered drift evidence from a visual-authorized lane",
+  ].join("; "));
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_DRIFT_ROOT || "";
 if (!privateRootRaw) {
@@ -90,7 +100,7 @@ for (const [index, report] of (manifest?.reports || []).entries()) {
   if (report.status === "pending-private-evidence") {
     pending += 1;
     if (!includePending) {
-      if (requireApproved) fail(`${label} is pending private evidence`);
+      if (requireApproved) failReport(report, label, "pending private evidence");
       continue;
     }
   }

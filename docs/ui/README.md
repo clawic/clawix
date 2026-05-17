@@ -33,8 +33,8 @@ the public repo.
   visible surface coverage entry.
 - `surface-baseline-coverage.manifest.json`: public-safe private baseline,
   rendered geometry, and copy snapshot references for visible surface coverage.
-- `rendered-drift.manifest.json`: public-safe routes and categories for private
-  rendered drift reports.
+- `rendered-drift.manifest.json`: public-safe routes, categories, and required
+  failure diagnostics for private rendered drift reports.
 - `gate-surface.manifest.json`: public contract for local, changed, release,
   and CI gate wiring.
 - `visual-model-allowlist.manifest.json`: explicit visual model gate for
@@ -150,7 +150,8 @@ the public repo.
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
    identify an allowlisted visual model.
 32. Keep visual guard failure diagnostics current with
-   `scripts/ui_visual_guard_failure_check.mjs`.
+   `scripts/ui_visual_guard_failure_check.mjs`; failures must include route,
+   reason, and required permission.
 33. Keep conceptual visual proposal records current with
    `scripts/ui_visual_proposal_check.mjs`.
 34. Keep private artifacts out of the public repo with

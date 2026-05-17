@@ -244,6 +244,7 @@ require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "private-codex
 require_snippet "docs/ui/rendered-drift.manifest.json" "private-codex-ui-rendered-drift"
 require_snippet "docs/ui/rendered-drift.manifest.json" "drift-detected"
 require_snippet "docs/ui/rendered-drift.manifest.json" "drift-report.json"
+require_snippet "docs/ui/rendered-drift.manifest.json" "failureOutputRequirements"
 require_snippet "docs/ui/gate-surface.manifest.json" "releaseLaneRequires"
 require_snippet "docs/ui/gate-surface.manifest.json" "scripts/ui_release_gate_check.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-baselines"
