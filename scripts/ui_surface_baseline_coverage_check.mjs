@@ -81,7 +81,18 @@ if (manifest?.privateCopyAlias !== copyInventory?.privateSnapshotAlias) {
 }
 
 const requiredEvidenceFields = new Set(requireArray(manifest, manifestPath, "requiredEvidenceFields"));
-for (const field of ["screenshotHash", "geometryHash", "copySnapshotHash", "approvedByUserAt", "approvedScope"]) {
+for (const field of [
+  "coverageId",
+  "platform",
+  "privateBaselineReference",
+  "captureCommand",
+  "screenshotHash",
+  "geometryHash",
+  "copySnapshotHash",
+  "baselineArtifactHash",
+  "approvedByUserAt",
+  "approvedScope",
+]) {
   if (!requiredEvidenceFields.has(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
 }
 const allowedStatuses = new Set(requireArray(manifest, manifestPath, "allowedBaselineStatuses"));
@@ -124,7 +135,7 @@ for (const [index, entry] of requireArray(manifest, manifestPath, "coverage").en
     if (!evidence.has(field)) fail(`${label}.requiredEvidence must include ${field}`);
   }
   if (entry.baselineStatus === "approved") {
-    for (const hashField of ["screenshotHash", "geometryHash", "copySnapshotHash"]) {
+    for (const hashField of ["screenshotHash", "geometryHash", "copySnapshotHash", "baselineArtifactHash"]) {
       if (typeof entry[hashField] !== "string" || entry[hashField].length < 16) {
         fail(`${label}.${hashField} must be present when approved`);
       }

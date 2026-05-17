@@ -33,6 +33,8 @@ the public repo.
   visible surface coverage entry.
 - `surface-baseline-coverage.manifest.json`: public-safe private baseline,
   rendered geometry, and copy snapshot references for visible surface coverage.
+  Surface evidence must include the coverage ID, platform, private baseline
+  reference, capture command, and approved artifact hashes before approval.
 - `rendered-drift.manifest.json`: public-safe routes, categories, and required
   failure diagnostics for private rendered drift reports.
 - `gate-surface.manifest.json`: public contract for local, changed, release,
