@@ -61,8 +61,11 @@ fun ShortCodePairingScreen(
     val flow = remember { ShortCodePairingFlow(container) }
     val discovered by flow.discovered.collectAsStateWithLifecycle()
     val status by flow.status.collectAsStateWithLifecycle()
+    val busy by flow.busy.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var code by remember { mutableStateOf("") }
+    val codeComplete = code.length >= 9
+    val canPair = codeComplete && discovered.isNotEmpty() && !busy
 
     LaunchedEffect(Unit) { flow.start() }
 
@@ -131,7 +134,7 @@ fun ShortCodePairingScreen(
                     .height(52.dp)
                     .clip(RoundedCornerShape(AppLayout.buttonCornerRadius))
                     .background(if (code.length >= 9) Palette.userBubbleFill else Palette.cardFill)
-                    .clickable(enabled = code.length >= 9 && discovered.isNotEmpty()) {
+                    .clickable(enabled = canPair) {
                         Haptics.send(view)
                         scope.launch {
                             val target = discovered.firstOrNull() ?: return@launch
@@ -168,7 +171,7 @@ fun ShortCodePairingScreen(
                 items(discovered, key = { it.name }) { mac ->
                     MacRow(mac = mac, onClick = {
                         scope.launch {
-                            if (code.length >= 9) {
+                            if (codeComplete && !busy) {
                                 val ok = flow.tryPair(mac, code)
                                 if (ok) onPaired()
                             }

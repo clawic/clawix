@@ -24,14 +24,5 @@
     "error": ["error", "failed", "failure", "alert", "catch"]
   },
   "allowedGapStatuses": ["pending-implementation-evidence", "platform-not-applicable"],
-  "allowedGaps": [
-    {
-      "coverageId": "android-domain-surfaces",
-      "state": "busy",
-      "status": "pending-implementation-evidence",
-      "owner": "ui-governance",
-      "reviewAfter": "2026-08-15",
-      "reason": "Android secondary domain surfaces do not currently expose a public source token for loading/busy state evidence; keep tracked until the implementation or private baseline records it."
-    }
-  ]
+  "allowedGaps": []
 }

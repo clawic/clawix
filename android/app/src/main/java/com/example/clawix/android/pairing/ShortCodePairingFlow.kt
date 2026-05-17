@@ -41,7 +41,9 @@ class ShortCodePairingFlow(private val container: AppContainer) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val _status = MutableStateFlow<String?>(null)
+    private val _busy = MutableStateFlow(false)
     val status: StateFlow<String?> = _status.asStateFlow()
+    val busy: StateFlow<Boolean> = _busy.asStateFlow()
     val discovered: StateFlow<List<DiscoveredMac>> = container.bonjour.discovered
 
     private var browseJob: Job? = null
@@ -64,78 +66,84 @@ class ShortCodePairingFlow(private val container: AppContainer) {
      * reason in `status` and returns false.
      */
     suspend fun tryPair(mac: DiscoveredMac, code: String): Boolean {
-        _status.value = "Connecting to ${mac.name}..."
-        val client = OkHttpClient.Builder()
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(8, TimeUnit.SECONDS)
-            .build()
-        val request = Request.Builder()
-            .url("ws://${mac.host}:${mac.port}/")
-            .build()
+        if (_busy.value) return false
+        _busy.value = true
+        try {
+            _status.value = "Connecting to ${mac.name}..."
+            val client = OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(8, TimeUnit.SECONDS)
+                .build()
+            val request = Request.Builder()
+                .url("ws://${mac.host}:${mac.port}/")
+                .build()
 
-        val ok = withTimeoutOrNull(8_000) {
-            suspendCancellableCoroutine<Boolean> { cont ->
-                var resumed = false
-                val listener = object : WebSocketListener() {
-                    override fun onOpen(webSocket: WebSocket, response: Response) {
-                        val auth = BridgeFrame(
-                            body = BridgeBody.Auth(
-                                token = code,
-                                deviceName = DeviceName.resolve(container.context),
-                                clientKind = ClientKind.COMPANION,
-                                clientId = BridgeDeviceIdentity.clientId,
-                                installationId = BridgeDeviceIdentity.installationId(container.context),
-                                deviceId = BridgeDeviceIdentity.deviceId(container.context),
+            val ok = withTimeoutOrNull(8_000) {
+                suspendCancellableCoroutine<Boolean> { cont ->
+                    var resumed = false
+                    val listener = object : WebSocketListener() {
+                        override fun onOpen(webSocket: WebSocket, response: Response) {
+                            val auth = BridgeFrame(
+                                body = BridgeBody.Auth(
+                                    token = code,
+                                    deviceName = DeviceName.resolve(container.context),
+                                    clientKind = ClientKind.COMPANION,
+                                    clientId = BridgeDeviceIdentity.clientId,
+                                    installationId = BridgeDeviceIdentity.installationId(container.context),
+                                    deviceId = BridgeDeviceIdentity.deviceId(container.context),
+                                )
                             )
-                        )
-                        webSocket.send(BridgeCoder.encode(auth))
-                    }
+                            webSocket.send(BridgeCoder.encode(auth))
+                        }
 
-                    override fun onMessage(webSocket: WebSocket, text: String) {
-                        val frame = runCatching { BridgeCoder.decode(text) }.getOrNull() ?: return
-                        when (val body = frame.body) {
-                            is BridgeBody.AuthOk -> {
-                                if (!resumed) {
-                                    resumed = true
-                                    val creds = Credentials(
-                                        host = mac.host,
-                                        port = mac.port,
-                                        token = code,
-                                        hostDisplayName = body.hostDisplayName ?: mac.name,
-                                        tailscaleHost = null,
-                                    )
-                                    container.credentialStore.save(creds)
-                                    container.bridgeClient.connect(creds)
-                                    cont.resume(true)
+                        override fun onMessage(webSocket: WebSocket, text: String) {
+                            val frame = runCatching { BridgeCoder.decode(text) }.getOrNull() ?: return
+                            when (val body = frame.body) {
+                                is BridgeBody.AuthOk -> {
+                                    if (!resumed) {
+                                        resumed = true
+                                        val creds = Credentials(
+                                            host = mac.host,
+                                            port = mac.port,
+                                            token = code,
+                                            hostDisplayName = body.hostDisplayName ?: mac.name,
+                                            tailscaleHost = null,
+                                        )
+                                        container.credentialStore.save(creds)
+                                        container.bridgeClient.connect(creds)
+                                        cont.resume(true)
+                                    }
+                                    webSocket.close(1000, null)
                                 }
-                                webSocket.close(1000, null)
+                                is BridgeBody.AuthFailed -> {
+                                    _status.value = "Pairing failed: ${body.reason}"
+                                    if (!resumed) { resumed = true; cont.resume(false) }
+                                    webSocket.close(1000, null)
+                                }
+                                is BridgeBody.VersionMismatch -> {
+                                    _status.value = "Update Clawix on your Mac (server v${body.serverVersion})"
+                                    if (!resumed) { resumed = true; cont.resume(false) }
+                                    webSocket.close(1000, null)
+                                }
+                                else -> { /* ignore other inbound frames */ }
                             }
-                            is BridgeBody.AuthFailed -> {
-                                _status.value = "Pairing failed: ${body.reason}"
-                                if (!resumed) { resumed = true; cont.resume(false) }
-                                webSocket.close(1000, null)
-                            }
-                            is BridgeBody.VersionMismatch -> {
-                                _status.value = "Update Clawix on your Mac (server v${body.serverVersion})"
-                                if (!resumed) { resumed = true; cont.resume(false) }
-                                webSocket.close(1000, null)
-                            }
-                            else -> { /* ignore other inbound frames */ }
+                        }
+
+                        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                            _status.value = "Network error: ${t.message ?: t.javaClass.simpleName}"
+                            if (!resumed) { resumed = true; cont.resume(false) }
                         }
                     }
-
-                    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                        _status.value = "Network error: ${t.message ?: t.javaClass.simpleName}"
-                        if (!resumed) { resumed = true; cont.resume(false) }
-                    }
+                    val ws = client.newWebSocket(request, listener)
+                    cont.invokeOnCancellation { ws.cancel() }
                 }
-                val ws = client.newWebSocket(request, listener)
-                cont.invokeOnCancellation { ws.cancel() }
+            } ?: false
+            if (!ok && _status.value == "Connecting to ${mac.name}...") {
+                _status.value = "Couldn't reach ${mac.name}. Try again?"
             }
-        } ?: false
-        if (!ok && _status.value == "Connecting to ${mac.name}...") {
-            _status.value = "Couldn't reach ${mac.name}. Try again?"
+            return ok
+        } finally {
+            _busy.value = false
         }
-        return ok
     }
 }
