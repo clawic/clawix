@@ -62,7 +62,7 @@ function splitReference(reference) {
   if (typeof reference !== "string" || !reference.includes(":")) return null;
   const [alias, ...suffixParts] = reference.split(":");
   const suffix = suffixParts.join(":");
-  if (!alias || !suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) return null;
+  if (!alias || !suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) return null;
   return { alias, suffix };
 }
 

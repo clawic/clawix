@@ -51,7 +51,7 @@ function relativePathFromReference(reference, alias) {
   const prefix = `${alias}:`;
   if (typeof reference !== "string" || !reference.startsWith(prefix)) return null;
   const suffix = reference.slice(prefix.length);
-  if (!suffix || suffix.includes("..") || suffix.startsWith("/") || suffix.startsWith("\\")) return null;
+  if (!suffix || suffix.includes("..") || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || /^[A-Z]:\\/.test(suffix)) return null;
   return suffix.split("/").join(path.sep);
 }
 

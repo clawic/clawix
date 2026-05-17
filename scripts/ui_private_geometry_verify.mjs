@@ -119,7 +119,7 @@ function splitReference(reference, alias, label) {
     return null;
   }
   const suffix = reference.slice(alias.length + 1);
-  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) {
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
     fail(`${label} must use a safe relative private reference`);
     return null;
   }
