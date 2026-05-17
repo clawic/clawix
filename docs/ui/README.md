@@ -78,7 +78,7 @@ the public repo.
 - `private-evidence-plan`: derived evidence plan emitted by
   `scripts/ui_private_evidence_plan_check.mjs`.
 - `private-visual-validation.manifest.json`: public contract for the aggregate
-  private visual validation runner.
+  private visual and performance evidence validation runner.
 - `visual-change-proposal.template.md`: conceptual-only proposal template for
   non-authorized visual/copy/layout changes.
 - `inspiration/`: non-canonical external references.
@@ -174,7 +174,8 @@ the public repo.
     evidence records without requiring private roots.
 38. Keep aggregate private visual validation current with
     `scripts/ui_private_visual_validation_manifest_check.mjs`.
-39. When all private roots are available, verify visual evidence end to end with
+39. When all private roots are available, verify visual and performance
+    evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
 40. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.

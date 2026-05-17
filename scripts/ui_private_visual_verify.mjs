@@ -37,6 +37,12 @@ const checks = [
     script: "scripts/ui_private_drift_verify.mjs",
     args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
   },
+  {
+    name: "private performance budgets",
+    env: "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
+    script: "scripts/ui_private_performance_budget_verify.mjs",
+    args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
+  },
 ];
 
 if (!requireApproved) {
@@ -44,9 +50,9 @@ if (!requireApproved) {
   process.exit(1);
 }
 
-const missingRoots = checks.filter((check) => !process.env[check.env]).map((check) => check.env);
+const missingRoots = [...new Set(checks.filter((check) => !process.env[check.env]).map((check) => check.env))];
 if (missingRoots.length > 0) {
-  console.error(`EXTERNAL PENDING: set ${missingRoots.join(", ")} to verify private UI visual evidence.`);
+  console.error(`EXTERNAL PENDING: set ${missingRoots.join(", ")} to verify private UI evidence.`);
   process.exit(2);
 }
 

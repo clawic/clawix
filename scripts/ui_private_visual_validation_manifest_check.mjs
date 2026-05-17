@@ -79,6 +79,7 @@ for (const script of [
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
   "scripts/ui_private_drift_verify.mjs",
+  "scripts/ui_private_performance_budget_verify.mjs",
 ]) {
   if (!delegates.some((delegate) => String(delegate).includes(script))) {
     fail(`${manifestPath}.delegates must include ${script}`);
@@ -91,6 +92,7 @@ for (const script of [
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
   "scripts/ui_private_drift_verify.mjs",
+  "scripts/ui_private_performance_budget_verify.mjs",
 ]) {
   if (!fs.existsSync(path.join(rootDir, script))) fail(`missing ${script}`);
 }
