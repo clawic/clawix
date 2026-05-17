@@ -1,1 +1,1 @@
-{"attachments":[{"kind":"image","filename":"screen.png","mimeType":"image/png","id":"att-image-1","dataBase64":"ZmFrZUltYWdl"}],"schemaVersion":1,"type":"sendMessage","sessionId":"session-1","text":"hello"}
+{"attachments":[{"kind":"image","id":"att-image-1","dataBase64":"ZmFrZUltYWdl","filename":"screen.png","mimeType":"image/png"}],"text":"hello","type":"sendMessage","sessionId":"session-1","schemaVersion":1}

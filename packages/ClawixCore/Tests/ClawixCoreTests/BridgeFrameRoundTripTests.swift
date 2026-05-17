@@ -30,7 +30,7 @@ final class BridgeFrameRoundTripTests: XCTestCase {
     func testPairingHandshake() throws {
         try roundTrip(.pairingStart)
         try roundTrip(.pairingPayload(
-            qrJson: "{\"v\":1,\"host\":\"127.0.0.1\",\"port\":24080,\"token\":\"abc\"}",
+            qrJson: "{\"v\":1,\"host\":\"127.0.0.1\",\"port\":24080,\"token\":\"abc\",\"shortCode\":\"ABC-234-XYZ\",\"hostDisplayName\":\"Fixture Mac\"}",
             token: "abc",
             shortCode: "ABC-234-XYZ"
         ))

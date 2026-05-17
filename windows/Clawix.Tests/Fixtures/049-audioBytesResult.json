@@ -1,1 +1,1 @@
-{"audioBase64":"ZmFrZUF1ZGlv","mimeType":"audio/m4a","durationMs":2400,"requestId":"req-audio-4","schemaVersion":1,"type":"audioBytesResult"}
+{"schemaVersion":1,"durationMs":2400,"type":"audioBytesResult","audioBase64":"ZmFrZUF1ZGlv","requestId":"req-audio-4","mimeType":"audio/m4a"}

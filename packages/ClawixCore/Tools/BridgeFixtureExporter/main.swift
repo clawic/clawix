@@ -109,7 +109,7 @@ enum BridgeFixtureExporter {
             ("pairingStart", BridgeFrame(.pairingStart)),
             ("listProjects", BridgeFrame(.listProjects)),
             ("readFile", BridgeFrame(.readFile(path: "/tmp/clawix-fixture/README.md"))),
-            ("pairingPayload", BridgeFrame(.pairingPayload(qrJson: #"{"v":1,"host":"127.0.0.1","port":24080,"token":"token-abc"}"#, token: "token-abc", shortCode: "ABC-234-XYZ"))),
+            ("pairingPayload", BridgeFrame(.pairingPayload(qrJson: #"{"v":1,"host":"127.0.0.1","port":24080,"token":"token-abc","shortCode":"ABC-234-XYZ","hostDisplayName":"Fixture Mac"}"#, token: "token-abc", shortCode: "ABC-234-XYZ"))),
             ("projectsSnapshot", BridgeFrame(.projectsSnapshot(projects: [project]))),
             ("fileSnapshot", BridgeFrame(.fileSnapshot(path: "/tmp/clawix-fixture/README.md", content: "# Fixture", isMarkdown: true, error: nil))),
             ("transcribeAudio", BridgeFrame(.transcribeAudio(requestId: "req-1", audioBase64: "ZmFrZUF1ZGlv", mimeType: "audio/m4a", language: "en"))),

@@ -1,1 +1,1 @@
-{"text":"hello audio","requestId":"req-1","schemaVersion":1,"type":"transcriptionResult"}
+{"schemaVersion":1,"type":"transcriptionResult","requestId":"req-1","text":"hello audio"}

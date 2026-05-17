@@ -1,1 +1,1 @@
-{"clientId":"client-win","type":"auth","deviceName":"Windows","schemaVersion":1,"clientKind":"desktop","token":"token-abc","installationId":"install-win","deviceId":"device-win"}
+{"deviceId":"device-win","clientId":"client-win","clientKind":"desktop","type":"auth","installationId":"install-win","deviceName":"Windows","token":"token-abc","schemaVersion":1}

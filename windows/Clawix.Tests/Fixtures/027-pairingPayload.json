@@ -1,1 +1,1 @@
-{"qrJson":"{\"v\":1,\"host\":\"127.0.0.1\",\"port\":24080,\"token\":\"token-abc\"}","shortCode":"ABC-234-XYZ","token":"token-abc","schemaVersion":1,"type":"pairingPayload"}
+{"schemaVersion":1,"qrJson":"{\"v\":1,\"host\":\"127.0.0.1\",\"port\":24080,\"token\":\"token-abc\",\"shortCode\":\"ABC-234-XYZ\",\"hostDisplayName\":\"Fixture Mac\"}","token":"token-abc","shortCode":"ABC-234-XYZ","type":"pairingPayload"}

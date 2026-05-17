@@ -1,1 +1,1 @@
-{"attachments":[{"filename":"voice.m4a","kind":"audio","mimeType":"audio/m4a","dataBase64":"ZmFrZUF1ZGlv","id":"att-audio-1"}],"schemaVersion":1,"type":"newSession","sessionId":"session-2","text":"start"}
+{"text":"start","schemaVersion":1,"sessionId":"session-2","attachments":[{"kind":"audio","dataBase64":"ZmFrZUF1ZGlv","id":"att-audio-1","mimeType":"audio/m4a","filename":"voice.m4a"}],"type":"newSession"}
