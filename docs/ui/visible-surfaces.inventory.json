@@ -3,6 +3,14 @@
   "status": "active",
   "policy": "Every current visible UI candidate must be mapped to patterns, debt, exception, or protected-surface status. This inventory is public metadata only; it does not approve or freeze a visual surface.",
   "reviewAfter": "2026-08-15",
+  "sourceRoots": [
+    "macos/Sources/Clawix",
+    "ios/Sources/Clawix",
+    "apps/macos/Sources",
+    "apps/ios/Sources",
+    "android/app/src/main/java/com/example/clawix/android",
+    "web/src"
+  ],
   "coverage": [
     {
       "id": "macos-root-chrome",
@@ -97,7 +105,7 @@
     {
       "id": "macos-icon-and-visual-support",
       "platform": "macos",
-      "scopes": ["macos/Sources/Clawix/LucideIcons/**", "macos/Sources/Clawix/ScreenTools/**", "macos/Sources/Clawix/Notifications/**"],
+      "scopes": ["macos/Sources/Clawix/LucideIcons/**", "macos/Sources/Clawix/ScreenTools/**", "macos/Sources/Clawix/Notifications/**", "apps/macos/Sources/Clawix/LucideBridge.swift"],
       "classification": "pattern",
       "patterns": ["icon-chip-button", "sheet-chrome", "toast", "entity-card"],
       "reason": "Icon glyphs, screen tool panes, overlays, and notification feedback are visible support surfaces."
@@ -125,7 +133,8 @@
         "ios/Sources/Clawix/Profile/**",
         "ios/Sources/Clawix/ProjectDetail/**",
         "ios/Sources/Clawix/Skills/**",
-        "ios/Sources/Clawix/Theme/**"
+        "ios/Sources/Clawix/Theme/**",
+        "apps/ios/Sources/Clawix/Theme/LucideBridge.swift"
       ],
       "classification": "pattern",
       "patterns": ["settings-surface", "entity-card", "search-field", "sheet-chrome", "icon-chip-button"],

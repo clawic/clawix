@@ -90,6 +90,8 @@ function globToRegExp(glob) {
 function platformFor(relativePath) {
   if (relativePath.startsWith("macos/")) return "macos";
   if (relativePath.startsWith("ios/")) return "ios";
+  if (relativePath.startsWith("apps/macos/")) return "macos";
+  if (relativePath.startsWith("apps/ios/")) return "ios";
   if (relativePath.startsWith("android/")) return "android";
   if (relativePath.startsWith("web/")) return "web";
   return "unknown";
@@ -104,7 +106,7 @@ function isVisibleCandidate(relativePath) {
   if (extension === ".tsx") return true;
   const text = fs.readFileSync(path.join(rootDir, relativePath), "utf8");
   if (extension === ".swift") {
-    return visibleName.test(basename) || /:\s*(some\s+)?View\b|NSView|NSPanel|NSWindow/.test(text);
+    return visibleName.test(basename) || /:\s*(some\s+)?View\b|NSView|NSPanel|NSWindow|LucideIcon|Image\(lucide/.test(text);
   }
   return visibleName.test(basename) || /@Composable/.test(text);
 }
@@ -129,12 +131,32 @@ const exceptionIds = new Set(requireArray(exceptions, "docs/ui/exceptions.regist
 
 const inventoryPath = "docs/ui/visible-surfaces.inventory.json";
 const inventory = readJson(inventoryPath);
-requireFields(inventory, inventoryPath, ["schemaVersion", "status", "policy", "reviewAfter", "coverage"]);
+requireFields(inventory, inventoryPath, ["schemaVersion", "status", "policy", "reviewAfter", "sourceRoots", "coverage"]);
 if (inventory?.reviewAfter && inventory.reviewAfter < today) {
   fail(`${inventoryPath}.reviewAfter expired on ${inventory.reviewAfter}`);
 }
 
 const requiredPlatforms = ["macos", "ios", "android", "web"];
+const requiredSourceRoots = [
+  "macos/Sources/Clawix",
+  "ios/Sources/Clawix",
+  "apps/macos/Sources",
+  "apps/ios/Sources",
+  "android/app/src/main/java/com/example/clawix/android",
+  "web/src",
+];
+const sourceRoots = requireArray(inventory, inventoryPath, "sourceRoots");
+for (const sourceRoot of sourceRoots) {
+  if (sourceRoot.startsWith("/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://")) {
+    fail(`${inventoryPath}.sourceRoots must use safe relative paths`);
+    continue;
+  }
+  if (platformFor(sourceRoot) === "unknown") fail(`${inventoryPath}.sourceRoots includes ungoverned root ${sourceRoot}`);
+  if (!fs.existsSync(path.join(rootDir, sourceRoot))) fail(`${inventoryPath}.sourceRoots missing root ${sourceRoot}`);
+}
+for (const sourceRoot of requiredSourceRoots) {
+  if (!sourceRoots.includes(sourceRoot)) fail(`${inventoryPath}.sourceRoots must include ${sourceRoot}`);
+}
 const platformCoverage = new Set();
 const coverage = requireArray(inventory, inventoryPath, "coverage");
 const compiledCoverage = [];
@@ -189,12 +211,6 @@ for (const platform of requiredPlatforms) {
   if (!platformCoverage.has(platform)) fail(`${inventoryPath}.coverage must include ${platform}`);
 }
 
-const sourceRoots = [
-  "macos/Sources/Clawix",
-  "ios/Sources/Clawix",
-  "android/app/src/main/java/com/example/clawix/android",
-  "web/src",
-];
 const candidates = sourceRoots.flatMap(walk).filter(isVisibleCandidate);
 const uncovered = [];
 const ambiguous = [];
