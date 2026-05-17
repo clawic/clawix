@@ -58,6 +58,7 @@
     "release-gate-contract-check",
     "rendered-geometry-manifest-shape",
     "copy-governance-contract-check",
+    "pattern-performance-contract-check",
     "component-extraction-policy-check",
     "mechanical-equivalence-policy-check",
     "visual-scope-policy-check",

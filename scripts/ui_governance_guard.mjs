@@ -181,6 +181,7 @@ for (const patternId of registryPatterns) {
     "states",
     "geometry",
     "copy",
+    "performance",
     "componentExtraction",
     "validation",
   ]);
@@ -376,6 +377,17 @@ requireFields(mechanicalEquivalence, mechanicalEquivalencePath, [
 const budgetsPath = "docs/ui/performance-budgets.registry.json";
 const budgets = readJson(budgetsPath);
 requireFields(budgets, budgetsPath, ["schemaVersion", "status", "policy", "flows"]);
+const patternPerformancePath = "docs/ui/pattern-performance.manifest.json";
+const patternPerformance = readJson(patternPerformancePath);
+requireFields(patternPerformance, patternPerformancePath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "patternRegistryPath",
+  "performanceBudgetRegistryPath",
+  "privateBaselineAlias",
+  "requiredFlowMappings",
+]);
 const requiredFlows = [
   "sidebar-hover-click-expand",
   "chat-scroll",
@@ -623,6 +635,7 @@ const requiredDocs = [
   "docs/ui/visible-surfaces.inventory.json",
   "docs/ui/rendered-geometry.manifest.json",
   "docs/ui/copy.inventory.json",
+  "docs/ui/pattern-performance.manifest.json",
   "docs/ui/visual-change-scopes.manifest.json",
   "docs/ui/visual-change-detectors.manifest.json",
   "docs/ui/visual-proposals.registry.json",

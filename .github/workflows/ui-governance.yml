@@ -58,6 +58,8 @@ jobs:
         run: node scripts/ui_copy_governance_check.mjs
       - name: Validate UI performance budgets
         run: node scripts/ui_performance_budget_check.mjs
+      - name: Validate UI pattern performance mapping
+        run: node scripts/ui_pattern_performance_check.mjs
       - name: Validate UI component extraction governance
         run: node scripts/ui_component_extraction_check.mjs
       - name: Validate UI mechanical equivalence governance

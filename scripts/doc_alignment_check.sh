@@ -57,6 +57,7 @@ for file in \
   "docs/ui/visible-surfaces.inventory.json" \
   "docs/ui/copy.inventory.json" \
   "docs/ui/rendered-geometry.manifest.json" \
+  "docs/ui/pattern-performance.manifest.json" \
   "docs/ui/visual-change-scopes.manifest.json" \
   "docs/ui/visual-change-detectors.manifest.json" \
   "docs/ui/visual-proposals.registry.json" \
@@ -100,6 +101,7 @@ for file in \
   "scripts/ui_copy_governance_check.mjs" \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_performance_budget_check.mjs" \
+  "scripts/ui_pattern_performance_check.mjs" \
   "scripts/ui_component_extraction_check.mjs" \
   "scripts/ui_mechanical_equivalence_check.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
@@ -174,6 +176,8 @@ require_snippet "docs/ui/README.md" "rendered-geometry.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_rendered_geometry_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_performance_budget_check.mjs"
+require_snippet "docs/ui/README.md" "pattern-performance.manifest.json"
+require_snippet "docs/ui/README.md" "scripts/ui_pattern_performance_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_component_extraction_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_mechanical_equivalence_check.mjs"
 require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
@@ -284,6 +288,10 @@ require_snippet "scripts/ui_private_evidence_verify.mjs" "performance-budget"
 require_snippet "docs/ui/performance-budgets.registry.json" "performance-evidence.json"
 require_snippet "docs/ui/performance-budgets.registry.json" "ui_private_performance_budget_verify.mjs"
 require_snippet "docs/ui/performance-budgets.registry.json" "\"unit\": \"critical-flow\""
+require_snippet "docs/ui/pattern-performance.manifest.json" "right-sidebar-browser-use"
+require_snippet "docs/ui/pattern-performance.manifest.json" "right-sidebar-surface"
+require_snippet "scripts/ui_pattern_performance_check.mjs" "performance.criticalFlows"
+require_snippet "docs/ui/pattern-registry/patterns/right-sidebar-surface.pattern.json" "right-sidebar/browser"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_visual_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_drift_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "EXTERNAL PENDING"
@@ -296,6 +304,7 @@ require_snippet "skills/ui-implementation/SKILL.md" "pattern IDs or debt/protect
 require_snippet "skills/ui-performance-budget/SKILL.md" "docs/ui/performance-budgets.registry.json"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## sidebar-row"
 require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## terminal-surface"
+require_snippet "docs/ui/pattern-registry/patterns/NOTES.md" "## right-sidebar-surface"
 require_snippet "docs/interface-matrix.md" "This matrix is the Clawix gate for ADR 0007"
 require_snippet "docs/interface-matrix.md" "Every current surface must be one of"
 require_snippet "docs/interface-matrix.md" "EXTERNAL PENDING"

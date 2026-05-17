@@ -75,6 +75,8 @@ the public repo.
   promotions.
 - `performance-budgets.registry.json`: critical-flow, per-platform budget
   registry.
+- `pattern-performance.manifest.json`: critical-flow ownership mapping from
+  performance budgets back to registry patterns.
 - `private-baselines.manifest.json`: public contract for private visual,
   geometry, and performance baselines.
 - `private-evidence-plan`: derived evidence plan emitted by
@@ -156,55 +158,58 @@ the public repo.
 27. Keep performance budget contracts current with
    `scripts/ui_performance_budget_check.mjs`; budget flow references must match
    private baseline references and stay scoped to critical flows.
-28. Keep component extraction APIs current with
+28. Keep pattern performance ownership current with
+   `scripts/ui_pattern_performance_check.mjs`; every critical flow must map to
+   registry patterns that declare the same performance contract.
+29. Keep component extraction APIs current with
    `scripts/ui_component_extraction_check.mjs`.
-29. Keep mechanical refactor evidence current with
+30. Keep mechanical refactor evidence current with
    `scripts/ui_mechanical_equivalence_check.mjs`.
-30. Keep visual authorization scopes current with
+31. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default, and
    approved scopes must declare files plus a change budget.
-31. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`;
+32. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`;
    presentation, copy, and hierarchy buckets must stay explicit.
-32. Keep visual model authorization current with
+33. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
    identify an allowlisted visual model.
-33. Keep visual guard failure diagnostics current with
+34. Keep visual guard failure diagnostics current with
    `scripts/ui_visual_guard_failure_check.mjs`; failures must include route,
    reason, and required permission.
-34. Keep conceptual visual proposal records current with
+35. Keep conceptual visual proposal records current with
    `scripts/ui_visual_proposal_check.mjs`.
-35. Keep private artifacts out of the public repo with
+36. Keep private artifacts out of the public repo with
    `scripts/ui_private_artifact_boundary_check.mjs`; public files may store
    aliases, manifests, hashes, and runner contracts only.
-36. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+37. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
    Every visible source candidate must resolve to exactly one pattern, debt,
    exception, or protected-surface classification; use `excludeScopes` to keep
    broad public-safe globs from masking known debt.
-37. Keep private baseline coverage current with
+38. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.
-38. Keep the private evidence plan current with
+39. Keep the private evidence plan current with
     `scripts/ui_private_evidence_plan_check.mjs`; it derives expected private
     evidence records without requiring private roots.
-39. Keep aggregate private visual validation current with
+40. Keep aggregate private visual validation current with
     `scripts/ui_private_visual_validation_manifest_check.mjs`.
-40. When all private roots are available, verify every record in the derived
+41. When all private roots are available, verify every record in the derived
     private evidence plan with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_evidence_verify.mjs --require-approved`.
-41. When all private roots are available, verify visual and performance
+42. When all private roots are available, verify visual and performance
     evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-42. When private debt audit evidence is available, verify it with
+43. When private debt audit evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_debt_audit_verify.mjs --require-approved`.
-43. When private geometry evidence is available, verify it with
+44. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-44. When private baselines are available, verify them with
+45. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-45. When private performance measurements are available, verify them with
+46. When private performance measurements are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved`.
-46. When private copy snapshots are available, verify them with
+47. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
-47. When private rendered drift reports are available, verify them with
+48. When private rendered drift reports are available, verify them with
     `CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_drift_verify.mjs --require-approved`.
-48. When the lane is not visual-authorized, use
+49. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.
