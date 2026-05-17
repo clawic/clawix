@@ -624,6 +624,7 @@ for (const relativePath of [
 
 for (const [relativePath, phrases] of [
   ["macos/Sources/Clawix/AgentBackend/ClawixClient.swift", ["place for v2"]],
+  ["macos/Sources/Clawix/ClawJS/ClawJSSecretsClient.swift", ["Legacy brokered execute", "/execute/"]],
   ["macos/Sources/Clawix/Publishing/PublishingCalendarView.swift", ["lands in\n/// v2", "lands in v2"]],
   ["macos/Sources/Clawix/Skills/SkillsStore.swift", ["skills-v2 lands"]],
   ["macos/Sources/Clawix/ClawJS/ClawJSPublishingClient.swift", ["fields the v1", "endpoint in v2"]],

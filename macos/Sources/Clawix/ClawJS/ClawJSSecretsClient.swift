@@ -476,24 +476,6 @@ final class ClawJSSecretsClient {
         return try await post("\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/broker/http", body: payload)
     }
 
-    // MARK: - Legacy brokered execute
-
-    struct ExecutorOutput: Codable {
-        let ok: Bool
-        let status: Int?
-        let body: String?
-        let detail: String?
-    }
-
-    func execute(secretName: String, executorId: String, args: [String: Any] = [:], ctx: [String: Any]? = nil) async throws -> ExecutorOutput {
-        var body: [String: Any] = ["args": args]
-        if let ctx { body["ctx"] = ctx }
-        return try await post(
-            "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/execute/\(percentEncode(executorId))",
-            body: body
-        )
-    }
-
     func syncBrand(secretName: String) async throws -> [String: AnyCodable] {
         try await post(
             "\(ClawixPersistentSurfaceKeys.publicApiPrefix)/tenants/\(tenantId)/secrets/\(percentEncode(secretName))/sync",
