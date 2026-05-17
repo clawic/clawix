@@ -32,6 +32,13 @@ The curated zones today, in order of authority:
 Anything outside these zones either inherits from them or is open work
 (section 13).
 
+Machine-readable interface governance lives in `docs/ui/`. When a surface maps
+to a pattern, debt item, protected surface, or exception, the registry and
+manifests there are the auditable contract for states, geometry, copy,
+validation, and visual mutation permissions. This document remains the prose
+visual canon; `docs/ui/` is the enforceable registry layer agents and checks
+must consult.
+
 ## 1. Foundations
 
 - **Squircle is universal.** Every rounded corner uses
