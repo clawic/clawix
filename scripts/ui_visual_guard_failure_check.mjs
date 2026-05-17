@@ -870,6 +870,7 @@ for (const snippet of [
   "privateDriftReportReference:",
   "reason: pending private evidence",
   "required permission: approved private rendered drift evidence from a visual-authorized lane",
+  "proposal route:",
   "macos-root-chrome",
 ]) {
   if (!driftOutput.includes(snippet)) fail(`private drift failure output is missing: ${snippet}`);

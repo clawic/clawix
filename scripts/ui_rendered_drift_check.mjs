@@ -122,7 +122,7 @@ for (const field of ["approvedByUserAt", "approvedScope"]) {
   if (!approvedDriftEvidenceFields.includes(field)) fail(`${manifestPath}.approvedDriftEvidenceFields must include ${field}`);
 }
 const failureOutputRequirements = requireArray(manifest, manifestPath, "failureOutputRequirements");
-for (const field of ["route", "reason", "required permission", "privateDriftReportReference"]) {
+for (const field of ["route", "reason", "required permission", "proposal route", "privateDriftReportReference"]) {
   if (!failureOutputRequirements.includes(field)) fail(`${manifestPath}.failureOutputRequirements must include ${field}`);
 }
 if (manifest?.evidenceFilename !== "drift-report.json") fail(`${manifestPath}.evidenceFilename must be drift-report.json`);

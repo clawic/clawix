@@ -94,18 +94,21 @@ function verifyDriftResults(evidence, report, label, allowedStatuses) {
 }
 
 function failReport(report, label, reason) {
+  const proposalPath = visualModelAllowlist?.proposalPath || "docs/ui/visual-change-proposal.template.md";
   fail([
     `${label} rendered drift evidence is not approved`,
     `route: ${report.coverageId || label}`,
     `privateDriftReportReference: ${report.privateDriftReportReference || "missing"}`,
     `reason: ${reason}`,
     "required permission: approved private rendered drift evidence from a visual-authorized lane",
+    `proposal route: ${proposalPath}`,
   ].join("; "));
 }
 
 const requireApproved = hasFlag("--require-approved");
 const includePending = hasFlag("--include-pending");
 const manifest = readJson("docs/ui/rendered-drift.manifest.json");
+const visualModelAllowlist = readJson("docs/ui/visual-model-allowlist.manifest.json");
 const approvedScopeContract = loadApprovedScopeContract(rootDir, fail);
 const alias = manifest?.privateDriftAlias || "private-codex-ui-rendered-drift";
 const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
