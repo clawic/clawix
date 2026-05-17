@@ -6,6 +6,7 @@ import path from "node:path";
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
 const today = new Date().toISOString().slice(0, 10);
+const simulateApprovedVisualScope = args.includes("--simulate-approved-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -84,6 +85,19 @@ const visualScopesPath = "docs/ui/visual-change-scopes.manifest.json";
 const visualScopes = readJson(visualScopesPath);
 const visualScopeEnv = String(visualScopes?.scopeSignal?.env || "CLAWIX_UI_VISUAL_SCOPE_ID");
 const requestedVisualScopeId = visualScopeEnv ? String(process.env[visualScopeEnv] || "") : "";
+if (simulateApprovedVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-approved-scope",
+      status: "approved",
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
 
 const governedPattern = /^docs\/ui\/pattern-registry\/patterns\/[^/]+\.pattern\.json$/;
 const governedFields = [

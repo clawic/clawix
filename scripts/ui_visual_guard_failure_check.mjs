@@ -82,6 +82,26 @@ for (const snippet of [
   if (!authorizedNoScopeOutput.includes(snippet)) fail(`authorized no-scope failure output is missing: ${snippet}`);
 }
 
+let authorizedScopedExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-approved-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-approved-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedScopedExitCode = error.status || 1;
+}
+if (authorizedScopedExitCode !== 0) {
+  fail("simulated visual diff must pass for claude-opus-4.7 with an approved visual scope");
+}
+
 let wrongModelOutput = "";
 let wrongModelExitCode = 0;
 try {
@@ -174,6 +194,26 @@ for (const snippet of [
   "docs/ui/pattern-registry/patterns/sidebar-row.pattern.json:1",
 ]) {
   if (!patternAuthorizedNoScopeOutput.includes(snippet)) fail(`pattern authorized no-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedScopedExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-approved-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-approved-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedScopedExitCode = error.status || 1;
+}
+if (patternAuthorizedScopedExitCode !== 0) {
+  fail("simulated pattern mutation must pass for claude-opus-4.7 with an approved visual scope");
 }
 
 let patternWrongModelOutput = "";
