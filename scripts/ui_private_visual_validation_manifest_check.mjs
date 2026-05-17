@@ -82,6 +82,15 @@ for (const root of [
 }
 
 const delegates = requireArray(manifest, manifestPath, "delegates");
+const runnerSource = fs.existsSync(path.join(rootDir, "scripts/ui_private_visual_verify.mjs"))
+  ? fs.readFileSync(path.join(rootDir, "scripts/ui_private_visual_verify.mjs"), "utf8")
+  : "";
+if (!runnerSource) fail("missing scripts/ui_private_visual_verify.mjs");
+for (const snippet of ["--require-approved", "EXTERNAL PENDING", "process.exit(2)"]) {
+  if (!runnerSource.includes(snippet)) {
+    fail(`scripts/ui_private_visual_verify.mjs must include ${snippet}`);
+  }
+}
 for (const script of [
   "scripts/ui_private_evidence_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
@@ -98,6 +107,9 @@ for (const script of [
   }
   if (!String(delegate).includes("--require-approved")) {
     fail(`${manifestPath}.delegates entry for ${script} must include --require-approved`);
+  }
+  if (!runnerSource.includes(script)) {
+    fail(`scripts/ui_private_visual_verify.mjs must delegate to ${script}`);
   }
 }
 
