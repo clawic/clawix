@@ -105,6 +105,9 @@ requireField(copyInventory, "docs/ui/copy.inventory.json", "privateSnapshotAlias
 const renderedDrift = readJson("docs/ui/rendered-drift.manifest.json");
 requireField(renderedDrift, "docs/ui/rendered-drift.manifest.json", "privateDriftAlias", "private-codex-ui-rendered-drift");
 
+const debtAudit = readJson("docs/ui/debt-audit.manifest.json");
+requireField(debtAudit, "docs/ui/debt-audit.manifest.json", "privateDebtAuditAlias", "private-codex-ui-debt-audit");
+
 const visualModelAllowlist = readJson("docs/ui/visual-model-allowlist.manifest.json");
 requireField(visualModelAllowlist, "docs/ui/visual-model-allowlist.manifest.json", "privateAssignment", "outside-public-repo");
 
@@ -118,6 +121,7 @@ for (const root of [
   "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
   "CLAWIX_UI_PRIVATE_COPY_ROOT",
   "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+  "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
 ]) {
   if (!requiredRoots.has(root)) fail("docs/ui/private-visual-validation.manifest.json.requiredRoots is missing " + root);
 }
