@@ -212,6 +212,30 @@ function verifyMeasurements(evidence, label) {
   }
 }
 
+function patternMeasurementKeys(patternId, platform) {
+  const pattern = readRepoJson(`docs/ui/pattern-registry/patterns/${patternId}.pattern.json`);
+  const geometry = pattern?.geometry;
+  if (!geometry || typeof geometry !== "object" || Array.isArray(geometry)) return [];
+  const platformGeometry = geometry[platform];
+  if (platformGeometry && typeof platformGeometry === "object" && !Array.isArray(platformGeometry)) {
+    return Object.entries(platformGeometry)
+      .filter(([, value]) => typeof value === "number")
+      .map(([key]) => key);
+  }
+  return Object.entries(geometry)
+    .filter(([, value]) => typeof value === "number")
+    .map(([key]) => key);
+}
+
+function verifyPatternMeasurementKeys(evidence, item, label) {
+  if (item.type !== "pattern-geometry") return;
+  for (const key of patternMeasurementKeys(item.id, item.platform)) {
+    if (typeof evidence.measurements?.[key] !== "number") {
+      fail(`${label}.measurements.${key} must be measured because it is declared in the public pattern geometry contract`);
+    }
+  }
+}
+
 function verifyCopyItems(evidence, label, allowedKinds = new Set()) {
   if (!("copyItems" in evidence)) return;
   if (!Array.isArray(evidence.copyItems) || evidence.copyItems.length === 0) {
@@ -387,6 +411,7 @@ for (const item of plan.evidence || []) {
   verifyMetrics(evidence, label, itemRequiredMetrics);
   verifyMeasurementSamples(evidence, label, itemRequiredMetrics);
   verifyMeasurements(evidence, label);
+  verifyPatternMeasurementKeys(evidence, item, label);
   verifyCopyItems(evidence, label, allowedCopyKinds);
   verifyCopyHierarchyHash(evidence, label);
   verifyDriftResults(evidence, label, item.type === "rendered-drift" ? driftPolicy : {});

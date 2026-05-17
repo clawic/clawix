@@ -90,6 +90,28 @@ function verifyMeasurements(value, label) {
   }
 }
 
+function measuredGeometryKeys(pattern, platform) {
+  const geometry = pattern?.geometry;
+  if (!geometry || typeof geometry !== "object" || Array.isArray(geometry)) return [];
+  const platformGeometry = geometry[platform];
+  if (platformGeometry && typeof platformGeometry === "object" && !Array.isArray(platformGeometry)) {
+    return Object.entries(platformGeometry)
+      .filter(([, value]) => typeof value === "number")
+      .map(([key]) => key);
+  }
+  return Object.entries(geometry)
+    .filter(([, value]) => typeof value === "number")
+    .map(([key]) => key);
+}
+
+function verifyRequiredMeasurementKeys(measurements, requiredKeys, label) {
+  for (const key of requiredKeys) {
+    if (typeof measurements?.[key] !== "number") {
+      fail(`${label}.${key} must be measured because it is declared in the public pattern geometry contract`);
+    }
+  }
+}
+
 function splitReference(reference, alias, label) {
   if (typeof reference !== "string" || !reference.startsWith(`${alias}:`)) {
     fail(`${label} must use ${alias}:`);
@@ -152,7 +174,9 @@ for (const patternId of registry?.patterns || []) {
     if (evidence.geometryEvidenceReference !== expectedReference) {
       fail(`${label}.geometryEvidenceReference must be ${expectedReference}`);
     }
+    const requiredMeasurementKeys = measuredGeometryKeys(pattern, platform);
     verifyMeasurements(evidence.measurements, `${label}.measurements`);
+    verifyRequiredMeasurementKeys(evidence.measurements, requiredMeasurementKeys, `${label}.measurements`);
     assertHash(evidence.geometryHash, `${label}.geometryHash`);
     assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
     verifiedPatterns += 1;
