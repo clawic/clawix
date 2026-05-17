@@ -144,6 +144,38 @@ for (const snippet of [
   if (!patternOutput.includes(snippet)) fail(`pattern mutation failure output is missing: ${snippet}`);
 }
 
+let patternAuthorizedNoScopeOutput = "";
+let patternAuthorizedNoScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedNoScopeExitCode = error.status || 1;
+  patternAuthorizedNoScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedNoScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail for claude-opus-4.7 when no approved visual scope is provided");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "required scope:",
+  "CLAWIX_UI_VISUAL_SCOPE_ID=<unset>",
+  "proposal route:",
+  "simulated unauthorized pattern mutation",
+  "docs/ui/pattern-registry/patterns/sidebar-row.pattern.json:1",
+]) {
+  if (!patternAuthorizedNoScopeOutput.includes(snippet)) fail(`pattern authorized no-scope failure output is missing: ${snippet}`);
+}
+
 let patternWrongModelOutput = "";
 let patternWrongModelExitCode = 0;
 try {
