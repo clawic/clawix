@@ -219,6 +219,64 @@ for (const snippet of [
   if (!authorizedWrongKindScopeOutput.includes(snippet)) fail(`authorized wrong-kind-scope failure output is missing: ${snippet}`);
 }
 
+let authorizedRevokedScopeOutput = "";
+let authorizedRevokedScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-revoked-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-revoked-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedRevokedScopeExitCode = error.status || 1;
+  authorizedRevokedScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedRevokedScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the provided visual scope is revoked");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-revoked-scope",
+  "scope simulated-revoked-scope is revoked, not approved",
+]) {
+  if (!authorizedRevokedScopeOutput.includes(snippet)) fail(`authorized revoked-scope failure output is missing: ${snippet}`);
+}
+
+let authorizedExpiredScopeOutput = "";
+let authorizedExpiredScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-expired-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-expired-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedExpiredScopeExitCode = error.status || 1;
+  authorizedExpiredScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedExpiredScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the provided visual scope is expired");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-expired-scope",
+  "scope simulated-expired-scope expired on 2000-01-01",
+]) {
+  if (!authorizedExpiredScopeOutput.includes(snippet)) fail(`authorized expired-scope failure output is missing: ${snippet}`);
+}
+
 let wrongModelOutput = "";
 let wrongModelExitCode = 0;
 try {
@@ -451,6 +509,66 @@ for (const snippet of [
   "does not allow microcopy",
 ]) {
   if (!patternAuthorizedWrongKindScopeOutput.includes(snippet)) fail(`pattern authorized wrong-kind-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedRevokedScopeOutput = "";
+let patternAuthorizedRevokedScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-revoked-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-revoked-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedRevokedScopeExitCode = error.status || 1;
+  patternAuthorizedRevokedScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedRevokedScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the provided visual scope is revoked");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-revoked-scope",
+  "scope simulated-revoked-scope is revoked, not approved",
+]) {
+  if (!patternAuthorizedRevokedScopeOutput.includes(snippet)) fail(`pattern authorized revoked-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedExpiredScopeOutput = "";
+let patternAuthorizedExpiredScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-expired-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-expired-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedExpiredScopeExitCode = error.status || 1;
+  patternAuthorizedExpiredScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedExpiredScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the provided visual scope is expired");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-expired-scope",
+  "scope simulated-expired-scope expired on 2000-01-01",
+]) {
+  if (!patternAuthorizedExpiredScopeOutput.includes(snippet)) fail(`pattern authorized expired-scope failure output is missing: ${snippet}`);
 }
 
 let patternWrongModelOutput = "";

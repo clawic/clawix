@@ -10,6 +10,8 @@ const simulateApprovedVisualScope = args.includes("--simulate-approved-visual-sc
 const simulateOverbudgetVisualScope = args.includes("--simulate-overbudget-visual-scope");
 const simulateWrongFileVisualScope = args.includes("--simulate-wrong-file-visual-scope");
 const simulateLayoutOnlyVisualScope = args.includes("--simulate-layout-only-visual-scope");
+const simulateRevokedVisualScope = args.includes("--simulate-revoked-visual-scope");
+const simulateExpiredVisualScope = args.includes("--simulate-expired-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -137,6 +139,32 @@ if (simulateLayoutOnlyVisualScope) {
       changeKinds: ["layout"],
       changeBudget: { maxFiles: 1, maxLines: 3 },
       expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateRevokedVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-revoked-scope",
+      status: "revoked",
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateExpiredVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-expired-scope",
+      status: "approved",
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
+      expiresAt: "2000-01-01",
     },
   ];
 }
