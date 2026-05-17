@@ -609,6 +609,19 @@ for (const pattern of ["LegacyChatDeepLink", "LegacyOAuthCallbackDeepLink"]) {
     fail(`Deep link routing tests must describe removed v1 routes as retired, found ${JSON.stringify(pattern)}`);
   }
 }
+for (const snippet of [
+  "clawix://session/",
+  "clawix://auth/callback/",
+  "testRejectsRetiredChatDeepLink",
+  "testRejectsRetiredOAuthCallbackDeepLink",
+  "clawix://chat/",
+  "clawix://oauth-callback/",
+  "XCTAssertNil(ClawixDeepLink.parse(url))",
+]) {
+  if (!deepLinkRoutingTests.includes(snippet)) {
+    fail(`Deep link routing tests must cover v1 accepted routes and retired-route rejection, missing ${JSON.stringify(snippet)}`);
+  }
+}
 
 for (const relativePath of [
   "ios/Sources/Clawix/Bridge/Credentials.swift",
