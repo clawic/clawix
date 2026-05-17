@@ -29,7 +29,7 @@ The contract format is decision -> document -> validation.
 
 | Decision | Canonical document | Guardrail or validation |
 | --- | --- | --- |
-| When the background bridge daemon is active, there is one runtime owner; Clawix must not also bootstrap a GUI-owned backend or second `BridgeServer`. | [`AGENTS.md`](../AGENTS.md), [`docs/host-ownership.md`](host-ownership.md), macOS bridge docs under [`playbooks/macos/`](../playbooks/macos/) | Targeted bridge E2E and code review must verify one runtime owner. PENDING GUARDRAIL: add a static check that rejects a second GUI-owned bridge bootstrap when daemon mode is enabled. |
+| When the background bridge daemon is active, there is one runtime owner; Clawix must not also bootstrap a GUI-owned backend or second `BridgeServer`. | [`AGENTS.md`](../AGENTS.md), [`docs/host-ownership.md`](host-ownership.md), macOS bridge docs under [`playbooks/macos/`](../playbooks/macos/) | `node scripts/interface_surface_guard.mjs` rejects GUI-owned backend or `BridgeServer` bootstraps that bypass the `daemonBridgeEnabled` gate. Targeted bridge E2E still verifies runtime behavior. |
 | iOS-visible or remote-visible runtime capabilities are implemented on the daemon or host contract surface before UI clients consume them. | [`docs/host-ownership.md`](host-ownership.md), [`packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md`](../packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md) | Add or update bridge protocol fixtures/E2E before wiring UI clients. Treat UI-only validation as partial for cross-device features. |
 | Validation must not send real prompts, mutate production data, touch real services, or consume paid APIs unless explicitly approved. | [`AGENTS.md`](../AGENTS.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md), macOS E2E scripts under [`macos/scripts/`](../macos/scripts/) | Prefer fixtures, local backends, dry-run paths, and interceptors. Mark unavailable real integrations as `EXTERNAL PENDING` in validation reports. |
 | Clawix follows the framework-owned Integration QA Lab standard for external connectors; UI wiring alone cannot make a connector complete. | [`docs/adr/0005-integration-qa-lab.md`](adr/0005-integration-qa-lab.md), ClawJS Integration QA Lab docs, [`qa/scenarios/telegram-integration-qa-lab.md`](../qa/scenarios/telegram-integration-qa-lab.md) | Clawix may display QA state or request approvals, but live checks must go through framework/host boundaries, brokered credential leases, and `EXTERNAL PENDING` reporting for unavailable provider prerequisites. |
@@ -72,8 +72,6 @@ The contract format is decision -> document -> validation.
 
 ## Known pending guardrails
 
-- PENDING GUARDRAIL: enforce "no second GUI-owned bridge/backend" with a static
-  check once the bridge bootstrap points are fully centralized.
 - PENDING GUARDRAIL: add a repo-wide storage writer check that flags new
   canonical `.clawjs/` writes in source code, not only docs.
 - PENDING GUARDRAIL: publish a non-private launcher contract for Android/Web

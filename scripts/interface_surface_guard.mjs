@@ -19,6 +19,20 @@ function readOptional(relativePath) {
   return fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, "utf8") : "";
 }
 
+function listFiles(relativeDir, extension, output = []) {
+  const absoluteDir = path.join(rootDir, relativeDir);
+  if (!fs.existsSync(absoluteDir)) return output;
+  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(relativePath, extension, output);
+    } else if (entry.isFile() && relativePath.endsWith(extension)) {
+      output.push(relativePath);
+    }
+  }
+  return output;
+}
+
 function requireSnippet(relativePath, snippet) {
   if (!read(relativePath).includes(snippet)) {
     fail(`${relativePath} is missing required snippet: ${snippet}`);
@@ -573,6 +587,34 @@ const appStateSource = read("macos/Sources/Clawix/AppState.swift");
 for (const pattern of ["legacyRouteKey", "CLAWIX_REPLICA_ROUTE", "legacy daemons", "legacy flows"]) {
   if (appStateSource.includes(pattern)) {
     fail(`AppState.swift contains clean-v1 incompatible launch/session compatibility wording ${JSON.stringify(pattern)}`);
+  }
+}
+if (!appStateSource.includes("let daemonBridgeEnabled = !fixtureActive && BackgroundBridgeService.shared.isActive")) {
+  fail("AppState.swift must derive daemonBridgeEnabled from BackgroundBridgeService.shared.isActive");
+}
+if (!appStateSource.includes("ProcessInfo.processInfo.environment[\"CLAWIX_DISABLE_BACKEND\"] != \"1\",\n           !daemonBridgeEnabled")) {
+  fail("AppState.swift must gate GUI-owned backend bootstrap behind !daemonBridgeEnabled");
+}
+if (!appStateSource.includes("ProcessInfo.processInfo.environment[\"CLAWIX_BRIDGE_DISABLE\"] != \"1\",\n           !daemonBridgeEnabled")) {
+  fail("AppState.swift must gate GUI-owned BridgeServer bootstrap behind !daemonBridgeEnabled");
+}
+if (!appStateSource.includes("} else if daemonBridgeEnabled {") || !appStateSource.includes("DaemonBridgeClient(appState: self, pairing: pairing)")) {
+  fail("AppState.swift must connect to the background bridge daemon instead of starting a second bridge when daemonBridgeEnabled");
+}
+const daemonBranchStart = appStateSource.indexOf("} else if daemonBridgeEnabled {");
+const daemonBranchEnd = appStateSource.indexOf("// Auto-reload threads", daemonBranchStart);
+const daemonBranch = daemonBranchStart >= 0 && daemonBranchEnd >= 0 ? appStateSource.slice(daemonBranchStart, daemonBranchEnd) : "";
+if (daemonBranch.includes("BridgeServer(") || daemonBranch.includes("await clawix.bootstrap()")) {
+  fail("daemonBridgeEnabled branch must not start a GUI-owned BridgeServer or backend");
+}
+for (const relativePath of listFiles("macos/Sources/Clawix", ".swift")) {
+  if (relativePath === "macos/Sources/Clawix/AppState.swift") continue;
+  const source = read(relativePath);
+  if (source.includes("BridgeServer(")) {
+    fail(`${relativePath} must not instantiate BridgeServer outside AppState's daemon-gated bootstrap`);
+  }
+  if (source.includes("ClawixService(")) {
+    fail(`${relativePath} must not instantiate ClawixService outside AppState's daemon-gated bootstrap`);
   }
 }
 
