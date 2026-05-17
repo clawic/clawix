@@ -46,6 +46,36 @@ for (const snippet of [
   if (!output.includes(snippet)) fail(`failure output is missing: ${snippet}`);
 }
 
+let patternOutput = "";
+let patternExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation"], {
+    cwd: rootDir,
+    env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternExitCode = error.status || 1;
+  patternOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternExitCode === 0) {
+  fail("simulated unauthorized pattern mutation must fail");
+}
+
+for (const snippet of [
+  "unauthorized pattern registry visual/copy contract mutation detected",
+  "required permission:",
+  "current model signal:",
+  "proposal route:",
+  "simulated unauthorized pattern mutation",
+  "docs/ui/pattern-registry/patterns/sidebar-row.pattern.json:1",
+  "geometry",
+]) {
+  if (!patternOutput.includes(snippet)) fail(`pattern mutation failure output is missing: ${snippet}`);
+}
+
 const driftRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-ui-drift-failure-"));
 let driftOutput = "";
 let driftExitCode = 0;

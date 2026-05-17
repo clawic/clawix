@@ -144,6 +144,9 @@ const configChecks = new Set(requireArray(config, "docs/ui/interface-governance.
 if (!configChecks.has("release-gate-contract-check")) {
   fail("docs/ui/interface-governance.config.json.publicChecks must include release-gate-contract-check");
 }
+if (!configChecks.has("pattern-visual-mutation-guard")) {
+  fail("docs/ui/interface-governance.config.json.publicChecks must include pattern-visual-mutation-guard");
+}
 
 for (const script of requireArray(manifest, manifestPath, "requiredPublicCheckScripts")) {
   if (typeof script !== "string" || !script.startsWith("scripts/") || script.includes("..")) {

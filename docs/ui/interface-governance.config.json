@@ -59,6 +59,7 @@
     "rendered-geometry-manifest-shape",
     "copy-governance-contract-check",
     "pattern-performance-contract-check",
+    "pattern-visual-mutation-guard",
     "component-extraction-policy-check",
     "mechanical-equivalence-policy-check",
     "visual-scope-policy-check",

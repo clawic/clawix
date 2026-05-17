@@ -220,6 +220,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_copy_governance_check.mjs"
   run node "$ROOT_DIR/scripts/ui_performance_budget_check.mjs"
   run node "$ROOT_DIR/scripts/ui_pattern_performance_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_pattern_mutation_guard.mjs"
   run node "$ROOT_DIR/scripts/ui_component_extraction_check.mjs"
   run node "$ROOT_DIR/scripts/ui_mechanical_equivalence_check.mjs"
   run node "$ROOT_DIR/scripts/ui_visual_scope_check.mjs"

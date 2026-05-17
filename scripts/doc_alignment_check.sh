@@ -102,6 +102,7 @@ for file in \
   "scripts/ui_private_copy_verify.mjs" \
   "scripts/ui_performance_budget_check.mjs" \
   "scripts/ui_pattern_performance_check.mjs" \
+  "scripts/ui_pattern_mutation_guard.mjs" \
   "scripts/ui_component_extraction_check.mjs" \
   "scripts/ui_mechanical_equivalence_check.mjs" \
   "scripts/ui_geometry_contract_check.mjs" \
@@ -178,6 +179,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_copy_governance_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_performance_budget_check.mjs"
 require_snippet "docs/ui/README.md" "pattern-performance.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_pattern_performance_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_pattern_mutation_guard.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_component_extraction_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_mechanical_equivalence_check.mjs"
 require_snippet "docs/ui/README.md" "visual-change-scopes.manifest.json"
@@ -292,6 +294,8 @@ require_snippet "docs/ui/pattern-performance.manifest.json" "right-sidebar-brows
 require_snippet "docs/ui/pattern-performance.manifest.json" "right-sidebar-surface"
 require_snippet "scripts/ui_pattern_performance_check.mjs" "performance.criticalFlows"
 require_snippet "docs/ui/pattern-registry/patterns/right-sidebar-surface.pattern.json" "right-sidebar/browser"
+require_snippet "scripts/ui_pattern_mutation_guard.mjs" "unauthorized pattern registry visual/copy contract mutation detected"
+require_snippet "scripts/ui_release_gate_check.mjs" "pattern-visual-mutation-guard"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_visual_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_drift_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "EXTERNAL PENDING"

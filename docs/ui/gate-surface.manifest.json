@@ -35,6 +35,7 @@
     "scripts/ui_copy_governance_check.mjs",
     "scripts/ui_performance_budget_check.mjs",
     "scripts/ui_pattern_performance_check.mjs",
+    "scripts/ui_pattern_mutation_guard.mjs",
     "scripts/ui_component_extraction_check.mjs",
     "scripts/ui_mechanical_equivalence_check.mjs",
     "scripts/ui_visual_scope_check.mjs",
