@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
@@ -50,26 +51,79 @@ function isPublicEvidenceReference(reference) {
   return true;
 }
 
-const privateEvidenceAliases = new Set([
-  "private-codex-ui-baselines",
-  "private-codex-ui-rendered-geometry",
-  "private-codex-ui-copy-snapshots",
-  "private-codex-ui-rendered-drift",
-  "private-codex-ui-debt-audit",
-]);
+const privateEvidenceAliases = {
+  "private-codex-ui-baselines": "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
+  "private-codex-ui-rendered-geometry": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
+  "private-codex-ui-copy-snapshots": "CLAWIX_UI_PRIVATE_COPY_ROOT",
+  "private-codex-ui-rendered-drift": "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+  "private-codex-ui-debt-audit": "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
+};
+
+function runPrivateEvidencePlan() {
+  const result = spawnSync(process.execPath, [path.join(rootDir, "scripts/ui_private_evidence_plan_check.mjs"), "--json"], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    fail("private evidence plan must pass before decision blockers can be verified");
+    if (result.stderr) {
+      for (const line of result.stderr.trim().split("\n")) fail(`private evidence plan: ${line}`);
+    }
+    return { evidence: [] };
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`private evidence plan output is not valid JSON: ${error.message}`);
+    return { evidence: [] };
+  }
+}
+
+function splitPrivateEvidenceReference(reference) {
+  if (typeof reference !== "string" || !reference.includes(":")) return null;
+  const [alias, ...suffixParts] = reference.split(":");
+  const suffix = suffixParts.join(":");
+  if (!alias || !suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) return null;
+  if (suffix.includes("*") && suffix !== "*" && !suffix.endsWith("/*")) return null;
+  return { alias, suffix };
+}
 
 function isPrivateEvidenceReference(reference) {
   if (typeof reference !== "string" || reference.length === 0) return false;
   if (reference.startsWith("~/") || reference.includes("/Users/") || reference.startsWith("file://")) return false;
-  const [alias, ...suffixParts] = reference.split(":");
-  const suffix = suffixParts.join(":");
-  if (!privateEvidenceAliases.has(alias)) return false;
-  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) return false;
+  const parsed = splitPrivateEvidenceReference(reference);
+  if (!parsed) return false;
+  if (!Object.hasOwn(privateEvidenceAliases, parsed.alias)) return false;
   return true;
+}
+
+function matchesPrivateEvidenceReference(pattern, concreteReference) {
+  const patternParts = splitPrivateEvidenceReference(pattern);
+  const concreteParts = splitPrivateEvidenceReference(concreteReference);
+  if (!patternParts || !concreteParts || patternParts.alias !== concreteParts.alias) return false;
+  if (patternParts.suffix === "*") return true;
+  if (patternParts.suffix.endsWith("/*")) {
+    const prefix = patternParts.suffix.slice(0, -1);
+    return concreteParts.suffix.startsWith(prefix);
+  }
+  return patternParts.suffix === concreteParts.suffix;
+}
+
+function commandMentionsVerifier(command, verifier) {
+  return typeof command === "string" && command.includes(verifier);
 }
 
 const decisionPath = "docs/ui/decision-verification.json";
 const decisionVerification = readJson(decisionPath);
+const privateVisualValidation = readJson("docs/ui/private-visual-validation.manifest.json");
+const privateEvidencePlan = runPrivateEvidencePlan();
+const plannedPrivateReferences = (privateEvidencePlan.evidence || []).map((item) => item.privateReference).filter(Boolean);
+const privateVisualDelegateCommands = requireArray(
+  privateVisualValidation,
+  "docs/ui/private-visual-validation.manifest.json",
+  "delegates",
+  { nonEmpty: true },
+);
 requireFields(decisionVerification, decisionPath, [
   "schemaVersion",
   "conversationId",
@@ -91,6 +145,15 @@ if (!String(decisionVerification?.sourceSession || "").startsWith("private-codex
 }
 if (!String(decisionVerification?.completionRule || "").includes("re-read")) {
   fail(`${decisionPath}.completionRule must require re-reading the private source before completion`);
+}
+
+const requiredPrivateRoots = new Set(
+  requireArray(privateVisualValidation, "docs/ui/private-visual-validation.manifest.json", "requiredRoots", { nonEmpty: true }),
+);
+for (const [alias, envName] of Object.entries(privateEvidenceAliases)) {
+  if (!requiredPrivateRoots.has(envName)) {
+    fail(`docs/ui/private-visual-validation.manifest.json.requiredRoots must include ${envName} for ${alias}`);
+  }
 }
 
 const allowedStatuses = new Set(requireArray(decisionVerification, decisionPath, "statuses"));
@@ -119,6 +182,11 @@ for (const [index, decision] of decisions.entries()) {
     for (const [evidenceIndex, evidence] of requireArray(decision, label, "privateEvidence").entries()) {
       if (!isPrivateEvidenceReference(evidence)) {
         fail(`${label}.privateEvidence[${evidenceIndex}] must be a public-safe private evidence alias reference`);
+        continue;
+      }
+      const matchesPlan = plannedPrivateReferences.some((reference) => matchesPrivateEvidenceReference(evidence, reference));
+      if (!matchesPlan) {
+        fail(`${label}.privateEvidence[${evidenceIndex}] is not covered by the derived private evidence plan`);
       }
     }
     for (const [verifierIndex, verifier] of requireArray(decision, label, "blockingVerifiers").entries()) {
@@ -132,6 +200,12 @@ for (const [index, decision] of decisions.entries()) {
       }
       if (!fs.existsSync(path.join(rootDir, verifier))) {
         fail(`${verifierLabel} points to missing verifier ${verifier}`);
+      }
+      const isAggregateRunner = verifier === "scripts/ui_private_visual_verify.mjs";
+      const isDelegate = privateVisualDelegateCommands.some((command) => commandMentionsVerifier(command, verifier));
+      const isVerificationCommand = commandMentionsVerifier(privateVisualValidation?.verificationCommand, verifier);
+      if (!isAggregateRunner && !isDelegate && !isVerificationCommand) {
+        fail(`${verifierLabel} must be delegated by docs/ui/private-visual-validation.manifest.json`);
       }
     }
   }

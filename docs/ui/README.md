@@ -104,7 +104,8 @@ the public repo.
    promotion.
 8. Keep decision verification evidence current with
    `scripts/ui_decision_verification_check.mjs`; open decisions must declare
-   the exact private evidence aliases and private verifiers that block closure.
+   private evidence aliases covered by the derived evidence plan plus the
+   private verifiers that block closure.
 9. Keep UI debt reports current with `scripts/ui_debt_report_check.mjs`; debt
    items are report-only outside a visual-authorized cleanup scope and
    opportunistic fixes stay forbidden.
