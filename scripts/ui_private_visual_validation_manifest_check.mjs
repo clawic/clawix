@@ -51,6 +51,7 @@ requireFields(manifest, manifestPath, [
   "status",
   "policy",
   "verificationCommand",
+  "evidencePlanCommand",
   "requiredRoots",
   "delegates",
   "decisionBlockers",
@@ -62,6 +63,9 @@ if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_vi
 }
 if (!String(manifest?.verificationCommand || "").includes("--require-approved")) {
   fail(`${manifestPath}.verificationCommand must require approved private evidence`);
+}
+if (manifest?.evidencePlanCommand !== "node scripts/ui_private_evidence_plan_check.mjs --json") {
+  fail(`${manifestPath}.evidencePlanCommand must run node scripts/ui_private_evidence_plan_check.mjs --json`);
 }
 if (manifest?.externalPendingExitCode !== 2) {
   fail(`${manifestPath}.externalPendingExitCode must be 2`);
@@ -90,6 +94,12 @@ for (const snippet of ["--require-approved", "EXTERNAL PENDING", "process.exit(2
   if (!runnerSource.includes(snippet)) {
     fail(`scripts/ui_private_visual_verify.mjs must include ${snippet}`);
   }
+}
+const evidenceVerifierSource = fs.existsSync(path.join(rootDir, "scripts/ui_private_evidence_verify.mjs"))
+  ? fs.readFileSync(path.join(rootDir, "scripts/ui_private_evidence_verify.mjs"), "utf8")
+  : "";
+if (!evidenceVerifierSource.includes("scripts/ui_private_evidence_plan_check.mjs")) {
+  fail("scripts/ui_private_evidence_verify.mjs must consume the derived private evidence plan");
 }
 for (const script of [
   "scripts/ui_private_evidence_verify.mjs",
@@ -136,6 +146,7 @@ for (const decisionId of decisionBlockers) {
 
 for (const script of [
   "scripts/ui_private_visual_verify.mjs",
+  "scripts/ui_private_evidence_plan_check.mjs",
   "scripts/ui_private_evidence_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
