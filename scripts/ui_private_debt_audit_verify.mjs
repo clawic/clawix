@@ -37,6 +37,11 @@ function readJson(relativePath) {
   return readJsonFile(path.join(rootDir, relativePath), relativePath);
 }
 
+function loadAllowedFindingCategories() {
+  const detectorManifest = readJson("docs/ui/visual-change-detectors.manifest.json");
+  return new Set((detectorManifest?.classificationBuckets || []).map((bucket) => bucket?.id).filter(Boolean));
+}
+
 function requireField(object, label, field) {
   if (object?.[field] === undefined || object[field] === null || object[field] === "") {
     fail(`${label} is missing ${field}`);
@@ -79,7 +84,7 @@ function assertApprovedScope(value, label) {
   fail(`${label} must be a non-empty string, array, or object`);
 }
 
-function verifyFindingItems(evidence, label) {
+function verifyFindingItems(evidence, label, allowedCategories) {
   if (!Array.isArray(evidence.findingItems) || evidence.findingItems.length === 0) {
     fail(`${label}.findingItems must be a non-empty array`);
     return;
@@ -94,6 +99,9 @@ function verifyFindingItems(evidence, label) {
       if (typeof item[field] !== "string" || item[field] === "") {
         fail(`${itemLabel}.${field} must be a non-empty string`);
       }
+    }
+    if (typeof item.category === "string" && item.category !== "" && !allowedCategories.has(item.category)) {
+      fail(`${itemLabel}.category must be one of ${[...allowedCategories].join(", ")}`);
     }
     assertHash(item.itemHash, `${itemLabel}.itemHash`);
   }
@@ -122,6 +130,7 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
 const manifest = readJson("docs/ui/debt-audit.manifest.json");
 const alias = manifest?.privateDebtAuditAlias || "private-codex-ui-debt-audit";
 const evidenceFilename = manifest?.evidenceFilename || "debt-audit-evidence.json";
+const allowedFindingCategories = loadAllowedFindingCategories();
 let verified = 0;
 
 for (const [index, entry] of (manifest?.entries || []).entries()) {
@@ -150,7 +159,7 @@ for (const [index, entry] of (manifest?.entries || []).entries()) {
   }
   assertHash(evidence.findingHash, `${label}.findingHash`);
   assertHash(evidence.visualInventoryHash, `${label}.visualInventoryHash`);
-  verifyFindingItems(evidence, label);
+  verifyFindingItems(evidence, label, allowedFindingCategories);
   verified += 1;
 }
 

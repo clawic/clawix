@@ -100,6 +100,11 @@ function readRepoJson(relativePath) {
   return readJson(path.join(rootDir, relativePath), relativePath);
 }
 
+function loadAllowedFindingCategories() {
+  const detectorManifest = readRepoJson("docs/ui/visual-change-detectors.manifest.json");
+  return new Set((detectorManifest?.classificationBuckets || []).map((bucket) => bucket?.id).filter(Boolean));
+}
+
 function requireField(object, label, field) {
   if (object?.[field] === undefined || object[field] === null || object[field] === "") {
     fail(`${label} is missing ${field}`);
@@ -281,7 +286,7 @@ function verifyDriftResults(evidence, label, driftPolicy = {}) {
   }
 }
 
-function verifyFindingItems(evidence, label) {
+function verifyFindingItems(evidence, label, allowedCategories) {
   if (!("findingItems" in evidence)) return;
   if (!Array.isArray(evidence.findingItems) || evidence.findingItems.length === 0) {
     fail(`${label}.findingItems must be a non-empty array`);
@@ -298,6 +303,9 @@ function verifyFindingItems(evidence, label) {
         fail(`${itemLabel}.${field} must be a non-empty string`);
       }
     }
+    if (typeof item.category === "string" && item.category !== "" && !allowedCategories.has(item.category)) {
+      fail(`${itemLabel}.category must be one of ${[...allowedCategories].join(", ")}`);
+    }
     if (typeof item.itemHash !== "string" || !/^[a-f0-9]{64}$/i.test(item.itemHash)) {
       fail(`${itemLabel}.itemHash must be a 64-character hex hash`);
     }
@@ -310,6 +318,7 @@ if (!hasFlag("--require-approved")) {
 }
 
 const plan = runEvidencePlan();
+const allowedFindingCategories = loadAllowedFindingCategories();
 const aliases = new Set();
 for (const item of plan.evidence || []) {
   const parsed = splitReference(item.privateReference);
@@ -381,7 +390,7 @@ for (const item of plan.evidence || []) {
   verifyCopyItems(evidence, label, allowedCopyKinds);
   verifyCopyHierarchyHash(evidence, label);
   verifyDriftResults(evidence, label, item.type === "rendered-drift" ? driftPolicy : {});
-  verifyFindingItems(evidence, label);
+  verifyFindingItems(evidence, label, allowedFindingCategories);
   verified += 1;
 }
 
