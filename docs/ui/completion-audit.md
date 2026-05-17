@@ -11,6 +11,7 @@ are re-read one by one.
 - Completion status: blocked by EXTERNAL PENDING private evidence.
 - Goal update rule: Do not call update_goal until all decisions are verified-complete with evidence.
 - Private evidence plan: 166 records must be verified before completion.
+- Private approval evidence: 1 record(s) must be verified before completion.
 
 | Private evidence type | Required records |
 | --- | --- |

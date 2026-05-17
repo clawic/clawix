@@ -72,11 +72,31 @@ function runPrivateEvidencePlan() {
   }
 }
 
+function countPrivateApprovalRecords() {
+  const approvalAuthorityPath = "docs/ui/approval-authority.manifest.json";
+  const approvalAuthority = readJson(approvalAuthorityPath);
+  let count = 0;
+  for (const [sourceIndex, source] of requireArray(approvalAuthority, approvalAuthorityPath, "approvalSources").entries()) {
+    const sourceLabel = `${approvalAuthorityPath}.approvalSources[${sourceIndex}]`;
+    const registry = readJson(source?.path || "");
+    const records = requireArray(registry, source?.path || sourceLabel, source?.arrayField || "items", { nonEmpty: false });
+    const approvalRequiredStatuses = Array.isArray(source?.approvalRequiredStatuses)
+      ? new Set(source.approvalRequiredStatuses)
+      : null;
+    for (const record of records) {
+      if (approvalRequiredStatuses && !approvalRequiredStatuses.has(record?.[source.statusField])) continue;
+      count += 1;
+    }
+  }
+  return count;
+}
+
 const auditPath = "docs/ui/completion-audit.md";
 const decisionPath = "docs/ui/decision-verification.json";
 const audit = read(auditPath);
 const decisionVerification = readJson(decisionPath);
 const privateEvidencePlan = runPrivateEvidencePlan();
+const privateApprovalRecordCount = countPrivateApprovalRecords();
 scanPublicSafety(audit, auditPath);
 
 for (const required of [
@@ -100,6 +120,9 @@ if (openDecisions.length === 0 && audit.includes("Completion status: blocked")) 
 const plannedEvidenceTotal = Array.isArray(privateEvidencePlan.evidence) ? privateEvidencePlan.evidence.length : 0;
 if (!audit.includes(`Private evidence plan: ${plannedEvidenceTotal} records must be verified before completion.`)) {
   fail(`${auditPath} must state the derived private evidence total`);
+}
+if (!audit.includes(`Private approval evidence: ${privateApprovalRecordCount} record(s) must be verified before completion.`)) {
+  fail(`${auditPath} must state the private approval evidence total`);
 }
 for (const [type, count] of Object.entries(privateEvidencePlan.counts || {})) {
   const row = `| \`${type}\` | ${count} |`;
