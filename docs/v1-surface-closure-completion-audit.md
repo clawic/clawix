@@ -74,5 +74,7 @@ Status vocabulary:
 | 37 | `external_pending_policy` | Separate external validation | verified | Clawix interface matrix and completion gates record physical, paid, provider, destructive, and permission-bound checks as `EXTERNAL PENDING`. |
 
 Current close condition: all listed decisions have public-safe implementation
-or explicit external-pending evidence, but the private source session must be
-re-read again immediately before any `update_goal(status=complete)` call.
+or explicit external-pending evidence. Completion remains blocked while the
+validation ledger reports `blocked-tooling` for Android and Windows bridge
+tests. The private source session must also be re-read again immediately before
+any `update_goal(status=complete)` call.

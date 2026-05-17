@@ -133,6 +133,7 @@ const expectedAcceptanceCategoryIds = [
   "external-pending-policy",
 ];
 const allowedValidationStatuses = new Set(["passed", "external-pending", "blocked-tooling"]);
+const allowedCompletionStatuses = new Set(["complete", "local-validation-passed-with-external-pending", "blocked-tooling"]);
 
 if (decisions.schemaVersion !== 1) fail(`${decisionsPath}.schemaVersion must be 1`);
 if (decisions.program !== "v1-surface-closure") fail(`${decisionsPath}.program must be v1-surface-closure`);
@@ -203,9 +204,12 @@ if (validation.schemaVersion !== 1) fail(`${validationPath}.schemaVersion must b
 if (validation.program !== "v1-surface-closure") fail(`${validationPath}.program must be v1-surface-closure`);
 if (validation.repo !== "clawix") fail(`${validationPath}.repo must be clawix`);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(validation.generatedAt ?? "")) fail(`${validationPath}.generatedAt must be YYYY-MM-DD`);
+if (!allowedCompletionStatuses.has(validation.completionStatus)) fail(`${validationPath}.completionStatus is invalid`);
+if (!Array.isArray(validation.completionBlockers)) fail(`${validationPath}.completionBlockers must be an array`);
 const validationResults = validation.results ?? [];
 if (!Array.isArray(validationResults) || validationResults.length === 0) fail(`${validationPath}.results must be a non-empty array`);
 const validatedAcceptanceIds = new Set();
+const blockingValidationIds = new Set();
 for (const result of validationResults) {
   const label = `${validationPath}.results.${result?.id ?? "<missing-id>"}`;
   if (!result.id) fail(`${label} is missing id`);
@@ -213,6 +217,10 @@ for (const result of validationResults) {
   if (!allowedValidationStatuses.has(result.status)) fail(`${label}.status is invalid`);
   if (!result.evidence) fail(`${label} is missing evidence`);
   if (result.status !== "passed" && !result.nextAction) fail(`${label} must include nextAction when not passed`);
+  if (result.status !== "passed" && typeof result.completionBlocking !== "boolean") {
+    fail(`${label}.completionBlocking must be explicit when status is not passed`);
+  }
+  if (result.completionBlocking === true) blockingValidationIds.add(result.id);
   if (!Array.isArray(result.acceptanceCategoryIds) || result.acceptanceCategoryIds.length === 0) {
     fail(`${label}.acceptanceCategoryIds must be a non-empty array`);
   }
@@ -221,6 +229,15 @@ for (const result of validationResults) {
     validatedAcceptanceIds.add(categoryId);
   }
 }
+const declaredBlockers = new Set(validation.completionBlockers);
+for (const blocker of blockingValidationIds) {
+  if (!declaredBlockers.has(blocker)) fail(`${validationPath}.completionBlockers is missing blocking result ${blocker}`);
+}
+for (const blocker of declaredBlockers) {
+  if (!blockingValidationIds.has(blocker)) fail(`${validationPath}.completionBlockers contains non-blocking result ${blocker}`);
+}
+if (validation.completionStatus === "complete" && declaredBlockers.size > 0) fail(`${validationPath}.completionStatus cannot be complete with blockers`);
+if (validation.completionStatus === "blocked-tooling" && declaredBlockers.size === 0) fail(`${validationPath}.completionStatus blocked-tooling requires blockers`);
 for (const expectedId of expectedAcceptanceCategoryIds) {
   if (!validatedAcceptanceIds.has(expectedId)) fail(`${validationPath} has no validation result for acceptance category ${expectedId}`);
 }

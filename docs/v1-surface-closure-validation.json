@@ -3,6 +3,8 @@
   "program": "v1-surface-closure",
   "repo": "clawix",
   "generatedAt": "2026-05-17",
+  "completionStatus": "blocked-tooling",
+  "completionBlockers": ["clawix-android-bridge", "clawix-windows-bridge"],
   "statusVocabulary": {
     "passed": "The command ran locally and returned exit code 0.",
     "external-pending": "The local harness exists, but a live, provider, Docker, paid, destructive, physical, or approved external prerequisite was intentionally not exercised.",
@@ -28,6 +30,7 @@
       "acceptanceCategoryIds": ["bridge-android"],
       "command": "bash scripts/launch-android.sh test",
       "status": "blocked-tooling",
+      "completionBlocking": true,
       "evidence": "Launcher exited 69 because the Gradle wrapper is missing and no gradle binary is available on PATH.",
       "nextAction": "Generate the Android Gradle wrapper on a machine with Gradle or open android/ in Android Studio, then rerun bash scripts/launch-android.sh test."
     },
@@ -36,6 +39,7 @@
       "acceptanceCategoryIds": ["bridge-windows"],
       "command": "dotnet test windows/Clawix.sln",
       "status": "blocked-tooling",
+      "completionBlocking": true,
       "evidence": "The dotnet CLI is not installed in this environment.",
       "nextAction": "Install the .NET 8 SDK or run the Windows test lane on a Windows/.NET environment, then rerun dotnet test windows/Clawix.sln."
     },
@@ -58,6 +62,7 @@
       "acceptanceCategoryIds": ["integrations-qa"],
       "command": "node scripts/interface_surface_guard.mjs && bash scripts/doc_alignment_check.sh",
       "status": "external-pending",
+      "completionBlocking": false,
       "evidence": "Hermetic/matrix coverage is present; live provider checks remain EXTERNAL PENDING without explicit approval.",
       "nextAction": "Run approved provider-specific live validation through the ClawJS Integration QA Lab when credentials and provider state are available."
     },
