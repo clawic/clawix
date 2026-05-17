@@ -11,10 +11,75 @@ function fail(message) {
   errors.push(message);
 }
 
+function readJson(relativePath) {
+  return JSON.parse(fs.readFileSync(path.join(rootDir, relativePath), "utf8"));
+}
+
+function writeJson(file, value) {
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function copyFixtureFile(fixtureRoot, relativePath) {
+  const destination = path.join(fixtureRoot, relativePath);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(path.join(rootDir, relativePath), destination);
+}
+
+function runFixtureNode(fixtureRoot, args, extraEnv = {}) {
+  try {
+    const stdout = execFileSync(process.execPath, args, {
+      cwd: fixtureRoot,
+      env: {
+        ...env,
+        ...extraEnv,
+      },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { exitCode: 0, output: stdout };
+  } catch (error) {
+    return {
+      exitCode: error.status || 1,
+      output: `${error.stdout || ""}${error.stderr || ""}`,
+    };
+  }
+}
+
+function buildApprovalFixture() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-ui-approval-fixture-"));
+  for (const relativePath of [
+    "scripts/ui_private_approval_verify.mjs",
+    "scripts/ui_private_root_contract.mjs",
+    "docs/ui/approval-authority.manifest.json",
+    "docs/ui/private-visual-validation.manifest.json",
+    "docs/ui/canon-promotions.registry.json",
+    "docs/ui/protected-surfaces.registry.json",
+    "docs/ui/visual-change-scopes.manifest.json",
+    "docs/ui/visual-proposals.registry.json",
+    "docs/ui/exceptions.registry.json",
+  ]) {
+    copyFixtureFile(fixtureRoot, relativePath);
+  }
+
+  const promotionsPath = path.join(fixtureRoot, "docs/ui/canon-promotions.registry.json");
+  const promotions = readJson("docs/ui/canon-promotions.registry.json");
+  promotions.promotions = [
+    {
+      id: "fixture-canon-approval",
+      approvedBy: "user",
+      approvedAt: "2026-05-17",
+      privateApprovalReference: "private-codex-ui-approval:canon/fixture-canon-approval",
+    },
+  ];
+  writeJson(promotionsPath, promotions);
+  return fixtureRoot;
+}
+
 const env = { ...process.env };
 delete env.CLAWIX_UI_VISUAL_AUTHORIZED;
 delete env.CLAWIX_UI_VISUAL_MODEL;
 delete env.CLAWIX_UI_VISUAL_SCOPE_ID;
+delete env.CLAWIX_UI_PRIVATE_APPROVAL_ROOT;
 
 let output = "";
 let exitCode = 0;
@@ -755,6 +820,69 @@ for (const snippet of [
   "macos-root-chrome",
 ]) {
   if (!driftOutput.includes(snippet)) fail(`private drift failure output is missing: ${snippet}`);
+}
+
+const approvalFixtureRoot = buildApprovalFixture();
+const approvalPrivateRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-ui-approval-private-"));
+try {
+  const missingApprovalRootResult = runFixtureNode(approvalFixtureRoot, ["scripts/ui_private_approval_verify.mjs", "--require-approved"]);
+  if (missingApprovalRootResult.exitCode !== 2) {
+    fail("private approval verifier must report EXTERNAL PENDING when approval records exist and the private root is missing");
+  }
+  for (const snippet of [
+    "EXTERNAL PENDING:",
+    "CLAWIX_UI_PRIVATE_APPROVAL_ROOT",
+    "private approval evidence",
+  ]) {
+    if (!missingApprovalRootResult.output.includes(snippet)) fail(`private approval missing-root output is missing: ${snippet}`);
+  }
+
+  const approvalEvidenceDir = path.join(approvalPrivateRoot, "canon", "fixture-canon-approval");
+  fs.mkdirSync(approvalEvidenceDir, { recursive: true });
+  writeJson(path.join(approvalEvidenceDir, "approval-evidence.json"), {
+    sourceId: "canon-promotions",
+    privateApprovalReference: "private-codex-ui-approval:canon/fixture-canon-approval",
+    approvedBy: "user",
+    approvedAt: "2026-05-17",
+    approvalHash: "not-a-valid-hash",
+  });
+  const invalidApprovalResult = runFixtureNode(
+    approvalFixtureRoot,
+    ["scripts/ui_private_approval_verify.mjs", "--require-approved"],
+    { CLAWIX_UI_PRIVATE_APPROVAL_ROOT: approvalPrivateRoot },
+  );
+  if (invalidApprovalResult.exitCode === 0) {
+    fail("private approval verifier must fail when approval evidence is invalid");
+  }
+  for (const snippet of [
+    "UI private approval verification failed:",
+    "approvalHash must be a 64-character hex hash",
+    "docs/ui/canon-promotions.registry.json.promotions[0]",
+  ]) {
+    if (!invalidApprovalResult.output.includes(snippet)) fail(`private approval invalid-evidence output is missing: ${snippet}`);
+  }
+
+  writeJson(path.join(approvalEvidenceDir, "approval-evidence.json"), {
+    sourceId: "canon-promotions",
+    privateApprovalReference: "private-codex-ui-approval:canon/fixture-canon-approval",
+    approvedBy: "user",
+    approvedAt: "2026-05-17",
+    approvalHash: "a".repeat(64),
+  });
+  const validApprovalResult = runFixtureNode(
+    approvalFixtureRoot,
+    ["scripts/ui_private_approval_verify.mjs", "--require-approved"],
+    { CLAWIX_UI_PRIVATE_APPROVAL_ROOT: approvalPrivateRoot },
+  );
+  if (validApprovalResult.exitCode !== 0) {
+    fail("private approval verifier must pass when approval evidence matches the public approval record");
+  }
+  if (!validApprovalResult.output.includes("UI private approval verification passed (1 approval records)")) {
+    fail("private approval valid-evidence output must report one verified approval record");
+  }
+} finally {
+  fs.rmSync(approvalFixtureRoot, { recursive: true, force: true });
+  fs.rmSync(approvalPrivateRoot, { recursive: true, force: true });
 }
 
 if (errors.length > 0) {
