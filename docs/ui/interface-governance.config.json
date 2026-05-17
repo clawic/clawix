@@ -46,6 +46,7 @@
     "canon-promotion-record-check",
     "decision-verification-evidence-check",
     "completion-audit-check",
+    "completion-source-contract-check",
     "exception-expiry",
     "exception-registry-check",
     "inspiration-reference-policy-check",
