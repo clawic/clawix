@@ -4,6 +4,8 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const uiDir = path.join(rootDir, "docs/ui");
+const expectedPrivateBaselineAlias = "private-codex-ui-baselines";
+const expectedPrivateAssignment = "outside-public-repo";
 const errors = [];
 
 function fail(message) {
@@ -97,6 +99,9 @@ const privateValidation = readJson("docs/ui/private-visual-validation.manifest.j
 const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
 requireField(privateBaselines, "docs/ui/private-baselines.manifest.json", "privateRootAlias");
 const privateBaselineAlias = privateBaselines?.privateRootAlias;
+if (privateBaselineAlias !== expectedPrivateBaselineAlias) {
+  fail(`docs/ui/private-baselines.manifest.json.privateRootAlias must be ${expectedPrivateBaselineAlias}`);
+}
 const requiredRoots = new Set(Array.isArray(privateValidation?.requiredRoots) ? privateValidation.requiredRoots : []);
 const rootAliases = Array.isArray(privateValidation?.rootAliases) ? privateValidation.rootAliases : [];
 const optionalRootAliases = Array.isArray(privateValidation?.optionalRootAliases) ? privateValidation.optionalRootAliases : [];
@@ -128,10 +133,10 @@ for (const [index, entry] of [...rootAliases, ...optionalRootAliases].entries())
 }
 
 const visualModelAllowlist = readJson("docs/ui/visual-model-allowlist.manifest.json");
-requireField(visualModelAllowlist, "docs/ui/visual-model-allowlist.manifest.json", "privateAssignment", "outside-public-repo");
+requireField(visualModelAllowlist, "docs/ui/visual-model-allowlist.manifest.json", "privateAssignment", expectedPrivateAssignment);
 
 const visualScopes = readJson("docs/ui/visual-change-scopes.manifest.json");
-requireField(visualScopes, "docs/ui/visual-change-scopes.manifest.json", "privateModelAssignment", "outside-public-repo");
+requireField(visualScopes, "docs/ui/visual-change-scopes.manifest.json", "privateModelAssignment", expectedPrivateAssignment);
 
 for (const root of requiredRoots) {
   if (!rootAliases.some((entry) => entry?.env === root)) {
