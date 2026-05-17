@@ -48,7 +48,11 @@ function requireAlias(value, alias, label) {
     fail(`${label} must use ${alias}:`);
     return;
   }
-  if (value.startsWith("/") || value.includes("/Users/") || value.startsWith("file://")) {
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..")) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (value.includes("/Users/") || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value)) {
     fail(`${label} must not contain a local path`);
   }
 }
