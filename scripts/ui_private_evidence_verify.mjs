@@ -27,6 +27,7 @@ const idFields = {
   "rendered-drift": "coverageId",
   "debt-audit": "debtId",
   "performance-budget": "flowId",
+  "mechanical-equivalence": "recordId",
 };
 
 function fail(message) {
@@ -98,6 +99,9 @@ function loadPrivateAliasRoots() {
   const validationManifest = readRepoJson("docs/ui/private-visual-validation.manifest.json");
   const requiredRoots = new Set(Array.isArray(validationManifest?.requiredRoots) ? validationManifest.requiredRoots : []);
   const rootAliases = Array.isArray(validationManifest?.rootAliases) ? validationManifest.rootAliases : [];
+  const optionalRootAliases = Array.isArray(validationManifest?.optionalRootAliases)
+    ? validationManifest.optionalRootAliases
+    : [];
   if (rootAliases.length === 0) {
     fail("docs/ui/private-visual-validation.manifest.json.rootAliases must not be empty");
     return {};
@@ -106,8 +110,15 @@ function loadPrivateAliasRoots() {
   const aliases = {};
   const seenAliases = new Set();
   const seenEnvs = new Set();
-  for (const [index, entry] of rootAliases.entries()) {
-    const label = `docs/ui/private-visual-validation.manifest.json.rootAliases[${index}]`;
+  const allAliasEntries = [
+    ...rootAliases.map((entry, index) => ({ entry, label: `docs/ui/private-visual-validation.manifest.json.rootAliases[${index}]`, required: true })),
+    ...optionalRootAliases.map((entry, index) => ({
+      entry,
+      label: `docs/ui/private-visual-validation.manifest.json.optionalRootAliases[${index}]`,
+      required: false,
+    })),
+  ];
+  for (const { entry, label, required } of allAliasEntries) {
     const { alias, env, manifestPath, manifestAliasField } = entry || {};
     if (typeof alias !== "string" || alias === "") fail(`${label}.alias must be a non-empty string`);
     if (typeof env !== "string" || env === "") fail(`${label}.env must be a non-empty string`);
@@ -120,7 +131,7 @@ function loadPrivateAliasRoots() {
     if (seenEnvs.has(env)) fail(`${label}.env duplicates ${env}`);
     seenAliases.add(alias);
     seenEnvs.add(env);
-    if (!requiredRoots.has(env)) fail(`${label}.env must be listed in requiredRoots`);
+    if (required && !requiredRoots.has(env)) fail(`${label}.env must be listed in requiredRoots`);
     const sourceManifest = readRepoJson(manifestPath);
     if (sourceManifest?.[manifestAliasField] !== alias) {
       fail(`${label} must match ${manifestPath}.${manifestAliasField}`);
@@ -424,6 +435,13 @@ function verifyPublicApprovalState(item, registries, label) {
       return false;
     }
   }
+  if (item.type === "mechanical-equivalence") {
+    const record = registries.mechanicalEquivalenceByKey.get(`${item.platform}:${item.id}`);
+    if (record?.status !== "verified-equivalent") {
+      fail(`${label} is pending verified mechanical equivalence`);
+      return false;
+    }
+  }
   return true;
 }
 
@@ -473,6 +491,7 @@ const copyInventory = readRepoJson("docs/ui/copy.inventory.json");
 const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKinds) ? copyInventory.restrictedCopyKinds : []);
 const renderedGeometry = readRepoJson("docs/ui/rendered-geometry.manifest.json");
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
+const mechanicalEquivalence = readRepoJson("docs/ui/mechanical-equivalence.manifest.json");
 const driftPolicy = {
   allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
   blockingStatuses: new Set(Array.isArray(renderedDrift?.blockingReportStatuses) ? renderedDrift.blockingReportStatuses : []),
@@ -486,6 +505,12 @@ const publicRegistries = {
   renderedDriftById: mapByKey(renderedDrift?.reports, (report) => report.coverageId),
   debtAuditById: mapByKey(debtAudit?.entries, (entry) => entry.debtId),
   performanceBudgetByKey: mapByKey(performanceBudgets?.flows, (flow) => `${flow.platform}:${flow.id}`),
+  mechanicalEquivalenceByKey: mapByKey(
+    (mechanicalEquivalence?.records || []).flatMap((record) =>
+      (record.platforms || []).map((platform) => ({ ...record, platform })),
+    ),
+    (record) => `${record.platform}:${record.id}`,
+  ),
   renderedGeometryStatus: renderedGeometry?.status,
   driftBlockingStatuses: driftPolicy.blockingStatuses,
 };
@@ -522,6 +547,14 @@ for (const item of plan.evidence || []) {
   verifyCopyHierarchyHash(evidence, label);
   verifyDriftResults(evidence, label, item.type === "rendered-drift" ? driftPolicy : {});
   verifyFindingItems(evidence, label, allowedFindingCategories);
+  if (item.type === "mechanical-equivalence") {
+    const record = publicRegistries.mechanicalEquivalenceByKey.get(`${item.platform}:${item.id}`);
+    if (record) {
+      for (const field of mechanicalEquivalence?.requiredEvidenceFields || []) {
+        if (evidence[field] !== record[field]) fail(`${label}.${field} must match the public mechanical equivalence record`);
+      }
+    }
+  }
   verified += 1;
 }
 

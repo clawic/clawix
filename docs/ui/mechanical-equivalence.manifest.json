@@ -3,6 +3,7 @@
   "status": "active",
   "policy": "Mechanical UI refactors are allowed only when before/after evidence proves equivalent rendered output, geometry, copy, and governed visual tokens. Public records store safe aliases and hashes; screenshots and raw captures stay private.",
   "privateEvidenceAlias": "private-codex-ui-mechanical-equivalence",
+  "evidenceFilename": "mechanical-equivalence-evidence.json",
   "recordRequirement": {
     "requiredForMutationClass": "mechanical-equivalent-refactor",
     "emptyRecordsAllowedOnlyWhenNoRefactorInScope": true,

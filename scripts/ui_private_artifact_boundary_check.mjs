@@ -99,18 +99,22 @@ requireField(privateBaselines, "docs/ui/private-baselines.manifest.json", "priva
 const privateBaselineAlias = privateBaselines?.privateRootAlias;
 const requiredRoots = new Set(Array.isArray(privateValidation?.requiredRoots) ? privateValidation.requiredRoots : []);
 const rootAliases = Array.isArray(privateValidation?.rootAliases) ? privateValidation.rootAliases : [];
+const optionalRootAliases = Array.isArray(privateValidation?.optionalRootAliases) ? privateValidation.optionalRootAliases : [];
 if (rootAliases.length === 0) fail("docs/ui/private-visual-validation.manifest.json.rootAliases must not be empty");
 if (!rootAliases.some((entry) => entry?.alias === privateBaselineAlias)) {
   fail(`docs/ui/private-visual-validation.manifest.json.rootAliases must include ${privateBaselineAlias}`);
 }
-for (const [index, entry] of rootAliases.entries()) {
-  const label = `docs/ui/private-visual-validation.manifest.json.rootAliases[${index}]`;
+for (const [index, entry] of [...rootAliases, ...optionalRootAliases].entries()) {
+  const isRequiredAlias = index < rootAliases.length;
+  const label = isRequiredAlias
+    ? `docs/ui/private-visual-validation.manifest.json.rootAliases[${index}]`
+    : `docs/ui/private-visual-validation.manifest.json.optionalRootAliases[${index - rootAliases.length}]`;
   requireField(entry, label, "alias");
   requireField(entry, label, "env");
   requireField(entry, label, "manifestPath");
   requireField(entry, label, "manifestAliasField");
   if (!entry?.env || !entry?.manifestPath || !entry?.manifestAliasField) continue;
-  if (!requiredRoots.has(entry.env)) {
+  if (isRequiredAlias && !requiredRoots.has(entry.env)) {
     fail(`${label}.env must be listed in docs/ui/private-visual-validation.manifest.json.requiredRoots`);
   }
   const linkedManifest = readJson(entry.manifestPath);

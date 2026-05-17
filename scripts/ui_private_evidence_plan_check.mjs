@@ -75,6 +75,7 @@ const copyInventory = readJson("docs/ui/copy.inventory.json");
 const renderedDrift = readJson("docs/ui/rendered-drift.manifest.json");
 const performanceBudgets = readJson("docs/ui/performance-budgets.registry.json");
 const debtAudit = readJson("docs/ui/debt-audit.manifest.json");
+const mechanicalEquivalence = readJson("docs/ui/mechanical-equivalence.manifest.json");
 
 const surfaceRequiredFields = requireArray(surfaceCoverage, "docs/ui/surface-baseline-coverage.manifest.json", "requiredEvidenceFields");
 for (const [index, entry] of requireArray(surfaceCoverage, "docs/ui/surface-baseline-coverage.manifest.json", "coverage").entries()) {
@@ -195,6 +196,25 @@ for (const [index, flow] of requireArray(performanceBudgets, "docs/ui/performanc
     evidenceFilename: performanceBudgets?.evidenceFilename || "performance-evidence.json",
     requiredFields: performanceBudgets?.requiredEvidenceFields || [],
   });
+}
+
+for (const [index, record] of requireArray(mechanicalEquivalence, "docs/ui/mechanical-equivalence.manifest.json", "records", { nonEmpty: false }).entries()) {
+  const label = `mechanical-equivalence[${index}]`;
+  requireFields(record, label, ["id", "status", "platforms", "changedFiles"]);
+  const platforms = requireArray(record, label, "platforms");
+  for (const platform of platforms) {
+    const privateReference = `${mechanicalEquivalence?.privateEvidenceAlias}:records/${record.id}/${platform}`;
+    assertPublicSafeReference(privateReference, mechanicalEquivalence?.privateEvidenceAlias, `${label}.${platform}.privateEvidenceReference`);
+    addPlanItem({
+      label: `${label}:${platform}`,
+      type: "mechanical-equivalence",
+      id: record.id,
+      platform,
+      privateReference,
+      evidenceFilename: mechanicalEquivalence?.evidenceFilename || "mechanical-equivalence-evidence.json",
+      requiredFields: ["recordId", "platform", "status", ...(mechanicalEquivalence?.requiredEvidenceFields || [])],
+    });
+  }
 }
 
 const counts = new Map();

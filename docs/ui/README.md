@@ -45,7 +45,8 @@ the public repo.
 - `component-extraction.manifest.json`: reusable component extraction policy,
   bounded API audit rules, and mechanical-equivalence evidence requirements.
 - `mechanical-equivalence.manifest.json`: before/after evidence and blocking
-  status contract for mechanical UI refactors.
+  status contract for mechanical UI refactors. Registered records are included
+  in the derived private evidence plan through an optional private root.
 - `pattern-registry/`: pattern manifests and human notes.
 - `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `copy.inventory.json`: copy canon policy and private snapshot requirements.
@@ -207,6 +208,8 @@ the public repo.
 42. When all private roots are available, verify every record in the derived
     private evidence plan with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_evidence_verify.mjs --require-approved`.
+    If mechanical-equivalence records exist, also set
+    `CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT=<private-root>`.
 43. When all private roots are available, verify visual and performance
     evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.

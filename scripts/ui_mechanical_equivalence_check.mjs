@@ -73,6 +73,7 @@ requireFields(manifest, manifestPath, [
   "status",
   "policy",
   "privateEvidenceAlias",
+  "evidenceFilename",
   "recordRequirement",
   "requiredEvidenceFields",
   "allowedTokenDiffStatuses",
@@ -82,6 +83,9 @@ requireFields(manifest, manifestPath, [
 
 if (manifest?.privateEvidenceAlias !== "private-codex-ui-mechanical-equivalence") {
   fail(`${manifestPath}.privateEvidenceAlias must be private-codex-ui-mechanical-equivalence`);
+}
+if (manifest?.evidenceFilename !== "mechanical-equivalence-evidence.json") {
+  fail(`${manifestPath}.evidenceFilename must be mechanical-equivalence-evidence.json`);
 }
 
 const recordRequirement = manifest?.recordRequirement || {};

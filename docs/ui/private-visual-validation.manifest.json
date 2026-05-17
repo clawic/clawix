@@ -43,6 +43,14 @@
       "manifestAliasField": "privateDebtAuditAlias"
     }
   ],
+  "optionalRootAliases": [
+    {
+      "alias": "private-codex-ui-mechanical-equivalence",
+      "env": "CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT",
+      "manifestPath": "docs/ui/mechanical-equivalence.manifest.json",
+      "manifestAliasField": "privateEvidenceAlias"
+    }
+  ],
   "delegates": [
     "node scripts/ui_private_evidence_verify.mjs --require-approved",
     "node scripts/ui_private_baseline_verify.mjs --require-approved",
