@@ -6,6 +6,7 @@ import com.example.clawix.android.core.BridgeFrame
 import com.example.clawix.android.core.BridgeJson
 import com.example.clawix.android.core.BRIDGE_SCHEMA_VERSION
 import com.example.clawix.android.core.ClientKind
+import com.example.clawix.android.core.PairingPayload
 import com.example.clawix.android.core.WireAttachment
 import com.example.clawix.android.core.WireAttachmentKind
 import com.example.clawix.android.core.WireSession
@@ -14,6 +15,7 @@ import com.example.clawix.android.core.WireRole
 import com.example.clawix.android.core.WireTimelineEntry
 import com.example.clawix.android.core.WireWorkItem
 import com.example.clawix.android.core.WireWorkItemStatus
+import com.example.clawix.android.bridge.Credentials
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -149,6 +151,19 @@ class BridgeFrameRoundtripTest {
     @Test fun roundtrip_bridge_state() {
         roundtrip(BridgeBody.BridgeStateFrame("ready", 12, null))
         roundtrip(BridgeBody.BridgeStateFrame("error", 0, "boot crashed"))
+    }
+
+    @Test fun pairing_payload_preserves_remote_route_fields() {
+        val payload = PairingPayload.parse(
+            """{"v":1,"host":"192.168.1.10","port":24080,"token":"tok","hostDisplayName":"Studio Mac","tailscaleHost":"100.64.1.2","shortCode":"ABC-234-XYZ","coordinatorUrl":"https://relay.example.com","irohNodeId":"node-1"}"""
+        )
+        assertNotNull(payload)
+        assertEquals("https://relay.example.com", payload?.coordinatorUrl)
+        assertEquals("node-1", payload?.irohNodeId)
+
+        val credentials = Credentials.fromPairingPayload(payload!!)
+        assertEquals("https://relay.example.com", credentials.coordinatorUrl)
+        assertEquals("node-1", credentials.irohNodeId)
     }
 
     @Test fun roundtrip_timeline_and_work_summary() {

@@ -366,6 +366,16 @@ for (const [relativePath, requiredSnippets, staleSnippets] of [
     ['obj.requireString("bearer")'],
   ],
   [
+    "android/app/src/main/java/com/example/clawix/android/core/PairingPayload.kt",
+    ["val coordinatorUrl: String? = null", "val irohNodeId: String? = null"],
+    ["clawix://pair"],
+  ],
+  [
+    "android/app/src/main/java/com/example/clawix/android/bridge/Credentials.kt",
+    ["val coordinatorUrl: String? = null", "val irohNodeId: String? = null", "KEY_COORDINATOR_URL", "KEY_IROH_NODE_ID"],
+    ["macName"],
+  ],
+  [
     "web/src/bridge/frames.ts",
     ["token: z.string(),", "shortCode: z.string(),"],
     ["bearer: z.string(),"],

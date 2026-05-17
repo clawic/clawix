@@ -108,6 +108,8 @@ class ShortCodePairingFlow(private val container: AppContainer) {
                                             token = code,
                                             hostDisplayName = body.hostDisplayName ?: mac.name,
                                             tailscaleHost = null,
+                                            coordinatorUrl = null,
+                                            irohNodeId = null,
                                         )
                                         container.credentialStore.save(creds)
                                         container.bridgeClient.connect(creds)

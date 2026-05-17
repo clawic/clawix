@@ -16,6 +16,8 @@ data class PairingPayload(
     val hostDisplayName: String? = null,
     val tailscaleHost: String? = null,
     val shortCode: String? = null,
+    val coordinatorUrl: String? = null,
+    val irohNodeId: String? = null,
 ) {
     companion object {
         /** Tolerant parser. Returns null if the QR isn't ours. */

@@ -9,6 +9,8 @@ import com.example.clawix.android.core.PairingPayload
  * Pairing credentials persisted between app launches. Mirrors iOS
  * `Credentials.swift`. The pairing token authorises the WebSocket; the
  * host/port and Tailscale fallback are used by the multi-path racer.
+ * Coordinator and Iroh fields are preserved from the v1 QR payload so
+ * remote bridge routes can be enabled without re-pairing.
  */
 data class Credentials(
     val host: String,
@@ -16,6 +18,8 @@ data class Credentials(
     val token: String,
     val hostDisplayName: String?,
     val tailscaleHost: String?,
+    val coordinatorUrl: String? = null,
+    val irohNodeId: String? = null,
 ) {
     companion object {
         fun fromPairingPayload(p: PairingPayload): Credentials = Credentials(
@@ -24,6 +28,8 @@ data class Credentials(
             token = p.token,
             hostDisplayName = p.hostDisplayName,
             tailscaleHost = p.tailscaleHost,
+            coordinatorUrl = p.coordinatorUrl,
+            irohNodeId = p.irohNodeId,
         )
     }
 }
@@ -81,6 +87,8 @@ class CredentialStore(context: Context) {
             token = token,
             hostDisplayName = prefs.getString(KEY_MAC_NAME, null),
             tailscaleHost = prefs.getString(KEY_TAILSCALE_HOST, null),
+            coordinatorUrl = prefs.getString(KEY_COORDINATOR_URL, null),
+            irohNodeId = prefs.getString(KEY_IROH_NODE_ID, null),
         )
     }
 
@@ -91,6 +99,8 @@ class CredentialStore(context: Context) {
             .putString(KEY_TOKEN, c.token)
             .putString(KEY_MAC_NAME, c.hostDisplayName)
             .putString(KEY_TAILSCALE_HOST, c.tailscaleHost)
+            .putString(KEY_COORDINATOR_URL, c.coordinatorUrl)
+            .putString(KEY_IROH_NODE_ID, c.irohNodeId)
             .apply()
     }
 
@@ -104,5 +114,7 @@ class CredentialStore(context: Context) {
         private const val KEY_TOKEN = "token"
         private const val KEY_MAC_NAME = "hostDisplayName"
         private const val KEY_TAILSCALE_HOST = "tailscaleHost"
+        private const val KEY_COORDINATOR_URL = "coordinatorUrl"
+        private const val KEY_IROH_NODE_ID = "irohNodeId"
     }
 }
