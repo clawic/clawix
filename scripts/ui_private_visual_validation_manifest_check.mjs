@@ -65,6 +65,26 @@ function runEvidencePlan() {
   }
 }
 
+function approvalRecordCount() {
+  const approvalAuthorityPath = "docs/ui/approval-authority.manifest.json";
+  const approvalAuthority = readJson(approvalAuthorityPath);
+  let count = 0;
+  for (const [sourceIndex, source] of requireArray(approvalAuthority, approvalAuthorityPath, "approvalSources").entries()) {
+    const sourceLabel = `${approvalAuthorityPath}.approvalSources[${sourceIndex}]`;
+    requireFields(source, sourceLabel, ["path", "arrayField"]);
+    const registry = readJson(source?.path || "");
+    const records = requireArray(registry, source?.path || sourceLabel, source?.arrayField || "items", { nonEmpty: false });
+    const approvalRequiredStatuses = Array.isArray(source?.approvalRequiredStatuses)
+      ? new Set(source.approvalRequiredStatuses)
+      : null;
+    for (const record of records) {
+      if (approvalRequiredStatuses && !approvalRequiredStatuses.has(record?.[source.statusField])) continue;
+      count += 1;
+    }
+  }
+  return count;
+}
+
 const manifestPath = "docs/ui/private-visual-validation.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -211,6 +231,9 @@ for (const contract of expectedOptionalAliasContracts) {
   if (roots.has(entry.env)) {
     fail(`${manifestPath}.optionalRootAliases entry for ${contract.alias} must not add ${entry.env} to requiredRoots`);
   }
+}
+if (approvalRecordCount() > 0 && !String(manifest?.verificationCommand || "").includes("CLAWIX_UI_PRIVATE_APPROVAL_ROOT")) {
+  fail(`${manifestPath}.verificationCommand must include CLAWIX_UI_PRIVATE_APPROVAL_ROOT while public approval records exist`);
 }
 
 const delegates = requireArray(manifest, manifestPath, "delegates");
