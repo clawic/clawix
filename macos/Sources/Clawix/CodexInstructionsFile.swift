@@ -1,11 +1,8 @@
 import Foundation
 
 // Read/write helper for ~/.codex/AGENTS.md, the file Codex uses as the
-// user's global custom instructions. The Personalization page in
-// Settings is a direct editor for this file: load on appear, save on
-// commit. No in-memory cache. If something else (CLI, another editor)
-// rewrites the file while the app is open, re-entering the page picks
-// up the new contents on the next .onAppear.
+// user's global custom instructions. Clawix-owned additions are scoped to
+// sentinel blocks so the rest of the Codex-owned file stays untouched.
 enum CodexInstructionsFile {
     static var fileURL: URL {
         FileManager.default.homeDirectoryForCurrentUser
@@ -152,6 +149,10 @@ enum CodexSecretsBlock {
 - All output is automatically redacted; secret values are replaced with `[REDACTED:secret_name]` in stdout, stderr, headers, and bodies.
 - If you need a secret that doesn't exist, propose its exact metadata (internal name, allowed hosts, allowed headers, read-only, justification) so the user can create it once. Never request the literal value.
 """
+}
+
+enum CodexPersonalizationBlock {
+    static let id = "personalization"
 }
 
 enum CodexMemoryBlock {

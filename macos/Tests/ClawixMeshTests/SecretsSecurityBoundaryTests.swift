@@ -258,6 +258,40 @@ final class SecretsSecurityBoundaryTests: XCTestCase {
         )
     }
 
+    func testCodexInstructionsWritesStaySentinelScopedAndConfirmed() throws {
+        let personalizationSource = try readSource("Settings/SettingsView+PersonalizationPage.swift")
+        let instructionsSource = try readSource("CodexInstructionsFile.swift")
+        let memorySource = try readSource("Memory/MemoryCodexInjectionCard.swift")
+        let secretsSource = try readSource("Secrets/SecretsCodexInjectionCard.swift")
+
+        XCTAssertTrue(
+            instructionsSource.contains("enum CodexPersonalizationBlock"),
+            "Clawix personalization must have an explicit sentinel block identity."
+        )
+        XCTAssertTrue(
+            personalizationSource.contains("CodexInstructionsFile.sentinelBlockBody(id: CodexPersonalizationBlock.id)"),
+            "The Personalization page must read only Clawix's AGENTS.md sentinel block, not the whole Codex file."
+        )
+        XCTAssertTrue(
+            personalizationSource.contains("appState.pendingConfirmation = ConfirmationRequest"),
+            "Saving Codex-owned AGENTS.md content must be brokered through the host confirmation dialog."
+        )
+        XCTAssertTrue(
+            personalizationSource.contains("CodexInstructionsFile.replaceSentinelBlock(id: CodexPersonalizationBlock.id"),
+            "Saving personalization must replace only Clawix's delimited block."
+        )
+        XCTAssertTrue(
+            personalizationSource.contains("CodexInstructionsFile.removeSentinelBlock(id: CodexPersonalizationBlock.id"),
+            "Clearing personalization must remove only Clawix's delimited block."
+        )
+        XCTAssertFalse(
+            personalizationSource.contains("CodexInstructionsFile.write(instructions)"),
+            "The Personalization page must not overwrite Codex's complete AGENTS.md file."
+        )
+        XCTAssertTrue(memorySource.contains("CodexInstructionsFile.replaceSentinelBlock(id: CodexMemoryBlock.id"))
+        XCTAssertTrue(secretsSource.contains("CodexInstructionsFile.replaceSentinelBlock(id: CodexSecretsBlock.id"))
+    }
+
     private func readSource(_ relativePath: String) throws -> String {
         let testFile = URL(fileURLWithPath: #filePath)
         let root = testFile

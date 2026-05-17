@@ -119,7 +119,7 @@ struct PersonalizationPage: View {
 
     private func load() {
         do {
-            let text = try CodexInstructionsFile.read()
+            let text = try CodexInstructionsFile.sentinelBlockBody(id: CodexPersonalizationBlock.id) ?? ""
             instructions = text
             savedSnapshot = text
             loadError = nil
@@ -131,9 +131,25 @@ struct PersonalizationPage: View {
     }
 
     private func save() {
+        let bodyToSave = instructions
+        appState.pendingConfirmation = ConfirmationRequest(
+            title: "Save Codex instructions?",
+            body: "This writes only Clawix's delimited personalization block into Codex's AGENTS.md. The rest of the file stays untouched, and clearing this field removes only that block.",
+            confirmLabel: "Save"
+        ) {
+            persistInstructions(bodyToSave)
+        }
+    }
+
+    private func persistInstructions(_ body: String) {
         do {
-            try CodexInstructionsFile.write(instructions)
-            savedSnapshot = instructions
+            if body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                try CodexInstructionsFile.removeSentinelBlock(id: CodexPersonalizationBlock.id)
+            } else {
+                try CodexInstructionsFile.replaceSentinelBlock(id: CodexPersonalizationBlock.id, body: body)
+            }
+            instructions = body
+            savedSnapshot = body
             saveError = nil
         } catch {
             saveError = error.localizedDescription
