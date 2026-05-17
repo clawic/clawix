@@ -1,13 +1,14 @@
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Clawix.Core.Models;
 
-[JsonConverter(typeof(JsonStringEnumConverter<WireWorkItemStatus>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<WireWorkItemStatus>))]
 public enum WireWorkItemStatus
 {
-    [JsonStringEnumMemberName("inProgress")] InProgress,
-    [JsonStringEnumMemberName("completed")] Completed,
-    [JsonStringEnumMemberName("failed")] Failed,
+    [EnumMember(Value = "inProgress")] InProgress,
+    [EnumMember(Value = "completed")] Completed,
+    [EnumMember(Value = "failed")] Failed,
 }
 
 public sealed record WireWorkItem

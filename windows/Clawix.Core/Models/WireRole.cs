@@ -1,10 +1,11 @@
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Clawix.Core.Models;
 
-[JsonConverter(typeof(JsonStringEnumConverter<WireRole>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<WireRole>))]
 public enum WireRole
 {
-    [JsonStringEnumMemberName("user")] User,
-    [JsonStringEnumMemberName("assistant")] Assistant,
+    [EnumMember(Value = "user")] User,
+    [EnumMember(Value = "assistant")] Assistant,
 }

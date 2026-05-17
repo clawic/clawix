@@ -60,7 +60,7 @@ var heartbeat = new Heartbeat(() => new HeartbeatState
 }, loggerFactory.CreateLogger<Heartbeat>());
 
 var pinned = new PinnedStateWatcher(loggerFactory.CreateLogger<PinnedStateWatcher>());
-pinned.Changed += () => _ = host.RefreshChatsAsync(CancellationToken.None);
+pinned.Changed += () => _ = host.RefreshSessionsAsync(CancellationToken.None);
 pinned.Start();
 
 await heartbeat.StartAsync();

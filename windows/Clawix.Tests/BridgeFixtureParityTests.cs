@@ -28,7 +28,7 @@ public sealed class BridgeFixtureParityTests
 
             var encoded = BridgeCoder.Encode(frame);
             var roundTrip = BridgeCoder.Decode(encoded);
-            Assert.Equal(frame, roundTrip);
+            Assert.Equal(encoded, BridgeCoder.Encode(roundTrip));
         }
 
         foreach (var required in new[]

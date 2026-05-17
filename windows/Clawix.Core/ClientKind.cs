@@ -1,10 +1,11 @@
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Clawix.Core;
 
-[JsonConverter(typeof(JsonStringEnumConverter<ClientKind>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<ClientKind>))]
 public enum ClientKind
 {
-    [JsonStringEnumMemberName("companion")] Companion,
-    [JsonStringEnumMemberName("desktop")] Desktop,
+    [EnumMember(Value = "companion")] Companion,
+    [EnumMember(Value = "desktop")] Desktop,
 }

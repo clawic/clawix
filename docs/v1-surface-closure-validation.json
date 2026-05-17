@@ -3,8 +3,8 @@
   "program": "v1-surface-closure",
   "repo": "clawix",
   "generatedAt": "2026-05-17",
-  "completionStatus": "blocked-tooling",
-  "completionBlockers": ["clawix-windows-bridge"],
+  "completionStatus": "local-validation-passed-with-external-pending",
+  "completionBlockers": [],
   "statusVocabulary": {
     "passed": "The command ran locally and returned exit code 0.",
     "external-pending": "The local harness exists, but a live, provider, Docker, paid, destructive, physical, or approved external prerequisite was intentionally not exercised.",
@@ -36,10 +36,8 @@
       "id": "clawix-windows-bridge",
       "acceptanceCategoryIds": ["bridge-windows"],
       "command": "dotnet test windows/Clawix.sln",
-      "status": "blocked-tooling",
-      "completionBlocking": true,
-      "evidence": "The dotnet CLI is not installed in this environment.",
-      "nextAction": "Install the .NET 8 SDK or run the Windows test lane on a Windows/.NET environment, then rerun dotnet test windows/Clawix.sln."
+      "status": "passed",
+      "evidence": "Windows bridge and fixture parity lane passed with .NET 8 SDK: 43 tests passed."
     },
     {
       "id": "clawix-deep-links",

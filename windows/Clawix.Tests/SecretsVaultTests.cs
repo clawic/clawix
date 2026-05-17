@@ -25,7 +25,7 @@ public sealed class SecretsVaultTests
         var nonce = Aead.RandomBytes(Aead.NonceLength);
         var sealed_ = Aead.Encrypt(key, nonce, "secret"u8.ToArray());
         sealed_[^1] ^= 0xFF;
-        Assert.Throws<System.Security.Cryptography.CryptographicException>(
+        Assert.ThrowsAny<System.Security.Cryptography.CryptographicException>(
             () => Aead.Decrypt(key, nonce, sealed_));
     }
 

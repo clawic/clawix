@@ -1,10 +1,11 @@
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Clawix.Core.Models;
 
-[JsonConverter(typeof(JsonStringEnumConverter<WireAttachmentKind>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<WireAttachmentKind>))]
 public enum WireAttachmentKind
 {
-    [JsonStringEnumMemberName("image")] Image,
-    [JsonStringEnumMemberName("audio")] Audio,
+    [EnumMember(Value = "image")] Image,
+    [EnumMember(Value = "audio")] Audio,
 }

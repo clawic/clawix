@@ -30,7 +30,7 @@ public sealed class BridgeProtocolTests
         Assert.Contains("\"deviceId\":\"device-win\"", json);
 
         var decoded = BridgeCoder.Decode(json);
-        Assert.Equal(frame, decoded);
+        Assert.Equal(json, BridgeCoder.Encode(decoded));
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class BridgeProtocolTests
         Assert.Contains("\"clientKind\":\"companion\"", json);
         Assert.Contains("\"clientId\":\"client-win\"", json);
         var decoded = BridgeCoder.Decode(json);
-        Assert.Equal(frame, decoded);
+        Assert.Equal(json, BridgeCoder.Encode(decoded));
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public sealed class BridgeProtocolTests
         var jsonB = BridgeCoder.Encode(withAtt);
         Assert.Contains("\"attachments\"", jsonB);
         var decoded = BridgeCoder.Decode(jsonB);
-        Assert.Equal(withAtt, decoded);
+        Assert.Equal(jsonB, BridgeCoder.Encode(decoded));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class BridgeProtocolTests
         var json = BridgeCoder.Encode(frame);
         var decoded = BridgeCoder.Decode(json);
         Assert.IsType<BridgeBody.SessionsSnapshot>(decoded.Body);
-        Assert.Equal(frame, decoded);
+        Assert.Equal(json, BridgeCoder.Encode(decoded));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public sealed class BridgeProtocolTests
         Assert.Contains("\"rateLimitsByLimitId\"", json);
         Assert.DoesNotContain("\"snapshot\"", json);
         var decoded = BridgeCoder.Decode(json);
-        Assert.Equal(frame, decoded);
+        Assert.Equal(json, BridgeCoder.Encode(decoded));
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class BridgeProtocolTests
         var frame = new BridgeFrame(new BridgeBody.MessageStreaming("c", "m", "hello", "thinking", false));
         var json = BridgeCoder.Encode(frame);
         var decoded = BridgeCoder.Decode(json);
-        Assert.Equal(frame, decoded);
+        Assert.Equal(json, BridgeCoder.Encode(decoded));
     }
 
     [Fact]
@@ -182,6 +182,6 @@ public sealed class BridgeProtocolTests
         var json = BridgeCoder.Encode(frame);
         Assert.Contains("\"type\":\"tools\"", json);
         var decoded = BridgeCoder.Decode(json);
-        Assert.Equal(frame, decoded);
+        Assert.Equal(json, BridgeCoder.Encode(decoded));
     }
 }

@@ -13,10 +13,14 @@ public sealed class HeartbeatTests
         // Use a private profile dir so we don't clobber the real heartbeat.
         var tmp = Path.Combine(Path.GetTempPath(), $"clawix-hb-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tmp);
-        var prevHome = Environment.GetEnvironmentVariable("USERPROFILE");
+        var prevUserProfile = Environment.GetEnvironmentVariable("CLAWIX_USER_PROFILE");
+        var prevAppData = Environment.GetEnvironmentVariable("CLAWIX_APP_DATA");
+        var prevLocalAppData = Environment.GetEnvironmentVariable("CLAWIX_LOCAL_APP_DATA");
         try
         {
-            Environment.SetEnvironmentVariable("USERPROFILE", tmp);
+            Environment.SetEnvironmentVariable("CLAWIX_USER_PROFILE", tmp);
+            Environment.SetEnvironmentVariable("CLAWIX_APP_DATA", Path.Combine(tmp, "app-data"));
+            Environment.SetEnvironmentVariable("CLAWIX_LOCAL_APP_DATA", Path.Combine(tmp, "local-app-data"));
             await using var hb = new Heartbeat(() => new HeartbeatState
             {
                 Version = "0.0.0",
@@ -35,7 +39,9 @@ public sealed class HeartbeatTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("USERPROFILE", prevHome);
+            Environment.SetEnvironmentVariable("CLAWIX_USER_PROFILE", prevUserProfile);
+            Environment.SetEnvironmentVariable("CLAWIX_APP_DATA", prevAppData);
+            Environment.SetEnvironmentVariable("CLAWIX_LOCAL_APP_DATA", prevLocalAppData);
             try { Directory.Delete(tmp, recursive: true); } catch { }
         }
     }

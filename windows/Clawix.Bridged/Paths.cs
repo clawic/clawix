@@ -2,9 +2,9 @@ namespace Clawix.Bridged;
 
 public static class Paths
 {
-    public static string UserProfile => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    public static string AppData => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-    public static string LocalAppData => Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    public static string UserProfile => EnvPath("CLAWIX_USER_PROFILE", Environment.SpecialFolder.UserProfile);
+    public static string AppData => EnvPath("CLAWIX_APP_DATA", Environment.SpecialFolder.ApplicationData);
+    public static string LocalAppData => EnvPath("CLAWIX_LOCAL_APP_DATA", Environment.SpecialFolder.LocalApplicationData);
 
     public static string ClawixState => Path.Combine(UserProfile, ".clawix", "state");
     public static string BridgeStatusPath => Path.Combine(ClawixState, "bridge-status.json");
@@ -32,5 +32,11 @@ public static class Paths
         Directory.CreateDirectory(ClawixAppData);
         Directory.CreateDirectory(ClawixLocalAppData);
         Directory.CreateDirectory(ClawixLogs);
+    }
+
+    private static string EnvPath(string name, Environment.SpecialFolder fallback)
+    {
+        var value = Environment.GetEnvironmentVariable(name);
+        return string.IsNullOrWhiteSpace(value) ? Environment.GetFolderPath(fallback) : value;
     }
 }

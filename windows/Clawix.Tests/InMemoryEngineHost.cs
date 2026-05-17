@@ -19,10 +19,10 @@ public sealed class InMemoryEngineHost : IEngineHost
     public (WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId) BridgeRateLimitsCurrent
         => (null, new Dictionary<string, WireRateLimitSnapshot>());
 
-    public event Action<BridgeRuntimeState>? BridgeStateChanged;
+    public event Action<BridgeRuntimeState>? BridgeStateChanged { add { } remove { } }
     public event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
-    public event Action<MessagesEvent>? MessagesChanged;
-    public event Action<(WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId)>? RateLimitsChanged;
+    public event Action<MessagesEvent>? MessagesChanged { add { } remove { } }
+    public event Action<(WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId)>? RateLimitsChanged { add { } remove { } }
 
     public void SetSessions(IEnumerable<WireSession> sessions)
     {

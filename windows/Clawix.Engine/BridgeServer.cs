@@ -56,7 +56,7 @@ public sealed class BridgeServer : IAsyncDisposable
                         KeepAliveInterval = TimeSpan.FromSeconds(15),
                     });
 
-                    app.Use(async (context, next) =>
+                    app.Run(async context =>
                     {
                         if (!context.WebSockets.IsWebSocketRequest)
                         {

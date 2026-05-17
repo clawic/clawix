@@ -1,27 +1,28 @@
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Clawix.Core.Models;
 
-[JsonConverter(typeof(JsonStringEnumConverter<WireAudioKind>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<WireAudioKind>))]
 public enum WireAudioKind
 {
-    [JsonStringEnumMemberName("user_message")] UserMessage,
-    [JsonStringEnumMemberName("dictation")] Dictation,
-    [JsonStringEnumMemberName("agent_tts")] AgentTts,
+    [EnumMember(Value = "user_message")] UserMessage,
+    [EnumMember(Value = "dictation")] Dictation,
+    [EnumMember(Value = "agent_tts")] AgentTts,
 }
 
-[JsonConverter(typeof(JsonStringEnumConverter<WireAudioOriginActor>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<WireAudioOriginActor>))]
 public enum WireAudioOriginActor
 {
-    [JsonStringEnumMemberName("user")] User,
-    [JsonStringEnumMemberName("agent")] Agent,
+    [EnumMember(Value = "user")] User,
+    [EnumMember(Value = "agent")] Agent,
 }
 
-[JsonConverter(typeof(JsonStringEnumConverter<WireAudioTranscriptRole>))]
+[JsonConverter(typeof(BridgeEnumJsonConverter<WireAudioTranscriptRole>))]
 public enum WireAudioTranscriptRole
 {
-    [JsonStringEnumMemberName("transcription")] Transcription,
-    [JsonStringEnumMemberName("synthesis_source")] SynthesisSource,
+    [EnumMember(Value = "transcription")] Transcription,
+    [EnumMember(Value = "synthesis_source")] SynthesisSource,
 }
 
 public sealed record WireAudioTranscript

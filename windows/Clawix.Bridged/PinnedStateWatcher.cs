@@ -26,10 +26,6 @@ public sealed class PinnedStateWatcher : IDisposable
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime | NotifyFilters.Size,
             EnableRaisingEvents = false,
         };
-        _fsw.Changed += (_, __) => _debounce.Stop() ;
-        _fsw.Created += (_, __) => _debounce.Stop();
-        _fsw.Renamed += (_, __) => _debounce.Stop();
-
         _debounce = new System.Timers.Timer(250) { AutoReset = false };
         _debounce.Elapsed += (_, __) =>
         {
@@ -40,7 +36,7 @@ public sealed class PinnedStateWatcher : IDisposable
         void Bump(object? _, FileSystemEventArgs __) { _debounce.Stop(); _debounce.Start(); }
         _fsw.Changed += Bump;
         _fsw.Created += Bump;
-        _fsw.Renamed += (_, e) => { _debounce.Stop(); _debounce.Start(); };
+        _fsw.Renamed += Bump;
     }
 
     public void Start() => _fsw.EnableRaisingEvents = true;
