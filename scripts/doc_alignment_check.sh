@@ -204,7 +204,7 @@ require_snippet "docs/ui/decision-verification.json" "private-codex-ui-rendered-
 require_snippet "docs/ui/README.md" "scripts/ui_decision_verification_check.mjs"
 require_snippet "docs/ui/README.md" "open decisions must declare"
 require_snippet "docs/ui/README.md" "derived evidence plan"
-require_snippet "scripts/ui_decision_verification_check.mjs" "39 records"
+require_snippet "scripts/ui_decision_verification_check.mjs" "expectedDecisions"
 require_snippet "scripts/ui_decision_verification_check.mjs" "privateEvidenceAliases"
 require_snippet "scripts/ui_decision_verification_check.mjs" "derived private evidence plan"
 require_snippet "docs/ui/visible-surfaces.inventory.json" "Every current visible UI candidate"

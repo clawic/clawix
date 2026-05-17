@@ -161,14 +161,59 @@ for (const status of ["open", "verified-complete"]) {
   if (!allowedStatuses.has(status)) fail(`${decisionPath}.statuses must include ${status}`);
 }
 
+const expectedDecisions = [
+  ["initial_scope", "Cross-platform desde dia 1"],
+  ["enforcement_mode", "Bloqueo estricto ya"],
+  ["canonical_source", "Registry + referencias"],
+  ["debt_strategy", "Baseline de deuda"],
+  ["canon_approval", "OK humano explicito"],
+  ["visual_baselines_location", "Privado + manifests publicos"],
+  ["canon_unit", "Patrones UI"],
+  ["agent_ui_workflow", "Consulta + contrato"],
+  ["performance_budget_style", "Por flujo critico"],
+  ["alignment_validation", "Geometrica + visual"],
+  ["state_coverage", "Todos los interactivos"],
+  ["human_visual_review", "Promover canon"],
+  ["governance_location", "Repo Clawix publico"],
+  ["skills_shape", "Skills especializadas"],
+  ["external_references_policy", "Biblioteca de inspiracion"],
+  ["gate_surface", "Dev + test + CI"],
+  ["exception_policy", "Excepcion con caducidad"],
+  ["copy_governance", "Si, como canon UI"],
+  ["v1_pattern_set", "Todo visible actual"],
+  ["ci_visual_strategy", "Lints + geometry + manifests"],
+  ["perf_budget_source", "Baseline aprobada"],
+  ["v1_delivery_goal", "Sistema + limpieza critica"],
+  ["registry_format", "JSON/YAML + Markdown"],
+  ["skill_naming_style", "Por intencion"],
+  ["component_extraction_rule", "Repeticion + estado"],
+  ["component_api_style", "Slots limitados"],
+  ["size_contracts", "Contrato geometrico"],
+  ["visual_mutation_permission", "Reportar y bloquearse"],
+  ["approved_surface_protection", "Freeze con contrato"],
+  ["ui_debt_fix_policy", "No tocar, listar"],
+  ["visual_model_gate", "Allowlist explicita"],
+  ["mechanical_refactor_visual_safety", "Equivalencia probada"],
+  ["visual_change_scope_limit", "Change budget"],
+  ["ui_change_classification", "CSS + copy + jerarquia"],
+  ["visual_guard_behavior", "Fail claro"],
+  ["visual_proposal_flow", "Patch conceptual"],
+  ["implementation_split", "Gobernanza primero"],
+  ["approved_baseline_authority", "Solo tu"],
+  ["critical_cleanup_owner", "Opus allowlist"],
+];
+
 const decisions = requireArray(decisionVerification, decisionPath, "decisions");
-if (decisions.length !== 39) fail(`${decisionPath}.decisions must contain 39 records`);
+if (decisions.length !== expectedDecisions.length) fail(`${decisionPath}.decisions must contain ${expectedDecisions.length} records`);
 const ids = new Set();
 for (const [index, decision] of decisions.entries()) {
   const label = `${decisionPath}.decisions[${index}]`;
   requireFields(decision, label, ["index", "id", "choice", "status", "publicEvidence", "remaining"]);
   if (!decision) continue;
+  const [expectedId, expectedChoice] = expectedDecisions[index] || [];
   if (decision.index !== index + 1) fail(`${label}.index must be ${index + 1}`);
+  if (decision.id !== expectedId) fail(`${label}.id must be ${expectedId}`);
+  if (decision.choice !== expectedChoice) fail(`${label}.choice must be ${expectedChoice}`);
   if (ids.has(decision.id)) fail(`${label}.id duplicates ${decision.id}`);
   ids.add(decision.id);
   if (!allowedStatuses.has(decision.status)) fail(`${label}.status is not allowed`);
