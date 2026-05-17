@@ -8,6 +8,7 @@
   "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
   "geometry": { "source": "settings pattern contracts must reuse registered controls and declare local geometry before protected approval" },
   "copy": { "visibleNamesAreCanon": true, "labelMaxWords": 4, "tooltipMaxWords": 12 },
+  "performance": { "criticalFlows": [], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
   "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
   "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["settings surface screenshot matrix"] }
 }

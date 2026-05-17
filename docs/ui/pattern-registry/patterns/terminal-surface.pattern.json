@@ -8,6 +8,7 @@
   "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
   "geometry": { "source": "terminal surface requires local composition contract and switch performance budget" },
   "copy": { "visibleNamesAreCanon": true },
+  "performance": { "criticalFlows": ["terminal-sidebar-switch"], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
   "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
   "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["terminal/sidebar switch performance baseline"] }
 }

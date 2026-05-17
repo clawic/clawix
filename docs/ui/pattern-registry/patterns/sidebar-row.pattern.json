@@ -29,6 +29,7 @@
     "captionMaxWords": 8,
     "visibleNamesAreCanon": true
   },
+  "performance": { "criticalFlows": ["sidebar-hover-click-expand", "terminal-sidebar-switch"], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
   "componentExtraction": {
     "policy": "required-when-repeated-with-state",
     "api": "limited-slots"

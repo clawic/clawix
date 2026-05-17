@@ -22,7 +22,7 @@ Each pattern declares:
 - allowed states;
 - geometry contract;
 - copy contract;
-- performance contract if relevant;
+- performance contract and critical-flow ownership;
 - validation commands or private baseline references;
 - whether component extraction is required, allowed, or forbidden.
 

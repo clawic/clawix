@@ -10,7 +10,7 @@
       "scopes": ["macos/Sources/Clawix/*.swift"],
       "excludeScopes": ["macos/Sources/Clawix/AutomationsView.swift", "macos/Sources/Clawix/PlanQuestionCard.swift"],
       "classification": "pattern",
-      "patterns": ["chat-surface", "composer-chrome", "sidebar-row", "sheet-chrome", "toast", "search-field", "icon-chip-button", "entity-card"],
+      "patterns": ["chat-surface", "composer-chrome", "sidebar-row", "sheet-chrome", "toast", "search-field", "icon-chip-button", "right-sidebar-surface", "entity-card"],
       "reason": "Root Swift files include app chrome, shared controls, icons, search, sheets, toast, and conversation support surfaces."
     },
     {
@@ -67,7 +67,7 @@
         "macos/Sources/Clawix/Terminal/**"
       ],
       "classification": "pattern",
-      "patterns": ["settings-surface", "entity-card", "search-field", "terminal-surface", "sheet-chrome", "sidebar-section", "dropdown-menu"],
+      "patterns": ["settings-surface", "entity-card", "search-field", "terminal-surface", "right-sidebar-surface", "sheet-chrome", "sidebar-section", "dropdown-menu"],
       "reason": "Domain panes and repeated operational surfaces use existing registry patterns until a more specific approved pattern is promoted."
     },
     {
@@ -162,7 +162,7 @@
       "platform": "web",
       "scopes": ["web/src/*.tsx", "web/src/components/**", "web/src/icons/**"],
       "classification": "pattern",
-      "patterns": ["sidebar-section", "sidebar-row", "dropdown-menu", "icon-chip-button", "sliding-segmented", "sheet-chrome", "toast", "search-field", "entity-card"],
+      "patterns": ["sidebar-section", "sidebar-row", "dropdown-menu", "icon-chip-button", "sliding-segmented", "sheet-chrome", "toast", "search-field", "right-sidebar-surface", "entity-card"],
       "reason": "Web shell, shared controls, custom icons, and reusable UI components."
     },
     {
@@ -170,7 +170,7 @@
       "platform": "web",
       "scopes": ["web/src/screens/**"],
       "classification": "pattern",
-      "patterns": ["chat-surface", "composer-chrome", "settings-surface", "terminal-surface", "search-field", "entity-card", "sidebar-row", "sheet-chrome"],
+      "patterns": ["chat-surface", "composer-chrome", "settings-surface", "terminal-surface", "right-sidebar-surface", "search-field", "entity-card", "sidebar-row", "sheet-chrome"],
       "reason": "Web route screens and page-level UI surfaces."
     }
   ]

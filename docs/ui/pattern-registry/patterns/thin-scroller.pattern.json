@@ -22,6 +22,7 @@
     "android": { "source": "native scroll behavior; visual parity is platform-specific" }
   },
   "copy": { "visibleText": false },
+  "performance": { "criticalFlows": [], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
   "componentExtraction": {
     "policy": "required",
     "api": "wrapper-plus-modifier"

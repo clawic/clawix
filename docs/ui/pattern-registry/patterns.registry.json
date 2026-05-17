@@ -18,6 +18,7 @@
     "toast",
     "search-field",
     "terminal-surface",
+    "right-sidebar-surface",
     "entity-card"
   ]
 }

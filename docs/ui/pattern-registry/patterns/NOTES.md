@@ -77,8 +77,13 @@ and empty/error text are governed together.
 Terminal-like agent output or process pane. The pattern owns density, scroll,
 font choice, selection behavior, and switching latency constraints.
 
+## right-sidebar-surface
+
+Agent side panels, browser/tool sidebars, and right-adjacent support panes. The
+pattern owns panel state, browser/tool affordance copy, focus handoff, and the
+right-sidebar/browser critical-flow budget.
+
 ## entity-card
 
 Repeated entity summary block. Use only when a card is genuinely a repeated
 item; page sections must not become nested decorative cards.
-

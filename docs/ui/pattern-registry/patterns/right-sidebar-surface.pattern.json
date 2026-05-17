@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "right-sidebar-surface",
+  "status": "active",
+  "platforms": ["macos", "ios", "android", "web"],
+  "mutationClass": ["visual-ui", "copy-ui", "functional-ui"],
+  "canonicalReferences": [
+    "macos/Sources/Clawix/ContentChrome.swift",
+    "macos/Sources/Clawix/ChatSidebarState.swift",
+    "web/src/components/shell/right-sidebar-shell.tsx"
+  ],
+  "states": ["idle", "hover-or-highlight", "focused", "pressed", "disabled", "selected", "busy", "error"],
+  "geometry": {
+    "source": "right-sidebar/browser geometry requires platform measurement before protected approval"
+  },
+  "copy": {
+    "visibleNamesAreCanon": true,
+    "labelMaxWords": 4,
+    "tooltipMaxWords": 12
+  },
+  "performance": {
+    "criticalFlows": ["right-sidebar-browser-use"],
+    "budgetRegistry": "docs/ui/performance-budgets.registry.json",
+    "privateBaselineAlias": "private-codex-ui-baselines"
+  },
+  "validation": {
+    "public": ["node scripts/ui_governance_guard.mjs", "node scripts/ui_pattern_performance_check.mjs"],
+    "private": ["right-sidebar/browser screenshot and performance baseline"]
+  },
+  "componentExtraction": {
+    "policy": "required-when-repeated-with-state",
+    "api": "limited-slots"
+  }
+}

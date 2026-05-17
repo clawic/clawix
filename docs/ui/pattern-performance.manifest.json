@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Critical interface performance flows must resolve to registry patterns. Pattern manifests declare matching performance.criticalFlows, while measured budgets and private evidence stay in the performance budget registry and private baseline manifest.",
+  "patternRegistryPath": "docs/ui/pattern-registry/patterns.registry.json",
+  "performanceBudgetRegistryPath": "docs/ui/performance-budgets.registry.json",
+  "privateBaselineAlias": "private-codex-ui-baselines",
+  "requiredFlowMappings": [
+    { "flowId": "sidebar-hover-click-expand", "patterns": ["sidebar-section", "sidebar-row"] },
+    { "flowId": "chat-scroll", "patterns": ["chat-surface"] },
+    { "flowId": "composer-typing", "patterns": ["composer-chrome"] },
+    { "flowId": "dropdown-open", "patterns": ["dropdown-menu"] },
+    { "flowId": "terminal-sidebar-switch", "patterns": ["terminal-surface", "sidebar-row"] },
+    { "flowId": "right-sidebar-browser-use", "patterns": ["right-sidebar-surface"] }
+  ]
+}
