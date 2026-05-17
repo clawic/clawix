@@ -224,6 +224,13 @@ const expectedDecisions = [
 
 const decisions = requireArray(decisionVerification, decisionPath, "decisions");
 if (decisions.length !== expectedDecisions.length) fail(`${decisionPath}.decisions must contain ${expectedDecisions.length} records`);
+const approvalDecisionIds = new Set([
+  "canon_approval",
+  "human_visual_review",
+  "approved_surface_protection",
+  "visual_change_scope_limit",
+  "approved_baseline_authority",
+]);
 const ids = new Set();
 for (const [index, decision] of decisions.entries()) {
   const label = `${decisionPath}.decisions[${index}]`;
@@ -272,6 +279,9 @@ for (const [index, decision] of decisions.entries()) {
         fail(`${verifierLabel} must be delegated by docs/ui/private-visual-validation.manifest.json`);
       }
     }
+  }
+  if (approvalDecisionIds.has(decision.id) && !decision.publicEvidence.includes("scripts/ui_private_approval_verify.mjs")) {
+    fail(`${label}.publicEvidence must include scripts/ui_private_approval_verify.mjs`);
   }
   for (const [evidenceIndex, evidence] of requireArray(decision, label, "publicEvidence").entries()) {
     const evidenceLabel = `${label}.publicEvidence[${evidenceIndex}]`;
