@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const args = new Set(process.argv.slice(2));
 const errors = [];
 
 function fail(message) {
@@ -76,6 +77,12 @@ requireFields(queue, queuePath, [
 
 const debtReportPath = queue?.sourceDebtReport || "docs/ui/debt-report.registry.json";
 const debtReport = readJson(debtReportPath);
+if (args.has("--simulate-completed-cleanup-with-pending-debt") && Array.isArray(queue?.items) && queue.items[0]) {
+  queue.items[0] = {
+    ...queue.items[0],
+    status: "completed",
+  };
+}
 const debtItems = new Map();
 for (const item of requireArray(debtReport, debtReportPath, "pendingItems")) {
   debtItems.set(item.debtId, item);
@@ -138,9 +145,13 @@ for (const field of [
 }
 
 const queuedDebtIds = new Set();
+const queueItemIds = new Set();
 for (const [index, item] of requireArray(queue, queuePath, "items").entries()) {
   const label = `${queuePath}.items[${index}]`;
   requireFields(item, label, requiredItemFields);
+  if (queueItemIds.has(item.id)) fail(`${label}.id duplicates ${item.id}`);
+  queueItemIds.add(item.id);
+  if (item.id !== `cleanup-${item.debtId}`) fail(`${label}.id must be cleanup-${item.debtId}`);
   if (!statuses.has(item.status)) fail(`${label}.status is invalid`);
   if (item.requiredVisualModel !== queue.requiredVisualModel) fail(`${label}.requiredVisualModel must match ${queuePath}`);
   if (item.requiredAuthorization !== "visual-authorized-lane") fail(`${label}.requiredAuthorization must be visual-authorized-lane`);
@@ -155,6 +166,17 @@ for (const [index, item] of requireArray(queue, queuePath, "items").entries()) {
   if (!debtItem) {
     fail(`${label}.debtId must reference ${debtReportPath}`);
     continue;
+  }
+  const cleanupCompleted = item.status === "completed";
+  const debtResolved = debtItem.status === "resolved";
+  if (cleanupCompleted !== debtResolved) {
+    fail(`${label}.status must be completed only when ${debtReportPath} marks the debt resolved`);
+  }
+  if (item.status === "blocked-without-approval" && debtItem.status !== "blocked-without-private-baseline") {
+    fail(`${label}.status blocked-without-approval requires ${debtReportPath} blocked-without-private-baseline`);
+  }
+  if (debtItem.status === "blocked-without-private-baseline" && item.status !== "blocked-without-approval") {
+    fail(`${label}.status must be blocked-without-approval while ${debtReportPath} blocks without private baseline`);
   }
   if (item.scope !== debtItem.scope) fail(`${label}.scope must match ${debtReportPath}`);
   if (JSON.stringify(item.platforms) !== JSON.stringify(debtItem.platforms)) {
