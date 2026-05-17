@@ -72,9 +72,19 @@ if (manifest?.privateApprovalAlias !== "private-codex-ui-approval") {
 }
 
 let checkedRecords = 0;
+const requiredSourceIds = new Set([
+  "canon-promotions",
+  "protected-surfaces",
+  "visual-change-scopes",
+  "visual-proposals",
+  "exceptions",
+]);
+const sourceIds = new Set();
 for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approvalSources").entries()) {
   const sourceLabel = `${manifestPath}.approvalSources[${sourceIndex}]`;
   requireFields(source, sourceLabel, ["id", "path", "arrayField"]);
+  if (sourceIds.has(source.id)) fail(`${sourceLabel}.id duplicates ${source.id}`);
+  sourceIds.add(source.id);
   if (typeof source.privateApprovalField !== "string" || source.privateApprovalField === "") {
     fail(`${sourceLabel}.privateApprovalField must name a private approval reference field`);
   }
@@ -113,6 +123,9 @@ for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approv
     }
     checkedRecords += 1;
   }
+}
+for (const sourceId of requiredSourceIds) {
+  if (!sourceIds.has(sourceId)) fail(`${manifestPath}.approvalSources must include ${sourceId}`);
 }
 
 scanForLocalPaths(manifest, manifestPath);
