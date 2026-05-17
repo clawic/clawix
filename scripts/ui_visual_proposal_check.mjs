@@ -122,7 +122,13 @@ if (registry?.templatePath !== "docs/ui/visual-change-proposal.template.md") {
 }
 
 const template = readText(registry?.templatePath || "docs/ui/visual-change-proposal.template.md");
-for (const snippet of ["Status: conceptual-only", "A proposal does not approve implementation", "User approval needed before implementation"]) {
+for (const snippet of [
+  "Status: conceptual-only",
+  "A proposal does not approve implementation",
+  "User approval needed before implementation",
+  "## Required Evidence",
+  "Drift found but not fixed",
+]) {
   if (!template.includes(snippet)) fail(`${registry?.templatePath} is missing required snippet: ${snippet}`);
 }
 
@@ -149,7 +155,21 @@ for (const status of approvalRequiredStatuses) {
 }
 
 const requiredFields = requireArray(registry, registryPath, "requiredProposalFields");
-for (const field of ["id", "status", "requestedBy", "mutationClass", "changeKinds", "surfaces", "platforms", "proposalReference", "userApprovalStatus", "implementationStatus", "reviewAfter"]) {
+for (const field of [
+  "id",
+  "status",
+  "requestedBy",
+  "mutationClass",
+  "changeKinds",
+  "surfaces",
+  "platforms",
+  "proposalReference",
+  "requiredEvidence",
+  "outOfScopeDrift",
+  "userApprovalStatus",
+  "implementationStatus",
+  "reviewAfter",
+]) {
   if (!requiredFields.includes(field)) fail(`${registryPath}.requiredProposalFields must include ${field}`);
 }
 
@@ -167,6 +187,8 @@ for (const [index, proposal] of requireArray(registry, registryPath, "proposals"
   for (const platform of requireArray(proposal, label, "platforms")) {
     if (!allowedPlatforms.has(platform)) fail(`${label}.platforms contains ${platform}`);
   }
+  requireArray(proposal, label, "requiredEvidence");
+  requireArray(proposal, label, "outOfScopeDrift", { nonEmpty: false });
   requirePublicReference(proposal.proposalReference, `${label}.proposalReference`);
   const reviewAfter = requireIsoDate(proposal.reviewAfter, `${label}.reviewAfter`);
   if (proposal.status === "conceptual-only" && proposal.implementationStatus !== "not-approved") {

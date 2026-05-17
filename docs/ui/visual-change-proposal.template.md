@@ -41,6 +41,12 @@ name decisions. A proposal does not approve implementation.
 - Private baseline capture needed before implementation:
 - Performance budget impact:
 
+## Required Evidence
+
+- Private baseline, geometry, copy, drift, or performance evidence needed:
+- Approval scope and private approval reference needed:
+- Checks that must pass before implementation:
+
 ## Out Of Scope
 
 - Drift found but not fixed:

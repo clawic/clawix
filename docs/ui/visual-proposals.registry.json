@@ -15,6 +15,8 @@
     "surfaces",
     "platforms",
     "proposalReference",
+    "requiredEvidence",
+    "outOfScopeDrift",
     "userApprovalStatus",
     "implementationStatus",
     "reviewAfter"
