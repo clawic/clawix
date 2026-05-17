@@ -93,6 +93,7 @@ const requiredEvidence = [
   "copyItems",
   "copySnapshotReference",
   "copySnapshotHash",
+  "copyHierarchyHash",
   "approvedByUserAt",
   "approvedScope",
 ];

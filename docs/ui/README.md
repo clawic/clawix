@@ -222,6 +222,8 @@ the public repo.
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved`.
 48. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
+    Copy evidence must include hashed `copyItems` and `copyHierarchyHash` so
+    visible text, order, and hierarchy are governed without publishing raw copy.
 49. When private rendered drift reports are available, verify them with
     `CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_drift_verify.mjs --require-approved`.
     Each private report must include hashed per-category `driftResults` entries

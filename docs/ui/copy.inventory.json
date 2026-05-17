@@ -30,6 +30,7 @@
     "copyItems",
     "copySnapshotReference",
     "copySnapshotHash",
+    "copyHierarchyHash",
     "approvedByUserAt",
     "approvedScope"
   ]

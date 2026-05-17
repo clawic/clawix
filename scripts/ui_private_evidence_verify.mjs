@@ -184,6 +184,13 @@ function verifyCopyItems(evidence, label) {
   }
 }
 
+function verifyCopyHierarchyHash(evidence, label) {
+  if (!("copyHierarchyHash" in evidence)) return;
+  if (typeof evidence.copyHierarchyHash !== "string" || !/^[a-f0-9]{64}$/i.test(evidence.copyHierarchyHash)) {
+    fail(`${label}.copyHierarchyHash must be a 64-character hex hash`);
+  }
+}
+
 function verifyDriftResults(evidence, label) {
   if (!("driftResults" in evidence)) return;
   if (!evidence.driftResults || typeof evidence.driftResults !== "object" || Array.isArray(evidence.driftResults)) {
@@ -292,6 +299,7 @@ for (const item of plan.evidence || []) {
   verifyMeasurementSamples(evidence, label);
   verifyMeasurements(evidence, label);
   verifyCopyItems(evidence, label);
+  verifyCopyHierarchyHash(evidence, label);
   verifyDriftResults(evidence, label);
   verifyFindingItems(evidence, label);
   verified += 1;

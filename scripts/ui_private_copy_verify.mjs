@@ -123,10 +123,11 @@ for (const [index, coverage] of (surfaceCoverage?.coverage || []).entries()) {
   const evidencePath = path.join(privateRoot, relativeEvidenceDir, evidenceFilename);
   const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
   if (!evidence) continue;
-  for (const field of ["copySnapshotReference", "copySnapshotHash", "approvedByUserAt", "approvedScope", "surfaceId"]) {
+  for (const field of ["copySnapshotReference", "copySnapshotHash", "copyHierarchyHash", "approvedByUserAt", "approvedScope", "surfaceId"]) {
     requireField(evidence, `${label} evidence`, field);
   }
   assertHash(evidence.copySnapshotHash, `${label}.copySnapshotHash`);
+  assertHash(evidence.copyHierarchyHash, `${label}.copyHierarchyHash`);
   if (evidence.copySnapshotReference !== coverage.copySnapshotReference) {
     fail(`${label}.copySnapshotReference must match the surface baseline coverage manifest`);
   }
@@ -163,6 +164,7 @@ for (const [index, surface] of surfaces.entries()) {
     requireField(evidence, `${label} evidence`, field);
   }
   assertHash(evidence.copySnapshotHash, `${label}.copySnapshotHash`);
+  assertHash(evidence.copyHierarchyHash, `${label}.copyHierarchyHash`);
   if (evidence.copySnapshotReference !== surface.copySnapshotReference) {
     fail(`${label}.copySnapshotReference must match the protected surface registry`);
   }
