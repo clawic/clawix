@@ -14,6 +14,6 @@
   },
   "copy": { "placeholderIsCanon": true, "tooltipMaxWords": 12 },
   "performance": { "criticalFlows": ["composer-typing"], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
-  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots", "riskSignals": ["state", "interaction", "geometry", "accessibility", "performance"] },
   "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["composer chrome screenshots and typing performance baseline"] }
 }

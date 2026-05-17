@@ -29,6 +29,7 @@
   },
   "componentExtraction": {
     "policy": "required-when-repeated-with-state",
-    "api": "limited-slots"
+    "api": "limited-slots",
+    "riskSignals": ["state", "interaction", "geometry", "accessibility", "performance"]
   }
 }

@@ -9,6 +9,6 @@
   "geometry": { "height": 30, "outerCornerRadius": 13, "indicatorCornerRadius": 10, "fontSize": 11.5, "animationDuration": 0.32 },
   "copy": { "labelMaxWords": 4, "visibleNamesAreCanon": true },
   "performance": { "criticalFlows": [], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
-  "componentExtraction": { "policy": "required", "api": "limited-slots" },
+  "componentExtraction": { "policy": "required", "api": "limited-slots", "riskSignals": ["state", "interaction", "geometry", "accessibility"] },
   "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["segmented control geometry baseline"] }
 }

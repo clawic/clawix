@@ -9,6 +9,6 @@
   "geometry": { "source": "sheet buttons and surfaces must use registered button/menu/card recipes" },
   "copy": { "primaryActionLabelMaxWords": 4, "visibleNamesAreCanon": true },
   "performance": { "criticalFlows": [], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
-  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots", "riskSignals": ["state", "interaction", "geometry", "accessibility"] },
   "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["sheet chrome state screenshots"] }
 }

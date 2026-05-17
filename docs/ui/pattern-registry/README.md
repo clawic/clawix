@@ -24,7 +24,9 @@ Each pattern declares:
 - copy contract;
 - performance contract and critical-flow ownership;
 - validation commands or private baseline references;
-- whether component extraction is required, allowed, or forbidden.
+- whether component extraction is required, allowed, or forbidden, plus the
+  state, interaction, geometry, accessibility, or performance risk signals that
+  justify extraction.
 
 `scripts/ui_geometry_contract_check.mjs` validates that every geometry clause is
 either measured with finite non-negative numbers or explicitly pending with a

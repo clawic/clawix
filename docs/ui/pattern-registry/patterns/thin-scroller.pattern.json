@@ -25,7 +25,8 @@
   "performance": { "criticalFlows": [], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
   "componentExtraction": {
     "policy": "required",
-    "api": "wrapper-plus-modifier"
+    "api": "wrapper-plus-modifier",
+    "riskSignals": ["state", "interaction", "geometry", "accessibility"]
   },
   "validation": {
     "public": ["node scripts/ui_governance_guard.mjs"],

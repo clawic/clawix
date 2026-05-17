@@ -9,6 +9,6 @@
   "geometry": { "source": "chat bubbles and inline cards remain open work; protect current rendering until visual-authorized cleanup" },
   "copy": { "agentAttributionIsCanon": true, "visibleNamesAreCanon": true },
   "performance": { "criticalFlows": ["chat-scroll"], "budgetRegistry": "docs/ui/performance-budgets.registry.json", "privateBaselineAlias": "private-codex-ui-baselines" },
-  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots" },
+  "componentExtraction": { "policy": "required-when-repeated-with-state", "api": "limited-slots", "riskSignals": ["state", "interaction", "geometry", "accessibility", "performance"] },
   "validation": { "public": ["node scripts/ui_governance_guard.mjs"], "private": ["chat scroll screenshots and performance baseline"] }
 }

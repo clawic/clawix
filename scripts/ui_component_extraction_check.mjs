@@ -178,7 +178,7 @@ for (const patternId of patternIds) {
   const pattern = readJson(patternPath);
   if (!pattern) continue;
   const extraction = pattern.componentExtraction;
-  requireFields(extraction, `${patternPath}.componentExtraction`, ["policy", "api"]);
+  requireFields(extraction, `${patternPath}.componentExtraction`, ["policy", "api", "riskSignals"]);
   if (!policyToApis.has(extraction?.policy)) {
     fail(`${patternPath}.componentExtraction.policy must be defined in ${manifestPath}`);
     continue;
@@ -190,6 +190,18 @@ for (const patternId of patternIds) {
   const allowedForPolicy = policyToApis.get(extraction.policy);
   if (!allowedForPolicy.has(extraction.api)) {
     fail(`${patternPath}.componentExtraction.api ${extraction.api} is not allowed for policy ${extraction.policy}`);
+  }
+  const riskSignals = new Set(requireArray(extraction, `${patternPath}.componentExtraction`, "riskSignals"));
+  for (const signal of riskSignals) {
+    if (!requiredRiskSignals.has(signal)) {
+      fail(`${patternPath}.componentExtraction.riskSignals contains unknown risk signal ${signal}`);
+    }
+  }
+  if (extraction.policy !== "forbidden" && riskSignals.size === 0) {
+    fail(`${patternPath}.componentExtraction.riskSignals must justify extraction when policy is ${extraction.policy}`);
+  }
+  if (extraction.policy === "required-when-repeated-with-state" && !riskSignals.has("state") && !riskSignals.has("interaction")) {
+    fail(`${patternPath}.componentExtraction.riskSignals must include state or interaction for required-when-repeated-with-state`);
   }
 }
 
