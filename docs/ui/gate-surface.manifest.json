@@ -6,6 +6,12 @@
   "publicWorkflow": ".github/workflows/ui-governance.yml",
   "requiredLanes": ["fast", "changed", "release"],
   "releaseLaneRequires": ["integration", "e2e", "device", "host"],
+  "publicCiStrategy": {
+    "job": "public-ui-governance",
+    "validates": ["lints", "geometry", "manifests"],
+    "forbidsPrivateRoots": true,
+    "privateEvidenceMode": "external-pending-contract"
+  },
   "requiredPublicCheckScripts": [
     "scripts/ui_governance_guard.mjs",
     "scripts/ui_canon_promotion_check.mjs",
@@ -40,6 +46,6 @@
     "scripts/ui_private_visual_validation_manifest_check.mjs",
     "scripts/ui_release_gate_check.mjs"
   ],
-  "privateEvidenceCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
+  "privateEvidenceCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "externalPendingExitCode": 2
 }

@@ -74,6 +74,7 @@ requireFields(manifest, manifestPath, [
   "publicWorkflow",
   "requiredLanes",
   "releaseLaneRequires",
+  "publicCiStrategy",
   "requiredPublicCheckScripts",
   "privateEvidenceCommand",
   "externalPendingExitCode",
@@ -85,10 +86,44 @@ if (manifest?.externalPendingExitCode !== 2) {
 if (!String(manifest?.privateEvidenceCommand || "").includes("scripts/ui_private_visual_verify.mjs --require-approved")) {
   fail(`${manifestPath}.privateEvidenceCommand must require the aggregate private visual verifier`);
 }
+for (const rootEnv of [
+  "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
+  "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
+  "CLAWIX_UI_PRIVATE_COPY_ROOT",
+  "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+]) {
+  if (!String(manifest?.privateEvidenceCommand || "").includes(rootEnv)) {
+    fail(`${manifestPath}.privateEvidenceCommand must include ${rootEnv}`);
+  }
+}
 
 const testScript = read(manifest?.localTestScript || "scripts/test.sh");
 const workflow = read(manifest?.publicWorkflow || ".github/workflows/ui-governance.yml");
 const config = readJson("docs/ui/interface-governance.config.json");
+
+const publicCiStrategy = manifest?.publicCiStrategy || {};
+requireFields(publicCiStrategy, `${manifestPath}.publicCiStrategy`, [
+  "job",
+  "validates",
+  "forbidsPrivateRoots",
+  "privateEvidenceMode",
+]);
+if (!workflow.includes(`${publicCiStrategy.job}:`)) {
+  fail(`${manifest.publicWorkflow} must define ${publicCiStrategy.job}`);
+}
+const publicCiValidates = new Set(requireArray(publicCiStrategy, `${manifestPath}.publicCiStrategy`, "validates"));
+for (const required of ["lints", "geometry", "manifests"]) {
+  if (!publicCiValidates.has(required)) fail(`${manifestPath}.publicCiStrategy.validates must include ${required}`);
+}
+if (publicCiStrategy.forbidsPrivateRoots !== true) {
+  fail(`${manifestPath}.publicCiStrategy.forbidsPrivateRoots must be true`);
+}
+if (publicCiStrategy.privateEvidenceMode !== "external-pending-contract") {
+  fail(`${manifestPath}.publicCiStrategy.privateEvidenceMode must be external-pending-contract`);
+}
+if (/CLAWIX_UI_PRIVATE_[A-Z_]+_ROOT/.test(workflow)) {
+  fail(`${manifest.publicWorkflow} must not require private evidence roots`);
+}
 
 const lanes = new Set(requireArray(manifest, manifestPath, "requiredLanes"));
 for (const lane of ["fast", "changed", "release"]) {

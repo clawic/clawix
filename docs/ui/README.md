@@ -36,7 +36,8 @@ the public repo.
 - `rendered-drift.manifest.json`: public-safe routes, categories, and required
   failure diagnostics for private rendered drift reports.
 - `gate-surface.manifest.json`: public contract for local, changed, release,
-  and CI gate wiring.
+  and CI gate wiring; public CI validates lints, geometry, and manifests
+  without private evidence roots.
 - `visual-model-allowlist.manifest.json`: explicit visual model gate for
   visual/copy/layout mutation authority.
 - `component-extraction.manifest.json`: reusable component extraction policy,
@@ -131,7 +132,8 @@ the public repo.
 22. Keep rendered drift report routes current with
    `scripts/ui_rendered_drift_check.mjs`.
 23. Keep gate wiring current with `scripts/ui_release_gate_check.mjs`; UI
-   governance checks must stay in local test lanes and public CI.
+   governance checks must stay in local test lanes and public CI, and public CI
+   must not require private evidence roots.
 24. Keep rendered geometry evidence contracts current with
    `scripts/ui_rendered_geometry_manifest_check.mjs`.
 25. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
