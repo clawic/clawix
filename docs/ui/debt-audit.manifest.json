@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "status": "pending-private-visual-inventory",
+  "policy": "Exact UI debt auditing is produced from private visual inventory evidence. The public repo stores only safe debt IDs, scopes, aliases, required evidence fields, and verifier commands.",
+  "sourceBaseline": "docs/ui/debt.baseline.json",
+  "sourceReport": "docs/ui/debt-report.registry.json",
+  "surfaceCoverageSource": "docs/ui/surface-baseline-coverage.manifest.json",
+  "privateDebtAuditAlias": "private-codex-ui-debt-audit",
+  "evidenceFilename": "debt-audit-evidence.json",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_debt_audit_verify.mjs --require-approved",
+  "auditStatuses": ["pending-private-visual-inventory", "audited-approved"],
+  "requiredEvidenceFields": [
+    "debtId",
+    "platform",
+    "scope",
+    "platforms",
+    "privateDebtAuditReference",
+    "findingHash",
+    "visualInventoryHash",
+    "auditedAt",
+    "approvedByUserAt",
+    "approvedScope"
+  ],
+  "entries": [
+    {
+      "debtId": "ui-debt-design-surface-raw-visual-values",
+      "scope": "macos/Sources/Clawix/Design/**",
+      "platforms": ["macos"],
+      "surfaceCoverageId": "macos-design-debt",
+      "auditStatus": "pending-private-visual-inventory",
+      "privateDebtAuditReference": "private-codex-ui-debt-audit:macos/ui-debt-design-surface-raw-visual-values",
+      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
+    },
+    {
+      "debtId": "ui-debt-automations-surface-raw-visual-values",
+      "scope": "macos/Sources/Clawix/AutomationsView.swift",
+      "platforms": ["macos"],
+      "surfaceCoverageId": "macos-design-debt",
+      "auditStatus": "pending-private-visual-inventory",
+      "privateDebtAuditReference": "private-codex-ui-debt-audit:macos/ui-debt-automations-surface-raw-visual-values",
+      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
+    },
+    {
+      "debtId": "ui-debt-plan-question-card-raw-visual-values",
+      "scope": "macos/Sources/Clawix/PlanQuestionCard.swift",
+      "platforms": ["macos"],
+      "surfaceCoverageId": "macos-design-debt",
+      "auditStatus": "pending-private-visual-inventory",
+      "privateDebtAuditReference": "private-codex-ui-debt-audit:macos/ui-debt-plan-question-card-raw-visual-values",
+      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
+    }
+  ]
+}
