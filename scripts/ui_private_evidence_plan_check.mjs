@@ -232,7 +232,10 @@ for (const [index, record] of requireArray(mechanicalEquivalence, "docs/ui/mecha
       platform,
       privateReference,
       evidenceFilename: mechanicalEquivalence?.evidenceFilename || "mechanical-equivalence-evidence.json",
-      requiredFields: ["recordId", "platform", "status", ...(mechanicalEquivalence?.requiredEvidenceFields || [])],
+      requiredFields: [
+        ...(mechanicalEquivalence?.requiredPrivateEvidenceFields || ["recordId", "platform", "status", "privateEvidenceReference"]),
+        ...(mechanicalEquivalence?.requiredEvidenceFields || []),
+      ],
     });
   }
 }

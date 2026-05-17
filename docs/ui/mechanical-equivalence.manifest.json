@@ -23,6 +23,7 @@
     "approvedByUserAt",
     "approvedScope"
   ],
+  "requiredPrivateEvidenceFields": ["recordId", "platform", "status", "privateEvidenceReference"],
   "requiredApprovedScopeFields": ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"],
   "allowedTokenDiffStatuses": ["no-token-diff", "approved-token-diff"],
   "equivalenceStatuses": ["pending-private-evidence", "verified-equivalent", "blocked-visible-diff"],

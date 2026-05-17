@@ -107,6 +107,7 @@ requireFields(manifest, manifestPath, [
   "evidenceFilename",
   "recordRequirement",
   "requiredEvidenceFields",
+  "requiredPrivateEvidenceFields",
   "requiredApprovedScopeFields",
   "allowedTokenDiffStatuses",
   "equivalenceStatuses",
@@ -155,6 +156,11 @@ const requiredApprovedScopeFields = requireArray(manifest, manifestPath, "requir
 const requiredApprovedScopeFieldSet = new Set(requiredApprovedScopeFields);
 for (const field of ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"]) {
   if (!requiredApprovedScopeFieldSet.has(field)) fail(`${manifestPath}.requiredApprovedScopeFields must include ${field}`);
+}
+const requiredPrivateEvidenceFields = requireArray(manifest, manifestPath, "requiredPrivateEvidenceFields");
+const requiredPrivateEvidenceFieldSet = new Set(requiredPrivateEvidenceFields);
+for (const field of ["recordId", "platform", "status", "privateEvidenceReference"]) {
+  if (!requiredPrivateEvidenceFieldSet.has(field)) fail(`${manifestPath}.requiredPrivateEvidenceFields must include ${field}`);
 }
 
 const tokenStatuses = new Set(requireArray(manifest, manifestPath, "allowedTokenDiffStatuses"));

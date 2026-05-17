@@ -16,6 +16,7 @@ const referenceFields = {
   "rendered-drift": "privateDriftReportReference",
   "debt-audit": "privateDebtAuditReference",
   "performance-budget": "privateBaselineReference",
+  "mechanical-equivalence": "privateEvidenceReference",
 };
 
 const idFields = {
@@ -182,6 +183,38 @@ function verifyApprovedScope(value, label) {
     return;
   }
   fail(`${label} must be a non-empty string, array, or object`);
+}
+
+function verifyApprovedScopeFields(value, requiredFields, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail(`${label} must be an object with approved user scope metadata`);
+    return;
+  }
+  for (const field of requiredFields || []) requireField(value, label, field);
+  if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  verifyIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
+  const approvalReference = splitReference(value.privateApprovalReference);
+  if (!approvalReference || approvalReference.alias !== "private-codex-ui-approvals") {
+    fail(`${label}.privateApprovalReference must use private-codex-ui-approvals:`);
+  }
+  if (typeof value.scopeId !== "string" || value.scopeId === "") {
+    fail(`${label}.scopeId must be a non-empty string`);
+  }
+}
+
+function deepEqual(left, right) {
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => deepEqual(value, right[index]));
+  }
+  if (left && right && typeof left === "object" && typeof right === "object") {
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    if (!deepEqual(leftKeys, rightKeys)) return false;
+    return leftKeys.every((key) => deepEqual(left[key], right[key]));
+  }
+  return false;
 }
 
 function verifyMetrics(evidence, label, requiredMetrics = []) {
@@ -549,9 +582,12 @@ for (const item of plan.evidence || []) {
   verifyFindingItems(evidence, label, allowedFindingCategories);
   if (item.type === "mechanical-equivalence") {
     const record = publicRegistries.mechanicalEquivalenceByKey.get(`${item.platform}:${item.id}`);
+    verifyApprovedScopeFields(evidence.approvedScope, mechanicalEquivalence?.requiredApprovedScopeFields || [], `${label}.approvedScope`);
     if (record) {
       for (const field of mechanicalEquivalence?.requiredEvidenceFields || []) {
-        if (evidence[field] !== record[field]) fail(`${label}.${field} must match the public mechanical equivalence record`);
+        if (!deepEqual(evidence[field], record[field])) {
+          fail(`${label}.${field} must match the public mechanical equivalence record`);
+        }
       }
     }
   }
