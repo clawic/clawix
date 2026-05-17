@@ -72,6 +72,7 @@
     "implementation-evidence-contract-check": ["scripts/ui_implementation_evidence_check.mjs"],
     "implementation-phase-contract-check": ["scripts/ui_implementation_phase_check.mjs"],
     "state-coverage-source-evidence": ["scripts/ui_state_coverage_check.mjs"],
+    "surface-inventory-coverage": ["scripts/ui_surface_inventory_check.mjs"],
     "surface-reference-contract-check": ["scripts/ui_surface_reference_check.mjs"],
     "surface-baseline-coverage-check": ["scripts/ui_surface_baseline_coverage_check.mjs"],
     "rendered-drift-report-check": ["scripts/ui_rendered_drift_check.mjs"],

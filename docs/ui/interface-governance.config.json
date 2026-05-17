@@ -52,6 +52,7 @@
     "implementation-evidence-contract-check",
     "implementation-phase-contract-check",
     "state-coverage-source-evidence",
+    "surface-inventory-coverage",
     "surface-reference-contract-check",
     "surface-baseline-coverage-check",
     "rendered-drift-report-check",

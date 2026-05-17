@@ -196,6 +196,12 @@ for (const checkId of Object.keys(publicCheckCoverage || {})) {
     fail(`${manifestPath}.publicCheckCoverage contains undeclared public check ${checkId}`);
   }
 }
+const coveredPublicCheckScripts = new Set(Object.values(publicCheckCoverage || {}).flat());
+for (const script of requiredPublicCheckScripts) {
+  if (!coveredPublicCheckScripts.has(script)) {
+    fail(`${manifestPath}.publicCheckCoverage must cover required public script ${script}`);
+  }
+}
 
 for (const script of requireArray(manifest, manifestPath, "requiredPublicCheckScripts")) {
   if (typeof script !== "string" || !script.startsWith("scripts/") || script.includes("..")) {
