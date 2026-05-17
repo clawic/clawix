@@ -73,6 +73,7 @@ requireFields(manifest, manifestPath, [
   "policy",
   "verificationCommand",
   "evidencePlanCommand",
+  "requiredApprovedScopeFields",
   "requiredRoots",
   "rootAliases",
   "optionalRootAliases",
@@ -94,6 +95,12 @@ if (manifest?.evidencePlanCommand !== "node scripts/ui_private_evidence_plan_che
 }
 if (manifest?.externalPendingExitCode !== 2) {
   fail(`${manifestPath}.externalPendingExitCode must be 2`);
+}
+const requiredApprovedScopeFields = new Set(requireArray(manifest, manifestPath, "requiredApprovedScopeFields"));
+for (const field of ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"]) {
+  if (!requiredApprovedScopeFields.has(field)) {
+    fail(`${manifestPath}.requiredApprovedScopeFields must include ${field}`);
+  }
 }
 
 const roots = new Set(requireArray(manifest, manifestPath, "requiredRoots"));

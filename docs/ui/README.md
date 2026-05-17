@@ -94,7 +94,8 @@ the public repo.
 - `private-evidence-plan`: derived evidence plan emitted by
   `scripts/ui_private_evidence_plan_check.mjs`.
 - `private-evidence-verifier`: end-to-end private evidence verifier backed by
-  the derived plan in `scripts/ui_private_evidence_verify.mjs`.
+  the derived plan in `scripts/ui_private_evidence_verify.mjs`; approved
+  evidence must carry user approval scope metadata.
 - `private-visual-validation.manifest.json`: public contract for the aggregate
   private visual and performance evidence validation runner.
 - `scripts/ui_private_evidence_verify.mjs`: private-root verifier for every
@@ -216,7 +217,9 @@ the public repo.
     `scripts/ui_private_evidence_plan_check.mjs`; it derives expected private
     evidence records without requiring private roots.
 41. Keep aggregate private visual validation current with
-    `scripts/ui_private_visual_validation_manifest_check.mjs`.
+    `scripts/ui_private_visual_validation_manifest_check.mjs`; approved private
+    evidence must require user approval scope metadata before it can satisfy
+    completion.
 42. Keep the completion audit current with
     `scripts/ui_completion_audit_check.mjs`; it must list every decision and
     keep open private evidence as `EXTERNAL PENDING`.

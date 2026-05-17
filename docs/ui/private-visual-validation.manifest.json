@@ -4,6 +4,7 @@
   "policy": "Private visual validation is reproducible through one public runner that delegates to the complete private evidence plan plus private approval, private baseline, rendered geometry, copy snapshot, rendered drift, debt audit, and performance budget verifiers. Missing private roots are EXTERNAL PENDING, not success.",
   "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "evidencePlanCommand": "node scripts/ui_private_evidence_plan_check.mjs --json",
+  "requiredApprovedScopeFields": ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"],
   "requiredRoots": [
     "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
     "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",

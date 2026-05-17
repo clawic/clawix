@@ -6,6 +6,8 @@ import path from "node:path";
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
 const errors = [];
+let approvedScopeRequiredFields = ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"];
+let privateApprovalAlias = "private-codex-ui-approval";
 
 const referenceFields = {
   "surface-baseline": "privateBaselineReference",
@@ -170,19 +172,20 @@ function verifyIsoTimestamp(value, label) {
 }
 
 function verifyApprovedScope(value, label) {
-  if (typeof value === "string") {
-    if (value.trim() === "") fail(`${label} must not be empty`);
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail(`${label} must be an object with approved user scope metadata`);
     return;
   }
-  if (Array.isArray(value)) {
-    if (value.length === 0) fail(`${label} must not be empty`);
-    return;
+  for (const field of approvedScopeRequiredFields) requireField(value, label, field);
+  if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  verifyIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
+  const approvalReference = splitReference(value.privateApprovalReference);
+  if (!approvalReference || approvalReference.alias !== privateApprovalAlias) {
+    fail(`${label}.privateApprovalReference must use ${privateApprovalAlias}:`);
   }
-  if (value && typeof value === "object") {
-    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
-    return;
+  if (typeof value.scopeId !== "string" || value.scopeId === "") {
+    fail(`${label}.scopeId must be a non-empty string`);
   }
-  fail(`${label} must be a non-empty string, array, or object`);
 }
 
 function verifyApprovedScopeFields(value, requiredFields, privateApprovalAlias, label) {
@@ -526,6 +529,11 @@ const renderedGeometry = readRepoJson("docs/ui/rendered-geometry.manifest.json")
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
 const mechanicalEquivalence = readRepoJson("docs/ui/mechanical-equivalence.manifest.json");
 const approvalAuthority = readRepoJson("docs/ui/approval-authority.manifest.json");
+const privateVisualValidation = readRepoJson("docs/ui/private-visual-validation.manifest.json");
+approvedScopeRequiredFields = Array.isArray(privateVisualValidation?.requiredApprovedScopeFields)
+  ? privateVisualValidation.requiredApprovedScopeFields
+  : approvedScopeRequiredFields;
+privateApprovalAlias = approvalAuthority?.privateApprovalAlias || privateApprovalAlias;
 const driftPolicy = {
   allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
   blockingStatuses: new Set(Array.isArray(renderedDrift?.blockingReportStatuses) ? renderedDrift.blockingReportStatuses : []),
