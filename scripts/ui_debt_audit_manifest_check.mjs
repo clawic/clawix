@@ -48,10 +48,10 @@ function assertPublicSafeReference(reference, alias, label) {
     return;
   }
   const suffix = reference.slice(alias.length + 1);
-  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) {
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
     fail(`${label} must use a safe relative private reference`);
   }
-  if (/^\/Users\//.test(reference) || reference.startsWith("file://") || /^[A-Z]:\\/.test(reference)) {
+  if (/^\/Users\//.test(reference) || reference.startsWith("~/") || reference.startsWith("file://") || /^[A-Z]:\\/.test(reference)) {
     fail(`${label} must not contain a local absolute path`);
   }
 }

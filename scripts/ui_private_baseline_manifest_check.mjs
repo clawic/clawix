@@ -67,7 +67,7 @@ function requireArray(object, label, field) {
 }
 
 function hasAbsolutePath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || /^[A-Z]:\\/.test(value) || value.startsWith("file://"));
+  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("~/") || /^[A-Z]:\\/.test(value) || value.startsWith("file://"));
 }
 
 function scanForAbsolutePaths(value, label) {
@@ -80,6 +80,20 @@ function scanForAbsolutePaths(value, label) {
     return;
   }
   if (hasAbsolutePath(value)) fail(`${label} must not contain a local absolute path`);
+}
+
+function assertPublicSafeReference(reference, alias, label) {
+  if (typeof reference !== "string" || !reference.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = reference.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasAbsolutePath(reference) || reference.includes("/Users/")) {
+    fail(`${label} must not contain a local absolute path`);
+  }
 }
 
 const manifest = readJson(manifestPath);
@@ -128,9 +142,7 @@ for (const [index, flow] of requireArray(manifest, manifestPath, "flows").entrie
   if (!requiredFlows.includes(flow.id)) fail(`${label}.id is not a required critical flow`);
   if (!requiredPlatforms.includes(flow.platform)) fail(`${label}.platform is not governed`);
   coverage.add(`${flow.platform}:${flow.id}`);
-  if (!String(flow.privateBaselineReference || "").startsWith(`${manifest.privateRootAlias}:`)) {
-    fail(`${label}.privateBaselineReference must use ${manifest.privateRootAlias}:`);
-  }
+  assertPublicSafeReference(flow.privateBaselineReference, manifest.privateRootAlias, `${label}.privateBaselineReference`);
   const flowEvidence = new Set(requireArray(flow, label, "requiredEvidence"));
   for (const field of requiredEvidence) {
     if (!flowEvidence.has(field)) fail(`${label}.requiredEvidence must include ${field}`);

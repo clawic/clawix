@@ -49,11 +49,11 @@ function requireAlias(reference, alias, label) {
     return null;
   }
   const suffix = reference.slice(alias.length + 1);
-  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) {
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
     fail(`${label} must use a safe relative private reference`);
     return null;
   }
-  if (reference.includes("/Users/") || reference.startsWith("/") || reference.startsWith("file://") || /^[A-Z]:\\/.test(reference)) {
+  if (reference.includes("/Users/") || reference.startsWith("/") || reference.startsWith("~/") || reference.startsWith("file://") || /^[A-Z]:\\/.test(reference)) {
     fail(`${label} must not contain a local path`);
   }
   return suffix;

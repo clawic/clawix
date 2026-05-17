@@ -49,7 +49,7 @@ function requireAlias(value, alias, label) {
     return;
   }
   const suffix = value.slice(alias.length + 1);
-  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..")) {
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
     fail(`${label} must use a safe relative private reference`);
   }
   if (value.includes("/Users/") || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value)) {

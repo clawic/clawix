@@ -45,7 +45,19 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function isPublicSafeReference(value, alias) {
-  return typeof value === "string" && value.startsWith(`${alias}:`) && !value.startsWith("/") && !value.includes("/Users/");
+  if (typeof value !== "string" || !value.startsWith(`${alias}:`)) return false;
+  const suffix = value.slice(alias.length + 1);
+  return (
+    suffix.length > 0 &&
+    !suffix.startsWith("/") &&
+    !suffix.startsWith("\\") &&
+    !suffix.startsWith("~/") &&
+    !suffix.includes("..") &&
+    !/^[A-Z]:\\/.test(suffix) &&
+    !value.includes("/Users/") &&
+    !value.startsWith("~/") &&
+    !value.startsWith("file://")
+  );
 }
 
 const copyPath = "docs/ui/copy.inventory.json";
