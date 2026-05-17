@@ -227,4 +227,66 @@ public abstract record BridgeBody
     {
         public override string TypeTag => "rateLimitsUpdated";
     }
+
+    // ===== audio catalog =====
+
+    public sealed record AudioRegister(string RequestId, WireAudioRegisterRequest Request) : BridgeBody
+    {
+        public override string TypeTag => "audioRegister";
+    }
+
+    public sealed record AudioAttachTranscript(string RequestId, string AudioId, WireAudioAttachTranscriptInput Transcript) : BridgeBody
+    {
+        public override string TypeTag => "audioAttachTranscript";
+    }
+
+    public sealed record AudioGet(string RequestId, string AudioId, string AppId) : BridgeBody
+    {
+        public override string TypeTag => "audioGet";
+    }
+
+    public sealed record AudioGetBytes(string RequestId, string AudioId, string AppId) : BridgeBody
+    {
+        public override string TypeTag => "audioGetBytes";
+    }
+
+    public sealed record AudioList(string RequestId, WireAudioListFilter Filter) : BridgeBody
+    {
+        public override string TypeTag => "audioList";
+    }
+
+    public sealed record AudioDelete(string RequestId, string AudioId, string AppId) : BridgeBody
+    {
+        public override string TypeTag => "audioDelete";
+    }
+
+    public sealed record AudioRegisterResult(string RequestId, WireAudioAssetWithTranscripts? Asset, string? ErrorMessage) : BridgeBody
+    {
+        public override string TypeTag => "audioRegisterResult";
+    }
+
+    public sealed record AudioAttachTranscriptResult(string RequestId, WireAudioTranscript? Transcript, string? ErrorMessage) : BridgeBody
+    {
+        public override string TypeTag => "audioAttachTranscriptResult";
+    }
+
+    public sealed record AudioGetResult(string RequestId, WireAudioAssetWithTranscripts? Asset, string? ErrorMessage) : BridgeBody
+    {
+        public override string TypeTag => "audioGetResult";
+    }
+
+    public sealed record AudioBytesResult(string RequestId, string? AudioBase64, string? MimeType, int? DurationMs, string? ErrorMessage) : BridgeBody
+    {
+        public override string TypeTag => "audioBytesResult";
+    }
+
+    public sealed record AudioListResult(string RequestId, WireAudioListResult? List, string? ErrorMessage) : BridgeBody
+    {
+        public override string TypeTag => "audioListResult";
+    }
+
+    public sealed record AudioDeleteResult(string RequestId, bool Deleted, string? ErrorMessage) : BridgeBody
+    {
+        public override string TypeTag => "audioDeleteResult";
+    }
 }

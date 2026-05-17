@@ -199,6 +199,85 @@ internal sealed partial class BridgeFrameConverter
                 writer.WritePropertyName("rateLimitsByLimitId");
                 JsonSerializer.Serialize(writer, rlu.ByLimitId, options);
                 break;
+            case BridgeBody.AudioRegister ar:
+                writer.WriteString("requestId", ar.RequestId);
+                writer.WritePropertyName("request");
+                JsonSerializer.Serialize(writer, ar.Request, options);
+                break;
+            case BridgeBody.AudioAttachTranscript aat:
+                writer.WriteString("requestId", aat.RequestId);
+                writer.WriteString("audioId", aat.AudioId);
+                writer.WritePropertyName("transcript");
+                JsonSerializer.Serialize(writer, aat.Transcript, options);
+                break;
+            case BridgeBody.AudioGet ag:
+                writer.WriteString("requestId", ag.RequestId);
+                writer.WriteString("audioId", ag.AudioId);
+                writer.WriteString("appId", ag.AppId);
+                break;
+            case BridgeBody.AudioGetBytes agb:
+                writer.WriteString("requestId", agb.RequestId);
+                writer.WriteString("audioId", agb.AudioId);
+                writer.WriteString("appId", agb.AppId);
+                break;
+            case BridgeBody.AudioList al:
+                writer.WriteString("requestId", al.RequestId);
+                writer.WritePropertyName("filter");
+                JsonSerializer.Serialize(writer, al.Filter, options);
+                break;
+            case BridgeBody.AudioDelete ad:
+                writer.WriteString("requestId", ad.RequestId);
+                writer.WriteString("audioId", ad.AudioId);
+                writer.WriteString("appId", ad.AppId);
+                break;
+            case BridgeBody.AudioRegisterResult arr:
+                writer.WriteString("requestId", arr.RequestId);
+                if (arr.Asset is not null)
+                {
+                    writer.WritePropertyName("asset");
+                    JsonSerializer.Serialize(writer, arr.Asset, options);
+                }
+                if (arr.ErrorMessage is not null) writer.WriteString("errorMessage", arr.ErrorMessage);
+                break;
+            case BridgeBody.AudioAttachTranscriptResult aatr:
+                writer.WriteString("requestId", aatr.RequestId);
+                if (aatr.Transcript is not null)
+                {
+                    writer.WritePropertyName("transcript");
+                    JsonSerializer.Serialize(writer, aatr.Transcript, options);
+                }
+                if (aatr.ErrorMessage is not null) writer.WriteString("errorMessage", aatr.ErrorMessage);
+                break;
+            case BridgeBody.AudioGetResult agr:
+                writer.WriteString("requestId", agr.RequestId);
+                if (agr.Asset is not null)
+                {
+                    writer.WritePropertyName("asset");
+                    JsonSerializer.Serialize(writer, agr.Asset, options);
+                }
+                if (agr.ErrorMessage is not null) writer.WriteString("errorMessage", agr.ErrorMessage);
+                break;
+            case BridgeBody.AudioBytesResult abr:
+                writer.WriteString("requestId", abr.RequestId);
+                if (abr.AudioBase64 is not null) writer.WriteString("audioBase64", abr.AudioBase64);
+                if (abr.MimeType is not null) writer.WriteString("mimeType", abr.MimeType);
+                if (abr.DurationMs is not null) writer.WriteNumber("durationMs", abr.DurationMs.Value);
+                if (abr.ErrorMessage is not null) writer.WriteString("errorMessage", abr.ErrorMessage);
+                break;
+            case BridgeBody.AudioListResult alr:
+                writer.WriteString("requestId", alr.RequestId);
+                if (alr.List is not null)
+                {
+                    writer.WritePropertyName("list");
+                    JsonSerializer.Serialize(writer, alr.List, options);
+                }
+                if (alr.ErrorMessage is not null) writer.WriteString("errorMessage", alr.ErrorMessage);
+                break;
+            case BridgeBody.AudioDeleteResult adr:
+                writer.WriteString("requestId", adr.RequestId);
+                writer.WriteBoolean("deleted", adr.Deleted);
+                if (adr.ErrorMessage is not null) writer.WriteString("errorMessage", adr.ErrorMessage);
+                break;
             default:
                 throw new JsonException($"unknown body subtype: {body.GetType()}");
         }

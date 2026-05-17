@@ -6,11 +6,9 @@ encoded `BridgeFrame` on the wire.
 To regenerate:
 
 ```bash
-cd ../../packages/ClawixCore
-swift test --filter BridgeProtocolFixturesTests
-# fixtures land in /tmp/clawix-bridge-fixtures, copy into this folder
+bash windows/scripts/dump-fixtures.sh
 ```
 
 The C# tests deserialize each fixture, re-serialize it, and assert
-byte-for-byte equality with the original JSON. Any drift means the
-ports diverged and the wire is broken.
+that Windows preserves the same frame body and schema. Any decode drift
+means the ports diverged and the wire is broken.

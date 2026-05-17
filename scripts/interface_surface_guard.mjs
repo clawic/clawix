@@ -603,6 +603,48 @@ for (const [relativePath, phrases] of [
   }
 }
 
+for (const [relativePath, snippets] of [
+  [
+    "windows/Clawix.Core/BridgeBody.cs",
+    ["AudioRegister(string RequestId", "AudioGetBytes(string RequestId", "AudioListResult(string RequestId"],
+  ],
+  [
+    "windows/Clawix.Core/BridgeFrameEncoder.cs",
+    ['case BridgeBody.AudioRegister ar:', 'case BridgeBody.AudioBytesResult abr:', 'case BridgeBody.AudioDeleteResult adr:'],
+  ],
+  [
+    "windows/Clawix.Core/BridgeFrameDecoder.cs",
+    ['"audioRegister" => new BridgeBody.AudioRegister', '"audioBytesResult" => new BridgeBody.AudioBytesResult', '"audioDeleteResult" => new BridgeBody.AudioDeleteResult'],
+  ],
+  [
+    "windows/Clawix.Tests/BridgeFixtureParityTests.cs",
+    ["SwiftBridgeFixtures_DecodeAndRoundTrip", '"audioRegister"', '"audioDeleteResult"'],
+  ],
+  [
+    "windows/scripts/dump-fixtures.sh",
+    ['swift run BridgeFixtureExporter "$FIXTURES_OUT"'],
+  ],
+]) {
+  const source = read(relativePath);
+  for (const snippet of snippets) {
+    if (!source.includes(snippet)) {
+      fail(`${relativePath} is missing Windows v1 bridge audio fixture parity snippet ${JSON.stringify(snippet)}`);
+    }
+  }
+}
+for (const phrase of ["FixtureFileSynthesizer not yet wired", "manual export pending", "BridgeProtocolFixturesTests"]) {
+  for (const relativePath of ["windows/scripts/dump-fixtures.sh", "windows/README.md", "windows/Clawix.Tests/Fixtures/README.md"]) {
+    if (read(relativePath).includes(phrase)) {
+      fail(`${relativePath} must use BridgeFixtureExporter without stale manual fixture wording ${JSON.stringify(phrase)}`);
+    }
+  }
+}
+const bridgeFixtureDir = path.join(rootDir, "windows/Clawix.Tests/Fixtures");
+const bridgeFixtureCount = fs.readdirSync(bridgeFixtureDir).filter((entry) => entry.endsWith(".json")).length;
+if (bridgeFixtureCount < 50) {
+  fail(`windows/Clawix.Tests/Fixtures must include canonical Swift bridge JSON fixtures, found ${bridgeFixtureCount}`);
+}
+
 for (const relativePath of [
   "STANDARDS.md",
   "cli/README.md",

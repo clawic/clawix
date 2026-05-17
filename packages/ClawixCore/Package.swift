@@ -8,7 +8,8 @@ let package = Package(
         .iOS(.v17)
     ],
     products: [
-        .library(name: "ClawixCore", targets: ["ClawixCore"])
+        .library(name: "ClawixCore", targets: ["ClawixCore"]),
+        .executable(name: "BridgeFixtureExporter", targets: ["BridgeFixtureExporter"])
     ],
     targets: [
         .target(
@@ -20,6 +21,11 @@ let package = Package(
             name: "ClawixCoreTests",
             dependencies: ["ClawixCore"],
             path: "Tests/ClawixCoreTests"
+        ),
+        .executableTarget(
+            name: "BridgeFixtureExporter",
+            dependencies: ["ClawixCore"],
+            path: "Tools/BridgeFixtureExporter"
         )
     ]
 )

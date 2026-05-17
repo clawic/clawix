@@ -1,0 +1,1 @@
+{"rateLimitsByLimitId":{},"rateLimits":{"limitId":"codex","primary":{"usedPercent":14,"resetsAt":1778222391,"windowDurationMins":300},"credits":{"unlimited":false,"balance":"12.34","hasCredits":true}},"schemaVersion":1,"type":"rateLimitsUpdated"}

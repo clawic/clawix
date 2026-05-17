@@ -17,13 +17,9 @@ if ! command -v swift >/dev/null 2>&1; then
     exit 2
 fi
 
-# Build and run the fixture synthesizer (lives in ClawixEngine).
-pushd "$PACKAGES_DIR/ClawixEngine" >/dev/null
-swift build --product FixtureFileSynthesizer 2>/dev/null || true
-swift run FixtureFileSynthesizer "$FIXTURES_OUT" || {
-    echo "FixtureFileSynthesizer not yet wired in Swift; manual export pending." >&2
-    exit 0
-}
+# Build and run the canonical bridge fixture exporter from ClawixCore.
+pushd "$PACKAGES_DIR/ClawixCore" >/dev/null
+swift run BridgeFixtureExporter "$FIXTURES_OUT"
 popd >/dev/null
 
 echo "Fixtures landed in $FIXTURES_OUT"

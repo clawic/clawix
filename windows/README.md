@@ -86,9 +86,14 @@ windows/
 dotnet test Clawix.Tests
 ```
 
-The fixtures in `Clawix.Tests/Fixtures/` come from running the Swift
-test suite with `swift test --filter BridgeProtocolFixturesTests`. Any
-JSON drift between Swift and C# fails the round-trip tests.
+The fixtures in `Clawix.Tests/Fixtures/` come from the Swift
+`BridgeFixtureExporter`:
+
+```bash
+bash windows/scripts/dump-fixtures.sh
+```
+
+Any decode drift between Swift and C# fails the fixture parity tests.
 
 ## Release
 

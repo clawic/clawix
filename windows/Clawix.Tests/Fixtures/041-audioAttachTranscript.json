@@ -1,0 +1,1 @@
+{"audioId":"audio-1","transcript":{"text":"better transcript","language":"en","role":"transcription","markAsPrimary":true,"provider":"whisper-large"},"requestId":"req-audio-2","schemaVersion":1,"type":"audioAttachTranscript"}

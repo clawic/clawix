@@ -157,6 +157,66 @@ internal sealed partial class BridgeFrameConverter : JsonConverter<BridgeFrame>
                 Get<WireRateLimitSnapshot>("rateLimits"),
                 Get<Dictionary<string, WireRateLimitSnapshot>>("rateLimitsByLimitId") ?? new Dictionary<string, WireRateLimitSnapshot>()),
 
+            "audioRegister" => new BridgeBody.AudioRegister(
+                GetStr("requestId"),
+                GetReq<WireAudioRegisterRequest>("request")),
+
+            "audioAttachTranscript" => new BridgeBody.AudioAttachTranscript(
+                GetStr("requestId"),
+                GetStr("audioId"),
+                GetReq<WireAudioAttachTranscriptInput>("transcript")),
+
+            "audioGet" => new BridgeBody.AudioGet(
+                GetStr("requestId"),
+                GetStr("audioId"),
+                GetStr("appId")),
+
+            "audioGetBytes" => new BridgeBody.AudioGetBytes(
+                GetStr("requestId"),
+                GetStr("audioId"),
+                GetStr("appId")),
+
+            "audioList" => new BridgeBody.AudioList(
+                GetStr("requestId"),
+                GetReq<WireAudioListFilter>("filter")),
+
+            "audioDelete" => new BridgeBody.AudioDelete(
+                GetStr("requestId"),
+                GetStr("audioId"),
+                GetStr("appId")),
+
+            "audioRegisterResult" => new BridgeBody.AudioRegisterResult(
+                GetStr("requestId"),
+                Get<WireAudioAssetWithTranscripts>("asset"),
+                GetStrOpt("errorMessage")),
+
+            "audioAttachTranscriptResult" => new BridgeBody.AudioAttachTranscriptResult(
+                GetStr("requestId"),
+                Get<WireAudioTranscript>("transcript"),
+                GetStrOpt("errorMessage")),
+
+            "audioGetResult" => new BridgeBody.AudioGetResult(
+                GetStr("requestId"),
+                Get<WireAudioAssetWithTranscripts>("asset"),
+                GetStrOpt("errorMessage")),
+
+            "audioBytesResult" => new BridgeBody.AudioBytesResult(
+                GetStr("requestId"),
+                GetStrOpt("audioBase64"),
+                GetStrOpt("mimeType"),
+                GetIntOpt("durationMs"),
+                GetStrOpt("errorMessage")),
+
+            "audioListResult" => new BridgeBody.AudioListResult(
+                GetStr("requestId"),
+                Get<WireAudioListResult>("list"),
+                GetStrOpt("errorMessage")),
+
+            "audioDeleteResult" => new BridgeBody.AudioDeleteResult(
+                GetStr("requestId"),
+                GetBool("deleted"),
+                GetStrOpt("errorMessage")),
+
             _ => throw BridgeDecodingException.UnknownType(type),
         };
     }
