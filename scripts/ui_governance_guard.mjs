@@ -141,6 +141,7 @@ requireFields(componentExtraction, componentExtractionPath, [
   "policy",
   "minimumCallSites",
   "requiredRiskSignals",
+  "mechanicalEquivalence",
   "allowedPolicies",
   "allowedApis",
 ]);

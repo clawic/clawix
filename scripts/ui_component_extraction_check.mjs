@@ -75,6 +75,7 @@ requireFields(manifest, manifestPath, [
   "policy",
   "minimumCallSites",
   "requiredRiskSignals",
+  "mechanicalEquivalence",
   "allowedPolicies",
   "allowedApis",
   "forbiddenApiSignals",
@@ -88,6 +89,43 @@ if (manifest?.minimumCallSites !== 2) {
 const requiredRiskSignals = new Set(requireArray(manifest, manifestPath, "requiredRiskSignals"));
 for (const signal of ["state", "interaction", "geometry", "accessibility", "performance"]) {
   if (!requiredRiskSignals.has(signal)) fail(`${manifestPath}.requiredRiskSignals must include ${signal}`);
+}
+
+const mechanicalEquivalence = manifest?.mechanicalEquivalence || {};
+requireFields(mechanicalEquivalence, `${manifestPath}.mechanicalEquivalence`, [
+  "manifestPath",
+  "privateEvidenceAlias",
+  "requiredForPolicies",
+  "requiredStatuses",
+  "requiredEvidenceFields",
+]);
+if (mechanicalEquivalence.manifestPath !== "docs/ui/mechanical-equivalence.manifest.json") {
+  fail(`${manifestPath}.mechanicalEquivalence.manifestPath must reference docs/ui/mechanical-equivalence.manifest.json`);
+}
+
+const mechanicalManifest = readJson(mechanicalEquivalence.manifestPath || "docs/ui/mechanical-equivalence.manifest.json");
+if (mechanicalEquivalence.privateEvidenceAlias !== mechanicalManifest?.privateEvidenceAlias) {
+  fail(`${manifestPath}.mechanicalEquivalence.privateEvidenceAlias must match ${mechanicalEquivalence.manifestPath}.privateEvidenceAlias`);
+}
+
+const requiredMechanicalPolicies = new Set(requireArray(mechanicalEquivalence, `${manifestPath}.mechanicalEquivalence`, "requiredForPolicies"));
+for (const policy of ["required", "required-when-repeated-with-state", "allowed"]) {
+  if (!requiredMechanicalPolicies.has(policy)) {
+    fail(`${manifestPath}.mechanicalEquivalence.requiredForPolicies must include ${policy}`);
+  }
+}
+
+const requiredMechanicalStatuses = new Set(requireArray(mechanicalEquivalence, `${manifestPath}.mechanicalEquivalence`, "requiredStatuses"));
+if (!requiredMechanicalStatuses.has("verified-equivalent")) {
+  fail(`${manifestPath}.mechanicalEquivalence.requiredStatuses must include verified-equivalent`);
+}
+
+const mechanicalEvidenceFields = new Set(requireArray(mechanicalEquivalence, `${manifestPath}.mechanicalEquivalence`, "requiredEvidenceFields"));
+const canonicalMechanicalEvidenceFields = new Set(requireArray(mechanicalManifest, mechanicalEquivalence.manifestPath || "docs/ui/mechanical-equivalence.manifest.json", "requiredEvidenceFields"));
+for (const field of canonicalMechanicalEvidenceFields) {
+  if (!mechanicalEvidenceFields.has(field)) {
+    fail(`${manifestPath}.mechanicalEquivalence.requiredEvidenceFields must include ${field}`);
+  }
 }
 
 const allowedApis = new Set();

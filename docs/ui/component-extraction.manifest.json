@@ -4,6 +4,24 @@
   "policy": "Reusable UI components are extracted only when repeated UI carries state, interaction, geometry, accessibility, or performance risk. Extracted APIs must keep presentation bounded by limited slots or a wrapper plus modifier contract.",
   "minimumCallSites": 2,
   "requiredRiskSignals": ["state", "interaction", "geometry", "accessibility", "performance"],
+  "mechanicalEquivalence": {
+    "manifestPath": "docs/ui/mechanical-equivalence.manifest.json",
+    "privateEvidenceAlias": "private-codex-ui-mechanical-equivalence",
+    "requiredForPolicies": ["required", "required-when-repeated-with-state", "allowed"],
+    "requiredStatuses": ["verified-equivalent"],
+    "requiredEvidenceFields": [
+      "beforeSnapshotReference",
+      "beforeSnapshotHash",
+      "afterSnapshotReference",
+      "afterSnapshotHash",
+      "geometryBeforeReference",
+      "geometryAfterReference",
+      "copyBeforeReference",
+      "copyAfterReference",
+      "tokenDiffStatus",
+      "approvedScope"
+    ]
+  },
   "allowedPolicies": [
     {
       "id": "required",
