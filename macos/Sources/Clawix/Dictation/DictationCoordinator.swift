@@ -1116,7 +1116,6 @@ final class DictationCoordinator: ObservableObject {
                 language: language
             )
             let id = UUID().uuidString
-            let audioURL = DictationAudioStorage.writeWAV(samples: samples, id: id)
             let words = processed.split(whereSeparator: { $0.isWhitespace }).count
             let duration = TimeInterval(samples.count) / 16_000.0
             let pmId = PowerModeManager.shared.activeConfig?.id.uuidString
@@ -1131,7 +1130,7 @@ final class DictationCoordinator: ObservableObject {
                 modelUsed: model?.rawValue,
                 language: language,
                 durationSeconds: duration,
-                audioFilePath: audioURL?.path,
+                audioFilePath: nil,
                 powerModeId: pmId,
                 wordCount: words,
                 transcriptionMs: 0,
@@ -1142,7 +1141,7 @@ final class DictationCoordinator: ObservableObject {
             Task { @MainActor in
                 await TranscriptionsRepository.shared.record(record)
                 await DictationAudioCatalogRecorder.register(
-                    record: record, audioURL: audioURL, processedText: processed,
+                    record: record, samples: samples, processedText: processed,
                     originalText: text, model: model, language: language,
                     enhancementProvider: enhancementProvider
                 )

@@ -161,7 +161,7 @@ final class TranscriptionsRepository: ObservableObject {
     // MARK: - Cleanup
 
     /// Delete every local history row older than `cutoff` and best-effort
-    /// remove the staged framework audio file if one is still referenced.
+    /// remove any obsolete host-side audio file if one is still referenced.
     func purgeRecords(olderThan cutoff: Date) async {
         do {
             let toDelete: [TranscriptionRecord] = try await dbQueue.read { db in
@@ -242,25 +242,14 @@ final class TranscriptionsRepository: ObservableObject {
     }
 }
 
-/// Staging helper for raw audio files associated with transcripts.
-/// Regular dictation audio is staged under `~/.claw/audio/dictation/`
-/// because the framework audio catalog owns the durable audio surface.
+/// WAV helper for dictation audio. Regular dictation audio is encoded in
+/// memory and registered with the framework audio catalog; only explicit
+/// empty-transcript debug dumps are written to host temp storage.
 enum DictationAudioStorage {
-    static func storageDirectory() throws -> URL {
-        let fm = FileManager.default
-        let dir = ClawixPersistentSurfacePaths
-            .frameworkGlobalChild(ClawixPersistentSurfacePaths.components.audio, isDirectory: true)
-            .appendingPathComponent(ClawixPersistentSurfacePaths.components.dictation, isDirectory: true)
-        if !fm.fileExists(atPath: dir.path) {
-            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        }
-        return dir
-    }
-
-    /// Sibling of `storageDirectory()` used to keep WAV dumps of
-    /// transcriptions that returned empty text. We never delete from
-    /// here — the user keeps the last few so they can sanity-check
-    /// what was actually captured when Whisper insists "no speech".
+    /// Host temp directory used to keep WAV dumps of transcriptions
+    /// that returned empty text. We never delete from here — the user
+    /// keeps the last few so they can sanity-check what was actually
+    /// captured when Whisper insists "no speech".
     static func emptyTranscriptDebugDirectory() throws -> URL {
         let fm = FileManager.default
         let dir = ClawixPersistentSurfacePaths
@@ -281,53 +270,48 @@ enum DictationAudioStorage {
         let stamp = ISO8601DateFormatter().string(from: Date())
             .replacingOccurrences(of: ":", with: "-")
         let url = dir.appendingPathComponent("empty-\(stamp).wav")
-        let id = "empty-\(stamp)"
-        guard let written = writeWAV(samples: samples, id: id, override: url) else { return nil }
+        guard let written = writeWAV(samples: samples, to: url) else { return nil }
         return written
     }
 
-    /// Persist a 16 kHz mono Float32 PCM buffer as a 16-bit WAV.
-    /// Skipped silently on any error — the transcript row is more
-    /// important than the audio companion and shouldn't fail because
-    /// of an audio write hiccup. `override`, when non-nil, bypasses
-    /// the default storage directory and writes the WAV at that
-    /// exact URL — used by the empty-transcript debug dump that
-    /// lives outside the regular transcript store.
-    static func writeWAV(samples: [Float], id: String, override: URL? = nil) -> URL? {
+    /// Encode a 16 kHz mono Float32 PCM buffer as a 16-bit WAV.
+    static func wavData(samples: [Float]) -> Data? {
         guard !samples.isEmpty else { return nil }
+        let sampleRate: Int = 16_000
+        let bitsPerSample: Int = 16
+        let channels: Int = 1
+        let byteRate = sampleRate * channels * (bitsPerSample / 8)
+        let blockAlign = channels * (bitsPerSample / 8)
+        let dataBytes = samples.count * (bitsPerSample / 8)
+        var data = Data(capacity: 44 + dataBytes)
+        data.append("RIFF".data(using: .ascii)!)
+        data.append(UInt32(36 + dataBytes).littleEndianData)
+        data.append("WAVE".data(using: .ascii)!)
+        data.append("fmt ".data(using: .ascii)!)
+        data.append(UInt32(16).littleEndianData)
+        data.append(UInt16(1).littleEndianData) // PCM
+        data.append(UInt16(channels).littleEndianData)
+        data.append(UInt32(sampleRate).littleEndianData)
+        data.append(UInt32(byteRate).littleEndianData)
+        data.append(UInt16(blockAlign).littleEndianData)
+        data.append(UInt16(bitsPerSample).littleEndianData)
+        data.append("data".data(using: .ascii)!)
+        data.append(UInt32(dataBytes).littleEndianData)
+        for sample in samples {
+            let clamped = max(-1, min(1, sample))
+            let value = Int16(clamped * Float(Int16.max))
+            data.append(UInt16(bitPattern: value).littleEndianData)
+        }
+        return data
+    }
+
+    /// Persist a WAV debug file at an explicit temp URL.
+    /// Skipped silently on any error — the transcript row is more
+    /// important than the diagnostic companion and shouldn't fail
+    /// because of an audio write hiccup.
+    private static func writeWAV(samples: [Float], to url: URL) -> URL? {
         do {
-            let url: URL
-            if let override {
-                url = override
-            } else {
-                let dir = try storageDirectory()
-                url = dir.appendingPathComponent("\(id).wav")
-            }
-            let sampleRate: Int = 16_000
-            let bitsPerSample: Int = 16
-            let channels: Int = 1
-            let byteRate = sampleRate * channels * (bitsPerSample / 8)
-            let blockAlign = channels * (bitsPerSample / 8)
-            let dataBytes = samples.count * (bitsPerSample / 8)
-            var data = Data(capacity: 44 + dataBytes)
-            data.append("RIFF".data(using: .ascii)!)
-            data.append(UInt32(36 + dataBytes).littleEndianData)
-            data.append("WAVE".data(using: .ascii)!)
-            data.append("fmt ".data(using: .ascii)!)
-            data.append(UInt32(16).littleEndianData)
-            data.append(UInt16(1).littleEndianData) // PCM
-            data.append(UInt16(channels).littleEndianData)
-            data.append(UInt32(sampleRate).littleEndianData)
-            data.append(UInt32(byteRate).littleEndianData)
-            data.append(UInt16(blockAlign).littleEndianData)
-            data.append(UInt16(bitsPerSample).littleEndianData)
-            data.append("data".data(using: .ascii)!)
-            data.append(UInt32(dataBytes).littleEndianData)
-            for sample in samples {
-                let clamped = max(-1, min(1, sample))
-                let value = Int16(clamped * Float(Int16.max))
-                data.append(UInt16(bitPattern: value).littleEndianData)
-            }
+            guard let data = wavData(samples: samples) else { return nil }
             try data.write(to: url, options: .atomic)
             return url
         } catch {

@@ -6,15 +6,14 @@ import ClawixEngine
 enum DictationAudioCatalogRecorder {
     static func register(
         record: TranscriptionRecord,
-        audioURL: URL?,
+        samples: [Float],
         processedText: String,
         originalText: String,
         model: DictationModel?,
         language: String?,
         enhancementProvider: String?
     ) async {
-        guard let audioURL,
-              let data = try? Data(contentsOf: audioURL),
+        guard let data = DictationAudioStorage.wavData(samples: samples),
               let client = AudioCatalogBootstrap.shared.currentClient
         else { return }
 
