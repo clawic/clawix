@@ -64,6 +64,7 @@ const normalizedGoalSource = normalizeText(goalSource);
 const normalizedSessionSource = normalizeText(sessionSource);
 const decisionVerification = readJson("docs/ui/decision-verification.json");
 const decisionsById = new Map((decisionVerification.decisions || []).map((decision) => [decision.id, decision]));
+const expectedDecisions = manifest.expectedDecisions || (manifest.expectedDecisionIds || []).map((id) => ({ id }));
 
 for (const snippet of [
   manifest.expectedConversationId,
@@ -80,13 +81,17 @@ if (sessionFile && countJsonlRecords(sessionFile) < manifest.expectedDecisionCou
   fail(`${sessionEnv} must contain enough JSONL records to cover the source conversation`);
 }
 
-for (const decisionId of manifest.expectedDecisionIds || []) {
+for (const expectedDecision of expectedDecisions) {
+  const decisionId = expectedDecision.id;
   const decision = decisionsById.get(decisionId);
   if (!goalSource.includes(`\`${decisionId}\``)) {
     fail(`${goalEnv} must include decision ${decisionId}`);
   }
   if (!sessionSource.includes(decisionId)) {
     fail(`${sessionEnv} must include decision ${decisionId}`);
+  }
+  if (expectedDecision.choice && decision?.choice !== expectedDecision.choice) {
+    fail(`docs/ui/decision-verification.json choice for ${decisionId} must be ${expectedDecision.choice}`);
   }
   if (!decision?.choice) {
     fail(`docs/ui/decision-verification.json must include a choice for ${decisionId}`);
@@ -107,4 +112,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`UI private completion source verification passed (${manifest.expectedDecisionIds.length} decisions)`);
+console.log(`UI private completion source verification passed (${expectedDecisions.length} decisions)`);
