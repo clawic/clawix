@@ -215,9 +215,27 @@ for (const snippet of [
   requireSnippet("docs/host-ownership.md", snippet);
 }
 for (const snippet of [
-  "| MCP | Framework | MCP settings | ClawJS MCP registry through `claw`/API | Framework registry; external configs read-only | Registry tests and Codex read-only guard |",
+  "| Agents, Personalities, Connections | Framework | Clawix agent and connection views | `claw agents`, `claw personalities`, `claw connections`; ClawJS agent/integration APIs, CLI/SDK, fixtures | Framework files plus `core.sqlite`, host secret refs | No direct Clawix canonical writes |",
+  "| Skills and Skill Collections | Framework | macOS Clawix skills/library UI | `claw skills`, `claw skill-collections`; ClawJS skills/library APIs, CLI/SDK, MCP resources | Framework files plus `core.sqlite` | Skill fixtures and interface coverage |",
+  "| MCP | Framework | MCP settings | `claw mcp list|get|upsert|delete|config-path`; ClawJS MCP registry API | Framework registry; external configs read-only | Registry tests and Codex read-only guard |",
 ]) {
   requireSnippet("docs/interface-matrix.md", snippet);
+}
+for (const [surfaceId, snippets] of [
+  ["agents", ["claw agents", "claw personalities", "ClawJS agents APIs, CLI/SDK and fixtures"]],
+  ["skillCollections", ["claw skill-collections", "ClawJS agents/library APIs"]],
+  ["connections", ["claw connections", "ClawJS integrations/channel APIs and QA matrix"]],
+  ["skills", ["claw skills", "claw skill-collections", "ClawJS skills/library APIs, CLI/SDK and MCP resources"]],
+]) {
+  const surface = (registry.surfaces ?? []).find((entry) => entry.id === surfaceId);
+  if (!surface) {
+    fail(`interface registry is missing ${surfaceId}`);
+    continue;
+  }
+  const surfaceText = `${surface.humanSurface ?? ""}\n${surface.programmaticSurface ?? ""}\n${surface.storageOwner ?? ""}\n${surface.validation ?? ""}`;
+  for (const snippet of snippets) {
+    if (!surfaceText.includes(snippet)) fail(`${surfaceId} registry row is missing framework command snippet ${JSON.stringify(snippet)}`);
+  }
 }
 const mcpSurface = (registry.surfaces ?? []).find((entry) => entry.id === "mcp");
 if (!mcpSurface) {
@@ -226,7 +244,9 @@ if (!mcpSurface) {
   const mcpSurfaceText = `${mcpSurface.humanSurface ?? ""}\n${mcpSurface.programmaticSurface ?? ""}\n${mcpSurface.storageOwner ?? ""}\n${mcpSurface.validation ?? ""}`;
   for (const snippet of [
     "Clawix MCP settings page",
-    "ClawJS MCP registry through claw/API; external configs read-only import",
+    "claw mcp list|get|upsert|delete|config-path",
+    "ClawJS MCP registry API",
+    "external configs read-only import",
     "framework-registry",
     "MCP registry tests and Codex read-only guard",
   ]) {
@@ -284,7 +304,7 @@ for (const relativePath of [
 }
 
 for (const snippet of [
-  "| QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | Framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |",
+  "| QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | `claw snippets list|upsert|delete`; framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |",
 ]) {
   requireSnippet("docs/interface-matrix.md", snippet);
 }
@@ -296,7 +316,8 @@ if (!quickAskSnippetsSurface) {
   for (const snippet of [
     "quickAsk",
     "QuickAsk slash commands and mention prompt templates",
-    "Framework snippets/prompts/skills",
+    "claw snippets list|upsert|delete",
+    "framework snippets/prompts/skills",
     "framework-snippets",
     "Snippet migration tests; QuickAsk host prefs remain local",
   ]) {

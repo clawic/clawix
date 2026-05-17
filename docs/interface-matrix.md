@@ -35,12 +35,12 @@ experimental switch. Every current surface must be one of:
 | Session deep links | Host | Open/copy session links | `clawix://session/<sessionId>` | Host route | Parser accepts session and rejects chat |
 | OAuth callback deep links | Host | OAuth callback handling | `clawix://auth/callback/<provider>` | Host route | Parser accepts auth callback and rejects the retired callback route spelling |
 | Pairing QR | Host | Pairing QR sheet | JSON payload with `v`, `host`, `port`, `token`, `shortCode`, `hostDisplayName` | Host runtime | Payload tests assert JSON, port `24080`, short code and host display identity |
-| Agents, Personalities, Connections | Framework | Clawix agent and connection views | ClawJS agents/integrations APIs, CLI/SDK, fixtures | Framework files plus `core.sqlite`, host secret refs | No direct Clawix canonical writes |
-| Skills and Skill Collections | Framework | macOS Clawix skills/library UI | ClawJS skills/library APIs, CLI/SDK, MCP resources | Framework files plus `core.sqlite` | Skill fixtures and interface coverage |
+| Agents, Personalities, Connections | Framework | Clawix agent and connection views | `claw agents`, `claw personalities`, `claw connections`; ClawJS agent/integration APIs, CLI/SDK, fixtures | Framework files plus `core.sqlite`, host secret refs | No direct Clawix canonical writes |
+| Skills and Skill Collections | Framework | macOS Clawix skills/library UI | `claw skills`, `claw skill-collections`; ClawJS skills/library APIs, CLI/SDK, MCP resources | Framework files plus `core.sqlite` | Skill fixtures and interface coverage |
 | Secrets | Host | Unlock, reveal and approvals | Host/vault APIs with opaque framework refs | Host vault | Signed-host/vault tests and plaintext negative checks |
-| MCP | Framework | MCP settings | ClawJS MCP registry through `claw`/API | Framework registry; external configs read-only | Registry tests and Codex read-only guard |
+| MCP | Framework | MCP settings | `claw mcp list|get|upsert|delete|config-path`; ClawJS MCP registry API | Framework registry; external configs read-only | Registry tests and Codex read-only guard |
 | Provider accounts/routing | Framework + Host | Provider account/model settings | Framework config plus host vault refs | Framework config; credentials in host vault | Routing tests; no UserDefaults as canonical store |
-| QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | Framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |
+| QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | `claw snippets list|upsert|delete`; framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |
 | Voice/audio/dictation | Framework + Host | Dictation and audio catalog UI | `@clawjs/audio` API/CLI/fixtures | Framework audio sidecar; host temp/debug/prefs local | Transcript/catalog tests and host exception checks |
 | Apps | Framework | Apps catalog and app surface | ClawJS apps/resource APIs | Framework workspace storage | Reject App Support as canonical Apps path |
 | Design | Framework | Styles, templates, references, editor | Design resource types in registry/runtime | Framework workspace storage | Design fixtures and storage boundary tests |
