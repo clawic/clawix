@@ -69,6 +69,11 @@ const skillContracts = [
     name: "visual-regression",
     snippets: [
       "node scripts/ui_private_visual_verify.mjs --require-approved",
+      "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root>",
+      "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root>",
+      "CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root>",
+      "CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root>",
+      "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root>",
       "node scripts/ui_private_geometry_verify.mjs --require-approved",
       "node scripts/ui_private_baseline_verify.mjs --require-approved",
       "Private screenshots/baselines stay outside the public repo",
