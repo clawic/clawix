@@ -12,6 +12,13 @@
     "requiredForVisualMutation": true
   },
   "proposalPath": "docs/ui/visual-change-proposal.template.md",
+  "privateApprovalAlias": "private-codex-ui-approval",
+  "initialActiveModels": ["claude-opus-4.7"],
+  "additionalActiveModelPolicy": {
+    "requiresExplicitUserApproval": true,
+    "privateApprovalReferenceRequired": true,
+    "publicRepoStoresApprovalAliasOnly": true
+  },
   "allowedVisualModels": [
     {
       "id": "claude-opus-4.7",

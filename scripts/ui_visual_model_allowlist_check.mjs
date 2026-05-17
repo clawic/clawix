@@ -70,6 +70,9 @@ requireFields(manifest, manifestPath, [
   "authorizationSignal",
   "modelSignal",
   "proposalPath",
+  "privateApprovalAlias",
+  "initialActiveModels",
+  "additionalActiveModelPolicy",
   "allowedVisualModels",
 ]);
 
@@ -83,6 +86,28 @@ if (manifest?.modelSignal?.requiredForVisualMutation !== true) {
 }
 if (manifest?.proposalPath !== "docs/ui/visual-change-proposal.template.md") {
   fail(`${manifestPath}.proposalPath must point to docs/ui/visual-change-proposal.template.md`);
+}
+const approvalAuthority = readJson("docs/ui/approval-authority.manifest.json");
+if (manifest?.privateApprovalAlias !== approvalAuthority?.privateApprovalAlias) {
+  fail(`${manifestPath}.privateApprovalAlias must match docs/ui/approval-authority.manifest.json.privateApprovalAlias`);
+}
+requireFields(manifest?.additionalActiveModelPolicy, `${manifestPath}.additionalActiveModelPolicy`, [
+  "requiresExplicitUserApproval",
+  "privateApprovalReferenceRequired",
+  "publicRepoStoresApprovalAliasOnly",
+]);
+if (manifest?.additionalActiveModelPolicy?.requiresExplicitUserApproval !== true) {
+  fail(`${manifestPath}.additionalActiveModelPolicy.requiresExplicitUserApproval must be true`);
+}
+if (manifest?.additionalActiveModelPolicy?.privateApprovalReferenceRequired !== true) {
+  fail(`${manifestPath}.additionalActiveModelPolicy.privateApprovalReferenceRequired must be true`);
+}
+if (manifest?.additionalActiveModelPolicy?.publicRepoStoresApprovalAliasOnly !== true) {
+  fail(`${manifestPath}.additionalActiveModelPolicy.publicRepoStoresApprovalAliasOnly must be true`);
+}
+const initialActiveModels = new Set(requireArray(manifest, manifestPath, "initialActiveModels"));
+if (!initialActiveModels.has("claude-opus-4.7")) {
+  fail(`${manifestPath}.initialActiveModels must include claude-opus-4.7`);
 }
 
 const allowedMutationClasses = new Set(["visual-ui", "copy-ui", "mechanical-equivalent-refactor"]);
@@ -100,6 +125,11 @@ for (const [index, model] of requireArray(manifest, manifestPath, "allowedVisual
   if (!["active", "revoked"].includes(model.status)) fail(`${label}.status is invalid`);
   if (model.status === "active") activeVisualModelCount += 1;
   if (model.privateApprovalRequired !== true) fail(`${label}.privateApprovalRequired must be true`);
+  if (model.status === "active" && !initialActiveModels.has(model.id)) {
+    if (typeof model.privateApprovalReference !== "string" || !model.privateApprovalReference.startsWith(`${manifest.privateApprovalAlias}:`)) {
+      fail(`${label}.privateApprovalReference must use ${manifest.privateApprovalAlias}: for additional active visual models`);
+    }
+  }
   if (model.scopeSource !== "docs/ui/visual-change-scopes.manifest.json") {
     fail(`${label}.scopeSource must be docs/ui/visual-change-scopes.manifest.json`);
   }
