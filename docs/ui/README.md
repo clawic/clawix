@@ -153,7 +153,9 @@ the public repo.
    governance checks must stay in local test lanes and public CI, and public CI
    must not require private evidence roots.
 25. Keep rendered geometry evidence contracts current with
-   `scripts/ui_rendered_geometry_manifest_check.mjs`.
+   `scripts/ui_rendered_geometry_manifest_check.mjs`; private pattern geometry
+   evidence must include measured values plus the approved geometry hash before
+   pending size clauses can become measured contracts.
 26. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
 27. Keep performance budget contracts current with
    `scripts/ui_performance_budget_check.mjs`; budget flow references must match

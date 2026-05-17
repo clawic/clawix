@@ -9,6 +9,7 @@
   "requiredEvidenceFields": [
     "patternId",
     "platform",
+    "measurements",
     "geometryHash",
     "captureCommand",
     "approvedByUserAt",

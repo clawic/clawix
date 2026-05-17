@@ -119,6 +119,24 @@ function verifyMetrics(evidence, label) {
   }
 }
 
+function verifyMeasurements(evidence, label) {
+  if (!("measurements" in evidence)) return;
+  if (!evidence.measurements || typeof evidence.measurements !== "object" || Array.isArray(evidence.measurements)) {
+    fail(`${label}.measurements must be an object`);
+    return;
+  }
+  const entries = Object.entries(evidence.measurements);
+  if (entries.length === 0) {
+    fail(`${label}.measurements must not be empty`);
+    return;
+  }
+  for (const [measurement, value] of entries) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+      fail(`${label}.measurements.${measurement} must be a finite non-negative number`);
+    }
+  }
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private evidence verification requires --require-approved.");
   process.exit(1);
@@ -175,6 +193,7 @@ for (const item of plan.evidence || []) {
   }
 
   verifyMetrics(evidence, label);
+  verifyMeasurements(evidence, label);
   verified += 1;
 }
 

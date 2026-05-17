@@ -47,6 +47,23 @@ function assertHash(value, label) {
   }
 }
 
+function verifyMeasurements(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail(`${label} must be an object`);
+    return;
+  }
+  const entries = Object.entries(value);
+  if (entries.length === 0) {
+    fail(`${label} must not be empty`);
+    return;
+  }
+  for (const [key, child] of entries) {
+    if (typeof child !== "number" || !Number.isFinite(child) || child < 0) {
+      fail(`${label}.${key} must be a finite non-negative number`);
+    }
+  }
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_GEOMETRY_ROOT || "";
 if (!privateRootRaw) {
@@ -81,6 +98,7 @@ for (const patternId of registry?.patterns || []) {
     for (const field of requiredEvidence) requireField(evidence, `${label} evidence`, field);
     if (evidence.patternId !== patternId) fail(`${label}.patternId must match the pattern registry`);
     if (evidence.platform !== platform) fail(`${label}.platform must match the pattern registry`);
+    verifyMeasurements(evidence.measurements, `${label}.measurements`);
     assertHash(evidence.geometryHash, `${label}.geometryHash`);
     verified += 1;
   }
