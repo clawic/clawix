@@ -97,6 +97,16 @@ if (!String(copyInventory?.verificationCommand || "").includes("scripts/ui_priva
 if (!String(copyInventory?.verificationCommand || "").includes("--require-approved")) {
   fail(`${copyPath}.verificationCommand must require approved private copy evidence`);
 }
+const protectedSurfaceRequirement = copyInventory?.protectedSurfaceRequirement || {};
+for (const field of [
+  "copySnapshotReferenceRequired",
+  "approvedCopyHashRequired",
+  "approvalBlockedWithoutSnapshot",
+]) {
+  if (protectedSurfaceRequirement[field] !== true) {
+    fail(`${copyPath}.protectedSurfaceRequirement.${field} must be true`);
+  }
+}
 const copyKinds = new Set(requireArray(copyInventory, copyPath, "restrictedCopyKinds"));
 for (const kind of requiredCopyKinds) {
   if (!copyKinds.has(kind)) fail(`${copyPath}.restrictedCopyKinds must include ${kind}`);
