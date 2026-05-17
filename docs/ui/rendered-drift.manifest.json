@@ -4,7 +4,7 @@
   "policy": "Rendered drift reports are produced from private visual, geometry, copy, and performance evidence. The public repo records only private report aliases, drift categories, statuses, and coverage mapping.",
   "surfaceBaselineCoveragePath": "docs/ui/surface-baseline-coverage.manifest.json",
   "privateDriftAlias": "private-codex-ui-rendered-drift",
-  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
+  "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"],
   "reportStatuses": ["pending-private-evidence", "no-drift", "drift-detected", "approved-drift"],
   "blockingReportStatuses": ["pending-private-evidence", "drift-detected"],

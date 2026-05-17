@@ -59,6 +59,8 @@ function requireAlias(value, alias, label) {
 
 const manifestPath = "docs/ui/rendered-drift.manifest.json";
 const manifest = readJson(manifestPath);
+const aggregateVisualManifestPath = "docs/ui/private-visual-validation.manifest.json";
+const aggregateVisualManifest = readJson(aggregateVisualManifestPath);
 requireFields(manifest, manifestPath, [
   "schemaVersion",
   "status",
@@ -85,6 +87,9 @@ if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_vi
 }
 if (!String(manifest?.verificationCommand || "").includes("--require-approved")) {
   fail(`${manifestPath}.verificationCommand must require approved private drift evidence`);
+}
+if (manifest?.verificationCommand !== aggregateVisualManifest?.verificationCommand) {
+  fail(`${manifestPath}.verificationCommand must match ${aggregateVisualManifestPath}.verificationCommand`);
 }
 
 const expectedCategories = ["geometry", "screenshot", "copy", "performance", "state"];

@@ -242,9 +242,8 @@ the public repo.
     `CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT=<private-root>`.
 46. When all private roots are available, verify visual and performance
     evidence end to end with
-    `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-    If public approval records exist, also set
-    `CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root>`.
+    `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
+    The approval root is required while public approval records exist.
 47. When private approval evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root> node scripts/ui_private_approval_verify.mjs --require-approved`.
 48. When private debt audit evidence is available, verify it with
