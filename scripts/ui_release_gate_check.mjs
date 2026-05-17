@@ -76,6 +76,7 @@ requireFields(manifest, manifestPath, [
   "releaseLaneRequires",
   "publicCiStrategy",
   "requiredPublicCheckScripts",
+  "publicCheckCoverage",
   "privateEvidenceCommand",
   "externalPendingExitCode",
 ]);
@@ -173,6 +174,28 @@ if (!configChecks.has("release-gate-contract-check")) {
 if (!configChecks.has("pattern-visual-mutation-guard")) {
   fail("docs/ui/interface-governance.config.json.publicChecks must include pattern-visual-mutation-guard");
 }
+const requiredPublicCheckScripts = new Set(requireArray(manifest, manifestPath, "requiredPublicCheckScripts"));
+const publicCheckCoverage = manifest?.publicCheckCoverage || {};
+if (!publicCheckCoverage || typeof publicCheckCoverage !== "object" || Array.isArray(publicCheckCoverage)) {
+  fail(`${manifestPath}.publicCheckCoverage must be an object`);
+}
+for (const checkId of configChecks) {
+  const scripts = publicCheckCoverage?.[checkId];
+  if (!Array.isArray(scripts) || scripts.length === 0) {
+    fail(`${manifestPath}.publicCheckCoverage must map ${checkId} to at least one public script`);
+    continue;
+  }
+  for (const script of scripts) {
+    if (!requiredPublicCheckScripts.has(script)) {
+      fail(`${manifestPath}.publicCheckCoverage.${checkId} references script not listed in requiredPublicCheckScripts: ${script}`);
+    }
+  }
+}
+for (const checkId of Object.keys(publicCheckCoverage || {})) {
+  if (!configChecks.has(checkId)) {
+    fail(`${manifestPath}.publicCheckCoverage contains undeclared public check ${checkId}`);
+  }
+}
 
 for (const script of requireArray(manifest, manifestPath, "requiredPublicCheckScripts")) {
   if (typeof script !== "string" || !script.startsWith("scripts/") || script.includes("..")) {
@@ -197,4 +220,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`UI release gate check passed (${manifest.requiredPublicCheckScripts.length} public checks)`);
+console.log(`UI release gate check passed (${manifest.requiredPublicCheckScripts.length} public scripts, ${configChecks.size} public checks)`);
