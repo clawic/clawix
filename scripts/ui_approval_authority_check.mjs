@@ -78,10 +78,19 @@ for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approv
   if (typeof source.privateApprovalField !== "string" || source.privateApprovalField === "") {
     fail(`${sourceLabel}.privateApprovalField must name a private approval reference field`);
   }
+  const approvalRequiredStatuses = Array.isArray(source.approvalRequiredStatuses)
+    ? new Set(source.approvalRequiredStatuses)
+    : null;
+  if (approvalRequiredStatuses && (typeof source.statusField !== "string" || source.statusField === "")) {
+    fail(`${sourceLabel}.statusField must be set when approvalRequiredStatuses is present`);
+  }
   const registry = readJson(source.path);
   const records = requireArray(registry, source.path, source.arrayField, { nonEmpty: false });
   for (const [recordIndex, record] of records.entries()) {
     const label = `${source.path}.${source.arrayField}[${recordIndex}]`;
+    if (approvalRequiredStatuses && !approvalRequiredStatuses.has(record?.[source.statusField])) {
+      continue;
+    }
     if (source.approvedByField && record[source.approvedByField] !== "user") {
       fail(`${label}.${source.approvedByField} must be user`);
     }

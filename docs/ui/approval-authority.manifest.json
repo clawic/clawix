@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "active",
-  "policy": "Only the user can approve canon promotions, protected surfaces, visual scopes, and exception records. Empty registries are valid; future approval records must stay public-safe and reference private approval evidence.",
+  "policy": "Only the user can approve canon promotions, protected surfaces, visual scopes, visual proposal handoffs, and exception records. Empty registries are valid; future approval records must stay public-safe and reference private approval evidence.",
   "privateApprovalAlias": "private-codex-ui-approval",
   "approvalSources": [
     {
@@ -23,6 +23,15 @@
       "path": "docs/ui/visual-change-scopes.manifest.json",
       "arrayField": "activeScopes",
       "approvedByField": "approvedBy",
+      "privateApprovalField": "privateApprovalReference"
+    },
+    {
+      "id": "visual-proposals",
+      "path": "docs/ui/visual-proposals.registry.json",
+      "arrayField": "proposals",
+      "statusField": "status",
+      "approvalRequiredStatuses": ["user-approved-for-visual-lane"],
+      "approvedByField": null,
       "privateApprovalField": "privateApprovalReference"
     },
     {
