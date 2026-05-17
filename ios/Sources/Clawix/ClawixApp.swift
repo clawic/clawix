@@ -79,7 +79,7 @@ struct ClawixApp: App {
             creds = Credentials(host: "127.0.0.1", port: 24080, token: "mock", hostDisplayName: "studio Mac", tailscaleHost: nil)
             if ClawixEnv.isEnabled(ClawixEnv.mockOpenFirstChat),
                let first = store.chats.first {
-                store.openChatId = first.id
+                store.openSessionId = first.id
             }
             return
         }
@@ -118,7 +118,7 @@ struct ClawixApp: App {
         SnapshotCache.clear()
         store.chats = []
         store.messagesByChat = [:]
-        store.openChatId = nil
+        store.openSessionId = nil
         creds = nil
     }
 
@@ -199,7 +199,7 @@ private struct RootView: View {
                     ChatListView(
                         store: store,
                         onOpen: { id in
-                            store.openChat(id)
+                            store.openSession(id)
                             path.append(RootNav.chat(id))
                         },
                         onOpenProject: { cwd in
@@ -223,11 +223,11 @@ private struct RootView: View {
                     .toolbar(.hidden, for: .navigationBar)
                     .task {
                         // Honor `CLAWIX_MOCK_OPEN_FIRST_CHAT`: bootstrap()
-                        // seeds `store.openChatId`, but navigation lives
+                        // seeds `store.openSessionId`, but navigation lives
                         // in this view's `path`. Push it on first appear
                         // so the designer lands directly in the chat
                         // detail without a manual tap.
-                        if path.isEmpty, let id = store.openChatId {
+                        if path.isEmpty, let id = store.openSessionId {
                             path.append(RootNav.chat(id))
                         }
                     }
@@ -290,7 +290,7 @@ private struct RootView: View {
                                     store: store,
                                     project: project,
                                     onOpen: { id in
-                                        store.openChat(id)
+                                        store.openSession(id)
                                         path.append(RootNav.chat(id))
                                     },
                                     onSwitchProject: { newCwd in
@@ -337,7 +337,7 @@ private struct RootView: View {
                         .preferredColorScheme(.dark)
                 }
                 .onChange(of: path) { _, newValue in
-                    // Keep the `openChatId` state in sync: when the
+                    // Keep the `openSessionId` state in sync: when the
                     // user pops every screen and we're back at the home
                     // (path empty), clear the open-chat state so the
                     // store treats the chat as closed.

@@ -106,7 +106,7 @@ final class BridgeStore {
     /// message currently held for the chat. Recomputed from
     /// `messagesByChat[chatId].first` after every snapshot/page apply.
     var oldestKnownIdByChat: [String: String] = [:]
-    var openChatId: String?
+    var openSessionId: String?
     var fileSnapshots: [String: FileSnapshotState] = [:]
     /// Cache of generated images keyed by absolute path on the Mac.
     /// Painted by the assistant timeline (workitem-driven) and by the
@@ -139,7 +139,7 @@ final class BridgeStore {
     /// `hasUnreadCompletion`). The wire model has no read-state, so
     /// detection is purely client-side: we watch for the
     /// `hasActiveTurn: true → false` transition on incoming chat
-    /// updates and add the chat id here when `openChatId` is something
+    /// updates and add the chat id here when `openSessionId` is something
     /// else. Cleared the moment the user opens that chat. Persisted to
     /// UserDefaults so the dot survives a relaunch.
     var unreadChatIds: Set<String> = UnreadChatsCache.load()
@@ -212,16 +212,16 @@ final class BridgeStore {
         snapshotCacheKey = cacheKey
         chats = []
         messagesByChat = [:]
-        openChatId = nil
+        openSessionId = nil
         hasMoreByChat = [:]
         loadingOlderByChat = [:]
         oldestKnownIdByChat = [:]
     }
 
     @MainActor
-    func openChat(_ chatId: String) {
-        openChatId = chatId
-        clearUnread(chatId: chatId)
+    func openSession(_ sessionId: String) {
+        openSessionId = sessionId
+        clearUnread(chatId: sessionId)
         // Intentionally NOT seeding `messagesByChat[chatId] = []` here.
         // We use the `nil` vs `[]` distinction to mean "snapshot not
         // delivered yet" vs "snapshot arrived and the chat is genuinely
@@ -235,7 +235,7 @@ final class BridgeStore {
         // parses cached the measurement settles in a single frame
         // instead of streaming up under the fade-in and surfacing as
         // a visible reanchor on chat entry.
-        if let cached = messagesByChat[chatId] {
+        if let cached = messagesByChat[sessionId] {
             let bodies = cached
                 .filter { $0.role == .assistant && !$0.content.isEmpty }
                 .map(\.content)
@@ -247,7 +247,7 @@ final class BridgeStore {
                 }
             }
         }
-        client?.openSession(chatId)
+        client?.openSession(sessionId)
     }
 
     /// Drop the soft-blue unread dot for `chatId`. Called when the user
@@ -276,7 +276,7 @@ final class BridgeStore {
     @MainActor
     private func observeActiveTurnTransition(_ updated: WireSession) {
         let prior = previousActiveTurnByChat[updated.id]
-        if prior == true && updated.hasActiveTurn == false && openChatId != updated.id {
+        if prior == true && updated.hasActiveTurn == false && openSessionId != updated.id {
             if !unreadChatIds.contains(updated.id) {
                 unreadChatIds.insert(updated.id)
                 UnreadChatsCache.save(unreadChatIds)
@@ -345,7 +345,7 @@ final class BridgeStore {
 
     @MainActor
     func closeChat() {
-        openChatId = nil
+        openSessionId = nil
     }
 
     /// Optimistic state-only side of a send: append the user bubble
@@ -726,8 +726,8 @@ final class BridgeStore {
         if let idx = chats.firstIndex(where: { $0.id == chatId }) {
             chats[idx].isArchived = true
         }
-        if openChatId == chatId {
-            openChatId = nil
+        if openSessionId == chatId {
+            openSessionId = nil
         }
         client?.archiveSession(sessionId: chatId)
         persistSnapshotDebounced()

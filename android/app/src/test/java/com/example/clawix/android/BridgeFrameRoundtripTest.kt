@@ -203,7 +203,7 @@ class BridgeFrameRoundtripTest {
         assertEquals(BridgeBody.OpenSession("c-1", 60), decoded.body)
     }
 
-    @Test fun open_chat_omits_limit_when_null() {
+    @Test fun open_session_omits_limit_when_null() {
         val raw = BridgeCoder.encode(BridgeFrame(body = BridgeBody.OpenSession("c-1", null)))
         assertTrue("expected no limit field, got $raw", !raw.contains("\"limit\""))
     }

@@ -904,8 +904,8 @@ for (const relativePath of [
 
 for (const [relativePath, patterns] of [
   ["ios/Sources/Clawix/ChatDetail/ChatDetailView.swift", ["legacy stop(_:)"]],
-  ["ios/Sources/Clawix/ClawixApp.swift", ["legacy `openChatId` flag"]],
-  ["ios/Sources/Clawix/Bridge/BridgeStore.swift", ["legacy daemon", "legacy peers"]],
+  ["ios/Sources/Clawix/ClawixApp.swift", ["legacy `openChatId` flag", "openChatId", "openChat("]],
+  ["ios/Sources/Clawix/Bridge/BridgeStore.swift", ["legacy daemon", "legacy peers", "openChatId", "openChat("]],
   ["ios/Sources/Clawix/Theme/LucideBridge.swift", ["legacy SF Symbol"]],
 ]) {
   const source = read(relativePath);
@@ -914,6 +914,11 @@ for (const [relativePath, patterns] of [
       fail(`${relativePath} must not describe current iOS v1 paths with legacy wording: ${JSON.stringify(pattern)}`);
     }
   }
+}
+
+const androidBridgeRoundtrip = read("android/app/src/test/java/com/example/clawix/android/BridgeFrameRoundtripTest.kt");
+if (androidBridgeRoundtrip.includes("open_chat_omits_limit_when_null")) {
+  fail("Android bridge round-trip tests must use session vocabulary for openSession coverage");
 }
 
 const secretsBackendSource = read("macos/Sources/Clawix/ClawJS/ClawJSSecretsBackend.swift");
