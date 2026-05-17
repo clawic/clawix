@@ -111,6 +111,14 @@ for (const state of requiredStates) {
 
 const inventoryPath = manifest?.inventoryPath || "docs/ui/visible-surfaces.inventory.json";
 const inventory = readJson(inventoryPath);
+const sourceRoots = requireArray(inventory, inventoryPath, "sourceRoots");
+for (const sourceRoot of sourceRoots) {
+  if (sourceRoot.startsWith("/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://")) {
+    fail(`${inventoryPath}.sourceRoots must use safe relative paths`);
+    continue;
+  }
+  if (!fs.existsSync(path.join(rootDir, sourceRoot))) fail(`${inventoryPath}.sourceRoots missing root ${sourceRoot}`);
+}
 const patternRegistryPath = "docs/ui/pattern-registry/patterns.registry.json";
 const patternRegistry = readJson(patternRegistryPath);
 const patternIds = new Set(requireArray(patternRegistry, patternRegistryPath, "patterns"));
@@ -121,12 +129,7 @@ for (const patternId of patternIds) {
   patternStates.set(patternId, new Set(requireArray(pattern, patternPath, "states")));
 }
 
-const sourceFiles = [
-  "macos/Sources/Clawix",
-  "ios/Sources/Clawix",
-  "android/app/src/main/java/com/example/clawix/android",
-  "web/src",
-].flatMap(walk).filter((file) => [".swift", ".kt", ".tsx"].includes(path.extname(file)));
+const sourceFiles = sourceRoots.flatMap(walk).filter((file) => [".swift", ".kt", ".tsx"].includes(path.extname(file)));
 
 const gapByKey = new Map();
 const allowedStatuses = new Set(requireArray(manifest, manifestPath, "allowedGapStatuses"));
