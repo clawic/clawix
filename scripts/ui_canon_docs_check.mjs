@@ -30,6 +30,7 @@ const requiredDocs = [
   "STYLE.md",
   "STANDARDS.md",
   "PERF.md",
+  "macos/PERF.md",
   "docs/ui/README.md",
 ];
 
@@ -70,6 +71,14 @@ for (const snippet of [
   "right-sidebar/browser use",
 ]) {
   requireSnippet("PERF.md", snippet);
+}
+
+for (const snippet of [
+  "../docs/ui/performance-budgets.registry.json",
+  "../docs/ui/private-baselines.manifest.json",
+  "baseline approval",
+]) {
+  requireSnippet("macos/PERF.md", snippet);
 }
 
 for (const snippet of [
