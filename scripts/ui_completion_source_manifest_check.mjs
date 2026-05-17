@@ -110,17 +110,21 @@ if (manifest?.externalPendingExitCode !== 2) fail(`${manifestPath}.externalPendi
 if (manifest?.expectedDecisionCount !== 39) fail(`${manifestPath}.expectedDecisionCount must be 39`);
 requireFields(manifest?.sourceSessionRequirements, `${manifestPath}.sourceSessionRequirements`, [
   "sessionMetaIdMatchesConversation",
+  "decisionsBeforeFirstGoalEvent",
   "minimumUserMessages",
   "requiredRecordTypes",
 ]);
 if (manifest?.sourceSessionRequirements?.sessionMetaIdMatchesConversation !== true) {
   fail(`${manifestPath}.sourceSessionRequirements.sessionMetaIdMatchesConversation must be true`);
 }
+if (manifest?.sourceSessionRequirements?.decisionsBeforeFirstGoalEvent !== true) {
+  fail(`${manifestPath}.sourceSessionRequirements.decisionsBeforeFirstGoalEvent must be true`);
+}
 if (!Number.isInteger(manifest?.sourceSessionRequirements?.minimumUserMessages) || manifest.sourceSessionRequirements.minimumUserMessages < 1) {
   fail(`${manifestPath}.sourceSessionRequirements.minimumUserMessages must be a positive integer`);
 }
 const requiredRecordTypes = requireArray(manifest?.sourceSessionRequirements, `${manifestPath}.sourceSessionRequirements`, "requiredRecordTypes");
-for (const recordType of ["session_meta", "event_msg:user_message", "response_item:message"]) {
+for (const recordType of ["session_meta", "event_msg:user_message", "response_item:message", "event_msg:thread_goal_updated"]) {
   if (!requiredRecordTypes.includes(recordType)) {
     fail(`${manifestPath}.sourceSessionRequirements.requiredRecordTypes must include ${recordType}`);
   }
@@ -185,10 +189,13 @@ for (const snippet of [
   "sourceSessionRequirements",
   "session_meta",
   "event_msg:user_message",
+  "thread_goal_",
+  "decisionsBeforeFirstGoalEvent",
   "decision.choice",
   "normalizeText",
   "parseJsonlRecords",
   "recordTypeKey",
+  "sourceBeforeFirstGoalEvent",
 ]) {
   if (!privateVerifier.includes(snippet)) {
     fail(`scripts/ui_private_completion_source_verify.mjs must include ${snippet}`);

@@ -11,8 +11,9 @@
   "expectedDecisionCount": 39,
   "sourceSessionRequirements": {
     "sessionMetaIdMatchesConversation": true,
+    "decisionsBeforeFirstGoalEvent": true,
     "minimumUserMessages": 9,
-    "requiredRecordTypes": ["session_meta", "event_msg:user_message", "response_item:message"]
+    "requiredRecordTypes": ["session_meta", "event_msg:user_message", "response_item:message", "event_msg:thread_goal_updated"]
   },
   "expectedDecisionIds": [
     "initial_scope",

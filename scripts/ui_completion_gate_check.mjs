@@ -119,6 +119,13 @@ function withTemporaryCompletionSources(sourceManifest, callback) {
             },
           }),
         ),
+        JSON.stringify({
+          type: "event_msg",
+          payload: {
+            type: "thread_goal_updated",
+            text: "simulated goal event after source decisions",
+          },
+        }),
       ].join("\n"),
     );
     return callback({

@@ -133,6 +133,9 @@ for (const recordType of sourceSessionRequirements.requiredRecordTypes || []) {
 if (!audit.includes(`at least ${sourceSessionRequirements.minimumUserMessages} user message records`)) {
   fail(`${auditPath} must state the source session user message minimum`);
 }
+if (sourceSessionRequirements.decisionsBeforeFirstGoalEvent && !audit.includes("before the first `thread_goal_*` event")) {
+  fail(`${auditPath} must state decisions are verified before the first thread_goal event`);
+}
 for (const [type, count] of Object.entries(privateEvidencePlan.counts || {})) {
   const row = `| \`${type}\` | ${count} |`;
   if (!audit.includes(row)) fail(`${auditPath} must include private evidence count row ${row}`);

@@ -8,8 +8,10 @@ are re-read one by one.
 - Goal reference: `private-codex-goal:clawix-interface-governance-plan-2026-05-15.md`
 - Source session: `private-codex-session:019e2b5e-fe48-7231-8e13-49411999b001`
 - Private source policy: private session, not published.
-- Private source session shape: `session_meta`, `event_msg:user_message`, and
-  `response_item:message` records required; at least 9 user message records.
+- Private source session shape: `session_meta`, `event_msg:user_message`,
+  `response_item:message`, and `event_msg:thread_goal_updated` records
+  required; at least 9 user message records.
+  Decision ids and choices must appear before the first `thread_goal_*` event.
 - Completion status: blocked by EXTERNAL PENDING private evidence.
 - Goal update rule: Do not call update_goal until all decisions are verified-complete with evidence.
 - Private evidence plan: 166 records must be verified before completion.

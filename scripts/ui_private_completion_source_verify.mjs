@@ -60,6 +60,16 @@ function recordTypeKey(record) {
   return record?.payload?.type ? `${record.type}:${record.payload.type}` : String(record?.type || "");
 }
 
+function recordText(record) {
+  return JSON.stringify(record || "");
+}
+
+function sourceBeforeFirstGoalEvent(records) {
+  const firstGoalEventIndex = records.findIndex((record) => recordTypeKey(record).startsWith("event_msg:thread_goal_"));
+  const sourceRecords = firstGoalEventIndex >= 0 ? records.slice(0, firstGoalEventIndex) : records;
+  return sourceRecords.map(recordText).join("\n");
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private completion source verification requires --require-approved.");
   process.exit(1);
@@ -81,6 +91,7 @@ const sessionSource = sessionFile ? fs.readFileSync(sessionFile, "utf8") : "";
 const sessionRecords = sessionFile ? parseJsonlRecords(sessionFile, sessionEnv) : [];
 const normalizedGoalSource = normalizeText(goalSource);
 const normalizedSessionSource = normalizeText(sessionSource);
+const normalizedPreGoalSessionSource = normalizeText(sourceBeforeFirstGoalEvent(sessionRecords));
 const decisionVerification = readJson("docs/ui/decision-verification.json");
 const decisionsById = new Map((decisionVerification.decisions || []).map((decision) => [decision.id, decision]));
 const expectedDecisions = manifest.expectedDecisions || (manifest.expectedDecisionIds || []).map((id) => ({ id }));
@@ -140,6 +151,14 @@ for (const expectedDecision of expectedDecisions) {
   }
   if (!normalizedSessionSource.includes(normalizedChoice)) {
     fail(`${sessionEnv} must include choice ${decision.choice} for decision ${decisionId}`);
+  }
+  if (sourceSessionRequirements.decisionsBeforeFirstGoalEvent) {
+    if (!normalizedPreGoalSessionSource.includes(decisionId)) {
+      fail(`${sessionEnv} must include decision ${decisionId} before the first thread goal event`);
+    }
+    if (!normalizedPreGoalSessionSource.includes(normalizedChoice)) {
+      fail(`${sessionEnv} must include choice ${decision.choice} before the first thread goal event`);
+    }
   }
 }
 
