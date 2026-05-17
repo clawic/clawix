@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
+import { assertApprovedScopeMetadata, loadApprovedScopeContract } from "./ui_private_approved_scope_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
@@ -70,19 +71,7 @@ function assertIsoTimestamp(value, label) {
 }
 
 function assertApprovedScope(value, label) {
-  if (typeof value === "string") {
-    if (value.trim() === "") fail(`${label} must not be empty`);
-    return;
-  }
-  if (Array.isArray(value)) {
-    if (value.length === 0) fail(`${label} must not be empty`);
-    return;
-  }
-  if (value && typeof value === "object") {
-    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
-    return;
-  }
-  fail(`${label} must be a non-empty string, array, or object`);
+  assertApprovedScopeMetadata(value, label, approvedScopeContract, fail);
 }
 
 function verifyFindingItems(evidence, label, allowedCategories) {
@@ -115,6 +104,7 @@ if (!hasFlag("--require-approved")) {
 
 const includePending = hasFlag("--include-pending");
 const manifest = readJson("docs/ui/debt-audit.manifest.json");
+const approvedScopeContract = loadApprovedScopeContract(rootDir, fail);
 const alias = manifest?.privateDebtAuditAlias || "private-codex-ui-debt-audit";
 const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
 const privateRootRaw = optionValue("--root") || process.env[privateRootEnv] || "";

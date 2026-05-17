@@ -247,6 +247,16 @@ for (const snippet of ["optionalRootAliases", "includeOptional", "required: fals
     fail(`scripts/ui_private_root_contract.mjs must support optional private root aliases via ${snippet}`);
   }
 }
+const approvedScopeContractPath = "scripts/ui_private_approved_scope_contract.mjs";
+const approvedScopeContractSource = fs.existsSync(path.join(rootDir, approvedScopeContractPath))
+  ? fs.readFileSync(path.join(rootDir, approvedScopeContractPath), "utf8")
+  : "";
+if (!approvedScopeContractSource) fail(`missing ${approvedScopeContractPath}`);
+for (const snippet of ["requiredApprovedScopeFields", "privateApprovalAlias", "approvedBy", "privateApprovalReference"]) {
+  if (!approvedScopeContractSource.includes(snippet)) {
+    fail(`${approvedScopeContractPath} must validate approved scope metadata via ${snippet}`);
+  }
+}
 for (const script of [
   "scripts/ui_private_approval_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
@@ -262,6 +272,22 @@ for (const script of [
   }
   if (/process\.env\.CLAWIX_UI_PRIVATE_/.test(source)) {
     fail(`${script} must not hard-code CLAWIX_UI_PRIVATE_* env names`);
+  }
+}
+for (const script of [
+  "scripts/ui_private_baseline_verify.mjs",
+  "scripts/ui_private_geometry_verify.mjs",
+  "scripts/ui_private_copy_verify.mjs",
+  "scripts/ui_private_drift_verify.mjs",
+  "scripts/ui_private_debt_audit_verify.mjs",
+  "scripts/ui_private_performance_budget_verify.mjs",
+]) {
+  const source = fs.existsSync(path.join(rootDir, script)) ? fs.readFileSync(path.join(rootDir, script), "utf8") : "";
+  if (!source.includes("ui_private_approved_scope_contract.mjs")) {
+    fail(`${script} must use ${approvedScopeContractPath}`);
+  }
+  if (!source.includes("assertApprovedScopeMetadata")) {
+    fail(`${script} must use shared approved scope metadata validation`);
   }
 }
 for (const script of [
@@ -336,6 +362,7 @@ for (const decisionId of decisionBlockers) {
 
 for (const script of [
   "scripts/ui_private_root_contract.mjs",
+  "scripts/ui_private_approved_scope_contract.mjs",
   "scripts/ui_private_visual_verify.mjs",
   "scripts/ui_private_evidence_plan_check.mjs",
   "scripts/ui_private_evidence_verify.mjs",
