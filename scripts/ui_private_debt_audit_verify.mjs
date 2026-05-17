@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
@@ -113,9 +114,12 @@ if (!hasFlag("--require-approved")) {
 }
 
 const includePending = hasFlag("--include-pending");
-const privateRootRaw = optionValue("--root") || process.env.CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT || "";
+const manifest = readJson("docs/ui/debt-audit.manifest.json");
+const alias = manifest?.privateDebtAuditAlias || "private-codex-ui-debt-audit";
+const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
+const privateRootRaw = optionValue("--root") || process.env[privateRootEnv] || "";
 if (!privateRootRaw) {
-  console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT or pass --root to verify private UI debt audit evidence.");
+  console.error(`EXTERNAL PENDING: set ${privateRootEnv} or pass --root to verify private UI debt audit evidence.`);
   process.exit(2);
 }
 
@@ -128,8 +132,6 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private debt audit root does not exist: ${privateRoot}`);
 }
 
-const manifest = readJson("docs/ui/debt-audit.manifest.json");
-const alias = manifest?.privateDebtAuditAlias || "private-codex-ui-debt-audit";
 const evidenceFilename = manifest?.evidenceFilename || "debt-audit-evidence.json";
 const allowedFindingCategories = loadAllowedFindingCategories();
 let verified = 0;

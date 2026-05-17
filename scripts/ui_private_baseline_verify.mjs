@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const manifestPath = "docs/ui/private-baselines.manifest.json";
@@ -84,6 +85,9 @@ function assertApprovedScope(value, label) {
 
 const requireApproved = hasFlag("--require-approved");
 const verifyPending = hasFlag("--include-pending");
+const manifest = readJson(manifestPath);
+const alias = manifest?.privateRootAlias || "private-codex-ui-baselines";
+const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
 
 if (!requireApproved) {
   console.error("UI private baseline verification requires --require-approved.");
@@ -91,9 +95,9 @@ if (!requireApproved) {
 }
 
 const privateRootArg = optionValue("--root");
-const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_BASELINE_ROOT || "";
+const privateRootRaw = privateRootArg || process.env[privateRootEnv] || "";
 if (!privateRootRaw) {
-  console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_BASELINE_ROOT or pass --root to verify private UI baselines.");
+  console.error(`EXTERNAL PENDING: set ${privateRootEnv} or pass --root to verify private UI baselines.`);
   process.exit(2);
 }
 
@@ -106,9 +110,7 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private baseline root does not exist: ${privateRoot}`);
 }
 
-const manifest = readJson(manifestPath);
 const surfaceCoverage = readJson("docs/ui/surface-baseline-coverage.manifest.json");
-const alias = manifest?.privateRootAlias || "private-codex-ui-baselines";
 const evidenceFilename = manifest?.evidenceFilename || "evidence.json";
 const surfaceEvidenceFilename = surfaceCoverage?.surfaceEvidenceFilename || "surface-evidence.json";
 let verifiedFlows = 0;

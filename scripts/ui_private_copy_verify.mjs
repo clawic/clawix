@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
@@ -106,6 +107,9 @@ function verifyCopyItems(value, label, allowedKinds) {
 
 const requireApproved = hasFlag("--require-approved");
 const includePending = hasFlag("--include-pending");
+const copyInventory = readJson("docs/ui/copy.inventory.json");
+const alias = copyInventory?.privateSnapshotAlias || "private-codex-ui-copy-snapshots";
+const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
 
 if (!requireApproved) {
   console.error("UI private copy verification requires --require-approved.");
@@ -113,9 +117,9 @@ if (!requireApproved) {
 }
 
 const privateRootArg = optionValue("--root");
-const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_COPY_ROOT || "";
+const privateRootRaw = privateRootArg || process.env[privateRootEnv] || "";
 if (!privateRootRaw) {
-  console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_COPY_ROOT or pass --root to verify private UI copy snapshots.");
+  console.error(`EXTERNAL PENDING: set ${privateRootEnv} or pass --root to verify private UI copy snapshots.`);
   process.exit(2);
 }
 
@@ -128,9 +132,7 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private copy root does not exist: ${privateRoot}`);
 }
 
-const copyInventory = readJson("docs/ui/copy.inventory.json");
 const protectedSurfaces = readJson("docs/ui/protected-surfaces.registry.json");
-const alias = copyInventory?.privateSnapshotAlias || "private-codex-ui-copy-snapshots";
 const evidenceFilename = copyInventory?.evidenceFilename || "copy-evidence.json";
 const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKinds) ? copyInventory.restrictedCopyKinds : []);
 let verified = 0;

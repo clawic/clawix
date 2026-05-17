@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
@@ -110,6 +111,10 @@ function verifyMeasurementSamples(evidence, label, requiredMetrics) {
 
 const requireApproved = hasFlag("--require-approved");
 const includePending = hasFlag("--include-pending");
+const budgets = readJson("docs/ui/performance-budgets.registry.json");
+const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
+const alias = privateBaselines?.privateRootAlias || "private-codex-ui-baselines";
+const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
 
 if (!requireApproved) {
   console.error("UI private performance budget verification requires --require-approved.");
@@ -117,9 +122,9 @@ if (!requireApproved) {
 }
 
 const privateRootArg = optionValue("--root");
-const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_BASELINE_ROOT || "";
+const privateRootRaw = privateRootArg || process.env[privateRootEnv] || "";
 if (!privateRootRaw) {
-  console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_BASELINE_ROOT or pass --root to verify private UI performance budgets.");
+  console.error(`EXTERNAL PENDING: set ${privateRootEnv} or pass --root to verify private UI performance budgets.`);
   process.exit(2);
 }
 
@@ -132,9 +137,6 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private performance root does not exist: ${privateRoot}`);
 }
 
-const budgets = readJson("docs/ui/performance-budgets.registry.json");
-const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
-const alias = privateBaselines?.privateRootAlias || "private-codex-ui-baselines";
 const evidenceFilename = budgets?.evidenceFilename || "performance-evidence.json";
 const requiredEvidenceFields = Array.isArray(budgets?.requiredEvidenceFields) ? budgets.requiredEvidenceFields : [];
 const requiredMetrics = Array.isArray(budgets?.requiredMetrics) ? budgets.requiredMetrics : [];

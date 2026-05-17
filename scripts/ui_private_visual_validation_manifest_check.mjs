@@ -176,6 +176,22 @@ for (const snippet of ["docs/ui/private-visual-validation.manifest.json", "rootA
   }
 }
 for (const script of [
+  "scripts/ui_private_baseline_verify.mjs",
+  "scripts/ui_private_geometry_verify.mjs",
+  "scripts/ui_private_copy_verify.mjs",
+  "scripts/ui_private_drift_verify.mjs",
+  "scripts/ui_private_debt_audit_verify.mjs",
+  "scripts/ui_private_performance_budget_verify.mjs",
+]) {
+  const source = fs.existsSync(path.join(rootDir, script)) ? fs.readFileSync(path.join(rootDir, script), "utf8") : "";
+  if (!source.includes("ui_private_root_contract.mjs") || !source.includes("privateRootEnvForAlias")) {
+    fail(`${script} must derive its private root env from rootAliases`);
+  }
+  if (/process\.env\.CLAWIX_UI_PRIVATE_/.test(source)) {
+    fail(`${script} must not hard-code CLAWIX_UI_PRIVATE_* env names`);
+  }
+}
+for (const script of [
   "scripts/ui_private_evidence_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
@@ -216,6 +232,7 @@ for (const decisionId of decisionBlockers) {
 }
 
 for (const script of [
+  "scripts/ui_private_root_contract.mjs",
   "scripts/ui_private_visual_verify.mjs",
   "scripts/ui_private_evidence_plan_check.mjs",
   "scripts/ui_private_evidence_verify.mjs",

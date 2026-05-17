@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { privateRootAliasEntries } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
@@ -51,13 +52,14 @@ function isPublicEvidenceReference(reference) {
   return true;
 }
 
-const privateEvidenceAliases = {
-  "private-codex-ui-baselines": "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
-  "private-codex-ui-rendered-geometry": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
-  "private-codex-ui-copy-snapshots": "CLAWIX_UI_PRIVATE_COPY_ROOT",
-  "private-codex-ui-rendered-drift": "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
-  "private-codex-ui-debt-audit": "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
-};
+function loadPrivateEvidenceAliases() {
+  try {
+    return Object.fromEntries(privateRootAliasEntries(rootDir).map((entry) => [entry.alias, entry.env]));
+  } catch (error) {
+    fail(`private root aliases could not be loaded: ${error.message}`);
+    return {};
+  }
+}
 
 function runPrivateEvidencePlan() {
   const result = spawnSync(process.execPath, [path.join(rootDir, "scripts/ui_private_evidence_plan_check.mjs"), "--json"], {
@@ -116,6 +118,7 @@ function commandMentionsVerifier(command, verifier) {
 const decisionPath = "docs/ui/decision-verification.json";
 const decisionVerification = readJson(decisionPath);
 const privateVisualValidation = readJson("docs/ui/private-visual-validation.manifest.json");
+const privateEvidenceAliases = loadPrivateEvidenceAliases();
 const privateEvidencePlan = runPrivateEvidencePlan();
 const plannedPrivateReferences = (privateEvidencePlan.evidence || []).map((item) => item.privateReference).filter(Boolean);
 const privateVisualDelegateCommands = requireArray(

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
@@ -131,10 +132,13 @@ if (!hasFlag("--require-approved")) {
 }
 
 const includePending = hasFlag("--include-pending");
+const manifest = readJson("docs/ui/rendered-geometry.manifest.json");
+const privateGeometryAlias = manifest?.privateGeometryAlias || "private-codex-ui-rendered-geometry";
+const privateRootEnv = privateRootEnvForAlias(rootDir, privateGeometryAlias);
 const privateRootArg = optionValue("--root");
-const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_GEOMETRY_ROOT || "";
+const privateRootRaw = privateRootArg || process.env[privateRootEnv] || "";
 if (!privateRootRaw) {
-  console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_GEOMETRY_ROOT or pass --root to verify private rendered geometry.");
+  console.error(`EXTERNAL PENDING: set ${privateRootEnv} or pass --root to verify private rendered geometry.`);
   process.exit(2);
 }
 
@@ -147,10 +151,8 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private geometry root does not exist: ${privateRoot}`);
 }
 
-const manifest = readJson("docs/ui/rendered-geometry.manifest.json");
 const registry = readJson(manifest?.patternSource || "docs/ui/pattern-registry/patterns.registry.json");
 const surfaceCoverage = readJson("docs/ui/surface-baseline-coverage.manifest.json");
-const privateGeometryAlias = manifest?.privateGeometryAlias || "private-codex-ui-rendered-geometry";
 const evidenceFilename = manifest?.evidenceFilename || "geometry-evidence.json";
 const surfaceEvidenceFilename = manifest?.surfaceEvidenceFilename || "surface-geometry.json";
 const requiredEvidence = Array.isArray(manifest?.requiredEvidenceFields) ? manifest.requiredEvidenceFields : [];

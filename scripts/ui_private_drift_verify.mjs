@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
@@ -115,6 +116,9 @@ function failReport(report, label, reason) {
 
 const requireApproved = hasFlag("--require-approved");
 const includePending = hasFlag("--include-pending");
+const manifest = readJson("docs/ui/rendered-drift.manifest.json");
+const alias = manifest?.privateDriftAlias || "private-codex-ui-rendered-drift";
+const privateRootEnv = privateRootEnvForAlias(rootDir, alias);
 
 if (!requireApproved) {
   console.error("UI private drift verification requires --require-approved.");
@@ -122,9 +126,9 @@ if (!requireApproved) {
 }
 
 const privateRootArg = optionValue("--root");
-const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_DRIFT_ROOT || "";
+const privateRootRaw = privateRootArg || process.env[privateRootEnv] || "";
 if (!privateRootRaw) {
-  console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_DRIFT_ROOT or pass --root to verify private rendered drift reports.");
+  console.error(`EXTERNAL PENDING: set ${privateRootEnv} or pass --root to verify private rendered drift reports.`);
   process.exit(2);
 }
 
@@ -137,8 +141,6 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private drift root does not exist: ${privateRoot}`);
 }
 
-const manifest = readJson("docs/ui/rendered-drift.manifest.json");
-const alias = manifest?.privateDriftAlias || "private-codex-ui-rendered-drift";
 const evidenceFilename = manifest?.evidenceFilename || "drift-report.json";
 const allowedStatuses = new Set(Array.isArray(manifest?.reportStatuses) ? manifest.reportStatuses : []);
 const blockingStatuses = new Set(Array.isArray(manifest?.blockingReportStatuses) ? manifest.blockingReportStatuses : []);
