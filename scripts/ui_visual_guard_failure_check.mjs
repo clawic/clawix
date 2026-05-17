@@ -49,6 +49,49 @@ for (const snippet of [
   if (!output.includes(snippet)) fail(`failure output is missing: ${snippet}`);
 }
 
+let authorizedExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedExitCode = error.status || 1;
+}
+if (authorizedExitCode !== 0) {
+  fail("simulated visual diff must pass when explicitly authorized for claude-opus-4.7");
+}
+
+let wrongModelOutput = "";
+let wrongModelExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "non-allowlisted-model",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  wrongModelExitCode = error.status || 1;
+  wrongModelOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (wrongModelExitCode === 0) {
+  fail("simulated visual diff must fail for a non-allowlisted visual model");
+}
+if (!wrongModelOutput.includes("CLAWIX_UI_VISUAL_MODEL=non-allowlisted-model")) {
+  fail("wrong model failure output must include the rejected model signal");
+}
+
 let patternOutput = "";
 let patternExitCode = 0;
 try {
