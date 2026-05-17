@@ -36,6 +36,7 @@ function requireFields(object, label, fields) {
 function requireArray(object, label, field, { nonEmpty = true } = {}) {
   if (!object) return [];
   const value = object[field];
+  if (value === undefined && !nonEmpty) return [];
   if (!Array.isArray(value)) {
     fail(`${label}.${field} must be an array`);
     return [];
@@ -141,6 +142,7 @@ for (const [index, entry] of coverage.entries()) {
   platformCoverage.add(entry.platform);
   if (!requiredPlatforms.includes(entry.platform)) fail(`${label}.platform is not governed`);
   const scopes = requireArray(entry, label, "scopes");
+  const excludeScopes = requireArray(entry, label, "excludeScopes", { nonEmpty: false });
   if (!["pattern", "debt", "exception", "protected"].includes(entry.classification)) {
     fail(`${label}.classification must be pattern, debt, exception, or protected`);
   }
@@ -167,7 +169,9 @@ for (const [index, entry] of coverage.entries()) {
   compiledCoverage.push({
     id: entry.id,
     platform: entry.platform,
+    classification: entry.classification,
     scopes: scopes.map((scope) => [scope, globToRegExp(scope)]),
+    excludeScopes: excludeScopes.map((scope) => [scope, globToRegExp(scope)]),
   });
 }
 
@@ -183,11 +187,18 @@ const sourceRoots = [
 ];
 const candidates = sourceRoots.flatMap(walk).filter(isVisibleCandidate);
 const uncovered = [];
+const ambiguous = [];
 for (const candidate of candidates) {
   const platform = platformFor(candidate);
-  const matches = compiledCoverage.filter((entry) => entry.platform === platform && entry.scopes.some(([, pattern]) => pattern.test(candidate)));
+  const matches = compiledCoverage.filter((entry) => {
+    if (entry.platform !== platform) return false;
+    if (entry.excludeScopes.some(([, pattern]) => pattern.test(candidate))) return false;
+    return entry.scopes.some(([, pattern]) => pattern.test(candidate));
+  });
   if (matches.length === 0) {
     uncovered.push(candidate);
+  } else if (matches.length > 1) {
+    ambiguous.push({ candidate, matches });
   }
 }
 
@@ -197,6 +208,18 @@ if (uncovered.length > 0) {
       "visible UI candidates are not mapped in docs/ui/visible-surfaces.inventory.json",
       ...uncovered.slice(0, 80).map((candidate) => `  ${candidate}`),
       uncovered.length > 80 ? `  ...and ${uncovered.length - 80} more` : "",
+    ].filter(Boolean).join("\n"),
+  );
+}
+
+if (ambiguous.length > 0) {
+  fail(
+    [
+      "visible UI candidates must map to exactly one inventory classification",
+      ...ambiguous.slice(0, 80).map(({ candidate, matches }) => (
+        `  ${candidate}: ${matches.map((entry) => `${entry.id}:${entry.classification}`).join(", ")}`
+      )),
+      ambiguous.length > 80 ? `  ...and ${ambiguous.length - 80} more` : "",
     ].filter(Boolean).join("\n"),
   );
 }

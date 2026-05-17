@@ -176,6 +176,9 @@ the public repo.
    `scripts/ui_private_artifact_boundary_check.mjs`; public files may store
    aliases, manifests, hashes, and runner contracts only.
 36. Keep visible source coverage current with `scripts/ui_surface_inventory_check.mjs`.
+   Every visible source candidate must resolve to exactly one pattern, debt,
+   exception, or protected-surface classification; use `excludeScopes` to keep
+   broad public-safe globs from masking known debt.
 37. Keep private baseline coverage current with
    `scripts/ui_private_baseline_manifest_check.mjs`; the public repo stores only
    safe hashes, aliases, tolerances, and runner IDs.

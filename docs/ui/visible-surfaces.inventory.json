@@ -8,6 +8,7 @@
       "id": "macos-root-chrome",
       "platform": "macos",
       "scopes": ["macos/Sources/Clawix/*.swift"],
+      "excludeScopes": ["macos/Sources/Clawix/AutomationsView.swift", "macos/Sources/Clawix/PlanQuestionCard.swift"],
       "classification": "pattern",
       "patterns": ["chat-surface", "composer-chrome", "sidebar-row", "sheet-chrome", "toast", "search-field", "icon-chip-button", "entity-card"],
       "reason": "Root Swift files include app chrome, shared controls, icons, search, sheets, toast, and conversation support surfaces."
