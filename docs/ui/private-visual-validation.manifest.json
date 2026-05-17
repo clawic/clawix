@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "active",
-  "policy": "Private visual validation is reproducible through one public runner that delegates to the complete private evidence plan plus private baseline, rendered geometry, copy snapshot, rendered drift, debt audit, and performance budget verifiers. Missing private roots are EXTERNAL PENDING, not success.",
+  "policy": "Private visual validation is reproducible through one public runner that delegates to the complete private evidence plan plus private approval, private baseline, rendered geometry, copy snapshot, rendered drift, debt audit, and performance budget verifiers. Missing private roots are EXTERNAL PENDING, not success.",
   "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "evidencePlanCommand": "node scripts/ui_private_evidence_plan_check.mjs --json",
   "requiredRoots": [
@@ -45,6 +45,12 @@
   ],
   "optionalRootAliases": [
     {
+      "alias": "private-codex-ui-approval",
+      "env": "CLAWIX_UI_PRIVATE_APPROVAL_ROOT",
+      "manifestPath": "docs/ui/approval-authority.manifest.json",
+      "manifestAliasField": "privateApprovalAlias"
+    },
+    {
       "alias": "private-codex-ui-mechanical-equivalence",
       "env": "CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT",
       "manifestPath": "docs/ui/mechanical-equivalence.manifest.json",
@@ -53,6 +59,7 @@
   ],
   "delegates": [
     "node scripts/ui_private_evidence_verify.mjs --require-approved",
+    "node scripts/ui_private_approval_verify.mjs --require-approved",
     "node scripts/ui_private_baseline_verify.mjs --require-approved",
     "node scripts/ui_private_geometry_verify.mjs --require-approved",
     "node scripts/ui_private_copy_verify.mjs --require-approved",

@@ -79,10 +79,21 @@ requireFields(manifest, manifestPath, [
   "status",
   "policy",
   "privateApprovalAlias",
+  "evidenceFilename",
+  "requiredPrivateApprovalEvidenceFields",
   "approvalSources",
 ]);
 if (manifest?.privateApprovalAlias !== "private-codex-ui-approval") {
   fail(`${manifestPath}.privateApprovalAlias must be private-codex-ui-approval`);
+}
+if (manifest?.evidenceFilename !== "approval-evidence.json") {
+  fail(`${manifestPath}.evidenceFilename must be approval-evidence.json`);
+}
+const requiredEvidenceFields = new Set(requireArray(manifest, manifestPath, "requiredPrivateApprovalEvidenceFields"));
+for (const field of ["sourceId", "privateApprovalReference", "approvedBy", "approvedAt", "approvalHash"]) {
+  if (!requiredEvidenceFields.has(field)) {
+    fail(`${manifestPath}.requiredPrivateApprovalEvidenceFields must include ${field}`);
+  }
 }
 
 let checkedRecords = 0;

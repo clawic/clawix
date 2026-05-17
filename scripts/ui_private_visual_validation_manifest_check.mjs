@@ -145,6 +145,12 @@ const expectedAliasContracts = [
 ];
 const expectedOptionalAliasContracts = [
   {
+    alias: "private-codex-ui-approval",
+    env: "CLAWIX_UI_PRIVATE_APPROVAL_ROOT",
+    manifestPath: "docs/ui/approval-authority.manifest.json",
+    manifestAliasField: "privateApprovalAlias",
+  },
+  {
     alias: "private-codex-ui-mechanical-equivalence",
     env: "CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT",
     manifestPath: "docs/ui/mechanical-equivalence.manifest.json",
@@ -235,6 +241,7 @@ for (const snippet of ["optionalRootAliases", "includeOptional", "required: fals
   }
 }
 for (const script of [
+  "scripts/ui_private_approval_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
@@ -252,6 +259,7 @@ for (const script of [
 }
 for (const script of [
   "scripts/ui_private_evidence_verify.mjs",
+  "scripts/ui_private_approval_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
@@ -324,6 +332,7 @@ for (const script of [
   "scripts/ui_private_visual_verify.mjs",
   "scripts/ui_private_evidence_plan_check.mjs",
   "scripts/ui_private_evidence_verify.mjs",
+  "scripts/ui_private_approval_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
