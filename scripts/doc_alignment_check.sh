@@ -24,6 +24,7 @@ require_snippet() {
 for file in \
   "AGENTS.md" \
   "CLAUDE.md" \
+  "PERF.md" \
   "docs/host-ownership.md" \
   "docs/data-storage-boundary.md" \
   "docs/decision-map.md" \
@@ -287,6 +288,8 @@ require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_vi
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_drift_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "EXTERNAL PENDING"
 require_snippet "docs/ui/visual-change-proposal.template.md" "Status: conceptual-only"
+require_snippet "PERF.md" "docs/ui/performance-budgets.registry.json"
+require_snippet "PERF.md" "ui_private_performance_budget_verify.mjs --require-approved"
 require_snippet "macos/PERF.md" "docs/ui/performance-budgets.registry.json"
 require_snippet "skills/ui-implementation/SKILL.md" "Declare the UI governance evidence"
 require_snippet "skills/ui-implementation/SKILL.md" "pattern IDs or debt/protected/exception mapping"
