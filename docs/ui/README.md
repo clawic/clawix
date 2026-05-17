@@ -227,7 +227,8 @@ the public repo.
 43. Keep the completion source contract current with
     `scripts/ui_completion_source_manifest_check.mjs`; final completion also
     requires `scripts/ui_private_completion_source_verify.mjs` against the
-    private goal file and source session.
+    private goal file and source session. The source session must satisfy
+    `completion-source.manifest.json.sourceSessionRequirements`.
 44. Keep the final completion gate current with
     `scripts/ui_completion_gate_check.mjs`; `update_goal` is allowed only after
     `scripts/ui_private_completion_verify.mjs --require-approved` exits 0, and

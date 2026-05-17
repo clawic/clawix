@@ -96,6 +96,7 @@ const decisionPath = "docs/ui/decision-verification.json";
 const audit = read(auditPath);
 const decisionVerification = readJson(decisionPath);
 const privateVisualValidation = readJson("docs/ui/private-visual-validation.manifest.json");
+const completionSource = readJson("docs/ui/completion-source.manifest.json");
 const privateEvidencePlan = runPrivateEvidencePlan();
 const privateApprovalRecordCount = countPrivateApprovalRecords();
 scanPublicSafety(audit, auditPath);
@@ -124,6 +125,13 @@ if (!audit.includes(`Private evidence plan: ${plannedEvidenceTotal} records must
 }
 if (!audit.includes(`Private approval evidence: ${privateApprovalRecordCount} record(s) must be verified before completion.`)) {
   fail(`${auditPath} must state the private approval evidence total`);
+}
+const sourceSessionRequirements = completionSource?.sourceSessionRequirements || {};
+for (const recordType of sourceSessionRequirements.requiredRecordTypes || []) {
+  if (!audit.includes(recordType)) fail(`${auditPath} must include source session record type ${recordType}`);
+}
+if (!audit.includes(`at least ${sourceSessionRequirements.minimumUserMessages} user message records`)) {
+  fail(`${auditPath} must state the source session user message minimum`);
 }
 for (const [type, count] of Object.entries(privateEvidencePlan.counts || {})) {
   const row = `| \`${type}\` | ${count} |`;
