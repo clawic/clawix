@@ -102,6 +102,64 @@ if (authorizedScopedExitCode !== 0) {
   fail("simulated visual diff must pass for claude-opus-4.7 with an approved visual scope");
 }
 
+let authorizedUnknownScopeOutput = "";
+let authorizedUnknownScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "unknown-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedUnknownScopeExitCode = error.status || 1;
+  authorizedUnknownScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedUnknownScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the provided visual scope is not listed");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=unknown-scope",
+  "scope unknown-scope is not listed",
+]) {
+  if (!authorizedUnknownScopeOutput.includes(snippet)) fail(`authorized unknown-scope failure output is missing: ${snippet}`);
+}
+
+let authorizedOverbudgetScopeOutput = "";
+let authorizedOverbudgetScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-overbudget-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-overbudget-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedOverbudgetScopeExitCode = error.status || 1;
+  authorizedOverbudgetScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedOverbudgetScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the approved visual scope budget is exceeded");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-overbudget-scope",
+  "maxLines budget exceeded",
+]) {
+  if (!authorizedOverbudgetScopeOutput.includes(snippet)) fail(`authorized overbudget-scope failure output is missing: ${snippet}`);
+}
+
 let wrongModelOutput = "";
 let wrongModelExitCode = 0;
 try {
@@ -214,6 +272,66 @@ try {
 }
 if (patternAuthorizedScopedExitCode !== 0) {
   fail("simulated pattern mutation must pass for claude-opus-4.7 with an approved visual scope");
+}
+
+let patternAuthorizedUnknownScopeOutput = "";
+let patternAuthorizedUnknownScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "unknown-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedUnknownScopeExitCode = error.status || 1;
+  patternAuthorizedUnknownScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedUnknownScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the provided visual scope is not listed");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=unknown-scope",
+  "scope unknown-scope is not listed",
+]) {
+  if (!patternAuthorizedUnknownScopeOutput.includes(snippet)) fail(`pattern authorized unknown-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedOverbudgetScopeOutput = "";
+let patternAuthorizedOverbudgetScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-overbudget-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-overbudget-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedOverbudgetScopeExitCode = error.status || 1;
+  patternAuthorizedOverbudgetScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedOverbudgetScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the approved visual scope budget is exceeded");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-overbudget-scope",
+  "maxLines budget exceeded",
+]) {
+  if (!patternAuthorizedOverbudgetScopeOutput.includes(snippet)) fail(`pattern authorized overbudget-scope failure output is missing: ${snippet}`);
 }
 
 let patternWrongModelOutput = "";

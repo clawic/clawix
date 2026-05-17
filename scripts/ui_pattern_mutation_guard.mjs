@@ -7,6 +7,7 @@ const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
 const today = new Date().toISOString().slice(0, 10);
 const simulateApprovedVisualScope = args.includes("--simulate-approved-visual-scope");
+const simulateOverbudgetVisualScope = args.includes("--simulate-overbudget-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -94,6 +95,19 @@ if (simulateApprovedVisualScope) {
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateOverbudgetVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-overbudget-scope",
+      status: "approved",
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 1 },
       expiresAt: "2099-12-31",
     },
   ];
