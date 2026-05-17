@@ -546,17 +546,25 @@ function matchingVisualDetector(line) {
 function visualDiffHits(diffText, sourceLabel) {
   const hits = [];
   let currentPath = "<unknown>";
+  let nextOldLine = 0;
   let nextNewLine = 0;
 
   for (const line of diffText.split("\n")) {
+    if (line.startsWith("--- a/")) {
+      currentPath = line.slice("--- a/".length);
+      continue;
+    }
+
     if (line.startsWith("+++ b/")) {
       currentPath = line.slice("+++ b/".length);
       continue;
     }
 
     if (line.startsWith("@@ ")) {
-      const match = /\+(\d+)(?:,\d+)?/.exec(line);
-      nextNewLine = match ? Number(match[1]) : 0;
+      const oldMatch = /-(\d+)(?:,\d+)?/.exec(line);
+      const newMatch = /\+(\d+)(?:,\d+)?/.exec(line);
+      nextOldLine = oldMatch ? Number(oldMatch[1]) : 0;
+      nextNewLine = newMatch ? Number(newMatch[1]) : 0;
       continue;
     }
 
@@ -567,6 +575,7 @@ function visualDiffHits(diffText, sourceLabel) {
           path: currentPath,
           line: nextNewLine || "?",
           source: sourceLabel,
+          operation: "added",
           detector: detector.id,
           changeKind: detector.changeKind,
           reason: detector.reason,
@@ -577,7 +586,26 @@ function visualDiffHits(diffText, sourceLabel) {
       continue;
     }
 
+    if (line.startsWith("-") && !line.startsWith("---")) {
+      const detector = matchingVisualDetector(line);
+      if (detector) {
+        hits.push({
+          path: currentPath,
+          line: nextOldLine || "?",
+          source: sourceLabel,
+          operation: "removed",
+          detector: detector.id,
+          changeKind: detector.changeKind,
+          reason: detector.reason,
+          text: line.slice(1, 241),
+        });
+      }
+      nextOldLine += 1;
+      continue;
+    }
+
     if (line.startsWith(" ") || line === "\\ No newline at end of file") {
+      nextOldLine += 1;
       nextNewLine += 1;
     }
   }
@@ -588,9 +616,10 @@ function visualDiffHits(diffText, sourceLabel) {
 const simulatedVisualDiff = [
   "diff --git a/web/src/simulated-visual-diff.tsx b/web/src/simulated-visual-diff.tsx",
   "+++ b/web/src/simulated-visual-diff.tsx",
-  "@@ -0,0 +1,2 @@",
+  "@@ -1,3 +1,2 @@",
   '+<button className="gap-2 text-red-500" aria-label="Rename">Rename</button>',
   '+const visibleModelOptions = ["visible-model-alpha", "visible-model-beta"];',
+  '-<div className="gap-2 text-blue-500">Legacy</div>',
 ].join("\n");
 const visualHits = simulateUnauthorizedVisualDiff
   ? visualDiffHits(simulatedVisualDiff, "simulated unauthorized visual diff")
@@ -610,7 +639,7 @@ if (visualHits.length > 0 && !visualAuthorized) {
         .slice(0, 20)
         .map(
           (hit) =>
-            `  ${hit.path}:${hit.line} [${hit.source}/${hit.detector}/${hit.changeKind}] reason=${hit.reason} text=${hit.text}`,
+            `  ${hit.path}:${hit.line} [${hit.source}/${hit.operation}/${hit.detector}/${hit.changeKind}] reason=${hit.reason} text=${hit.text}`,
         ),
     ].join("\n"),
   );

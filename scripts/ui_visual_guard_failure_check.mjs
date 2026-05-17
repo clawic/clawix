@@ -45,6 +45,9 @@ for (const snippet of [
   "web/src/simulated-visual-diff.tsx:2",
   "cross-visible-option-list",
   "visible-model-alpha",
+  "web/src/simulated-visual-diff.tsx:1",
+  "removed",
+  "Legacy",
 ]) {
   if (!output.includes(snippet)) fail(`failure output is missing: ${snippet}`);
 }
