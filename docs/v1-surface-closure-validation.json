@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "program": "v1-surface-closure",
+  "repo": "clawix",
+  "generatedAt": "2026-05-17",
+  "statusVocabulary": {
+    "passed": "The command ran locally and returned exit code 0.",
+    "external-pending": "The local harness exists, but a live, provider, Docker, paid, destructive, physical, or approved external prerequisite was intentionally not exercised.",
+    "blocked-tooling": "The validation path exists, but required local tooling was unavailable in this environment."
+  },
+  "results": [
+    {
+      "id": "clawix-v1-audit",
+      "acceptanceCategoryIds": ["external-pending-policy"],
+      "command": "node scripts/v1_surface_closure_audit_check.mjs",
+      "status": "passed",
+      "evidence": "V1 surface closure audit check passed (37 decisions)."
+    },
+    {
+      "id": "clawix-swift-bridge",
+      "acceptanceCategoryIds": ["bridge-swift", "pairing"],
+      "command": "swift test --package-path macos --filter ClawixProtocolEncodingTests",
+      "status": "passed",
+      "evidence": "Swift bridge protocol encoding test filter passed: 2 tests."
+    },
+    {
+      "id": "clawix-android-bridge",
+      "acceptanceCategoryIds": ["bridge-android"],
+      "command": "bash scripts/launch-android.sh test",
+      "status": "blocked-tooling",
+      "evidence": "Launcher exited 69 because the Gradle wrapper is missing and no gradle binary is available on PATH.",
+      "nextAction": "Generate the Android Gradle wrapper on a machine with Gradle or open android/ in Android Studio, then rerun bash scripts/launch-android.sh test."
+    },
+    {
+      "id": "clawix-windows-bridge",
+      "acceptanceCategoryIds": ["bridge-windows"],
+      "command": "dotnet test windows/Clawix.sln",
+      "status": "blocked-tooling",
+      "evidence": "The dotnet CLI is not installed in this environment.",
+      "nextAction": "Install the .NET 8 SDK or run the Windows test lane on a Windows/.NET environment, then rerun dotnet test windows/Clawix.sln."
+    },
+    {
+      "id": "clawix-deep-links",
+      "acceptanceCategoryIds": ["deep-links"],
+      "command": "node scripts/interface_surface_guard.mjs",
+      "status": "passed",
+      "evidence": "Interface surface guard passed and enforces session/auth callback links while rejecting retired routes."
+    },
+    {
+      "id": "clawix-storage-and-framework-artifacts",
+      "acceptanceCategoryIds": ["storage-boundary", "framework-owned-artifacts", "host-tools-policy", "provider-routing", "mcp-registry", "domain-resource-fixtures"],
+      "command": "node scripts/interface_surface_guard.mjs && node scripts/storage_boundary_guard.mjs",
+      "status": "passed",
+      "evidence": "Interface surface and storage boundary guards passed."
+    },
+    {
+      "id": "clawix-integrations-external",
+      "acceptanceCategoryIds": ["integrations-qa"],
+      "command": "node scripts/interface_surface_guard.mjs && bash scripts/doc_alignment_check.sh",
+      "status": "external-pending",
+      "evidence": "Hermetic/matrix coverage is present; live provider checks remain EXTERNAL PENDING without explicit approval.",
+      "nextAction": "Run approved provider-specific live validation through the ClawJS Integration QA Lab when credentials and provider state are available."
+    },
+    {
+      "id": "clawix-docs-alignment",
+      "acceptanceCategoryIds": ["docs-alignment"],
+      "command": "bash scripts/doc_alignment_check.sh",
+      "status": "passed",
+      "evidence": "Doc alignment passed."
+    },
+    {
+      "id": "clawix-source-size",
+      "acceptanceCategoryIds": ["source-size"],
+      "command": "node scripts/source-size-check.mjs",
+      "status": "passed",
+      "evidence": "Source size check passed with existing warnings/signals."
+    },
+    {
+      "id": "clawix-public-hygiene",
+      "acceptanceCategoryIds": ["public-hygiene"],
+      "command": "bash macos/scripts/public_hygiene_check.sh && node scripts/tracked-ignored-check.mjs && node scripts/code-hygiene-check.mjs",
+      "status": "passed",
+      "evidence": "Public hygiene, tracked ignored, and code hygiene checks passed."
+    }
+  ]
+}

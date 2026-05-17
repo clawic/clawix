@@ -24,6 +24,9 @@ Source extraction:
   `mcp-registry`, `integrations-qa`,
   `domain-resource-fixtures`, `docs-alignment`, `source-size`,
   `public-hygiene`, and `external-pending-policy`.
+- Validation ledger: `docs/v1-surface-closure-validation.json` records latest
+  local pass, `EXTERNAL PENDING`, and blocked-tooling status per acceptance
+  category.
 
 Status vocabulary:
 

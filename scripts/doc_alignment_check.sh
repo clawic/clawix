@@ -30,6 +30,7 @@ for file in \
   "docs/decision-map.md" \
   "docs/v1-surface-closure-decisions.json" \
   "docs/v1-surface-closure-acceptance.json" \
+  "docs/v1-surface-closure-validation.json" \
   "docs/v1-surface-closure-completion-audit.md" \
   "docs/interface-matrix.md" \
   "docs/interface-surface-clawix.registry.json" \

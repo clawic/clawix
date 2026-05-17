@@ -29,9 +29,11 @@ function requireSnippet(relativePath, snippet) {
 
 const decisionsPath = "docs/v1-surface-closure-decisions.json";
 const acceptancePath = "docs/v1-surface-closure-acceptance.json";
+const validationPath = "docs/v1-surface-closure-validation.json";
 const auditPath = "docs/v1-surface-closure-completion-audit.md";
 const decisions = readJson(decisionsPath);
 const acceptance = readJson(acceptancePath);
+const validation = readJson(validationPath);
 const audit = read(auditPath);
 
 const expectedIds = [
@@ -130,6 +132,7 @@ const expectedAcceptanceCategoryIds = [
   "public-hygiene",
   "external-pending-policy",
 ];
+const allowedValidationStatuses = new Set(["passed", "external-pending", "blocked-tooling"]);
 
 if (decisions.schemaVersion !== 1) fail(`${decisionsPath}.schemaVersion must be 1`);
 if (decisions.program !== "v1-surface-closure") fail(`${decisionsPath}.program must be v1-surface-closure`);
@@ -171,6 +174,12 @@ for (const category of acceptanceCategories) {
   if (!Array.isArray(category.validationCommands) || category.validationCommands.length === 0) {
     fail(`${label}.validationCommands must be a non-empty array`);
   }
+  for (const command of category.validationCommands ?? []) {
+    if (typeof command !== "string" || command.trim() === "") fail(`${label}.validationCommands must contain non-empty strings`);
+    if (command === "node scripts/persistent-surface-guard.mjs") {
+      fail(`${label}.validationCommands must not use persistent-surface-guard without --self-test or explicit targets`);
+    }
+  }
   for (const evidencePath of category.evidence ?? []) {
     if (!fs.existsSync(path.join(rootDir, evidencePath))) fail(`${label}.evidence path does not exist: ${evidencePath}`);
   }
@@ -190,6 +199,36 @@ if (/\/Users\//.test(acceptanceText) || /rollout-\d{4}-\d{2}-\d{2}T/.test(accept
   fail(`${acceptancePath} must not include private local session paths`);
 }
 
+if (validation.schemaVersion !== 1) fail(`${validationPath}.schemaVersion must be 1`);
+if (validation.program !== "v1-surface-closure") fail(`${validationPath}.program must be v1-surface-closure`);
+if (validation.repo !== "clawix") fail(`${validationPath}.repo must be clawix`);
+if (!/^\d{4}-\d{2}-\d{2}$/.test(validation.generatedAt ?? "")) fail(`${validationPath}.generatedAt must be YYYY-MM-DD`);
+const validationResults = validation.results ?? [];
+if (!Array.isArray(validationResults) || validationResults.length === 0) fail(`${validationPath}.results must be a non-empty array`);
+const validatedAcceptanceIds = new Set();
+for (const result of validationResults) {
+  const label = `${validationPath}.results.${result?.id ?? "<missing-id>"}`;
+  if (!result.id) fail(`${label} is missing id`);
+  if (!result.command) fail(`${label} is missing command`);
+  if (!allowedValidationStatuses.has(result.status)) fail(`${label}.status is invalid`);
+  if (!result.evidence) fail(`${label} is missing evidence`);
+  if (result.status !== "passed" && !result.nextAction) fail(`${label} must include nextAction when not passed`);
+  if (!Array.isArray(result.acceptanceCategoryIds) || result.acceptanceCategoryIds.length === 0) {
+    fail(`${label}.acceptanceCategoryIds must be a non-empty array`);
+  }
+  for (const categoryId of result.acceptanceCategoryIds ?? []) {
+    if (!expectedAcceptanceCategoryIds.includes(categoryId)) fail(`${label} references unknown acceptance category ${categoryId}`);
+    validatedAcceptanceIds.add(categoryId);
+  }
+}
+for (const expectedId of expectedAcceptanceCategoryIds) {
+  if (!validatedAcceptanceIds.has(expectedId)) fail(`${validationPath} has no validation result for acceptance category ${expectedId}`);
+}
+const validationText = read(validationPath);
+if (/\/Users\//.test(validationText) || /rollout-\d{4}-\d{2}-\d{2}T/.test(validationText)) {
+  fail(`${validationPath} must not include private local session paths`);
+}
+
 const actualIds = (decisions.decisions ?? []).map((decision) => decision.id);
 for (const expectedId of expectedIds) {
   if (!actualIds.includes(expectedId)) fail(`${decisionsPath} is missing decision ${expectedId}`);
@@ -204,6 +243,7 @@ if (!audit.includes("39 `request_user_input` prompts")) fail(`${auditPath} must 
 if (!audit.includes("37 binding answers")) fail(`${auditPath} must record the binding answer count`);
 if (!audit.includes("2 excluded prompts")) fail(`${auditPath} must record excluded source prompts`);
 if (!audit.includes("Acceptance validation matrix")) fail(`${auditPath} must mention the acceptance validation matrix`);
+if (!audit.includes("Validation ledger")) fail(`${auditPath} must mention the validation ledger`);
 for (const sourceSnippet of ["`bridge_manifest_source`", "`apps_design_storage`", "`apps_design_contract_status`"]) {
   if (!audit.includes(sourceSnippet)) fail(`${auditPath} must mention source extraction snippet ${sourceSnippet}`);
 }

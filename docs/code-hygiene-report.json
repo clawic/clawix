@@ -7,7 +7,7 @@
   "reportOnlyFindings": 6,
   "baselinedFindings": 3,
   "lastAuditSummary": {
-    "scannedFiles": 1913,
+    "scannedFiles": 1914,
     "todoFindings": 0,
     "duplicateAssetGroups": 6,
     "duplicateAssetFiles": 12,
