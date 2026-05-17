@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
@@ -70,6 +71,40 @@ function withoutPrivateCompletionEnv() {
     if (key.startsWith("CLAWIX_UI_PRIVATE_")) delete env[key];
   }
   return env;
+}
+
+function withTemporaryCompletionSources(sourceManifest, callback) {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-ui-completion-"));
+  try {
+    const goalFile = path.join(tempRoot, "goal.md");
+    const sessionFile = path.join(tempRoot, "session.jsonl");
+    const decisions = sourceManifest?.expectedDecisions || [];
+    const decisionLines = decisions.map((decision) => `- \`${decision.id}\`: ${decision.choice}`).join("\n");
+    fs.writeFileSync(
+      goalFile,
+      [
+        sourceManifest.expectedConversationId,
+        "Required Decision Verification Checklist",
+        "Do not mark the associated goal complete",
+        "update_goal(status:",
+        decisionLines,
+      ].join("\n"),
+    );
+    fs.writeFileSync(
+      sessionFile,
+      decisions
+        .map((decision) =>
+          JSON.stringify({ conversation: sourceManifest.expectedConversationId, decision: decision.id, choice: decision.choice }),
+        )
+        .join("\n"),
+    );
+    return callback({
+      [sourceManifest.privateGoalFileEnv]: goalFile,
+      [sourceManifest.privateSourceSessionFileEnv]: sessionFile,
+    });
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 }
 
 function approvalRecords(approvalManifest) {
@@ -264,6 +299,27 @@ if (!simulatedClosedOutput.includes("CLAWIX_UI_PRIVATE_COMPLETION_GOAL_FILE")) {
 if (simulatedClosedOutput.includes("open decisions block update_goal")) {
   fail(`${manifest.privateVerifierScript} must not report open decisions during closed-decision simulation`);
 }
+withTemporaryCompletionSources(sourceManifest, (temporaryEnv) => {
+  const result = spawnSync(
+    process.execPath,
+    [path.join(rootDir, manifest.privateVerifierScript), "--require-approved", "--simulate-no-open-decisions", "--skip-public-prerequisites"],
+    {
+      cwd: rootDir,
+      env: { ...withoutPrivateCompletionEnv(), ...temporaryEnv },
+      encoding: "utf8",
+    },
+  );
+  const output = `${result.stdout || ""}${result.stderr || ""}`;
+  if (result.status !== manifest.externalPendingExitCode) {
+    fail(`${manifest.privateVerifierScript} must exit ${manifest.externalPendingExitCode} after source verification when visual roots are missing`);
+  }
+  if (!output.includes("CLAWIX_UI_PRIVATE_BASELINE_ROOT")) {
+    fail(`${manifest.privateVerifierScript} must advance to private visual root verification after private source verification passes`);
+  }
+  if (output.includes("CLAWIX_UI_PRIVATE_COMPLETION_GOAL_FILE")) {
+    fail(`${manifest.privateVerifierScript} must not keep blocking on private completion sources after source verification passes`);
+  }
+});
 
 const gateSurface = readJson("docs/ui/gate-surface.manifest.json");
 if (!requireArray(gateSurface, "docs/ui/gate-surface.manifest.json", "requiredPublicCheckScripts").includes(manifest?.publicCheckScript)) {
