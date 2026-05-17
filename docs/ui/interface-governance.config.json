@@ -40,6 +40,7 @@
     "protected-surface-shape",
     "protected-surface-freeze-contract-check",
     "approval-authority-check",
+    "canon-unit-contract-check",
     "canon-promotion-record-check",
     "decision-verification-evidence-check",
     "exception-expiry",

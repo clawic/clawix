@@ -32,6 +32,8 @@ jobs:
         run: node scripts/ui_protected_surface_check.mjs
       - name: Validate UI approval authority
         run: node scripts/ui_approval_authority_check.mjs
+      - name: Validate UI canon units
+        run: node scripts/ui_canon_unit_check.mjs
       - name: Validate UI geometry contracts
         run: node scripts/ui_geometry_contract_check.mjs
       - name: Validate UI implementation evidence

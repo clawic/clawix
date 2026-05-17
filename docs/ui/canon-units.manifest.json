@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "The primary canon unit is the UI pattern. Narrower sub-pattern, component, or surface units are not canon until explicitly promoted through the user approval and canon promotion registries.",
+  "primaryUnit": "pattern",
+  "patternRegistry": "docs/ui/pattern-registry/patterns.registry.json",
+  "promotionRegistry": "docs/ui/canon-promotions.registry.json",
+  "approvalAuthority": "docs/ui/approval-authority.manifest.json",
+  "allowedUnitStatuses": ["candidate", "promoted", "revoked"],
+  "requiredUnitFields": ["id", "unitKind", "status", "source", "promotionRequired"],
+  "units": [
+    {
+      "id": "pattern",
+      "unitKind": "primary-canon-unit",
+      "status": "promoted",
+      "source": "docs/ui/pattern-registry/patterns.registry.json",
+      "promotionRequired": false
+    },
+    {
+      "id": "component",
+      "unitKind": "narrower-unit",
+      "status": "candidate",
+      "source": "docs/ui/component-extraction.manifest.json",
+      "promotionRequired": true
+    },
+    {
+      "id": "surface",
+      "unitKind": "narrower-unit",
+      "status": "candidate",
+      "source": "docs/ui/protected-surfaces.registry.json",
+      "promotionRequired": true
+    }
+  ]
+}

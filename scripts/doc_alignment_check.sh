@@ -68,6 +68,7 @@ for file in \
   "docs/ui/exceptions.registry.json" \
   "docs/ui/protected-surfaces.registry.json" \
   "docs/ui/approval-authority.manifest.json" \
+  "docs/ui/canon-units.manifest.json" \
   "docs/ui/canon-promotions.registry.json" \
   "docs/ui/performance-budgets.registry.json" \
   "docs/ui/private-baselines.manifest.json" \
@@ -85,6 +86,7 @@ for file in \
   "scripts/ui_inspiration_reference_check.mjs" \
   "scripts/ui_protected_surface_check.mjs" \
   "scripts/ui_approval_authority_check.mjs" \
+  "scripts/ui_canon_unit_check.mjs" \
   "scripts/ui_implementation_evidence_check.mjs" \
   "scripts/ui_implementation_phase_check.mjs" \
   "scripts/ui_state_coverage_check.mjs" \
@@ -145,6 +147,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_exception_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_inspiration_reference_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_protected_surface_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_approval_authority_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_canon_unit_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "implementation-evidence.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_implementation_evidence_check.mjs"
@@ -209,6 +212,8 @@ require_snippet "docs/ui/protected-surfaces.registry.json" "requiredFreezeFields
 require_snippet "docs/ui/protected-surfaces.registry.json" "geometryEvidenceReference"
 require_snippet "docs/ui/approval-authority.manifest.json" "private-codex-ui-approval"
 require_snippet "docs/ui/approval-authority.manifest.json" "canon-promotions"
+require_snippet "docs/ui/canon-units.manifest.json" "\"primaryUnit\": \"pattern\""
+require_snippet "docs/ui/canon-units.manifest.json" "promotionRequired"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"
