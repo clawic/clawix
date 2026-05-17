@@ -100,7 +100,23 @@ const manifest = readRepoJson("docs/ui/approval-authority.manifest.json");
 const alias = manifest?.privateApprovalAlias;
 const evidenceFilename = manifest?.evidenceFilename || "approval-evidence.json";
 const requiredEvidenceFields = manifest?.requiredPrivateApprovalEvidenceFields || [];
-const approvals = approvalRecords(manifest).filter(({ record, source }) => record?.[source.privateApprovalField]);
+const approvalEntries = approvalRecords(manifest);
+const approvals = [];
+
+for (const { source, record, label } of approvalEntries) {
+  const reference = record?.[source.privateApprovalField];
+  if (!reference) {
+    fail(`${label}.${source.privateApprovalField} is required for private approval verification`);
+    continue;
+  }
+  approvals.push({ source, record, label });
+}
+
+if (errors.length > 0) {
+  console.error("UI private approval verification failed:");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
 
 if (approvals.length === 0) {
   console.log("UI private approval verification passed (0 approval records)");

@@ -825,6 +825,24 @@ for (const snippet of [
 const approvalFixtureRoot = buildApprovalFixture();
 const approvalPrivateRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-ui-approval-private-"));
 try {
+  const approvalFixturePromotionsPath = path.join(approvalFixtureRoot, "docs/ui/canon-promotions.registry.json");
+  const approvalPromotions = JSON.parse(fs.readFileSync(approvalFixturePromotionsPath, "utf8"));
+  const missingReferencePromotions = JSON.parse(JSON.stringify(approvalPromotions));
+  delete missingReferencePromotions.promotions[0].privateApprovalReference;
+  writeJson(approvalFixturePromotionsPath, missingReferencePromotions);
+  const missingApprovalReferenceResult = runFixtureNode(approvalFixtureRoot, ["scripts/ui_private_approval_verify.mjs", "--require-approved"]);
+  if (missingApprovalReferenceResult.exitCode === 0) {
+    fail("private approval verifier must fail when an approval record is missing its private approval reference");
+  }
+  for (const snippet of [
+    "UI private approval verification failed:",
+    "privateApprovalReference is required for private approval verification",
+    "docs/ui/canon-promotions.registry.json.promotions[0]",
+  ]) {
+    if (!missingApprovalReferenceResult.output.includes(snippet)) fail(`private approval missing-reference output is missing: ${snippet}`);
+  }
+  writeJson(approvalFixturePromotionsPath, approvalPromotions);
+
   const missingApprovalRootResult = runFixtureNode(approvalFixtureRoot, ["scripts/ui_private_approval_verify.mjs", "--require-approved"]);
   if (missingApprovalRootResult.exitCode !== 2) {
     fail("private approval verifier must report EXTERNAL PENDING when approval records exist and the private root is missing");
