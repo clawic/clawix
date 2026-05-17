@@ -66,6 +66,8 @@ function scanForLocalPaths(value, label) {
 
 const manifestPath = "docs/ui/gate-surface.manifest.json";
 const manifest = readJson(manifestPath);
+const privateVisualValidationPath = "docs/ui/private-visual-validation.manifest.json";
+const privateVisualValidation = readJson(privateVisualValidationPath);
 requireFields(manifest, manifestPath, [
   "schemaVersion",
   "status",
@@ -87,13 +89,10 @@ if (manifest?.externalPendingExitCode !== 2) {
 if (!String(manifest?.privateEvidenceCommand || "").includes("scripts/ui_private_visual_verify.mjs --require-approved")) {
   fail(`${manifestPath}.privateEvidenceCommand must require the aggregate private visual verifier`);
 }
-for (const rootEnv of [
-  "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
-  "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
-  "CLAWIX_UI_PRIVATE_COPY_ROOT",
-  "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
-  "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
-]) {
+if (manifest?.privateEvidenceCommand !== privateVisualValidation?.verificationCommand) {
+  fail(`${manifestPath}.privateEvidenceCommand must match ${privateVisualValidationPath}.verificationCommand`);
+}
+for (const rootEnv of requireArray(privateVisualValidation, privateVisualValidationPath, "requiredRoots")) {
   if (!String(manifest?.privateEvidenceCommand || "").includes(rootEnv)) {
     fail(`${manifestPath}.privateEvidenceCommand must include ${rootEnv}`);
   }
