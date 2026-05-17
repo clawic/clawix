@@ -347,6 +347,19 @@ for (const relativePath of staleContractTargets) {
 }
 
 for (const relativePath of [
+  "docs/persistent-surface-clawix.manifest.json",
+  "macos/Sources/Clawix/Persistence/PersistentSurfaceRegistry.swift",
+]) {
+  const text = read(relativePath);
+  if (text.includes('"clawix.protocol.bridge"')) {
+    fail(`${relativePath} must use clawix.protocol.bridge.v1, not the unversioned bridge protocol id`);
+  }
+  if (!text.includes("clawix.protocol.bridge.v1")) {
+    fail(`${relativePath} must expose clawix.protocol.bridge.v1`);
+  }
+}
+
+for (const relativePath of [
   "linux/app/src-tauri/src/daemon_client.rs",
   "linux/app/src/lib/daemon_ws.ts",
 ]) {
