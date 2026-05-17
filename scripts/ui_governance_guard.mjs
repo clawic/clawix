@@ -538,6 +538,48 @@ const visualAuthorized =
   process.env[visualAuthorizationEnv] === visualAuthorizationValue &&
   Boolean(visualModelEnv) &&
   activeVisualModelIds.has(requestedVisualModel);
+const visualScopesPath = "docs/ui/visual-change-scopes.manifest.json";
+const visualScopes = readJson(visualScopesPath);
+const visualScopeEnv = String(visualScopes?.scopeSignal?.env || "CLAWIX_UI_VISUAL_SCOPE_ID");
+const requestedVisualScopeId = visualScopeEnv ? String(process.env[visualScopeEnv] || "") : "";
+
+function fileMatchesScope(file, scopeFiles = []) {
+  return scopeFiles.some((scopeFile) => {
+    if (scopeFile === file) return true;
+    if (scopeFile.endsWith("/**")) return file.startsWith(scopeFile.slice(0, -3));
+    return false;
+  });
+}
+
+function approvedScopeForHits(hits) {
+  if (!requestedVisualScopeId) return { ok: false, reason: `${visualScopeEnv}=<approved visual scope id> is required` };
+  const scope = (visualScopes?.activeScopes || []).find((candidate) => candidate?.id === requestedVisualScopeId);
+  if (!scope) return { ok: false, reason: `scope ${requestedVisualScopeId} is not listed in ${visualScopesPath}.activeScopes` };
+  if (scope.status !== "approved") return { ok: false, reason: `scope ${requestedVisualScopeId} is ${scope.status}, not approved` };
+  if (scope.expiresAt && scope.expiresAt < today) return { ok: false, reason: `scope ${requestedVisualScopeId} expired on ${scope.expiresAt}` };
+
+  const files = new Set(hits.map((hit) => hit.path));
+  const changeKinds = new Set(hits.map((hit) => hit.changeKind));
+  const scopeFiles = Array.isArray(scope.files) ? scope.files : [];
+  const scopeChangeKinds = new Set(Array.isArray(scope.changeKinds) ? scope.changeKinds : []);
+  const changeBudget = scope.changeBudget || {};
+
+  for (const file of files) {
+    if (!fileMatchesScope(file, scopeFiles)) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include ${file}` };
+  }
+  for (const changeKind of changeKinds) {
+    if (!scopeChangeKinds.has(changeKind)) {
+      return { ok: false, reason: `scope ${requestedVisualScopeId} does not allow ${changeKind}` };
+    }
+  }
+  if (Number.isInteger(changeBudget.maxFiles) && files.size > changeBudget.maxFiles) {
+    return { ok: false, reason: `scope ${requestedVisualScopeId} maxFiles budget exceeded` };
+  }
+  if (Number.isInteger(changeBudget.maxLines) && hits.length > changeBudget.maxLines) {
+    return { ok: false, reason: `scope ${requestedVisualScopeId} maxLines budget exceeded` };
+  }
+  return { ok: true, scope };
+}
 
 function matchingVisualDetector(line) {
   return compiledVisualDetectors.find((detector) => detector.regex.test(line));
@@ -643,6 +685,26 @@ if (visualHits.length > 0 && !visualAuthorized) {
         ),
     ].join("\n"),
   );
+}
+if (visualHits.length > 0 && visualAuthorized) {
+  const scopeResult = approvedScopeForHits(visualHits);
+  if (!scopeResult.ok) {
+    fail(
+      [
+        "authorized visual/copy/layout source edit missing approved scope",
+        `required scope: ${visualScopeEnv}=<approved scope from ${visualScopesPath}>`,
+        `current scope signal: ${visualScopeEnv}=${requestedVisualScopeId || "<unset>"}`,
+        `reason: ${scopeResult.reason}`,
+        `proposal route: ${visualModelAllowlist?.proposalPath || "docs/ui/visual-change-proposal.template.md"}`,
+        ...visualHits
+          .slice(0, 20)
+          .map(
+            (hit) =>
+              `  ${hit.path}:${hit.line} [${hit.source}/${hit.operation}/${hit.detector}/${hit.changeKind}] reason=${hit.reason} text=${hit.text}`,
+          ),
+      ].join("\n"),
+    );
+  }
 }
 
 const requiredDocs = [

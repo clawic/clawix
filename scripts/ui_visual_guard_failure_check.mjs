@@ -52,7 +52,8 @@ for (const snippet of [
   if (!output.includes(snippet)) fail(`failure output is missing: ${snippet}`);
 }
 
-let authorizedExitCode = 0;
+let authorizedNoScopeOutput = "";
+let authorizedNoScopeExitCode = 0;
 try {
   execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff"], {
     cwd: rootDir,
@@ -65,10 +66,20 @@ try {
     stdio: ["ignore", "pipe", "pipe"],
   });
 } catch (error) {
-  authorizedExitCode = error.status || 1;
+  authorizedNoScopeExitCode = error.status || 1;
+  authorizedNoScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
 }
-if (authorizedExitCode !== 0) {
-  fail("simulated visual diff must pass when explicitly authorized for claude-opus-4.7");
+if (authorizedNoScopeExitCode === 0) {
+  fail("simulated visual diff must fail for claude-opus-4.7 when no approved visual scope is provided");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "required scope:",
+  "CLAWIX_UI_VISUAL_SCOPE_ID=<unset>",
+  "proposal route:",
+  "web/src/simulated-visual-diff.tsx:1",
+]) {
+  if (!authorizedNoScopeOutput.includes(snippet)) fail(`authorized no-scope failure output is missing: ${snippet}`);
 }
 
 let wrongModelOutput = "";

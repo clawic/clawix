@@ -84,6 +84,7 @@ requireFields(manifest, manifestPath, [
   "policy",
   "privateModelAssignment",
   "defaultAuthorized",
+  "scopeSignal",
   "scopeStatuses",
   "requiredApprovalFields",
   "activeScopes",
@@ -93,6 +94,13 @@ if (manifest?.defaultAuthorized !== false) {
 }
 if (manifest?.privateModelAssignment !== "outside-public-repo") {
   fail(`${manifestPath}.privateModelAssignment must stay outside-public-repo`);
+}
+requireFields(manifest?.scopeSignal, `${manifestPath}.scopeSignal`, ["env", "requiredForVisualMutation"]);
+if (manifest?.scopeSignal?.env !== "CLAWIX_UI_VISUAL_SCOPE_ID") {
+  fail(`${manifestPath}.scopeSignal.env must be CLAWIX_UI_VISUAL_SCOPE_ID`);
+}
+if (manifest?.scopeSignal?.requiredForVisualMutation !== true) {
+  fail(`${manifestPath}.scopeSignal.requiredForVisualMutation must be true`);
 }
 
 const allowedStatuses = new Set(requireArray(manifest, manifestPath, "scopeStatuses"));
