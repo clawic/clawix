@@ -54,7 +54,7 @@ function isPublicEvidenceReference(reference) {
 
 function loadPrivateEvidenceAliases() {
   try {
-    return Object.fromEntries(privateRootAliasEntries(rootDir).map((entry) => [entry.alias, entry.env]));
+    return Object.fromEntries(privateRootAliasEntries(rootDir, { includeOptional: true }).map((entry) => [entry.alias, entry.env]));
   } catch (error) {
     fail(`private root aliases could not be loaded: ${error.message}`);
     return {};
@@ -169,9 +169,9 @@ if (!String(decisionVerification?.completionRule || "").includes("re-read")) {
 const requiredPrivateRoots = new Set(
   requireArray(privateVisualValidation, "docs/ui/private-visual-validation.manifest.json", "requiredRoots", { nonEmpty: true }),
 );
-for (const [alias, envName] of Object.entries(privateEvidenceAliases)) {
-  if (!requiredPrivateRoots.has(envName)) {
-    fail(`docs/ui/private-visual-validation.manifest.json.requiredRoots must include ${envName} for ${alias}`);
+for (const entry of privateRootAliasEntries(rootDir)) {
+  if (!requiredPrivateRoots.has(entry.env)) {
+    fail(`docs/ui/private-visual-validation.manifest.json.requiredRoots must include ${entry.env} for ${entry.alias}`);
   }
 }
 

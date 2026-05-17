@@ -226,6 +226,14 @@ for (const snippet of ["docs/ui/private-visual-validation.manifest.json", "rootA
     fail(`scripts/ui_private_evidence_verify.mjs must derive private aliases from ${snippet}`);
   }
 }
+const rootContractSource = fs.existsSync(path.join(rootDir, "scripts/ui_private_root_contract.mjs"))
+  ? fs.readFileSync(path.join(rootDir, "scripts/ui_private_root_contract.mjs"), "utf8")
+  : "";
+for (const snippet of ["optionalRootAliases", "includeOptional", "required: false"]) {
+  if (!rootContractSource.includes(snippet)) {
+    fail(`scripts/ui_private_root_contract.mjs must support optional private root aliases via ${snippet}`);
+  }
+}
 for (const script of [
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
