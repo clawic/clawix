@@ -93,20 +93,29 @@ for (const file of walk(uiDir)) {
   if (extension === ".json") scanValue(JSON.parse(content), relativePath);
 }
 
-const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
-requireField(privateBaselines, "docs/ui/private-baselines.manifest.json", "privateRootAlias", "private-codex-ui-baselines");
-
-const renderedGeometry = readJson("docs/ui/rendered-geometry.manifest.json");
-requireField(renderedGeometry, "docs/ui/rendered-geometry.manifest.json", "privateGeometryAlias", "private-codex-ui-rendered-geometry");
-
-const copyInventory = readJson("docs/ui/copy.inventory.json");
-requireField(copyInventory, "docs/ui/copy.inventory.json", "privateSnapshotAlias", "private-codex-ui-copy-snapshots");
-
-const renderedDrift = readJson("docs/ui/rendered-drift.manifest.json");
-requireField(renderedDrift, "docs/ui/rendered-drift.manifest.json", "privateDriftAlias", "private-codex-ui-rendered-drift");
-
-const debtAudit = readJson("docs/ui/debt-audit.manifest.json");
-requireField(debtAudit, "docs/ui/debt-audit.manifest.json", "privateDebtAuditAlias", "private-codex-ui-debt-audit");
+const privateValidation = readJson("docs/ui/private-visual-validation.manifest.json");
+const requiredRoots = new Set(Array.isArray(privateValidation?.requiredRoots) ? privateValidation.requiredRoots : []);
+const rootAliases = Array.isArray(privateValidation?.rootAliases) ? privateValidation.rootAliases : [];
+if (rootAliases.length === 0) fail("docs/ui/private-visual-validation.manifest.json.rootAliases must not be empty");
+for (const [index, entry] of rootAliases.entries()) {
+  const label = `docs/ui/private-visual-validation.manifest.json.rootAliases[${index}]`;
+  requireField(entry, label, "alias");
+  requireField(entry, label, "env");
+  requireField(entry, label, "manifestPath");
+  requireField(entry, label, "manifestAliasField");
+  if (!entry?.env || !entry?.manifestPath || !entry?.manifestAliasField) continue;
+  if (!requiredRoots.has(entry.env)) {
+    fail(`${label}.env must be listed in docs/ui/private-visual-validation.manifest.json.requiredRoots`);
+  }
+  const linkedManifest = readJson(entry.manifestPath);
+  requireField(linkedManifest, entry.manifestPath, entry.manifestAliasField, entry.alias);
+  if (
+    typeof linkedManifest?.verificationCommand === "string" &&
+    !linkedManifest.verificationCommand.includes(entry.env)
+  ) {
+    fail(`${entry.manifestPath}.verificationCommand must include ${entry.env}`);
+  }
+}
 
 const visualModelAllowlist = readJson("docs/ui/visual-model-allowlist.manifest.json");
 requireField(visualModelAllowlist, "docs/ui/visual-model-allowlist.manifest.json", "privateAssignment", "outside-public-repo");
@@ -114,16 +123,10 @@ requireField(visualModelAllowlist, "docs/ui/visual-model-allowlist.manifest.json
 const visualScopes = readJson("docs/ui/visual-change-scopes.manifest.json");
 requireField(visualScopes, "docs/ui/visual-change-scopes.manifest.json", "privateModelAssignment", "outside-public-repo");
 
-const privateValidation = readJson("docs/ui/private-visual-validation.manifest.json");
-const requiredRoots = new Set(Array.isArray(privateValidation?.requiredRoots) ? privateValidation.requiredRoots : []);
-for (const root of [
-  "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
-  "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
-  "CLAWIX_UI_PRIVATE_COPY_ROOT",
-  "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
-  "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
-]) {
-  if (!requiredRoots.has(root)) fail("docs/ui/private-visual-validation.manifest.json.requiredRoots is missing " + root);
+for (const root of requiredRoots) {
+  if (!rootAliases.some((entry) => entry?.env === root)) {
+    fail("docs/ui/private-visual-validation.manifest.json.rootAliases is missing " + root);
+  }
 }
 
 if (errors.length > 0) {
