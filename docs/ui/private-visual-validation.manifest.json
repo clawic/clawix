@@ -71,5 +71,16 @@
     "perf_budget_source",
     "size_contracts"
   ],
+  "decisionBlockerEvidenceTypes": [
+    { "decisionId": "initial_scope", "evidenceTypes": ["surface-baseline", "surface-geometry", "surface-copy"] },
+    { "decisionId": "enforcement_mode", "evidenceTypes": ["rendered-drift"] },
+    { "decisionId": "debt_strategy", "evidenceTypes": ["debt-audit"] },
+    { "decisionId": "visual_baselines_location", "evidenceTypes": ["critical-flow-baseline", "surface-baseline", "rendered-drift"] },
+    { "decisionId": "alignment_validation", "evidenceTypes": ["surface-geometry", "pattern-geometry", "surface-baseline"] },
+    { "decisionId": "copy_governance", "evidenceTypes": ["surface-copy"] },
+    { "decisionId": "v1_pattern_set", "evidenceTypes": ["surface-baseline", "pattern-geometry"] },
+    { "decisionId": "perf_budget_source", "evidenceTypes": ["performance-budget"] },
+    { "decisionId": "size_contracts", "evidenceTypes": ["pattern-geometry"] }
+  ],
   "externalPendingExitCode": 2
 }

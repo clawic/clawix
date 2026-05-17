@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
@@ -44,6 +45,26 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
   return value;
 }
 
+function runEvidencePlan() {
+  const result = spawnSync(process.execPath, [path.join(rootDir, "scripts/ui_private_evidence_plan_check.mjs"), "--json"], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    fail("private evidence plan must pass before private visual validation can be verified");
+    if (result.stderr) {
+      for (const line of result.stderr.trim().split("\n")) fail(`private evidence plan: ${line}`);
+    }
+    return { counts: {} };
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`private evidence plan output is not valid JSON: ${error.message}`);
+    return { counts: {} };
+  }
+}
+
 const manifestPath = "docs/ui/private-visual-validation.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -57,8 +78,10 @@ requireFields(manifest, manifestPath, [
   "optionalRootAliases",
   "delegates",
   "decisionBlockers",
+  "decisionBlockerEvidenceTypes",
   "externalPendingExitCode",
 ]);
+const evidencePlan = runEvidencePlan();
 
 if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_visual_verify.mjs")) {
   fail(`${manifestPath}.verificationCommand must run scripts/ui_private_visual_verify.mjs`);
@@ -256,6 +279,35 @@ for (const decisionId of openDecisionIds) {
 for (const decisionId of decisionBlockers) {
   if (!openDecisionIds.includes(decisionId)) {
     fail(`${manifestPath}.decisionBlockers contains non-open decision ${decisionId}`);
+  }
+}
+const evidenceTypeCounts = evidencePlan?.counts || {};
+const decisionBlockerEvidenceTypes = requireArray(manifest, manifestPath, "decisionBlockerEvidenceTypes");
+const blockerEvidenceByDecision = new Map();
+for (const [index, entry] of decisionBlockerEvidenceTypes.entries()) {
+  const label = `${manifestPath}.decisionBlockerEvidenceTypes[${index}]`;
+  requireFields(entry, label, ["decisionId", "evidenceTypes"]);
+  if (!entry) continue;
+  if (!blockerSet.has(entry.decisionId)) {
+    fail(`${label}.decisionId must be listed in decisionBlockers`);
+  }
+  if (blockerEvidenceByDecision.has(entry.decisionId)) {
+    fail(`${label}.decisionId duplicates ${entry.decisionId}`);
+  }
+  blockerEvidenceByDecision.set(entry.decisionId, entry);
+  const evidenceTypes = requireArray(entry, label, "evidenceTypes");
+  const seenTypes = new Set();
+  for (const evidenceType of evidenceTypes) {
+    if (seenTypes.has(evidenceType)) fail(`${label}.evidenceTypes duplicates ${evidenceType}`);
+    seenTypes.add(evidenceType);
+    if (!Number.isInteger(evidenceTypeCounts[evidenceType]) || evidenceTypeCounts[evidenceType] <= 0) {
+      fail(`${label}.evidenceTypes includes ${evidenceType}, which is not produced by the private evidence plan`);
+    }
+  }
+}
+for (const decisionId of decisionBlockers) {
+  if (!blockerEvidenceByDecision.has(decisionId)) {
+    fail(`${manifestPath}.decisionBlockerEvidenceTypes must include ${decisionId}`);
   }
 }
 
