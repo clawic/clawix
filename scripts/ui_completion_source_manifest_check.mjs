@@ -109,6 +109,9 @@ if (manifest?.externalPendingExitCode !== 2) fail(`${manifestPath}.externalPendi
 if (manifest?.expectedDecisionCount !== 39) fail(`${manifestPath}.expectedDecisionCount must be 39`);
 
 const decisionVerification = readJson("docs/ui/decision-verification.json");
+if (manifest?.expectedConversationId !== decisionVerification?.conversationId) {
+  fail(`${manifestPath}.expectedConversationId must match docs/ui/decision-verification.json.conversationId`);
+}
 if (decisionVerification?.goalReference !== manifest?.goalReferenceAlias) {
   fail(`${manifestPath}.goalReferenceAlias must match docs/ui/decision-verification.json.goalReference`);
 }
