@@ -17,6 +17,7 @@
     "scripts/ui_canon_promotion_check.mjs",
     "scripts/ui_decision_verification_check.mjs",
     "scripts/ui_debt_report_check.mjs",
+    "scripts/ui_debt_audit_manifest_check.mjs",
     "scripts/ui_critical_cleanup_queue_check.mjs",
     "scripts/ui_exception_check.mjs",
     "scripts/ui_inspiration_reference_check.mjs",
@@ -47,6 +48,6 @@
     "scripts/ui_private_visual_validation_manifest_check.mjs",
     "scripts/ui_release_gate_check.mjs"
   ],
-  "privateEvidenceCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
+  "privateEvidenceCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "externalPendingExitCode": 2
 }

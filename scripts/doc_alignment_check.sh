@@ -64,6 +64,7 @@ for file in \
   "docs/ui/debt.baseline.json" \
   "docs/ui/debt-baseline.manifest.json" \
   "docs/ui/debt-report.registry.json" \
+  "docs/ui/debt-audit.manifest.json" \
   "docs/ui/critical-cleanup.queue.json" \
   "docs/ui/exceptions.registry.json" \
   "docs/ui/protected-surfaces.registry.json" \
@@ -81,6 +82,7 @@ for file in \
   "scripts/ui_canon_promotion_check.mjs" \
   "scripts/ui_decision_verification_check.mjs" \
   "scripts/ui_debt_report_check.mjs" \
+  "scripts/ui_debt_audit_manifest_check.mjs" \
   "scripts/ui_critical_cleanup_queue_check.mjs" \
   "scripts/ui_exception_check.mjs" \
   "scripts/ui_inspiration_reference_check.mjs" \
@@ -113,6 +115,7 @@ for file in \
   "scripts/ui_private_evidence_plan_check.mjs" \
   "scripts/ui_private_evidence_verify.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
+  "scripts/ui_private_debt_audit_verify.mjs" \
   "scripts/ui_private_performance_budget_verify.mjs" \
   "scripts/ui_private_visual_verify.mjs" \
   "scripts/ui_private_drift_verify.mjs" \
@@ -144,6 +147,7 @@ require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the cu
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_canon_promotion_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_debt_report_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_debt_audit_manifest_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_critical_cleanup_queue_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_exception_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_inspiration_reference_check.mjs"
@@ -249,6 +253,8 @@ require_snippet "docs/ui/surface-references.manifest.json" "Every visible surfac
 require_snippet "docs/ui/surface-references.manifest.json" "forbidAbsolutePath"
 require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "macos-root-chrome"
 require_snippet "docs/ui/surface-baseline-coverage.manifest.json" "private-codex-ui-rendered-geometry"
+require_snippet "docs/ui/debt-audit.manifest.json" "private-codex-ui-debt-audit"
+require_snippet "docs/ui/debt-audit.manifest.json" "ui_private_debt_audit_verify.mjs"
 require_snippet "docs/ui/rendered-drift.manifest.json" "private-codex-ui-rendered-drift"
 require_snippet "docs/ui/rendered-drift.manifest.json" "drift-detected"
 require_snippet "docs/ui/rendered-drift.manifest.json" "drift-report.json"
@@ -261,6 +267,7 @@ require_snippet "docs/ui/private-baselines.manifest.json" "private-codex-ui-base
 require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_verify.mjs"
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "scripts/ui_private_evidence_plan_check.mjs" "surface-baseline"
+require_snippet "scripts/ui_private_evidence_plan_check.mjs" "debt-audit"
 require_snippet "scripts/ui_private_evidence_plan_check.mjs" "performance-budget"
 require_snippet "scripts/ui_private_evidence_verify.mjs" "private evidence plan output is not valid JSON"
 require_snippet "scripts/ui_private_evidence_verify.mjs" "performance-budget"

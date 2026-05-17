@@ -74,6 +74,7 @@ const patternRegistry = readJson("docs/ui/pattern-registry/patterns.registry.jso
 const copyInventory = readJson("docs/ui/copy.inventory.json");
 const renderedDrift = readJson("docs/ui/rendered-drift.manifest.json");
 const performanceBudgets = readJson("docs/ui/performance-budgets.registry.json");
+const debtAudit = readJson("docs/ui/debt-audit.manifest.json");
 
 const surfaceRequiredFields = requireArray(surfaceCoverage, "docs/ui/surface-baseline-coverage.manifest.json", "requiredEvidenceFields");
 for (const [index, entry] of requireArray(surfaceCoverage, "docs/ui/surface-baseline-coverage.manifest.json", "coverage").entries()) {
@@ -166,6 +167,21 @@ for (const [index, report] of requireArray(renderedDrift, "docs/ui/rendered-drif
   });
 }
 
+for (const [index, entry] of requireArray(debtAudit, "docs/ui/debt-audit.manifest.json", "entries").entries()) {
+  const label = `debt-audit[${index}]`;
+  requireFields(entry, label, ["debtId", "platforms", "privateDebtAuditReference", "requiredEvidence"]);
+  assertPublicSafeReference(entry.privateDebtAuditReference, debtAudit?.privateDebtAuditAlias, `${label}.privateDebtAuditReference`);
+  addPlanItem({
+    label,
+    type: "debt-audit",
+    id: entry.debtId,
+    platform: entry.platforms?.[0] || "unknown",
+    privateReference: entry.privateDebtAuditReference,
+    evidenceFilename: debtAudit?.evidenceFilename || "debt-audit-evidence.json",
+    requiredFields: entry.requiredEvidence,
+  });
+}
+
 for (const [index, flow] of requireArray(performanceBudgets, "docs/ui/performance-budgets.registry.json", "flows").entries()) {
   const label = `performance-budgets[${index}]`;
   requireFields(flow, label, ["id", "platform", "privateBaselineReference"]);
@@ -193,6 +209,7 @@ for (const type of [
   "critical-flow-baseline",
   "pattern-geometry",
   "rendered-drift",
+  "debt-audit",
   "performance-budget",
 ]) {
   if (!counts.has(type)) fail(`private evidence plan must include ${type}`);

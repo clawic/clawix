@@ -12,6 +12,7 @@ const aliasRoots = {
   "private-codex-ui-rendered-geometry": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
   "private-codex-ui-copy-snapshots": "CLAWIX_UI_PRIVATE_COPY_ROOT",
   "private-codex-ui-rendered-drift": "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+  "private-codex-ui-debt-audit": "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
 };
 
 const referenceFields = {
@@ -21,6 +22,7 @@ const referenceFields = {
   "critical-flow-baseline": "privateBaselineReference",
   "pattern-geometry": "geometryEvidenceReference",
   "rendered-drift": "privateDriftReportReference",
+  "debt-audit": "privateDebtAuditReference",
   "performance-budget": "privateBaselineReference",
 };
 
@@ -31,6 +33,7 @@ const idFields = {
   "critical-flow-baseline": "flowId",
   "pattern-geometry": "patternId",
   "rendered-drift": "coverageId",
+  "debt-audit": "debtId",
   "performance-budget": "flowId",
 };
 

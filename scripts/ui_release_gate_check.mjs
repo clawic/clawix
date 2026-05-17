@@ -91,6 +91,7 @@ for (const rootEnv of [
   "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
   "CLAWIX_UI_PRIVATE_COPY_ROOT",
   "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+  "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
 ]) {
   if (!String(manifest?.privateEvidenceCommand || "").includes(rootEnv)) {
     fail(`${manifestPath}.privateEvidenceCommand must include ${rootEnv}`);

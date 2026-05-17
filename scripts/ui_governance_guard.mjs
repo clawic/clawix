@@ -305,6 +305,18 @@ requireFields(debtReport, debtReportPath, [
   "pendingItems",
 ]);
 
+const debtAuditPath = "docs/ui/debt-audit.manifest.json";
+const debtAudit = readJson(debtAuditPath);
+requireFields(debtAudit, debtAuditPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "sourceBaseline",
+  "sourceReport",
+  "privateDebtAuditAlias",
+  "entries",
+]);
+
 const exceptionsPath = "docs/ui/exceptions.registry.json";
 const exceptions = readJson(exceptionsPath);
 requireFields(exceptions, exceptionsPath, [
@@ -617,6 +629,7 @@ const requiredDocs = [
   "docs/ui/debt.baseline.json",
   "docs/ui/debt-baseline.manifest.json",
   "docs/ui/debt-report.registry.json",
+  "docs/ui/debt-audit.manifest.json",
   "docs/ui/critical-cleanup.queue.json",
   "docs/ui/exceptions.registry.json",
   "docs/ui/protected-surfaces.registry.json",

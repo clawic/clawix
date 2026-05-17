@@ -36,6 +36,7 @@
     "registry-completeness",
     "debt-baseline-shape",
     "debt-report-coverage",
+    "debt-audit-manifest-check",
     "critical-cleanup-queue-check",
     "protected-surface-shape",
     "protected-surface-freeze-contract-check",

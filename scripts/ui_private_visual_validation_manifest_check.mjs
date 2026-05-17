@@ -69,6 +69,7 @@ for (const root of [
   "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
   "CLAWIX_UI_PRIVATE_COPY_ROOT",
   "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+  "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
 ]) {
   if (!roots.has(root)) fail(`${manifestPath}.requiredRoots must include ${root}`);
 }
@@ -80,6 +81,7 @@ for (const script of [
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
   "scripts/ui_private_drift_verify.mjs",
+  "scripts/ui_private_debt_audit_verify.mjs",
   "scripts/ui_private_performance_budget_verify.mjs",
 ]) {
   if (!delegates.some((delegate) => String(delegate).includes(script))) {
@@ -94,6 +96,7 @@ for (const script of [
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
   "scripts/ui_private_drift_verify.mjs",
+  "scripts/ui_private_debt_audit_verify.mjs",
   "scripts/ui_private_performance_budget_verify.mjs",
 ]) {
   if (!fs.existsSync(path.join(rootDir, script))) fail(`missing ${script}`);

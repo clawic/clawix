@@ -22,6 +22,8 @@ jobs:
         run: node scripts/ui_decision_verification_check.mjs
       - name: Validate UI debt report
         run: node scripts/ui_debt_report_check.mjs
+      - name: Validate UI debt audit manifest
+        run: node scripts/ui_debt_audit_manifest_check.mjs
       - name: Validate UI critical cleanup queue
         run: node scripts/ui_critical_cleanup_queue_check.mjs
       - name: Validate UI exception registry
