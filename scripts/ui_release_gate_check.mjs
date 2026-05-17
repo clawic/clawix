@@ -49,7 +49,7 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function hasLocalPath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
 }
 
 function scanForLocalPaths(value, label) {
@@ -62,6 +62,12 @@ function scanForLocalPaths(value, label) {
     return;
   }
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
+}
+
+function scanPublicText(value, label) {
+  if (/\/Users\/|~\/|file:\/\/|[A-Z]:\\|BEGIN [A-Z ]*PRIVATE KEY|\bAKIA[0-9A-Z]{16}\b|\bsk-[A-Za-z0-9]{20,}\b|CLAWIX_UI_PRIVATE_[A-Z_]+_ROOT/.test(value)) {
+    fail(`${label} must not contain private roots, local paths, or secret-like tokens`);
+  }
 }
 
 const manifestPath = "docs/ui/gate-surface.manifest.json";
@@ -101,6 +107,8 @@ for (const rootEnv of requireArray(privateVisualValidation, privateVisualValidat
 const testScript = read(manifest?.localTestScript || "scripts/test.sh");
 const workflow = read(manifest?.publicWorkflow || ".github/workflows/ui-governance.yml");
 const config = readJson("docs/ui/interface-governance.config.json");
+scanPublicText(testScript, manifest?.localTestScript || "scripts/test.sh");
+scanPublicText(workflow, manifest?.publicWorkflow || ".github/workflows/ui-governance.yml");
 
 const publicCiStrategy = manifest?.publicCiStrategy || {};
 requireFields(publicCiStrategy, `${manifestPath}.publicCiStrategy`, [
