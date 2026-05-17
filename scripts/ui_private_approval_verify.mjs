@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { privateRootEnvForAlias } from "./ui_private_root_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
@@ -67,6 +68,22 @@ function assertHash(value, label) {
   if (typeof value !== "string" || !/^[a-f0-9]{64}$/i.test(value)) {
     fail(`${label} must be a 64-character hex hash`);
   }
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map((entry) => stableValue(entry));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, stableValue(value[key])]),
+    );
+  }
+  return value;
+}
+
+function publicRecordHash(record) {
+  return crypto.createHash("sha256").update(JSON.stringify(stableValue(record))).digest("hex");
 }
 
 function approvalRecords(manifest) {
@@ -169,6 +186,10 @@ for (const { source, record, label } of approvals) {
     fail(`${label}.approvedAt must match public approval record`);
   }
   assertHash(evidence.approvalHash, `${label}.approvalHash`);
+  assertHash(evidence.publicRecordHash, `${label}.publicRecordHash`);
+  if (evidence.publicRecordHash !== publicRecordHash(record)) {
+    fail(`${label}.publicRecordHash must match the public approval record`);
+  }
   verified += 1;
 }
 

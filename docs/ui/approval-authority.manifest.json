@@ -4,7 +4,7 @@
   "policy": "Only the user can approve canon promotions, protected surfaces, visual scopes, visual proposal handoffs, and exception records. Empty registries are valid; future approval records must stay public-safe and reference private approval evidence.",
   "privateApprovalAlias": "private-codex-ui-approval",
   "evidenceFilename": "approval-evidence.json",
-  "requiredPrivateApprovalEvidenceFields": ["sourceId", "privateApprovalReference", "approvedBy", "approvedAt", "approvalHash"],
+  "requiredPrivateApprovalEvidenceFields": ["sourceId", "privateApprovalReference", "approvedBy", "approvedAt", "approvalHash", "publicRecordHash"],
   "approvalSources": [
     {
       "id": "canon-promotions",

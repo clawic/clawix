@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -73,6 +74,22 @@ function buildApprovalFixture() {
   ];
   writeJson(promotionsPath, promotions);
   return fixtureRoot;
+}
+
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map((entry) => stableValue(entry));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, stableValue(value[key])]),
+    );
+  }
+  return value;
+}
+
+function fixturePublicRecordHash(record) {
+  return crypto.createHash("sha256").update(JSON.stringify(stableValue(record))).digest("hex");
 }
 
 const env = { ...process.env };
@@ -863,6 +880,7 @@ try {
     approvedBy: "user",
     approvedAt: "2026-05-17",
     approvalHash: "not-a-valid-hash",
+    publicRecordHash: "b".repeat(64),
   });
   const invalidApprovalResult = runFixtureNode(
     approvalFixtureRoot,
@@ -886,6 +904,31 @@ try {
     approvedBy: "user",
     approvedAt: "2026-05-17",
     approvalHash: "a".repeat(64),
+    publicRecordHash: "b".repeat(64),
+  });
+  const mismatchedRecordHashResult = runFixtureNode(
+    approvalFixtureRoot,
+    ["scripts/ui_private_approval_verify.mjs", "--require-approved"],
+    { CLAWIX_UI_PRIVATE_APPROVAL_ROOT: approvalPrivateRoot },
+  );
+  if (mismatchedRecordHashResult.exitCode === 0) {
+    fail("private approval verifier must fail when approval evidence is not bound to the public approval record");
+  }
+  for (const snippet of [
+    "UI private approval verification failed:",
+    "publicRecordHash must match the public approval record",
+    "docs/ui/canon-promotions.registry.json.promotions[0]",
+  ]) {
+    if (!mismatchedRecordHashResult.output.includes(snippet)) fail(`private approval record-hash output is missing: ${snippet}`);
+  }
+
+  writeJson(path.join(approvalEvidenceDir, "approval-evidence.json"), {
+    sourceId: "canon-promotions",
+    privateApprovalReference: "private-codex-ui-approval:canon/fixture-canon-approval",
+    approvedBy: "user",
+    approvedAt: "2026-05-17",
+    approvalHash: "a".repeat(64),
+    publicRecordHash: fixturePublicRecordHash(approvalPromotions.promotions[0]),
   });
   const validApprovalResult = runFixtureNode(
     approvalFixtureRoot,

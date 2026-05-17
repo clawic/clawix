@@ -100,7 +100,8 @@ the public repo.
 - `scripts/ui_private_evidence_verify.mjs`: private-root verifier for every
   record in the derived evidence plan.
 - `scripts/ui_private_approval_verify.mjs`: optional private-root verifier for
-  user approval evidence referenced by public approval records.
+  user approval evidence referenced by public approval records, including a
+  hash binding back to the public approval record.
 - `visual-change-proposal.template.md`: conceptual-only proposal template for
   non-authorized visual/copy/layout changes.
 - `inspiration/`: non-canonical external references.
@@ -141,7 +142,7 @@ the public repo.
    `scripts/ui_protected_surface_check.mjs`.
 15. Keep approval authority current with
    `scripts/ui_approval_authority_check.mjs`; future approvals must be from the
-   user, point to private approval evidence, and pass
+   user, point to private approval evidence bound to the public record hash, and pass
    `scripts/ui_private_approval_verify.mjs --require-approved` once approval
    records exist.
 16. Keep canon unit contracts current with `scripts/ui_canon_unit_check.mjs`;

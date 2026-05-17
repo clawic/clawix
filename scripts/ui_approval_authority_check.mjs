@@ -90,7 +90,7 @@ if (manifest?.evidenceFilename !== "approval-evidence.json") {
   fail(`${manifestPath}.evidenceFilename must be approval-evidence.json`);
 }
 const requiredEvidenceFields = new Set(requireArray(manifest, manifestPath, "requiredPrivateApprovalEvidenceFields"));
-for (const field of ["sourceId", "privateApprovalReference", "approvedBy", "approvedAt", "approvalHash"]) {
+for (const field of ["sourceId", "privateApprovalReference", "approvedBy", "approvedAt", "approvalHash", "publicRecordHash"]) {
   if (!requiredEvidenceFields.has(field)) {
     fail(`${manifestPath}.requiredPrivateApprovalEvidenceFields must include ${field}`);
   }
