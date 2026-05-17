@@ -113,7 +113,11 @@ public final class BridgeSession: Identifiable {
         installationId: String,
         deviceId: String
     ) {
-        guard [clientId, installationId, deviceId].allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+        guard BridgeAuthValidation.hasValidClientIdentity(
+            clientId: clientId,
+            installationId: installationId,
+            deviceId: deviceId
+        ) else {
             BridgeLog.write("auth-fail reason=invalid-client-identity name=\(deviceName ?? "?")")
             send(BridgeFrame(.authFailed(reason: "invalid-client-identity")))
             close(.protocolCode(.policyViolation))
