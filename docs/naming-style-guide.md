@@ -49,7 +49,8 @@ shape, and agent-oriented rename workflow, also read
   - `clawix://session/<sessionId>`
   - `clawix://settings/<section>`
 - Pairing QR codes use a JSON payload with `v`, `host`, `port`, `token`,
-  and related metadata; pair-token deep links are not stable v1 routes.
+  `shortCode`, `hostDisplayName`, and related metadata; pair-token deep links
+  are not stable v1 routes.
 - `claw://` is reserved for future framework-level links.
 
 ## Identifier rules

@@ -199,6 +199,7 @@ for (const snippet of [
 ]) {
   requireSnippet("docs/interface-matrix.md", snippet);
 }
+requireSnippet("docs/naming-style-guide.md", "`shortCode`, `hostDisplayName`");
 
 const pairingSurface = (registry.surfaces ?? []).find((entry) => entry.id === "pairing.qrJson");
 if (!pairingSurface) {
