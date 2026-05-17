@@ -47,6 +47,7 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
 const detectorPath = "docs/ui/visual-change-detectors.manifest.json";
 const manifest = readJson(detectorPath);
+const copyInventory = readJson("docs/ui/copy.inventory.json");
 requireFields(manifest, detectorPath, [
   "schemaVersion",
   "status",
@@ -120,11 +121,16 @@ for (const [bucketId, kinds] of requiredBuckets.entries()) {
 
 const seenKinds = new Set();
 const seenPlatforms = new Set();
+const detectorPatternsByKind = new Map();
 for (const [index, detector] of requireArray(manifest, detectorPath, "detectors").entries()) {
   const label = `${detectorPath}.detectors[${index}]`;
   requireFields(detector, label, ["id", "platforms", "changeKind", "pattern", "reason"]);
   if (!requiredKinds.has(detector.changeKind)) fail(`${label}.changeKind is not registered`);
   seenKinds.add(detector.changeKind);
+  detectorPatternsByKind.set(
+    detector.changeKind,
+    `${detectorPatternsByKind.get(detector.changeKind) || ""}\n${detector.pattern || ""}`,
+  );
   for (const platform of requireArray(detector, label, "platforms")) {
     if (!requiredPlatforms.has(platform)) fail(`${label}.platforms contains unsupported ${platform}`);
     seenPlatforms.add(platform);
@@ -141,6 +147,29 @@ for (const kind of requiredKinds) {
 }
 for (const platform of requiredPlatforms) {
   if (!seenPlatforms.has(platform)) fail(`${detectorPath}.detectors must cover ${platform}`);
+}
+
+const copySignalsByKind = {
+  "visible-name": ["title", "label"],
+  label: ["label", "aria-label", "accessibilityLabel"],
+  placeholder: ["placeholder"],
+  tooltip: ["tooltip", "help", "aria-label", "accessibilityLabel"],
+  microcopy: ["help", "accessibilityLabel", "aria-label"],
+  "empty-state": ["emptyState"],
+  "loading-state": ["loadingState"],
+  "error-state": ["errorMessage"],
+  "copy-hierarchy": ["section", "header", "footer"],
+};
+const combinedDetectorPatterns = [...detectorPatternsByKind.values()].join("\n");
+for (const copyKind of requireArray(copyInventory, "docs/ui/copy.inventory.json", "restrictedCopyKinds")) {
+  const signals = copySignalsByKind[copyKind];
+  if (!signals) {
+    fail(`scripts/ui_visual_detector_check.mjs must declare copy detector signals for ${copyKind}`);
+    continue;
+  }
+  if (!signals.some((signal) => combinedDetectorPatterns.includes(signal))) {
+    fail(`${detectorPath}.detectors must cover restricted copy kind ${copyKind}`);
+  }
 }
 
 if (errors.length > 0) {

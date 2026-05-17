@@ -48,7 +48,7 @@
     { "id": "web-motion", "platforms": ["web"], "changeKind": "animation", "pattern": "\\b(animation|transition|duration-|ease-)\\b", "reason": "Web motion tokens are visual behavior." },
     { "id": "cross-visible-option-list", "platforms": ["macos", "ios", "android", "web"], "changeKind": "microcopy", "pattern": "(\\breturn\\b|=)\\s*\\[[^\\]]*\"[A-Za-z0-9][^\"]{2,}\"[^\\]]*\\]", "reason": "Visible picker and menu option lists are governed copy." },
     { "id": "cross-ordering", "platforms": ["macos", "ios", "android", "web"], "changeKind": "ordering", "pattern": "\\b(sort\\(|sorted\\(|order|position)\\b", "reason": "Visible ordering can change hierarchy." },
-    { "id": "cross-visible-name", "platforms": ["macos", "ios", "android", "web"], "changeKind": "visible-name", "pattern": "\\b(title|label|placeholder|emptyState|errorMessage)\\b", "reason": "Visible names and placeholders are governed copy." },
+    { "id": "cross-visible-name", "platforms": ["macos", "ios", "android", "web"], "changeKind": "visible-name", "pattern": "\\b(title|label|placeholder|tooltip|help|emptyState|loadingState|errorMessage)\\b", "reason": "Visible names, placeholders, tooltips, and state messages are governed copy." },
     { "id": "cross-hierarchy", "platforms": ["macos", "ios", "android", "web"], "changeKind": "hierarchy", "pattern": "\\b(section|header|footer|sidebar|toolbar|menu)\\b", "reason": "Visible hierarchy changes need UI authorization." },
     { "id": "cross-spacing", "platforms": ["macos", "ios", "android", "web"], "changeKind": "spacing", "pattern": "\\b(spacing|inset|offset|gap|padding|margin)\\b", "reason": "Spacing changes are visual decisions." }
   ]
