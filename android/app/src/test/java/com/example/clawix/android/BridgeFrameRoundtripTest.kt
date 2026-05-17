@@ -151,7 +151,7 @@ class BridgeFrameRoundtripTest {
         roundtrip(BridgeBody.ErrorEvent("E_NET", "WebSocket closed"))
         roundtrip(
             BridgeBody.PairingPayload(
-                """{"v":1,"host":"127.0.0.1","port":24080,"token":"tok","shortCode":"ABC-234-XYZ"}""",
+                """{"v":1,"host":"127.0.0.1","port":24080,"token":"tok","shortCode":"ABC-234-XYZ","hostDisplayName":"Studio Mac"}""",
                 "tok",
                 "ABC-234-XYZ",
             )

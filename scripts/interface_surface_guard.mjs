@@ -591,6 +591,15 @@ for (const [relativePath, requiredSnippets, staleSnippets] of [
 }
 
 const androidBridgeRoundtripTest = read("android/app/src/test/java/com/example/clawix/android/BridgeFrameRoundtripTest.kt");
+for (const snippet of [
+  '"port":24080',
+  '"shortCode":"ABC-234-XYZ"',
+  '"hostDisplayName":"Studio Mac"',
+]) {
+  if (!androidBridgeRoundtripTest.includes(snippet)) {
+    fail(`Android bridge round-trip pairing fixture is missing stable QR field ${JSON.stringify(snippet)}`);
+  }
+}
 for (const pattern of [
   "roundtrip_chat_management_v2",
   "roundtrip_voice_v3",
