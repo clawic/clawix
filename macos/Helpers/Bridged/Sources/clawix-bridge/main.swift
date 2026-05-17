@@ -180,8 +180,9 @@ final class HostBox: @unchecked Sendable {
 /// `~/.clawix/state/bridge-status.json`. The npm CLI reads this file
 /// to drive `clawix status` and the live watch in `clawix up` without
 /// opening an authenticated websocket. Atomic write (`.tmp` + rename)
-/// so a reader never sees a half-flushed JSON. peerCount stays 0 in
-/// this iteration; wiring it to `BridgeServer` lives in v1.x.
+/// so a reader never sees a half-flushed JSON. `peerCount` is read from
+/// `BridgeStats`, which the Apple and Linux bridge session lifecycles
+/// update after successful authentication and on close.
 enum BridgeHeartbeat {
     private static let interval: TimeInterval = 2.0
 

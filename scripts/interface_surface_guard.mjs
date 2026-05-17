@@ -704,6 +704,16 @@ if (appSource.includes("one-shot legacy")) {
   fail("App.swift must not describe audio catalog bootstrap as a legacy migration");
 }
 
+const bridgeDaemonSource = read("macos/Helpers/Bridged/Sources/clawix-bridge/main.swift");
+for (const pattern of ["peerCount stays 0", "wiring it to `BridgeServer` lives in v1.x", "this iteration; wiring"]) {
+  if (bridgeDaemonSource.includes(pattern)) {
+    fail(`clawix-bridge heartbeat must not describe live peerCount as unresolved work: ${JSON.stringify(pattern)}`);
+  }
+}
+if (!bridgeDaemonSource.includes("\"peerCount\": BridgeStats.shared.activeSessionCount")) {
+  fail("clawix-bridge heartbeat must publish peerCount from BridgeStats.shared.activeSessionCount");
+}
+
 const appStateSource = read("macos/Sources/Clawix/AppState.swift");
 for (const pattern of ["legacyRouteKey", "CLAWIX_REPLICA_ROUTE", "legacy daemons", "legacy flows"]) {
   if (appStateSource.includes(pattern)) {
