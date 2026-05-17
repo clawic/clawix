@@ -44,6 +44,8 @@ jobs:
         run: node scripts/ui_canon_unit_check.mjs
       - name: Validate UI geometry contracts
         run: node scripts/ui_geometry_contract_check.mjs
+      - name: Validate UI completion audit
+        run: node scripts/ui_completion_audit_check.mjs
       - name: Validate UI implementation evidence
         run: node scripts/ui_implementation_evidence_check.mjs
       - name: Validate UI implementation phases

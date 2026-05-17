@@ -1,0 +1,118 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+
+const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const errors = [];
+
+function fail(message) {
+  errors.push(message);
+}
+
+function read(relativePath) {
+  const file = path.join(rootDir, relativePath);
+  if (!fs.existsSync(file)) {
+    fail(`missing ${relativePath}`);
+    return "";
+  }
+  return fs.readFileSync(file, "utf8");
+}
+
+function readJson(relativePath) {
+  const content = read(relativePath);
+  if (!content) return null;
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    fail(`${relativePath} is not valid JSON: ${error.message}`);
+    return null;
+  }
+}
+
+function requireArray(object, label, field, { nonEmpty = true } = {}) {
+  const value = object?.[field];
+  if (!Array.isArray(value)) {
+    fail(`${label}.${field} must be an array`);
+    return [];
+  }
+  if (nonEmpty && value.length === 0) fail(`${label}.${field} must not be empty`);
+  return value;
+}
+
+function scanPublicSafety(content, label) {
+  if (/\/Users\//.test(content) || /file:\/\//.test(content) || /^[A-Z]:\\/m.test(content)) {
+    fail(`${label} must not publish local private paths`);
+  }
+  if (/BEGIN [A-Z ]*PRIVATE KEY/.test(content) || /\bAKIA[0-9A-Z]{16}\b/.test(content) || /\bsk-[A-Za-z0-9]{20,}\b/.test(content)) {
+    fail(`${label} must not publish secret-like values`);
+  }
+  if (/rollout-2026-05-15T13-21-46/.test(content)) {
+    fail(`${label} must use the public-safe source session alias, not the private filename`);
+  }
+}
+
+const auditPath = "docs/ui/completion-audit.md";
+const decisionPath = "docs/ui/decision-verification.json";
+const audit = read(auditPath);
+const decisionVerification = readJson(decisionPath);
+scanPublicSafety(audit, auditPath);
+
+for (const required of [
+  "private-codex-goal:clawix-interface-governance-plan-2026-05-15.md",
+  "private-codex-session:019e2b5e-fe48-7231-8e13-49411999b001",
+  "private session, not published",
+  "Do not call update_goal",
+]) {
+  if (!audit.includes(required)) fail(`${auditPath} must include ${required}`);
+}
+
+const decisions = requireArray(decisionVerification, decisionPath, "decisions");
+const openDecisions = decisions.filter((decision) => decision?.status === "open");
+if (openDecisions.length > 0 && !audit.includes("Completion status: blocked by EXTERNAL PENDING private evidence.")) {
+  fail(`${auditPath} must state completion is blocked while decisions remain open`);
+}
+if (openDecisions.length === 0 && audit.includes("Completion status: blocked")) {
+  fail(`${auditPath} must not stay blocked when all decisions are verified-complete`);
+}
+
+const rowPattern = /^\| (\d+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \|$/gm;
+const rows = [];
+let match;
+while ((match = rowPattern.exec(audit)) !== null) {
+  rows.push({
+    index: Number(match[1]),
+    id: match[2],
+    status: match[3].trim(),
+    evidenceState: match[4].trim(),
+  });
+}
+
+if (rows.length !== decisions.length) {
+  fail(`${auditPath} must include one completion row per decision`);
+}
+
+const rowsById = new Map(rows.map((row) => [row.id, row]));
+for (const decision of decisions) {
+  const row = rowsById.get(decision.id);
+  const label = `${auditPath}.${decision.id}`;
+  if (!row) {
+    fail(`${label} is missing`);
+    continue;
+  }
+  if (row.index !== decision.index) fail(`${label} must use index ${decision.index}`);
+  if (row.status !== decision.status) fail(`${label} status must match ${decisionPath}`);
+  if (decision.status === "open" && !row.evidenceState.includes("EXTERNAL PENDING")) {
+    fail(`${label} must identify private evidence as EXTERNAL PENDING`);
+  }
+  if (decision.status === "verified-complete" && row.evidenceState !== "Public evidence verified.") {
+    fail(`${label} must state public evidence is verified`);
+  }
+}
+
+if (errors.length > 0) {
+  console.error("UI completion audit check failed:");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log(`UI completion audit check passed (${rows.length} decisions, ${openDecisions.length} open)`);

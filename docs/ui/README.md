@@ -47,6 +47,8 @@ the public repo.
 - `mechanical-equivalence.manifest.json`: before/after evidence and blocking
   status contract for mechanical UI refactors. Registered records are included
   in the derived private evidence plan through an optional private root.
+- `completion-audit.md`: public-safe completion ledger that mirrors the
+  private goal/session re-read rule without publishing private source content.
 - `pattern-registry/`: pattern manifests and human notes.
 - `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `copy.inventory.json`: copy canon policy and private snapshot requirements.
@@ -205,29 +207,32 @@ the public repo.
     evidence records without requiring private roots.
 41. Keep aggregate private visual validation current with
     `scripts/ui_private_visual_validation_manifest_check.mjs`.
-42. When all private roots are available, verify every record in the derived
+42. Keep the completion audit current with
+    `scripts/ui_completion_audit_check.mjs`; it must list every decision and
+    keep open private evidence as `EXTERNAL PENDING`.
+43. When all private roots are available, verify every record in the derived
     private evidence plan with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_evidence_verify.mjs --require-approved`.
     If mechanical-equivalence records exist, also set
     `CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT=<private-root>`.
-43. When all private roots are available, verify visual and performance
+44. When all private roots are available, verify visual and performance
     evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-44. When private debt audit evidence is available, verify it with
+45. When private debt audit evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_debt_audit_verify.mjs --require-approved`.
     Debt audit evidence must include hashed `findingItems` so each private
     finding is independently accountable without publishing visual values.
-45. When private geometry evidence is available, verify it with
+46. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-46. When private baselines are available, verify them with
+47. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-47. When private performance measurements are available, verify them with
+48. When private performance measurements are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved`.
-48. When private copy snapshots are available, verify them with
+49. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
     Copy evidence must include hashed `copyItems` and `copyHierarchyHash` so
     visible text, order, and hierarchy are governed without publishing raw copy.
-49. When private rendered drift reports are available, verify them with
+50. When private rendered drift reports are available, verify them with
     `CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_drift_verify.mjs --require-approved`.
     Each private report must include hashed per-category `driftResults` entries
     for every public drift category, so approval records prove what was checked
