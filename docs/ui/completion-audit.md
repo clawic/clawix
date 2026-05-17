@@ -29,14 +29,14 @@ are re-read one by one.
 | 2 | `enforcement_mode` | open | EXTERNAL PENDING: private rendered drift evidence. |
 | 3 | `canonical_source` | verified-complete | Public evidence verified. |
 | 4 | `debt_strategy` | open | EXTERNAL PENDING: private debt audit findings. |
-| 5 | `canon_approval` | verified-complete | Public evidence verified. |
+| 5 | `canon_approval` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 6 | `visual_baselines_location` | open | EXTERNAL PENDING: approved private baseline and drift hashes. |
 | 7 | `canon_unit` | verified-complete | Public evidence verified. |
 | 8 | `agent_ui_workflow` | verified-complete | Public evidence verified. |
 | 9 | `performance_budget_style` | verified-complete | Public evidence verified. |
 | 10 | `alignment_validation` | open | EXTERNAL PENDING: private rendered geometry and screenshot comparison evidence. |
 | 11 | `state_coverage` | verified-complete | Public evidence verified. |
-| 12 | `human_visual_review` | verified-complete | Public evidence verified. |
+| 12 | `human_visual_review` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 13 | `governance_location` | verified-complete | Public evidence verified. |
 | 14 | `skills_shape` | verified-complete | Public evidence verified. |
 | 15 | `external_references_policy` | verified-complete | Public evidence verified. |
@@ -53,14 +53,14 @@ are re-read one by one.
 | 26 | `component_api_style` | verified-complete | Public evidence verified. |
 | 27 | `size_contracts` | open | EXTERNAL PENDING: approved private rendered geometry measurements. |
 | 28 | `visual_mutation_permission` | verified-complete | Public evidence verified. |
-| 29 | `approved_surface_protection` | verified-complete | Public evidence verified. |
+| 29 | `approved_surface_protection` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 30 | `ui_debt_fix_policy` | verified-complete | Public evidence verified. |
 | 31 | `visual_model_gate` | verified-complete | Public evidence verified. |
 | 32 | `mechanical_refactor_visual_safety` | verified-complete | Public evidence verified. |
-| 33 | `visual_change_scope_limit` | verified-complete | Public evidence verified. |
+| 33 | `visual_change_scope_limit` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 34 | `ui_change_classification` | verified-complete | Public evidence verified. |
 | 35 | `visual_guard_behavior` | verified-complete | Public evidence verified. |
 | 36 | `visual_proposal_flow` | verified-complete | Public evidence verified. |
 | 37 | `implementation_split` | verified-complete | Public evidence verified. |
-| 38 | `approved_baseline_authority` | verified-complete | Public evidence verified. |
+| 38 | `approved_baseline_authority` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 39 | `critical_cleanup_owner` | verified-complete | Public evidence verified. |

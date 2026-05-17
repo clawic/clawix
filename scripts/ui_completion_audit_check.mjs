@@ -123,6 +123,13 @@ if (rows.length !== decisions.length) {
 }
 
 const rowsById = new Map(rows.map((row) => [row.id, row]));
+const approvalDecisionIds = new Set([
+  "canon_approval",
+  "human_visual_review",
+  "approved_surface_protection",
+  "visual_change_scope_limit",
+  "approved_baseline_authority",
+]);
 for (const decision of decisions) {
   const row = rowsById.get(decision.id);
   const label = `${auditPath}.${decision.id}`;
@@ -134,6 +141,12 @@ for (const decision of decisions) {
   if (row.status !== decision.status) fail(`${label} status must match ${decisionPath}`);
   if (decision.status === "open" && !row.evidenceState.includes("EXTERNAL PENDING")) {
     fail(`${label} must identify private evidence as EXTERNAL PENDING`);
+  }
+  if (decision.status === "verified-complete" && approvalDecisionIds.has(decision.id)) {
+    if (row.evidenceState !== "Public approval evidence and private approval verifier wired.") {
+      fail(`${label} must state private approval verifier is wired`);
+    }
+    continue;
   }
   if (decision.status === "verified-complete" && row.evidenceState !== "Public evidence verified.") {
     fail(`${label} must state public evidence is verified`);
