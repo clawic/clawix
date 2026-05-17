@@ -79,6 +79,30 @@ function requireSafePrivateReference(value, alias, label) {
   }
 }
 
+function requireIsoDate(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    fail(`${label} must be an ISO yyyy-mm-dd date`);
+    return null;
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    fail(`${label} must be a valid calendar date`);
+    return null;
+  }
+  return value;
+}
+
+function requirePublicReference(value, label) {
+  if (typeof value !== "string" || value === "" || value.startsWith("/") || value.startsWith("~/") || value.includes("\\") || value.includes("..") || value.startsWith("file://") || /^[A-Z]:\\/.test(value)) {
+    fail(`${label} must be a safe public repo-relative reference`);
+    return;
+  }
+  const target = value.split("#", 1)[0];
+  if (!fs.existsSync(path.join(rootDir, target))) {
+    fail(`${label} points to missing target ${target}`);
+  }
+}
+
 const registryPath = "docs/ui/visual-proposals.registry.json";
 const registry = readJson(registryPath);
 requireFields(registry, registryPath, [
@@ -143,6 +167,8 @@ for (const [index, proposal] of requireArray(registry, registryPath, "proposals"
   for (const platform of requireArray(proposal, label, "platforms")) {
     if (!allowedPlatforms.has(platform)) fail(`${label}.platforms contains ${platform}`);
   }
+  requirePublicReference(proposal.proposalReference, `${label}.proposalReference`);
+  const reviewAfter = requireIsoDate(proposal.reviewAfter, `${label}.reviewAfter`);
   if (proposal.status === "conceptual-only" && proposal.implementationStatus !== "not-approved") {
     fail(`${label}.implementationStatus must be not-approved while conceptual-only`);
   }
@@ -153,9 +179,11 @@ for (const [index, proposal] of requireArray(registry, registryPath, "proposals"
     if (proposal.userApprovalStatus !== "approved") {
       fail(`${label}.userApprovalStatus must be approved for ${proposal.status}`);
     }
+    if (proposal.approvedBy !== "user") fail(`${label}.approvedBy must be user for ${proposal.status}`);
+    requireIsoDate(proposal.approvedAt, `${label}.approvedAt`);
     requireSafePrivateReference(proposal.privateApprovalReference, registry.privateApprovalAlias, `${label}.privateApprovalReference`);
   }
-  if (proposal.reviewAfter < today) fail(`${label}.reviewAfter expired on ${proposal.reviewAfter}`);
+  if (reviewAfter && reviewAfter < today) fail(`${label}.reviewAfter expired on ${proposal.reviewAfter}`);
 }
 
 scanForLocalPaths(registry, registryPath);
