@@ -14,6 +14,20 @@ function fail(message) {
   failures.push(message);
 }
 
+function listFiles(relativeDir, extensions, output = []) {
+  const absoluteDir = path.join(rootDir, relativeDir);
+  if (!fs.existsSync(absoluteDir)) return output;
+  for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      listFiles(relativePath, extensions, output);
+    } else if (entry.isFile() && extensions.some((extension) => relativePath.endsWith(extension))) {
+      output.push(relativePath);
+    }
+  }
+  return output;
+}
+
 const requiredSnippets = [
   ["macos/Sources/Clawix/Apps/AppsStore.swift", "ClawixPersistentSurfacePaths.frameworkGlobalChild(\"apps\""],
   ["macos/Sources/Clawix/Design/DesignStore.swift", "ClawixPersistentSurfacePaths.frameworkGlobalChild(\"design\""],
@@ -158,6 +172,26 @@ for (const [id, requiredNote] of [
 
 for (const staleId of ["clawix.apps", "clawix.design", "clawix.audioCatalog", "clawix.audioCatalogMetadata", "clawix.dictationAudio"]) {
   if (nodes.has(staleId)) fail(`persistent surface manifest still exposes retired host-owned node ${staleId}`);
+}
+
+const codeRoots = [
+  "macos/Sources",
+  "macos/Helpers",
+  "packages",
+  "android/app/src",
+  "ios/Sources",
+  "web/src",
+  "linux/app/src",
+  "windows",
+];
+const sourceExtensions = [".swift", ".kt", ".java", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".rs", ".cs", ".xaml"];
+for (const codeRoot of codeRoots) {
+  for (const relativePath of listFiles(codeRoot, sourceExtensions)) {
+    const source = read(relativePath);
+    if (/["'`]~?\/?\.clawjs\b/.test(source) || /["'`][^"'`]*\/\.clawjs\b/.test(source)) {
+      fail(`${relativePath} references retired .clawjs workspace storage; new canonical writes must use .claw/ or framework storage`);
+    }
+  }
 }
 
 if (failures.length > 0) {

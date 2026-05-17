@@ -21,7 +21,7 @@ The contract format is decision -> document -> validation.
 | Decision | Canonical document | Guardrail or validation |
 | --- | --- | --- |
 | Framework global data, framework databases, workspace files, host state, and GUI-only app state have separate roots. | [`docs/data-storage-boundary.md`](data-storage-boundary.md), [`docs/host-ownership.md`](host-ownership.md) | `bash scripts/doc_alignment_check.sh` requires the storage boundary and blocks stale pre-refactor roots. |
-| New workspace-local framework writes use `.claw/`; `.clawjs/` is retired pre-public compatibility. | [`docs/data-storage-boundary.md`](data-storage-boundary.md), [`docs/naming-style-guide.md`](naming-style-guide.md), [`docs/adr/0002-naming-and-stability-surfaces.md`](adr/0002-naming-and-stability-surfaces.md) | `bash scripts/doc_alignment_check.sh` requires `.claw/` and retired `.clawjs` language. Code review must reject new canonical `.clawjs` writes unless a successor ADR grants a bounded exception. |
+| New workspace-local framework writes use `.claw/`; `.clawjs/` is retired pre-public compatibility. | [`docs/data-storage-boundary.md`](data-storage-boundary.md), [`docs/naming-style-guide.md`](naming-style-guide.md), [`docs/adr/0002-naming-and-stability-surfaces.md`](adr/0002-naming-and-stability-surfaces.md) | `bash scripts/doc_alignment_check.sh` requires `.claw/` and retired `.clawjs` language; `node scripts/storage_boundary_guard.mjs` rejects `.clawjs` references in platform/source code. |
 | User-facing structured records belong in `core.sqlite`; high-churn runtime/search/blob state uses sidecars; plaintext secrets never live in the main database. | [`docs/data-storage-boundary.md`](data-storage-boundary.md) | `bash scripts/doc_alignment_check.sh` requires `core.sqlite`, sidecar names, and plaintext secret language. |
 | Codex data under `~/.codex` is an external read-only source by default. | [`docs/host-ownership.md`](host-ownership.md), [`docs/adr/0001-claw-framework-host-boundary.md`](adr/0001-claw-framework-host-boundary.md) | Review any Codex-source integration for read/mirror/index behavior only. Writes into Codex-owned sources need explicit reversible opt-in. |
 
@@ -72,7 +72,5 @@ The contract format is decision -> document -> validation.
 
 ## Known pending guardrails
 
-- PENDING GUARDRAIL: add a repo-wide storage writer check that flags new
-  canonical `.clawjs/` writes in source code, not only docs.
 - PENDING GUARDRAIL: publish a non-private launcher contract for Android/Web
   once those targets are ready for external contributors.
