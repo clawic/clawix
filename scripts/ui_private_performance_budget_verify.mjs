@@ -59,6 +59,33 @@ function assertHash(value, label) {
   }
 }
 
+function verifyMeasurementSamples(evidence, label, requiredMetrics) {
+  if (!Array.isArray(evidence.measurementSamples) || evidence.measurementSamples.length === 0) {
+    fail(`${label}.measurementSamples must be a non-empty array`);
+    return;
+  }
+  const seenMetrics = new Set();
+  for (const [index, sample] of evidence.measurementSamples.entries()) {
+    const sampleLabel = `${label}.measurementSamples[${index}]`;
+    if (!sample || typeof sample !== "object" || Array.isArray(sample)) {
+      fail(`${sampleLabel} must be an object`);
+      continue;
+    }
+    if (typeof sample.metric !== "string" || !requiredMetrics.includes(sample.metric)) {
+      fail(`${sampleLabel}.metric must be one of the required metrics`);
+    } else {
+      seenMetrics.add(sample.metric);
+    }
+    if (typeof sample.value !== "number" || !Number.isFinite(sample.value) || sample.value < 0) {
+      fail(`${sampleLabel}.value must be a finite non-negative number`);
+    }
+    assertHash(sample.sampleHash, `${sampleLabel}.sampleHash`);
+  }
+  for (const metric of requiredMetrics) {
+    if (!seenMetrics.has(metric)) fail(`${label}.measurementSamples must include ${metric}`);
+  }
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_BASELINE_ROOT || "";
 if (!privateRootRaw) {
@@ -116,6 +143,7 @@ for (const [index, flow] of (budgets?.flows || []).entries()) {
       fail(`${label}.metrics.${metric} must be a finite non-negative number`);
     }
   }
+  verifyMeasurementSamples(evidence, label, requiredMetrics);
   verified += 1;
 }
 

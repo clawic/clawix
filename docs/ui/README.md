@@ -77,6 +77,8 @@ the public repo.
   promotions.
 - `performance-budgets.registry.json`: critical-flow, per-platform budget
   registry.
+  Private performance evidence must include hash-backed `measurementSamples`
+  for every required metric before a budget can be enforced.
 - `pattern-performance.manifest.json`: critical-flow ownership mapping from
   performance budgets back to registry patterns.
 - `private-baselines.manifest.json`: public contract for private visual,

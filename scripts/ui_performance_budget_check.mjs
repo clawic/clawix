@@ -103,7 +103,7 @@ for (const metric of requiredMetrics) {
   if (!topLevelMetrics.has(metric)) fail(`${budgetsPath}.requiredMetrics must include ${metric}`);
 }
 const evidenceFields = new Set(requireArray(budgets, budgetsPath, "requiredEvidenceFields"));
-for (const field of ["flowId", "platform", "privateBaselineReference", "metrics", "measurementHash", "measuredAt", "approvedByUserAt"]) {
+for (const field of ["flowId", "platform", "privateBaselineReference", "metrics", "measurementSamples", "measurementHash", "measuredAt", "approvedByUserAt"]) {
   if (!evidenceFields.has(field)) fail(`${budgetsPath}.requiredEvidenceFields must include ${field}`);
 }
 

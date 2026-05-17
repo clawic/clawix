@@ -119,6 +119,30 @@ function verifyMetrics(evidence, label) {
   }
 }
 
+function verifyMeasurementSamples(evidence, label) {
+  if (!("measurementSamples" in evidence)) return;
+  if (!Array.isArray(evidence.measurementSamples) || evidence.measurementSamples.length === 0) {
+    fail(`${label}.measurementSamples must be a non-empty array`);
+    return;
+  }
+  for (const [index, sample] of evidence.measurementSamples.entries()) {
+    const sampleLabel = `${label}.measurementSamples[${index}]`;
+    if (!sample || typeof sample !== "object" || Array.isArray(sample)) {
+      fail(`${sampleLabel} must be an object`);
+      continue;
+    }
+    if (typeof sample.metric !== "string" || sample.metric === "") {
+      fail(`${sampleLabel}.metric must be a non-empty string`);
+    }
+    if (typeof sample.value !== "number" || !Number.isFinite(sample.value) || sample.value < 0) {
+      fail(`${sampleLabel}.value must be a finite non-negative number`);
+    }
+    if (typeof sample.sampleHash !== "string" || !/^[a-f0-9]{64}$/i.test(sample.sampleHash)) {
+      fail(`${sampleLabel}.sampleHash must be a 64-character hex hash`);
+    }
+  }
+}
+
 function verifyMeasurements(evidence, label) {
   if (!("measurements" in evidence)) return;
   if (!evidence.measurements || typeof evidence.measurements !== "object" || Array.isArray(evidence.measurements)) {
@@ -265,6 +289,7 @@ for (const item of plan.evidence || []) {
   }
 
   verifyMetrics(evidence, label);
+  verifyMeasurementSamples(evidence, label);
   verifyMeasurements(evidence, label);
   verifyCopyItems(evidence, label);
   verifyDriftResults(evidence, label);
