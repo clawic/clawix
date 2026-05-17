@@ -20,8 +20,10 @@
     "copyBeforeReference",
     "copyAfterReference",
     "tokenDiffStatus",
+    "approvedByUserAt",
     "approvedScope"
   ],
+  "requiredApprovedScopeFields": ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"],
   "allowedTokenDiffStatuses": ["no-token-diff", "approved-token-diff"],
   "equivalenceStatuses": ["pending-private-evidence", "verified-equivalent", "blocked-visible-diff"],
   "records": []

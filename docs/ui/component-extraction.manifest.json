@@ -19,6 +19,7 @@
       "copyBeforeReference",
       "copyAfterReference",
       "tokenDiffStatus",
+      "approvedByUserAt",
       "approvedScope"
     ]
   },

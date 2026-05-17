@@ -77,6 +77,26 @@ function requireAlias(value, alias, label) {
   }
 }
 
+function requireIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
+function requireApprovedScope(value, requiredFields, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail(`${label} must be an object with approved user scope metadata`);
+    return;
+  }
+  requireFields(value, label, requiredFields);
+  if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  requireIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
+  requireAlias(value.privateApprovalReference, "private-codex-ui-approvals", `${label}.privateApprovalReference`);
+  if (typeof value.scopeId !== "string" || value.scopeId === "") {
+    fail(`${label}.scopeId must be a non-empty string`);
+  }
+}
+
 const manifestPath = "docs/ui/mechanical-equivalence.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -87,6 +107,7 @@ requireFields(manifest, manifestPath, [
   "evidenceFilename",
   "recordRequirement",
   "requiredEvidenceFields",
+  "requiredApprovedScopeFields",
   "allowedTokenDiffStatuses",
   "equivalenceStatuses",
   "records",
@@ -125,9 +146,15 @@ for (const field of [
   "copyBeforeReference",
   "copyAfterReference",
   "tokenDiffStatus",
+  "approvedByUserAt",
   "approvedScope",
 ]) {
   if (!requiredEvidenceFieldSet.has(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
+}
+const requiredApprovedScopeFields = requireArray(manifest, manifestPath, "requiredApprovedScopeFields");
+const requiredApprovedScopeFieldSet = new Set(requiredApprovedScopeFields);
+for (const field of ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"]) {
+  if (!requiredApprovedScopeFieldSet.has(field)) fail(`${manifestPath}.requiredApprovedScopeFields must include ${field}`);
 }
 
 const tokenStatuses = new Set(requireArray(manifest, manifestPath, "allowedTokenDiffStatuses"));
@@ -160,6 +187,8 @@ for (const [index, record] of records.entries()) {
   ]);
   if (!equivalenceStatuses.has(record.status)) fail(`${label}.status is invalid`);
   if (!tokenStatuses.has(record.tokenDiffStatus)) fail(`${label}.tokenDiffStatus is invalid`);
+  requireIsoTimestamp(record.approvedByUserAt, `${label}.approvedByUserAt`);
+  requireApprovedScope(record.approvedScope, requiredApprovedScopeFields, `${label}.approvedScope`);
   for (const field of [
     "beforeSnapshotReference",
     "afterSnapshotReference",
