@@ -75,6 +75,9 @@ let checkedRecords = 0;
 for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approvalSources").entries()) {
   const sourceLabel = `${manifestPath}.approvalSources[${sourceIndex}]`;
   requireFields(source, sourceLabel, ["id", "path", "arrayField"]);
+  if (typeof source.privateApprovalField !== "string" || source.privateApprovalField === "") {
+    fail(`${sourceLabel}.privateApprovalField must name a private approval reference field`);
+  }
   const registry = readJson(source.path);
   const records = requireArray(registry, source.path, source.arrayField, { nonEmpty: false });
   for (const [recordIndex, record] of records.entries()) {

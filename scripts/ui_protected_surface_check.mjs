@@ -103,6 +103,7 @@ for (const field of [
   "patterns",
   "approvedBy",
   "approvedAt",
+  "privateApprovalReference",
   "contract",
   "privateBaselineReference",
   "privateBaselineHash",
@@ -127,6 +128,7 @@ for (const [index, surface] of surfaces.entries()) {
   ids.add(surface.id);
   if (!requiredPlatforms.has(surface.platform)) fail(`${label}.platform is not governed`);
   if (surface.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  requireAlias(surface.privateApprovalReference, "private-codex-ui-approval", `${label}.privateApprovalReference`);
   for (const pattern of requireArray(surface, label, "patterns")) {
     if (!patternIds.has(pattern)) fail(`${label}.patterns references unknown pattern ${pattern}`);
   }

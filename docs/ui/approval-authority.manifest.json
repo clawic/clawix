@@ -16,7 +16,7 @@
       "path": "docs/ui/protected-surfaces.registry.json",
       "arrayField": "surfaces",
       "approvedByField": "approvedBy",
-      "privateApprovalField": null
+      "privateApprovalField": "privateApprovalReference"
     },
     {
       "id": "visual-change-scopes",

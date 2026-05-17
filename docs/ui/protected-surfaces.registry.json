@@ -12,6 +12,7 @@
     "patterns",
     "approvedBy",
     "approvedAt",
+    "privateApprovalReference",
     "contract",
     "privateBaselineReference",
     "privateBaselineHash",
