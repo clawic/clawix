@@ -101,6 +101,7 @@ const requiredSourceIds = new Set([
   "canon-promotions",
   "protected-surfaces",
   "visual-change-scopes",
+  "visual-model-allowlist",
   "visual-proposals",
   "exceptions",
 ]);
@@ -108,6 +109,7 @@ const requiredApprovedByFields = new Map([
   ["canon-promotions", "approvedBy"],
   ["protected-surfaces", "approvedBy"],
   ["visual-change-scopes", "approvedBy"],
+  ["visual-model-allowlist", "approvedBy"],
   ["exceptions", "approvedBy"],
 ]);
 const sourceIds = new Set();

@@ -56,6 +56,7 @@ function buildApprovalFixture() {
     "docs/ui/canon-promotions.registry.json",
     "docs/ui/protected-surfaces.registry.json",
     "docs/ui/visual-change-scopes.manifest.json",
+    "docs/ui/visual-model-allowlist.manifest.json",
     "docs/ui/visual-proposals.registry.json",
     "docs/ui/exceptions.registry.json",
   ]) {
@@ -73,6 +74,10 @@ function buildApprovalFixture() {
     },
   ];
   writeJson(promotionsPath, promotions);
+  const allowlistPath = path.join(fixtureRoot, "docs/ui/visual-model-allowlist.manifest.json");
+  const allowlist = readJson("docs/ui/visual-model-allowlist.manifest.json");
+  allowlist.allowedVisualModels = [];
+  writeJson(allowlistPath, allowlist);
   return fixtureRoot;
 }
 

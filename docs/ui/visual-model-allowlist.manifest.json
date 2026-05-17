@@ -13,6 +13,7 @@
   },
   "proposalPath": "docs/ui/visual-change-proposal.template.md",
   "privateApprovalAlias": "private-codex-ui-approval",
+  "modelStatuses": ["active", "revoked"],
   "initialActiveModels": ["claude-opus-4.7"],
   "additionalActiveModelPolicy": {
     "requiresExplicitUserApproval": true,
@@ -26,7 +27,10 @@
       "status": "active",
       "allowedMutationClasses": ["visual-ui", "copy-ui", "mechanical-equivalent-refactor"],
       "scopeSource": "docs/ui/visual-change-scopes.manifest.json",
-      "privateApprovalRequired": true
+      "privateApprovalRequired": true,
+      "approvedBy": "user",
+      "approvedAt": "2026-05-15",
+      "privateApprovalReference": "private-codex-ui-approval:models/claude-opus-4.7"
     }
   ]
 }

@@ -88,6 +88,7 @@ requireFields(manifest, manifestPath, [
   "modelSignal",
   "proposalPath",
   "privateApprovalAlias",
+  "modelStatuses",
   "initialActiveModels",
   "additionalActiveModelPolicy",
   "allowedVisualModels",
@@ -126,6 +127,10 @@ const initialActiveModels = new Set(requireArray(manifest, manifestPath, "initia
 if (!initialActiveModels.has("claude-opus-4.7")) {
   fail(`${manifestPath}.initialActiveModels must include claude-opus-4.7`);
 }
+const modelStatuses = new Set(requireArray(manifest, manifestPath, "modelStatuses"));
+for (const status of ["active", "revoked"]) {
+  if (!modelStatuses.has(status)) fail(`${manifestPath}.modelStatuses must include ${status}`);
+}
 
 const allowedMutationClasses = new Set(["visual-ui", "copy-ui", "mechanical-equivalent-refactor"]);
 let activeVisualModelCount = 0;
@@ -139,10 +144,15 @@ for (const [index, model] of requireArray(manifest, manifestPath, "allowedVisual
     "scopeSource",
     "privateApprovalRequired",
   ]);
-  if (!["active", "revoked"].includes(model.status)) fail(`${label}.status is invalid`);
+  if (!modelStatuses.has(model.status)) fail(`${label}.status is invalid`);
   if (model.status === "active") activeVisualModelCount += 1;
   if (model.privateApprovalRequired !== true) fail(`${label}.privateApprovalRequired must be true`);
-  if (model.status === "active" && !initialActiveModels.has(model.id)) {
+  if (model.status === "active") {
+    requireFields(model, label, ["approvedBy", "approvedAt", "privateApprovalReference"]);
+    if (model.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+    if (typeof model.approvedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(model.approvedAt) || Number.isNaN(Date.parse(model.approvedAt))) {
+      fail(`${label}.approvedAt must be an ISO date`);
+    }
     requireSafePrivateReference(model.privateApprovalReference, manifest.privateApprovalAlias, `${label}.privateApprovalReference`);
   }
   if (model.scopeSource !== "docs/ui/visual-change-scopes.manifest.json") {

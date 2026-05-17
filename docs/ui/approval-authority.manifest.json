@@ -28,6 +28,16 @@
       "privateApprovalField": "privateApprovalReference"
     },
     {
+      "id": "visual-model-allowlist",
+      "path": "docs/ui/visual-model-allowlist.manifest.json",
+      "arrayField": "allowedVisualModels",
+      "statusField": "status",
+      "statusValuesField": "modelStatuses",
+      "approvalRequiredStatuses": ["active"],
+      "approvedByField": "approvedBy",
+      "privateApprovalField": "privateApprovalReference"
+    },
+    {
       "id": "visual-proposals",
       "path": "docs/ui/visual-proposals.registry.json",
       "arrayField": "proposals",

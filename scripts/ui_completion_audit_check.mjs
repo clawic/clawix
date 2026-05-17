@@ -127,6 +127,7 @@ const approvalDecisionIds = new Set([
   "canon_approval",
   "human_visual_review",
   "approved_surface_protection",
+  "visual_model_gate",
   "visual_change_scope_limit",
   "approved_baseline_authority",
 ]);

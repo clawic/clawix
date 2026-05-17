@@ -41,7 +41,8 @@ the public repo.
   and CI gate wiring; public CI validates lints, geometry, and manifests
   without private evidence roots.
 - `visual-model-allowlist.manifest.json`: explicit visual model gate for
-  visual/copy/layout mutation authority.
+  visual/copy/layout mutation authority, with user approval evidence for every
+  active visual model.
 - `component-extraction.manifest.json`: reusable component extraction policy,
   bounded API audit rules, and mechanical-equivalence evidence requirements.
 - `mechanical-equivalence.manifest.json`: before/after evidence and blocking
@@ -197,7 +198,7 @@ the public repo.
    presentation, copy, and hierarchy buckets must stay explicit.
 34. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
-   identify an allowlisted visual model.
+   identify an allowlisted visual model with private approval evidence.
 35. Keep visual guard failure diagnostics current with
    `scripts/ui_visual_guard_failure_check.mjs`; failures must include route,
    reason, and required permission.

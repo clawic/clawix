@@ -55,7 +55,7 @@ are re-read one by one.
 | 28 | `visual_mutation_permission` | verified-complete | Public evidence verified. |
 | 29 | `approved_surface_protection` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 30 | `ui_debt_fix_policy` | verified-complete | Public evidence verified. |
-| 31 | `visual_model_gate` | verified-complete | Public evidence verified. |
+| 31 | `visual_model_gate` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 32 | `mechanical_refactor_visual_safety` | verified-complete | Public evidence verified. |
 | 33 | `visual_change_scope_limit` | verified-complete | Public approval evidence and private approval verifier wired. |
 | 34 | `ui_change_classification` | verified-complete | Public evidence verified. |
