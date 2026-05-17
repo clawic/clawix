@@ -23,6 +23,13 @@ function requireSnippet(file, snippet) {
   if (!content.includes(snippet)) fail(`${file} must include ${snippet}`);
 }
 
+function scanForPrivateContent(file) {
+  const content = read(file);
+  if (/\/Users\/|~\/|file:\/\/|[A-Z]:\\|BEGIN [A-Z ]*PRIVATE KEY|\bAKIA[0-9A-Z]{16}\b|\bsk-[A-Za-z0-9]{20,}\b/.test(content)) {
+    fail(`${file} must not contain private paths or secret-like tokens`);
+  }
+}
+
 function requireFrontmatterName(file, name) {
   const content = read(file);
   if (!content.startsWith("---\n")) fail(`${file} must start with YAML frontmatter`);
@@ -88,6 +95,7 @@ const skillContracts = [
 
 for (const contract of skillContracts) {
   requireFrontmatterName(contract.file, contract.name);
+  scanForPrivateContent(contract.file);
   for (const snippet of contract.snippets) requireSnippet(contract.file, snippet);
 }
 
