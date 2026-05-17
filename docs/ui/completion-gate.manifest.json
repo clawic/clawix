@@ -11,6 +11,18 @@
   "privateVerifierScript": "scripts/ui_private_completion_verify.mjs",
   "privateApprovalVerifierScript": "scripts/ui_private_approval_verify.mjs",
   "finalVerificationCommand": "CLAWIX_UI_PRIVATE_COMPLETION_GOAL_FILE=<private-goal-file> CLAWIX_UI_PRIVATE_COMPLETION_SOURCE_SESSION_FILE=<private-source-session-jsonl> CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root> node scripts/ui_private_completion_verify.mjs --require-approved",
+  "conditionalPrivateRoots": [
+    {
+      "env": "CLAWIX_UI_PRIVATE_APPROVAL_ROOT",
+      "condition": "required-when-approval-records-exist",
+      "manifestPath": "docs/ui/approval-authority.manifest.json"
+    },
+    {
+      "env": "CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT",
+      "condition": "required-when-mechanical-equivalence-records-exist",
+      "manifestPath": "docs/ui/mechanical-equivalence.manifest.json"
+    }
+  ],
   "requiredPublicChecks": [
     "decision-verification-evidence-check",
     "completion-audit-check",

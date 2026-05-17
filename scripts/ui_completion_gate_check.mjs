@@ -125,6 +125,23 @@ function approvalRecords(approvalManifest) {
   return records;
 }
 
+function mechanicalEquivalenceRecords(mechanicalManifest) {
+  return requireArray(mechanicalManifest, "docs/ui/mechanical-equivalence.manifest.json", "records", { nonEmpty: false });
+}
+
+function requireConditionalRootContract({ rootsByEnv, env, condition, manifestPath: sourceManifestPath }) {
+  if (!env || !condition || !sourceManifestPath) {
+    fail(`${manifestPath}.conditionalPrivateRoots entries must include env, condition, and manifestPath`);
+    return;
+  }
+  if (!fs.existsSync(path.join(rootDir, sourceManifestPath))) {
+    fail(`${manifestPath}.conditionalPrivateRoots entry for ${env} points to missing ${sourceManifestPath}`);
+  }
+  if (!rootsByEnv.has(env)) {
+    fail(`${manifestPath}.conditionalPrivateRoots entry for ${env} must map to a private visual optional root alias`);
+  }
+}
+
 const manifestPath = "docs/ui/completion-gate.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -140,6 +157,7 @@ requireFields(manifest, manifestPath, [
   "privateVerifierScript",
   "privateApprovalVerifierScript",
   "finalVerificationCommand",
+  "conditionalPrivateRoots",
   "requiredPublicChecks",
   "publicPrerequisiteScripts",
   "goalUpdateRule",
@@ -184,6 +202,7 @@ for (const relativePath of [
 const sourceManifest = readJson(manifest?.completionSourceManifestPath || "docs/ui/completion-source.manifest.json");
 const visualManifest = readJson(manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json");
 const approvalManifest = readJson(manifest?.approvalAuthorityManifestPath || "docs/ui/approval-authority.manifest.json");
+const mechanicalManifest = readJson("docs/ui/mechanical-equivalence.manifest.json");
 for (const envName of [
   sourceManifest?.privateGoalFileEnv,
   sourceManifest?.privateSourceSessionFileEnv,
@@ -191,6 +210,26 @@ for (const envName of [
 ]) {
   if (!String(manifest?.finalVerificationCommand || "").includes(envName)) {
     fail(`${manifestPath}.finalVerificationCommand must include ${envName}`);
+  }
+}
+const optionalRootAliases = requireArray(visualManifest, manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json", "optionalRootAliases");
+const optionalRootsByEnv = new Map(optionalRootAliases.map((entry) => [entry?.env, entry]));
+const conditionalRootContracts = requireArray(manifest, manifestPath, "conditionalPrivateRoots");
+for (const contract of conditionalRootContracts) {
+  requireConditionalRootContract({ rootsByEnv: optionalRootsByEnv, ...contract });
+}
+const conditionalRootsByCondition = new Map(conditionalRootContracts.map((entry) => [entry?.condition, entry]));
+for (const [condition, expected] of [
+  ["required-when-approval-records-exist", { env: "CLAWIX_UI_PRIVATE_APPROVAL_ROOT", manifestPath: manifest?.approvalAuthorityManifestPath }],
+  ["required-when-mechanical-equivalence-records-exist", { env: "CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT", manifestPath: "docs/ui/mechanical-equivalence.manifest.json" }],
+]) {
+  const contract = conditionalRootsByCondition.get(condition);
+  if (!contract) {
+    fail(`${manifestPath}.conditionalPrivateRoots must include ${condition}`);
+    continue;
+  }
+  for (const [field, value] of Object.entries(expected)) {
+    if (contract[field] !== value) fail(`${manifestPath}.conditionalPrivateRoots ${condition} must set ${field}=${value}`);
   }
 }
 const activeApprovalRecords = approvalRecords(approvalManifest);
@@ -201,7 +240,6 @@ if (activeApprovalRecords.length > 0) {
   if (!requireArray(visualManifest, manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json", "delegates").includes("node scripts/ui_private_approval_verify.mjs --require-approved")) {
     fail(`${manifest?.privateVisualValidationManifestPath}.delegates must include scripts/ui_private_approval_verify.mjs while approval records exist`);
   }
-  const optionalRootAliases = requireArray(visualManifest, manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json", "optionalRootAliases");
   if (!optionalRootAliases.some((entry) => entry?.alias === approvalManifest?.privateApprovalAlias && entry?.env === "CLAWIX_UI_PRIVATE_APPROVAL_ROOT")) {
     fail(`${manifest?.privateVisualValidationManifestPath}.optionalRootAliases must expose CLAWIX_UI_PRIVATE_APPROVAL_ROOT for private approvals`);
   }
@@ -217,6 +255,10 @@ if (activeApprovalRecords.length > 0) {
   if (!approvalOutput.includes("CLAWIX_UI_PRIVATE_APPROVAL_ROOT")) {
     fail(`${manifest.privateApprovalVerifierScript} must report CLAWIX_UI_PRIVATE_APPROVAL_ROOT when approval records exist`);
   }
+}
+const activeMechanicalRecords = mechanicalEquivalenceRecords(mechanicalManifest);
+if (activeMechanicalRecords.length > 0 && !String(manifest?.finalVerificationCommand || "").includes("CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT")) {
+  fail(`${manifestPath}.finalVerificationCommand must include CLAWIX_UI_PRIVATE_MECHANICAL_EQUIVALENCE_ROOT while mechanical equivalence records exist`);
 }
 
 const config = readJson("docs/ui/interface-governance.config.json");

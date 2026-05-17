@@ -232,7 +232,9 @@ the public repo.
     `scripts/ui_completion_gate_check.mjs`; `update_goal` is allowed only after
     `scripts/ui_private_completion_verify.mjs --require-approved` exits 0, and
     public approval records require `CLAWIX_UI_PRIVATE_APPROVAL_ROOT` in the
-    final verification command.
+    final verification command. Conditional private roots are declared in the
+    gate manifest so future approval or mechanical-equivalence records cannot
+    be omitted from final completion.
 45. When all private roots are available, verify every record in the derived
     private evidence plan with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_evidence_verify.mjs --require-approved`.
