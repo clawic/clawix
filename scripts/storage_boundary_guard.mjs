@@ -135,6 +135,16 @@ if (!Array.isArray(manifest.edges) || manifest.edges.length === 0) {
 if (!Array.isArray(manifest.routes) || manifest.routes.length === 0) {
   fail("persistent surface manifest must preserve route graph routes");
 }
+const routeGraphContractIds = [
+  ...(manifest.edges ?? []).map((edge) => edge.contractId),
+  ...(manifest.routes ?? []).flatMap((route) => (route.steps ?? []).map((step) => step.contractId)),
+].filter(Boolean);
+if (routeGraphContractIds.includes("clawix.protocol.bridge")) {
+  fail("persistent surface route graph must use clawix.protocol.bridge.v1, not the unversioned bridge contract id");
+}
+if (!routeGraphContractIds.includes("clawix.protocol.bridge.v1")) {
+  fail("persistent surface route graph must reference clawix.protocol.bridge.v1");
+}
 for (const [id, expectedPath] of [
   ["claw.framework.apps", "~/.claw/apps"],
   ["claw.framework.design", "~/.claw/design"],

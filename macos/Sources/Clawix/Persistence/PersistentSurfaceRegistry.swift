@@ -521,20 +521,20 @@ enum ClawixPersistentSurfaceRegistry {
 
     private static var contractSurfaceNodes: [PersistentSurfaceNode] {
         let bridgeProtocol = ClawixPersistentSurface.contract(
-            id: "clawix.protocol.bridge",
+            id: "clawix.protocol.bridge.v1",
             kind: .`protocol`,
             name: "Clawix bridge protocol",
             parentId: "claw.contracts.protocol",
             project: "core",
             surfaceClass: "protocol",
-            value: "clawix-bridge",
+            value: "clawix-bridge-v1",
             version: "1",
             direction: "bidirectional",
             notes: "Shared JSON frame protocol consumed by macOS, iOS, Android, Linux, Windows and web clients."
         )
         let bridgeFields = ["schemaVersion", "type", "clientKind", "clientId", "installationId", "deviceId", "sessionId", "threadId", "requestId"].map { field in
             ClawixPersistentSurface.contract(
-                id: "clawix.protocol.bridge.field.\(field)",
+                id: "\(bridgeProtocol.id).field.\(field)",
                 kind: .protocolField,
                 name: field,
                 parentId: bridgeProtocol.id,
@@ -542,7 +542,7 @@ enum ClawixPersistentSurfaceRegistry {
                 surfaceClass: "protocol",
                 key: field,
                 fieldPath: field,
-                schemaId: "clawix-bridge",
+                schemaId: bridgeProtocol.value,
                 direction: "bidirectional"
             )
         }
@@ -566,14 +566,14 @@ enum ClawixPersistentSurfaceRegistry {
             "rateLimitsUpdated",
         ].map { type in
             ClawixPersistentSurface.contract(
-                id: "clawix.protocol.bridge.frame.\(type)",
+                id: "\(bridgeProtocol.id).frame.\(type)",
                 kind: .protocolFrame,
                 name: type,
                 parentId: bridgeProtocol.id,
                 project: "core",
                 surfaceClass: "protocol",
                 value: type,
-                schemaId: "clawix-bridge",
+                schemaId: bridgeProtocol.value,
                 direction: "bidirectional"
             )
         }

@@ -10,8 +10,8 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         XCTAssertTrue(nodes.contains { $0.id == "clawix.database.local.table.dictation_transcript.column.audio_file_path" && $0.nullable == true })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.database.local.table.terminal_tabs.index.terminal_tabs_chat_position_idx" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.prefs.sidebar.viewMode" && $0.key == "SidebarViewMode" })
-        XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge" && $0.surfaceClass == "protocol" })
-        XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge.field.schemaVersion" && $0.fieldPath == "schemaVersion" })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge.v1" && $0.surfaceClass == "protocol" && $0.version == "1" })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.protocol.bridge.v1.field.schemaVersion" && $0.fieldPath == "schemaVersion" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.api.mesh.post.mesh.jobs" && $0.route == "/v1/mesh/jobs" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.event.remoteJob.completed" && $0.value == "completed" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.web.storage.currentRoute" && $0.key == "ui.route" })
@@ -63,6 +63,25 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         let fixtureData = try Data(contentsOf: manifestURL)
         let expected = try JSONDecoder().decode(PersistentSurfaceManifest.self, from: fixtureData)
         XCTAssertEqual(expected, ClawixPersistentSurfaceRegistry.manifest)
+    }
+
+    func testCommittedRouteGraphUsesBridgeV1Contract() throws {
+        let manifestURL = Self.repoRoot()
+            .appendingPathComponent("docs", isDirectory: true)
+            .appendingPathComponent("persistent-surface-clawix.manifest.json")
+        let data = try Data(contentsOf: manifestURL)
+        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let edges = object?["edges"] as? [[String: Any]] ?? []
+        let routes = object?["routes"] as? [[String: Any]] ?? []
+
+        XCTAssertFalse(edges.isEmpty)
+        XCTAssertFalse(routes.isEmpty)
+        XCTAssertFalse(edges.contains { $0["contractId"] as? String == "clawix.protocol.bridge" })
+        XCTAssertTrue(edges.contains { $0["contractId"] as? String == "clawix.protocol.bridge.v1" })
+        for route in routes {
+            let steps = route["steps"] as? [[String: Any]] ?? []
+            XCTAssertFalse(steps.contains { $0["contractId"] as? String == "clawix.protocol.bridge" })
+        }
     }
 
     @MainActor

@@ -2,7 +2,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="${1:-"$ROOT/docs/persistent-surface-clawix.manifest.json"}"
+OUT_ARG="${1:-"$ROOT/docs/persistent-surface-clawix.manifest.json"}"
+if [[ "$OUT_ARG" = /* ]]; then
+  OUT="$OUT_ARG"
+else
+  OUT="$ROOT/$OUT_ARG"
+fi
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
@@ -24,10 +29,25 @@ for (const candidate of [outPath, canonicalPath]) {
     break;
   }
 }
+
+function normalizeContractId(contractId) {
+  if (contractId === "clawix.protocol.bridge") return "clawix.protocol.bridge.v1";
+  return contractId;
+}
+
 const merged = {
   nodes: generated.nodes,
-  edges: routeGraphSource.edges ?? [],
-  routes: routeGraphSource.routes ?? [],
+  edges: (routeGraphSource.edges ?? []).map((edge) => ({
+    ...edge,
+    contractId: normalizeContractId(edge.contractId),
+  })),
+  routes: (routeGraphSource.routes ?? []).map((route) => ({
+    ...route,
+    steps: (route.steps ?? []).map((step) => ({
+      ...step,
+      contractId: normalizeContractId(step.contractId),
+    })),
+  })),
   version: generated.version,
 };
 const pretty = JSON.stringify(merged, null, 2)
