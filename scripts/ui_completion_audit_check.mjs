@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
@@ -51,10 +52,31 @@ function scanPublicSafety(content, label) {
   }
 }
 
+function runPrivateEvidencePlan() {
+  const result = spawnSync(process.execPath, [path.join(rootDir, "scripts/ui_private_evidence_plan_check.mjs"), "--json"], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    fail("private evidence plan must pass before completion audit can be verified");
+    if (result.stderr) {
+      for (const line of result.stderr.trim().split("\n")) fail(`private evidence plan: ${line}`);
+    }
+    return { counts: {}, evidence: [] };
+  }
+  try {
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    fail(`private evidence plan output is not valid JSON: ${error.message}`);
+    return { counts: {}, evidence: [] };
+  }
+}
+
 const auditPath = "docs/ui/completion-audit.md";
 const decisionPath = "docs/ui/decision-verification.json";
 const audit = read(auditPath);
 const decisionVerification = readJson(decisionPath);
+const privateEvidencePlan = runPrivateEvidencePlan();
 scanPublicSafety(audit, auditPath);
 
 for (const required of [
@@ -73,6 +95,15 @@ if (openDecisions.length > 0 && !audit.includes("Completion status: blocked by E
 }
 if (openDecisions.length === 0 && audit.includes("Completion status: blocked")) {
   fail(`${auditPath} must not stay blocked when all decisions are verified-complete`);
+}
+
+const plannedEvidenceTotal = Array.isArray(privateEvidencePlan.evidence) ? privateEvidencePlan.evidence.length : 0;
+if (!audit.includes(`Private evidence plan: ${plannedEvidenceTotal} records must be verified before completion.`)) {
+  fail(`${auditPath} must state the derived private evidence total`);
+}
+for (const [type, count] of Object.entries(privateEvidencePlan.counts || {})) {
+  const row = `| \`${type}\` | ${count} |`;
+  if (!audit.includes(row)) fail(`${auditPath} must include private evidence count row ${row}`);
 }
 
 const rowPattern = /^\| (\d+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \|$/gm;

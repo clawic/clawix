@@ -10,6 +10,18 @@ are re-read one by one.
 - Private source policy: private session, not published.
 - Completion status: blocked by EXTERNAL PENDING private evidence.
 - Goal update rule: Do not call update_goal until all decisions are verified-complete with evidence.
+- Private evidence plan: 166 records must be verified before completion.
+
+| Private evidence type | Required records |
+| --- | --- |
+| `surface-baseline` | 14 |
+| `surface-geometry` | 14 |
+| `surface-copy` | 14 |
+| `critical-flow-baseline` | 24 |
+| `pattern-geometry` | 59 |
+| `rendered-drift` | 14 |
+| `debt-audit` | 3 |
+| `performance-budget` | 24 |
 
 | # | Decision | Status | Completion evidence state |
 | --- | --- | --- | --- |
