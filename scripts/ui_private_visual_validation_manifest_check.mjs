@@ -75,6 +75,7 @@ for (const root of [
 
 const delegates = requireArray(manifest, manifestPath, "delegates");
 for (const script of [
+  "scripts/ui_private_evidence_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",
@@ -88,6 +89,7 @@ for (const script of [
 
 for (const script of [
   "scripts/ui_private_visual_verify.mjs",
+  "scripts/ui_private_evidence_verify.mjs",
   "scripts/ui_private_baseline_verify.mjs",
   "scripts/ui_private_geometry_verify.mjs",
   "scripts/ui_private_copy_verify.mjs",

@@ -111,6 +111,7 @@ for file in \
   "scripts/ui_surface_inventory_check.mjs" \
   "scripts/ui_private_baseline_manifest_check.mjs" \
   "scripts/ui_private_evidence_plan_check.mjs" \
+  "scripts/ui_private_evidence_verify.mjs" \
   "scripts/ui_private_baseline_verify.mjs" \
   "scripts/ui_private_performance_budget_verify.mjs" \
   "scripts/ui_private_visual_verify.mjs" \
@@ -180,6 +181,7 @@ require_snippet "docs/ui/README.md" "scripts/ui_visual_proposal_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_artifact_boundary_check.mjs"
 require_snippet "docs/ui/README.md" "private-baselines.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_private_evidence_plan_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_private_evidence_verify.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_visual_verify.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_performance_budget_verify.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_private_drift_verify.mjs"
@@ -259,6 +261,8 @@ require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_v
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "scripts/ui_private_evidence_plan_check.mjs" "surface-baseline"
 require_snippet "scripts/ui_private_evidence_plan_check.mjs" "performance-budget"
+require_snippet "scripts/ui_private_evidence_verify.mjs" "private evidence plan output is not valid JSON"
+require_snippet "scripts/ui_private_evidence_verify.mjs" "performance-budget"
 require_snippet "docs/ui/performance-budgets.registry.json" "performance-evidence.json"
 require_snippet "docs/ui/performance-budgets.registry.json" "ui_private_performance_budget_verify.mjs"
 require_snippet "docs/ui/performance-budgets.registry.json" "\"unit\": \"critical-flow\""

@@ -14,6 +14,17 @@ const includePending = hasFlag("--include-pending");
 
 const checks = [
   {
+    name: "complete private evidence plan",
+    envs: [
+      "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
+      "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
+      "CLAWIX_UI_PRIVATE_COPY_ROOT",
+      "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+    ],
+    script: "scripts/ui_private_evidence_verify.mjs",
+    args: ["--require-approved"],
+  },
+  {
     name: "private baseline",
     env: "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
     script: "scripts/ui_private_baseline_verify.mjs",
@@ -50,7 +61,9 @@ if (!requireApproved) {
   process.exit(1);
 }
 
-const missingRoots = [...new Set(checks.filter((check) => !process.env[check.env]).map((check) => check.env))];
+const missingRoots = [
+  ...new Set(checks.flatMap((check) => check.envs || [check.env]).filter((envName) => !process.env[envName])),
+];
 if (missingRoots.length > 0) {
   console.error(`EXTERNAL PENDING: set ${missingRoots.join(", ")} to verify private UI evidence.`);
   process.exit(2);
