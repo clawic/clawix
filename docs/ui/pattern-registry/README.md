@@ -34,3 +34,5 @@ does not approve a new visual direction. Private rendered geometry evidence
 must include `measurements`, `geometryHash`, `screenshotComparisonHash`,
 `captureCommand`, `approvedByUserAt`, and `approvedScope` before a pending
 clause can be replaced with measured contract values.
+Surface geometry evidence uses the same measured fields with `coverageId`
+instead of `patternId`.

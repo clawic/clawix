@@ -16,6 +16,16 @@
     "approvedByUserAt",
     "approvedScope"
   ],
+  "requiredSurfaceEvidenceFields": [
+    "coverageId",
+    "platform",
+    "measurements",
+    "geometryHash",
+    "screenshotComparisonHash",
+    "captureCommand",
+    "approvedByUserAt",
+    "approvedScope"
+  ],
   "publicRepoMustNotStore": [
     "raw-geometry-dump",
     "raw-screenshot",

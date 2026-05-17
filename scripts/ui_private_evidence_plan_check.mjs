@@ -106,7 +106,7 @@ for (const [index, entry] of requireArray(surfaceCoverage, "docs/ui/surface-base
     platform: entry.platform,
     privateReference: entry.geometryEvidenceReference,
     evidenceFilename: "surface-geometry.json",
-    requiredFields: ["coverageId", "platform", "geometryHash", "approvedByUserAt", "approvedScope"],
+    requiredFields: renderedGeometry?.requiredSurfaceEvidenceFields || [],
   });
   addPlanItem({
     label,
