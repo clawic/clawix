@@ -60,8 +60,8 @@ the public repo.
   `docs/ui/debt-baseline.*`; `debt.baseline.json` remains canonical.
 - `debt-report.registry.json`: report-only pending items and fix policy
   derived from the debt baseline.
-- `critical-cleanup.queue.json`: non-executable queue for visual-authorized
-  cleanup of report-only debt.
+- `critical-cleanup.queue.json`: non-executable V1 delivery queue for
+  visual-authorized cleanup of report-only debt.
 - `exceptions.registry.json`: temporary scoped exceptions with owner, reason,
   review date, and expiry.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
@@ -101,7 +101,8 @@ the public repo.
    opportunistic fixes stay forbidden.
 10. Keep critical cleanup queue records current with
    `scripts/ui_critical_cleanup_queue_check.mjs`; queued cleanup remains
-   non-executable until an allowlisted visual lane receives approval.
+   non-executable until an allowlisted visual lane receives approval, and V1
+   delivery can only be completed or tracked pending for that lane.
 11. Keep UI exceptions current with `scripts/ui_exception_check.mjs`; active
    exceptions must be owned, approved, reviewed, and expiring.
 12. Keep inspiration references current with

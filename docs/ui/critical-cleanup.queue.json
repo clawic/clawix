@@ -5,6 +5,13 @@
   "sourceDebtReport": "docs/ui/debt-report.registry.json",
   "visualModelAllowlist": "docs/ui/visual-model-allowlist.manifest.json",
   "requiredVisualModel": "claude-opus-4.7",
+  "v1Delivery": {
+    "goal": "governance-system-plus-critical-cleanup",
+    "cleanupDeliveryState": "tracked-pending-for-allowlisted-model",
+    "completionCondition": "completed-by-allowlisted-visual-model-or-tracked-pending-with-private-approval-required",
+    "nonVisualAgentAction": "track-only",
+    "blockedUntil": ["approved-visual-scope", "private-baseline", "copy-snapshot", "rendered-geometry"]
+  },
   "queueStatuses": ["queued-visual-authorized-lane", "blocked-without-approval", "in-progress", "completed"],
   "requiredItemFields": [
     "id",

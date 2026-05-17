@@ -68,6 +68,7 @@ requireFields(queue, queuePath, [
   "sourceDebtReport",
   "visualModelAllowlist",
   "requiredVisualModel",
+  "v1Delivery",
   "queueStatuses",
   "requiredItemFields",
   "items",
@@ -89,6 +90,31 @@ const activeModels = new Set(
 );
 if (!activeModels.has(queue?.requiredVisualModel)) {
   fail(`${queuePath}.requiredVisualModel must be active in ${allowlistPath}`);
+}
+
+const v1Delivery = queue?.v1Delivery || {};
+requireFields(v1Delivery, `${queuePath}.v1Delivery`, [
+  "goal",
+  "cleanupDeliveryState",
+  "completionCondition",
+  "nonVisualAgentAction",
+  "blockedUntil",
+]);
+if (v1Delivery.goal !== "governance-system-plus-critical-cleanup") {
+  fail(`${queuePath}.v1Delivery.goal must be governance-system-plus-critical-cleanup`);
+}
+if (v1Delivery.cleanupDeliveryState !== "tracked-pending-for-allowlisted-model") {
+  fail(`${queuePath}.v1Delivery.cleanupDeliveryState must be tracked-pending-for-allowlisted-model`);
+}
+if (v1Delivery.completionCondition !== "completed-by-allowlisted-visual-model-or-tracked-pending-with-private-approval-required") {
+  fail(`${queuePath}.v1Delivery.completionCondition must require completion or tracked pending approval`);
+}
+if (v1Delivery.nonVisualAgentAction !== "track-only") {
+  fail(`${queuePath}.v1Delivery.nonVisualAgentAction must be track-only`);
+}
+const blockedUntil = new Set(requireArray(v1Delivery, `${queuePath}.v1Delivery`, "blockedUntil"));
+for (const blocker of ["approved-visual-scope", "private-baseline", "copy-snapshot", "rendered-geometry"]) {
+  if (!blockedUntil.has(blocker)) fail(`${queuePath}.v1Delivery.blockedUntil must include ${blocker}`);
 }
 
 const statuses = new Set(requireArray(queue, queuePath, "queueStatuses"));
