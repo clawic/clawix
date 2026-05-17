@@ -24,6 +24,18 @@ are re-read one by one.
 | `debt-audit` | 3 |
 | `performance-budget` | 24 |
 
+| Open decision | Required private evidence types |
+| --- | --- |
+| `initial_scope` | `surface-baseline`, `surface-geometry`, `surface-copy` |
+| `enforcement_mode` | `rendered-drift` |
+| `debt_strategy` | `debt-audit` |
+| `visual_baselines_location` | `critical-flow-baseline`, `surface-baseline`, `rendered-drift` |
+| `alignment_validation` | `surface-geometry`, `pattern-geometry`, `surface-baseline` |
+| `copy_governance` | `surface-copy` |
+| `v1_pattern_set` | `surface-baseline`, `pattern-geometry` |
+| `perf_budget_source` | `performance-budget` |
+| `size_contracts` | `pattern-geometry` |
+
 | # | Decision | Status | Completion evidence state |
 | --- | --- | --- | --- |
 | 1 | `initial_scope` | open | EXTERNAL PENDING: private surface baselines, rendered geometry, and copy snapshots. |

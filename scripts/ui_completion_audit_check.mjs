@@ -95,6 +95,7 @@ const auditPath = "docs/ui/completion-audit.md";
 const decisionPath = "docs/ui/decision-verification.json";
 const audit = read(auditPath);
 const decisionVerification = readJson(decisionPath);
+const privateVisualValidation = readJson("docs/ui/private-visual-validation.manifest.json");
 const privateEvidencePlan = runPrivateEvidencePlan();
 const privateApprovalRecordCount = countPrivateApprovalRecords();
 scanPublicSafety(audit, auditPath);
@@ -127,6 +128,16 @@ if (!audit.includes(`Private approval evidence: ${privateApprovalRecordCount} re
 for (const [type, count] of Object.entries(privateEvidencePlan.counts || {})) {
   const row = `| \`${type}\` | ${count} |`;
   if (!audit.includes(row)) fail(`${auditPath} must include private evidence count row ${row}`);
+}
+const decisionBlockerEvidenceTypes = requireArray(
+  privateVisualValidation,
+  "docs/ui/private-visual-validation.manifest.json",
+  "decisionBlockerEvidenceTypes",
+);
+for (const entry of decisionBlockerEvidenceTypes) {
+  const evidenceTypes = requireArray(entry, `docs/ui/private-visual-validation.manifest.json.${entry?.decisionId || "unknown"}`, "evidenceTypes");
+  const row = `| \`${entry.decisionId}\` | ${evidenceTypes.map((type) => `\`${type}\``).join(", ")} |`;
+  if (!audit.includes(row)) fail(`${auditPath} must include open decision evidence row ${row}`);
 }
 
 const rowPattern = /^\| (\d+) \| `([^`]+)` \| ([^|]+) \| ([^|]+) \|$/gm;
