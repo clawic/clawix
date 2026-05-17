@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const today = new Date().toISOString().slice(0, 10);
 const simulateUnauthorizedVisualDiff = process.argv.includes("--simulate-unauthorized-visual-diff");
+const simulateCrossPlatformVisualDiff = process.argv.includes("--simulate-cross-platform-visual-diff");
 const simulateApprovedVisualScope = process.argv.includes("--simulate-approved-visual-scope");
 const simulateOverbudgetVisualScope = process.argv.includes("--simulate-overbudget-visual-scope");
 const simulateWrongFileVisualScope = process.argv.includes("--simulate-wrong-file-visual-scope");
@@ -523,6 +524,7 @@ for (const [index, detector] of requireArray(visualDetectors, visualDetectorsPat
   try {
     compiledVisualDetectors.push({
       id: detector.id,
+      platforms: Array.isArray(detector.platforms) ? detector.platforms : [],
       changeKind: detector.changeKind,
       reason: detector.reason,
       regex: new RegExp(detector.pattern),
@@ -724,8 +726,20 @@ function approvedScopeForHits(hits) {
   return { ok: true, scope };
 }
 
-function matchingVisualDetector(line) {
-  return compiledVisualDetectors.find((detector) => detector.regex.test(line));
+function platformForPath(file) {
+  if (file.startsWith("macos/Sources/") || file.startsWith("apps/macos/Sources/")) return "macos";
+  if (file.startsWith("ios/Sources/") || file.startsWith("apps/ios/Sources/")) return "ios";
+  if (file.startsWith("android/app/src/main/")) return "android";
+  if (file.startsWith("web/src/")) return "web";
+  return null;
+}
+
+function matchingVisualDetector(line, file) {
+  const platform = platformForPath(file);
+  return compiledVisualDetectors.find((detector) => {
+    if (platform && !detector.platforms.includes(platform)) return false;
+    return detector.regex.test(line);
+  });
 }
 
 function visualDiffHits(diffText, sourceLabel) {
@@ -754,7 +768,7 @@ function visualDiffHits(diffText, sourceLabel) {
     }
 
     if (line.startsWith("+") && !line.startsWith("+++")) {
-      const detector = matchingVisualDetector(line);
+      const detector = matchingVisualDetector(line, currentPath);
       if (detector) {
         hits.push({
           path: currentPath,
@@ -772,7 +786,7 @@ function visualDiffHits(diffText, sourceLabel) {
     }
 
     if (line.startsWith("-") && !line.startsWith("---")) {
-      const detector = matchingVisualDetector(line);
+      const detector = matchingVisualDetector(line, currentPath);
       if (detector) {
         hits.push({
           path: currentPath,
@@ -806,7 +820,31 @@ const simulatedVisualDiff = [
   '+const visibleModelOptions = ["visible-model-alpha", "visible-model-beta"];',
   '-<div className="gap-2 text-blue-500">Legacy</div>',
 ].join("\n");
-const visualHits = simulateUnauthorizedVisualDiff
+const simulatedCrossPlatformVisualDiff = [
+  "diff --git a/macos/Sources/SimulatedVisual.swift b/macos/Sources/SimulatedVisual.swift",
+  "+++ b/macos/Sources/SimulatedVisual.swift",
+  "@@ -1,0 +1,3 @@",
+  '+Text("Rename").font(.headline).foregroundColor(.red)',
+  '+HStack { Image(systemName: "square.and.pencil") }.padding(8)',
+  "diff --git a/ios/Sources/SimulatedVisual.swift b/ios/Sources/SimulatedVisual.swift",
+  "+++ b/ios/Sources/SimulatedVisual.swift",
+  "@@ -1,0 +1,2 @@",
+  '+VStack { Text("Rename") }.background(Color.blue)',
+  '+Image(systemName: "chevron.right").accessibilityLabel("Open")',
+  "diff --git a/android/app/src/main/SimulatedVisual.kt b/android/app/src/main/SimulatedVisual.kt",
+  "+++ b/android/app/src/main/SimulatedVisual.kt",
+  "@@ -1,0 +1,3 @@",
+  '+Text("Rename", modifier = Modifier.padding(8.dp), fontSize = 14.sp)',
+  "+Icon(Icons.Default.Edit, contentDescription = \"Rename\")",
+  "diff --git a/web/src/simulated-visual-diff.tsx b/web/src/simulated-visual-diff.tsx",
+  "+++ b/web/src/simulated-visual-diff.tsx",
+  "@@ -1,0 +1,2 @@",
+  '+<button className="gap-2 text-red-500" aria-label="Rename">Rename</button>',
+  '+const visibleModelOptions = ["visible-model-alpha", "visible-model-beta"];',
+].join("\n");
+const visualHits = simulateCrossPlatformVisualDiff
+  ? visualDiffHits(simulatedCrossPlatformVisualDiff, "simulated cross-platform visual diff")
+  : simulateUnauthorizedVisualDiff
   ? visualDiffHits(simulatedVisualDiff, "simulated unauthorized visual diff")
   : [
       ...visualDiffHits(git(diffArgs), changedBase ? `diff against ${changedBase}` : "working tree"),

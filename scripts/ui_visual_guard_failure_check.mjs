@@ -140,6 +140,37 @@ for (const snippet of [
   if (!output.includes(snippet)) fail(`failure output is missing: ${snippet}`);
 }
 
+let crossPlatformOutput = "";
+let crossPlatformExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-cross-platform-visual-diff"], {
+    cwd: rootDir,
+    env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  crossPlatformExitCode = error.status || 1;
+  crossPlatformOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (crossPlatformExitCode === 0) {
+  fail("simulated cross-platform visual diff must fail");
+}
+for (const snippet of [
+  "unauthorized visual/copy/layout source edit detected",
+  "simulated cross-platform visual diff",
+  "macos/Sources/SimulatedVisual.swift:1",
+  "swiftui-color",
+  "ios/Sources/SimulatedVisual.swift:1",
+  "swiftui-color",
+  "android/app/src/main/SimulatedVisual.kt:1",
+  "compose-layout",
+  "web/src/simulated-visual-diff.tsx:1",
+  "web-class-style",
+]) {
+  if (!crossPlatformOutput.includes(snippet)) fail(`cross-platform failure output is missing: ${snippet}`);
+}
+
 let authorizedNoScopeOutput = "";
 let authorizedNoScopeExitCode = 0;
 try {
