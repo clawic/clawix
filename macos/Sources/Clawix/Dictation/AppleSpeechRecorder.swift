@@ -186,22 +186,18 @@ final class AppleSpeechRecorder: NSObject {
 
 /// Names of the available transcription backends. Default is
 /// `whisperLocal` — the existing path that ships with the app. Cloud
-/// variants share a common multipart-WAV upload path implemented in
-/// `CloudTranscriptionProvider`.
+/// transcription resolves provider/account/model through framework
+/// feature routing.
 enum DictationTranscriptionBackend: String, CaseIterable {
     case whisperLocal
     case appleSpeech
-    case groqCloud
-    case deepgramCloud
-    case customCloud
+    case cloudSTT
 
     var displayName: String {
         switch self {
         case .whisperLocal:  return "Whisper (local)"
         case .appleSpeech:   return "Apple Speech (streaming)"
-        case .groqCloud:     return "Groq (cloud)"
-        case .deepgramCloud: return "Deepgram (cloud)"
-        case .customCloud:   return "Custom Whisper endpoint"
+        case .cloudSTT:      return "Cloud STT"
         }
     }
 
@@ -211,32 +207,17 @@ enum DictationTranscriptionBackend: String, CaseIterable {
             return "Highest accuracy. Requires a downloaded Whisper model."
         case .appleSpeech:
             return "Streaming partials, no model download. Less accurate in noisy environments."
-        case .groqCloud:
-            return "<200 ms latency. Whisper-large-v3 hosted; needs a Groq API key."
-        case .deepgramCloud:
-            return "Nova-3 cloud. Punctuation + smart formatting; needs a Deepgram key."
-        case .customCloud:
-            return "Any OpenAI-compatible /audio/transcriptions endpoint."
+        case .cloudSTT:
+            return "Routes audio through the Model Providers STT selection."
         }
     }
 
-    /// True when the backend uploads via `CloudTranscriptionProvider`
-    /// rather than running locally.
+    /// True when the backend uploads through a framework-routed STT
+    /// provider rather than running locally.
     var isCloud: Bool {
         switch self {
         case .whisperLocal, .appleSpeech: return false
-        case .groqCloud, .deepgramCloud, .customCloud: return true
-        }
-    }
-
-    /// Map to the cloud provider implementation. Nil for local
-    /// backends.
-    var cloudProvider: CloudTranscriptionProvider? {
-        switch self {
-        case .groqCloud:     return .groq
-        case .deepgramCloud: return .deepgram
-        case .customCloud:   return .custom
-        case .whisperLocal, .appleSpeech: return nil
+        case .cloudSTT: return true
         }
     }
 }

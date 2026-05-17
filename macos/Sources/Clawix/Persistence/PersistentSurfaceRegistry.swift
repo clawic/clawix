@@ -837,8 +837,6 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.quickAsk.clipboardLastSeen", "Quick Ask clipboard last seen", QuickAskClipboardSniffer.lastSeenKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.quickAsk.clipboardLastSeenAt", "Quick Ask clipboard last seen at", QuickAskClipboardSniffer.lastSeenAtKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.secrets.deviceId", "Secrets device id", SecretsPaths.deviceIdKey, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.customBaseUrl", "Custom transcription base URL", ClawixPersistentSurfaceKeys.dictationCustomBaseURL, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.customModel", "Custom transcription model", ClawixPersistentSurfaceKeys.dictationCustomModel, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.injectText", "Dictation inject text", DictationCoordinator.injectDefaultsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.restoreClipboard", "Dictation restore clipboard", DictationCoordinator.restoreClipboardDefaultsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.autoSendKey", "Dictation auto send key", DictationCoordinator.autoSendKeyDefaultsKey, PersistentSurfaceKind.appStorageKey),
@@ -879,17 +877,12 @@ enum ClawixPersistentSurfaceRegistry {
             ("clawix.prefs.dictation.accessibilityRequested", "Dictation accessibility requested", DictationPermissions.hasRequestedAccessibilityKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.replacements", "Dictation replacements", DictationReplacementStore.defaultsKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.enhancement.enabled", "Enhancement enabled", EnhancementSettings.enabledKey, PersistentSurfaceKind.appStorageKey),
-            ("clawix.prefs.dictation.enhancement.provider", "Enhancement provider", EnhancementSettings.providerKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.activePrompt", "Enhancement active prompt", EnhancementSettings.activePromptKey, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.dictation.enhancement.skipShortEnabled", "Enhancement skip short enabled", EnhancementSettings.skipShortEnabledKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.skipShortMinWords", "Enhancement skip short minimum words", EnhancementSettings.skipShortMinWordsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.timeoutSeconds", "Enhancement timeout seconds", EnhancementSettings.timeoutSecondsKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.timeoutPolicy", "Enhancement timeout policy", EnhancementSettings.timeoutPolicyKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.dictation.enhancement.clipboardContext", "Enhancement clipboard context", EnhancementSettings.clipboardContextKey, PersistentSurfaceKind.appStorageKey),
-            ("clawix.prefs.dictation.enhancement.model", "Enhancement model pattern", ClawixPersistentSurfaceKeys.enhancementModelPattern, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.enhancement.baseUrl", "Enhancement base URL pattern", ClawixPersistentSurfaceKeys.enhancementBaseURLPattern, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.cloudModel", "Cloud transcription model pattern", ClawixPersistentSurfaceKeys.cloudTranscriptionModelPattern, PersistentSurfaceKind.preferenceKey),
-            ("clawix.prefs.dictation.cloudBaseUrl", "Cloud transcription base URL pattern", ClawixPersistentSurfaceKeys.cloudTranscriptionBaseURLPattern, PersistentSurfaceKind.preferenceKey),
             ("clawix.prefs.screenTools.exportDirectory", "Screen tools export directory", ScreenToolSettings.exportDirectoryKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.screenTools.afterCaptureAction", "Screen tools after capture action", ScreenToolSettings.afterCaptureActionKey, PersistentSurfaceKind.appStorageKey),
             ("clawix.prefs.screenTools.imageFormat", "Screen tools image format", ScreenToolSettings.imageFormatKey, PersistentSurfaceKind.appStorageKey),
@@ -1017,8 +1010,6 @@ enum ClawixPersistentSurfaceKeys {
     static let relayRefreshPrefix = "clawix.relay.refresh"
     static let relayRefreshPattern = "clawix.relay.refresh.<deviceId>"
     static func relayRefreshKey(for deviceId: String) -> String { "\(relayRefreshPrefix).\(deviceId)" }
-    static let dictationCustomBaseURL = "dictation.transcription.baseURL.custom"
-    static let dictationCustomModel = "dictation.transcription.model.custom"
     static let useAppleScriptPaste = "useAppleScriptPaste"
     static let bridgeDefaultsSuite = "clawix.bridge"
     static let bridgeBearer = "ClawixBridge.Bearer.v1"
@@ -1030,10 +1021,6 @@ enum ClawixPersistentSurfaceKeys {
     static let bridgeDictationActiveModel = "ClawixBridge.Dictation.ActiveModel"
     static let agentRuntime = "ClawixAgentRuntime"
     static let openCodeModel = "ClawixOpenCodeModel"
-    static let enhancementModelPattern = "dictation.enhancement.model.<provider>"
-    static let enhancementBaseURLPattern = "dictation.enhancement.baseURL.<provider>"
-    static let cloudTranscriptionModelPattern = "dictation.transcription.model.<provider>"
-    static let cloudTranscriptionBaseURLPattern = "dictation.transcription.baseURL.<provider>"
     static let binaryPath = "ClawixBinaryPath"
     static let backgroundBridgeWasEnabled = "clawix.backgroundBridge.wasEnabled"
     static let appleLanguages = "AppleLanguages"

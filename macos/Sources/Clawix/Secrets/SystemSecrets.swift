@@ -3,11 +3,9 @@ import SecretsModels
 import SecretsVault
 
 /// Centralized read/write of secrets that the app itself owns (not the
-/// user's hand-curated vault entries): API keys for cloud LLM providers
-/// (Enhancement) and cloud transcription endpoints (Groq / Deepgram /
-/// Custom). These live in a dedicated container called "Clawix System"
-/// inside the same encrypted Secrets the user already has, so the app
-/// never has to touch the macOS Keychain to persist a secret.
+/// user's hand-curated vault entries). Provider accounts, model routes,
+/// and provider credentials are framework-owned; this container remains
+/// only for host-owned system secrets.
 ///
 /// The container is created lazily on the first write. Reads return nil
 /// if Secrets is not unlocked (callers treat that as "provider not
@@ -138,87 +136,5 @@ enum SystemSecrets {
             return existing
         }
         return try store.createVault(name: containerName)
-    }
-}
-
-// MARK: - Enhancement provider keys
-
-@MainActor
-enum EnhancementSecrets {
-    static func setAPIKey(_ key: String, for provider: EnhancementProviderID) async throws {
-        try await SystemSecrets.set(
-            internalName: internalName(for: provider),
-            title: "Enhancement - \(provider.rawValue)",
-            value: key,
-            allowedHosts: allowedHosts(for: provider)
-        )
-    }
-
-    static func hasAPIKey(for provider: EnhancementProviderID) async -> Bool {
-        await SystemSecrets.has(internalName: internalName(for: provider))
-    }
-
-    nonisolated static func internalName(for provider: EnhancementProviderID) -> String {
-        "enhancement.\(provider.rawValue)"
-    }
-
-    private static func allowedHosts(for provider: EnhancementProviderID) -> [String] {
-        switch provider {
-        case .openai:
-            return ["api.openai.com"]
-        case .anthropic:
-            return ["api.anthropic.com"]
-        case .groq:
-            return ["api.groq.com"]
-        case .mistral:
-            return ["api.mistral.ai"]
-        case .xai:
-            return ["api.x.ai"]
-        case .openrouter:
-            return ["openrouter.ai"]
-        case .custom:
-            guard let raw = UserDefaults.standard.string(forKey: EnhancementSettings.baseURLKey(for: provider.rawValue)),
-                  let host = URL(string: raw)?.host,
-                  !host.isEmpty else { return [] }
-            return [host]
-        case .ollama:
-            return ["localhost", "127.0.0.1"]
-        }
-    }
-}
-
-// MARK: - Cloud transcription provider keys
-
-@MainActor
-enum CloudTranscriptionSecrets {
-    static func setAPIKey(_ key: String, for provider: CloudTranscriptionProvider) async throws {
-        try await SystemSecrets.set(
-            internalName: internalName(for: provider),
-            title: "Transcription - \(provider.rawValue)",
-            value: key,
-            allowedHosts: allowedHosts(for: provider)
-        )
-    }
-
-    static func hasAPIKey(for provider: CloudTranscriptionProvider) async -> Bool {
-        await SystemSecrets.has(internalName: internalName(for: provider))
-    }
-
-    nonisolated static func internalName(for provider: CloudTranscriptionProvider) -> String {
-        "transcription.\(provider.rawValue)"
-    }
-
-    private static func allowedHosts(for provider: CloudTranscriptionProvider) -> [String] {
-        switch provider {
-        case .groq:
-            return ["api.groq.com"]
-        case .deepgram:
-            return ["api.deepgram.com"]
-        case .custom:
-            guard let raw = UserDefaults.standard.string(forKey: CloudTranscriptionProvider.baseURLKey(for: provider.rawValue)),
-                  let host = URL(string: raw)?.host,
-                  !host.isEmpty else { return [] }
-            return [host]
-        }
     }
 }

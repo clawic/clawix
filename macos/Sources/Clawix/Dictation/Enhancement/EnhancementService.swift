@@ -26,17 +26,6 @@ final class EnhancementService {
     private static let minInterval: TimeInterval = 1.0
     private var lastCallAt: Date?
 
-    private let providers: [EnhancementProvider] = [
-        OpenAIEnhancementProvider(),
-        AnthropicEnhancementProvider(),
-        OllamaEnhancementProvider(),
-        GroqEnhancementProvider(),
-        MistralEnhancementProvider(),
-        XAIEnhancementProvider(),
-        OpenRouterEnhancementProvider(),
-        CustomEnhancementProvider()
-    ]
-
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -46,12 +35,6 @@ final class EnhancementService {
 
     var isEnabled: Bool {
         defaults.bool(forKey: EnhancementSettings.enabledKey)
-    }
-
-    var activeProvider: EnhancementProvider? {
-        let raw = defaults.string(forKey: EnhancementSettings.providerKey) ?? EnhancementProviderID.openai.rawValue
-        guard let id = EnhancementProviderID(rawValue: raw) else { return nil }
-        return providers.first(where: { $0.id == id })
     }
 
     /// Apply enhancement to `raw`. Returns the original text on every
@@ -93,27 +76,25 @@ final class EnhancementService {
         lastCallAt = Date()
 
         let prompt = PromptLibrary.shared.activePrompt()
-        let timeoutPolicy = defaults.string(forKey: EnhancementSettings.timeoutPolicyKey) ?? "retry"
         let timeoutFromDefaults = defaults.integer(forKey: EnhancementSettings.timeoutSecondsKey)
         let timeout = timeoutFromDefaults > 0 ? timeoutFromDefaults : 7
 
-        // Framework routing has priority when Settings → Model Providers
-        // defines an enhancement route. The per-enhancement provider
-        // remains a stable v1 configuration path for users who pick the
-        // provider directly in Voice to Text settings.
-        if let routed = FeatureRouting.resolve(
+        guard let routed = FeatureRouting.resolve(
             feature: .enhancement,
             capability: .chat,
             store: AIAccountSecretsStore.shared
-        ) {
-            let context = EnhancementContext(
-                clipboardText: defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
-                    ? clipboardSnapshot()
-                    : nil
-            )
+        ) else { return raw }
+
+        let clipboardText = defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
+            ? clipboardSnapshot()
+            : nil
+        let policy = defaults.string(forKey: EnhancementSettings.timeoutPolicyKey) ?? "retry"
+        let maxAttempts = policy == "retry" ? 3 : 1
+        var lastError: Error?
+        for attempt in 0..<maxAttempts {
             do {
                 let client = try await AIClientFactory.client(for: routed.account, model: routed.model)
-                let user = composeUserMessage(text: trimmed, prompt: prompt.userPrompt, context: context)
+                let user = composeUserMessage(text: trimmed, prompt: prompt.userPrompt, clipboardText: clipboardText)
                 let request = ChatRequest(
                     messages: [
                         AIChatMessage(role: .system, content: prompt.systemPrompt),
@@ -121,42 +102,8 @@ final class EnhancementService {
                     ],
                     timeoutSeconds: timeout
                 )
-                let answer = try await client.chat(request).trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleaned = try await client.chat(request).trimmingCharacters(in: .whitespacesAndNewlines)
                 try? AIAccountSecretsStore.shared.touch(accountId: routed.account.id)
-                return answer.isEmpty ? raw : answer
-            } catch {
-                NSLog("[Clawix.Enhancement] framework routing failed, trying configured provider: %@", String(describing: error))
-            }
-        }
-
-        guard let provider = activeProvider else { return raw }
-        guard await provider.isConfigured() else { return raw }
-
-        let model = defaults.string(forKey: EnhancementSettings.modelKey(for: provider.id.rawValue))
-            ?? provider.id.defaultModels.first
-            ?? ""
-        _ = timeoutPolicy
-        let policy = defaults.string(forKey: EnhancementSettings.timeoutPolicyKey) ?? "retry"
-
-        let context = EnhancementContext(
-            clipboardText: defaults.bool(forKey: EnhancementSettings.clipboardContextKey)
-                ? clipboardSnapshot()
-                : nil
-        )
-
-        let maxAttempts = policy == "retry" ? 3 : 1
-        var lastError: Error?
-        for attempt in 0..<maxAttempts {
-            do {
-                let result = try await provider.enhance(
-                    text: trimmed,
-                    systemPrompt: prompt.systemPrompt,
-                    userPrompt: prompt.userPrompt,
-                    model: model,
-                    context: context,
-                    timeoutSeconds: timeout
-                )
-                let cleaned = result.trimmingCharacters(in: .whitespacesAndNewlines)
                 return cleaned.isEmpty ? raw : cleaned
             } catch {
                 lastError = error
@@ -171,7 +118,7 @@ final class EnhancementService {
         // All attempts exhausted; surface the last error in NSLog and
         // fall back to raw so the paste still happens.
         if let lastError {
-            NSLog("[Clawix.Enhancement] failed: %@", String(describing: lastError))
+            NSLog("[Clawix.Enhancement] routed provider failed: %@", String(describing: lastError))
         }
         return raw
     }
@@ -180,15 +127,12 @@ final class EnhancementService {
         NSPasteboard.general.string(forType: .string)
     }
 
-    /// Mirrors the message composer in `EnhancementProvider` for the
-    /// framework-routed AIClient path so every provider sees the same
-    /// transcript wrapper.
-    private func composeUserMessage(text: String, prompt: String, context: EnhancementContext?) -> String {
+    private func composeUserMessage(text: String, prompt: String, clipboardText: String?) -> String {
         var parts: [String] = []
         let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedPrompt.isEmpty { parts.append(trimmedPrompt) }
         parts.append("<<<TRANSCRIPT>>>\n\(text)\n<<<END_TRANSCRIPT>>>")
-        if let clip = context?.clipboardText, !clip.isEmpty {
+        if let clip = clipboardText, !clip.isEmpty {
             parts.append("Recent clipboard for context:\n\(clip.prefix(2000))")
         }
         return parts.joined(separator: "\n\n")

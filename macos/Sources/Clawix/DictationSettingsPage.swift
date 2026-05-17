@@ -345,7 +345,7 @@ struct DictationSettingsPage: View {
                 SettingsCard {
                     DropdownRow(
                         title: "Engine",
-                        detail: "Local Whisper for highest accuracy. Apple Speech streams partials with no model download. Cloud variants need API keys (configure below)",
+                        detail: "Local Whisper for highest accuracy. Apple Speech streams partials. Cloud STT uses Model Providers",
                         options: DictationTranscriptionBackend.allCases.map { ($0.rawValue, $0.displayName) },
                         selection: Binding(
                             get: { UserDefaults.standard.string(forKey: DictationCoordinator.backendKey) ?? DictationTranscriptionBackend.whisperLocal.rawValue },
@@ -1313,55 +1313,21 @@ private struct DictionaryFieldStyle: View {
 // MARK: - Cloud backends row
 
 private struct CloudBackendsRow: View {
-    @State private var sheetOpen = false
-    @State private var configuredCount: Int = 0
-    @ObservedObject private var vault: SecretsManager = .shared
-
     var body: some View {
         SettingsRow {
             VStack(alignment: .leading, spacing: 3) {
-                Text("Cloud backend keys")
+                Text("Cloud STT provider")
                     .font(BodyFont.system(size: 12.5))
                     .foregroundColor(Palette.textPrimary)
-                Text(detail)
+                Text("Provider, account and model route")
                     .font(BodyFont.system(size: 11))
                     .foregroundColor(Palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         } trailing: {
-            Button {
-                sheetOpen = true
-            } label: {
-                Text("Configure")
-                    .font(BodyFont.system(size: 12, wght: 600))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Capsule(style: .continuous).fill(Color(white: 0.165)))
-            }
-            .buttonStyle(.plain)
+            FeatureProviderPicker(featureId: .sttCloud, capability: .stt)
+                .frame(width: 260)
         }
-        .sheet(isPresented: $sheetOpen) {
-            CloudBackendsSheet(isPresented: $sheetOpen)
-        }
-        .task(id: vault.state) { await refreshConfigured() }
-    }
-
-    private var detail: LocalizedStringKey {
-        if vault.state != .unlocked {
-            return "Secrets locked. Unlock to manage cloud backend keys."
-        }
-        if configuredCount == 0 {
-            return "Add Groq / Deepgram / Custom Whisper keys to use the cloud backends."
-        }
-        return "\(configuredCount) backend\(configuredCount == 1 ? "" : "s") configured."
-    }
-
-    private func refreshConfigured() async {
-        let groq = await CloudTranscriptionSecrets.hasAPIKey(for: .groq)
-        let deepgram = await CloudTranscriptionSecrets.hasAPIKey(for: .deepgram)
-        let custom = await CloudTranscriptionSecrets.hasAPIKey(for: .custom)
-        configuredCount = [groq, deepgram, custom].filter { $0 }.count
     }
 }
 

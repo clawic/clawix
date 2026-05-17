@@ -59,25 +59,12 @@ struct EnhancementSummaryRow: View {
 struct EnhancementSettingsSheet: View {
     @ObservedObject var library: PromptLibrary
     @Binding var isPresented: Bool
-    @ObservedObject private var vault: SecretsManager = .shared
 
-    @AppStorage(EnhancementSettings.providerKey) private var providerRaw = EnhancementProviderID.openai.rawValue
     @AppStorage(EnhancementSettings.skipShortEnabledKey) private var skipShortEnabled = true
     @AppStorage(EnhancementSettings.skipShortMinWordsKey) private var skipShortMinWords = 3
     @AppStorage(EnhancementSettings.timeoutSecondsKey) private var timeoutSeconds = 7
     @AppStorage(EnhancementSettings.timeoutPolicyKey) private var timeoutPolicy = "retry"
     @AppStorage(EnhancementSettings.clipboardContextKey) private var clipboardContext = false
-
-    @State private var apiKeyDraft: String = ""
-    @State private var apiKeyVisible: Bool = false
-    @State private var modelDraft: String = ""
-    @State private var baseURLDraft: String = ""
-    @State private var isConnected: Bool = false
-    @State private var apiKeySaveError: String?
-
-    private var provider: EnhancementProviderID {
-        EnhancementProviderID(rawValue: providerRaw) ?? .openai
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -108,8 +95,6 @@ struct EnhancementSettingsSheet: View {
         }
         .frame(width: 660, height: 600)
         .background(Color(white: 0.10))
-        .task(id: providerRaw) { await reloadDrafts() }
-        .task(id: vault.state) { await refreshConnected() }
     }
 
     // MARK: - Sections
@@ -117,124 +102,7 @@ struct EnhancementSettingsSheet: View {
     private var providerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader("Provider")
-            HStack(spacing: 10) {
-                Picker("", selection: $providerRaw) {
-                    ForEach(EnhancementProviderID.allCases, id: \.rawValue) { id in
-                        Text(id.displayName).tag(id.rawValue)
-                    }
-                }
-                .labelsHidden()
-                .frame(maxWidth: 240)
-                Spacer()
-                connectedDot
-            }
-            if provider.requiresAPIKey {
-                HStack(spacing: 8) {
-                    Group {
-                        if apiKeyVisible {
-                            TextField("API key", text: $apiKeyDraft)
-                        } else {
-                            SecureField("API key", text: $apiKeyDraft)
-                        }
-                    }
-                    .textFieldStyle(.plain)
-                    .font(BodyFont.system(size: 12, wght: 500))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color(white: 0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                            )
-                    )
-                    Button {
-                        apiKeyVisible.toggle()
-                    } label: {
-                        LucideIcon.auto(apiKeyVisible ? "eye.slash" : "eye", size: 11)
-                            .foregroundColor(Palette.textPrimary)
-                            .frame(width: 26, height: 26)
-                            .background(Circle().fill(Color(white: 0.14)))
-                    }
-                    .buttonStyle(.plain)
-                    Button("Save") {
-                        let key = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !key.isEmpty else { return }
-                        let target = provider
-                        Task {
-                            await saveAPIKey(key, for: target)
-                        }
-                    }
-                    .disabled(vault.state != .unlocked || apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                if let apiKeySaveError {
-                    Text(apiKeySaveError)
-                        .font(BodyFont.system(size: 11, wght: 600))
-                        .foregroundColor(Color(red: 0.95, green: 0.65, blue: 0.30))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            } else if provider == .ollama {
-                TextField("Base URL", text: $baseURLDraft)
-                    .textFieldStyle(.plain)
-                    .font(BodyFont.system(size: 12, wght: 500))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color(white: 0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                            )
-                    )
-                    .onChange(of: baseURLDraft) { _, new in
-                        UserDefaults.standard.set(
-                            new,
-                            forKey: EnhancementSettings.baseURLKey(for: provider.rawValue)
-                        )
-                    }
-            }
-
-            HStack(spacing: 10) {
-                Text("Model")
-                    .font(BodyFont.system(size: 11.5, wght: 600))
-                    .foregroundColor(Palette.textSecondary)
-                TextField(provider.defaultModels.first ?? "", text: $modelDraft)
-                    .textFieldStyle(.plain)
-                    .font(BodyFont.system(size: 12, wght: 500))
-                    .foregroundColor(Palette.textPrimary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color(white: 0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                            )
-                    )
-                    .onChange(of: modelDraft) { _, new in
-                        UserDefaults.standard.set(
-                            new,
-                            forKey: EnhancementSettings.modelKey(for: provider.rawValue)
-                        )
-                    }
-                Menu {
-                    ForEach(provider.defaultModels, id: \.self) { m in
-                        Button(m) { modelDraft = m }
-                    }
-                } label: {
-                    LucideIcon(.list, size: 11)
-                        .foregroundColor(Palette.textPrimary)
-                        .frame(width: 26, height: 26)
-                        .background(Circle().fill(Color(white: 0.14)))
-                }
-                .menuStyle(.borderlessButton)
-                .frame(width: 28)
-            }
+            FeatureProviderPicker(featureId: .enhancement, capability: .chat)
         }
     }
 
@@ -331,53 +199,6 @@ struct EnhancementSettingsSheet: View {
             .textCase(.uppercase)
     }
 
-    private var connectedDot: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(isConnected ? Color(red: 0.27, green: 0.74, blue: 0.42) : Color(white: 0.45))
-                .frame(width: 8, height: 8)
-            Text(connectionLabel)
-                .font(BodyFont.system(size: 11, wght: 600))
-                .foregroundColor(Palette.textSecondary)
-        }
-    }
-
-    private var connectionLabel: LocalizedStringKey {
-        if vault.state != .unlocked && provider.requiresAPIKey {
-            return "Secrets locked"
-        }
-        return isConnected ? "Connected" : "Not configured"
-    }
-
-    private func reloadDrafts() async {
-        apiKeyDraft = ""
-        modelDraft = UserDefaults.standard.string(
-            forKey: EnhancementSettings.modelKey(for: provider.rawValue)
-        ) ?? (provider.defaultModels.first ?? "")
-        baseURLDraft = UserDefaults.standard.string(
-            forKey: EnhancementSettings.baseURLKey(for: provider.rawValue)
-        ) ?? "http://localhost:11434"
-        await refreshConnected()
-    }
-
-    private func refreshConnected() async {
-        if !provider.requiresAPIKey {
-            isConnected = true
-            return
-        }
-        isConnected = await EnhancementSecrets.hasAPIKey(for: provider)
-    }
-
-    private func saveAPIKey(_ key: String, for provider: EnhancementProviderID) async {
-        apiKeySaveError = nil
-        do {
-            try await EnhancementSecrets.setAPIKey(key, for: provider)
-            await refreshConnected()
-        } catch {
-            apiKeySaveError = error.localizedDescription
-            await refreshConnected()
-        }
-    }
 }
 
 // MARK: - Prompt list row

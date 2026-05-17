@@ -496,17 +496,15 @@ final class DictationCoordinator: ObservableObject {
             return
         }
 
-        // Cloud Whisper backends (Groq / Deepgram / Custom) take the
-        // captured PCM and upload as WAV. Same async + enhancement
-        // path as the local Whisper branch — the only difference is
-        // the transcription source.
-        if let cloud = activeBackend.cloudProvider {
+        // Cloud STT takes the captured PCM and routes it through the
+        // framework provider selection. Same async + enhancement path
+        // as the local Whisper branch.
+        if activeBackend == .cloudSTT {
             Task { [weak self] in
                 do {
                     let autoFormat = self?.defaults.object(forKey: Self.autoFormatParagraphsKey) as? Bool ?? true
                     let useVAD = self?.defaults.object(forKey: Self.vadEnabledKey) as? Bool ?? true
                     let raw = try await self?.transcribeCloudOrFallback(
-                        cloud: cloud,
                         samples: samples,
                         model: model,
                         language: language,
@@ -602,13 +600,12 @@ final class DictationCoordinator: ObservableObject {
             trace("transcribe: routed-stt ok provider=\(routed.account.providerId.rawValue) chars=\(raw.count)")
             return autoFormat ? TranscriptFormatter.format(raw) : raw
         } catch {
-            trace("transcribe: routed-stt failed, trying configured cloud provider: \(error.localizedDescription)")
+            trace("transcribe: routed-stt failed, falling back locally if possible: \(error.localizedDescription)")
             return nil
         }
     }
 
     private func transcribeCloudOrFallback(
-        cloud: CloudTranscriptionProvider,
         samples: [Float],
         model: DictationModel,
         language: String?,
@@ -616,38 +613,26 @@ final class DictationCoordinator: ObservableObject {
         useVAD: Bool,
         autoFormat: Bool
     ) async throws -> String {
-        // Framework routing has priority when Settings → Model Providers
-        // defines an STT cloud route. The per-dictation cloud provider
-        // remains a stable v1 configuration path for users who pick the
-        // provider directly in Voice to Text settings.
         if let raw = try? await Self.routedSTTTranscribe(samples: samples, language: language, autoFormat: autoFormat) {
             return raw
         }
 
-        do {
-            Self.trace("transcribe: cloud start provider=\(cloud.rawValue)")
-            let cloudRaw = try await cloud.transcribe(
-                samples: samples,
-                language: language,
-                prompt: prompt
-            )
-            Self.trace("transcribe: cloud ok provider=\(cloud.rawValue) chars=\(cloudRaw.count)")
-            return autoFormat ? TranscriptFormatter.format(cloudRaw) : cloudRaw
-        } catch {
-            Self.trace("transcribe: cloud failed provider=\(cloud.rawValue) error=\(error.localizedDescription)")
-            guard Self.canRunLocalFallback(model: model) else {
-                throw error
-            }
-            Self.trace("transcribe: falling back to local model=\(model.rawValue)")
-            return try await Self.transcribeLocalWithFallback(
-                samples: samples,
-                model: model,
-                language: language,
-                prompt: prompt,
-                useVAD: useVAD,
-                autoFormat: autoFormat
+        guard Self.canRunLocalFallback(model: model) else {
+            throw NSError(
+                domain: "Clawix.Dictation",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Configure a cloud STT provider route or download a local Whisper model."]
             )
         }
+        Self.trace("transcribe: cloud route unavailable, falling back to local model=\(model.rawValue)")
+        return try await Self.transcribeLocalWithFallback(
+            samples: samples,
+            model: model,
+            language: language,
+            prompt: prompt,
+            useVAD: useVAD,
+            autoFormat: autoFormat
+        )
     }
 
     static func transcribeLocalWithFallback(
@@ -910,11 +895,11 @@ final class DictationCoordinator: ObservableObject {
                 fail(with: "Couldn't start audio engine: \(error.localizedDescription)")
                 return
             }
-        case .groqCloud, .deepgramCloud, .customCloud:
-            // Local Whisper and the cloud Whisper backends share the
-            // capture path: AUHAL records 16 kHz mono PCM into the
-            // same buffer; `stop()` then either runs WhisperKit
-            // locally or uploads the WAV to the cloud provider.
+        case .cloudSTT:
+            // Local Whisper and cloud STT share the capture path:
+            // AUHAL records 16 kHz mono PCM into the same buffer;
+            // `stop()` then either runs WhisperKit locally or uploads
+            // the WAV through the framework-routed provider.
             do {
                 Self.trace("capture: start cloud backend=\(backend.rawValue)")
                 try capture.start(deviceID: MicrophonePreferences.shared.activeDeviceID())
@@ -1119,9 +1104,7 @@ final class DictationCoordinator: ObservableObject {
             let words = processed.split(whereSeparator: { $0.isWhitespace }).count
             let duration = TimeInterval(samples.count) / 16_000.0
             let pmId = PowerModeManager.shared.activeConfig?.id.uuidString
-            let enhancementProvider: String? = EnhancementService.shared.isEnabled
-                ? UserDefaults.standard.string(forKey: EnhancementSettings.providerKey)
-                : nil
+            let enhancementProvider: String? = EnhancementService.shared.isEnabled ? "framework-route" : nil
             let record = TranscriptionRecord(
                 id: id,
                 timestamp: Date(),

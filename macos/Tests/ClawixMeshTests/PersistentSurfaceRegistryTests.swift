@@ -37,6 +37,13 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
             $0.id == "clawix.prefs.provider.featureAccount" ||
             $0.id == "clawix.prefs.provider.featureModel" ||
             $0.id == "clawix.prefs.provider.enabled" ||
+            $0.id == "clawix.prefs.dictation.customBaseUrl" ||
+            $0.id == "clawix.prefs.dictation.customModel" ||
+            $0.id == "clawix.prefs.dictation.enhancement.provider" ||
+            $0.id == "clawix.prefs.dictation.enhancement.model" ||
+            $0.id == "clawix.prefs.dictation.enhancement.baseUrl" ||
+            $0.id == "clawix.prefs.dictation.cloudModel" ||
+            $0.id == "clawix.prefs.dictation.cloudBaseUrl" ||
             $0.id == "clawix.prefs.dictation.whisperPrompts" ||
             $0.id == "clawix.prefs.dictation.enhancement.customPrompts"
         })
