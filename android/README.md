@@ -23,8 +23,8 @@ gradle wrapper --gradle-version 8.10.2
 Then:
 
 ```bash
-./gradlew :app:assembleDebug
-./gradlew :app:installDebug
+../scripts/launch-android.sh assemble
+../scripts/launch-android.sh install
 ```
 
 Open Android Studio with the `clawix/android/` folder for IDE support; it regenerates the wrapper automatically on first sync.

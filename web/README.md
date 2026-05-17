@@ -13,22 +13,22 @@ For remote access, the user opens `http://<mac>.local:24080` (mDNS) or the Tails
 ## Development
 
 ```bash
-pnpm install
-pnpm dev    # Vite dev server on http://localhost:5173, proxies private /ws -> daemon
+# from the workspace root
+pnpm --dir web install
+scripts/launch-web.sh dev    # Vite dev server on http://localhost:5173, proxies private /ws -> daemon
 ```
 
 The daemon must be running:
 
 ```bash
 # from the workspace root
-bash dev.sh
+bash macos/scripts/dev.sh
 ```
 
 For embedded mode (the daemon serves the built bundle), run from the workspace root:
 
 ```bash
-pnpm --filter @clawix/web build
-bash dev.sh   # restarts daemon, web is at http://localhost:24080
+scripts/launch-web.sh embedded   # builds web, restarts daemon, web is at http://localhost:24080
 ```
 
 ## Layout

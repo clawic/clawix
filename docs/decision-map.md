@@ -42,7 +42,7 @@ The contract format is decision -> document -> validation.
 | macOS development builds go through the project launcher scripts and stable signing placeholders; public docs never include maintainer signing identities. | [`AGENTS.md`](../AGENTS.md), [`README.md`](../README.md), [`CONTRIBUTING.md`](../CONTRIBUTING.md) | `bash macos/scripts/public_hygiene_check.sh` blocks signing identity, Team ID, bundle ID, `.signing.env`, and private-path leaks. |
 | macOS visible/runtime changes require the relevant build, E2E, hygiene, or playbook validation before merge. | [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`playbooks/README.md`](../playbooks/README.md), [`macos/PERF.md`](../macos/PERF.md) | Run focused tests during iteration and the heavier launcher/build/playbook validation at batch boundaries. |
 | Performance work starts with reproduction and instrumentation before optimization. | [`macos/PERF.md`](../macos/PERF.md) | Capture traces, logs, CPU/RAM samples, or host diagnostics before assigning cause. Separate confirmed, probable, and discarded causes. |
-| Android and Web are launched through central launcher flows in the private workspace. | Private workspace operating instructions, public platform READMEs | PENDING GUARDRAIL: mirror the public, non-private launcher contract into platform docs or add public script wrappers when those surfaces become supported. |
+| Android and Web have public, non-private launcher contracts. | [`android/README.md`](../android/README.md), [`web/README.md`](../web/README.md) | `scripts/launch-android.sh` and `scripts/launch-web.sh` are the safe public wrappers; private workspace launchers may wrap them but are not required by public docs. |
 
 ## Interface governance
 
@@ -72,5 +72,4 @@ The contract format is decision -> document -> validation.
 
 ## Known pending guardrails
 
-- PENDING GUARDRAIL: publish a non-private launcher contract for Android/Web
-  once those targets are ready for external contributors.
+All previously listed guardrails now have a script or public launcher contract.

@@ -290,10 +290,14 @@ for snippet in \
   "New workspace-local framework writes use \`.claw/\`" \
   "Sensitive native permissions" \
   "Source file boundaries" \
-  "PENDING GUARDRAIL"
+  "scripts/launch-android.sh" \
+  "scripts/launch-web.sh"
 do
   require_snippet "docs/decision-map.md" "$snippet"
 done
+
+require_snippet "android/README.md" "../scripts/launch-android.sh assemble"
+require_snippet "web/README.md" "scripts/launch-web.sh dev"
 
 for snippet in \
   "Status: accepted" \
