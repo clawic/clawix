@@ -89,6 +89,24 @@ for (const kind of ["pattern", "debt", "protected", "exception"]) {
     fail(`${manifestPath}.requiredReferenceKinds must include ${kind}`);
   }
 }
+requireFields(manifest?.publicReferencePolicy, `${manifestPath}.publicReferencePolicy`, [
+  "allowRepoRelativePath",
+  "allowMarkdownAnchor",
+  "forbidAbsolutePath",
+  "forbidHomePath",
+  "forbidPrivateRootAlias",
+]);
+for (const [field, expected] of Object.entries({
+  allowRepoRelativePath: true,
+  allowMarkdownAnchor: true,
+  forbidAbsolutePath: true,
+  forbidHomePath: true,
+  forbidPrivateRootAlias: true,
+})) {
+  if (manifest?.publicReferencePolicy?.[field] !== expected) {
+    fail(`${manifestPath}.publicReferencePolicy.${field} must be ${expected}`);
+  }
+}
 
 const inventoryPath = manifest?.inventoryPath || "docs/ui/visible-surfaces.inventory.json";
 const inventory = readJson(inventoryPath);
