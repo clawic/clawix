@@ -57,9 +57,22 @@ requireFields(manifest, detectorPath, [
   "detectors",
 ]);
 
-const sourceRoots = new Set(requireArray(manifest, detectorPath, "sourceRoots"));
+const sourceRoots = requireArray(manifest, detectorPath, "sourceRoots");
+const sourceRootSet = new Set(sourceRoots);
+for (const [index, sourceRoot] of sourceRoots.entries()) {
+  const label = `${detectorPath}.sourceRoots[${index}]`;
+  if (typeof sourceRoot !== "string" || sourceRoot === "") {
+    fail(`${label} must be a non-empty string`);
+    continue;
+  }
+  if (sourceRoot.startsWith("/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://")) {
+    fail(`${label} must be a safe relative path`);
+    continue;
+  }
+  if (!fs.existsSync(path.join(rootDir, sourceRoot))) fail(`${label} does not exist`);
+}
 for (const root of ["macos/Sources", "ios/Sources", "apps/macos/Sources", "apps/ios/Sources", "android/app/src/main", "web/src"]) {
-  if (!sourceRoots.has(root)) fail(`${detectorPath}.sourceRoots must include ${root}`);
+  if (!sourceRootSet.has(root)) fail(`${detectorPath}.sourceRoots must include ${root}`);
 }
 
 const requiredKinds = new Set(requireArray(manifest, detectorPath, "requiredChangeKinds"));

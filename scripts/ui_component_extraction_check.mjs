@@ -210,6 +210,18 @@ requireFields(sourceAudit, `${manifestPath}.sourceAudit`, ["roots", "fileExtensi
 const sourceRoots = requireArray(sourceAudit, `${manifestPath}.sourceAudit`, "roots");
 const extensions = new Set(requireArray(sourceAudit, `${manifestPath}.sourceAudit`, "fileExtensions"));
 const skippedDirectories = new Set(requireArray(sourceAudit, `${manifestPath}.sourceAudit`, "skippedDirectories"));
+for (const [index, sourceRoot] of sourceRoots.entries()) {
+  const label = `${manifestPath}.sourceAudit.roots[${index}]`;
+  if (typeof sourceRoot !== "string" || sourceRoot === "") {
+    fail(`${label} must be a non-empty string`);
+    continue;
+  }
+  if (sourceRoot.startsWith("/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://")) {
+    fail(`${label} must be a safe relative path`);
+    continue;
+  }
+  if (!fs.existsSync(path.join(rootDir, sourceRoot))) fail(`${label} does not exist`);
+}
 for (const sourceRoot of ["macos/Sources", "ios/Sources", "apps/macos/Sources", "apps/ios/Sources", "android/app/src/main", "web/src"]) {
   if (!sourceRoots.includes(sourceRoot)) {
     fail(`${manifestPath}.sourceAudit.roots must include ${sourceRoot}`);
