@@ -325,66 +325,66 @@
         }
       }
     },
-    " is deprecated. Use ": {
+    " has been replaced. Use ": {
       "localizations": {
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": " está obsoleto. Usa "
+            "value": " se reemplazó. Usa "
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": " is deprecated. Use "
+            "value": " has been replaced. Use "
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": " est obsolète. Utilisez "
+            "value": " a été remplacé. Utilisez "
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": " ist veraltet. Verwende "
+            "value": " wurde ersetzt. Verwende "
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": " è deprecato. Usa "
+            "value": " è stato sostituito. Usa "
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": " foi descontinuado. Use "
+            "value": " foi substituído. Use "
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": " は非推奨です。"
+            "value": " は置き換えられました。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": " 已弃用。请使用 "
+            "value": " 已被替换。请使用 "
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "은(는) 더 이상 사용되지 않습니다. "
+            "value": "은(는) 교체되었습니다. "
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": " устарело. Используйте "
+            "value": " заменено. Используйте "
           }
         }
       }

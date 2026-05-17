@@ -17,7 +17,7 @@ struct ConfigurationPage: View {
                 .foregroundColor(Palette.textPrimary)
                 .padding(.bottom, 14)
 
-            DeprecationBanner()
+            ReplacementBanner()
                 .padding(.bottom, 14)
 
             HStack {
@@ -120,7 +120,7 @@ struct PermissionToggleRow: View {
     }
 }
 
-struct DeprecationBanner: View {
+struct ReplacementBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             LucideIcon(.circleAlert, size: 13)
@@ -128,7 +128,7 @@ struct DeprecationBanner: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 0) {
                     InlineCode("[features].collab")
-                    Text(" is deprecated. Use ")
+                    Text(" has been replaced. Use ")
                         .foregroundColor(Color(white: 0.85))
                     InlineCode("[features].multi_agent")
                     Text(" instead.")
