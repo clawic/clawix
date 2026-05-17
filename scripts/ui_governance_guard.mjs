@@ -12,6 +12,7 @@ const simulateWrongFileVisualScope = process.argv.includes("--simulate-wrong-fil
 const simulateLayoutOnlyVisualScope = process.argv.includes("--simulate-layout-only-visual-scope");
 const simulateRevokedVisualScope = process.argv.includes("--simulate-revoked-visual-scope");
 const simulateExpiredVisualScope = process.argv.includes("--simulate-expired-visual-scope");
+const simulateBudgetKindVisualScope = process.argv.includes("--simulate-budget-kind-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -626,6 +627,19 @@ if (simulateExpiredVisualScope) {
     },
   ];
 }
+if (simulateBudgetKindVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-budget-kind-scope",
+      status: "approved",
+      files: ["web/src/simulated-visual-diff.tsx"],
+      changeKinds: ["layout", "microcopy"],
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout"] },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
 
 function fileMatchesScope(file, scopeFiles = []) {
   return scopeFiles.some((scopeFile) => {
@@ -647,6 +661,9 @@ function approvedScopeForHits(hits) {
   const scopeFiles = Array.isArray(scope.files) ? scope.files : [];
   const scopeChangeKinds = new Set(Array.isArray(scope.changeKinds) ? scope.changeKinds : []);
   const changeBudget = scope.changeBudget || {};
+  const budgetChangeKinds = new Set(
+    Array.isArray(changeBudget.allowedChangeKinds) ? changeBudget.allowedChangeKinds : [...scopeChangeKinds],
+  );
 
   for (const file of files) {
     if (!fileMatchesScope(file, scopeFiles)) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include ${file}` };
@@ -654,6 +671,11 @@ function approvedScopeForHits(hits) {
   for (const changeKind of changeKinds) {
     if (!scopeChangeKinds.has(changeKind)) {
       return { ok: false, reason: `scope ${requestedVisualScopeId} does not allow ${changeKind}` };
+    }
+  }
+  for (const changeKind of changeKinds) {
+    if (!budgetChangeKinds.has(changeKind)) {
+      return { ok: false, reason: `scope ${requestedVisualScopeId} changeBudget does not allow ${changeKind}` };
     }
   }
   if (Number.isInteger(changeBudget.maxFiles) && files.size > changeBudget.maxFiles) {

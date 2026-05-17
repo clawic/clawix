@@ -12,6 +12,7 @@ const simulateWrongFileVisualScope = args.includes("--simulate-wrong-file-visual
 const simulateLayoutOnlyVisualScope = args.includes("--simulate-layout-only-visual-scope");
 const simulateRevokedVisualScope = args.includes("--simulate-revoked-visual-scope");
 const simulateExpiredVisualScope = args.includes("--simulate-expired-visual-scope");
+const simulateBudgetKindVisualScope = args.includes("--simulate-budget-kind-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -168,6 +169,19 @@ if (simulateExpiredVisualScope) {
     },
   ];
 }
+if (simulateBudgetKindVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-budget-kind-scope",
+      status: "approved",
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout"] },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
 
 const governedPattern = /^docs\/ui\/pattern-registry\/patterns\/[^/]+\.pattern\.json$/;
 const governedFields = [
@@ -195,12 +209,20 @@ function approvedScopeForHits(hits) {
   const files = new Set(hits.map((hit) => hit.path));
   const scopeChangeKinds = new Set(Array.isArray(scope.changeKinds) ? scope.changeKinds : []);
   const changeBudget = scope.changeBudget || {};
+  const budgetChangeKinds = new Set(
+    Array.isArray(changeBudget.allowedChangeKinds) ? changeBudget.allowedChangeKinds : [...scopeChangeKinds],
+  );
   for (const file of files) {
     if (!fileMatchesScope(file, scope.files || [])) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include ${file}` };
   }
   for (const hit of hits) {
     if (!scopeChangeKinds.has(hit.scopeChangeKind)) {
       return { ok: false, reason: `scope ${requestedVisualScopeId} does not allow ${hit.scopeChangeKind}` };
+    }
+  }
+  for (const hit of hits) {
+    if (!budgetChangeKinds.has(hit.scopeChangeKind)) {
+      return { ok: false, reason: `scope ${requestedVisualScopeId} changeBudget does not allow ${hit.scopeChangeKind}` };
     }
   }
   if (Number.isInteger(changeBudget.maxFiles) && files.size > changeBudget.maxFiles) {

@@ -277,6 +277,35 @@ for (const snippet of [
   if (!authorizedExpiredScopeOutput.includes(snippet)) fail(`authorized expired-scope failure output is missing: ${snippet}`);
 }
 
+let authorizedBudgetKindScopeOutput = "";
+let authorizedBudgetKindScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-budget-kind-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-budget-kind-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedBudgetKindScopeExitCode = error.status || 1;
+  authorizedBudgetKindScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedBudgetKindScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the approved visual scope budget does not allow the detected change kind");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-budget-kind-scope",
+  "changeBudget does not allow microcopy",
+]) {
+  if (!authorizedBudgetKindScopeOutput.includes(snippet)) fail(`authorized budget-kind-scope failure output is missing: ${snippet}`);
+}
+
 let wrongModelOutput = "";
 let wrongModelExitCode = 0;
 try {
@@ -569,6 +598,36 @@ for (const snippet of [
   "scope simulated-expired-scope expired on 2000-01-01",
 ]) {
   if (!patternAuthorizedExpiredScopeOutput.includes(snippet)) fail(`pattern authorized expired-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedBudgetKindScopeOutput = "";
+let patternAuthorizedBudgetKindScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-budget-kind-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-budget-kind-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedBudgetKindScopeExitCode = error.status || 1;
+  patternAuthorizedBudgetKindScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedBudgetKindScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the approved visual scope budget does not allow the detected change kind");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-budget-kind-scope",
+  "changeBudget does not allow microcopy",
+]) {
+  if (!patternAuthorizedBudgetKindScopeOutput.includes(snippet)) fail(`pattern authorized budget-kind-scope failure output is missing: ${snippet}`);
 }
 
 let patternWrongModelOutput = "";
