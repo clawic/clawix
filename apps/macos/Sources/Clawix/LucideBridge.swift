@@ -1,7 +1,7 @@
 import SwiftUI
 import LucideIcon
 
-// Lucide-side glue layer for legacy SF Symbol call sites.
+// Lucide-side glue layer for SF Symbol-named call sites.
 //
 // `Image(lucide: .chevron_down)` is the canonical way to render a Lucide
 // icon: it goes through the asset catalog the package ships, so the

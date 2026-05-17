@@ -703,6 +703,18 @@ for (const pattern of ["legacy SF Symbol", "init(lucideOrSystem", "Compatibility
   }
 }
 
+for (const relativePath of [
+  "apps/macos/Sources/Clawix/LucideBridge.swift",
+  "apps/ios/Sources/Clawix/Theme/LucideBridge.swift",
+]) {
+  const source = read(relativePath);
+  for (const pattern of ["legacy SF Symbol"]) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must describe current Lucide bridge paths without legacy wording: ${JSON.stringify(pattern)}`);
+    }
+  }
+}
+
 for (const [relativePath, patterns] of [
   ["ios/Sources/Clawix/ChatDetail/ChatDetailView.swift", ["legacy stop(_:)"]],
   ["ios/Sources/Clawix/ClawixApp.swift", ["legacy `openChatId` flag"]],
