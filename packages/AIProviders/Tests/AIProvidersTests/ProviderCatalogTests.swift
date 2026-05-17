@@ -52,6 +52,19 @@ final class ProviderCatalogTests: XCTestCase {
         XCTAssertEqual(model?.id, "gpt-4o")
     }
 
+    func testXAICatalogUsesCurrentStableModelAliases() {
+        let xai = ProviderCatalog.definition(for: .xai)!
+        let ids = Set(xai.models.map(\.id))
+        XCTAssertEqual(ids, [
+            "grok-4.3-latest",
+            "grok-4.20-reasoning-latest",
+            "grok-4.20-non-reasoning-latest",
+        ])
+        XCTAssertFalse(ids.contains("grok-2-latest"))
+        XCTAssertFalse(ids.contains("grok-2-vision-latest"))
+        XCTAssertFalse(ids.contains("grok-beta"))
+    }
+
     func testFallbackModelLookupWhenNoDefault() {
         // Cursor lists no `isDefaultFor` flags; should still return any
         // model that lists `.chat`.

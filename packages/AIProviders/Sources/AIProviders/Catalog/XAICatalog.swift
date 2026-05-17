@@ -12,26 +12,26 @@ public enum XAICatalog {
         brand: ProviderBrand(monogram: "X", colorHex: "#000000"),
         models: [
             ModelDefinition(
-                id: "grok-2-latest",
+                id: "grok-4.3-latest",
                 providerId: .xai,
-                displayName: "Grok 2",
+                displayName: "Grok 4.3",
                 capabilities: [.chat, .toolUse],
-                contextWindow: 131_072,
+                contextWindow: 1_000_000,
                 isDefaultFor: [.chat]
             ),
             ModelDefinition(
-                id: "grok-2-vision-latest",
+                id: "grok-4.20-reasoning-latest",
                 providerId: .xai,
-                displayName: "Grok 2 Vision",
-                capabilities: [.chat, .vision, .toolUse],
-                contextWindow: 32_768
+                displayName: "Grok 4.20 Reasoning",
+                capabilities: [.chat, .toolUse],
+                contextWindow: 2_000_000
             ),
             ModelDefinition(
-                id: "grok-beta",
+                id: "grok-4.20-non-reasoning-latest",
                 providerId: .xai,
-                displayName: "Grok Beta",
-                capabilities: [.chat],
-                contextWindow: 131_072
+                displayName: "Grok 4.20 Non-Reasoning",
+                capabilities: [.chat, .toolUse],
+                contextWindow: 2_000_000
             )
         ]
     )
