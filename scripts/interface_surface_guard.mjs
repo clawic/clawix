@@ -39,6 +39,10 @@ function requireSnippet(relativePath, snippet) {
   }
 }
 
+function countOccurrences(text, token) {
+  return text.split(token).length - 1;
+}
+
 const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
 if (registry.version !== 1) fail("interface registry version must be 1");
 if (registry.sourceConversationId !== "019e2727-cf2b-7c41-9feb-1fd2b5c77554") {
@@ -391,6 +395,35 @@ for (const [relativePath, source] of [
     if (source.includes(pattern)) {
       fail(`${relativePath} must expose stable local v1 names for upstream wire fields: ${JSON.stringify(pattern)}`);
     }
+  }
+}
+
+const upstreamExtensionWireKey = "experimentalApi";
+const allowedUpstreamExtensionWireKeyCounts = new Map([
+  ["macos/Sources/Clawix/AgentBackend/ClawixProtocol.swift", 1],
+  ["macos/Helpers/Bridged/Sources/clawix-bridge/BackendRPC.swift", 1],
+  ["macos/Tests/ClawixMeshTests/ClawixProtocolEncodingTests.swift", 1],
+]);
+const upstreamExtensionWireKeyFiles = [
+  ...listFiles("macos", ".swift"),
+  ...listFiles("ios", ".swift"),
+  ...listFiles("android", ".kt"),
+  ...listFiles("windows", ".cs"),
+  ...listFiles("docs", ".md"),
+  ...listFiles("docs", ".json"),
+];
+for (const relativePath of upstreamExtensionWireKeyFiles) {
+  const count = countOccurrences(read(relativePath), upstreamExtensionWireKey);
+  if (count === 0) continue;
+  const expected = allowedUpstreamExtensionWireKeyCounts.get(relativePath);
+  if (expected !== count) {
+    fail(`${relativePath} must not expose ${upstreamExtensionWireKey}; only stable local extensionFields names may use the upstream wire key`);
+  }
+}
+for (const [relativePath, expected] of allowedUpstreamExtensionWireKeyCounts) {
+  const count = countOccurrences(read(relativePath), upstreamExtensionWireKey);
+  if (count !== expected) {
+    fail(`${relativePath} must contain exactly ${expected} upstream ${upstreamExtensionWireKey} wire-key mapping`);
   }
 }
 
