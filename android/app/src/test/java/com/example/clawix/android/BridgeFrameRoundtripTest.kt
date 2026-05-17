@@ -9,6 +9,17 @@ import com.example.clawix.android.core.ClientKind
 import com.example.clawix.android.core.PairingPayload
 import com.example.clawix.android.core.WireAttachment
 import com.example.clawix.android.core.WireAttachmentKind
+import com.example.clawix.android.core.WireAudioAsset
+import com.example.clawix.android.core.WireAudioAssetWithTranscripts
+import com.example.clawix.android.core.WireAudioAttachTranscriptInput
+import com.example.clawix.android.core.WireAudioKind
+import com.example.clawix.android.core.WireAudioListFilter
+import com.example.clawix.android.core.WireAudioListResult
+import com.example.clawix.android.core.WireAudioOriginActor
+import com.example.clawix.android.core.WireAudioRegisterRequest
+import com.example.clawix.android.core.WireAudioRegisterTranscript
+import com.example.clawix.android.core.WireAudioTranscript
+import com.example.clawix.android.core.WireAudioTranscriptRole
 import com.example.clawix.android.core.WireSession
 import com.example.clawix.android.core.WireMessage
 import com.example.clawix.android.core.WireRole
@@ -36,6 +47,36 @@ import org.junit.Test
 class BridgeFrameRoundtripTest {
 
     private val parser = Json { isLenient = true; ignoreUnknownKeys = true }
+
+    private val sampleTranscript = WireAudioTranscript(
+        id = "transcript-1",
+        audioId = "audio-1",
+        role = WireAudioTranscriptRole.transcription,
+        text = "hello audio",
+        provider = "whisper",
+        language = "en",
+        createdAt = 1_750_000_001_000,
+        isPrimary = true,
+    )
+
+    private val sampleAudioAsset = WireAudioAssetWithTranscripts(
+        asset = WireAudioAsset(
+            id = "audio-1",
+            kind = WireAudioKind.user_message,
+            appId = "clawix",
+            originActor = WireAudioOriginActor.user,
+            mimeType = "audio/m4a",
+            bytesRelPath = "clawix/audio-1.m4a",
+            durationMs = 2_400,
+            createdAt = 1_750_000_000_000,
+            deviceId = "device-android",
+            sessionId = "session-1",
+            threadId = "thread-1",
+            linkedMessageId = "message-1",
+            metadataJson = """{"source":"fixture"}""",
+        ),
+        transcripts = listOf(sampleTranscript),
+    )
 
     private fun roundtrip(body: BridgeBody) {
         val frame = BridgeFrame(body = body)
@@ -140,6 +181,73 @@ class BridgeFrameRoundtripTest {
         roundtrip(BridgeBody.RequestAudio("a-1"))
         roundtrip(BridgeBody.AudioSnapshot("a-1", "AAA=", "audio/m4a", null))
         roundtrip(BridgeBody.AudioSnapshot("a-1", null, null, "not found"))
+    }
+
+    @Test fun roundtrip_audio_catalog_v1() {
+        roundtrip(
+            BridgeBody.AudioRegister(
+                "req-audio-1",
+                WireAudioRegisterRequest(
+                    kind = WireAudioKind.user_message,
+                    appId = "clawix",
+                    originActor = WireAudioOriginActor.user,
+                    mimeType = "audio/m4a",
+                    bytesBase64 = "AAA=",
+                    durationMs = 2_400,
+                    deviceId = "device-android",
+                    sessionId = "session-1",
+                    threadId = "thread-1",
+                    linkedMessageId = "message-1",
+                    metadataJson = """{"source":"android-test"}""",
+                    transcript = WireAudioRegisterTranscript(
+                        text = "hello audio",
+                        role = WireAudioTranscriptRole.transcription,
+                        provider = "whisper",
+                        language = "en",
+                    ),
+                ),
+            )
+        )
+        roundtrip(
+            BridgeBody.AudioAttachTranscript(
+                "req-audio-2",
+                "audio-1",
+                WireAudioAttachTranscriptInput(
+                    text = "better transcript",
+                    role = WireAudioTranscriptRole.transcription,
+                    provider = "whisper-large",
+                    language = "en",
+                    markAsPrimary = true,
+                ),
+            )
+        )
+        roundtrip(BridgeBody.AudioGet("req-audio-3", "audio-1", "clawix"))
+        roundtrip(BridgeBody.AudioGetBytes("req-audio-4", "audio-1", "clawix"))
+        roundtrip(
+            BridgeBody.AudioList(
+                "req-audio-5",
+                WireAudioListFilter(
+                    appId = "clawix",
+                    kind = WireAudioKind.user_message,
+                    originActor = WireAudioOriginActor.user,
+                    deviceId = "device-android",
+                    sessionId = "session-1",
+                    threadId = "thread-1",
+                    linkedMessageId = "message-1",
+                    fromCreatedAt = 1_750_000_000_000,
+                    toCreatedAt = 1_750_000_100_000,
+                    limit = 50,
+                    offset = 0,
+                ),
+            )
+        )
+        roundtrip(BridgeBody.AudioDelete("req-audio-6", "audio-1", "clawix"))
+        roundtrip(BridgeBody.AudioRegisterResult("req-audio-1", sampleAudioAsset, null))
+        roundtrip(BridgeBody.AudioAttachTranscriptResult("req-audio-2", sampleTranscript, null))
+        roundtrip(BridgeBody.AudioGetResult("req-audio-3", sampleAudioAsset, null))
+        roundtrip(BridgeBody.AudioBytesResult("req-audio-4", "AAA=", "audio/m4a", 2_400, null))
+        roundtrip(BridgeBody.AudioListResult("req-audio-5", WireAudioListResult(listOf(sampleAudioAsset), 1), null))
+        roundtrip(BridgeBody.AudioDeleteResult("req-audio-6", true, null))
     }
 
     @Test fun roundtrip_images_v1() {

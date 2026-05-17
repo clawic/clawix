@@ -150,6 +150,70 @@ sealed class BridgeBody {
         override val typeTag = "rateLimitsUpdated"
     }
 
+    // MARK: - audio catalog
+    data class AudioRegister(val requestId: String, val request: WireAudioRegisterRequest) : BridgeBody() {
+        override val typeTag = "audioRegister"
+    }
+    data class AudioAttachTranscript(
+        val requestId: String,
+        val audioId: String,
+        val transcript: WireAudioAttachTranscriptInput,
+    ) : BridgeBody() {
+        override val typeTag = "audioAttachTranscript"
+    }
+    data class AudioGet(val requestId: String, val audioId: String, val appId: String) : BridgeBody() {
+        override val typeTag = "audioGet"
+    }
+    data class AudioGetBytes(val requestId: String, val audioId: String, val appId: String) : BridgeBody() {
+        override val typeTag = "audioGetBytes"
+    }
+    data class AudioList(val requestId: String, val filter: WireAudioListFilter) : BridgeBody() {
+        override val typeTag = "audioList"
+    }
+    data class AudioDelete(val requestId: String, val audioId: String, val appId: String) : BridgeBody() {
+        override val typeTag = "audioDelete"
+    }
+    data class AudioRegisterResult(
+        val requestId: String,
+        val asset: WireAudioAssetWithTranscripts?,
+        val errorMessage: String?,
+    ) : BridgeBody() {
+        override val typeTag = "audioRegisterResult"
+    }
+    data class AudioAttachTranscriptResult(
+        val requestId: String,
+        val transcript: WireAudioTranscript?,
+        val errorMessage: String?,
+    ) : BridgeBody() {
+        override val typeTag = "audioAttachTranscriptResult"
+    }
+    data class AudioGetResult(
+        val requestId: String,
+        val asset: WireAudioAssetWithTranscripts?,
+        val errorMessage: String?,
+    ) : BridgeBody() {
+        override val typeTag = "audioGetResult"
+    }
+    data class AudioBytesResult(
+        val requestId: String,
+        val audioBase64: String?,
+        val mimeType: String?,
+        val durationMs: Int?,
+        val errorMessage: String?,
+    ) : BridgeBody() {
+        override val typeTag = "audioBytesResult"
+    }
+    data class AudioListResult(
+        val requestId: String,
+        val list: WireAudioListResult?,
+        val errorMessage: String?,
+    ) : BridgeBody() {
+        override val typeTag = "audioListResult"
+    }
+    data class AudioDeleteResult(val requestId: String, val deleted: Boolean, val errorMessage: String?) : BridgeBody() {
+        override val typeTag = "audioDeleteResult"
+    }
+
     // MARK: - unknown future type (forward-compat)
     data class Unknown(val type: String, val raw: JsonObject) : BridgeBody() { override val typeTag = type }
 }

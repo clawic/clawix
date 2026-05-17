@@ -121,7 +121,7 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
         }
         is BridgeBody.BridgeStateFrame -> {
             b.put("state", body.state)
-            b.put("chatCount", body.sessionCount)
+            b.put("chatCount", body.chatCount)
             body.message?.let { b.put("message", it) }
         }
         is BridgeBody.RateLimitsSnapshot -> {
@@ -137,6 +137,66 @@ internal fun encodePayload(body: BridgeBody, b: kotlinx.serialization.json.JsonO
                 "rateLimitsByLimitId",
                 BridgeJson.encodeToJsonElement(WireRateLimitSnapshot.mapSerializer, body.byLimitId)
             )
+        }
+        is BridgeBody.AudioRegister -> {
+            b.put("requestId", body.requestId)
+            b.put("request", BridgeJson.encodeToJsonElement(WireAudioRegisterRequest.serializer(), body.request))
+        }
+        is BridgeBody.AudioAttachTranscript -> {
+            b.put("requestId", body.requestId)
+            b.put("audioId", body.audioId)
+            b.put("transcript", BridgeJson.encodeToJsonElement(WireAudioAttachTranscriptInput.serializer(), body.transcript))
+        }
+        is BridgeBody.AudioGet -> {
+            b.put("requestId", body.requestId)
+            b.put("audioId", body.audioId)
+            b.put("appId", body.appId)
+        }
+        is BridgeBody.AudioGetBytes -> {
+            b.put("requestId", body.requestId)
+            b.put("audioId", body.audioId)
+            b.put("appId", body.appId)
+        }
+        is BridgeBody.AudioList -> {
+            b.put("requestId", body.requestId)
+            b.put("filter", BridgeJson.encodeToJsonElement(WireAudioListFilter.serializer(), body.filter))
+        }
+        is BridgeBody.AudioDelete -> {
+            b.put("requestId", body.requestId)
+            b.put("audioId", body.audioId)
+            b.put("appId", body.appId)
+        }
+        is BridgeBody.AudioRegisterResult -> {
+            b.put("requestId", body.requestId)
+            body.asset?.let { b.put("asset", BridgeJson.encodeToJsonElement(WireAudioAssetWithTranscripts.serializer(), it)) }
+            body.errorMessage?.let { b.put("errorMessage", it) }
+        }
+        is BridgeBody.AudioAttachTranscriptResult -> {
+            b.put("requestId", body.requestId)
+            body.transcript?.let { b.put("transcript", BridgeJson.encodeToJsonElement(WireAudioTranscript.serializer(), it)) }
+            body.errorMessage?.let { b.put("errorMessage", it) }
+        }
+        is BridgeBody.AudioGetResult -> {
+            b.put("requestId", body.requestId)
+            body.asset?.let { b.put("asset", BridgeJson.encodeToJsonElement(WireAudioAssetWithTranscripts.serializer(), it)) }
+            body.errorMessage?.let { b.put("errorMessage", it) }
+        }
+        is BridgeBody.AudioBytesResult -> {
+            b.put("requestId", body.requestId)
+            body.audioBase64?.let { b.put("audioBase64", it) }
+            body.mimeType?.let { b.put("mimeType", it) }
+            body.durationMs?.let { b.put("durationMs", it) }
+            body.errorMessage?.let { b.put("errorMessage", it) }
+        }
+        is BridgeBody.AudioListResult -> {
+            b.put("requestId", body.requestId)
+            body.list?.let { b.put("list", BridgeJson.encodeToJsonElement(WireAudioListResult.serializer(), it)) }
+            body.errorMessage?.let { b.put("errorMessage", it) }
+        }
+        is BridgeBody.AudioDeleteResult -> {
+            b.put("requestId", body.requestId)
+            b.put("deleted", body.deleted)
+            body.errorMessage?.let { b.put("errorMessage", it) }
         }
         is BridgeBody.Unknown -> {
             // Re-emit raw fields preserving keys.

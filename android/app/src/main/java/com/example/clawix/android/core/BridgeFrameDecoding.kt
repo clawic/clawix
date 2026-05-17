@@ -119,6 +119,66 @@ internal fun decodePayload(type: String, obj: JsonObject): BridgeBody = when (ty
         snapshot = obj.optObj("rateLimits", WireRateLimitSnapshot.serializer()),
         byLimitId = obj.optMap("rateLimitsByLimitId", WireRateLimitSnapshot.mapSerializer) ?: emptyMap(),
     )
+    "audioRegister" -> BridgeBody.AudioRegister(
+        obj.requireString("requestId"),
+        obj.requireObj("request", WireAudioRegisterRequest.serializer()),
+    )
+    "audioAttachTranscript" -> BridgeBody.AudioAttachTranscript(
+        obj.requireString("requestId"),
+        obj.requireString("audioId"),
+        obj.requireObj("transcript", WireAudioAttachTranscriptInput.serializer()),
+    )
+    "audioGet" -> BridgeBody.AudioGet(
+        obj.requireString("requestId"),
+        obj.requireString("audioId"),
+        obj.requireString("appId"),
+    )
+    "audioGetBytes" -> BridgeBody.AudioGetBytes(
+        obj.requireString("requestId"),
+        obj.requireString("audioId"),
+        obj.requireString("appId"),
+    )
+    "audioList" -> BridgeBody.AudioList(
+        obj.requireString("requestId"),
+        obj.requireObj("filter", WireAudioListFilter.serializer()),
+    )
+    "audioDelete" -> BridgeBody.AudioDelete(
+        obj.requireString("requestId"),
+        obj.requireString("audioId"),
+        obj.requireString("appId"),
+    )
+    "audioRegisterResult" -> BridgeBody.AudioRegisterResult(
+        obj.requireString("requestId"),
+        obj.optObj("asset", WireAudioAssetWithTranscripts.serializer()),
+        obj.optString("errorMessage"),
+    )
+    "audioAttachTranscriptResult" -> BridgeBody.AudioAttachTranscriptResult(
+        obj.requireString("requestId"),
+        obj.optObj("transcript", WireAudioTranscript.serializer()),
+        obj.optString("errorMessage"),
+    )
+    "audioGetResult" -> BridgeBody.AudioGetResult(
+        obj.requireString("requestId"),
+        obj.optObj("asset", WireAudioAssetWithTranscripts.serializer()),
+        obj.optString("errorMessage"),
+    )
+    "audioBytesResult" -> BridgeBody.AudioBytesResult(
+        obj.requireString("requestId"),
+        obj.optString("audioBase64"),
+        obj.optString("mimeType"),
+        obj.optInt("durationMs"),
+        obj.optString("errorMessage"),
+    )
+    "audioListResult" -> BridgeBody.AudioListResult(
+        obj.requireString("requestId"),
+        obj.optObj("list", WireAudioListResult.serializer()),
+        obj.optString("errorMessage"),
+    )
+    "audioDeleteResult" -> BridgeBody.AudioDeleteResult(
+        obj.requireString("requestId"),
+        obj.requireBool("deleted"),
+        obj.optString("errorMessage"),
+    )
     else -> BridgeBody.Unknown(type, obj)
 }
 

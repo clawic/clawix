@@ -605,6 +605,22 @@ for (const [relativePath, phrases] of [
 
 for (const [relativePath, snippets] of [
   [
+    "android/app/src/main/java/com/example/clawix/android/core/BridgeProtocol.kt",
+    ["AudioRegister(val requestId: String", "AudioGetBytes(val requestId: String", "AudioListResult("],
+  ],
+  [
+    "android/app/src/main/java/com/example/clawix/android/core/BridgeFrameEncoding.kt",
+    ["is BridgeBody.AudioRegister ->", "is BridgeBody.AudioBytesResult ->", 'b.put("chatCount", body.chatCount)'],
+  ],
+  [
+    "android/app/src/main/java/com/example/clawix/android/core/BridgeFrameDecoding.kt",
+    ['"audioRegister" -> BridgeBody.AudioRegister', '"audioBytesResult" -> BridgeBody.AudioBytesResult', '"audioDeleteResult" -> BridgeBody.AudioDeleteResult'],
+  ],
+  [
+    "android/app/src/test/java/com/example/clawix/android/BridgeFrameRoundtripTest.kt",
+    ["roundtrip_audio_catalog_v1", "BridgeBody.AudioRegister(", "BridgeBody.AudioDeleteResult("],
+  ],
+  [
     "windows/Clawix.Core/BridgeBody.cs",
     ["AudioRegister(string RequestId", "AudioGetBytes(string RequestId", "AudioListResult(string RequestId"],
   ],

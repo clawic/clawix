@@ -182,6 +182,115 @@ data class WireAudioRef(
 )
 
 @Serializable
+enum class WireAudioKind {
+    @SerialName("user_message") user_message,
+    @SerialName("dictation") dictation,
+    @SerialName("agent_tts") agent_tts,
+}
+
+@Serializable
+enum class WireAudioOriginActor {
+    @SerialName("user") user,
+    @SerialName("agent") agent,
+}
+
+@Serializable
+enum class WireAudioTranscriptRole {
+    @SerialName("transcription") transcription,
+    @SerialName("synthesis_source") synthesis_source,
+}
+
+@Serializable
+data class WireAudioTranscript(
+    val id: String,
+    val audioId: String,
+    val role: WireAudioTranscriptRole,
+    val text: String,
+    val provider: String? = null,
+    val language: String? = null,
+    val createdAt: Long,
+    val isPrimary: Boolean,
+)
+
+@Serializable
+data class WireAudioAsset(
+    val id: String,
+    val kind: WireAudioKind,
+    val appId: String,
+    val originActor: WireAudioOriginActor,
+    val mimeType: String,
+    val bytesRelPath: String,
+    val durationMs: Int,
+    val createdAt: Long,
+    val deviceId: String? = null,
+    val sessionId: String? = null,
+    val threadId: String? = null,
+    val linkedMessageId: String? = null,
+    val metadataJson: String? = null,
+)
+
+@Serializable
+data class WireAudioAssetWithTranscripts(
+    val asset: WireAudioAsset,
+    val transcripts: List<WireAudioTranscript> = emptyList(),
+)
+
+@Serializable
+data class WireAudioRegisterTranscript(
+    val text: String,
+    val role: WireAudioTranscriptRole? = null,
+    val provider: String? = null,
+    val language: String? = null,
+)
+
+@Serializable
+data class WireAudioRegisterRequest(
+    val id: String? = null,
+    val kind: WireAudioKind,
+    val appId: String,
+    val originActor: WireAudioOriginActor,
+    val mimeType: String,
+    val bytesBase64: String,
+    val durationMs: Int,
+    val deviceId: String? = null,
+    val sessionId: String? = null,
+    val threadId: String? = null,
+    val linkedMessageId: String? = null,
+    val metadataJson: String? = null,
+    val transcript: WireAudioRegisterTranscript? = null,
+)
+
+@Serializable
+data class WireAudioAttachTranscriptInput(
+    val text: String,
+    val role: WireAudioTranscriptRole = WireAudioTranscriptRole.transcription,
+    val provider: String? = null,
+    val language: String? = null,
+    val markAsPrimary: Boolean? = null,
+)
+
+@Serializable
+data class WireAudioListFilter(
+    val appId: String,
+    val kind: WireAudioKind? = null,
+    val originActor: WireAudioOriginActor? = null,
+    val deviceId: String? = null,
+    val sessionId: String? = null,
+    val threadId: String? = null,
+    val linkedMessageId: String? = null,
+    val fromCreatedAt: Long? = null,
+    val toCreatedAt: Long? = null,
+    val limit: Int? = null,
+    val offset: Int? = null,
+)
+
+@Serializable
+data class WireAudioListResult(
+    val items: List<WireAudioAssetWithTranscripts> = emptyList(),
+    val total: Int,
+)
+
+@Serializable
 data class WireMessage(
     val id: String,
     val role: WireRole,
