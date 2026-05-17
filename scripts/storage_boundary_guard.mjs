@@ -96,6 +96,12 @@ for (const [relativePath, patterns] of forbiddenByPath) {
 
 const manifest = JSON.parse(read("docs/persistent-surface-clawix.manifest.json"));
 const nodes = new Map(manifest.nodes.map((node) => [node.id, node]));
+if (!Array.isArray(manifest.edges) || manifest.edges.length === 0) {
+  fail("persistent surface manifest must preserve route graph edges");
+}
+if (!Array.isArray(manifest.routes) || manifest.routes.length === 0) {
+  fail("persistent surface manifest must preserve route graph routes");
+}
 for (const [id, expectedPath] of [
   ["claw.framework.apps", "~/.claw/apps"],
   ["claw.framework.design", "~/.claw/design"],
