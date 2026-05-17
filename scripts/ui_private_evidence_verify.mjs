@@ -362,6 +362,13 @@ function verifyPublicApprovalState(item, registries, label) {
     }
     return true;
   }
+  if (item.type === "pattern-geometry") {
+    if (registries.renderedGeometryStatus !== "approved") {
+      fail(`${label} is pending approved rendered geometry evidence`);
+      return false;
+    }
+    return true;
+  }
   if (item.type === "rendered-drift") {
     const report = registries.renderedDriftById.get(item.id);
     if (registries.driftBlockingStatuses.has(report?.status)) {
@@ -431,6 +438,7 @@ const privateBaselines = readRepoJson("docs/ui/private-baselines.manifest.json")
 const debtAudit = readRepoJson("docs/ui/debt-audit.manifest.json");
 const copyInventory = readRepoJson("docs/ui/copy.inventory.json");
 const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKinds) ? copyInventory.restrictedCopyKinds : []);
+const renderedGeometry = readRepoJson("docs/ui/rendered-geometry.manifest.json");
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
 const driftPolicy = {
   allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
@@ -445,6 +453,7 @@ const publicRegistries = {
   renderedDriftById: mapByKey(renderedDrift?.reports, (report) => report.coverageId),
   debtAuditById: mapByKey(debtAudit?.entries, (entry) => entry.debtId),
   performanceBudgetByKey: mapByKey(performanceBudgets?.flows, (flow) => `${flow.platform}:${flow.id}`),
+  renderedGeometryStatus: renderedGeometry?.status,
   driftBlockingStatuses: driftPolicy.blockingStatuses,
 };
 
