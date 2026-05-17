@@ -2,12 +2,11 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { assertApprovedScopeMetadata, loadApprovedScopeContract } from "./ui_private_approved_scope_contract.mjs";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
 const errors = [];
-let approvedScopeRequiredFields = ["scopeId", "approvedBy", "approvedAt", "privateApprovalReference"];
-let privateApprovalAlias = "private-codex-ui-approval";
 
 const referenceFields = {
   "surface-baseline": "privateBaselineReference",
@@ -172,37 +171,11 @@ function verifyIsoTimestamp(value, label) {
 }
 
 function verifyApprovedScope(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    fail(`${label} must be an object with approved user scope metadata`);
-    return;
-  }
-  for (const field of approvedScopeRequiredFields) requireField(value, label, field);
-  if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
-  verifyIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
-  const approvalReference = splitReference(value.privateApprovalReference);
-  if (!approvalReference || approvalReference.alias !== privateApprovalAlias) {
-    fail(`${label}.privateApprovalReference must use ${privateApprovalAlias}:`);
-  }
-  if (typeof value.scopeId !== "string" || value.scopeId === "") {
-    fail(`${label}.scopeId must be a non-empty string`);
-  }
+  assertApprovedScopeMetadata(value, label, approvedScopeContract, fail);
 }
 
-function verifyApprovedScopeFields(value, requiredFields, privateApprovalAlias, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    fail(`${label} must be an object with approved user scope metadata`);
-    return;
-  }
-  for (const field of requiredFields || []) requireField(value, label, field);
-  if (value.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
-  verifyIsoTimestamp(value.approvedAt, `${label}.approvedAt`);
-  const approvalReference = splitReference(value.privateApprovalReference);
-  if (!approvalReference || approvalReference.alias !== privateApprovalAlias) {
-    fail(`${label}.privateApprovalReference must use ${privateApprovalAlias}:`);
-  }
-  if (typeof value.scopeId !== "string" || value.scopeId === "") {
-    fail(`${label}.scopeId must be a non-empty string`);
-  }
+function verifyApprovedScopeFields(value, label) {
+  assertApprovedScopeMetadata(value, label, approvedScopeContract, fail);
 }
 
 function deepEqual(left, right) {
@@ -528,12 +501,7 @@ const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKind
 const renderedGeometry = readRepoJson("docs/ui/rendered-geometry.manifest.json");
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
 const mechanicalEquivalence = readRepoJson("docs/ui/mechanical-equivalence.manifest.json");
-const approvalAuthority = readRepoJson("docs/ui/approval-authority.manifest.json");
-const privateVisualValidation = readRepoJson("docs/ui/private-visual-validation.manifest.json");
-approvedScopeRequiredFields = Array.isArray(privateVisualValidation?.requiredApprovedScopeFields)
-  ? privateVisualValidation.requiredApprovedScopeFields
-  : approvedScopeRequiredFields;
-privateApprovalAlias = approvalAuthority?.privateApprovalAlias || privateApprovalAlias;
+const approvedScopeContract = loadApprovedScopeContract(rootDir, fail);
 const driftPolicy = {
   allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
   blockingStatuses: new Set(Array.isArray(renderedDrift?.blockingReportStatuses) ? renderedDrift.blockingReportStatuses : []),
@@ -593,8 +561,6 @@ for (const item of plan.evidence || []) {
     const record = publicRegistries.mechanicalEquivalenceByKey.get(`${item.platform}:${item.id}`);
     verifyApprovedScopeFields(
       evidence.approvedScope,
-      mechanicalEquivalence?.requiredApprovedScopeFields || [],
-      approvalAuthority?.privateApprovalAlias,
       `${label}.approvedScope`,
     );
     if (record) {
