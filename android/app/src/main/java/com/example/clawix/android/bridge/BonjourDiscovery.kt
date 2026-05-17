@@ -28,9 +28,8 @@ data class DiscoveredMac(
  * Wraps `NsdManager` to discover `_clawix-bridge._tcp` advertisements on
  * the LAN. Callers acquire a `WifiManager.MulticastLock` for the
  * lifetime of the discovery (Android filters multicast by default to
- * save battery). On API 34+ migrate to `registerServiceInfoCallback`;
- * fall back to legacy `discoverServices`+`resolveService` for
- * minSdk 29 devices.
+ * save battery). On API 34+ use `registerServiceInfoCallback`; older
+ * minSdk 29 devices use `discoverServices`+`resolveService`.
  *
  * Mirrors iOS `BonjourBrowser` (NSNetServiceBrowser based) but exposes
  * a Flow so coroutines can collect discovered Macs and cancel naturally
@@ -106,8 +105,8 @@ class BonjourDiscovery(context: Context) {
     }
 
     /**
-     * Resolves the given service to host+port. Uses the new callback API
-     * on API 34+, the legacy resolveService on older versions.
+     * Resolves the given service to host+port. Uses the callback API on
+     * API 34+ and the classic resolveService path on older versions.
      */
     @Suppress("DEPRECATION")
     private fun resolve(service: NsdServiceInfo, onResolved: (DiscoveredMac?) -> Unit) {
@@ -133,15 +132,15 @@ class BonjourDiscovery(context: Context) {
                 nsd.registerServiceInfoCallback(service, java.util.concurrent.Executors.newSingleThreadExecutor(), cb)
             } catch (t: Throwable) {
                 Log.w(TAG, "register info callback threw, falling back", t)
-                legacyResolve(service, onResolved)
+                classicResolve(service, onResolved)
             }
         } else {
-            legacyResolve(service, onResolved)
+            classicResolve(service, onResolved)
         }
     }
 
     @Suppress("DEPRECATION")
-    private fun legacyResolve(service: NsdServiceInfo, onResolved: (DiscoveredMac?) -> Unit) {
+    private fun classicResolve(service: NsdServiceInfo, onResolved: (DiscoveredMac?) -> Unit) {
         nsd.resolveService(service, object : NsdManager.ResolveListener {
             override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                 Log.w(TAG, "resolve failed: $errorCode")

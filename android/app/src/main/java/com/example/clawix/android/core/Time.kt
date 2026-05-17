@@ -32,8 +32,7 @@ object IsoDateSerializer : KSerializer<Instant> {
 
 /** Optional variant. The default `@Serializable Instant?` field already
  *  handles null at the property level, but we want a tolerant decoder:
- *  some legacy frames sent `""` for absent dates. We map empty strings
- *  to null so the field still decodes. */
+ *  v1 optional date fields map both `null` and empty strings to absent. */
 object OptionalIsoDateSerializer : KSerializer<Instant?> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("kotlinx.datetime.Instant?", PrimitiveKind.STRING)

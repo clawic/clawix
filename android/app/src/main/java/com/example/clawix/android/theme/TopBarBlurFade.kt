@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
  * Subtle top fade that replaces the bottom edge of an elevated top bar
  * with a gradient back to the background color. Mirrors iOS
  * `TopBarBlurFade`: enough to disambiguate the floating glass pill from
- * scrolling content without requiring an actual blur on legacy APIs.
+ * scrolling content without requiring an actual blur on older Android APIs.
  */
 @Composable
 fun TopBarBlurFade(

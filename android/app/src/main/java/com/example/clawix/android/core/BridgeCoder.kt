@@ -7,14 +7,12 @@ import kotlinx.serialization.json.Json
  * iOS:
  *   - dates are ISO-8601 strings (we encode/decode them manually via
  *     `IsoDateSerializer`)
- *   - extra unknown fields are tolerated so older clients can talk to
- *     newer daemons gracefully
+ *   - extra unknown fields are tolerated for forward-compatible v1 peers
  *   - `encodeDefaults = false` so optional nullables that hold their
  *     default (`null`/`false`/`""`) don't bloat outbound frames. iOS uses
  *     `encodeIfPresent` for the same effect.
- *   - lenient parsing because some daemon code paths used to emit
- *     numeric strings inside int fields (we tolerate them while phasing
- *     out)
+ *   - lenient parsing accepts numeric strings inside int fields from
+ *     host runtimes that serialize loosely.
  */
 object BridgeJson {
     val json: Json = Json {
