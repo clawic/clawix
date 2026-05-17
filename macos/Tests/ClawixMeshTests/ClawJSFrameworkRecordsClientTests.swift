@@ -81,6 +81,24 @@ final class ClawJSFrameworkRecordsClientTests: XCTestCase {
                 && call.contains("--metadata")
         })
         XCTAssertTrue(calls.contains(["skills", "delete", "review", "--json"]))
+        assertFrameworkRecordCommandsOnly(calls)
+    }
+
+    private func assertFrameworkRecordCommandsOnly(_ calls: [[String]], file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertFalse(calls.isEmpty, file: file, line: line)
+        for call in calls {
+            XCTAssertTrue(["snippets", "skills"].contains(call.first), file: file, line: line)
+            XCTAssertTrue(call.contains("--json"), file: file, line: line)
+
+            let commandLine = call.joined(separator: " ")
+            for forbidden in [
+                "UserDefaults",
+                "quickAsk.slashCommandsCustom",
+                "quickAsk.mentionPromptsCustom",
+            ] {
+                XCTAssertFalse(commandLine.contains(forbidden), file: file, line: line)
+            }
+        }
     }
 
     func testProviderRoutingCommandsMapToClawJSRecordsCli() throws {

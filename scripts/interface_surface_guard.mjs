@@ -283,6 +283,75 @@ for (const relativePath of [
   }
 }
 
+for (const snippet of [
+  "| QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | Framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |",
+]) {
+  requireSnippet("docs/interface-matrix.md", snippet);
+}
+const quickAskSnippetsSurface = (registry.surfaces ?? []).find((entry) => entry.id === "quickAsk.snippets");
+if (!quickAskSnippetsSurface) {
+  fail("interface registry is missing quickAsk.snippets");
+} else {
+  const quickAskSurfaceText = `${quickAskSnippetsSurface.featureFlag ?? ""}\n${quickAskSnippetsSurface.humanSurface ?? ""}\n${quickAskSnippetsSurface.programmaticSurface ?? ""}\n${quickAskSnippetsSurface.storageOwner ?? ""}\n${quickAskSnippetsSurface.validation ?? ""}`;
+  for (const snippet of [
+    "quickAsk",
+    "QuickAsk slash commands and mention prompt templates",
+    "Framework snippets/prompts/skills",
+    "framework-snippets",
+    "Snippet migration tests; QuickAsk host prefs remain local",
+  ]) {
+    if (!quickAskSurfaceText.includes(snippet)) fail(`quickAsk.snippets registry row is missing framework snippet snippet ${JSON.stringify(snippet)}`);
+  }
+}
+for (const [relativePath, snippets] of [
+  [
+    "macos/Sources/Clawix/QuickAsk/QuickAskSlashCommands.swift",
+    [
+      "framework-owned snippets",
+      'nonisolated static let snippetKind = "quickask_slash"',
+      "ClawJSFrameworkRecordsClient.shared.listSnippets(kind: Self.snippetKind)",
+      "ClawJSFrameworkRecordsClient.shared.upsertSnippet(",
+      "ClawJSFrameworkRecordsClient.shared.deleteSnippet(",
+    ],
+  ],
+  [
+    "macos/Sources/Clawix/QuickAsk/QuickAskMentions.swift",
+    [
+      'nonisolated static let snippetKind = "quickask_mention"',
+      "ClawJSFrameworkRecordsClient.shared.listSnippets(kind: Self.snippetKind)",
+      "ClawJSFrameworkRecordsClient.shared.upsertSnippet(",
+      "ClawJSFrameworkRecordsClient.shared.deleteSnippet(",
+    ],
+  ],
+  [
+    "macos/Tests/ClawixMeshTests/ClawJSFrameworkRecordsClientTests.swift",
+    [
+      "testSnippetCommandsMapToClawJSRecordsCli",
+      "assertFrameworkRecordCommandsOnly(calls)",
+      'XCTAssertTrue(["snippets", "skills"].contains(call.first)',
+      '"quickAsk.slashCommandsCustom"',
+      '"quickAsk.mentionPromptsCustom"',
+    ],
+  ],
+]) {
+  for (const snippet of snippets) {
+    requireSnippet(relativePath, snippet);
+  }
+}
+for (const relativePath of [
+  "macos/Sources/Clawix/QuickAsk/QuickAskSlashCommands.swift",
+  "macos/Sources/Clawix/QuickAsk/QuickAskMentions.swift",
+]) {
+  for (const snippet of [
+    "UserDefaults.standard.set",
+    "UserDefaults.standard.data",
+    "quickAsk.slashCommandsCustom",
+    "quickAsk.mentionPromptsCustom",
+  ]) {
+    requireNoSnippet(relativePath, snippet, "QuickAsk reusable slash commands and mention prompts must be framework snippets; only host hotkey/panel prefs remain local");
+  }
+}
+
 const pairingSurface = (registry.surfaces ?? []).find((entry) => entry.id === "pairing.qrJson");
 if (!pairingSurface) {
   fail("interface registry is missing pairing.qrJson");
