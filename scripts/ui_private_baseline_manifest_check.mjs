@@ -16,6 +16,9 @@ const requiredFlows = [
   "right-sidebar-browser-use",
 ];
 const requiredEvidence = [
+  "flowId",
+  "platform",
+  "privateBaselineReference",
   "captureCommand",
   "geometryHash",
   "screenshotHash",
