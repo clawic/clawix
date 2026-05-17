@@ -11,6 +11,7 @@
     "platform",
     "measurements",
     "geometryHash",
+    "screenshotComparisonHash",
     "captureCommand",
     "approvedByUserAt",
     "approvedScope"

@@ -100,6 +100,7 @@ for (const patternId of registry?.patterns || []) {
     if (evidence.platform !== platform) fail(`${label}.platform must match the pattern registry`);
     verifyMeasurements(evidence.measurements, `${label}.measurements`);
     assertHash(evidence.geometryHash, `${label}.geometryHash`);
+    assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
     verified += 1;
   }
 }

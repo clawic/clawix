@@ -31,6 +31,6 @@ either measured with finite non-negative numbers or explicitly pending with a
 reason. When geometry is platform-specific, every platform declared by the
 pattern must have either measured values or its own pending source clause. It
 does not approve a new visual direction. Private rendered geometry evidence
-must include `measurements`, `geometryHash`, `captureCommand`,
-`approvedByUserAt`, and `approvedScope` before a pending clause can be replaced
-with measured contract values.
+must include `measurements`, `geometryHash`, `screenshotComparisonHash`,
+`captureCommand`, `approvedByUserAt`, and `approvedScope` before a pending
+clause can be replaced with measured contract values.

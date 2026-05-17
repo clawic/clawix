@@ -81,7 +81,7 @@ if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_ge
 }
 
 const requiredEvidence = new Set(requireArray(manifest, manifestPath, "requiredEvidenceFields"));
-for (const field of ["patternId", "platform", "measurements", "geometryHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
+for (const field of ["patternId", "platform", "measurements", "geometryHash", "screenshotComparisonHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
   if (!requiredEvidence.has(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
 }
 
