@@ -90,6 +90,19 @@ function verifyMeasurements(value, label) {
   }
 }
 
+function splitReference(reference, alias, label) {
+  if (typeof reference !== "string" || !reference.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return null;
+  }
+  const suffix = reference.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) {
+    fail(`${label} must use a safe relative private reference`);
+    return null;
+  }
+  return suffix;
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private geometry verification requires --require-approved.");
   process.exit(1);
@@ -113,10 +126,14 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
 
 const manifest = readJson("docs/ui/rendered-geometry.manifest.json");
 const registry = readJson(manifest?.patternSource || "docs/ui/pattern-registry/patterns.registry.json");
+const surfaceCoverage = readJson("docs/ui/surface-baseline-coverage.manifest.json");
+const privateGeometryAlias = manifest?.privateGeometryAlias || "private-codex-ui-rendered-geometry";
 const evidenceFilename = manifest?.evidenceFilename || "geometry-evidence.json";
 const requiredEvidence = Array.isArray(manifest?.requiredEvidenceFields) ? manifest.requiredEvidenceFields : [];
+const requiredSurfaceEvidence = Array.isArray(manifest?.requiredSurfaceEvidenceFields) ? manifest.requiredSurfaceEvidenceFields : [];
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
-let verified = 0;
+let verifiedPatterns = 0;
+let verifiedSurfaces = 0;
 
 for (const patternId of registry?.patterns || []) {
   const pattern = readJson(`docs/ui/pattern-registry/patterns/${patternId}.pattern.json`);
@@ -131,11 +148,36 @@ for (const patternId of registry?.patterns || []) {
     assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
     if (evidence.patternId !== patternId) fail(`${label}.patternId must match the pattern registry`);
     if (evidence.platform !== platform) fail(`${label}.platform must match the pattern registry`);
+    const expectedReference = `${privateGeometryAlias}:${platform}/${patternId}`;
+    if (evidence.geometryEvidenceReference !== expectedReference) {
+      fail(`${label}.geometryEvidenceReference must be ${expectedReference}`);
+    }
     verifyMeasurements(evidence.measurements, `${label}.measurements`);
     assertHash(evidence.geometryHash, `${label}.geometryHash`);
     assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
-    verified += 1;
+    verifiedPatterns += 1;
   }
+}
+
+for (const [index, entry] of (surfaceCoverage?.coverage || []).entries()) {
+  const label = `surface:${entry?.platform || "unknown"}:${entry?.coverageId || index}`;
+  const suffix = splitReference(entry?.geometryEvidenceReference, privateGeometryAlias, `${label}.geometryEvidenceReference`);
+  if (!suffix) continue;
+  const evidencePath = path.join(privateRoot, suffix.split("/").join(path.sep), evidenceFilename);
+  const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
+  if (!evidence) continue;
+  for (const field of requiredSurfaceEvidence) requireField(evidence, `${label} evidence`, field);
+  assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+  assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
+  if (evidence.coverageId !== entry.coverageId) fail(`${label}.coverageId must match the surface coverage manifest`);
+  if (evidence.platform !== entry.platform) fail(`${label}.platform must match the surface coverage manifest`);
+  if (evidence.geometryEvidenceReference !== entry.geometryEvidenceReference) {
+    fail(`${label}.geometryEvidenceReference must match the surface coverage manifest`);
+  }
+  verifyMeasurements(evidence.measurements, `${label}.measurements`);
+  assertHash(evidence.geometryHash, `${label}.geometryHash`);
+  assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
+  verifiedSurfaces += 1;
 }
 
 if (errors.length > 0) {
@@ -144,4 +186,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`UI private geometry verification passed (${verified} rendered geometry snapshots)`);
+console.log(`UI private geometry verification passed (${verifiedPatterns} pattern snapshots; ${verifiedSurfaces} surface snapshots)`);

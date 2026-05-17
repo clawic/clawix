@@ -9,6 +9,7 @@
   "requiredEvidenceFields": [
     "patternId",
     "platform",
+    "geometryEvidenceReference",
     "measurements",
     "geometryHash",
     "screenshotComparisonHash",
@@ -19,6 +20,7 @@
   "requiredSurfaceEvidenceFields": [
     "coverageId",
     "platform",
+    "geometryEvidenceReference",
     "measurements",
     "geometryHash",
     "screenshotComparisonHash",

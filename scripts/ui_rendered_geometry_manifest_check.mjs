@@ -85,11 +85,11 @@ if (!String(manifest?.verificationCommand || "").includes("--require-approved"))
 }
 
 const requiredEvidence = new Set(requireArray(manifest, manifestPath, "requiredEvidenceFields"));
-for (const field of ["patternId", "platform", "measurements", "geometryHash", "screenshotComparisonHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
+for (const field of ["patternId", "platform", "geometryEvidenceReference", "measurements", "geometryHash", "screenshotComparisonHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
   if (!requiredEvidence.has(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
 }
 const requiredSurfaceEvidence = new Set(requireArray(manifest, manifestPath, "requiredSurfaceEvidenceFields"));
-for (const field of ["coverageId", "platform", "measurements", "geometryHash", "screenshotComparisonHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
+for (const field of ["coverageId", "platform", "geometryEvidenceReference", "measurements", "geometryHash", "screenshotComparisonHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
   if (!requiredSurfaceEvidence.has(field)) fail(`${manifestPath}.requiredSurfaceEvidenceFields must include ${field}`);
 }
 
