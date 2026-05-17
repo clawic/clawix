@@ -119,6 +119,8 @@ const expectedAcceptanceCategoryIds = [
   "deep-links",
   "pairing",
   "storage-boundary",
+  "framework-owned-artifacts",
+  "host-tools-policy",
   "provider-routing",
   "mcp-registry",
   "integrations-qa",
@@ -169,12 +171,19 @@ for (const category of acceptanceCategories) {
   if (!Array.isArray(category.validationCommands) || category.validationCommands.length === 0) {
     fail(`${label}.validationCommands must be a non-empty array`);
   }
+  for (const evidencePath of category.evidence ?? []) {
+    if (!fs.existsSync(path.join(rootDir, evidencePath))) fail(`${label}.evidence path does not exist: ${evidencePath}`);
+  }
   for (const decisionId of category.decisionIds ?? []) {
     if (!expectedIds.includes(decisionId)) fail(`${label}.decisionIds contains unknown decision ${decisionId}`);
   }
   if (category.status === "external-pending" && (!Array.isArray(category.externalPending) || category.externalPending.length === 0)) {
     fail(`${label}.externalPending must explain the external dependency`);
   }
+}
+const acceptanceDecisionIds = new Set(acceptanceCategories.flatMap((category) => category.decisionIds ?? []));
+for (const expectedId of expectedIds) {
+  if (!acceptanceDecisionIds.has(expectedId)) fail(`${acceptancePath} does not map decision ${expectedId} to an acceptance category`);
 }
 const acceptanceText = read(acceptancePath);
 if (/\/Users\//.test(acceptanceText) || /rollout-\d{4}-\d{2}-\d{2}T/.test(acceptanceText)) {

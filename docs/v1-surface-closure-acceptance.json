@@ -10,7 +10,15 @@
       "id": "bridge-swift",
       "title": "Swift host bridge contract",
       "status": "verified",
-      "decisionIds": ["bridge_contract_v1", "bridge_source_of_truth", "bridge_v1_frame_scope"],
+      "decisionIds": [
+        "bridge_contract_v1",
+        "bridge_version_field",
+        "bridge_source_of_truth",
+        "bridge_v1_frame_scope",
+        "send_frame_name",
+        "chat_session_vocabulary",
+        "client_kind_values"
+      ],
       "evidence": ["macos/Tests/ClawixMeshTests/ClawixProtocolEncodingTests.swift", "scripts/interface_surface_guard.mjs", "docs/interface-matrix.md"],
       "validationCommands": ["node scripts/interface_surface_guard.mjs", "node scripts/v1_surface_closure_audit_check.mjs"]
     },
@@ -50,9 +58,42 @@
       "id": "storage-boundary",
       "title": "Framework, host, vault, cache, and workspace storage boundary",
       "status": "verified",
-      "decisionIds": ["framework_store_ownership", "storage_bucket_policy", "secrets_boundary", "provider_config_owner"],
+      "decisionIds": [
+        "framework_store_ownership",
+        "storage_bucket_policy",
+        "apps_design_storage",
+        "audio_dictation_storage",
+        "agent_skill_storage_format",
+        "project_identity_storage",
+        "quickask_prompts_storage",
+        "secrets_boundary",
+        "provider_config_owner"
+      ],
       "evidence": ["docs/data-storage-boundary.md", "docs/persistent-surface-clawix.manifest.json", "scripts/storage_boundary_guard.mjs"],
       "validationCommands": ["node scripts/storage_boundary_guard.mjs", "node scripts/v1_surface_closure_audit_check.mjs"]
+    },
+    {
+      "id": "framework-owned-artifacts",
+      "title": "Framework-owned reusable artifacts",
+      "status": "verified",
+      "decisionIds": [
+        "framework_store_ownership",
+        "apps_design_storage",
+        "audio_dictation_storage",
+        "agent_skill_storage_format",
+        "project_identity_storage",
+        "quickask_prompts_storage"
+      ],
+      "evidence": ["docs/interface-matrix.md", "docs/data-storage-boundary.md", "docs/persistent-surface-clawix.manifest.json"],
+      "validationCommands": ["bash scripts/doc_alignment_check.sh", "node scripts/storage_boundary_guard.mjs"]
+    },
+    {
+      "id": "host-tools-policy",
+      "title": "Host tool policy, approvals, audit, and local capabilities",
+      "status": "verified",
+      "decisionIds": ["agent_tools_policy", "local_models_storage", "secrets_boundary", "external_pending_policy"],
+      "evidence": ["docs/host-ownership.md", "docs/interface-matrix.md", "docs/persistent-surface-clawix.manifest.json"],
+      "validationCommands": ["bash scripts/doc_alignment_check.sh", "node scripts/interface_surface_guard.mjs"]
     },
     {
       "id": "provider-routing",
@@ -92,7 +133,7 @@
       "id": "docs-alignment",
       "title": "Docs, naming, route graph, and surface alignment",
       "status": "verified",
-      "decisionIds": ["surface_parity_gate", "migration_policy_no_users", "experimental_surface_policy"],
+      "decisionIds": ["surface_parity_gate", "migration_policy_no_users", "experimental_surface_policy", "experimental_correction"],
       "evidence": ["scripts/doc_alignment_check.sh", "scripts/interface_surface_guard.mjs", "docs/decision-map.md"],
       "validationCommands": ["bash scripts/doc_alignment_check.sh", "node scripts/interface_surface_guard.mjs"]
     },

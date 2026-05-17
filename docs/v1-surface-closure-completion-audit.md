@@ -20,7 +20,8 @@ Source extraction:
 - Acceptance validation matrix: `docs/v1-surface-closure-acceptance.json`
   records mandatory closure categories: `bridge-swift`, `bridge-android`,
   `bridge-windows`, `deep-links`, `pairing`, `storage-boundary`,
-  `provider-routing`, `mcp-registry`, `integrations-qa`,
+  `framework-owned-artifacts`, `host-tools-policy`, `provider-routing`,
+  `mcp-registry`, `integrations-qa`,
   `domain-resource-fixtures`, `docs-alignment`, `source-size`,
   `public-hygiene`, and `external-pending-policy`.
 
