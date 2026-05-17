@@ -4,7 +4,6 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const uiDir = path.join(rootDir, "docs/ui");
-const privateBaselineAlias = "private-codex-ui-baselines";
 const errors = [];
 
 function fail(message) {
@@ -95,6 +94,9 @@ for (const file of walk(uiDir)) {
 }
 
 const privateValidation = readJson("docs/ui/private-visual-validation.manifest.json");
+const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
+requireField(privateBaselines, "docs/ui/private-baselines.manifest.json", "privateRootAlias");
+const privateBaselineAlias = privateBaselines?.privateRootAlias;
 const requiredRoots = new Set(Array.isArray(privateValidation?.requiredRoots) ? privateValidation.requiredRoots : []);
 const rootAliases = Array.isArray(privateValidation?.rootAliases) ? privateValidation.rootAliases : [];
 if (rootAliases.length === 0) fail("docs/ui/private-visual-validation.manifest.json.rootAliases must not be empty");
