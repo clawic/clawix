@@ -19,5 +19,16 @@
     "node scripts/ui_private_debt_audit_verify.mjs --require-approved",
     "node scripts/ui_private_performance_budget_verify.mjs --require-approved"
   ],
+  "decisionBlockers": [
+    "initial_scope",
+    "enforcement_mode",
+    "debt_strategy",
+    "visual_baselines_location",
+    "alignment_validation",
+    "copy_governance",
+    "v1_pattern_set",
+    "perf_budget_source",
+    "size_contracts"
+  ],
   "externalPendingExitCode": 2
 }

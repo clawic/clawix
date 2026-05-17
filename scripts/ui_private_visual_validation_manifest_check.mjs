@@ -53,6 +53,7 @@ requireFields(manifest, manifestPath, [
   "verificationCommand",
   "requiredRoots",
   "delegates",
+  "decisionBlockers",
   "externalPendingExitCode",
 ]);
 
@@ -97,6 +98,27 @@ for (const script of [
   }
   if (!String(delegate).includes("--require-approved")) {
     fail(`${manifestPath}.delegates entry for ${script} must include --require-approved`);
+  }
+}
+
+const decisionVerificationPath = "docs/ui/decision-verification.json";
+const decisionVerification = readJson(decisionVerificationPath);
+const openDecisionIds = requireArray(decisionVerification, decisionVerificationPath, "decisions")
+  .filter((decision) => decision?.status === "open")
+  .map((decision) => decision.id);
+const decisionBlockers = requireArray(manifest, manifestPath, "decisionBlockers");
+const blockerSet = new Set(decisionBlockers);
+if (blockerSet.size !== decisionBlockers.length) {
+  fail(`${manifestPath}.decisionBlockers must not contain duplicate decision ids`);
+}
+for (const decisionId of openDecisionIds) {
+  if (!blockerSet.has(decisionId)) {
+    fail(`${manifestPath}.decisionBlockers must include open decision ${decisionId}`);
+  }
+}
+for (const decisionId of decisionBlockers) {
+  if (!openDecisionIds.includes(decisionId)) {
+    fail(`${manifestPath}.decisionBlockers contains non-open decision ${decisionId}`);
   }
 }
 
