@@ -1,5 +1,5 @@
-// Memory mirrors the Mac Memory screen. Wire frames not yet exposed; show
-// a placeholder layout matching the Mac chrome.
+// Memory companion surface. Mac + ClawJS own v1 memory edits; the web view
+// states that boundary while sessions consume the shared context.
 import { PageHeader, Card } from "../../components/ui";
 
 export function MemoryView() {
@@ -22,10 +22,9 @@ export function MemoryView() {
                   lineHeight: 1.55,
                 }}
               >
-                Codex memory entries are managed on your Mac. Editing from the web requires a memory
-                wire frame, which lands in a future schema bump. Until then, use the Memory panel in
-                the Mac app to add or revise entries; they will be visible to your sessions here
-                automatically.
+                Codex memory entries are managed through the Mac UI and ClawJS framework APIs.
+                Sessions here consume that shared context automatically while edits remain on the
+                canonical v1 surfaces.
               </p>
             </div>
           </Card>

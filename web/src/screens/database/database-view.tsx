@@ -1,5 +1,5 @@
-// Database mirror. Wire frames not yet exposed; show placeholder layout
-// matching the Mac chrome.
+// Database companion surface. Mac + ClawJS own v1 record editing; the
+// web view states that boundary instead of pretending to be an unwired editor.
 import { PageHeader, Card } from "../../components/ui";
 
 export function DatabaseView() {
@@ -22,9 +22,9 @@ export function DatabaseView() {
                   lineHeight: 1.55,
                 }}
               >
-                Database collections, records and bulk operations are exposed on the Mac. Web access
-                requires a database wire frame, scheduled for a follow-up schema bump. The Mac panel
-                stays canonical until then.
+                Database collections, records and bulk operations are v1 surfaces on the Mac and
+                through ClawJS CLI/API. This web companion keeps the boundary visible while record
+                mutation stays with those canonical surfaces.
               </p>
             </div>
           </Card>

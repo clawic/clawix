@@ -1,5 +1,5 @@
-// Secrets Vault. Argon2id self-test wired locally; unlock frame still
-// pending. Layout mirrors the Mac SecretsView in placeholder form.
+// Secrets Vault companion surface. Signed host/vault APIs own unlock and
+// reveal; this web view verifies local Argon2id parity without moving secrets.
 import { useState } from "react";
 import { KeyIcon } from "../../icons";
 import { PageHeader, Card, Button, TextField } from "../../components/ui";
@@ -61,9 +61,9 @@ export function SecretsView() {
                   lineHeight: 1.55,
                 }}
               >
-                Unlock via the web is gated on schema parity with the Mac. The crypto runs locally
-                with libsodium Argon2id; below is the parity self-test that proves the derivation
-                matches the Mac binding before we wire the actual unlock frame.
+                Unlock and reveal stay with the signed host/vault v1 surface. The crypto below runs
+                locally with libsodium Argon2id and proves the derivation matches the Mac binding
+                without moving plaintext secrets into the web companion.
               </p>
               <TextField
                 type="password"

@@ -1134,6 +1134,19 @@ if (iosChatListSource.includes("onOpenSkills")) {
   fail("ChatListView.swift must not keep a visible iOS Skills entry until the bridge consumes real skillsList/skillsView frames");
 }
 
+for (const [relativePath, patterns] of [
+  ["web/src/screens/database/database-view.tsx", ["Wire frames not yet exposed", "placeholder layout", "follow-up schema bump"]],
+  ["web/src/screens/memory/memory-view.tsx", ["Wire frames not yet exposed", "placeholder layout", "future schema bump"]],
+  ["web/src/screens/secrets/secrets-view.tsx", ["unlock frame still", "placeholder form", "wire the actual unlock frame"]],
+]) {
+  const source = read(relativePath);
+  for (const pattern of patterns) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must describe web companion boundaries as v1 classification, not unfinished placeholder work: ${JSON.stringify(pattern)}`);
+    }
+  }
+}
+
 const windowsPhaseStubFiles = [
   "windows/Clawix.App/MainWindow.xaml.cs",
   "windows/Clawix.App/ViewModels/SidebarViewModel.cs",
