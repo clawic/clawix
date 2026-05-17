@@ -59,6 +59,28 @@ function assertHash(value, label) {
   }
 }
 
+function assertIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
+function assertApprovedScope(value, label) {
+  if (typeof value === "string") {
+    if (value.trim() === "") fail(`${label} must not be empty`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  fail(`${label} must be a non-empty string, array, or object`);
+}
+
 function verifyCopyItems(value, label) {
   if (!Array.isArray(value) || value.length === 0) {
     fail(`${label} must be a non-empty array`);
@@ -132,6 +154,8 @@ for (const [index, coverage] of (surfaceCoverage?.coverage || []).entries()) {
   for (const field of ["copySnapshotReference", "copySnapshotHash", "copyHierarchyHash", "approvedByUserAt", "approvedScope", "surfaceId"]) {
     requireField(evidence, `${label} evidence`, field);
   }
+  assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+  assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
   assertHash(evidence.copySnapshotHash, `${label}.copySnapshotHash`);
   assertHash(evidence.copyHierarchyHash, `${label}.copyHierarchyHash`);
   if (evidence.copySnapshotReference !== coverage.copySnapshotReference) {
@@ -169,6 +193,8 @@ for (const [index, surface] of surfaces.entries()) {
   for (const field of copyInventory?.requiredEvidenceFields || []) {
     requireField(evidence, `${label} evidence`, field);
   }
+  assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+  assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
   assertHash(evidence.copySnapshotHash, `${label}.copySnapshotHash`);
   assertHash(evidence.copyHierarchyHash, `${label}.copyHierarchyHash`);
   if (evidence.copySnapshotReference !== surface.copySnapshotReference) {

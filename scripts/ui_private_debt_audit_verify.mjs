@@ -57,6 +57,28 @@ function assertHash(value, label) {
   }
 }
 
+function assertIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
+function assertApprovedScope(value, label) {
+  if (typeof value === "string") {
+    if (value.trim() === "") fail(`${label} must not be empty`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  fail(`${label} must be a non-empty string, array, or object`);
+}
+
 function verifyFindingItems(evidence, label) {
   if (!Array.isArray(evidence.findingItems) || evidence.findingItems.length === 0) {
     fail(`${label}.findingItems must be a non-empty array`);
@@ -114,6 +136,9 @@ for (const [index, entry] of (manifest?.entries || []).entries()) {
   if (!evidence) continue;
 
   for (const field of entry.requiredEvidence || []) requireField(evidence, `${label} evidence`, field);
+  assertIsoTimestamp(evidence.auditedAt, `${label}.auditedAt`);
+  assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+  assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
   if (evidence.debtId !== entry.debtId) fail(`${label}.debtId must match the public audit manifest`);
   if (evidence.platform !== entry.platforms?.[0]) fail(`${label}.platform must match the public audit manifest`);
   if (evidence.scope !== entry.scope) fail(`${label}.scope must match the public audit manifest`);

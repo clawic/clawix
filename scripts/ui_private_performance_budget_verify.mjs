@@ -59,6 +59,12 @@ function assertHash(value, label) {
   }
 }
 
+function assertIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
 function verifyMeasurementSamples(evidence, label, requiredMetrics) {
   if (!Array.isArray(evidence.measurementSamples) || evidence.measurementSamples.length === 0) {
     fail(`${label}.measurementSamples must be a non-empty array`);
@@ -137,6 +143,8 @@ for (const [index, flow] of (budgets?.flows || []).entries()) {
   const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
   if (!evidence) continue;
   for (const field of requiredEvidenceFields) requireField(evidence, `${label} evidence`, field);
+  assertIsoTimestamp(evidence.measuredAt, `${label}.measuredAt`);
+  assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
   if (evidence.flowId !== flow.id) fail(`${label}.flowId must match the budget registry`);
   if (evidence.platform !== flow.platform) fail(`${label}.platform must match the budget registry`);
   if (evidence.privateBaselineReference !== flow.privateBaselineReference) {

@@ -59,6 +59,12 @@ function assertHash(value, label) {
   }
 }
 
+function assertIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
 function verifyDriftResults(evidence, report, label, allowedStatuses) {
   if (!evidence.driftResults || typeof evidence.driftResults !== "object" || Array.isArray(evidence.driftResults)) {
     fail(`${label}.driftResults must be an object keyed by drift category`);
@@ -142,6 +148,7 @@ for (const [index, report] of (manifest?.reports || []).entries()) {
   const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
   if (!evidence) continue;
   for (const field of requiredEvidenceFields) requireField(evidence, `${label} evidence`, field);
+  assertIsoTimestamp(evidence.producedAt, `${label}.producedAt`);
   if (evidence.coverageId !== report.coverageId) fail(`${label}.coverageId must match the public manifest`);
   if (evidence.platform !== report.platform) fail(`${label}.platform must match the public manifest`);
   if (evidence.status !== report.status) fail(`${label}.status must match the public manifest`);

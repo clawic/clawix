@@ -51,6 +51,28 @@ function assertHash(value, label) {
   }
 }
 
+function assertIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
+function assertApprovedScope(value, label) {
+  if (typeof value === "string") {
+    if (value.trim() === "") fail(`${label} must not be empty`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  fail(`${label} must be a non-empty string, array, or object`);
+}
+
 function verifyMeasurements(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     fail(`${label} must be an object`);
@@ -105,6 +127,8 @@ for (const patternId of registry?.patterns || []) {
     const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
     if (!evidence) continue;
     for (const field of requiredEvidence) requireField(evidence, `${label} evidence`, field);
+    assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+    assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
     if (evidence.patternId !== patternId) fail(`${label}.patternId must match the pattern registry`);
     if (evidence.platform !== platform) fail(`${label}.platform must match the pattern registry`);
     verifyMeasurements(evidence.measurements, `${label}.measurements`);

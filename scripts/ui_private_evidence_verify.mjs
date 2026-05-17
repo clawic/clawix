@@ -104,6 +104,34 @@ function requireField(object, label, field) {
   if (/Hash$/.test(field) && (typeof object[field] !== "string" || !/^[a-f0-9]{64}$/i.test(object[field]))) {
     fail(`${label}.${field} must be a 64-character hex hash`);
   }
+  if (["approvedByUserAt", "measuredAt", "auditedAt", "producedAt"].includes(field)) {
+    verifyIsoTimestamp(object[field], `${label}.${field}`);
+  }
+  if (field === "approvedScope") {
+    verifyApprovedScope(object[field], `${label}.${field}`);
+  }
+}
+
+function verifyIsoTimestamp(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}(?:T.+)?$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date or timestamp`);
+  }
+}
+
+function verifyApprovedScope(value, label) {
+  if (typeof value === "string") {
+    if (value.trim() === "") fail(`${label} must not be empty`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  fail(`${label} must be a non-empty string, array, or object`);
 }
 
 function verifyMetrics(evidence, label) {
