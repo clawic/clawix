@@ -17,6 +17,7 @@
     "scripts/ui_protected_surface_check.mjs",
     "scripts/ui_geometry_contract_check.mjs",
     "scripts/ui_implementation_evidence_check.mjs",
+    "scripts/ui_implementation_phase_check.mjs",
     "scripts/ui_state_coverage_check.mjs",
     "scripts/ui_surface_reference_check.mjs",
     "scripts/ui_surface_baseline_coverage_check.mjs",

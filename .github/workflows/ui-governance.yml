@@ -34,6 +34,8 @@ jobs:
         run: node scripts/ui_geometry_contract_check.mjs
       - name: Validate UI implementation evidence
         run: node scripts/ui_implementation_evidence_check.mjs
+      - name: Validate UI implementation phases
+        run: node scripts/ui_implementation_phase_check.mjs
       - name: Validate UI state coverage
         run: node scripts/ui_state_coverage_check.mjs
       - name: Validate UI surface references

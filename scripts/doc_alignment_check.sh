@@ -71,6 +71,7 @@ for file in \
   "docs/ui/performance-budgets.registry.json" \
   "docs/ui/private-baselines.manifest.json" \
   "docs/ui/private-visual-validation.manifest.json" \
+  "docs/ui/implementation-phases.manifest.json" \
   "docs/ui/visual-change-proposal.template.md" \
   "docs/ui/inspiration/references.registry.json" \
   ".github/PULL_REQUEST_TEMPLATE.md" \
@@ -83,6 +84,7 @@ for file in \
   "scripts/ui_inspiration_reference_check.mjs" \
   "scripts/ui_protected_surface_check.mjs" \
   "scripts/ui_implementation_evidence_check.mjs" \
+  "scripts/ui_implementation_phase_check.mjs" \
   "scripts/ui_state_coverage_check.mjs" \
   "scripts/ui_surface_reference_check.mjs" \
   "scripts/ui_surface_baseline_coverage_check.mjs" \
@@ -143,6 +145,8 @@ require_snippet "docs/ui/README.md" "scripts/ui_protected_surface_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_geometry_contract_check.mjs"
 require_snippet "docs/ui/README.md" "implementation-evidence.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_implementation_evidence_check.mjs"
+require_snippet "docs/ui/README.md" "implementation-phases.manifest.json"
+require_snippet "docs/ui/README.md" "scripts/ui_implementation_phase_check.mjs"
 require_snippet "docs/ui/README.md" "state-coverage.manifest.json"
 require_snippet "docs/ui/README.md" "scripts/ui_state_coverage_check.mjs"
 require_snippet "docs/ui/README.md" "surface-references.manifest.json"
@@ -215,6 +219,8 @@ require_snippet "docs/ui/visual-proposals.registry.json" "conceptual-only"
 require_snippet "scripts/ui_private_artifact_boundary_check.mjs" "private-codex-ui-baselines"
 require_snippet "scripts/ui_private_artifact_boundary_check.mjs" "outside-public-repo"
 require_snippet "docs/ui/implementation-evidence.manifest.json" ".github/PULL_REQUEST_TEMPLATE.md"
+require_snippet "docs/ui/implementation-phases.manifest.json" "blocked-without-allowlisted-visual-lane"
+require_snippet "docs/ui/implementation-phases.manifest.json" "governance-manifest"
 require_snippet ".github/PULL_REQUEST_TEMPLATE.md" "## UI governance evidence"
 require_snippet ".github/PULL_REQUEST_TEMPLATE.md" "Pattern/debt/protected/exception mapping:"
 require_snippet "docs/ui/state-coverage.manifest.json" "android-domain-surfaces"

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Interface governance is implemented before any visual cleanup. Non-authorized agents may extend contracts, manifests, checks, and evidence wiring, but they must not change presentation. Private evidence capture and visual cleanup are separate phases.",
+  "nonAuthorizedAllowedActions": [
+    "governance-manifest",
+    "public-check",
+    "private-verifier",
+    "evidence-wiring",
+    "conceptual-proposal"
+  ],
+  "nonAuthorizedForbiddenActions": [
+    "visual-ui",
+    "copy-ui",
+    "layout-change",
+    "style-token-change",
+    "critical-cleanup-execution"
+  ],
+  "phases": [
+    {
+      "id": "public-governance-foundation",
+      "status": "complete",
+      "evidence": [
+        "docs/ui/interface-governance.config.json",
+        "docs/ui/gate-surface.manifest.json",
+        "scripts/ui_governance_guard.mjs",
+        "scripts/ui_release_gate_check.mjs"
+      ]
+    },
+    {
+      "id": "private-evidence-capture",
+      "status": "external-pending",
+      "evidence": [
+        "docs/ui/private-visual-validation.manifest.json",
+        "scripts/ui_private_visual_verify.mjs"
+      ]
+    },
+    {
+      "id": "visual-cleanup-execution",
+      "status": "blocked-without-allowlisted-visual-lane",
+      "evidence": [
+        "docs/ui/critical-cleanup.queue.json",
+        "docs/ui/visual-model-allowlist.manifest.json",
+        "docs/ui/visual-change-scopes.manifest.json"
+      ]
+    }
+  ]
+}

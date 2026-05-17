@@ -598,6 +598,7 @@ const requiredDocs = [
   "docs/ui/pattern-registry/patterns/NOTES.md",
   "docs/ui/interface-governance.config.json",
   "docs/ui/implementation-evidence.manifest.json",
+  "docs/ui/implementation-phases.manifest.json",
   "docs/ui/state-coverage.manifest.json",
   "docs/ui/surface-references.manifest.json",
   "docs/ui/surface-baseline-coverage.manifest.json",
