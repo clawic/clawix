@@ -160,6 +160,32 @@ function verifyCopyItems(evidence, label) {
   }
 }
 
+function verifyDriftResults(evidence, label) {
+  if (!("driftResults" in evidence)) return;
+  if (!evidence.driftResults || typeof evidence.driftResults !== "object" || Array.isArray(evidence.driftResults)) {
+    fail(`${label}.driftResults must be an object keyed by drift category`);
+    return;
+  }
+  const entries = Object.entries(evidence.driftResults);
+  if (entries.length === 0) {
+    fail(`${label}.driftResults must not be empty`);
+    return;
+  }
+  for (const [category, result] of entries) {
+    const resultLabel = `${label}.driftResults.${category}`;
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      fail(`${resultLabel} must be an object`);
+      continue;
+    }
+    if (typeof result.status !== "string" || result.status === "") {
+      fail(`${resultLabel}.status must be a non-empty string`);
+    }
+    if (typeof result.resultHash !== "string" || !/^[a-f0-9]{64}$/i.test(result.resultHash)) {
+      fail(`${resultLabel}.resultHash must be a 64-character hex hash`);
+    }
+  }
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private evidence verification requires --require-approved.");
   process.exit(1);
@@ -218,6 +244,7 @@ for (const item of plan.evidence || []) {
   verifyMetrics(evidence, label);
   verifyMeasurements(evidence, label);
   verifyCopyItems(evidence, label);
+  verifyDriftResults(evidence, label);
   verified += 1;
 }
 

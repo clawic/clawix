@@ -91,7 +91,7 @@ for (const field of ["coverageId", "platform", "privateDriftReportReference", "d
   if (!requiredReportFields.includes(field)) fail(`${manifestPath}.requiredReportFields must include ${field}`);
 }
 const requiredEvidenceFields = requireArray(manifest, manifestPath, "requiredEvidenceFields");
-for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reportHash", "producedAt"]) {
+for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "driftResults", "status", "reportHash", "producedAt"]) {
   if (!requiredEvidenceFields.includes(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
 }
 const failureOutputRequirements = requireArray(manifest, manifestPath, "failureOutputRequirements");

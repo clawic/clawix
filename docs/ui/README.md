@@ -218,5 +218,8 @@ the public repo.
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
 49. When private rendered drift reports are available, verify them with
     `CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_drift_verify.mjs --require-approved`.
+    Each private report must include hashed per-category `driftResults` entries
+    for every public drift category, so approval records prove what was checked
+    without publishing screenshots, copy, geometry, or performance captures.
 50. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

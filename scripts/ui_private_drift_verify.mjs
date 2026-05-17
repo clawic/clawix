@@ -59,6 +59,28 @@ function assertHash(value, label) {
   }
 }
 
+function verifyDriftResults(evidence, report, label, allowedStatuses) {
+  if (!evidence.driftResults || typeof evidence.driftResults !== "object" || Array.isArray(evidence.driftResults)) {
+    fail(`${label}.driftResults must be an object keyed by drift category`);
+    return;
+  }
+  for (const category of report.driftCategories || []) {
+    const result = evidence.driftResults[category];
+    const resultLabel = `${label}.driftResults.${category}`;
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+      fail(`${resultLabel} must be an object`);
+      continue;
+    }
+    if (typeof result.status !== "string" || !allowedStatuses.has(result.status)) {
+      fail(`${resultLabel}.status is invalid`);
+    }
+    if (evidence.status !== "pending-private-evidence" && result.status === "pending-private-evidence") {
+      fail(`${resultLabel}.status must not be pending when the report is approved`);
+    }
+    assertHash(result.resultHash, `${resultLabel}.resultHash`);
+  }
+}
+
 function failReport(report, label, reason) {
   fail([
     `${label} rendered drift evidence is not approved`,
@@ -125,6 +147,7 @@ for (const [index, report] of (manifest?.reports || []).entries()) {
   for (const category of report.driftCategories || []) {
     if (!categories.has(category)) fail(`${label}.driftCategories must include ${category}`);
   }
+  verifyDriftResults(evidence, report, label, allowedStatuses);
   verified += 1;
 }
 
