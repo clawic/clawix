@@ -186,6 +186,29 @@ function verifyDriftResults(evidence, label) {
   }
 }
 
+function verifyFindingItems(evidence, label) {
+  if (!("findingItems" in evidence)) return;
+  if (!Array.isArray(evidence.findingItems) || evidence.findingItems.length === 0) {
+    fail(`${label}.findingItems must be a non-empty array`);
+    return;
+  }
+  for (const [index, item] of evidence.findingItems.entries()) {
+    const itemLabel = `${label}.findingItems[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      fail(`${itemLabel} must be an object`);
+      continue;
+    }
+    for (const field of ["category", "source"]) {
+      if (typeof item[field] !== "string" || item[field] === "") {
+        fail(`${itemLabel}.${field} must be a non-empty string`);
+      }
+    }
+    if (typeof item.itemHash !== "string" || !/^[a-f0-9]{64}$/i.test(item.itemHash)) {
+      fail(`${itemLabel}.itemHash must be a 64-character hex hash`);
+    }
+  }
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private evidence verification requires --require-approved.");
   process.exit(1);
@@ -245,6 +268,7 @@ for (const item of plan.evidence || []) {
   verifyMeasurements(evidence, label);
   verifyCopyItems(evidence, label);
   verifyDriftResults(evidence, label);
+  verifyFindingItems(evidence, label);
   verified += 1;
 }
 

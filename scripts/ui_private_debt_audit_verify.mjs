@@ -57,6 +57,26 @@ function assertHash(value, label) {
   }
 }
 
+function verifyFindingItems(evidence, label) {
+  if (!Array.isArray(evidence.findingItems) || evidence.findingItems.length === 0) {
+    fail(`${label}.findingItems must be a non-empty array`);
+    return;
+  }
+  for (const [index, item] of evidence.findingItems.entries()) {
+    const itemLabel = `${label}.findingItems[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      fail(`${itemLabel} must be an object`);
+      continue;
+    }
+    for (const field of ["category", "source"]) {
+      if (typeof item[field] !== "string" || item[field] === "") {
+        fail(`${itemLabel}.${field} must be a non-empty string`);
+      }
+    }
+    assertHash(item.itemHash, `${itemLabel}.itemHash`);
+  }
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private debt audit verification requires --require-approved.");
   process.exit(1);
@@ -105,6 +125,7 @@ for (const [index, entry] of (manifest?.entries || []).entries()) {
   }
   assertHash(evidence.findingHash, `${label}.findingHash`);
   assertHash(evidence.visualInventoryHash, `${label}.visualInventoryHash`);
+  verifyFindingItems(evidence, label);
   verified += 1;
 }
 

@@ -94,6 +94,7 @@ for (const field of [
   "scope",
   "platforms",
   "privateDebtAuditReference",
+  "findingItems",
   "findingHash",
   "visualInventoryHash",
   "auditedAt",

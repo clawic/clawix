@@ -15,6 +15,7 @@
     "scope",
     "platforms",
     "privateDebtAuditReference",
+    "findingItems",
     "findingHash",
     "visualInventoryHash",
     "auditedAt",
@@ -29,7 +30,7 @@
       "surfaceCoverageId": "macos-design-debt",
       "auditStatus": "pending-private-visual-inventory",
       "privateDebtAuditReference": "private-codex-ui-debt-audit:macos/ui-debt-design-surface-raw-visual-values",
-      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
+      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingItems", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
     },
     {
       "debtId": "ui-debt-automations-surface-raw-visual-values",
@@ -38,7 +39,7 @@
       "surfaceCoverageId": "macos-design-debt",
       "auditStatus": "pending-private-visual-inventory",
       "privateDebtAuditReference": "private-codex-ui-debt-audit:macos/ui-debt-automations-surface-raw-visual-values",
-      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
+      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingItems", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
     },
     {
       "debtId": "ui-debt-plan-question-card-raw-visual-values",
@@ -47,7 +48,7 @@
       "surfaceCoverageId": "macos-design-debt",
       "auditStatus": "pending-private-visual-inventory",
       "privateDebtAuditReference": "private-codex-ui-debt-audit:macos/ui-debt-plan-question-card-raw-visual-values",
-      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
+      "requiredEvidence": ["debtId", "platform", "scope", "platforms", "privateDebtAuditReference", "findingItems", "findingHash", "visualInventoryHash", "auditedAt", "approvedByUserAt", "approvedScope"]
     }
   ]
 }

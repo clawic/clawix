@@ -208,6 +208,8 @@ the public repo.
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
 44. When private debt audit evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_debt_audit_verify.mjs --require-approved`.
+    Debt audit evidence must include hashed `findingItems` so each private
+    finding is independently accountable without publishing visual values.
 45. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
 46. When private baselines are available, verify them with
