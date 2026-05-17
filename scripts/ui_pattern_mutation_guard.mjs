@@ -91,15 +91,21 @@ const visualScopesPath = "docs/ui/visual-change-scopes.manifest.json";
 const visualScopes = readJson(visualScopesPath);
 const visualScopeEnv = String(visualScopes?.scopeSignal?.env || "CLAWIX_UI_VISUAL_SCOPE_ID");
 const requestedVisualScopeId = visualScopeEnv ? String(process.env[visualScopeEnv] || "") : "";
+const simulatedScopeApproval = {
+  approvedBy: "user",
+  approvedAt: "2026-05-17",
+  privateApprovalReference: "private-codex-ui-approval:simulated",
+};
 if (simulateApprovedVisualScope) {
   visualScopes.activeScopes = [
     ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
     {
       id: "simulated-approved-scope",
       status: "approved",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
-      changeBudget: { maxFiles: 1, maxLines: 3 },
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
       expiresAt: "2099-12-31",
     },
   ];
@@ -110,9 +116,10 @@ if (simulateOverbudgetVisualScope) {
     {
       id: "simulated-overbudget-scope",
       status: "approved",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
-      changeBudget: { maxFiles: 1, maxLines: 1 },
+      changeBudget: { maxFiles: 1, maxLines: 1, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
       expiresAt: "2099-12-31",
     },
   ];
@@ -123,9 +130,10 @@ if (simulateWrongFileVisualScope) {
     {
       id: "simulated-wrong-file-scope",
       status: "approved",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/other.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
-      changeBudget: { maxFiles: 1, maxLines: 3 },
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
       expiresAt: "2099-12-31",
     },
   ];
@@ -136,9 +144,10 @@ if (simulateLayoutOnlyVisualScope) {
     {
       id: "simulated-layout-only-scope",
       status: "approved",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout"],
-      changeBudget: { maxFiles: 1, maxLines: 3 },
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout"] },
       expiresAt: "2099-12-31",
     },
   ];
@@ -149,9 +158,10 @@ if (simulateRevokedVisualScope) {
     {
       id: "simulated-revoked-scope",
       status: "revoked",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
-      changeBudget: { maxFiles: 1, maxLines: 3 },
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
       expiresAt: "2099-12-31",
     },
   ];
@@ -162,9 +172,10 @@ if (simulateExpiredVisualScope) {
     {
       id: "simulated-expired-scope",
       status: "approved",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
-      changeBudget: { maxFiles: 1, maxLines: 3 },
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
       expiresAt: "2000-01-01",
     },
   ];
@@ -175,6 +186,7 @@ if (simulateBudgetKindVisualScope) {
     {
       id: "simulated-budget-kind-scope",
       status: "approved",
+      ...simulatedScopeApproval,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout"] },
@@ -199,19 +211,44 @@ function fileMatchesScope(file, scopeFiles = []) {
   });
 }
 
+function isIsoDate(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value));
+}
+
+function isSafePrivateApprovalReference(value) {
+  if (typeof value !== "string" || !value.startsWith("private-codex-ui-approval:")) return false;
+  const suffix = value.slice("private-codex-ui-approval:".length);
+  return Boolean(
+    suffix &&
+      !suffix.startsWith("/") &&
+      !suffix.startsWith("\\") &&
+      !suffix.startsWith("~/") &&
+      !suffix.includes("..") &&
+      !/^[A-Z]:\\/.test(suffix) &&
+      !value.includes("/Users/") &&
+      !value.startsWith("file://"),
+  );
+}
+
 function approvedScopeForHits(hits) {
   if (!requestedVisualScopeId) return { ok: false, reason: `${visualScopeEnv}=<approved visual scope id> is required` };
   const scope = (visualScopes?.activeScopes || []).find((candidate) => candidate?.id === requestedVisualScopeId);
   if (!scope) return { ok: false, reason: `scope ${requestedVisualScopeId} is not listed in ${visualScopesPath}.activeScopes` };
   if (scope.status !== "approved") return { ok: false, reason: `scope ${requestedVisualScopeId} is ${scope.status}, not approved` };
   if (scope.expiresAt && scope.expiresAt < today) return { ok: false, reason: `scope ${requestedVisualScopeId} expired on ${scope.expiresAt}` };
+  if (scope.approvedBy !== "user") return { ok: false, reason: `scope ${requestedVisualScopeId} must be approvedBy user` };
+  if (!isIsoDate(scope.approvedAt)) return { ok: false, reason: `scope ${requestedVisualScopeId} must include approvedAt ISO date` };
+  if (!isSafePrivateApprovalReference(scope.privateApprovalReference)) {
+    return { ok: false, reason: `scope ${requestedVisualScopeId} must include safe private approval reference` };
+  }
 
   const files = new Set(hits.map((hit) => hit.path));
   const scopeChangeKinds = new Set(Array.isArray(scope.changeKinds) ? scope.changeKinds : []);
   const changeBudget = scope.changeBudget || {};
-  const budgetChangeKinds = new Set(
-    Array.isArray(changeBudget.allowedChangeKinds) ? changeBudget.allowedChangeKinds : [...scopeChangeKinds],
-  );
+  if (!Array.isArray(changeBudget.allowedChangeKinds)) {
+    return { ok: false, reason: `scope ${requestedVisualScopeId} changeBudget.allowedChangeKinds is required` };
+  }
+  const budgetChangeKinds = new Set(changeBudget.allowedChangeKinds);
   for (const file of files) {
     if (!fileMatchesScope(file, scope.files || [])) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include ${file}` };
   }
