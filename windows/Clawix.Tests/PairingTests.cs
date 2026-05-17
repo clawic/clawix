@@ -69,10 +69,12 @@ public sealed class PairingTests
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         Assert.Equal(1, root.GetProperty("v").GetInt32());
-        Assert.Equal((int)svc.Port, root.GetProperty("port").GetInt32());
+        Assert.Equal(24080, root.GetProperty("port").GetInt32());
         Assert.Equal(svc.Bearer, root.GetProperty("token").GetString());
         Assert.Equal(svc.ShortCode, root.GetProperty("shortCode").GetString());
         Assert.True(root.TryGetProperty("host", out _));
         Assert.True(root.TryGetProperty("hostDisplayName", out _));
+        Assert.False(root.TryGetProperty("bearer", out _));
+        Assert.DoesNotContain("clawix://pair", json);
     }
 }

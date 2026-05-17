@@ -511,6 +511,11 @@ for (const [relativePath, requiredSnippets, staleSnippets] of [
     ['GetStr("token")', 'GetStr("shortCode")'],
     ['GetStr("bearer")'],
   ],
+  [
+    "windows/Clawix.Tests/PairingTests.cs",
+    ['Assert.Equal(24080, root.GetProperty("port").GetInt32());', 'Assert.False(root.TryGetProperty("bearer", out _));', 'Assert.DoesNotContain("clawix://pair", json);'],
+    [],
+  ],
 ]) {
   const source = read(relativePath);
   for (const snippet of requiredSnippets) {
