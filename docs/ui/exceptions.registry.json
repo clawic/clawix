@@ -9,6 +9,8 @@
     "scope",
     "platforms",
     "owner",
+    "approvedBy",
+    "approvedAt",
     "reason",
     "createdAt",
     "reviewAfter",

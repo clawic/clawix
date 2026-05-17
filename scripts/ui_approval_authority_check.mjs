@@ -93,6 +93,12 @@ const requiredSourceIds = new Set([
   "visual-proposals",
   "exceptions",
 ]);
+const requiredApprovedByFields = new Map([
+  ["canon-promotions", "approvedBy"],
+  ["protected-surfaces", "approvedBy"],
+  ["visual-change-scopes", "approvedBy"],
+  ["exceptions", "approvedBy"],
+]);
 const sourceIds = new Set();
 for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approvalSources").entries()) {
   const sourceLabel = `${manifestPath}.approvalSources[${sourceIndex}]`;
@@ -101,6 +107,10 @@ for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approv
   sourceIds.add(source.id);
   if (typeof source.privateApprovalField !== "string" || source.privateApprovalField === "") {
     fail(`${sourceLabel}.privateApprovalField must name a private approval reference field`);
+  }
+  const requiredApprovedByField = requiredApprovedByFields.get(source.id);
+  if (requiredApprovedByField && source.approvedByField !== requiredApprovedByField) {
+    fail(`${sourceLabel}.approvedByField must be ${requiredApprovedByField}`);
   }
   const approvalRequiredStatuses = Array.isArray(source.approvalRequiredStatuses)
     ? new Set(source.approvalRequiredStatuses)

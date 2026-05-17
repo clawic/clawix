@@ -39,7 +39,7 @@
       "id": "exceptions",
       "path": "docs/ui/exceptions.registry.json",
       "arrayField": "exceptions",
-      "approvedByField": null,
+      "approvedByField": "approvedBy",
       "privateApprovalField": "privateApprovalReference"
     }
   ]

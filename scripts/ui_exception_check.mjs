@@ -117,6 +117,8 @@ for (const field of [
   "scope",
   "platforms",
   "owner",
+  "approvedBy",
+  "approvedAt",
   "reason",
   "createdAt",
   "reviewAfter",
@@ -136,6 +138,8 @@ if (args.has("--simulate-unreferenced-active-exception")) {
       scope: "simulated",
       platforms: ["macos"],
       owner: "ui-governance-self-test",
+      approvedBy: "user",
+      approvedAt: "2026-05-17",
       reason: "Synthetic fixture for active exception inventory mapping enforcement.",
       createdAt: "2026-05-17",
       reviewAfter: "2026-08-15",
@@ -157,6 +161,8 @@ for (const [index, exception] of exceptionRecords.entries()) {
   for (const platform of requireArray(exception, label, "platforms")) {
     if (!requiredPlatforms.has(platform)) fail(`${label}.platforms contains unsupported ${platform}`);
   }
+  if (exception.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  requireIsoDate(exception.approvedAt, `${label}.approvedAt`);
   if (exception.status === "active" && exception.expiresAt < today) {
     fail(`${label} active exception expired on ${exception.expiresAt}`);
   }
