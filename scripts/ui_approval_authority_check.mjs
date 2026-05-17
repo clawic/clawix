@@ -84,7 +84,18 @@ for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approv
   if (approvalRequiredStatuses && (typeof source.statusField !== "string" || source.statusField === "")) {
     fail(`${sourceLabel}.statusField must be set when approvalRequiredStatuses is present`);
   }
+  if (approvalRequiredStatuses && (typeof source.statusValuesField !== "string" || source.statusValuesField === "")) {
+    fail(`${sourceLabel}.statusValuesField must be set when approvalRequiredStatuses is present`);
+  }
   const registry = readJson(source.path);
+  if (approvalRequiredStatuses) {
+    const allowedStatuses = new Set(requireArray(registry, source.path, source.statusValuesField));
+    for (const status of approvalRequiredStatuses) {
+      if (!allowedStatuses.has(status)) {
+        fail(`${sourceLabel}.approvalRequiredStatuses contains status not declared in ${source.path}.${source.statusValuesField}: ${status}`);
+      }
+    }
+  }
   const records = requireArray(registry, source.path, source.arrayField, { nonEmpty: false });
   for (const [recordIndex, record] of records.entries()) {
     const label = `${source.path}.${source.arrayField}[${recordIndex}]`;

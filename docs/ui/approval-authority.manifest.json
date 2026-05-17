@@ -30,6 +30,7 @@
       "path": "docs/ui/visual-proposals.registry.json",
       "arrayField": "proposals",
       "statusField": "status",
+      "statusValuesField": "proposalStatuses",
       "approvalRequiredStatuses": ["user-approved-for-visual-lane"],
       "approvedByField": null,
       "privateApprovalField": "privateApprovalReference"
