@@ -13,6 +13,7 @@ const simulateLayoutOnlyVisualScope = args.includes("--simulate-layout-only-visu
 const simulateRevokedVisualScope = args.includes("--simulate-revoked-visual-scope");
 const simulateExpiredVisualScope = args.includes("--simulate-expired-visual-scope");
 const simulateBudgetKindVisualScope = args.includes("--simulate-budget-kind-visual-scope");
+const simulateMissingPatternVisualScope = args.includes("--simulate-missing-pattern-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -96,6 +97,11 @@ const simulatedScopeApproval = {
   approvedAt: "2026-05-17",
   privateApprovalReference: "private-codex-ui-approval:simulated",
 };
+const simulatedPatternScope = {
+  platforms: ["macos", "ios", "android", "web"],
+  surfaces: ["macos-sidebar"],
+  patterns: ["sidebar-row"],
+};
 if (simulateApprovedVisualScope) {
   visualScopes.activeScopes = [
     ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
@@ -103,6 +109,7 @@ if (simulateApprovedVisualScope) {
       id: "simulated-approved-scope",
       status: "approved",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
@@ -117,6 +124,7 @@ if (simulateOverbudgetVisualScope) {
       id: "simulated-overbudget-scope",
       status: "approved",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 1, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
@@ -131,6 +139,7 @@ if (simulateWrongFileVisualScope) {
       id: "simulated-wrong-file-scope",
       status: "approved",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/other.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
@@ -145,6 +154,7 @@ if (simulateLayoutOnlyVisualScope) {
       id: "simulated-layout-only-scope",
       status: "approved",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout"] },
@@ -159,6 +169,7 @@ if (simulateRevokedVisualScope) {
       id: "simulated-revoked-scope",
       status: "revoked",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
@@ -173,6 +184,7 @@ if (simulateExpiredVisualScope) {
       id: "simulated-expired-scope",
       status: "approved",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
@@ -187,9 +199,27 @@ if (simulateBudgetKindVisualScope) {
       id: "simulated-budget-kind-scope",
       status: "approved",
       ...simulatedScopeApproval,
+      ...simulatedPatternScope,
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout"] },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateMissingPatternVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-missing-pattern-scope",
+      status: "approved",
+      ...simulatedScopeApproval,
+      platforms: ["macos", "ios", "android", "web"],
+      surfaces: ["macos-sidebar"],
+      patterns: ["composer-chrome"],
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 3, allowedChangeKinds: ["layout", "microcopy", "hierarchy"] },
       expiresAt: "2099-12-31",
     },
   ];
@@ -230,6 +260,20 @@ function isSafePrivateApprovalReference(value) {
   );
 }
 
+function patternIdForPath(file) {
+  const match = /^docs\/ui\/pattern-registry\/patterns\/([^/]+)\.pattern\.json$/.exec(file);
+  return match?.[1] || null;
+}
+
+const patternPlatformCache = new Map();
+function platformsForPattern(patternId) {
+  if (patternPlatformCache.has(patternId)) return patternPlatformCache.get(patternId);
+  const pattern = readJson(`docs/ui/pattern-registry/patterns/${patternId}.pattern.json`);
+  const platforms = Array.isArray(pattern?.platforms) ? pattern.platforms : [];
+  patternPlatformCache.set(patternId, platforms);
+  return platforms;
+}
+
 function approvedScopeForHits(hits) {
   if (!requestedVisualScopeId) return { ok: false, reason: `${visualScopeEnv}=<approved visual scope id> is required` };
   const scope = (visualScopes?.activeScopes || []).find((candidate) => candidate?.id === requestedVisualScopeId);
@@ -243,14 +287,27 @@ function approvedScopeForHits(hits) {
   }
 
   const files = new Set(hits.map((hit) => hit.path));
+  const scopePlatforms = new Set(Array.isArray(scope.platforms) ? scope.platforms : []);
+  const scopeSurfaces = new Set(Array.isArray(scope.surfaces) ? scope.surfaces : []);
+  const scopePatterns = new Set(Array.isArray(scope.patterns) ? scope.patterns : []);
   const scopeChangeKinds = new Set(Array.isArray(scope.changeKinds) ? scope.changeKinds : []);
   const changeBudget = scope.changeBudget || {};
+  if (scopePlatforms.size === 0) return { ok: false, reason: `scope ${requestedVisualScopeId} must declare platforms` };
+  if (scopeSurfaces.size === 0) return { ok: false, reason: `scope ${requestedVisualScopeId} must declare surfaces` };
+  if (scopePatterns.size === 0) return { ok: false, reason: `scope ${requestedVisualScopeId} must declare patterns` };
   if (!Array.isArray(changeBudget.allowedChangeKinds)) {
     return { ok: false, reason: `scope ${requestedVisualScopeId} changeBudget.allowedChangeKinds is required` };
   }
   const budgetChangeKinds = new Set(changeBudget.allowedChangeKinds);
   for (const file of files) {
     if (!fileMatchesScope(file, scope.files || [])) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include ${file}` };
+  }
+  const touchedPatterns = new Set([...files].map(patternIdForPath).filter(Boolean));
+  for (const patternId of touchedPatterns) {
+    if (!scopePatterns.has(patternId)) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include pattern ${patternId}` };
+    for (const platform of platformsForPattern(patternId)) {
+      if (!scopePlatforms.has(platform)) return { ok: false, reason: `scope ${requestedVisualScopeId} does not include platform ${platform}` };
+    }
   }
   for (const hit of hits) {
     if (!scopeChangeKinds.has(hit.scopeChangeKind)) {

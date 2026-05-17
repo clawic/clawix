@@ -628,6 +628,36 @@ for (const snippet of [
   if (!patternAuthorizedWrongFileScopeOutput.includes(snippet)) fail(`pattern authorized wrong-file-scope failure output is missing: ${snippet}`);
 }
 
+let patternAuthorizedMissingPatternScopeOutput = "";
+let patternAuthorizedMissingPatternScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-missing-pattern-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-missing-pattern-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedMissingPatternScopeExitCode = error.status || 1;
+  patternAuthorizedMissingPatternScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedMissingPatternScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the approved visual scope does not include the touched pattern");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-missing-pattern-scope",
+  "does not include pattern sidebar-row",
+]) {
+  if (!patternAuthorizedMissingPatternScopeOutput.includes(snippet)) fail(`pattern authorized missing-pattern-scope failure output is missing: ${snippet}`);
+}
+
 let patternAuthorizedWrongKindScopeOutput = "";
 let patternAuthorizedWrongKindScopeExitCode = 0;
 try {

@@ -101,6 +101,10 @@ const requiredChangeKinds = new Set([
 
 const manifestPath = "docs/ui/visual-change-scopes.manifest.json";
 const manifest = readJson(manifestPath);
+const inventoryPath = "docs/ui/visible-surfaces.inventory.json";
+const inventory = readJson(inventoryPath);
+const patternRegistryPath = "docs/ui/pattern-registry/patterns.registry.json";
+const patternRegistry = readJson(patternRegistryPath);
 requireFields(manifest, manifestPath, [
   "schemaVersion",
   "status",
@@ -133,10 +137,12 @@ for (const status of ["proposed", "approved", "expired", "revoked"]) {
 
 const requiredApprovalFields = requireArray(manifest, manifestPath, "requiredApprovalFields");
 const requiredApprovalFieldSet = new Set(requiredApprovalFields);
-for (const field of ["files", "changeBudget", "approvedBy", "approvedAt", "expiresAt", "privateApprovalReference"]) {
+for (const field of ["platforms", "surfaces", "patterns", "files", "changeBudget", "approvedBy", "approvedAt", "expiresAt", "privateApprovalReference"]) {
   if (!requiredApprovalFieldSet.has(field)) fail(`${manifestPath}.requiredApprovalFields must include ${field}`);
 }
 
+const inventorySurfaceIds = new Set(requireArray(inventory, inventoryPath, "coverage").map((entry) => entry?.id).filter(Boolean));
+const patternIds = new Set(requireArray(patternRegistry, patternRegistryPath, "patterns"));
 const scopes = requireArray(manifest, manifestPath, "activeScopes", { nonEmpty: false });
 for (const [index, scope] of scopes.entries()) {
   const label = `${manifestPath}.activeScopes[${index}]`;
@@ -150,6 +156,12 @@ for (const [index, scope] of scopes.entries()) {
   }
   for (const platform of requireArray(scope, label, "platforms")) {
     if (!requiredPlatforms.has(platform)) fail(`${label}.platforms contains unsupported ${platform}`);
+  }
+  for (const surface of requireArray(scope, label, "surfaces")) {
+    if (!inventorySurfaceIds.has(surface)) fail(`${label}.surfaces references unknown visible surface ${surface}`);
+  }
+  for (const pattern of requireArray(scope, label, "patterns")) {
+    if (!patternIds.has(pattern)) fail(`${label}.patterns references unknown pattern ${pattern}`);
   }
   for (const kind of requireArray(scope, label, "changeKinds")) {
     if (!requiredChangeKinds.has(kind)) fail(`${label}.changeKinds contains unsupported ${kind}`);
