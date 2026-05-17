@@ -21,6 +21,11 @@ final class PersistentSurfaceRegistryTests: XCTestCase {
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.snippets" && $0.owner == "claw" && $0.path == "~/.claw/core.sqlite#snippets" })
         XCTAssertTrue(nodes.contains { $0.id == "claw.framework.providerRouting" && $0.owner == "claw" && $0.path == "~/.claw/core.sqlite#provider_routing,provider_settings" })
         XCTAssertTrue(nodes.contains { $0.id == "clawix.dictationAudioDebug" && $0.path == "~/.clawix/tmp/dictation-audio-debug" })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.database.local" && $0.notes?.contains("UI/cache/snapshot") == true })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.clawjs" && $0.storageClass == "hostOperational" && $0.notes?.contains("Not a framework data root") == true })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.secrets" && $0.storageClass == "hostOperational" && $0.notes?.contains("opaque secret ids only") == true })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.localModels" && $0.storageClass == "hostOperational" && $0.notes?.contains("model binaries") == true })
+        XCTAssertTrue(nodes.contains { $0.id == "clawix.dictationSounds" && $0.storageClass == "hostOperational" && $0.notes?.contains("framework audio surface") == true })
         XCTAssertFalse(nodes.contains {
             $0.id == "clawix.apps" ||
             $0.id == "clawix.design" ||

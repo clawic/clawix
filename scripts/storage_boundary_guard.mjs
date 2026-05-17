@@ -128,6 +128,28 @@ if (!hostActionAudit) {
   if (hostActionAudit.canonicality !== "hostOnly") fail("clawix.hostActionAudit canonicality must be hostOnly");
 }
 
+for (const [id, requiredNote] of [
+  ["clawix.database.local", "UI/cache/snapshot"],
+  ["clawix.clawjs", "Not a framework data root"],
+  ["clawix.secrets", "opaque secret ids only"],
+  ["clawix.localModels", "model binaries"],
+  ["clawix.dictationSounds", "framework audio surface"],
+]) {
+  const node = nodes.get(id);
+  if (!node) {
+    fail(`persistent surface manifest is missing ${id}`);
+    continue;
+  }
+  if (node.owner !== "clawix") fail(`${id} owner must be clawix`);
+  if (node.canonicality !== "hostOnly") fail(`${id} canonicality must be hostOnly`);
+  if (id !== "clawix.database.local" && node.storageClass !== "hostOperational") {
+    fail(`${id} storageClass must be hostOperational`);
+  }
+  if (!node.notes || !node.notes.includes(requiredNote)) {
+    fail(`${id} must document host-only storage boundary note ${JSON.stringify(requiredNote)}`);
+  }
+}
+
 for (const staleId of ["clawix.apps", "clawix.design", "clawix.audioCatalog", "clawix.audioCatalogMetadata", "clawix.dictationAudio"]) {
   if (nodes.has(staleId)) fail(`persistent surface manifest still exposes retired host-owned node ${staleId}`);
 }

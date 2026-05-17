@@ -29,7 +29,7 @@ const checks = [
     name: "private copy",
     env: "CLAWIX_UI_PRIVATE_COPY_ROOT",
     script: "scripts/ui_private_copy_verify.mjs",
-    args: ["--require-approved"],
+    args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
   },
   {
     name: "private rendered drift",

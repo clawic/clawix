@@ -55,6 +55,8 @@ requireFields(copyInventory, copyPath, [
   "status",
   "policy",
   "patternCopySource",
+  "surfaceCoverageSource",
+  "protectedSurfaceSource",
   "privateSnapshotAlias",
   "evidenceFilename",
   "verificationCommand",
@@ -85,7 +87,7 @@ for (const kind of requiredCopyKinds) {
   if (!copyKinds.has(kind)) fail(`${copyPath}.restrictedCopyKinds must include ${kind}`);
 }
 
-const requiredEvidence = ["copySnapshotReference", "copySnapshotHash", "approvedByUserAt", "approvedScope"];
+const requiredEvidence = ["coverageId", "platform", "copySnapshotReference", "copySnapshotHash", "approvedByUserAt", "approvedScope"];
 const evidence = new Set(requireArray(copyInventory, copyPath, "requiredEvidenceFields"));
 for (const field of requiredEvidence) {
   if (!evidence.has(field)) fail(`${copyPath}.requiredEvidenceFields must include ${field}`);
@@ -118,6 +120,17 @@ for (const patternId of patternIds) {
 const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
 const privateAlias = copyInventory?.privateSnapshotAlias || "";
+const surfaceCoveragePath = copyInventory?.surfaceCoverageSource || "docs/ui/surface-baseline-coverage.manifest.json";
+const surfaceCoverage = readJson(surfaceCoveragePath);
+for (const [index, entry] of requireArray(surfaceCoverage, surfaceCoveragePath, "coverage").entries()) {
+  const label = `${surfaceCoveragePath}.coverage[${index}]`;
+  requireFields(entry, label, ["coverageId", "platform", "copySnapshotReference", "requiredEvidence"]);
+  if (!isPublicSafeReference(entry.copySnapshotReference, privateAlias)) {
+    fail(`${label}.copySnapshotReference must use ${privateAlias}: and must not contain a local path`);
+  }
+  const coverageEvidence = new Set(requireArray(entry, label, "requiredEvidence"));
+  if (!coverageEvidence.has("copySnapshotHash")) fail(`${label}.requiredEvidence must include copySnapshotHash`);
+}
 for (const [index, surface] of requireArray(protectedSurfaces, protectedPath, "surfaces", { nonEmpty: false }).entries()) {
   const label = `${protectedPath}.surfaces[${index}]`;
   requireFields(surface, label, ["copySnapshotReference", "copySnapshotHash"]);

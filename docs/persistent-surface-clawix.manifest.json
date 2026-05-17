@@ -7,6 +7,7 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Clawix Application Support",
+      "notes" : "Host GUI-only app data and host runtime support. Framework-owned reusable data belongs under ~/.claw or workspace .claw/ roots.",
       "owner" : "clawix",
       "path" : "~/Library/Application Support/Clawix",
       "privacy" : "userData",
@@ -35,6 +36,7 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Clawix local database",
+      "notes" : "Host-local UI/cache/snapshot database only; framework resources remain canonical in ClawJS storage.",
       "owner" : "clawix",
       "parentId" : "clawix.applicationSupport",
       "path" : "~/Library/Application Support/Clawix/clawix.sqlite",
@@ -95,12 +97,13 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Temporary secrets vault database pattern",
+      "notes" : "Test/dummy-mode host vault path. Plaintext secrets stay in signed host or vault surfaces, never framework storage.",
       "owner" : "clawix",
       "path" : "<tmp>/clawix-vault-<uuid>.sqlite",
       "privacy" : "userData",
       "project" : "macos",
       "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
+      "storageClass" : "hostOperational"
     },
     {
       "canonicality" : "frameworkCanonical",
@@ -199,13 +202,14 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Embedded ClawJS",
+      "notes" : "Host-managed embedded runtime distribution/cache. Not a framework data root and not a canonical ClawJS store.",
       "owner" : "clawix",
       "parentId" : "clawix.applicationSupport",
       "path" : "~/Library/Application Support/Clawix/clawjs",
       "privacy" : "userData",
       "project" : "macos",
       "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
+      "storageClass" : "hostOperational"
     },
     {
       "canonicality" : "hostOnly",
@@ -214,13 +218,14 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Secrets",
+      "notes" : "Signed-host vault/proxy state. Framework records may reference opaque secret ids only.",
       "owner" : "clawix",
       "parentId" : "clawix.applicationSupport",
       "path" : "~/Library/Application Support/Clawix/secrets",
       "privacy" : "userData",
       "project" : "macos",
       "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
+      "storageClass" : "hostOperational"
     },
     {
       "canonicality" : "hostOnly",
@@ -229,13 +234,14 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Local models",
+      "notes" : "Host/runtime-local model binaries and installation state. Framework storage records capabilities and non-sensitive metadata only.",
       "owner" : "clawix",
       "parentId" : "clawix.applicationSupport",
       "path" : "~/Library/Application Support/Clawix/local-models",
       "privacy" : "userData",
       "project" : "macos",
       "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
+      "storageClass" : "hostOperational"
     },
     {
       "canonicality" : "hostOnly",
@@ -244,13 +250,14 @@
       "language" : "swift",
       "lifecycle" : "durable",
       "name" : "Dictation sounds",
+      "notes" : "Host UI playback assets for dictation feedback. The durable audio catalog and transcripts live in the framework audio surface.",
       "owner" : "clawix",
       "parentId" : "clawix.applicationSupport",
       "path" : "~/Library/Application Support/Clawix/dictation-sounds",
       "privacy" : "userData",
       "project" : "macos",
       "repo" : "Clawix",
-      "storageClass" : "nativeAppData"
+      "storageClass" : "hostOperational"
     },
     {
       "canonicality" : "cache",
@@ -6254,101 +6261,6 @@
       "project" : "macos",
       "repo" : "Clawix",
       "storageClass" : "nativeAppData"
-    }
-  ],
-  "edges" : [
-    {
-      "contractId" : "clawix.protocol.bridge",
-      "fromId" : "clawix.ui.chat",
-      "id" : "clawix.edge.chat.ui.consumes.bridge",
-      "notes" : "Host-side mirror of the canonical ClawJS chat.localDesktop route edge.",
-      "owner" : "clawix",
-      "toId" : "clawix.bridge.local",
-      "transport" : "local bridge RPC",
-      "type" : "consumes",
-      "validation" : "macOS bridge daemon E2E fixture",
-      "visibility" : "internal"
-    },
-    {
-      "contractId" : "clawix.protocol.bridge",
-      "fromId" : "clawix.companion.client",
-      "id" : "clawix.edge.companion.consumes.bridge",
-      "owner" : "clawix",
-      "toId" : "clawix.bridge.local",
-      "transport" : "WebSocket localhost:24080",
-      "type" : "consumes",
-      "validation" : "Bridge frame round-trip tests across Swift, Android, Windows, Web",
-      "visibility" : "public"
-    }
-  ],
-  "routes" : [
-    {
-      "adrs" : [
-        "docs/adr/0011-surface-route-graph.md"
-      ],
-      "docs" : [
-        "docs/adr/0011-surface-route-graph.md",
-        "docs/host-ownership.md"
-      ],
-      "fromId" : "clawix.ui.chat",
-      "id" : "chat.localDesktop.clawixHost",
-      "name" : "Clawix host leg of local desktop chat",
-      "owner" : "clawix",
-      "steps" : [
-        {
-          "contractId" : "clawix.protocol.bridge",
-          "edgeId" : "clawix.edge.chat.ui.consumes.bridge",
-          "edgeType" : "consumes",
-          "fromId" : "clawix.ui.chat",
-          "owner" : "clawix",
-          "toId" : "clawix.bridge.local",
-          "transport" : "local bridge RPC",
-          "validation" : "macOS bridge daemon E2E fixture",
-          "visibility" : "internal"
-        }
-      ],
-      "summary" : "Clawix UI enters the local bridge before the framework-owned daemon/runtime/session route continues in ClawJS.",
-      "tests" : [
-        "macos/Helpers/Bridged/Tests/e2e_bridge_daemon.py"
-      ],
-      "toId" : "clawix.bridge.local",
-      "transport" : "local bridge RPC",
-      "validation" : "macOS bridge daemon E2E fixture",
-      "visibility" : "internal"
-    },
-    {
-      "adrs" : [
-        "docs/adr/0011-surface-route-graph.md"
-      ],
-      "docs" : [
-        "docs/adr/0011-surface-route-graph.md",
-        "packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md"
-      ],
-      "fromId" : "clawix.companion.client",
-      "id" : "chat.companionBridge.clawixHost",
-      "name" : "Clawix host leg of companion chat",
-      "owner" : "clawix",
-      "steps" : [
-        {
-          "contractId" : "clawix.protocol.bridge",
-          "edgeId" : "clawix.edge.companion.consumes.bridge",
-          "edgeType" : "consumes",
-          "fromId" : "clawix.companion.client",
-          "owner" : "clawix",
-          "toId" : "clawix.bridge.local",
-          "transport" : "WebSocket localhost:24080",
-          "validation" : "Cross-platform bridge frame round-trip tests",
-          "visibility" : "public"
-        }
-      ],
-      "summary" : "Companion clients enter the local bridge over the stable bridge protocol on port 24080 before framework routing continues.",
-      "tests" : [
-        "packages/ClawixCore/Tests/ClawixCoreTests/BridgeFrameRoundTripTests.swift"
-      ],
-      "toId" : "clawix.bridge.local",
-      "transport" : "WebSocket localhost:24080",
-      "validation" : "Cross-platform bridge frame round-trip tests",
-      "visibility" : "public"
     }
   ],
   "version" : 1

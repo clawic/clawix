@@ -80,7 +80,44 @@ const protectedSurfaces = readJson("docs/ui/protected-surfaces.registry.json");
 const alias = copyInventory?.privateSnapshotAlias || "private-codex-ui-copy-snapshots";
 const evidenceFilename = copyInventory?.evidenceFilename || "copy-evidence.json";
 const requireApproved = hasFlag("--require-approved");
+const includePending = hasFlag("--include-pending");
 let verified = 0;
+let pending = 0;
+
+const surfaceCoverage = readJson(copyInventory?.surfaceCoverageSource || "docs/ui/surface-baseline-coverage.manifest.json");
+for (const [index, coverage] of (surfaceCoverage?.coverage || []).entries()) {
+  const label = `surface coverage ${coverage.coverageId || index}`;
+  if (coverage.baselineStatus !== "approved") {
+    pending += 1;
+    if (!includePending) {
+      if (requireApproved) fail(`${label} is pending approved copy snapshot`);
+      continue;
+    }
+  }
+  requireField(coverage, label, "copySnapshotReference");
+  const relativeEvidenceDir = relativePathFromReference(coverage.copySnapshotReference, alias);
+  if (!relativeEvidenceDir) {
+    fail(`${label} has invalid copySnapshotReference`);
+    continue;
+  }
+  const evidencePath = path.join(privateRoot, relativeEvidenceDir, evidenceFilename);
+  const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
+  if (!evidence) continue;
+  for (const field of ["copySnapshotReference", "copySnapshotHash", "approvedByUserAt", "approvedScope", "surfaceId"]) {
+    requireField(evidence, `${label} evidence`, field);
+  }
+  assertHash(evidence.copySnapshotHash, `${label}.copySnapshotHash`);
+  if (evidence.copySnapshotReference !== coverage.copySnapshotReference) {
+    fail(`${label}.copySnapshotReference must match the surface baseline coverage manifest`);
+  }
+  if (evidence.coverageId !== coverage.coverageId) {
+    fail(`${label}.coverageId must match the surface baseline coverage manifest`);
+  }
+  if (evidence.platform !== coverage.platform) {
+    fail(`${label}.platform must match the surface baseline coverage manifest`);
+  }
+  verified += 1;
+}
 
 const surfaces = Array.isArray(protectedSurfaces?.surfaces) ? protectedSurfaces.surfaces : [];
 for (const [index, surface] of surfaces.entries()) {
@@ -123,4 +160,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`UI private copy verification passed (${verified} protected surface snapshots)`);
+console.log(`UI private copy verification passed (${verified} snapshots, ${pending} pending)`);

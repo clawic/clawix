@@ -95,12 +95,19 @@ struct PersistentSurfaceManifest: Codable, Equatable {
 }
 
 enum ClawixPersistentSurface {
-    static func root(id: String, name: String, path: String, storageClass: String = "nativeAppData") -> PersistentSurfaceNode {
-        node(id: id, kind: .root, name: name, path: path, storageClass: storageClass)
+    static func root(id: String, name: String, path: String, storageClass: String = "nativeAppData", notes: String? = nil) -> PersistentSurfaceNode {
+        node(id: id, kind: .root, name: name, path: path, storageClass: storageClass, notes: notes)
     }
 
-    static func database(id: String, name: String, path: String, parentId: String? = nil) -> PersistentSurfaceNode {
-        node(id: id, kind: .database, name: name, path: path, storageClass: "nativeAppData", parentId: parentId)
+    static func database(
+        id: String,
+        name: String,
+        path: String,
+        parentId: String? = nil,
+        storageClass: String = "nativeAppData",
+        notes: String? = nil
+    ) -> PersistentSurfaceNode {
+        node(id: id, kind: .database, name: name, path: path, storageClass: storageClass, parentId: parentId, notes: notes)
     }
 
     static func table(_ name: String, databaseId: String) -> PersistentSurfaceNode {
@@ -138,8 +145,15 @@ enum ClawixPersistentSurface {
         )
     }
 
-    static func folder(id: String, name: String, path: String, parentId: String? = nil, storageClass: String = "nativeAppData") -> PersistentSurfaceNode {
-        node(id: id, kind: .folder, name: name, path: path, storageClass: storageClass, parentId: parentId)
+    static func folder(
+        id: String,
+        name: String,
+        path: String,
+        parentId: String? = nil,
+        storageClass: String = "nativeAppData",
+        notes: String? = nil
+    ) -> PersistentSurfaceNode {
+        node(id: id, kind: .folder, name: name, path: path, storageClass: storageClass, parentId: parentId, notes: notes)
     }
 
     static func frameworkFolder(id: String, name: String, path: String, parentId: String? = nil, notes: String? = nil) -> PersistentSurfaceNode {
@@ -315,7 +329,8 @@ enum ClawixPersistentSurfaceRegistry {
             ClawixPersistentSurface.root(
                 id: "clawix.applicationSupport",
                 name: "Clawix Application Support",
-                path: "~/Library/Application Support/Clawix"
+                path: "~/Library/Application Support/Clawix",
+                notes: "Host GUI-only app data and host runtime support. Framework-owned reusable data belongs under ~/.claw or workspace .claw/ roots."
             ),
             ClawixPersistentSurface.root(
                 id: "clawix.home",
@@ -327,7 +342,8 @@ enum ClawixPersistentSurfaceRegistry {
                 id: localDatabaseId,
                 name: "Clawix local database",
                 path: "~/Library/Application Support/Clawix/clawix.sqlite",
-                parentId: "clawix.applicationSupport"
+                parentId: "clawix.applicationSupport",
+                notes: "Host-local UI/cache/snapshot database only; framework resources remain canonical in ClawJS storage."
             ),
             ClawixPersistentSurface.frameworkFolder(
                 id: "claw.framework.audio",
@@ -352,7 +368,9 @@ enum ClawixPersistentSurfaceRegistry {
                 id: "clawix.secretsTemporaryVaultPattern",
                 name: "Temporary secrets vault database pattern",
                 path: "<tmp>/clawix-vault-<uuid>.sqlite",
-                parentId: nil
+                parentId: nil,
+                storageClass: "hostOperational",
+                notes: "Test/dummy-mode host vault path. Plaintext secrets stay in signed host or vault surfaces, never framework storage."
             ),
             ClawixPersistentSurface.frameworkFolder(
                 id: "claw.framework.apps",
@@ -400,25 +418,33 @@ enum ClawixPersistentSurfaceRegistry {
                 id: "clawix.clawjs",
                 name: "Embedded ClawJS",
                 path: "~/Library/Application Support/Clawix/clawjs",
-                parentId: "clawix.applicationSupport"
+                parentId: "clawix.applicationSupport",
+                storageClass: "hostOperational",
+                notes: "Host-managed embedded runtime distribution/cache. Not a framework data root and not a canonical ClawJS store."
             ),
             ClawixPersistentSurface.folder(
                 id: "clawix.secrets",
                 name: "Secrets",
                 path: "~/Library/Application Support/Clawix/secrets",
-                parentId: "clawix.applicationSupport"
+                parentId: "clawix.applicationSupport",
+                storageClass: "hostOperational",
+                notes: "Signed-host vault/proxy state. Framework records may reference opaque secret ids only."
             ),
             ClawixPersistentSurface.folder(
                 id: "clawix.localModels",
                 name: "Local models",
                 path: "~/Library/Application Support/Clawix/local-models",
-                parentId: "clawix.applicationSupport"
+                parentId: "clawix.applicationSupport",
+                storageClass: "hostOperational",
+                notes: "Host/runtime-local model binaries and installation state. Framework storage records capabilities and non-sensitive metadata only."
             ),
             ClawixPersistentSurface.folder(
                 id: "clawix.dictationSounds",
                 name: "Dictation sounds",
                 path: "~/Library/Application Support/Clawix/dictation-sounds",
-                parentId: "clawix.applicationSupport"
+                parentId: "clawix.applicationSupport",
+                storageClass: "hostOperational",
+                notes: "Host UI playback assets for dictation feedback. The durable audio catalog and transcripts live in the framework audio surface."
             ),
             ClawixPersistentSurface.cache(
                 id: "clawix.captures",
