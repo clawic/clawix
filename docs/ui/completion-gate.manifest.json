@@ -15,6 +15,9 @@
     "completion-source-contract-check",
     "private-visual-validation-manifest-shape"
   ],
+  "publicPrerequisiteScripts": [
+    "scripts/ui_release_gate_check.mjs"
+  ],
   "goalUpdateRule": "Call update_goal only after scripts/ui_private_completion_verify.mjs --require-approved exits 0.",
   "externalPendingExitCode": 2
 }

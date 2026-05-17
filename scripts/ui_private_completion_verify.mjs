@@ -14,6 +14,13 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(rootDir, relativePath), "utf8"));
 }
 
+function runPublicPrerequisites(manifest) {
+  if (hasFlag("--skip-public-prerequisites")) return;
+  for (const script of manifest.publicPrerequisiteScripts || []) {
+    runScript(script, []);
+  }
+}
+
 function runScript(script, scriptArgs = ["--require-approved"]) {
   const result = spawnSync(process.execPath, [path.join(rootDir, script), ...scriptArgs], {
     cwd: rootDir,
@@ -34,6 +41,7 @@ if (!hasFlag("--require-approved")) {
 }
 
 const manifest = readJson("docs/ui/completion-gate.manifest.json");
+runPublicPrerequisites(manifest);
 const decisionVerification = readJson(manifest.decisionVerificationPath || "docs/ui/decision-verification.json");
 const openDecisions = hasFlag("--simulate-no-open-decisions")
   ? []

@@ -86,6 +86,7 @@ requireFields(manifest, manifestPath, [
   "privateVerifierScript",
   "finalVerificationCommand",
   "requiredPublicChecks",
+  "publicPrerequisiteScripts",
   "goalUpdateRule",
   "externalPendingExitCode",
 ]);
@@ -140,12 +141,26 @@ if (!publicChecks.has("completion-final-gate-check")) {
 for (const check of requireArray(manifest, manifestPath, "requiredPublicChecks")) {
   if (!publicChecks.has(check)) fail(`${manifestPath}.requiredPublicChecks includes undeclared check ${check}`);
 }
+if (!Array.isArray(manifest.publicPrerequisiteScripts) || !manifest.publicPrerequisiteScripts.includes("scripts/ui_release_gate_check.mjs")) {
+  fail(`${manifestPath}.publicPrerequisiteScripts must include scripts/ui_release_gate_check.mjs`);
+}
+for (const [index, script] of (manifest.publicPrerequisiteScripts || []).entries()) {
+  if (typeof script !== "string" || !script.startsWith("scripts/ui_") || !script.endsWith(".mjs")) {
+    fail(`${manifestPath}.publicPrerequisiteScripts[${index}] must be a public UI script`);
+    continue;
+  }
+  if (!fs.existsSync(path.join(rootDir, script))) {
+    fail(`${manifestPath}.publicPrerequisiteScripts[${index}] points to missing ${script}`);
+  }
+}
 
 const privateVerifier = read(manifest?.privateVerifierScript || "scripts/ui_private_completion_verify.mjs");
 for (const snippet of [
   "docs/ui/completion-gate.manifest.json",
   "scripts/ui_private_completion_source_verify.mjs",
   "scripts/ui_private_visual_verify.mjs",
+  "publicPrerequisiteScripts",
+  "--skip-public-prerequisites",
   "EXTERNAL PENDING",
   "process.exit(2)",
   "open decisions",
@@ -160,7 +175,7 @@ const decisionVerification = readJson(manifest?.decisionVerificationPath || "doc
 const openDecisions = requireArray(decisionVerification, manifest?.decisionVerificationPath || "docs/ui/decision-verification.json", "decisions")
   .filter((decision) => decision?.status === "open");
 if (openDecisions.length > 0) {
-  const result = spawnSync(process.execPath, [path.join(rootDir, manifest.privateVerifierScript), "--require-approved"], {
+  const result = spawnSync(process.execPath, [path.join(rootDir, manifest.privateVerifierScript), "--require-approved", "--skip-public-prerequisites"], {
     cwd: rootDir,
     env: withoutPrivateCompletionEnv(),
     encoding: "utf8",
@@ -181,7 +196,7 @@ if (openDecisions.length > 0) {
 
 const simulatedClosedResult = spawnSync(
   process.execPath,
-  [path.join(rootDir, manifest.privateVerifierScript), "--require-approved", "--simulate-no-open-decisions"],
+  [path.join(rootDir, manifest.privateVerifierScript), "--require-approved", "--simulate-no-open-decisions", "--skip-public-prerequisites"],
   {
     cwd: rootDir,
     env: withoutPrivateCompletionEnv(),
