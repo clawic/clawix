@@ -28,6 +28,8 @@ for file in \
   "docs/host-ownership.md" \
   "docs/data-storage-boundary.md" \
   "docs/decision-map.md" \
+  "docs/v1-surface-closure-decisions.json" \
+  "docs/v1-surface-closure-completion-audit.md" \
   "docs/interface-matrix.md" \
   "docs/interface-surface-clawix.registry.json" \
   "docs/naming-style-guide.md" \
@@ -125,6 +127,7 @@ for file in \
   "scripts/ui_private_drift_verify.mjs" \
   "scripts/ui_private_visual_validation_manifest_check.mjs" \
   "scripts/ui_governance_guard.mjs" \
+  "scripts/v1_surface_closure_audit_check.mjs" \
   "scripts/storage_boundary_guard.mjs"
 do
   require_file "$file"
@@ -535,6 +538,10 @@ done
 
 if ! node "$ROOT_DIR/scripts/interface_surface_guard.mjs"; then
   fail "interface surface guard failed"
+fi
+
+if ! node "$ROOT_DIR/scripts/v1_surface_closure_audit_check.mjs"; then
+  fail "v1 surface closure audit check failed"
 fi
 
 if ! node "$ROOT_DIR/scripts/storage_boundary_guard.mjs"; then
