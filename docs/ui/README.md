@@ -77,7 +77,8 @@ the public repo.
   review date, and expiry.
 - `protected-surfaces.registry.json`: user-approved frozen visual surfaces.
 - `approval-authority.manifest.json`: aggregate contract for explicit user
-  approval authority across canon, protected surfaces, scopes, and exceptions.
+  approval authority across canon, protected surfaces, scopes, and exceptions;
+  private approval evidence stays outside the public repo.
 - `canon-units.manifest.json`: declares UI pattern as the primary canon unit
   and requires promotion for narrower units.
 - `canon-promotions.registry.json`: public-safe records for user-approved canon
@@ -98,6 +99,8 @@ the public repo.
   private visual and performance evidence validation runner.
 - `scripts/ui_private_evidence_verify.mjs`: private-root verifier for every
   record in the derived evidence plan.
+- `scripts/ui_private_approval_verify.mjs`: optional private-root verifier for
+  user approval evidence referenced by public approval records.
 - `visual-change-proposal.template.md`: conceptual-only proposal template for
   non-authorized visual/copy/layout changes.
 - `inspiration/`: non-canonical external references.
@@ -138,7 +141,9 @@ the public repo.
    `scripts/ui_protected_surface_check.mjs`.
 15. Keep approval authority current with
    `scripts/ui_approval_authority_check.mjs`; future approvals must be from the
-   user and point to private approval evidence.
+   user, point to private approval evidence, and pass
+   `scripts/ui_private_approval_verify.mjs --require-approved` once approval
+   records exist.
 16. Keep canon unit contracts current with `scripts/ui_canon_unit_check.mjs`;
    narrower units require explicit canon promotion before becoming canon.
 17. Keep geometry contracts current with `scripts/ui_geometry_contract_check.mjs`.
@@ -229,24 +234,28 @@ the public repo.
 46. When all private roots are available, verify visual and performance
     evidence end to end with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved`.
-47. When private debt audit evidence is available, verify it with
+    If public approval records exist, also set
+    `CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root>`.
+47. When private approval evidence is available, verify it with
+    `CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root> node scripts/ui_private_approval_verify.mjs --require-approved`.
+48. When private debt audit evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_debt_audit_verify.mjs --require-approved`.
     Debt audit evidence must include hashed `findingItems` so each private
     finding is independently accountable without publishing visual values.
-48. When private geometry evidence is available, verify it with
+49. When private geometry evidence is available, verify it with
     `CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> node scripts/ui_private_geometry_verify.mjs --require-approved`.
-49. When private baselines are available, verify them with
+50. When private baselines are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_baseline_verify.mjs --require-approved`.
-50. When private performance measurements are available, verify them with
+51. When private performance measurements are available, verify them with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved`.
-51. When private copy snapshots are available, verify them with
+52. When private copy snapshots are available, verify them with
     `CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> node scripts/ui_private_copy_verify.mjs --require-approved`.
     Copy evidence must include hashed `copyItems` and `copyHierarchyHash` so
     visible text, order, and hierarchy are governed without publishing raw copy.
-52. When private rendered drift reports are available, verify them with
+53. When private rendered drift reports are available, verify them with
     `CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_drift_verify.mjs --require-approved`.
     Each private report must include hashed per-category `driftResults` entries
     for every public drift category, so approval records prove what was checked
     without publishing screenshots, copy, geometry, or performance captures.
-50. When the lane is not visual-authorized, use
+54. When the lane is not visual-authorized, use
    `visual-change-proposal.template.md` instead of changing presentation.

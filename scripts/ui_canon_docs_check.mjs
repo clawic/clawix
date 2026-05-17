@@ -76,6 +76,7 @@ for (const snippet of [
   "docs/ui/debt-baseline.*",
   "private-visual-validation.manifest.json",
   "visual-change-proposal.template.md",
+  "ui_private_approval_verify.mjs --require-approved",
   "ui_private_visual_verify.mjs --require-approved",
 ]) {
   requireSnippet("docs/ui/README.md", snippet);
