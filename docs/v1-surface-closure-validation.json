@@ -4,7 +4,7 @@
   "repo": "clawix",
   "generatedAt": "2026-05-17",
   "completionStatus": "blocked-tooling",
-  "completionBlockers": ["clawix-android-bridge", "clawix-windows-bridge"],
+  "completionBlockers": ["clawix-windows-bridge"],
   "statusVocabulary": {
     "passed": "The command ran locally and returned exit code 0.",
     "external-pending": "The local harness exists, but a live, provider, Docker, paid, destructive, physical, or approved external prerequisite was intentionally not exercised.",
@@ -29,10 +29,8 @@
       "id": "clawix-android-bridge",
       "acceptanceCategoryIds": ["bridge-android"],
       "command": "bash scripts/launch-android.sh test",
-      "status": "blocked-tooling",
-      "completionBlocking": true,
-      "evidence": "Launcher exited 69 because the Gradle wrapper is missing and no gradle binary is available on PATH.",
-      "nextAction": "Generate the Android Gradle wrapper on a machine with Gradle or open android/ in Android Studio, then rerun bash scripts/launch-android.sh test."
+      "status": "passed",
+      "evidence": "Android unit lane passed through the public launcher using a cached Gradle distribution: BUILD SUCCESSFUL, :app:testDebugUnitTest."
     },
     {
       "id": "clawix-windows-bridge",
