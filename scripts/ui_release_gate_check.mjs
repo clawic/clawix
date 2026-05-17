@@ -70,6 +70,18 @@ function scanPublicText(value, label) {
   }
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasWorkflowNodeRun(workflowSource, script) {
+  return new RegExp(`^\\s*run:\\s+node\\s+${escapeRegExp(script)}\\s*$`, "m").test(workflowSource);
+}
+
+function hasTestScriptNodeRun(testScriptSource, script) {
+  return new RegExp(`^\\s*run\\s+node\\s+"\\$ROOT_DIR/${escapeRegExp(script)}"\\s*$`, "m").test(testScriptSource);
+}
+
 const manifestPath = "docs/ui/gate-surface.manifest.json";
 const manifest = readJson(manifestPath);
 const privateVisualValidationPath = "docs/ui/private-visual-validation.manifest.json";
@@ -216,11 +228,10 @@ for (const script of requireArray(manifest, manifestPath, "requiredPublicCheckSc
     continue;
   }
   if (!fs.existsSync(path.join(rootDir, script))) fail(`missing ${script}`);
-  const basename = path.basename(script);
-  if (!testScript.includes(`"$ROOT_DIR/scripts/${basename}"`)) {
+  if (!hasTestScriptNodeRun(testScript, script)) {
     fail(`${manifest.localTestScript} must run ${script}`);
   }
-  if (!workflow.includes(`run: node ${script}`)) {
+  if (!hasWorkflowNodeRun(workflow, script)) {
     fail(`${manifest.publicWorkflow} must run ${script}`);
   }
 }
