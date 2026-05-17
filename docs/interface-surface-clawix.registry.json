@@ -49,9 +49,9 @@
       "status": "stable",
       "owner": "host",
       "humanSurface": "Clawix pairing QR",
-      "programmaticSurface": "JSON payload with v, host, port and token",
+      "programmaticSurface": "JSON payload with v, host, port, token, shortCode and hostDisplayName",
       "storageOwner": "host-runtime",
-      "validation": "Pairing payload tests assert JSON contract and port 24080"
+      "validation": "Pairing payload tests assert JSON contract, port 24080, shortCode and hostDisplayName"
     },
     {
       "id": "agents",

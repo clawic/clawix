@@ -34,7 +34,7 @@ experimental switch. Every current surface must be one of:
 | Bridge v1 | Framework | Pairing and companion clients | Swift `BridgeProtocol` plus JSON fixtures; Android/Windows parity | Framework contract | Round-trip fixture tests across clients |
 | Session deep links | Host | Open/copy session links | `clawix://session/<sessionId>` | Host route | Parser accepts session and rejects chat |
 | OAuth callback deep links | Host | OAuth callback handling | `clawix://auth/callback/<provider>` | Host route | Parser accepts auth callback and rejects the retired callback route spelling |
-| Pairing QR | Host | Pairing QR sheet | JSON payload with `v`, `host`, `port`, `token` | Host runtime | Payload tests assert JSON and port `24080` |
+| Pairing QR | Host | Pairing QR sheet | JSON payload with `v`, `host`, `port`, `token`, `shortCode`, `hostDisplayName` | Host runtime | Payload tests assert JSON, port `24080`, short code and host display identity |
 | Agents, Personalities, Connections | Framework | Clawix agent and connection views | ClawJS agents/integrations APIs, CLI/SDK, fixtures | Framework files plus `core.sqlite`, host secret refs | No direct Clawix canonical writes |
 | Skills and Skill Collections | Framework | macOS Clawix skills/library UI | ClawJS skills/library APIs, CLI/SDK, MCP resources | Framework files plus `core.sqlite` | Skill fixtures and interface coverage |
 | Secrets | Host | Unlock, reveal and approvals | Host/vault APIs with opaque framework refs | Host vault | Signed-host/vault tests and plaintext negative checks |

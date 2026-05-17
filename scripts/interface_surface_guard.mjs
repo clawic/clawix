@@ -194,10 +194,22 @@ for (const snippet of [
   "EXTERNAL PENDING",
   "clawix://session/<sessionId>",
   "clawix://auth/callback/<provider>",
-  "JSON payload with `v`, `host`, `port`, `token`",
+  "JSON payload with `v`, `host`, `port`, `token`, `shortCode`, `hostDisplayName`",
   "`HostActionPolicy` approval/audit API",
 ]) {
   requireSnippet("docs/interface-matrix.md", snippet);
+}
+
+const pairingSurface = (registry.surfaces ?? []).find((entry) => entry.id === "pairing.qrJson");
+if (!pairingSurface) {
+  fail("interface registry is missing pairing.qrJson");
+} else {
+  const pairingSurfaceText = `${pairingSurface.programmaticSurface ?? ""}\n${pairingSurface.validation ?? ""}`;
+  for (const snippet of ["shortCode", "hostDisplayName", "port 24080"]) {
+    if (!pairingSurfaceText.includes(snippet)) {
+      fail(`pairing.qrJson registry row is missing stable QR snippet ${JSON.stringify(snippet)}`);
+    }
+  }
 }
 
 const staleContractTargets = [
