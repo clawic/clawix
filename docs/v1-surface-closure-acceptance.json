@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "program": "v1-surface-closure",
+  "statusVocabulary": {
+    "verified": "Repository evidence and a public-safe verifier cover the category.",
+    "external-pending": "Repository evidence exists, but final validation needs an explicit live, physical, paid, destructive, provider, or native-permission approval."
+  },
+  "requiredCategories": [
+    {
+      "id": "bridge-swift",
+      "title": "Swift host bridge contract",
+      "status": "verified",
+      "decisionIds": ["bridge_contract_v1", "bridge_source_of_truth", "bridge_v1_frame_scope"],
+      "evidence": ["macos/Tests/ClawixMeshTests/ClawixProtocolEncodingTests.swift", "scripts/interface_surface_guard.mjs", "docs/interface-matrix.md"],
+      "validationCommands": ["node scripts/interface_surface_guard.mjs", "node scripts/v1_surface_closure_audit_check.mjs"]
+    },
+    {
+      "id": "bridge-android",
+      "title": "Android bridge consumer contract",
+      "status": "verified",
+      "decisionIds": ["active_target_scope", "bridge_contract_v1", "bridge_v1_frame_scope"],
+      "evidence": ["android/app/src/test/java/com/example/clawix/android/BridgeFrameRoundtripTest.kt", "android/app/src/main/java/com/example/clawix/android/core/BridgeProtocol.kt", "docs/interface-matrix.md"],
+      "validationCommands": ["scripts/launch-android.sh test", "node scripts/interface_surface_guard.mjs"]
+    },
+    {
+      "id": "bridge-windows",
+      "title": "Windows bridge consumer contract",
+      "status": "verified",
+      "decisionIds": ["active_target_scope", "bridge_contract_v1", "bridge_v1_frame_scope"],
+      "evidence": ["windows/Clawix.Tests/BridgeProtocolTests.cs", "windows/Clawix.Tests/BridgeFixtureParityTests.cs", "windows/Clawix.Core/BridgeFrame.cs"],
+      "validationCommands": ["dotnet test windows/Clawix.sln", "node scripts/interface_surface_guard.mjs"]
+    },
+    {
+      "id": "deep-links",
+      "title": "Session and OAuth deep links",
+      "status": "verified",
+      "decisionIds": ["session_deep_link", "oauth_deep_link"],
+      "evidence": ["macos/Tests/ClawixMeshTests/DeepLinkRoutingTests.swift", "macos/Sources/Clawix/AppState/DeepLinks.swift", "docs/interface-matrix.md"],
+      "validationCommands": ["node scripts/interface_surface_guard.mjs", "bash scripts/doc_alignment_check.sh"]
+    },
+    {
+      "id": "pairing",
+      "title": "JSON pairing payload",
+      "status": "verified",
+      "decisionIds": ["pairing_qr_contract", "host_display_name", "client_identity_fields"],
+      "evidence": ["windows/Clawix.Tests/PairingTests.cs", "android/app/src/main/java/com/example/clawix/android/core/PairingPayload.kt", "macos/Sources/Clawix/Bridge/PairWindowView.swift"],
+      "validationCommands": ["node scripts/interface_surface_guard.mjs", "node scripts/v1_surface_closure_audit_check.mjs"]
+    },
+    {
+      "id": "storage-boundary",
+      "title": "Framework, host, vault, cache, and workspace storage boundary",
+      "status": "verified",
+      "decisionIds": ["framework_store_ownership", "storage_bucket_policy", "secrets_boundary", "provider_config_owner"],
+      "evidence": ["docs/data-storage-boundary.md", "docs/persistent-surface-clawix.manifest.json", "scripts/storage_boundary_guard.mjs"],
+      "validationCommands": ["node scripts/storage_boundary_guard.mjs", "node scripts/v1_surface_closure_audit_check.mjs"]
+    },
+    {
+      "id": "provider-routing",
+      "title": "Provider routing and non-secret provider config",
+      "status": "verified",
+      "decisionIds": ["provider_config_owner", "secrets_boundary"],
+      "evidence": ["macos/Sources/Clawix/Providers/FeatureRouting.swift", "macos/Sources/Clawix/Providers/AIAccountSecretsStore.swift", "docs/interface-matrix.md"],
+      "validationCommands": ["node scripts/storage_boundary_guard.mjs", "node scripts/interface_surface_guard.mjs"]
+    },
+    {
+      "id": "mcp-registry",
+      "title": "MCP registry and read-only external config boundary",
+      "status": "verified",
+      "decisionIds": ["mcp_config_policy", "registry_shape"],
+      "evidence": ["macos/Tests/ClawixMeshTests/MCPClawJSAdapterTests.swift", "macos/Sources/Clawix/MCP/MCPServersStore.swift", "docs/interface-matrix.md"],
+      "validationCommands": ["node scripts/interface_surface_guard.mjs", "bash scripts/doc_alignment_check.sh"]
+    },
+    {
+      "id": "integrations-qa",
+      "title": "External integration QA lab",
+      "status": "external-pending",
+      "decisionIds": ["external_integrations_policy", "external_pending_policy"],
+      "evidence": ["docs/adr/0005-integration-qa-lab.md", "docs/interface-matrix.md", "docs/decision-map.md"],
+      "validationCommands": ["node scripts/interface_surface_guard.mjs", "bash scripts/doc_alignment_check.sh"],
+      "externalPending": ["live provider credentials", "provider-side destructive or paid operations", "provider webhooks and physical setup"]
+    },
+    {
+      "id": "domain-resource-fixtures",
+      "title": "Domain resource fixtures and minimum vertical contracts",
+      "status": "external-pending",
+      "decisionIds": ["domain_verticals_policy", "vertical_completion_depth", "missing_domain_contracts"],
+      "evidence": ["docs/interface-matrix.md", "macos/Tests/ClawixMeshTests/LifeRegistryTests.swift", "macos/Tests/ClawixMeshTests/ClawJSFrameworkRecordsClientTests.swift"],
+      "validationCommands": ["node scripts/interface_surface_guard.mjs", "node scripts/storage_boundary_guard.mjs"],
+      "externalPending": ["calendar and contacts native permission runs", "IoT devices", "publishing/payment/provider flows"]
+    },
+    {
+      "id": "docs-alignment",
+      "title": "Docs, naming, route graph, and surface alignment",
+      "status": "verified",
+      "decisionIds": ["surface_parity_gate", "migration_policy_no_users", "experimental_surface_policy"],
+      "evidence": ["scripts/doc_alignment_check.sh", "scripts/interface_surface_guard.mjs", "docs/decision-map.md"],
+      "validationCommands": ["bash scripts/doc_alignment_check.sh", "node scripts/interface_surface_guard.mjs"]
+    },
+    {
+      "id": "source-size",
+      "title": "Source-size and responsibility boundaries",
+      "status": "verified",
+      "decisionIds": ["execution_batching"],
+      "evidence": ["docs/source-size-baseline.json", "scripts/source-size-check.mjs", "docs/adr/0004-source-file-boundaries.md"],
+      "validationCommands": ["node scripts/source-size-check.mjs"]
+    },
+    {
+      "id": "public-hygiene",
+      "title": "Public hygiene, private-path safety, and code hygiene",
+      "status": "verified",
+      "decisionIds": ["repo_scope", "external_pending_policy"],
+      "evidence": ["macos/scripts/public_hygiene_check.sh", "scripts/tracked-ignored-check.mjs", "scripts/code-hygiene-check.mjs"],
+      "validationCommands": ["bash macos/scripts/public_hygiene_check.sh", "node scripts/tracked-ignored-check.mjs", "node scripts/code-hygiene-check.mjs"]
+    },
+    {
+      "id": "external-pending-policy",
+      "title": "Explicit external pending validation policy",
+      "status": "verified",
+      "decisionIds": ["external_pending_policy", "external_integrations_policy", "domain_verticals_policy"],
+      "evidence": ["docs/v1-surface-closure-completion-audit.md", "docs/interface-matrix.md", "docs/decision-map.md"],
+      "validationCommands": ["node scripts/v1_surface_closure_audit_check.mjs"]
+    }
+  ]
+}

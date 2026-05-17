@@ -17,6 +17,12 @@ Source extraction:
   Default mode before the later answered prompt.
 - The free-form `apps_design_storage` concern is retained as the inventory
   requirement for the later `apps_design_contract_status` move-now decision.
+- Acceptance validation matrix: `docs/v1-surface-closure-acceptance.json`
+  records mandatory closure categories: `bridge-swift`, `bridge-android`,
+  `bridge-windows`, `deep-links`, `pairing`, `storage-boundary`,
+  `provider-routing`, `mcp-registry`, `integrations-qa`,
+  `domain-resource-fixtures`, `docs-alignment`, `source-size`,
+  `public-hygiene`, and `external-pending-policy`.
 
 Status vocabulary:
 

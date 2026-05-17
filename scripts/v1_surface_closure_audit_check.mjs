@@ -28,8 +28,10 @@ function requireSnippet(relativePath, snippet) {
 }
 
 const decisionsPath = "docs/v1-surface-closure-decisions.json";
+const acceptancePath = "docs/v1-surface-closure-acceptance.json";
 const auditPath = "docs/v1-surface-closure-completion-audit.md";
 const decisions = readJson(decisionsPath);
+const acceptance = readJson(acceptancePath);
 const audit = read(auditPath);
 
 const expectedIds = [
@@ -110,6 +112,22 @@ const expectedSourceQuestionIds = [
   "missing_domain_contracts",
   "execution_batching",
 ];
+const expectedAcceptanceCategoryIds = [
+  "bridge-swift",
+  "bridge-android",
+  "bridge-windows",
+  "deep-links",
+  "pairing",
+  "storage-boundary",
+  "provider-routing",
+  "mcp-registry",
+  "integrations-qa",
+  "domain-resource-fixtures",
+  "docs-alignment",
+  "source-size",
+  "public-hygiene",
+  "external-pending-policy",
+];
 
 if (decisions.schemaVersion !== 1) fail(`${decisionsPath}.schemaVersion must be 1`);
 if (decisions.program !== "v1-surface-closure") fail(`${decisionsPath}.program must be v1-surface-closure`);
@@ -130,6 +148,39 @@ if (sourceQuestionIds.length !== expectedSourceQuestionIds.length) {
   fail(`${decisionsPath}.sourceExtraction.bindingSourceQuestionIds must contain exactly ${expectedSourceQuestionIds.length} ids`);
 }
 
+if (acceptance.schemaVersion !== 1) fail(`${acceptancePath}.schemaVersion must be 1`);
+if (acceptance.program !== "v1-surface-closure") fail(`${acceptancePath}.program must be v1-surface-closure`);
+const acceptanceCategories = acceptance.requiredCategories ?? [];
+if (!Array.isArray(acceptanceCategories)) fail(`${acceptancePath}.requiredCategories must be an array`);
+const actualAcceptanceIds = acceptanceCategories.map((category) => category.id);
+for (const expectedId of expectedAcceptanceCategoryIds) {
+  if (!actualAcceptanceIds.includes(expectedId)) fail(`${acceptancePath} is missing acceptance category ${expectedId}`);
+  if (!audit.includes(`\`${expectedId}\``)) fail(`${auditPath} is missing acceptance category ${expectedId}`);
+}
+if (actualAcceptanceIds.length !== expectedAcceptanceCategoryIds.length) {
+  fail(`${acceptancePath} must contain exactly ${expectedAcceptanceCategoryIds.length} acceptance categories`);
+}
+for (const category of acceptanceCategories) {
+  const label = `${acceptancePath}.requiredCategories.${category?.id ?? "<missing-id>"}`;
+  if (!expectedAcceptanceCategoryIds.includes(category.id)) fail(`${label} is unexpected`);
+  if (!["verified", "external-pending"].includes(category.status)) fail(`${label}.status must be verified or external-pending`);
+  if (!Array.isArray(category.decisionIds) || category.decisionIds.length === 0) fail(`${label}.decisionIds must be a non-empty array`);
+  if (!Array.isArray(category.evidence) || category.evidence.length === 0) fail(`${label}.evidence must be a non-empty array`);
+  if (!Array.isArray(category.validationCommands) || category.validationCommands.length === 0) {
+    fail(`${label}.validationCommands must be a non-empty array`);
+  }
+  for (const decisionId of category.decisionIds ?? []) {
+    if (!expectedIds.includes(decisionId)) fail(`${label}.decisionIds contains unknown decision ${decisionId}`);
+  }
+  if (category.status === "external-pending" && (!Array.isArray(category.externalPending) || category.externalPending.length === 0)) {
+    fail(`${label}.externalPending must explain the external dependency`);
+  }
+}
+const acceptanceText = read(acceptancePath);
+if (/\/Users\//.test(acceptanceText) || /rollout-\d{4}-\d{2}-\d{2}T/.test(acceptanceText)) {
+  fail(`${acceptancePath} must not include private local session paths`);
+}
+
 const actualIds = (decisions.decisions ?? []).map((decision) => decision.id);
 for (const expectedId of expectedIds) {
   if (!actualIds.includes(expectedId)) fail(`${decisionsPath} is missing decision ${expectedId}`);
@@ -143,6 +194,7 @@ for (const id of actualIds) {
 if (!audit.includes("39 `request_user_input` prompts")) fail(`${auditPath} must record the source prompt count`);
 if (!audit.includes("37 binding answers")) fail(`${auditPath} must record the binding answer count`);
 if (!audit.includes("2 excluded prompts")) fail(`${auditPath} must record excluded source prompts`);
+if (!audit.includes("Acceptance validation matrix")) fail(`${auditPath} must mention the acceptance validation matrix`);
 for (const sourceSnippet of ["`bridge_manifest_source`", "`apps_design_storage`", "`apps_design_contract_status`"]) {
   if (!audit.includes(sourceSnippet)) fail(`${auditPath} must mention source extraction snippet ${sourceSnippet}`);
 }
