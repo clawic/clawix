@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const errors = [];
@@ -27,7 +28,23 @@ const knipReportMarkdown = readText("docs/code-hygiene-knip-report.md");
 const peripheryReportMarkdown = readText("docs/code-hygiene-periphery-report.md");
 const ledger = readText("docs/code-hygiene-ledger.md");
 const decisionChecklist = readText("docs/code-hygiene-decision-checklist.md");
+const completionAudit = readText("docs/code-hygiene-completion-audit.md");
 const knipConfigPath = fs.existsSync(path.join(rootDir, "web", "knip.json")) ? "web/knip.json" : "knip.json";
+const auditResult = spawnSync("node", ["scripts/code-hygiene-audit.mjs", "--json"], {
+  cwd: rootDir,
+  encoding: "utf8",
+  maxBuffer: 50 * 1024 * 1024,
+});
+let auditSummary = null;
+if (auditResult.status !== 0) {
+  fail("code hygiene audit must run successfully from the checker");
+} else {
+  try {
+    auditSummary = JSON.parse(auditResult.stdout).summary;
+  } catch {
+    fail("code hygiene audit output must be valid JSON");
+  }
+}
 
 if (decisions.schemaVersion !== 1) fail("code hygiene decisions schemaVersion must be 1");
 if (decisions.program !== "code-hygiene") fail("code hygiene decisions program must be code-hygiene");
@@ -52,6 +69,12 @@ for (const entry of baseline.entries ?? []) {
   if (!entry.ownerArea) fail("code hygiene baseline entry is missing ownerArea");
   if (!entry.reference) fail("code hygiene baseline entry is missing reference");
   if (!entry.expiresAt) fail("code hygiene baseline entry is missing expiresAt");
+  if (entry.expiresAt && !/^\d{4}-\d{2}-\d{2}$/.test(entry.expiresAt)) {
+    fail(`code hygiene baseline entry ${entry.id ?? "(unknown)"} has invalid expiresAt`);
+  }
+  if (entry.expiresAt && entry.expiresAt <= report.generatedAt) {
+    fail(`code hygiene baseline entry ${entry.id ?? "(unknown)"} is expired`);
+  }
   if (entry.category && !baseline.categories.includes(entry.category)) fail(`code hygiene baseline entry ${entry.id ?? "(unknown)"} has unknown category`);
 }
 
@@ -81,11 +104,24 @@ if (!report.generatedAt) fail("code hygiene report must include generatedAt");
 if (!report.lastAuditSummary) fail("code hygiene report must include lastAuditSummary");
 if (typeof report.baselinedFindings !== "number") fail("code hygiene report must include baselinedFindings");
 if (report.baselinedFindings !== (baseline.entries ?? []).length) fail("code hygiene report baselinedFindings must match baseline entry count");
+if (report.blockingFindings !== 0) fail("code hygiene report must have zero blocking findings after initial cleanup");
 for (const field of ["scannedFiles", "todoFindings", "duplicateAssetGroups", "duplicateAssetFiles", "unreferencedAssetCandidates"]) {
   if (typeof report.lastAuditSummary?.[field] !== "number") {
     fail(`code hygiene report lastAuditSummary must include numeric ${field}`);
   }
+  if (auditSummary && report.lastAuditSummary?.[field] !== auditSummary[field]) {
+    fail(`code hygiene report lastAuditSummary.${field} must match current audit summary`);
+  }
 }
+const expectedReportOnlyFindings =
+  report.lastAuditSummary.todoFindings +
+  report.lastAuditSummary.duplicateAssetGroups +
+  report.lastAuditSummary.unreferencedAssetCandidates;
+if (report.reportOnlyFindings !== expectedReportOnlyFindings) {
+  fail("code hygiene reportOnlyFindings must match report-only audit categories");
+}
+if (report.lastAuditSummary.todoFindings !== 0) fail("code hygiene report must keep actionable TODO findings at zero");
+if (report.lastAuditSummary.unreferencedAssetCandidates !== 0) fail("code hygiene report must keep unreferenced asset candidates at zero");
 if (report.knipSummary?.totalIssues !== knipReport.summary?.totalIssues) fail("code hygiene report Knip summary must match the Knip report");
 if (report.baselinedFindings !== (baseline.entries?.length ?? 0)) fail("code hygiene report baselinedFindings must match baseline entries");
 if (typeof report.peripherySummary?.packageCount !== "number") fail("code hygiene report must include Periphery packageCount");
@@ -119,13 +155,27 @@ if (!peripheryReportMarkdown.includes("This report does not authorize automatic 
 }
 if (!ledger.includes("private session, not published")) fail("code hygiene ledger must not publish private session paths");
 if (!decisionChecklist.includes("rollout_model")) fail("code hygiene decision checklist must include rollout_model");
-if (!decisionChecklist.includes("Cleanup campaign is pending")) fail("code hygiene decision checklist must record pending cleanup campaign");
+if (!decisionChecklist.includes("Initial cleanup completed")) fail("code hygiene decision checklist must record completed initial cleanup");
+if (!report.notes?.some((note) => note.includes("Initial cleanup completed"))) {
+  fail("code hygiene report notes must record completed initial cleanup");
+}
+if (!completionAudit.includes("11 `request_user_input`")) fail("code hygiene completion audit must record the request_user_input batch review");
+if (!completionAudit.includes("33 binding answers")) fail("code hygiene completion audit must record the decision count review");
+if (!completionAudit.includes("private session, not published")) fail("code hygiene completion audit must not publish private session paths");
+for (const decision of decisions.decisions ?? []) {
+  if (!completionAudit.includes(`\`${decision.id}\``)) {
+    fail(`code hygiene completion audit must include decision ${decision.id}`);
+  }
+}
+const completionRows = completionAudit.split("\n").filter((line) => /^\| \d+ \|/.test(line));
+if (completionRows.length !== decisions.decisionCount) fail("code hygiene completion audit must have one row per decision");
 
 for (const relativePath of [
   "docs/adr/0016-code-hygiene-program.md",
   "docs/code-hygiene-decisions.json",
   "docs/code-hygiene-baseline.json",
   "docs/code-hygiene-decision-checklist.md",
+  "docs/code-hygiene-completion-audit.md",
   "docs/code-hygiene-tools.json",
   "docs/code-hygiene-ledger.md",
   "docs/code-hygiene-report.json",

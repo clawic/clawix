@@ -25,6 +25,17 @@ const ignoredDirectories = new Set([
   "test-results",
 ]);
 const ignoredFiles = new Set(["package-lock.json", "pnpm-lock.yaml", "yarn.lock"]);
+const ignoredPaths = new Set(["scripts/code-hygiene-audit.mjs"]);
+const ignoredPathPrefixes = [
+  ".claude/worktrees/",
+  ".codex/worktrees/",
+  "macos/Helpers/Bridged/Sources/clawix-bridge/Resources/web-dist/",
+];
+const publicOrGeneratedAssetPrefixes = [
+  "android/app/src/main/res/mipmap-",
+  "ios/Sources/Clawix/Assets.xcassets/",
+  "macos/Resources/AppIcons/",
+];
 const sourceExtensions = new Set([
   ".cjs",
   ".css",
@@ -95,9 +106,11 @@ function walk(directory) {
     if (ignoredDirectories.has(entry.name)) continue;
     const absolutePath = path.join(directory, entry.name);
     const relativePath = path.relative(rootDir, absolutePath);
+    if (ignoredPathPrefixes.some((prefix) => `${relativePath}/`.startsWith(prefix))) continue;
     if (entry.isDirectory()) {
       results.push(...walk(absolutePath));
     } else if (!ignoredFiles.has(entry.name)) {
+      if (ignoredPaths.has(relativePath)) continue;
       results.push(relativePath);
     }
   }
@@ -115,6 +128,7 @@ function scanTodos(files) {
     for (const [index, line] of lines.entries()) {
       const match = line.match(todoPattern);
       if (!match) continue;
+      if (!isActionableTodoLine(line, match)) continue;
       const explicitCategory = match[2] || line.match(categoryPattern)?.[1] || null;
       findings.push({
         path: relativePath,
@@ -126,6 +140,16 @@ function scanTodos(files) {
     }
   }
   return findings;
+}
+
+function isActionableTodoLine(line, match) {
+  const before = line.slice(0, match.index ?? 0);
+  const trimmed = line.trimStart();
+  const marker = match[1].toUpperCase();
+  if (marker === "XXX" && /^XXX(?:-|$)/i.test(line.slice(match.index ?? 0))) return false;
+  if (/^(\/\/|\/\*|\*|#|<!--|\{\/\*|\{#)/.test(trimmed)) return true;
+  if (/^[-*]\s+\[\s\]\s+/i.test(trimmed)) return true;
+  return /(\/\/|\/\*|<!--)\s*$/.test(before);
 }
 
 function scanDuplicateAssets(files) {
@@ -160,6 +184,7 @@ function scanUnreferencedAssets(files, referenceIndex) {
   for (const relativePath of files) {
     const extension = path.extname(relativePath).toLowerCase();
     if (!assetExtensions.has(extension)) continue;
+    if (publicOrGeneratedAssetPrefixes.some((prefix) => relativePath.startsWith(prefix))) continue;
     const normalizedPath = relativePath.toLowerCase();
     const fileName = path.basename(relativePath).toLowerCase();
     const stem = fileName.slice(0, -extension.length);

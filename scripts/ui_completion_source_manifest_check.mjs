@@ -80,6 +80,7 @@ requireFields(manifest, manifestPath, [
   "expectedConversationId",
   "expectedDecisionCount",
   "expectedDecisionIds",
+  "expectedDecisions",
   "externalPendingExitCode",
 ]);
 scanPublicSafety(manifest, manifestPath);
@@ -116,15 +117,29 @@ if (decisionVerification?.sourceSession !== manifest?.sourceSessionAlias) {
 }
 const decisions = requireArray(decisionVerification, "docs/ui/decision-verification.json", "decisions");
 const expectedDecisionIds = requireArray(manifest, manifestPath, "expectedDecisionIds");
+const expectedDecisions = requireArray(manifest, manifestPath, "expectedDecisions");
 if (expectedDecisionIds.length !== manifest?.expectedDecisionCount) {
   fail(`${manifestPath}.expectedDecisionIds must contain expectedDecisionCount entries`);
+}
+if (expectedDecisions.length !== manifest?.expectedDecisionCount) {
+  fail(`${manifestPath}.expectedDecisions must contain expectedDecisionCount entries`);
 }
 if (expectedDecisionIds.length !== decisions.length) {
   fail(`${manifestPath}.expectedDecisionIds must mirror docs/ui/decision-verification.json decisions`);
 }
+if (expectedDecisions.length !== decisions.length) {
+  fail(`${manifestPath}.expectedDecisions must mirror docs/ui/decision-verification.json decisions`);
+}
 for (const [index, decision] of decisions.entries()) {
   if (expectedDecisionIds[index] !== decision?.id) {
     fail(`${manifestPath}.expectedDecisionIds[${index}] must be ${decision?.id}`);
+  }
+  const expectedDecision = expectedDecisions[index];
+  if (expectedDecision?.id !== decision?.id) {
+    fail(`${manifestPath}.expectedDecisions[${index}].id must be ${decision?.id}`);
+  }
+  if (expectedDecision?.choice !== decision?.choice) {
+    fail(`${manifestPath}.expectedDecisions[${index}].choice must be ${decision?.choice}`);
   }
 }
 
@@ -144,6 +159,7 @@ for (const snippet of [
   "EXTERNAL PENDING",
   "process.exit(2)",
   "expectedDecisionIds",
+  "expectedDecisions",
   "expectedConversationId",
   "decision.choice",
   "normalizeText",
