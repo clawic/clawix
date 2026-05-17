@@ -76,6 +76,8 @@ jobs:
         run: node scripts/ui_surface_inventory_check.mjs
       - name: Validate private baseline manifest contract
         run: node scripts/ui_private_baseline_manifest_check.mjs
+      - name: Validate private evidence plan contract
+        run: node scripts/ui_private_evidence_plan_check.mjs
       - name: Validate private visual validation contract
         run: node scripts/ui_private_visual_validation_manifest_check.mjs
       - name: Validate documentation alignment

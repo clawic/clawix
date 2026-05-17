@@ -66,6 +66,7 @@
     "visual-proposal-record-check",
     "private-artifact-boundary-check",
     "private-baseline-manifest-shape",
+    "private-evidence-plan-check",
     "private-visual-validation-manifest-shape",
     "performance-budget-platform-coverage",
     "unauthorized-visual-diff"

@@ -43,6 +43,7 @@
     "scripts/ui_private_artifact_boundary_check.mjs",
     "scripts/ui_surface_inventory_check.mjs",
     "scripts/ui_private_baseline_manifest_check.mjs",
+    "scripts/ui_private_evidence_plan_check.mjs",
     "scripts/ui_private_visual_validation_manifest_check.mjs",
     "scripts/ui_release_gate_check.mjs"
   ],
