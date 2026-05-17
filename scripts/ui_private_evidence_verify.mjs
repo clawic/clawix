@@ -207,7 +207,7 @@ function verifyMeasurements(evidence, label) {
   }
 }
 
-function verifyCopyItems(evidence, label) {
+function verifyCopyItems(evidence, label, allowedKinds = new Set()) {
   if (!("copyItems" in evidence)) return;
   if (!Array.isArray(evidence.copyItems) || evidence.copyItems.length === 0) {
     fail(`${label}.copyItems must be a non-empty array`);
@@ -223,6 +223,9 @@ function verifyCopyItems(evidence, label) {
       if (typeof item[field] !== "string" || item[field] === "") {
         fail(`${itemLabel}.${field} must be a non-empty string`);
       }
+    }
+    if (typeof item.kind === "string" && allowedKinds.size > 0 && !allowedKinds.has(item.kind)) {
+      fail(`${itemLabel}.kind must be one of the restricted copy kinds`);
     }
     if (typeof item.textHash !== "string" || !/^[a-f0-9]{64}$/i.test(item.textHash)) {
       fail(`${itemLabel}.textHash must be a 64-character hex hash`);
@@ -338,6 +341,8 @@ const performanceBudgets = readRepoJson("docs/ui/performance-budgets.registry.js
 const requiredPerformanceMetrics = Array.isArray(performanceBudgets?.requiredMetrics)
   ? performanceBudgets.requiredMetrics
   : [];
+const copyInventory = readRepoJson("docs/ui/copy.inventory.json");
+const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKinds) ? copyInventory.restrictedCopyKinds : []);
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
 const driftPolicy = {
   allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
@@ -373,7 +378,7 @@ for (const item of plan.evidence || []) {
   verifyMetrics(evidence, label, itemRequiredMetrics);
   verifyMeasurementSamples(evidence, label, itemRequiredMetrics);
   verifyMeasurements(evidence, label);
-  verifyCopyItems(evidence, label);
+  verifyCopyItems(evidence, label, allowedCopyKinds);
   verifyCopyHierarchyHash(evidence, label);
   verifyDriftResults(evidence, label, item.type === "rendered-drift" ? driftPolicy : {});
   verifyFindingItems(evidence, label);

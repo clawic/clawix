@@ -81,7 +81,7 @@ function assertApprovedScope(value, label) {
   fail(`${label} must be a non-empty string, array, or object`);
 }
 
-function verifyCopyItems(value, label) {
+function verifyCopyItems(value, label, allowedKinds) {
   if (!Array.isArray(value) || value.length === 0) {
     fail(`${label} must be a non-empty array`);
     return;
@@ -96,6 +96,9 @@ function verifyCopyItems(value, label) {
       if (typeof item[field] !== "string" || item[field] === "") {
         fail(`${itemLabel}.${field} must be a non-empty string`);
       }
+    }
+    if (typeof item.kind === "string" && !allowedKinds.has(item.kind)) {
+      fail(`${itemLabel}.kind must be one of the restricted copy kinds`);
     }
     assertHash(item.textHash, `${itemLabel}.textHash`);
   }
@@ -129,6 +132,7 @@ const copyInventory = readJson("docs/ui/copy.inventory.json");
 const protectedSurfaces = readJson("docs/ui/protected-surfaces.registry.json");
 const alias = copyInventory?.privateSnapshotAlias || "private-codex-ui-copy-snapshots";
 const evidenceFilename = copyInventory?.evidenceFilename || "copy-evidence.json";
+const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKinds) ? copyInventory.restrictedCopyKinds : []);
 let verified = 0;
 let pending = 0;
 
@@ -167,7 +171,7 @@ for (const [index, coverage] of (surfaceCoverage?.coverage || []).entries()) {
   if (evidence.platform !== coverage.platform) {
     fail(`${label}.platform must match the surface baseline coverage manifest`);
   }
-  verifyCopyItems(evidence.copyItems, `${label}.copyItems`);
+  verifyCopyItems(evidence.copyItems, `${label}.copyItems`, allowedCopyKinds);
   verified += 1;
 }
 
@@ -206,7 +210,7 @@ for (const [index, surface] of surfaces.entries()) {
   if (evidence.surfaceId !== surface.id) {
     fail(`${label}.surfaceId must match the protected surface registry`);
   }
-  verifyCopyItems(evidence.copyItems, `${label}.copyItems`);
+  verifyCopyItems(evidence.copyItems, `${label}.copyItems`, allowedCopyKinds);
   verified += 1;
 }
 
