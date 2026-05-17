@@ -210,6 +210,11 @@ requireFields(sourceAudit, `${manifestPath}.sourceAudit`, ["roots", "fileExtensi
 const sourceRoots = requireArray(sourceAudit, `${manifestPath}.sourceAudit`, "roots");
 const extensions = new Set(requireArray(sourceAudit, `${manifestPath}.sourceAudit`, "fileExtensions"));
 const skippedDirectories = new Set(requireArray(sourceAudit, `${manifestPath}.sourceAudit`, "skippedDirectories"));
+for (const sourceRoot of ["macos/Sources", "ios/Sources", "apps/macos/Sources", "apps/ios/Sources", "android/app/src/main", "web/src"]) {
+  if (!sourceRoots.includes(sourceRoot)) {
+    fail(`${manifestPath}.sourceAudit.roots must include ${sourceRoot}`);
+  }
+}
 
 let auditedFiles = 0;
 for (const sourceRoot of sourceRoots) {

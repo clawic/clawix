@@ -89,7 +89,7 @@
     }
   ],
   "sourceAudit": {
-    "roots": ["macos/Sources", "ios/Sources", "android/app/src/main", "web/src"],
+    "roots": ["macos/Sources", "ios/Sources", "apps/macos/Sources", "apps/ios/Sources", "android/app/src/main", "web/src"],
     "fileExtensions": [".swift", ".kt", ".kts", ".tsx", ".ts", ".jsx", ".js"],
     "skippedDirectories": ["node_modules", ".build", "build", "DerivedData"]
   }

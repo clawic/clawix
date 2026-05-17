@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "status": "active",
   "policy": "Unauthorized visual, copy, and layout edits are detected from platform-specific source tokens. Detector changes are governance changes and must stay public-safe.",
-  "sourceRoots": ["macos/Sources", "ios/Sources", "android/app/src/main", "web/src"],
+  "sourceRoots": ["macos/Sources", "ios/Sources", "apps/macos/Sources", "apps/ios/Sources", "android/app/src/main", "web/src"],
   "requiredChangeKinds": [
     "color",
     "spacing",

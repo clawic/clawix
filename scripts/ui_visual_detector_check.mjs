@@ -58,7 +58,7 @@ requireFields(manifest, detectorPath, [
 ]);
 
 const sourceRoots = new Set(requireArray(manifest, detectorPath, "sourceRoots"));
-for (const root of ["macos/Sources", "ios/Sources", "android/app/src/main", "web/src"]) {
+for (const root of ["macos/Sources", "ios/Sources", "apps/macos/Sources", "apps/ios/Sources", "android/app/src/main", "web/src"]) {
   if (!sourceRoots.has(root)) fail(`${detectorPath}.sourceRoots must include ${root}`);
 }
 
