@@ -4,6 +4,13 @@
   "policy": "UI debt findings are report-only until a visual-authorized lane receives explicit scope. Non-authorized agents list these items and must not fix them opportunistically.",
   "sourceBaseline": "docs/ui/debt.baseline.json",
   "reportStatusValues": ["pending-visual-authorized-cleanup", "blocked-without-private-baseline", "resolved"],
+  "fixPolicy": {
+    "nonAuthorizedAction": "report-only",
+    "cleanupActionBeforeApproval": "queue-only",
+    "requiredAuthorization": "visual-authorized-lane",
+    "requiredPrivateEvidenceBeforeCleanup": ["private-baseline", "copy-snapshot", "rendered-geometry"],
+    "forbiddenWithoutApproval": ["presentation-edit", "copy-edit", "layout-edit", "opportunistic-fix"]
+  },
   "pendingItems": [
     {
       "id": "pending-ui-debt-design-surface-raw-visual-values",

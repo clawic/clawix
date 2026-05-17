@@ -58,8 +58,8 @@ the public repo.
 - `debt.baseline.json`: frozen existing visual drift.
 - `debt-baseline.manifest.json`: compatibility alias for the original plan term
   `docs/ui/debt-baseline.*`; `debt.baseline.json` remains canonical.
-- `debt-report.registry.json`: report-only pending items derived from the debt
-  baseline.
+- `debt-report.registry.json`: report-only pending items and fix policy
+  derived from the debt baseline.
 - `critical-cleanup.queue.json`: non-executable queue for visual-authorized
   cleanup of report-only debt.
 - `exceptions.registry.json`: temporary scoped exceptions with owner, reason,
@@ -97,7 +97,8 @@ the public repo.
 8. Keep decision verification evidence current with
    `scripts/ui_decision_verification_check.mjs`.
 9. Keep UI debt reports current with `scripts/ui_debt_report_check.mjs`; debt
-   items are report-only outside a visual-authorized cleanup scope.
+   items are report-only outside a visual-authorized cleanup scope and
+   opportunistic fixes stay forbidden.
 10. Keep critical cleanup queue records current with
    `scripts/ui_critical_cleanup_queue_check.mjs`; queued cleanup remains
    non-executable until an allowlisted visual lane receives approval.

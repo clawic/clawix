@@ -86,6 +86,7 @@ requireFields(report, reportPath, [
   "policy",
   "sourceBaseline",
   "reportStatusValues",
+  "fixPolicy",
   "pendingItems",
 ]);
 if (report?.sourceBaseline !== debtPath) fail(`${reportPath}.sourceBaseline must be ${debtPath}`);
@@ -94,6 +95,36 @@ if (alias?.reportRegistry !== reportPath) fail(`${aliasPath}.reportRegistry must
 const reportStatuses = new Set(requireArray(report, reportPath, "reportStatusValues"));
 for (const status of ["pending-visual-authorized-cleanup", "blocked-without-private-baseline", "resolved"]) {
   if (!reportStatuses.has(status)) fail(`${reportPath}.reportStatusValues must include ${status}`);
+}
+
+const fixPolicy = report?.fixPolicy || {};
+requireFields(fixPolicy, `${reportPath}.fixPolicy`, [
+  "nonAuthorizedAction",
+  "cleanupActionBeforeApproval",
+  "requiredAuthorization",
+  "requiredPrivateEvidenceBeforeCleanup",
+  "forbiddenWithoutApproval",
+]);
+if (fixPolicy.nonAuthorizedAction !== "report-only") {
+  fail(`${reportPath}.fixPolicy.nonAuthorizedAction must be report-only`);
+}
+if (fixPolicy.cleanupActionBeforeApproval !== "queue-only") {
+  fail(`${reportPath}.fixPolicy.cleanupActionBeforeApproval must be queue-only`);
+}
+if (fixPolicy.requiredAuthorization !== "visual-authorized-lane") {
+  fail(`${reportPath}.fixPolicy.requiredAuthorization must be visual-authorized-lane`);
+}
+const fixPolicyEvidence = new Set(requireArray(fixPolicy, `${reportPath}.fixPolicy`, "requiredPrivateEvidenceBeforeCleanup"));
+for (const evidence of requiredEvidence) {
+  if (!fixPolicyEvidence.has(evidence)) {
+    fail(`${reportPath}.fixPolicy.requiredPrivateEvidenceBeforeCleanup must include ${evidence}`);
+  }
+}
+const forbiddenWithoutApproval = new Set(requireArray(fixPolicy, `${reportPath}.fixPolicy`, "forbiddenWithoutApproval"));
+for (const action of ["presentation-edit", "copy-edit", "layout-edit", "opportunistic-fix"]) {
+  if (!forbiddenWithoutApproval.has(action)) {
+    fail(`${reportPath}.fixPolicy.forbiddenWithoutApproval must include ${action}`);
+  }
 }
 
 const reportedDebtIds = new Set();
