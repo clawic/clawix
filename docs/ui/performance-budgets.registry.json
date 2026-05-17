@@ -2,6 +2,20 @@
   "schemaVersion": 1,
   "status": "pending-approved-baseline-capture",
   "policy": "Budgets are per critical flow and per governed platform. They become strict only after the user approves measured private baselines.",
+  "budgetStyle": {
+    "unit": "critical-flow",
+    "platformScope": "per-governed-platform",
+    "requiredFlows": [
+      "sidebar-hover-click-expand",
+      "chat-scroll",
+      "composer-typing",
+      "dropdown-open",
+      "terminal-sidebar-switch",
+      "right-sidebar-browser-use"
+    ],
+    "measurementSource": "private-baseline",
+    "approvalRequiredBeforeEnforcement": true
+  },
   "requiredMetrics": ["interactionLatencyMs", "p95FrameTimeMs", "hitchCount", "memoryDeltaMb"],
   "requiredEvidenceFields": ["flowId", "platform", "privateBaselineReference", "metrics", "measurementHash", "measuredAt", "approvedByUserAt"],
   "evidenceFilename": "performance-evidence.json",

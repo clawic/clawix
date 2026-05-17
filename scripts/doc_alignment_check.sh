@@ -254,6 +254,7 @@ require_snippet "docs/ui/private-baselines.manifest.json" "ui_private_baseline_v
 require_snippet "docs/ui/private-baselines.manifest.json" "pending-user-approved-capture"
 require_snippet "docs/ui/performance-budgets.registry.json" "performance-evidence.json"
 require_snippet "docs/ui/performance-budgets.registry.json" "ui_private_performance_budget_verify.mjs"
+require_snippet "docs/ui/performance-budgets.registry.json" "\"unit\": \"critical-flow\""
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_visual_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "ui_private_drift_verify.mjs"
 require_snippet "docs/ui/private-visual-validation.manifest.json" "EXTERNAL PENDING"

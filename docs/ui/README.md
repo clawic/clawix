@@ -71,7 +71,8 @@ the public repo.
   and requires promotion for narrower units.
 - `canon-promotions.registry.json`: public-safe records for user-approved canon
   promotions.
-- `performance-budgets.registry.json`: critical-flow budget registry.
+- `performance-budgets.registry.json`: critical-flow, per-platform budget
+  registry.
 - `private-baselines.manifest.json`: public contract for private visual,
   geometry, and performance baselines.
 - `private-visual-validation.manifest.json`: public contract for the aggregate
@@ -139,7 +140,7 @@ the public repo.
 25. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
 26. Keep performance budget contracts current with
    `scripts/ui_performance_budget_check.mjs`; budget flow references must match
-   private baseline references.
+   private baseline references and stay scoped to critical flows.
 27. Keep component extraction APIs current with
    `scripts/ui_component_extraction_check.mjs`.
 28. Keep mechanical refactor evidence current with

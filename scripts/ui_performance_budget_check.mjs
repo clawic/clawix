@@ -63,6 +63,7 @@ requireFields(budgets, budgetsPath, [
   "schemaVersion",
   "status",
   "policy",
+  "budgetStyle",
   "requiredMetrics",
   "requiredEvidenceFields",
   "evidenceFilename",
@@ -74,6 +75,28 @@ if (budgets?.evidenceFilename !== "performance-evidence.json") {
 }
 if (!String(budgets?.verificationCommand || "").includes("scripts/ui_private_performance_budget_verify.mjs --require-approved")) {
   fail(`${budgetsPath}.verificationCommand must run scripts/ui_private_performance_budget_verify.mjs --require-approved`);
+}
+const budgetStyle = budgets?.budgetStyle || {};
+requireFields(budgetStyle, `${budgetsPath}.budgetStyle`, [
+  "unit",
+  "platformScope",
+  "requiredFlows",
+  "measurementSource",
+  "approvalRequiredBeforeEnforcement",
+]);
+if (budgetStyle.unit !== "critical-flow") fail(`${budgetsPath}.budgetStyle.unit must be critical-flow`);
+if (budgetStyle.platformScope !== "per-governed-platform") {
+  fail(`${budgetsPath}.budgetStyle.platformScope must be per-governed-platform`);
+}
+if (budgetStyle.measurementSource !== "private-baseline") {
+  fail(`${budgetsPath}.budgetStyle.measurementSource must be private-baseline`);
+}
+if (budgetStyle.approvalRequiredBeforeEnforcement !== true) {
+  fail(`${budgetsPath}.budgetStyle.approvalRequiredBeforeEnforcement must be true`);
+}
+const styleFlows = new Set(requireArray(budgetStyle, `${budgetsPath}.budgetStyle`, "requiredFlows"));
+for (const flow of requiredFlows) {
+  if (!styleFlows.has(flow)) fail(`${budgetsPath}.budgetStyle.requiredFlows must include ${flow}`);
 }
 const topLevelMetrics = new Set(requireArray(budgets, budgetsPath, "requiredMetrics"));
 for (const metric of requiredMetrics) {
