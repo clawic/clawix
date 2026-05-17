@@ -14,6 +14,7 @@ function fail(message) {
 const env = { ...process.env };
 delete env.CLAWIX_UI_VISUAL_AUTHORIZED;
 delete env.CLAWIX_UI_VISUAL_MODEL;
+delete env.CLAWIX_UI_VISUAL_SCOPE_ID;
 
 let output = "";
 let exitCode = 0;
@@ -158,6 +159,64 @@ for (const snippet of [
   "maxLines budget exceeded",
 ]) {
   if (!authorizedOverbudgetScopeOutput.includes(snippet)) fail(`authorized overbudget-scope failure output is missing: ${snippet}`);
+}
+
+let authorizedWrongFileScopeOutput = "";
+let authorizedWrongFileScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-wrong-file-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-wrong-file-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedWrongFileScopeExitCode = error.status || 1;
+  authorizedWrongFileScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedWrongFileScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the approved visual scope does not include the touched file");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-wrong-file-scope",
+  "does not include web/src/simulated-visual-diff.tsx",
+]) {
+  if (!authorizedWrongFileScopeOutput.includes(snippet)) fail(`authorized wrong-file-scope failure output is missing: ${snippet}`);
+}
+
+let authorizedWrongKindScopeOutput = "";
+let authorizedWrongKindScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_governance_guard.mjs", "--simulate-unauthorized-visual-diff", "--simulate-layout-only-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-layout-only-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  authorizedWrongKindScopeExitCode = error.status || 1;
+  authorizedWrongKindScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+if (authorizedWrongKindScopeExitCode === 0) {
+  fail("simulated visual diff must fail when the approved visual scope does not allow the detected change kind");
+}
+for (const snippet of [
+  "authorized visual/copy/layout source edit missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-layout-only-scope",
+  "does not allow microcopy",
+]) {
+  if (!authorizedWrongKindScopeOutput.includes(snippet)) fail(`authorized wrong-kind-scope failure output is missing: ${snippet}`);
 }
 
 let wrongModelOutput = "";
@@ -332,6 +391,66 @@ for (const snippet of [
   "maxLines budget exceeded",
 ]) {
   if (!patternAuthorizedOverbudgetScopeOutput.includes(snippet)) fail(`pattern authorized overbudget-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedWrongFileScopeOutput = "";
+let patternAuthorizedWrongFileScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-wrong-file-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-wrong-file-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedWrongFileScopeExitCode = error.status || 1;
+  patternAuthorizedWrongFileScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedWrongFileScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the approved visual scope does not include the touched file");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-wrong-file-scope",
+  "does not include docs/ui/pattern-registry/patterns/sidebar-row.pattern.json",
+]) {
+  if (!patternAuthorizedWrongFileScopeOutput.includes(snippet)) fail(`pattern authorized wrong-file-scope failure output is missing: ${snippet}`);
+}
+
+let patternAuthorizedWrongKindScopeOutput = "";
+let patternAuthorizedWrongKindScopeExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation", "--simulate-layout-only-visual-scope"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "claude-opus-4.7",
+      CLAWIX_UI_VISUAL_SCOPE_ID: "simulated-layout-only-scope",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternAuthorizedWrongKindScopeExitCode = error.status || 1;
+  patternAuthorizedWrongKindScopeOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternAuthorizedWrongKindScopeExitCode === 0) {
+  fail("simulated pattern mutation must fail when the approved visual scope does not allow the detected change kind");
+}
+for (const snippet of [
+  "authorized pattern registry visual/copy contract mutation missing approved scope",
+  "current scope signal: CLAWIX_UI_VISUAL_SCOPE_ID=simulated-layout-only-scope",
+  "does not allow microcopy",
+]) {
+  if (!patternAuthorizedWrongKindScopeOutput.includes(snippet)) fail(`pattern authorized wrong-kind-scope failure output is missing: ${snippet}`);
 }
 
 let patternWrongModelOutput = "";

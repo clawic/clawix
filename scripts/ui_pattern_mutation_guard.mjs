@@ -8,6 +8,8 @@ const args = process.argv.slice(2);
 const today = new Date().toISOString().slice(0, 10);
 const simulateApprovedVisualScope = args.includes("--simulate-approved-visual-scope");
 const simulateOverbudgetVisualScope = args.includes("--simulate-overbudget-visual-scope");
+const simulateWrongFileVisualScope = args.includes("--simulate-wrong-file-visual-scope");
+const simulateLayoutOnlyVisualScope = args.includes("--simulate-layout-only-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -108,6 +110,32 @@ if (simulateOverbudgetVisualScope) {
       files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
       changeKinds: ["layout", "microcopy", "hierarchy"],
       changeBudget: { maxFiles: 1, maxLines: 1 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateWrongFileVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-wrong-file-scope",
+      status: "approved",
+      files: ["docs/ui/pattern-registry/patterns/other.pattern.json"],
+      changeKinds: ["layout", "microcopy", "hierarchy"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateLayoutOnlyVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-layout-only-scope",
+      status: "approved",
+      files: ["docs/ui/pattern-registry/patterns/sidebar-row.pattern.json"],
+      changeKinds: ["layout"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
       expiresAt: "2099-12-31",
     },
   ];

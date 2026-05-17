@@ -8,6 +8,8 @@ const today = new Date().toISOString().slice(0, 10);
 const simulateUnauthorizedVisualDiff = process.argv.includes("--simulate-unauthorized-visual-diff");
 const simulateApprovedVisualScope = process.argv.includes("--simulate-approved-visual-scope");
 const simulateOverbudgetVisualScope = process.argv.includes("--simulate-overbudget-visual-scope");
+const simulateWrongFileVisualScope = process.argv.includes("--simulate-wrong-file-visual-scope");
+const simulateLayoutOnlyVisualScope = process.argv.includes("--simulate-layout-only-visual-scope");
 const errors = [];
 
 function fail(message) {
@@ -566,6 +568,32 @@ if (simulateOverbudgetVisualScope) {
       files: ["web/src/simulated-visual-diff.tsx"],
       changeKinds: ["layout", "microcopy"],
       changeBudget: { maxFiles: 1, maxLines: 1 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateWrongFileVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-wrong-file-scope",
+      status: "approved",
+      files: ["web/src/other-visual-file.tsx"],
+      changeKinds: ["layout", "microcopy"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
+      expiresAt: "2099-12-31",
+    },
+  ];
+}
+if (simulateLayoutOnlyVisualScope) {
+  visualScopes.activeScopes = [
+    ...(Array.isArray(visualScopes.activeScopes) ? visualScopes.activeScopes : []),
+    {
+      id: "simulated-layout-only-scope",
+      status: "approved",
+      files: ["web/src/simulated-visual-diff.tsx"],
+      changeKinds: ["layout"],
+      changeBudget: { maxFiles: 1, maxLines: 3 },
       expiresAt: "2099-12-31",
     },
   ];
