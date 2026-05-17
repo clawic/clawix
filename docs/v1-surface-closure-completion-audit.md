@@ -72,7 +72,14 @@ Status vocabulary:
 | 36 | `experimental_correction` | Do not skip existing experimental surfaces | verified | The matrix explicitly classifies current surfaces as stable, dev-only, or removed and the guard rejects unclassified stable skips. |
 | 37 | `external_pending_policy` | Separate external validation | verified | Clawix interface matrix and completion gates record physical, paid, provider, destructive, and permission-bound checks as `EXTERNAL PENDING`. |
 
+Final source reread: completed on 2026-05-17 against the private JSONL source.
+The structured reread found 39 `request_user_input` prompts, 37 binding
+answers, and the same 2 excluded prompts recorded above. The free-form
+Apps/Design inventory concern and the later move-now answer are both covered by
+the storage rows.
+
 Current close condition: all listed decisions have public-safe implementation
-or explicit external-pending evidence, and the local Clawix acceptance lanes
-record no tooling blockers. The private source session must still be re-read
-again immediately before any `update_goal(status=complete)` call.
+or explicit external-pending evidence, the local Clawix acceptance lanes record
+no tooling blockers, and the final private-source reread has been completed.
+Live provider, device, payment, destructive, and permission-bound checks remain
+explicit `EXTERNAL PENDING`, not local implementation blockers.
