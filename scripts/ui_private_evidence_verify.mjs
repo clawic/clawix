@@ -7,14 +7,6 @@ const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const args = process.argv.slice(2);
 const errors = [];
 
-const aliasRoots = {
-  "private-codex-ui-baselines": "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
-  "private-codex-ui-rendered-geometry": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
-  "private-codex-ui-copy-snapshots": "CLAWIX_UI_PRIVATE_COPY_ROOT",
-  "private-codex-ui-rendered-drift": "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
-  "private-codex-ui-debt-audit": "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
-};
-
 const referenceFields = {
   "surface-baseline": "privateBaselineReference",
   "surface-geometry": "geometryEvidenceReference",
@@ -100,6 +92,42 @@ function readJson(file, label) {
 
 function readRepoJson(relativePath) {
   return readJson(path.join(rootDir, relativePath), relativePath);
+}
+
+function loadPrivateAliasRoots() {
+  const validationManifest = readRepoJson("docs/ui/private-visual-validation.manifest.json");
+  const requiredRoots = new Set(Array.isArray(validationManifest?.requiredRoots) ? validationManifest.requiredRoots : []);
+  const rootAliases = Array.isArray(validationManifest?.rootAliases) ? validationManifest.rootAliases : [];
+  if (rootAliases.length === 0) {
+    fail("docs/ui/private-visual-validation.manifest.json.rootAliases must not be empty");
+    return {};
+  }
+
+  const aliases = {};
+  const seenAliases = new Set();
+  const seenEnvs = new Set();
+  for (const [index, entry] of rootAliases.entries()) {
+    const label = `docs/ui/private-visual-validation.manifest.json.rootAliases[${index}]`;
+    const { alias, env, manifestPath, manifestAliasField } = entry || {};
+    if (typeof alias !== "string" || alias === "") fail(`${label}.alias must be a non-empty string`);
+    if (typeof env !== "string" || env === "") fail(`${label}.env must be a non-empty string`);
+    if (typeof manifestPath !== "string" || manifestPath === "") fail(`${label}.manifestPath must be a non-empty string`);
+    if (typeof manifestAliasField !== "string" || manifestAliasField === "") {
+      fail(`${label}.manifestAliasField must be a non-empty string`);
+    }
+    if (!alias || !env || !manifestPath || !manifestAliasField) continue;
+    if (seenAliases.has(alias)) fail(`${label}.alias duplicates ${alias}`);
+    if (seenEnvs.has(env)) fail(`${label}.env duplicates ${env}`);
+    seenAliases.add(alias);
+    seenEnvs.add(env);
+    if (!requiredRoots.has(env)) fail(`${label}.env must be listed in requiredRoots`);
+    const sourceManifest = readRepoJson(manifestPath);
+    if (sourceManifest?.[manifestAliasField] !== alias) {
+      fail(`${label} must match ${manifestPath}.${manifestAliasField}`);
+    }
+    aliases[alias] = env;
+  }
+  return aliases;
 }
 
 function loadAllowedFindingCategories() {
@@ -406,6 +434,7 @@ if (!hasFlag("--require-approved")) {
 
 const plan = runEvidencePlan();
 const allowedFindingCategories = loadAllowedFindingCategories();
+const aliasRoots = loadPrivateAliasRoots();
 const aliases = new Set();
 for (const item of plan.evidence || []) {
   const parsed = splitReference(item.privateReference);

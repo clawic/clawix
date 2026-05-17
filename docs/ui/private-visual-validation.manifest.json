@@ -11,6 +11,38 @@
     "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
     "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT"
   ],
+  "rootAliases": [
+    {
+      "alias": "private-codex-ui-baselines",
+      "env": "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
+      "manifestPath": "docs/ui/private-baselines.manifest.json",
+      "manifestAliasField": "privateRootAlias"
+    },
+    {
+      "alias": "private-codex-ui-rendered-geometry",
+      "env": "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
+      "manifestPath": "docs/ui/rendered-geometry.manifest.json",
+      "manifestAliasField": "privateGeometryAlias"
+    },
+    {
+      "alias": "private-codex-ui-copy-snapshots",
+      "env": "CLAWIX_UI_PRIVATE_COPY_ROOT",
+      "manifestPath": "docs/ui/copy.inventory.json",
+      "manifestAliasField": "privateSnapshotAlias"
+    },
+    {
+      "alias": "private-codex-ui-rendered-drift",
+      "env": "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+      "manifestPath": "docs/ui/rendered-drift.manifest.json",
+      "manifestAliasField": "privateDriftAlias"
+    },
+    {
+      "alias": "private-codex-ui-debt-audit",
+      "env": "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
+      "manifestPath": "docs/ui/debt-audit.manifest.json",
+      "manifestAliasField": "privateDebtAuditAlias"
+    }
+  ],
   "delegates": [
     "node scripts/ui_private_evidence_verify.mjs --require-approved",
     "node scripts/ui_private_baseline_verify.mjs --require-approved",

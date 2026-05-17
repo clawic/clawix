@@ -53,6 +53,7 @@ requireFields(manifest, manifestPath, [
   "verificationCommand",
   "evidencePlanCommand",
   "requiredRoots",
+  "rootAliases",
   "delegates",
   "decisionBlockers",
   "externalPendingExitCode",
@@ -72,16 +73,79 @@ if (manifest?.externalPendingExitCode !== 2) {
 }
 
 const roots = new Set(requireArray(manifest, manifestPath, "requiredRoots"));
-for (const root of [
+const expectedRoots = [
   "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
   "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
   "CLAWIX_UI_PRIVATE_COPY_ROOT",
   "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
   "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
-]) {
+];
+for (const root of expectedRoots) {
   if (!roots.has(root)) fail(`${manifestPath}.requiredRoots must include ${root}`);
   if (!String(manifest?.verificationCommand || "").includes(root)) {
     fail(`${manifestPath}.verificationCommand must include ${root}`);
+  }
+}
+
+const expectedAliasContracts = [
+  {
+    alias: "private-codex-ui-baselines",
+    env: "CLAWIX_UI_PRIVATE_BASELINE_ROOT",
+    manifestPath: "docs/ui/private-baselines.manifest.json",
+    manifestAliasField: "privateRootAlias",
+  },
+  {
+    alias: "private-codex-ui-rendered-geometry",
+    env: "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
+    manifestPath: "docs/ui/rendered-geometry.manifest.json",
+    manifestAliasField: "privateGeometryAlias",
+  },
+  {
+    alias: "private-codex-ui-copy-snapshots",
+    env: "CLAWIX_UI_PRIVATE_COPY_ROOT",
+    manifestPath: "docs/ui/copy.inventory.json",
+    manifestAliasField: "privateSnapshotAlias",
+  },
+  {
+    alias: "private-codex-ui-rendered-drift",
+    env: "CLAWIX_UI_PRIVATE_DRIFT_ROOT",
+    manifestPath: "docs/ui/rendered-drift.manifest.json",
+    manifestAliasField: "privateDriftAlias",
+  },
+  {
+    alias: "private-codex-ui-debt-audit",
+    env: "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
+    manifestPath: "docs/ui/debt-audit.manifest.json",
+    manifestAliasField: "privateDebtAuditAlias",
+  },
+];
+const rootAliases = requireArray(manifest, manifestPath, "rootAliases");
+const aliasesByAlias = new Map();
+const aliasesByEnv = new Map();
+for (const [index, entry] of rootAliases.entries()) {
+  const label = `${manifestPath}.rootAliases[${index}]`;
+  requireFields(entry, label, ["alias", "env", "manifestPath", "manifestAliasField"]);
+  if (!entry) continue;
+  if (aliasesByAlias.has(entry.alias)) fail(`${label}.alias duplicates ${entry.alias}`);
+  if (aliasesByEnv.has(entry.env)) fail(`${label}.env duplicates ${entry.env}`);
+  aliasesByAlias.set(entry.alias, entry);
+  aliasesByEnv.set(entry.env, entry);
+  if (!roots.has(entry.env)) fail(`${label}.env must be listed in requiredRoots`);
+  const sourceManifest = readJson(entry.manifestPath);
+  if (sourceManifest?.[entry.manifestAliasField] !== entry.alias) {
+    fail(`${label} must match ${entry.manifestPath}.${entry.manifestAliasField}`);
+  }
+}
+for (const contract of expectedAliasContracts) {
+  const entry = aliasesByAlias.get(contract.alias);
+  if (!entry) {
+    fail(`${manifestPath}.rootAliases must include ${contract.alias}`);
+    continue;
+  }
+  for (const field of ["env", "manifestPath", "manifestAliasField"]) {
+    if (entry[field] !== contract[field]) {
+      fail(`${manifestPath}.rootAliases entry for ${contract.alias} must set ${field}=${contract[field]}`);
+    }
   }
 }
 
@@ -95,11 +159,21 @@ for (const snippet of ["--require-approved", "EXTERNAL PENDING", "process.exit(2
     fail(`scripts/ui_private_visual_verify.mjs must include ${snippet}`);
   }
 }
+for (const snippet of ["docs/ui/private-visual-validation.manifest.json", "requiredRoots", "delegates", "parseDelegate"]) {
+  if (!runnerSource.includes(snippet)) {
+    fail(`scripts/ui_private_visual_verify.mjs must derive private validation from ${snippet}`);
+  }
+}
 const evidenceVerifierSource = fs.existsSync(path.join(rootDir, "scripts/ui_private_evidence_verify.mjs"))
   ? fs.readFileSync(path.join(rootDir, "scripts/ui_private_evidence_verify.mjs"), "utf8")
   : "";
 if (!evidenceVerifierSource.includes("scripts/ui_private_evidence_plan_check.mjs")) {
   fail("scripts/ui_private_evidence_verify.mjs must consume the derived private evidence plan");
+}
+for (const snippet of ["docs/ui/private-visual-validation.manifest.json", "rootAliases", "loadPrivateAliasRoots"]) {
+  if (!evidenceVerifierSource.includes(snippet)) {
+    fail(`scripts/ui_private_evidence_verify.mjs must derive private aliases from ${snippet}`);
+  }
 }
 for (const script of [
   "scripts/ui_private_evidence_verify.mjs",
@@ -117,9 +191,6 @@ for (const script of [
   }
   if (!String(delegate).includes("--require-approved")) {
     fail(`${manifestPath}.delegates entry for ${script} must include --require-approved`);
-  }
-  if (!runnerSource.includes(script)) {
-    fail(`scripts/ui_private_visual_verify.mjs must delegate to ${script}`);
   }
 }
 
