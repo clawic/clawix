@@ -86,6 +86,14 @@ function verifyMeasurementSamples(evidence, label, requiredMetrics) {
   }
 }
 
+const requireApproved = hasFlag("--require-approved");
+const includePending = hasFlag("--include-pending");
+
+if (!requireApproved) {
+  console.error("UI private performance budget verification requires --require-approved.");
+  process.exit(1);
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_BASELINE_ROOT || "";
 if (!privateRootRaw) {
@@ -102,8 +110,6 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private performance root does not exist: ${privateRoot}`);
 }
 
-const requireApproved = hasFlag("--require-approved");
-const includePending = hasFlag("--include-pending");
 const budgets = readJson("docs/ui/performance-budgets.registry.json");
 const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
 const alias = privateBaselines?.privateRootAlias || "private-codex-ui-baselines";

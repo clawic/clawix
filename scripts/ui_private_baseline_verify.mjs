@@ -60,6 +60,14 @@ function assertHash(value, label) {
   }
 }
 
+const requireApproved = hasFlag("--require-approved");
+const verifyPending = hasFlag("--include-pending");
+
+if (!requireApproved) {
+  console.error("UI private baseline verification requires --require-approved.");
+  process.exit(1);
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_BASELINE_ROOT || "";
 if (!privateRootRaw) {
@@ -79,8 +87,6 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
 const manifest = readJson(manifestPath);
 const alias = manifest?.privateRootAlias || "private-codex-ui-baselines";
 const evidenceFilename = manifest?.evidenceFilename || "evidence.json";
-const requireApproved = hasFlag("--require-approved");
-const verifyPending = hasFlag("--include-pending");
 let verified = 0;
 let pending = 0;
 

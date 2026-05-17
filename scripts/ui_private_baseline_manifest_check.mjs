@@ -101,6 +101,9 @@ if (manifest?.evidenceFilename !== "evidence.json") {
 if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_baseline_verify.mjs")) {
   fail(`${manifestPath}.verificationCommand must run scripts/ui_private_baseline_verify.mjs`);
 }
+if (!String(manifest?.verificationCommand || "").includes("--require-approved")) {
+  fail(`${manifestPath}.verificationCommand must require approved private baseline evidence`);
+}
 
 const evidenceFields = new Set(requireArray(manifest, manifestPath, "requiredEvidenceFields"));
 for (const field of requiredEvidence) {

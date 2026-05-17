@@ -91,6 +91,14 @@ function failReport(report, label, reason) {
   ].join("; "));
 }
 
+const requireApproved = hasFlag("--require-approved");
+const includePending = hasFlag("--include-pending");
+
+if (!requireApproved) {
+  console.error("UI private drift verification requires --require-approved.");
+  process.exit(1);
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_DRIFT_ROOT || "";
 if (!privateRootRaw) {
@@ -107,8 +115,6 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
   fail(`private drift root does not exist: ${privateRoot}`);
 }
 
-const requireApproved = hasFlag("--require-approved");
-const includePending = hasFlag("--include-pending");
 const manifest = readJson("docs/ui/rendered-drift.manifest.json");
 const alias = manifest?.privateDriftAlias || "private-codex-ui-rendered-drift";
 const evidenceFilename = manifest?.evidenceFilename || "drift-report.json";

@@ -76,6 +76,9 @@ if (manifest?.status !== "pending-private-capture" && manifest?.status !== "acti
 if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_visual_verify.mjs")) {
   fail(`${manifestPath}.verificationCommand must run scripts/ui_private_visual_verify.mjs`);
 }
+if (!String(manifest?.verificationCommand || "").includes("--require-approved")) {
+  fail(`${manifestPath}.verificationCommand must require approved private drift evidence`);
+}
 
 const expectedCategories = ["geometry", "screenshot", "copy", "performance", "state"];
 const categories = new Set(requireArray(manifest, manifestPath, "driftCategories"));

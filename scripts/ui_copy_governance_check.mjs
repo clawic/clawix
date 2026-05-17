@@ -82,6 +82,9 @@ if (copyInventory?.evidenceFilename !== "copy-evidence.json") {
 if (!String(copyInventory?.verificationCommand || "").includes("scripts/ui_private_copy_verify.mjs")) {
   fail(`${copyPath}.verificationCommand must run scripts/ui_private_copy_verify.mjs`);
 }
+if (!String(copyInventory?.verificationCommand || "").includes("--require-approved")) {
+  fail(`${copyPath}.verificationCommand must require approved private copy evidence`);
+}
 const copyKinds = new Set(requireArray(copyInventory, copyPath, "restrictedCopyKinds"));
 for (const kind of requiredCopyKinds) {
   if (!copyKinds.has(kind)) fail(`${copyPath}.restrictedCopyKinds must include ${kind}`);

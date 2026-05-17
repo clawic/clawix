@@ -79,6 +79,14 @@ function verifyCopyItems(value, label) {
   }
 }
 
+const requireApproved = hasFlag("--require-approved");
+const includePending = hasFlag("--include-pending");
+
+if (!requireApproved) {
+  console.error("UI private copy verification requires --require-approved.");
+  process.exit(1);
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_COPY_ROOT || "";
 if (!privateRootRaw) {
@@ -99,8 +107,6 @@ const copyInventory = readJson("docs/ui/copy.inventory.json");
 const protectedSurfaces = readJson("docs/ui/protected-surfaces.registry.json");
 const alias = copyInventory?.privateSnapshotAlias || "private-codex-ui-copy-snapshots";
 const evidenceFilename = copyInventory?.evidenceFilename || "copy-evidence.json";
-const requireApproved = hasFlag("--require-approved");
-const includePending = hasFlag("--include-pending");
 let verified = 0;
 let pending = 0;
 
