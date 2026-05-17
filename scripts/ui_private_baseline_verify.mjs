@@ -121,7 +121,10 @@ if (Array.isArray(manifest?.flows)) {
     const label = `${flow.platform}:${flow.id}`;
     if (flow.baselineStatus !== "approved") {
       pendingFlows += 1;
-      if (!verifyPending) continue;
+      if (!verifyPending) {
+        if (requireApproved) fail(`${label} is pending approved baseline capture`);
+        continue;
+      }
     }
     if (requireApproved && flow.baselineStatus !== "approved") {
       fail(`${label} is not approved`);
@@ -161,7 +164,10 @@ if (Array.isArray(surfaceCoverage?.coverage)) {
     const label = `surface:${entry.platform || "unknown"}:${entry.coverageId || index}`;
     if (entry.baselineStatus !== "approved") {
       pendingSurfaces += 1;
-      if (!verifyPending) continue;
+      if (!verifyPending) {
+        if (requireApproved) fail(`${label} is pending approved surface baseline capture`);
+        continue;
+      }
     }
     if (requireApproved && entry.baselineStatus !== "approved") {
       fail(`${label} is not approved`);
