@@ -41,7 +41,7 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function scanPublicSafety(content, label) {
-  if (/\/Users\//.test(content) || /file:\/\//.test(content) || /^[A-Z]:\\/m.test(content)) {
+  if (/\/Users\//.test(content) || /~\//.test(content) || /file:\/\//.test(content) || /^[A-Z]:\\/m.test(content)) {
     fail(`${label} must not publish local private paths`);
   }
   if (/BEGIN [A-Z ]*PRIVATE KEY/.test(content) || /\bAKIA[0-9A-Z]{16}\b/.test(content) || /\bsk-[A-Za-z0-9]{20,}\b/.test(content)) {

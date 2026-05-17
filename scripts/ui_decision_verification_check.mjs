@@ -85,9 +85,25 @@ function splitPrivateEvidenceReference(reference) {
   if (typeof reference !== "string" || !reference.includes(":")) return null;
   const [alias, ...suffixParts] = reference.split(":");
   const suffix = suffixParts.join(":");
-  if (!alias || !suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) return null;
+  if (!alias || !suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) return null;
   if (suffix.includes("*") && suffix !== "*" && !suffix.endsWith("/*")) return null;
   return { alias, suffix };
+}
+
+function isSafePrivateAliasReference(reference, alias) {
+  if (typeof reference !== "string" || !reference.startsWith(`${alias}:`)) return false;
+  const suffix = reference.slice(alias.length + 1);
+  return Boolean(
+    suffix &&
+      !suffix.startsWith("/") &&
+      !suffix.startsWith("\\") &&
+      !suffix.startsWith("~/") &&
+      !suffix.includes("..") &&
+      !/^[A-Z]:\\/.test(suffix) &&
+      !reference.includes("/Users/") &&
+      !reference.startsWith("~/") &&
+      !reference.startsWith("file://"),
+  );
 }
 
 function isPrivateEvidenceReference(reference) {
@@ -140,10 +156,10 @@ requireFields(decisionVerification, decisionPath, [
 if (decisionVerification?.conversationId !== "019e2b5e-fe48-7231-8e13-49411999b001") {
   fail(`${decisionPath}.conversationId must stay pinned to the source conversation`);
 }
-if (!String(decisionVerification?.goalReference || "").startsWith("private-codex-goal:")) {
+if (!isSafePrivateAliasReference(decisionVerification?.goalReference, "private-codex-goal")) {
   fail(`${decisionPath}.goalReference must be a public-safe private goal alias`);
 }
-if (!String(decisionVerification?.sourceSession || "").startsWith("private-codex-session:")) {
+if (!isSafePrivateAliasReference(decisionVerification?.sourceSession, "private-codex-session")) {
   fail(`${decisionPath}.sourceSession must be a public-safe private session alias`);
 }
 if (!String(decisionVerification?.completionRule || "").includes("re-read")) {

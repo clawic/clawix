@@ -58,7 +58,7 @@ function scanPublicSafety(value, label) {
     return;
   }
   if (typeof value !== "string") return;
-  if (/\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value)) {
+  if (/\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value)) {
     fail(`${label} must not publish a local private path`);
   }
   if (/rollout-2026-05-15T13-21-46/.test(value)) {
