@@ -172,6 +172,15 @@ for (const copyKind of requireArray(copyInventory, "docs/ui/copy.inventory.json"
   }
 }
 
+const governanceGuardSource = fs.existsSync(path.join(rootDir, "scripts/ui_governance_guard.mjs"))
+  ? fs.readFileSync(path.join(rootDir, "scripts/ui_governance_guard.mjs"), "utf8")
+  : "";
+for (const snippet of ["platformForPath", "detector.platforms.includes(platform)", "--simulate-cross-platform-visual-diff"]) {
+  if (!governanceGuardSource.includes(snippet)) {
+    fail(`scripts/ui_governance_guard.mjs must enforce detector platform scoping via ${snippet}`);
+  }
+}
+
 if (errors.length > 0) {
   console.error("UI visual detector check failed:");
   for (const error of errors) console.error(`- ${error}`);
