@@ -59,6 +59,26 @@ function assertHash(value, label) {
   }
 }
 
+function verifyCopyItems(value, label) {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail(`${label} must be a non-empty array`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const itemLabel = `${label}[${index}]`;
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      fail(`${itemLabel} must be an object`);
+      continue;
+    }
+    for (const field of ["kind", "textHash", "source"]) {
+      if (typeof item[field] !== "string" || item[field] === "") {
+        fail(`${itemLabel}.${field} must be a non-empty string`);
+      }
+    }
+    assertHash(item.textHash, `${itemLabel}.textHash`);
+  }
+}
+
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_COPY_ROOT || "";
 if (!privateRootRaw) {
@@ -116,6 +136,7 @@ for (const [index, coverage] of (surfaceCoverage?.coverage || []).entries()) {
   if (evidence.platform !== coverage.platform) {
     fail(`${label}.platform must match the surface baseline coverage manifest`);
   }
+  verifyCopyItems(evidence.copyItems, `${label}.copyItems`);
   verified += 1;
 }
 
@@ -151,6 +172,7 @@ for (const [index, surface] of surfaces.entries()) {
   if (evidence.surfaceId !== surface.id) {
     fail(`${label}.surfaceId must match the protected surface registry`);
   }
+  verifyCopyItems(evidence.copyItems, `${label}.copyItems`);
   verified += 1;
 }
 

@@ -87,7 +87,15 @@ for (const kind of requiredCopyKinds) {
   if (!copyKinds.has(kind)) fail(`${copyPath}.restrictedCopyKinds must include ${kind}`);
 }
 
-const requiredEvidence = ["coverageId", "platform", "copySnapshotReference", "copySnapshotHash", "approvedByUserAt", "approvedScope"];
+const requiredEvidence = [
+  "coverageId",
+  "platform",
+  "copyItems",
+  "copySnapshotReference",
+  "copySnapshotHash",
+  "approvedByUserAt",
+  "approvedScope",
+];
 const evidence = new Set(requireArray(copyInventory, copyPath, "requiredEvidenceFields"));
 for (const field of requiredEvidence) {
   if (!evidence.has(field)) fail(`${copyPath}.requiredEvidenceFields must include ${field}`);

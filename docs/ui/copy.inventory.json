@@ -27,6 +27,7 @@
   "requiredEvidenceFields": [
     "coverageId",
     "platform",
+    "copyItems",
     "copySnapshotReference",
     "copySnapshotHash",
     "approvedByUserAt",

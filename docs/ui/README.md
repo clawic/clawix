@@ -156,7 +156,9 @@ the public repo.
    `scripts/ui_rendered_geometry_manifest_check.mjs`; private pattern geometry
    evidence must include measured values plus the approved geometry hash before
    pending size clauses can become measured contracts.
-26. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`.
+26. Keep copy contracts current with `scripts/ui_copy_governance_check.mjs`;
+   private copy evidence must include hashed `copyItems` plus the approved
+   snapshot hash before copy can be treated as approved canon.
 27. Keep performance budget contracts current with
    `scripts/ui_performance_budget_check.mjs`; budget flow references must match
    private baseline references and stay scoped to critical flows.
