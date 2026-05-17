@@ -45,7 +45,10 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function hasLocalPath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+  return (
+    typeof value === "string" &&
+    (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value))
+  );
 }
 
 function scanForLocalPaths(value, label) {
@@ -63,6 +66,14 @@ function scanForLocalPaths(value, label) {
 function requireAlias(value, alias, label) {
   if (typeof value !== "string" || !value.startsWith(`${alias}:`)) {
     fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..")) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasLocalPath(value)) {
+    fail(`${label} must not contain a local path`);
   }
 }
 
