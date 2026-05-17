@@ -94,6 +94,13 @@ if (wrongModelExitCode === 0) {
 if (!wrongModelOutput.includes("CLAWIX_UI_VISUAL_MODEL=non-allowlisted-model")) {
   fail("wrong model failure output must include the rejected model signal");
 }
+for (const snippet of [
+  "required permission:",
+  "proposal route:",
+  "non-authorized agents must leave a conceptual proposal",
+]) {
+  if (!wrongModelOutput.includes(snippet)) fail(`wrong model failure output is missing: ${snippet}`);
+}
 
 let patternOutput = "";
 let patternExitCode = 0;
@@ -124,6 +131,38 @@ for (const snippet of [
   "geometry",
 ]) {
   if (!patternOutput.includes(snippet)) fail(`pattern mutation failure output is missing: ${snippet}`);
+}
+
+let patternWrongModelOutput = "";
+let patternWrongModelExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-mutation"], {
+    cwd: rootDir,
+    env: {
+      ...env,
+      CLAWIX_UI_VISUAL_AUTHORIZED: "1",
+      CLAWIX_UI_VISUAL_MODEL: "non-allowlisted-model",
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternWrongModelExitCode = error.status || 1;
+  patternWrongModelOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternWrongModelExitCode === 0) {
+  fail("simulated pattern mutation must fail for a non-allowlisted visual model");
+}
+for (const snippet of [
+  "unauthorized pattern registry visual/copy contract mutation detected",
+  "required permission:",
+  "current model signal:",
+  "CLAWIX_UI_VISUAL_MODEL=non-allowlisted-model",
+  "proposal route:",
+  "simulated unauthorized pattern mutation",
+]) {
+  if (!patternWrongModelOutput.includes(snippet)) fail(`pattern wrong model failure output is missing: ${snippet}`);
 }
 
 let patternRemovalOutput = "";
