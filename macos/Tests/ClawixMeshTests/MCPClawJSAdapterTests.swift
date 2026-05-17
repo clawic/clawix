@@ -69,6 +69,20 @@ final class MCPClawJSAdapterTests: XCTestCase {
         XCTAssertEqual(configPath.configPath, "/tmp/config.toml")
         XCTAssertEqual(configPath.exists, true)
         XCTAssertTrue(calls.contains(["mcp", "config-path", "--scope", "user", "--json"]))
+        assertClawJSMCPCommandsOnly(calls)
+    }
+
+    private func assertClawJSMCPCommandsOnly(_ calls: [[String]], file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertFalse(calls.isEmpty, file: file, line: line)
+        for call in calls {
+            XCTAssertEqual(call.first, "mcp", file: file, line: line)
+            XCTAssertTrue(call.contains("--json"), file: file, line: line)
+
+            let commandLine = call.joined(separator: " ")
+            for forbidden in [".codex", "config.toml", "mcp_servers", "[mcp_servers"] {
+                XCTAssertFalse(commandLine.contains(forbidden), file: file, line: line)
+            }
+        }
     }
 }
 

@@ -39,6 +39,12 @@ function requireSnippet(relativePath, snippet) {
   }
 }
 
+function requireNoSnippet(relativePath, snippet, reason) {
+  if (read(relativePath).includes(snippet)) {
+    fail(`${relativePath} contains forbidden snippet ${JSON.stringify(snippet)}: ${reason}`);
+  }
+}
+
 function countOccurrences(text, token) {
   return text.split(token).length - 1;
 }
@@ -200,6 +206,82 @@ for (const snippet of [
   requireSnippet("docs/interface-matrix.md", snippet);
 }
 requireSnippet("docs/naming-style-guide.md", "`shortCode`, `hostDisplayName`");
+
+for (const snippet of [
+  "Codex is an external read-only source by default.",
+  "`~/.codex` may be read",
+  "It must not be deleted, moved, overwritten, recursively\nchmodded, or used as a write target",
+]) {
+  requireSnippet("docs/host-ownership.md", snippet);
+}
+for (const snippet of [
+  "| MCP | Framework | MCP settings | ClawJS MCP registry through `claw`/API | Framework registry; external configs read-only | Registry tests and Codex read-only guard |",
+]) {
+  requireSnippet("docs/interface-matrix.md", snippet);
+}
+const mcpSurface = (registry.surfaces ?? []).find((entry) => entry.id === "mcp");
+if (!mcpSurface) {
+  fail("interface registry is missing mcp");
+} else {
+  const mcpSurfaceText = `${mcpSurface.humanSurface ?? ""}\n${mcpSurface.programmaticSurface ?? ""}\n${mcpSurface.storageOwner ?? ""}\n${mcpSurface.validation ?? ""}`;
+  for (const snippet of [
+    "Clawix MCP settings page",
+    "ClawJS MCP registry through claw/API; external configs read-only import",
+    "framework-registry",
+    "MCP registry tests and Codex read-only guard",
+  ]) {
+    if (!mcpSurfaceText.includes(snippet)) fail(`mcp registry row is missing read-only registry snippet ${JSON.stringify(snippet)}`);
+  }
+}
+for (const [relativePath, snippets] of [
+  [
+    "macos/Sources/Clawix/MCP/MCPServersStore.swift",
+    [
+      "self.init(persistence: ClawJSMCPClient())",
+      "the stable `claw mcp ... --json` adapter",
+      "mutates Codex-owned TOML directly.",
+    ],
+  ],
+  [
+    "macos/Sources/Clawix/MCP/ClawJSMCPClient.swift",
+    [
+      'runner.run(["mcp", "list", "--json"])',
+      'runner.run(["mcp", "delete", server.tomlIdentifier, "--json"])',
+      'var args = ["mcp", "upsert", server.tomlIdentifier, "--json"]',
+      'var args = ["mcp", "config-path", "--scope", scope, "--json"]',
+    ],
+  ],
+  [
+    "macos/Tests/ClawixMeshTests/MCPClawJSAdapterTests.swift",
+    [
+      "testClawJSMCPClientMapsListAndSaveToJsonCommands",
+      "assertClawJSMCPCommandsOnly(calls)",
+      'XCTAssertEqual(call.first, "mcp"',
+      'XCTAssertTrue(call.contains("--json")',
+      '".codex", "config.toml", "mcp_servers", "[mcp_servers"',
+    ],
+  ],
+]) {
+  for (const snippet of snippets) {
+    requireSnippet(relativePath, snippet);
+  }
+}
+for (const relativePath of [
+  "macos/Sources/Clawix/MCP/MCPServersStore.swift",
+  "macos/Sources/Clawix/MCP/ClawJSMCPClient.swift",
+]) {
+  for (const snippet of [
+    "FileManager.default",
+    "write(to:",
+    "Data(contentsOf:",
+    "String(contentsOf:",
+    ".codex",
+    "config.toml",
+    "[mcp_servers",
+  ]) {
+    requireNoSnippet(relativePath, snippet, "MCP configuration must go through the ClawJS MCP registry; Codex config remains read-only external input");
+  }
+}
 
 const pairingSurface = (registry.surfaces ?? []).find((entry) => entry.id === "pairing.qrJson");
 if (!pairingSurface) {
