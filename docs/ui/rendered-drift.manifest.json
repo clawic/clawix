@@ -7,8 +7,11 @@
   "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> node scripts/ui_private_visual_verify.mjs --require-approved",
   "driftCategories": ["geometry", "screenshot", "copy", "performance", "state"],
   "reportStatuses": ["pending-private-evidence", "no-drift", "drift-detected", "approved-drift"],
+  "blockingReportStatuses": ["pending-private-evidence", "drift-detected"],
+  "approvalRequiredStatuses": ["approved-drift"],
   "requiredReportFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reviewAfter"],
   "requiredEvidenceFields": ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "driftResults", "status", "reportHash", "producedAt"],
+  "approvedDriftEvidenceFields": ["approvedByUserAt", "approvedScope"],
   "failureOutputRequirements": ["route", "reason", "required permission", "privateDriftReportReference"],
   "evidenceFilename": "drift-report.json",
   "reports": [

@@ -65,6 +65,22 @@ function assertIsoTimestamp(value, label) {
   }
 }
 
+function assertApprovedScope(value, label) {
+  if (typeof value === "string") {
+    if (value.trim() === "") fail(`${label} must not be empty`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  fail(`${label} must be a non-empty string, array, or object`);
+}
+
 function verifyDriftResults(evidence, report, label, allowedStatuses) {
   if (!evidence.driftResults || typeof evidence.driftResults !== "object" || Array.isArray(evidence.driftResults)) {
     fail(`${label}.driftResults must be an object keyed by drift category`);
@@ -125,16 +141,21 @@ const manifest = readJson("docs/ui/rendered-drift.manifest.json");
 const alias = manifest?.privateDriftAlias || "private-codex-ui-rendered-drift";
 const evidenceFilename = manifest?.evidenceFilename || "drift-report.json";
 const allowedStatuses = new Set(Array.isArray(manifest?.reportStatuses) ? manifest.reportStatuses : []);
+const blockingStatuses = new Set(Array.isArray(manifest?.blockingReportStatuses) ? manifest.blockingReportStatuses : []);
+const approvalRequiredStatuses = new Set(Array.isArray(manifest?.approvalRequiredStatuses) ? manifest.approvalRequiredStatuses : []);
 const requiredEvidenceFields = Array.isArray(manifest?.requiredEvidenceFields) ? manifest.requiredEvidenceFields : [];
+const approvedDriftEvidenceFields = Array.isArray(manifest?.approvedDriftEvidenceFields)
+  ? manifest.approvedDriftEvidenceFields
+  : [];
 let verified = 0;
 let pending = 0;
 
 for (const [index, report] of (manifest?.reports || []).entries()) {
   const label = `${report.platform || "unknown"}:${report.coverageId || index}`;
-  if (report.status === "pending-private-evidence") {
+  if (blockingStatuses.has(report.status)) {
     pending += 1;
     if (!includePending) {
-      if (requireApproved) failReport(report, label, "pending private evidence");
+      if (requireApproved) failReport(report, label, report.status === "drift-detected" ? "drift detected" : "pending private evidence");
       continue;
     }
   }
@@ -148,6 +169,11 @@ for (const [index, report] of (manifest?.reports || []).entries()) {
   const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
   if (!evidence) continue;
   for (const field of requiredEvidenceFields) requireField(evidence, `${label} evidence`, field);
+  if (approvalRequiredStatuses.has(evidence.status)) {
+    for (const field of approvedDriftEvidenceFields) requireField(evidence, `${label} evidence`, field);
+    assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+    assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
+  }
   assertIsoTimestamp(evidence.producedAt, `${label}.producedAt`);
   if (evidence.coverageId !== report.coverageId) fail(`${label}.coverageId must match the public manifest`);
   if (evidence.platform !== report.platform) fail(`${label}.platform must match the public manifest`);

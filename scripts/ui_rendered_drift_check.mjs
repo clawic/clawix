@@ -64,8 +64,11 @@ requireFields(manifest, manifestPath, [
   "verificationCommand",
   "driftCategories",
   "reportStatuses",
+  "blockingReportStatuses",
+  "approvalRequiredStatuses",
   "requiredReportFields",
   "requiredEvidenceFields",
+  "approvedDriftEvidenceFields",
   "failureOutputRequirements",
   "evidenceFilename",
   "reports",
@@ -89,6 +92,14 @@ const statuses = new Set(requireArray(manifest, manifestPath, "reportStatuses"))
 for (const status of ["pending-private-evidence", "no-drift", "drift-detected", "approved-drift"]) {
   if (!statuses.has(status)) fail(`${manifestPath}.reportStatuses must include ${status}`);
 }
+const blockingStatuses = new Set(requireArray(manifest, manifestPath, "blockingReportStatuses"));
+for (const status of ["pending-private-evidence", "drift-detected"]) {
+  if (!blockingStatuses.has(status)) fail(`${manifestPath}.blockingReportStatuses must include ${status}`);
+}
+const approvalRequiredStatuses = new Set(requireArray(manifest, manifestPath, "approvalRequiredStatuses"));
+if (!approvalRequiredStatuses.has("approved-drift")) {
+  fail(`${manifestPath}.approvalRequiredStatuses must include approved-drift`);
+}
 const requiredReportFields = requireArray(manifest, manifestPath, "requiredReportFields");
 for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "status", "reviewAfter"]) {
   if (!requiredReportFields.includes(field)) fail(`${manifestPath}.requiredReportFields must include ${field}`);
@@ -96,6 +107,10 @@ for (const field of ["coverageId", "platform", "privateDriftReportReference", "d
 const requiredEvidenceFields = requireArray(manifest, manifestPath, "requiredEvidenceFields");
 for (const field of ["coverageId", "platform", "privateDriftReportReference", "driftCategories", "driftResults", "status", "reportHash", "producedAt"]) {
   if (!requiredEvidenceFields.includes(field)) fail(`${manifestPath}.requiredEvidenceFields must include ${field}`);
+}
+const approvedDriftEvidenceFields = requireArray(manifest, manifestPath, "approvedDriftEvidenceFields");
+for (const field of ["approvedByUserAt", "approvedScope"]) {
+  if (!approvedDriftEvidenceFields.includes(field)) fail(`${manifestPath}.approvedDriftEvidenceFields must include ${field}`);
 }
 const failureOutputRequirements = requireArray(manifest, manifestPath, "failureOutputRequirements");
 for (const field of ["route", "reason", "required permission", "privateDriftReportReference"]) {
