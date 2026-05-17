@@ -41,8 +41,8 @@ the public repo.
   visual/copy/layout mutation authority.
 - `component-extraction.manifest.json`: reusable component extraction policy,
   bounded API audit rules, and mechanical-equivalence evidence requirements.
-- `mechanical-equivalence.manifest.json`: before/after evidence contract for
-  mechanical UI refactors.
+- `mechanical-equivalence.manifest.json`: before/after evidence and blocking
+  status contract for mechanical UI refactors.
 - `pattern-registry/`: pattern manifests and human notes.
 - `visible-surfaces.inventory.json`: current visible UI candidate inventory.
 - `copy.inventory.json`: copy canon policy and private snapshot requirements.

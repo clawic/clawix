@@ -73,6 +73,7 @@ requireFields(manifest, manifestPath, [
   "status",
   "policy",
   "privateEvidenceAlias",
+  "recordRequirement",
   "requiredEvidenceFields",
   "allowedTokenDiffStatuses",
   "equivalenceStatuses",
@@ -81,6 +82,20 @@ requireFields(manifest, manifestPath, [
 
 if (manifest?.privateEvidenceAlias !== "private-codex-ui-mechanical-equivalence") {
   fail(`${manifestPath}.privateEvidenceAlias must be private-codex-ui-mechanical-equivalence`);
+}
+
+const recordRequirement = manifest?.recordRequirement || {};
+requireFields(recordRequirement, `${manifestPath}.recordRequirement`, [
+  "requiredForMutationClass",
+  "emptyRecordsAllowedOnlyWhenNoRefactorInScope",
+  "mergeBlockingStatuses",
+  "requiredPassingStatus",
+]);
+if (recordRequirement.requiredForMutationClass !== "mechanical-equivalent-refactor") {
+  fail(`${manifestPath}.recordRequirement.requiredForMutationClass must be mechanical-equivalent-refactor`);
+}
+if (recordRequirement.emptyRecordsAllowedOnlyWhenNoRefactorInScope !== true) {
+  fail(`${manifestPath}.recordRequirement.emptyRecordsAllowedOnlyWhenNoRefactorInScope must be true`);
 }
 
 const requiredEvidenceFields = requireArray(manifest, manifestPath, "requiredEvidenceFields");
@@ -108,6 +123,13 @@ for (const status of ["no-token-diff", "approved-token-diff"]) {
 const equivalenceStatuses = new Set(requireArray(manifest, manifestPath, "equivalenceStatuses"));
 for (const status of ["pending-private-evidence", "verified-equivalent", "blocked-visible-diff"]) {
   if (!equivalenceStatuses.has(status)) fail(`${manifestPath}.equivalenceStatuses must include ${status}`);
+}
+const mergeBlockingStatuses = new Set(requireArray(recordRequirement, `${manifestPath}.recordRequirement`, "mergeBlockingStatuses"));
+for (const status of ["pending-private-evidence", "blocked-visible-diff"]) {
+  if (!mergeBlockingStatuses.has(status)) fail(`${manifestPath}.recordRequirement.mergeBlockingStatuses must include ${status}`);
+}
+if (recordRequirement.requiredPassingStatus !== "verified-equivalent") {
+  fail(`${manifestPath}.recordRequirement.requiredPassingStatus must be verified-equivalent`);
 }
 
 const records = requireArray(manifest, manifestPath, "records", { nonEmpty: false });
