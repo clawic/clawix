@@ -17,7 +17,7 @@
     "approvalRequiredBeforeEnforcement": true
   },
   "requiredMetrics": ["interactionLatencyMs", "p95FrameTimeMs", "hitchCount", "memoryDeltaMb"],
-  "requiredEvidenceFields": ["flowId", "platform", "privateBaselineReference", "metrics", "measurementSamples", "measurementHash", "measuredAt", "approvedByUserAt"],
+  "requiredEvidenceFields": ["flowId", "platform", "privateBaselineReference", "metrics", "measurementSamples", "measurementHash", "measuredAt", "approvedByUserAt", "approvedScope"],
   "evidenceFilename": "performance-evidence.json",
   "verificationCommand": "CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> node scripts/ui_private_performance_budget_verify.mjs --require-approved",
   "flows": [

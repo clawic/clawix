@@ -65,6 +65,22 @@ function assertIsoTimestamp(value, label) {
   }
 }
 
+function assertApprovedScope(value, label) {
+  if (typeof value === "string") {
+    if (value.trim() === "") fail(`${label} must not be empty`);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (Object.keys(value).length === 0) fail(`${label} must not be empty`);
+    return;
+  }
+  fail(`${label} must be a non-empty string, array, or object`);
+}
+
 function verifyMeasurementSamples(evidence, label, requiredMetrics) {
   if (!Array.isArray(evidence.measurementSamples) || evidence.measurementSamples.length === 0) {
     fail(`${label}.measurementSamples must be a non-empty array`);
@@ -145,6 +161,7 @@ for (const [index, flow] of (budgets?.flows || []).entries()) {
   for (const field of requiredEvidenceFields) requireField(evidence, `${label} evidence`, field);
   assertIsoTimestamp(evidence.measuredAt, `${label}.measuredAt`);
   assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+  assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
   if (evidence.flowId !== flow.id) fail(`${label}.flowId must match the budget registry`);
   if (evidence.platform !== flow.platform) fail(`${label}.platform must match the budget registry`);
   if (evidence.privateBaselineReference !== flow.privateBaselineReference) {
