@@ -85,7 +85,7 @@ function scanForAbsolutePaths(value, label) {
 function assertPublicSafeReference(reference, alias, label) {
   if (typeof reference !== "string" || !reference.startsWith(`${alias}:`)) {
     fail(`${label} must use ${alias}:`);
-    return;
+    return null;
   }
   const suffix = reference.slice(alias.length + 1);
   if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
@@ -94,6 +94,7 @@ function assertPublicSafeReference(reference, alias, label) {
   if (hasAbsolutePath(reference) || reference.includes("/Users/")) {
     fail(`${label} must not contain a local absolute path`);
   }
+  return suffix;
 }
 
 const manifest = readJson(manifestPath);
@@ -142,7 +143,10 @@ for (const [index, flow] of requireArray(manifest, manifestPath, "flows").entrie
   if (!requiredFlows.includes(flow.id)) fail(`${label}.id is not a required critical flow`);
   if (!requiredPlatforms.includes(flow.platform)) fail(`${label}.platform is not governed`);
   coverage.add(`${flow.platform}:${flow.id}`);
-  assertPublicSafeReference(flow.privateBaselineReference, manifest.privateRootAlias, `${label}.privateBaselineReference`);
+  const referenceSuffix = assertPublicSafeReference(flow.privateBaselineReference, manifest.privateRootAlias, `${label}.privateBaselineReference`);
+  if (referenceSuffix && referenceSuffix !== `${flow.platform}/${flow.id}`) {
+    fail(`${label}.privateBaselineReference must target ${flow.platform}/${flow.id}`);
+  }
   const flowEvidence = new Set(requireArray(flow, label, "requiredEvidence"));
   for (const field of requiredEvidence) {
     if (!flowEvidence.has(field)) fail(`${label}.requiredEvidence must include ${field}`);
