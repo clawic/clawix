@@ -7,6 +7,7 @@ const uiDir = path.join(rootDir, "docs/ui");
 const expectedPrivateBaselineAlias = "private-codex-ui-baselines";
 const expectedPrivateAssignment = "outside-public-repo";
 const errors = [];
+const privatePathOrSecretPattern = /\/Users\/|~\/|file:\/\/|[A-Z]:\\|BEGIN [A-Z ]*PRIVATE KEY|\bAKIA[0-9A-Z]{16}\b|\bsk-[A-Za-z0-9]{20,}\b/;
 
 function fail(message) {
   errors.push(message);
@@ -89,10 +90,16 @@ for (const file of walk(uiDir)) {
     fail(`${relativePath} must not store private visual evidence in the public repo`);
   }
   const content = fs.readFileSync(file, "utf8");
-  if (/\/Users\/|file:\/\/|BEGIN [A-Z ]*PRIVATE KEY|\bAKIA[0-9A-Z]{16}\b|\bsk-[A-Za-z0-9]{20,}\b/.test(content)) {
+  if (privatePathOrSecretPattern.test(content)) {
     fail(`${relativePath} contains a private path or secret-like token`);
   }
-  if (extension === ".json") scanValue(JSON.parse(content), relativePath);
+  if (extension === ".json") {
+    try {
+      scanValue(JSON.parse(content), relativePath);
+    } catch (error) {
+      fail(`${relativePath} is not valid JSON: ${error.message}`);
+    }
+  }
 }
 
 const privateValidation = readJson("docs/ui/private-visual-validation.manifest.json");
