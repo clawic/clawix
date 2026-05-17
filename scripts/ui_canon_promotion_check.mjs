@@ -83,6 +83,12 @@ function requireHash(value, label) {
   }
 }
 
+function requireIsoDate(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date`);
+  }
+}
+
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
 const manifestPath = "docs/ui/canon-promotions.registry.json";
 const manifest = readJson(manifestPath);
@@ -148,6 +154,7 @@ for (const [index, promotion] of promotions.entries()) {
   if (!statuses.has(promotion.status)) fail(`${label}.status is invalid`);
   if (!requiredPlatforms.has(promotion.platform)) fail(`${label}.platform is not governed`);
   if (promotion.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  requireIsoDate(promotion.approvedAt, `${label}.approvedAt`);
   requireArray(promotion, label, "patterns");
   requireAlias(promotion.privateApprovalReference, manifest.privateApprovalAlias, `${label}.privateApprovalReference`);
   requireAlias(promotion.privateBaselineReference, manifest.privateBaselineAlias, `${label}.privateBaselineReference`);

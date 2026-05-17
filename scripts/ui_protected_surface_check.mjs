@@ -83,6 +83,12 @@ function requireHash(value, label) {
   }
 }
 
+function requireIsoDate(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date`);
+  }
+}
+
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
 const protectedPath = "docs/ui/protected-surfaces.registry.json";
 const protectedSurfaces = readJson(protectedPath);
@@ -139,6 +145,7 @@ for (const [index, surface] of surfaces.entries()) {
   ids.add(surface.id);
   if (!requiredPlatforms.has(surface.platform)) fail(`${label}.platform is not governed`);
   if (surface.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  requireIsoDate(surface.approvedAt, `${label}.approvedAt`);
   requireAlias(surface.privateApprovalReference, "private-codex-ui-approval", `${label}.privateApprovalReference`);
   for (const pattern of requireArray(surface, label, "patterns")) {
     if (!patternIds.has(pattern)) fail(`${label}.patterns references unknown pattern ${pattern}`);
