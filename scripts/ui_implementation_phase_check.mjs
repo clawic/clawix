@@ -47,7 +47,7 @@ function requireRepoReference(reference, label) {
     fail(`${label} must be a repo-relative reference`);
     return;
   }
-  if (path.isAbsolute(reference) || reference.startsWith("~/") || reference.includes("/Users/") || reference.includes(":")) {
+  if (path.isAbsolute(reference) || reference.startsWith("~/") || reference.includes("\\") || reference.includes("/Users/") || reference.includes(":")) {
     fail(`${label} must be public-safe and repo-relative`);
     return;
   }

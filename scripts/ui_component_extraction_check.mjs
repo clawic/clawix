@@ -216,7 +216,7 @@ for (const [index, sourceRoot] of sourceRoots.entries()) {
     fail(`${label} must be a non-empty string`);
     continue;
   }
-  if (sourceRoot.startsWith("/") || sourceRoot.startsWith("~/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://") || /^[A-Z]:\\/.test(sourceRoot)) {
+  if (sourceRoot.startsWith("/") || sourceRoot.startsWith("~/") || sourceRoot.includes("\\") || sourceRoot.includes("..") || sourceRoot.startsWith("file://") || /^[A-Z]:\\/.test(sourceRoot)) {
     fail(`${label} must be a safe relative path`);
     continue;
   }

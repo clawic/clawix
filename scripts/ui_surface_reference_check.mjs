@@ -45,7 +45,7 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 function isPublicSafeReference(reference) {
   if (typeof reference !== "string" || reference.length === 0) return false;
   if (path.isAbsolute(reference)) return false;
-  if (reference.startsWith("~/") || reference.includes("/Users/")) return false;
+  if (reference.startsWith("~/") || reference.includes("\\") || reference.includes("/Users/")) return false;
   if (reference.startsWith("private-") || reference.includes(":")) return false;
   return true;
 }
