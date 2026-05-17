@@ -11,6 +11,7 @@
     "scripts/ui_canon_promotion_check.mjs",
     "scripts/ui_decision_verification_check.mjs",
     "scripts/ui_debt_report_check.mjs",
+    "scripts/ui_critical_cleanup_queue_check.mjs",
     "scripts/ui_exception_check.mjs",
     "scripts/ui_inspiration_reference_check.mjs",
     "scripts/ui_protected_surface_check.mjs",

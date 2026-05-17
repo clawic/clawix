@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "status": "queued",
+  "policy": "Critical visual cleanup is queued but not executable by non-visual agents. Each item must come from the UI debt report and can only be worked by an explicitly allowlisted visual model inside an approved visual scope.",
+  "sourceDebtReport": "docs/ui/debt-report.registry.json",
+  "visualModelAllowlist": "docs/ui/visual-model-allowlist.manifest.json",
+  "requiredVisualModel": "claude-opus-4.7",
+  "queueStatuses": ["queued-visual-authorized-lane", "blocked-without-approval", "in-progress", "completed"],
+  "requiredItemFields": [
+    "id",
+    "debtId",
+    "status",
+    "scope",
+    "platforms",
+    "requiredVisualModel",
+    "requiredAuthorization",
+    "privateApprovalRequired",
+    "allowedCurrentAction"
+  ],
+  "items": [
+    {
+      "id": "cleanup-ui-debt-design-surface-raw-visual-values",
+      "debtId": "ui-debt-design-surface-raw-visual-values",
+      "status": "queued-visual-authorized-lane",
+      "scope": "macos/Sources/Clawix/Design/**",
+      "platforms": ["macos"],
+      "requiredVisualModel": "claude-opus-4.7",
+      "requiredAuthorization": "visual-authorized-lane",
+      "privateApprovalRequired": true,
+      "allowedCurrentAction": "Queue only; do not modify presentation without approved visual scope."
+    },
+    {
+      "id": "cleanup-ui-debt-automations-surface-raw-visual-values",
+      "debtId": "ui-debt-automations-surface-raw-visual-values",
+      "status": "queued-visual-authorized-lane",
+      "scope": "macos/Sources/Clawix/AutomationsView.swift",
+      "platforms": ["macos"],
+      "requiredVisualModel": "claude-opus-4.7",
+      "requiredAuthorization": "visual-authorized-lane",
+      "privateApprovalRequired": true,
+      "allowedCurrentAction": "Queue only; do not modify presentation without approved visual scope."
+    },
+    {
+      "id": "cleanup-ui-debt-plan-question-card-raw-visual-values",
+      "debtId": "ui-debt-plan-question-card-raw-visual-values",
+      "status": "queued-visual-authorized-lane",
+      "scope": "macos/Sources/Clawix/PlanQuestionCard.swift",
+      "platforms": ["macos"],
+      "requiredVisualModel": "claude-opus-4.7",
+      "requiredAuthorization": "visual-authorized-lane",
+      "privateApprovalRequired": true,
+      "allowedCurrentAction": "Queue only; do not modify presentation without approved visual scope."
+    }
+  ]
+}

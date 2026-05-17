@@ -615,6 +615,7 @@ const requiredDocs = [
   "docs/ui/debt.baseline.json",
   "docs/ui/debt-baseline.manifest.json",
   "docs/ui/debt-report.registry.json",
+  "docs/ui/critical-cleanup.queue.json",
   "docs/ui/exceptions.registry.json",
   "docs/ui/protected-surfaces.registry.json",
   "docs/ui/canon-promotions.registry.json",

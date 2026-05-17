@@ -201,6 +201,7 @@ fast() {
   run node "$ROOT_DIR/scripts/ui_canon_promotion_check.mjs"
   run node "$ROOT_DIR/scripts/ui_decision_verification_check.mjs"
   run node "$ROOT_DIR/scripts/ui_debt_report_check.mjs"
+  run node "$ROOT_DIR/scripts/ui_critical_cleanup_queue_check.mjs"
   run node "$ROOT_DIR/scripts/ui_exception_check.mjs"
   run node "$ROOT_DIR/scripts/ui_inspiration_reference_check.mjs"
   run node "$ROOT_DIR/scripts/ui_protected_surface_check.mjs"

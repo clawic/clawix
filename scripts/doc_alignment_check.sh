@@ -64,6 +64,7 @@ for file in \
   "docs/ui/debt.baseline.json" \
   "docs/ui/debt-baseline.manifest.json" \
   "docs/ui/debt-report.registry.json" \
+  "docs/ui/critical-cleanup.queue.json" \
   "docs/ui/exceptions.registry.json" \
   "docs/ui/protected-surfaces.registry.json" \
   "docs/ui/canon-promotions.registry.json" \
@@ -77,6 +78,7 @@ for file in \
   "scripts/ui_canon_promotion_check.mjs" \
   "scripts/ui_decision_verification_check.mjs" \
   "scripts/ui_debt_report_check.mjs" \
+  "scripts/ui_critical_cleanup_queue_check.mjs" \
   "scripts/ui_exception_check.mjs" \
   "scripts/ui_inspiration_reference_check.mjs" \
   "scripts/ui_protected_surface_check.mjs" \
@@ -134,6 +136,7 @@ require_snippet "docs/ui/README.md" "If a guard finds visual debt outside the cu
 require_snippet "docs/ui/README.md" "scripts/ui_surface_inventory_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_canon_promotion_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_debt_report_check.mjs"
+require_snippet "docs/ui/README.md" "scripts/ui_critical_cleanup_queue_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_exception_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_inspiration_reference_check.mjs"
 require_snippet "docs/ui/README.md" "scripts/ui_protected_surface_check.mjs"
@@ -189,6 +192,8 @@ require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt-baseline.*"
 require_snippet "docs/ui/debt-baseline.manifest.json" "docs/ui/debt.baseline.json"
 require_snippet "docs/ui/debt-report.registry.json" "Report only."
 require_snippet "docs/ui/debt-report.registry.json" "pending-visual-authorized-cleanup"
+require_snippet "docs/ui/critical-cleanup.queue.json" "queued-visual-authorized-lane"
+require_snippet "docs/ui/critical-cleanup.queue.json" "claude-opus-4.7"
 require_snippet "docs/ui/inspiration/references.registry.json" "non-canonical"
 require_snippet "docs/ui/inspiration/references.registry.json" "\"canonical\": false"
 require_snippet "docs/ui/exceptions.registry.json" "UI exceptions are temporary"

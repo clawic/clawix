@@ -36,6 +36,7 @@
     "registry-completeness",
     "debt-baseline-shape",
     "debt-report-coverage",
+    "critical-cleanup-queue-check",
     "protected-surface-shape",
     "protected-surface-freeze-contract-check",
     "canon-promotion-record-check",
