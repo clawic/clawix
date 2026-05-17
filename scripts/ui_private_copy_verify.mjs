@@ -151,7 +151,7 @@ for (const [index, coverage] of (surfaceCoverage?.coverage || []).entries()) {
   const evidencePath = path.join(privateRoot, relativeEvidenceDir, evidenceFilename);
   const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
   if (!evidence) continue;
-  for (const field of ["copySnapshotReference", "copySnapshotHash", "copyHierarchyHash", "approvedByUserAt", "approvedScope", "surfaceId"]) {
+  for (const field of ["coverageId", "platform", "copySnapshotReference", "copySnapshotHash", "copyHierarchyHash", "approvedByUserAt", "approvedScope"]) {
     requireField(evidence, `${label} evidence`, field);
   }
   assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
