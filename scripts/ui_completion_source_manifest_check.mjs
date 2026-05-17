@@ -79,6 +79,7 @@ requireFields(manifest, manifestPath, [
   "verificationCommand",
   "expectedConversationId",
   "expectedDecisionCount",
+  "sourceSessionRequirements",
   "expectedDecisionIds",
   "expectedDecisions",
   "externalPendingExitCode",
@@ -107,6 +108,23 @@ for (const envName of [manifest?.privateGoalFileEnv, manifest?.privateSourceSess
 }
 if (manifest?.externalPendingExitCode !== 2) fail(`${manifestPath}.externalPendingExitCode must be 2`);
 if (manifest?.expectedDecisionCount !== 39) fail(`${manifestPath}.expectedDecisionCount must be 39`);
+requireFields(manifest?.sourceSessionRequirements, `${manifestPath}.sourceSessionRequirements`, [
+  "sessionMetaIdMatchesConversation",
+  "minimumUserMessages",
+  "requiredRecordTypes",
+]);
+if (manifest?.sourceSessionRequirements?.sessionMetaIdMatchesConversation !== true) {
+  fail(`${manifestPath}.sourceSessionRequirements.sessionMetaIdMatchesConversation must be true`);
+}
+if (!Number.isInteger(manifest?.sourceSessionRequirements?.minimumUserMessages) || manifest.sourceSessionRequirements.minimumUserMessages < 1) {
+  fail(`${manifestPath}.sourceSessionRequirements.minimumUserMessages must be a positive integer`);
+}
+const requiredRecordTypes = requireArray(manifest?.sourceSessionRequirements, `${manifestPath}.sourceSessionRequirements`, "requiredRecordTypes");
+for (const recordType of ["session_meta", "event_msg:user_message", "response_item:message"]) {
+  if (!requiredRecordTypes.includes(recordType)) {
+    fail(`${manifestPath}.sourceSessionRequirements.requiredRecordTypes must include ${recordType}`);
+  }
+}
 
 const decisionVerification = readJson("docs/ui/decision-verification.json");
 if (manifest?.expectedConversationId !== decisionVerification?.conversationId) {
@@ -164,8 +182,13 @@ for (const snippet of [
   "expectedDecisionIds",
   "expectedDecisions",
   "expectedConversationId",
+  "sourceSessionRequirements",
+  "session_meta",
+  "event_msg:user_message",
   "decision.choice",
   "normalizeText",
+  "parseJsonlRecords",
+  "recordTypeKey",
 ]) {
   if (!privateVerifier.includes(snippet)) {
     fail(`scripts/ui_private_completion_source_verify.mjs must include ${snippet}`);

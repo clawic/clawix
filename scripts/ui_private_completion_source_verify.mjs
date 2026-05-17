@@ -42,6 +42,24 @@ function countJsonlRecords(file) {
   return fs.readFileSync(file, "utf8").split("\n").filter((line) => line.trim() !== "").length;
 }
 
+function parseJsonlRecords(file, label) {
+  const records = [];
+  const lines = fs.readFileSync(file, "utf8").split("\n");
+  for (const [index, line] of lines.entries()) {
+    if (line.trim() === "") continue;
+    try {
+      records.push(JSON.parse(line));
+    } catch (error) {
+      fail(`${label} line ${index + 1} is not valid JSON: ${error.message}`);
+    }
+  }
+  return records;
+}
+
+function recordTypeKey(record) {
+  return record?.payload?.type ? `${record.type}:${record.payload.type}` : String(record?.type || "");
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private completion source verification requires --require-approved.");
   process.exit(1);
@@ -60,11 +78,13 @@ const goalFile = assertPrivateFile(process.env[goalEnv], goalEnv);
 const sessionFile = assertPrivateFile(process.env[sessionEnv], sessionEnv);
 const goalSource = goalFile ? fs.readFileSync(goalFile, "utf8") : "";
 const sessionSource = sessionFile ? fs.readFileSync(sessionFile, "utf8") : "";
+const sessionRecords = sessionFile ? parseJsonlRecords(sessionFile, sessionEnv) : [];
 const normalizedGoalSource = normalizeText(goalSource);
 const normalizedSessionSource = normalizeText(sessionSource);
 const decisionVerification = readJson("docs/ui/decision-verification.json");
 const decisionsById = new Map((decisionVerification.decisions || []).map((decision) => [decision.id, decision]));
 const expectedDecisions = manifest.expectedDecisions || (manifest.expectedDecisionIds || []).map((id) => ({ id }));
+const sourceSessionRequirements = manifest.sourceSessionRequirements || {};
 
 for (const snippet of [
   manifest.expectedConversationId,
@@ -79,6 +99,23 @@ if (!sessionSource.includes(manifest.expectedConversationId)) {
 }
 if (sessionFile && countJsonlRecords(sessionFile) < manifest.expectedDecisionCount) {
   fail(`${sessionEnv} must contain enough JSONL records to cover the source conversation`);
+}
+if (sourceSessionRequirements.sessionMetaIdMatchesConversation) {
+  const sessionMeta = sessionRecords.find((record) => record?.type === "session_meta");
+  if (!sessionMeta) {
+    fail(`${sessionEnv} must contain a session_meta record`);
+  } else if (sessionMeta.payload?.id !== manifest.expectedConversationId) {
+    fail(`${sessionEnv} session_meta id must match the expected conversation id`);
+  }
+}
+const userMessageCount = sessionRecords.filter((record) => recordTypeKey(record) === "event_msg:user_message").length;
+if (userMessageCount < Number(sourceSessionRequirements.minimumUserMessages || 0)) {
+  fail(`${sessionEnv} must contain at least ${sourceSessionRequirements.minimumUserMessages} user message records`);
+}
+for (const recordType of sourceSessionRequirements.requiredRecordTypes || []) {
+  if (!sessionRecords.some((record) => recordTypeKey(record) === recordType)) {
+    fail(`${sessionEnv} must contain record type ${recordType}`);
+  }
 }
 
 for (const expectedDecision of expectedDecisions) {

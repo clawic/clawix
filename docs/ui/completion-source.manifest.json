@@ -9,6 +9,11 @@
   "verificationCommand": "CLAWIX_UI_PRIVATE_COMPLETION_GOAL_FILE=<private-goal-file> CLAWIX_UI_PRIVATE_COMPLETION_SOURCE_SESSION_FILE=<private-source-session-jsonl> node scripts/ui_private_completion_source_verify.mjs --require-approved",
   "expectedConversationId": "019e2b5e-fe48-7231-8e13-49411999b001",
   "expectedDecisionCount": 39,
+  "sourceSessionRequirements": {
+    "sessionMetaIdMatchesConversation": true,
+    "minimumUserMessages": 9,
+    "requiredRecordTypes": ["session_meta", "event_msg:user_message", "response_item:message"]
+  },
   "expectedDecisionIds": [
     "initial_scope",
     "enforcement_mode",

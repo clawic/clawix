@@ -92,11 +92,34 @@ function withTemporaryCompletionSources(sourceManifest, callback) {
     );
     fs.writeFileSync(
       sessionFile,
-      decisions
-        .map((decision) =>
-          JSON.stringify({ conversation: sourceManifest.expectedConversationId, decision: decision.id, choice: decision.choice }),
-        )
-        .join("\n"),
+      [
+        JSON.stringify({ type: "session_meta", payload: { id: sourceManifest.expectedConversationId } }),
+        ...Array.from({ length: sourceManifest.sourceSessionRequirements?.minimumUserMessages || 1 }, (_, index) =>
+          JSON.stringify({
+            type: "event_msg",
+            payload: {
+              type: "user_message",
+              text: index === 0 ? decisionLines : `source verification user message ${index}`,
+            },
+          }),
+        ),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            text: decisions.map((decision) => `${decision.id}: ${decision.choice}`).join("\n"),
+          },
+        }),
+        ...decisions.map((decision) =>
+          JSON.stringify({
+            type: "response_item",
+            payload: {
+              type: "message",
+              text: `${decision.id}: ${decision.choice}`,
+            },
+          }),
+        ),
+      ].join("\n"),
     );
     return callback({
       [sourceManifest.privateGoalFileEnv]: goalFile,
