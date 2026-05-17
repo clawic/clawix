@@ -28,7 +28,7 @@ test('publicPairingPayload uses hostDisplayName in the v1 pairing contract', () 
     assert.equal(Object.hasOwn(payload, 'macName'), false);
 });
 
-test('publicPairingPayload omits shortCode from QR payloads', () => {
+test('publicPairingPayload includes shortCode in QR payloads', () => {
     const payload = publicPairingPayload({
         v: 1,
         host: '192.168.1.10',
@@ -37,13 +37,14 @@ test('publicPairingPayload omits shortCode from QR payloads', () => {
         hostDisplayName: 'Studio Mac',
         shortCode: 'ABC-DEF-GHJ',
         tailscaleHost: null
-    }, { includeShortCode: false });
+    });
 
     assert.deepEqual(payload, {
         v: 1,
         host: '192.168.1.10',
         port: 24080,
         token: 'bearer-token',
-        hostDisplayName: 'Studio Mac'
+        hostDisplayName: 'Studio Mac',
+        shortCode: 'ABC-DEF-GHJ'
     });
 });

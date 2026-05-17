@@ -71,7 +71,7 @@ function readPairingPayload() {
     };
 }
 
-function publicPairingPayload(payload, { includeShortCode = true } = {}) {
+function publicPairingPayload(payload) {
     const out = {
         v: payload.v,
         host: payload.host,
@@ -79,7 +79,7 @@ function publicPairingPayload(payload, { includeShortCode = true } = {}) {
         token: payload.token,
         hostDisplayName: payload.hostDisplayName
     };
-    if (includeShortCode && payload.shortCode) out.shortCode = payload.shortCode;
+    if (payload.shortCode) out.shortCode = payload.shortCode;
     if (payload.tailscaleHost) out.tailscaleHost = payload.tailscaleHost;
     return out;
 }
@@ -108,11 +108,7 @@ function show({ json = false } = {}) {
     }
 
     ui.section('scan with the Clawix iOS app');
-    // shortCode is intentionally omitted from the QR. iOS ignores it on
-    // the scan path (the long token is what authenticates), and
-    // dropping it knocks ~26 bytes off the payload, so the QR fits in a
-    // smaller version and therefore in narrower terminal windows.
-    const qrJson = JSON.stringify(publicPairingPayload(payload, { includeShortCode: false }));
+    const qrJson = JSON.stringify(publicPairingPayload(payload));
     qr.generate(qrJson, { small: true });
 
     if (payload.shortCode) {

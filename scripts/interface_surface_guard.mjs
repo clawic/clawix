@@ -523,6 +523,24 @@ for (const pattern of [
   }
 }
 
+const cliPairSource = read("cli/lib/pair.js");
+for (const pattern of ["includeShortCode: false", "omits shortCode from the QR", "shortCode is intentionally omitted from the QR"]) {
+  if (cliPairSource.includes(pattern)) {
+    fail(`CLI pairing QR must include the stable shortCode field, found ${JSON.stringify(pattern)}`);
+  }
+}
+const cliPairTest = read("cli/test/pair.test.js");
+for (const snippet of ["includes shortCode in QR payloads", "shortCode: 'ABC-DEF-GHJ'"]) {
+  if (!cliPairTest.includes(snippet)) {
+    fail(`CLI pairing tests must cover stable QR shortCode field ${JSON.stringify(snippet)}`);
+  }
+}
+for (const pattern of ["omits shortCode from QR payloads", "includeShortCode: false"]) {
+  if (cliPairTest.includes(pattern)) {
+    fail(`CLI pairing tests must not preserve shortCode omission ${JSON.stringify(pattern)}`);
+  }
+}
+
 for (const [relativePath, source] of [
   ["linux/app/src-tauri/src/lib.rs", read("linux/app/src-tauri/src/lib.rs")],
   ["linux/app/src-tauri/src/daemon_client.rs", linuxDaemonClient],
