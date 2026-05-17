@@ -30,6 +30,8 @@ jobs:
         run: node scripts/ui_inspiration_reference_check.mjs
       - name: Validate UI protected surface contract
         run: node scripts/ui_protected_surface_check.mjs
+      - name: Validate UI approval authority
+        run: node scripts/ui_approval_authority_check.mjs
       - name: Validate UI geometry contracts
         run: node scripts/ui_geometry_contract_check.mjs
       - name: Validate UI implementation evidence

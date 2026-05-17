@@ -1,0 +1,103 @@
+#!/usr/bin/env node
+import fs from "node:fs";
+import path from "node:path";
+
+const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const errors = [];
+
+function fail(message) {
+  errors.push(message);
+}
+
+function readJson(relativePath) {
+  const file = path.join(rootDir, relativePath);
+  if (!fs.existsSync(file)) {
+    fail(`missing ${relativePath}`);
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    fail(`${relativePath} is not valid JSON: ${error.message}`);
+    return null;
+  }
+}
+
+function requireFields(object, label, fields) {
+  if (!object) return;
+  for (const field of fields) {
+    if (object[field] === undefined || object[field] === null || object[field] === "") {
+      fail(`${label} is missing ${field}`);
+    }
+  }
+}
+
+function requireArray(object, label, field, { nonEmpty = true } = {}) {
+  const value = object?.[field];
+  if (!Array.isArray(value)) {
+    fail(`${label}.${field} must be an array`);
+    return [];
+  }
+  if (nonEmpty && value.length === 0) fail(`${label}.${field} must not be empty`);
+  return value;
+}
+
+function hasLocalPath(value) {
+  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+}
+
+function scanForLocalPaths(value, label) {
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => scanForLocalPaths(child, `${label}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, child] of Object.entries(value)) scanForLocalPaths(child, `${label}.${key}`);
+    return;
+  }
+  if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
+}
+
+const manifestPath = "docs/ui/approval-authority.manifest.json";
+const manifest = readJson(manifestPath);
+requireFields(manifest, manifestPath, [
+  "schemaVersion",
+  "status",
+  "policy",
+  "privateApprovalAlias",
+  "approvalSources",
+]);
+if (manifest?.privateApprovalAlias !== "private-codex-ui-approval") {
+  fail(`${manifestPath}.privateApprovalAlias must be private-codex-ui-approval`);
+}
+
+let checkedRecords = 0;
+for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approvalSources").entries()) {
+  const sourceLabel = `${manifestPath}.approvalSources[${sourceIndex}]`;
+  requireFields(source, sourceLabel, ["id", "path", "arrayField"]);
+  const registry = readJson(source.path);
+  const records = requireArray(registry, source.path, source.arrayField, { nonEmpty: false });
+  for (const [recordIndex, record] of records.entries()) {
+    const label = `${source.path}.${source.arrayField}[${recordIndex}]`;
+    if (source.approvedByField && record[source.approvedByField] !== "user") {
+      fail(`${label}.${source.approvedByField} must be user`);
+    }
+    if (source.privateApprovalField) {
+      const reference = record[source.privateApprovalField];
+      if (typeof reference !== "string" || !reference.startsWith(`${manifest.privateApprovalAlias}:`)) {
+        fail(`${label}.${source.privateApprovalField} must use ${manifest.privateApprovalAlias}:`);
+      }
+    }
+    checkedRecords += 1;
+  }
+}
+
+scanForLocalPaths(manifest, manifestPath);
+
+if (errors.length > 0) {
+  console.error("UI approval authority check failed:");
+  for (const error of errors) console.error(`- ${error}`);
+  process.exit(1);
+}
+
+console.log(`UI approval authority check passed (${checkedRecords} approval records)`);

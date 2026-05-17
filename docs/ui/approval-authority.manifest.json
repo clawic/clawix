@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "status": "active",
+  "policy": "Only the user can approve canon promotions, protected surfaces, visual scopes, and exception records. Empty registries are valid; future approval records must stay public-safe and reference private approval evidence.",
+  "privateApprovalAlias": "private-codex-ui-approval",
+  "approvalSources": [
+    {
+      "id": "canon-promotions",
+      "path": "docs/ui/canon-promotions.registry.json",
+      "arrayField": "promotions",
+      "approvedByField": "approvedBy",
+      "privateApprovalField": "privateApprovalReference"
+    },
+    {
+      "id": "protected-surfaces",
+      "path": "docs/ui/protected-surfaces.registry.json",
+      "arrayField": "surfaces",
+      "approvedByField": "approvedBy",
+      "privateApprovalField": null
+    },
+    {
+      "id": "visual-change-scopes",
+      "path": "docs/ui/visual-change-scopes.manifest.json",
+      "arrayField": "activeScopes",
+      "approvedByField": "approvedBy",
+      "privateApprovalField": "privateApprovalReference"
+    },
+    {
+      "id": "exceptions",
+      "path": "docs/ui/exceptions.registry.json",
+      "arrayField": "exceptions",
+      "approvedByField": null,
+      "privateApprovalField": "privateApprovalReference"
+    }
+  ]
+}

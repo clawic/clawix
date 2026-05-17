@@ -619,6 +619,7 @@ const requiredDocs = [
   "docs/ui/critical-cleanup.queue.json",
   "docs/ui/exceptions.registry.json",
   "docs/ui/protected-surfaces.registry.json",
+  "docs/ui/approval-authority.manifest.json",
   "docs/ui/canon-promotions.registry.json",
   "docs/ui/performance-budgets.registry.json",
   "docs/ui/private-baselines.manifest.json",

@@ -15,6 +15,7 @@
     "scripts/ui_exception_check.mjs",
     "scripts/ui_inspiration_reference_check.mjs",
     "scripts/ui_protected_surface_check.mjs",
+    "scripts/ui_approval_authority_check.mjs",
     "scripts/ui_geometry_contract_check.mjs",
     "scripts/ui_implementation_evidence_check.mjs",
     "scripts/ui_implementation_phase_check.mjs",
