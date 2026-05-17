@@ -78,6 +78,12 @@ function requireSafePrivateReference(value, alias, label) {
   }
 }
 
+function requireIsoDate(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value))) {
+    fail(`${label} must be an ISO date`);
+  }
+}
+
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
 const requiredChangeKinds = new Set([
   "color",
@@ -136,6 +142,9 @@ for (const [index, scope] of scopes.entries()) {
   const label = `${manifestPath}.activeScopes[${index}]`;
   requireFields(scope, label, requiredApprovalFields);
   if (!allowedStatuses.has(scope.status)) fail(`${label}.status is invalid`);
+  if (scope.approvedBy !== "user") fail(`${label}.approvedBy must be user`);
+  requireIsoDate(scope.approvedAt, `${label}.approvedAt`);
+  requireIsoDate(scope.expiresAt, `${label}.expiresAt`);
   if (scope.status === "approved" && scope.expiresAt < today) {
     fail(`${label} approved scope expired on ${scope.expiresAt}`);
   }
