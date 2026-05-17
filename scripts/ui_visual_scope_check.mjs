@@ -162,6 +162,10 @@ for (const [index, scope] of scopes.entries()) {
     if (!requiredChangeKinds.has(kind)) fail(`${label}.changeBudget.allowedChangeKinds contains unsupported ${kind}`);
     if (!scope.changeKinds.includes(kind)) fail(`${label}.changeBudget.allowedChangeKinds must be within scope.changeKinds`);
   }
+  const budgetKinds = new Set(changeBudget.allowedChangeKinds || []);
+  for (const kind of scope.changeKinds || []) {
+    if (!budgetKinds.has(kind)) fail(`${label}.changeBudget.allowedChangeKinds must cover scope change kind ${kind}`);
+  }
   requireSafePrivateReference(scope.privateApprovalReference, "private-codex-ui-approval", `${label}.privateApprovalReference`);
 }
 
