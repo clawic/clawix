@@ -66,7 +66,7 @@ struct ChatTranscriptScrollerView: View {
                 .padding(.horizontal, 24)
                 .padding(.top, 24)
                 .padding(.bottom, 12)
-                .background(ThinScrollerInstaller(style: .legacy).allowsHitTesting(false))
+                .background(ThinScrollerInstaller(style: .clawixAlwaysVisible).allowsHitTesting(false))
             }
             .scrollPosition(id: bottomScrollBinding, anchor: .bottom)
             .modifier(ChatScrollDeclarativeAnchors())

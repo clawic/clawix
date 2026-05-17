@@ -748,6 +748,20 @@ if (macosPackage.includes("legacy JSON blob store")) {
   fail("macos/Package.swift must describe current persistence without legacy blob-store wording");
 }
 
+for (const [relativePath, patterns] of [
+  ["macos/Sources/Clawix/ThinScrollbar.swift", ["scrollView.scrollerStyle = .legacy", "scroller.scrollerStyle = .legacy", "horizontal.scrollerStyle = .legacy"]],
+  ["macos/Sources/Clawix/QuickAsk/QuickAskView.swift", [".thinScrollers(style: .legacy)"]],
+  ["macos/Sources/Clawix/Chat/ChatView+TranscriptScroller.swift", ["ThinScrollerInstaller(style: .legacy)"]],
+  ["macos/Sources/Clawix/Terminal/TerminalEmulatorView.swift", ["scrollerStyle: .legacy"]],
+]) {
+  const source = read(relativePath);
+  for (const pattern of patterns) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must use .clawixAlwaysVisible instead of exposing AppKit legacy scroller naming: ${JSON.stringify(pattern)}`);
+    }
+  }
+}
+
 const lucideBridgeSource = read("macos/Sources/Clawix/LucideBridge.swift");
 for (const pattern of ["legacy SF Symbol", "init(lucideOrSystem", "Compatibility shim"]) {
   if (lucideBridgeSource.includes(pattern)) {

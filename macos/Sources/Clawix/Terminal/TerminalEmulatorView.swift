@@ -157,7 +157,7 @@ struct TerminalEmulatorView: NSViewRepresentable {
 
         static let swiftTermScrollerWidth: CGFloat = NSScroller.scrollerWidth(
             for: .regular,
-            scrollerStyle: .legacy
+            scrollerStyle: .clawixAlwaysVisible
         )
 
         func focusIfNeeded() {

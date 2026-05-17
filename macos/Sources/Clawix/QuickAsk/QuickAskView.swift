@@ -501,7 +501,7 @@ struct QuickAskView: View {
             // left edge. The bar still effectively disappears when the
             // content fits because `drawKnob()` short-circuits at
             // `knobProportion >= 0.999`.
-            .thinScrollers(style: .legacy)
+            .thinScrollers(style: .clawixAlwaysVisible)
             .onChange(of: currentChat?.messages.last?.id) { _ in
                 scrollToBottom(proxy: proxy)
             }

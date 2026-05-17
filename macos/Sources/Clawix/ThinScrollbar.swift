@@ -1,6 +1,10 @@
 import SwiftUI
 import AppKit
 
+extension NSScroller.Style {
+    static var clawixAlwaysVisible: NSScroller.Style { .legacy }
+}
+
 /// SwiftUI scroll container backed by a real `NSScrollView` and a custom
 /// `NSScroller` that paints a thin, low-opacity capsule. Scrolling and
 /// thumb tracking are 100% native — we don't observe scroll offset from
@@ -16,7 +20,7 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
     /// it > 0 sidesteps the recurring "scroller's left edge gets clipped
     /// by the SwiftUI hosting layer" bug entirely: with the hosting view
     /// physically stopping before the scroller's column, there's no
-    /// overlap to z-fight over. Default 0 keeps the legacy overlay
+    /// overlap to z-fight over. Default 0 keeps the overlay-style
     /// behaviour for menus where the content already pads itself.
     init(_ axes: Axis.Set = .vertical,
          trailingGutter: CGFloat = 0,
@@ -32,20 +36,20 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
         scrollView.hasVerticalScroller = axes.contains(.vertical)
         scrollView.hasHorizontalScroller = axes.contains(.horizontal)
         scrollView.borderType = .noBorder
-        // Legacy style: the overlay style runs a private NSScrollerImp
+        // Always-visible style: the overlay style runs a private NSScrollerImp
         // collapse/expand animation on the scroller's layer that we can't
         // intercept from the public NSView API. The collapse shrinks the
         // bar's bounds while idle, which clips our right-anchored knob's
-        // left edge. Legacy doesn't collapse, so the knob stays at its
-        // full width regardless of hover. The bar still effectively
-        // disappears when content fits because `drawKnob()` short-circuits
-        // at `knobProportion >= 0.999`.
+        // left edge. The AppKit always-visible style doesn't collapse,
+        // so the knob stays at its full width regardless of hover. The bar
+        // still effectively disappears when content fits because `drawKnob()`
+        // short-circuits at `knobProportion >= 0.999`.
         scrollView.autohidesScrollers = false
-        scrollView.scrollerStyle = .legacy
+        scrollView.scrollerStyle = .clawixAlwaysVisible
         scrollView.verticalScrollElasticity = .allowed
 
         let scroller = ThinScroller()
-        scroller.scrollerStyle = .legacy
+        scroller.scrollerStyle = .clawixAlwaysVisible
         scroller.controlSize = .regular
         // The document view (NSHostingView) is layer-backed by SwiftUI,
         // and on macOS layer-backed siblings always composite above
@@ -77,7 +81,7 @@ struct ThinScrollView<Content: View>: NSViewRepresentable {
         }
         if axes.contains(.horizontal) {
             let horizontal = ThinScroller()
-            horizontal.scrollerStyle = .legacy
+            horizontal.scrollerStyle = .clawixAlwaysVisible
             horizontal.controlSize = .regular
             horizontal.wantsLayer = true
             scrollView.horizontalScroller = horizontal
@@ -345,7 +349,7 @@ final class ThinScrollerInstallerView: NSView {
 
     private func attachThinScroller(to scrollView: NSScrollView) {
         scrollView.scrollerStyle = style
-        // `.overlay` autohides while idle; `.legacy` keeps the scroller
+        // `.overlay` autohides while idle; `.clawixAlwaysVisible` keeps the scroller
         // permanently visible (its 14pt column lives outside the clipView,
         // so the knob can't get clipped by the SwiftUI hosting layer or
         // by the private collapse animation).
