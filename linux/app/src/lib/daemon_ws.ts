@@ -9,14 +9,14 @@ export interface BridgeFrame {
 }
 
 const [chats, setChats] = createSignal<unknown[]>([]);
-const [activeChatId, setActiveChatId] = createSignal<string | null>(null);
+const [activeSessionId, setActiveSessionId] = createSignal<string | null>(null);
 const [streamingMessages, setStreamingMessages] = createSignal<Record<string, unknown>>({});
 const [bridgeState, setBridgeState] = createSignal<string>("booting");
 
 export const daemonStore = {
   chats,
-  activeChatId,
-  setActiveChatId,
+  activeSessionId,
+  setActiveSessionId,
   streamingMessages,
   bridgeState,
   send: (body: BridgeFrame["body"]) => invoke("send_intent", { body })
@@ -70,6 +70,6 @@ export async function loadChats(): Promise<void> {
   setChats(initial);
 }
 
-export async function sendMessage(text: string, chatId?: string): Promise<void> {
-  await invoke("send_prompt", { args: { chatId, text } });
+export async function sendMessage(text: string, sessionId?: string): Promise<void> {
+  await invoke("send_message", { args: { sessionId, text } });
 }

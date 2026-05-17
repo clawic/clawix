@@ -22,7 +22,7 @@ export default function ChatView() {
   });
 
   const messages = createMemo<Message[]>(() => {
-    const id = params.id ?? daemonStore.activeChatId() ?? "";
+    const id = params.id ?? daemonStore.activeSessionId() ?? "";
     if (!id) return [];
     return ((daemonStore.streamingMessages()[id] as Message[]) ?? []).filter(
       (m) => m && (m.role === "user" || m.role === "assistant")

@@ -465,6 +465,20 @@ for (const pattern of [
   }
 }
 
+for (const [relativePath, source] of [
+  ["linux/app/src-tauri/src/lib.rs", read("linux/app/src-tauri/src/lib.rs")],
+  ["linux/app/src-tauri/src/daemon_client.rs", linuxDaemonClient],
+  ["linux/app/src/lib/daemon_ws.ts", read("linux/app/src/lib/daemon_ws.ts")],
+  ["linux/app/src/views/ChatView.tsx", read("linux/app/src/views/ChatView.tsx")],
+  ["linux/app/src/views/QuickAskHUD.tsx", read("linux/app/src/views/QuickAskHUD.tsx")],
+]) {
+  for (const pattern of ["send_prompt", "open_chat", "chat_id", "activeChatId"]) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} exposes stale Linux bridge command/session vocabulary ${JSON.stringify(pattern)}`);
+    }
+  }
+}
+
 for (const [relativePath, requiredSnippets, staleSnippets] of [
   [
     "android/app/src/main/java/com/example/clawix/android/core/BridgeProtocol.kt",

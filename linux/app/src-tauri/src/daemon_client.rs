@@ -53,20 +53,20 @@ impl DaemonClient {
         Ok(Vec::new())
     }
 
-    pub async fn open_chat(&self, chat_id: &str) -> Result<serde_json::Value> {
+    pub async fn open_session(&self, session_id: &str) -> Result<serde_json::Value> {
         self.send_intent(serde_json::json!({
             "type": "openSession",
-            "sessionId": chat_id,
+            "sessionId": session_id,
         }))
         .await
     }
 
-    pub async fn send_prompt(
+    pub async fn send_message(
         &self,
-        chat_id: Option<&str>,
+        session_id: Option<&str>,
         text: &str,
     ) -> Result<serde_json::Value> {
-        let body = if let Some(id) = chat_id {
+        let body = if let Some(id) = session_id {
             serde_json::json!({ "type": "sendMessage", "sessionId": id, "text": text })
         } else {
             serde_json::json!({
@@ -78,10 +78,10 @@ impl DaemonClient {
         self.send_intent(body).await
     }
 
-    pub async fn interrupt_turn(&self, chat_id: &str) -> Result<()> {
+    pub async fn interrupt_turn(&self, session_id: &str) -> Result<()> {
         self.send_intent(serde_json::json!({
             "type": "interruptTurn",
-            "sessionId": chat_id
+            "sessionId": session_id
         }))
         .await?;
         Ok(())

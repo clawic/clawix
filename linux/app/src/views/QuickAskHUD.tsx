@@ -17,7 +17,7 @@ export default function QuickAskHUD() {
     if (!value || busy()) return;
     setBusy(true);
     try {
-      await invoke("send_prompt", { args: { chatId: null, text: value } });
+      await invoke("send_message", { args: { sessionId: null, text: value } });
       const win = getCurrentWindow();
       await win.hide();
       setText("");

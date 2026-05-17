@@ -62,8 +62,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_chats,
-            commands::open_chat,
-            commands::send_prompt,
+            commands::open_session,
+            commands::send_message,
             commands::interrupt_turn,
             commands::start_pairing,
             commands::list_audio_inputs,
@@ -101,39 +101,40 @@ mod commands {
     }
 
     #[tauri::command]
-    pub async fn open_chat(
-        chat_id: String,
+    pub async fn open_session(
+        session_id: String,
         state: State<'_, AppState>,
     ) -> Result<serde_json::Value, String> {
         let client = state.daemon.lock().await;
-        client.open_chat(&chat_id).await.map_err(|e| e.to_string())
+        client.open_session(&session_id).await.map_err(|e| e.to_string())
     }
 
     #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
     pub struct SendMessageArgs {
-        pub chat_id: Option<String>,
+        pub session_id: Option<String>,
         pub text: String,
     }
 
     #[tauri::command]
-    pub async fn send_prompt(
+    pub async fn send_message(
         args: SendMessageArgs,
         state: State<'_, AppState>,
     ) -> Result<serde_json::Value, String> {
         let client = state.daemon.lock().await;
         client
-            .send_prompt(args.chat_id.as_deref(), &args.text)
+            .send_message(args.session_id.as_deref(), &args.text)
             .await
             .map_err(|e| e.to_string())
     }
 
     #[tauri::command]
     pub async fn interrupt_turn(
-        chat_id: String,
+        session_id: String,
         state: State<'_, AppState>,
     ) -> Result<(), String> {
         let client = state.daemon.lock().await;
-        client.interrupt_turn(&chat_id).await.map_err(|e| e.to_string())
+        client.interrupt_turn(&session_id).await.map_err(|e| e.to_string())
     }
 
     #[tauri::command]
