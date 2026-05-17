@@ -72,6 +72,24 @@ function withoutPrivateCompletionEnv() {
   return env;
 }
 
+function approvalRecords(approvalManifest) {
+  const records = [];
+  for (const [sourceIndex, source] of requireArray(approvalManifest, "docs/ui/approval-authority.manifest.json", "approvalSources").entries()) {
+    const label = `docs/ui/approval-authority.manifest.json.approvalSources[${sourceIndex}]`;
+    requireFields(source, label, ["id", "path", "arrayField", "privateApprovalField"]);
+    if (!source?.path || !source?.arrayField || !source?.privateApprovalField) continue;
+    const registry = readJson(source.path);
+    const requiredStatuses = Array.isArray(source.approvalRequiredStatuses)
+      ? new Set(source.approvalRequiredStatuses)
+      : null;
+    for (const record of requireArray(registry, source.path, source.arrayField, { nonEmpty: false })) {
+      if (requiredStatuses && !requiredStatuses.has(record?.[source.statusField])) continue;
+      records.push(record);
+    }
+  }
+  return records;
+}
+
 const manifestPath = "docs/ui/completion-gate.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -82,8 +100,10 @@ requireFields(manifest, manifestPath, [
   "completionAuditPath",
   "completionSourceManifestPath",
   "privateVisualValidationManifestPath",
+  "approvalAuthorityManifestPath",
   "publicCheckScript",
   "privateVerifierScript",
+  "privateApprovalVerifierScript",
   "finalVerificationCommand",
   "requiredPublicChecks",
   "publicPrerequisiteScripts",
@@ -98,6 +118,9 @@ if (manifest?.publicCheckScript !== "scripts/ui_completion_gate_check.mjs") {
 if (manifest?.privateVerifierScript !== "scripts/ui_private_completion_verify.mjs") {
   fail(`${manifestPath}.privateVerifierScript must be scripts/ui_private_completion_verify.mjs`);
 }
+if (manifest?.privateApprovalVerifierScript !== "scripts/ui_private_approval_verify.mjs") {
+  fail(`${manifestPath}.privateApprovalVerifierScript must be scripts/ui_private_approval_verify.mjs`);
+}
 if (!String(manifest?.finalVerificationCommand || "").includes("scripts/ui_private_completion_verify.mjs --require-approved")) {
   fail(`${manifestPath}.finalVerificationCommand must require the private completion verifier`);
 }
@@ -111,8 +134,10 @@ for (const relativePath of [
   manifest?.completionAuditPath,
   manifest?.completionSourceManifestPath,
   manifest?.privateVisualValidationManifestPath,
+  manifest?.approvalAuthorityManifestPath,
   manifest?.publicCheckScript,
   manifest?.privateVerifierScript,
+  manifest?.privateApprovalVerifierScript,
 ]) {
   if (!relativePath || relativePath.includes("..") || path.isAbsolute(relativePath)) {
     fail(`${manifestPath} contains an unsafe relative path ${relativePath}`);
@@ -123,6 +148,7 @@ for (const relativePath of [
 
 const sourceManifest = readJson(manifest?.completionSourceManifestPath || "docs/ui/completion-source.manifest.json");
 const visualManifest = readJson(manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json");
+const approvalManifest = readJson(manifest?.approvalAuthorityManifestPath || "docs/ui/approval-authority.manifest.json");
 for (const envName of [
   sourceManifest?.privateGoalFileEnv,
   sourceManifest?.privateSourceSessionFileEnv,
@@ -130,6 +156,31 @@ for (const envName of [
 ]) {
   if (!String(manifest?.finalVerificationCommand || "").includes(envName)) {
     fail(`${manifestPath}.finalVerificationCommand must include ${envName}`);
+  }
+}
+const activeApprovalRecords = approvalRecords(approvalManifest);
+if (activeApprovalRecords.length > 0) {
+  if (!String(manifest?.finalVerificationCommand || "").includes("CLAWIX_UI_PRIVATE_APPROVAL_ROOT")) {
+    fail(`${manifestPath}.finalVerificationCommand must include CLAWIX_UI_PRIVATE_APPROVAL_ROOT while approval records exist`);
+  }
+  if (!requireArray(visualManifest, manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json", "delegates").includes("node scripts/ui_private_approval_verify.mjs --require-approved")) {
+    fail(`${manifest?.privateVisualValidationManifestPath}.delegates must include scripts/ui_private_approval_verify.mjs while approval records exist`);
+  }
+  const optionalRootAliases = requireArray(visualManifest, manifest?.privateVisualValidationManifestPath || "docs/ui/private-visual-validation.manifest.json", "optionalRootAliases");
+  if (!optionalRootAliases.some((entry) => entry?.alias === approvalManifest?.privateApprovalAlias && entry?.env === "CLAWIX_UI_PRIVATE_APPROVAL_ROOT")) {
+    fail(`${manifest?.privateVisualValidationManifestPath}.optionalRootAliases must expose CLAWIX_UI_PRIVATE_APPROVAL_ROOT for private approvals`);
+  }
+  const approvalResult = spawnSync(process.execPath, [path.join(rootDir, manifest.privateApprovalVerifierScript), "--require-approved"], {
+    cwd: rootDir,
+    env: withoutPrivateCompletionEnv(),
+    encoding: "utf8",
+  });
+  const approvalOutput = `${approvalResult.stdout || ""}${approvalResult.stderr || ""}`;
+  if (approvalResult.status !== manifest.externalPendingExitCode) {
+    fail(`${manifest.privateApprovalVerifierScript} must exit ${manifest.externalPendingExitCode} while private approval evidence is missing`);
+  }
+  if (!approvalOutput.includes("CLAWIX_UI_PRIVATE_APPROVAL_ROOT")) {
+    fail(`${manifest.privateApprovalVerifierScript} must report CLAWIX_UI_PRIVATE_APPROVAL_ROOT when approval records exist`);
   }
 }
 

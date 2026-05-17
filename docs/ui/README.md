@@ -230,7 +230,9 @@ the public repo.
     private goal file and source session.
 44. Keep the final completion gate current with
     `scripts/ui_completion_gate_check.mjs`; `update_goal` is allowed only after
-    `scripts/ui_private_completion_verify.mjs --require-approved` exits 0.
+    `scripts/ui_private_completion_verify.mjs --require-approved` exits 0, and
+    public approval records require `CLAWIX_UI_PRIVATE_APPROVAL_ROOT` in the
+    final verification command.
 45. When all private roots are available, verify every record in the derived
     private evidence plan with
     `CLAWIX_UI_PRIVATE_BASELINE_ROOT=<private-root> CLAWIX_UI_PRIVATE_GEOMETRY_ROOT=<private-root> CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root> CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root> CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root> node scripts/ui_private_evidence_verify.mjs --require-approved`.
