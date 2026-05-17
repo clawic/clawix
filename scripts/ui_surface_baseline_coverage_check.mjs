@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const args = new Set(process.argv.slice(2));
 const errors = [];
 
 function fail(message) {
@@ -45,15 +46,27 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 function requireAlias(reference, alias, label) {
   if (typeof reference !== "string" || !reference.startsWith(`${alias}:`)) {
     fail(`${label} must use ${alias}:`);
-    return;
+    return null;
   }
-  if (reference.includes("/Users/") || reference.startsWith("/") || reference.startsWith("file://")) {
+  const suffix = reference.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) {
+    fail(`${label} must use a safe relative private reference`);
+    return null;
+  }
+  if (reference.includes("/Users/") || reference.startsWith("/") || reference.startsWith("file://") || /^[A-Z]:\\/.test(reference)) {
     fail(`${label} must not contain a local path`);
   }
+  return suffix;
 }
 
 const manifestPath = "docs/ui/surface-baseline-coverage.manifest.json";
 const manifest = readJson(manifestPath);
+if (args.has("--simulate-mismatched-surface-reference") && Array.isArray(manifest?.coverage) && manifest.coverage[0]) {
+  manifest.coverage[0] = {
+    ...manifest.coverage[0],
+    privateBaselineReference: `${manifest.privateBaselineAlias}:surfaces/${manifest.coverage[0].platform}/wrong-surface`,
+  };
+}
 requireFields(manifest, manifestPath, [
   "schemaVersion",
   "status",
@@ -131,9 +144,19 @@ for (const [index, entry] of requireArray(manifest, manifestPath, "coverage").en
   if (entry.platform !== inventoryEntry.platform) fail(`${label}.platform must match ${inventoryPath}`);
   if (entry.classification !== inventoryEntry.classification) fail(`${label}.classification must match ${inventoryPath}`);
   if (!allowedStatuses.has(entry.baselineStatus)) fail(`${label}.baselineStatus is not allowed`);
-  requireAlias(entry.privateBaselineReference, manifest.privateBaselineAlias, `${label}.privateBaselineReference`);
-  requireAlias(entry.geometryEvidenceReference, manifest.privateGeometryAlias, `${label}.geometryEvidenceReference`);
-  requireAlias(entry.copySnapshotReference, manifest.privateCopyAlias, `${label}.copySnapshotReference`);
+  const expectedSurfaceReference = `surfaces/${entry.platform}/${entry.coverageId}`;
+  const baselineReferenceSuffix = requireAlias(entry.privateBaselineReference, manifest.privateBaselineAlias, `${label}.privateBaselineReference`);
+  const geometryReferenceSuffix = requireAlias(entry.geometryEvidenceReference, manifest.privateGeometryAlias, `${label}.geometryEvidenceReference`);
+  const copyReferenceSuffix = requireAlias(entry.copySnapshotReference, manifest.privateCopyAlias, `${label}.copySnapshotReference`);
+  if (baselineReferenceSuffix && baselineReferenceSuffix !== expectedSurfaceReference) {
+    fail(`${label}.privateBaselineReference must target ${expectedSurfaceReference}`);
+  }
+  if (geometryReferenceSuffix && geometryReferenceSuffix !== expectedSurfaceReference) {
+    fail(`${label}.geometryEvidenceReference must target ${expectedSurfaceReference}`);
+  }
+  if (copyReferenceSuffix && copyReferenceSuffix !== expectedSurfaceReference) {
+    fail(`${label}.copySnapshotReference must target ${expectedSurfaceReference}`);
+  }
   const evidence = new Set(requireArray(entry, label, "requiredEvidence"));
   for (const field of requiredEvidenceFields) {
     if (!evidence.has(field)) fail(`${label}.requiredEvidence must include ${field}`);
