@@ -49,6 +49,22 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
   return value;
 }
 
+function hasLocalPath(value) {
+  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+}
+
+function scanForLocalPaths(value, label) {
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => scanForLocalPaths(child, `${label}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const [key, child] of Object.entries(value)) scanForLocalPaths(child, `${label}.${key}`);
+    return;
+  }
+  if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
+}
+
 const registryPath = "docs/ui/visual-proposals.registry.json";
 const registry = readJson(registryPath);
 requireFields(registry, registryPath, [
@@ -56,6 +72,8 @@ requireFields(registry, registryPath, [
   "status",
   "policy",
   "templatePath",
+  "privateApprovalAlias",
+  "approvalRequiredForStatuses",
   "proposalStatuses",
   "requiredProposalFields",
   "proposals",
@@ -70,14 +88,26 @@ for (const snippet of ["Status: conceptual-only", "A proposal does not approve i
   if (!template.includes(snippet)) fail(`${registry?.templatePath} is missing required snippet: ${snippet}`);
 }
 
+const approvalAuthority = readJson("docs/ui/approval-authority.manifest.json");
+if (registry?.privateApprovalAlias !== approvalAuthority?.privateApprovalAlias) {
+  fail(`${registryPath}.privateApprovalAlias must match docs/ui/approval-authority.manifest.json.privateApprovalAlias`);
+}
+
 const configPath = "docs/ui/interface-governance.config.json";
 const config = readJson(configPath);
 const allowedMutationClasses = new Set(requireArray(config, configPath, "mutationClasses"));
 const allowedChangeKinds = new Set(requireArray(config, configPath, "restrictedChangeKinds"));
 const allowedPlatforms = new Set(requireArray(config, configPath, "platforms"));
 const allowedStatuses = new Set(requireArray(registry, registryPath, "proposalStatuses"));
+const approvalRequiredStatuses = new Set(requireArray(registry, registryPath, "approvalRequiredForStatuses"));
 for (const status of ["conceptual-only", "user-approved-for-visual-lane", "rejected", "expired"]) {
   if (!allowedStatuses.has(status)) fail(`${registryPath}.proposalStatuses must include ${status}`);
+}
+if (!approvalRequiredStatuses.has("user-approved-for-visual-lane")) {
+  fail(`${registryPath}.approvalRequiredForStatuses must include user-approved-for-visual-lane`);
+}
+for (const status of approvalRequiredStatuses) {
+  if (!allowedStatuses.has(status)) fail(`${registryPath}.approvalRequiredForStatuses contains unknown status ${status}`);
 }
 
 const requiredFields = requireArray(registry, registryPath, "requiredProposalFields");
@@ -105,8 +135,18 @@ for (const [index, proposal] of requireArray(registry, registryPath, "proposals"
   if (proposal.status !== "user-approved-for-visual-lane" && proposal.userApprovalStatus === "approved") {
     fail(`${label}.userApprovalStatus cannot be approved unless status is user-approved-for-visual-lane`);
   }
+  if (approvalRequiredStatuses.has(proposal.status)) {
+    if (proposal.userApprovalStatus !== "approved") {
+      fail(`${label}.userApprovalStatus must be approved for ${proposal.status}`);
+    }
+    if (typeof proposal.privateApprovalReference !== "string" || !proposal.privateApprovalReference.startsWith(`${registry.privateApprovalAlias}:`)) {
+      fail(`${label}.privateApprovalReference must use ${registry.privateApprovalAlias}: for ${proposal.status}`);
+    }
+  }
   if (proposal.reviewAfter < today) fail(`${label}.reviewAfter expired on ${proposal.reviewAfter}`);
 }
+
+scanForLocalPaths(registry, registryPath);
 
 if (errors.length > 0) {
   console.error("UI visual proposal check failed:");
