@@ -117,9 +117,72 @@ for (const snippet of [
   "proposal route:",
   "simulated unauthorized pattern mutation",
   "docs/ui/pattern-registry/patterns/sidebar-row.pattern.json:1",
+  "added",
   "geometry",
 ]) {
   if (!patternOutput.includes(snippet)) fail(`pattern mutation failure output is missing: ${snippet}`);
+}
+
+let patternRemovalOutput = "";
+let patternRemovalExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-removal"], {
+    cwd: rootDir,
+    env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternRemovalExitCode = error.status || 1;
+  patternRemovalOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternRemovalExitCode === 0) {
+  fail("simulated unauthorized pattern removal must fail");
+}
+
+for (const snippet of [
+  "unauthorized pattern registry visual/copy contract mutation detected",
+  "required permission:",
+  "current model signal:",
+  "proposal route:",
+  "simulated unauthorized pattern removal",
+  "docs/ui/pattern-registry/patterns/sidebar-row.pattern.json:12",
+  "removed",
+  "geometry",
+]) {
+  if (!patternRemovalOutput.includes(snippet)) fail(`pattern removal failure output is missing: ${snippet}`);
+}
+
+let patternDeletionOutput = "";
+let patternDeletionExitCode = 0;
+try {
+  execFileSync("node", ["scripts/ui_pattern_mutation_guard.mjs", "--simulate-unauthorized-pattern-deletion"], {
+    cwd: rootDir,
+    env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+} catch (error) {
+  patternDeletionExitCode = error.status || 1;
+  patternDeletionOutput = `${error.stdout || ""}${error.stderr || ""}`;
+}
+
+if (patternDeletionExitCode === 0) {
+  fail("simulated unauthorized pattern deletion must fail");
+}
+
+for (const snippet of [
+  "unauthorized pattern registry visual/copy contract mutation detected",
+  "required permission:",
+  "current model signal:",
+  "proposal route:",
+  "simulated unauthorized pattern deletion",
+  "docs/ui/pattern-registry/patterns/sidebar-row.pattern.json:12",
+  "removed",
+  "geometry",
+]) {
+  if (!patternDeletionOutput.includes(snippet)) fail(`pattern deletion failure output is missing: ${snippet}`);
 }
 
 const driftRoot = fs.mkdtempSync(path.join(os.tmpdir(), "clawix-ui-drift-failure-"));

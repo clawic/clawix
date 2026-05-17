@@ -90,38 +90,60 @@ const governedFields = [
 
 function findPatternMutationHits(diffText, sourceLabel) {
   const hits = [];
-  let currentPath = "<unknown>";
+  let oldPath = "<unknown>";
+  let newPath = "<unknown>";
+  let nextOldLine = 0;
   let nextNewLine = 0;
 
   for (const line of diffText.split("\n")) {
+    if (line.startsWith("--- a/")) {
+      oldPath = line.slice("--- a/".length);
+      continue;
+    }
     if (line.startsWith("+++ b/")) {
-      currentPath = line.slice("+++ b/".length);
+      newPath = line.slice("+++ b/".length);
+      continue;
+    }
+    if (line === "+++ /dev/null") {
+      newPath = "/dev/null";
       continue;
     }
     if (line.startsWith("@@ ")) {
-      const match = /\+(\d+)(?:,\d+)?/.exec(line);
-      nextNewLine = match ? Number(match[1]) : 0;
+      const match = /-(\d+)(?:,\d+)? \+(\d+)(?:,\d+)?/.exec(line);
+      nextOldLine = match ? Number(match[1]) : 0;
+      nextNewLine = match ? Number(match[2]) : 0;
       continue;
     }
-    if (line.startsWith("+") && !line.startsWith("+++")) {
+    if ((line.startsWith("+") && !line.startsWith("+++")) || (line.startsWith("-") && !line.startsWith("---"))) {
+      const isRemoval = line.startsWith("-");
+      const sourceLine = isRemoval ? nextOldLine : nextNewLine;
+      const currentPath = isRemoval ? oldPath : newPath;
       if (governedPattern.test(currentPath)) {
         for (const field of governedFields) {
           if (field.pattern.test(line)) {
             hits.push({
               path: currentPath,
-              line: nextNewLine || "?",
+              line: sourceLine || "?",
               source: sourceLabel,
               detector: field.id,
               changeKind: field.changeKind,
+              operation: isRemoval ? "removed" : "added",
               text: line.slice(1, 241),
             });
           }
         }
       }
-      nextNewLine += 1;
+      if (isRemoval) {
+        nextOldLine += 1;
+      } else {
+        nextNewLine += 1;
+      }
       continue;
     }
-    if (line.startsWith(" ") || line === "\\ No newline at end of file") nextNewLine += 1;
+    if (line.startsWith(" ")) {
+      nextOldLine += 1;
+      nextNewLine += 1;
+    }
   }
 
   return hits;
@@ -136,10 +158,35 @@ const simulatedPatternMutation = [
   '+  "states": ["idle", "focused"]',
 ].join("\n");
 
+const simulatedPatternRemoval = [
+  "diff --git a/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json b/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json",
+  "--- a/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json",
+  "+++ b/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json",
+  "@@ -12,3 +12,0 @@",
+  '-  "geometry": { "rowHeight": 36, "cornerRadius": 10 },',
+  '-  "copy": { "labelMaxWords": 5 },',
+  '-  "states": ["idle", "focused"]',
+].join("\n");
+
+const simulatedPatternDeletion = [
+  "diff --git a/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json b/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json",
+  "deleted file mode 100644",
+  "--- a/docs/ui/pattern-registry/patterns/sidebar-row.pattern.json",
+  "+++ /dev/null",
+  "@@ -12,3 +0,0 @@",
+  '-  "geometry": { "rowHeight": 36, "cornerRadius": 10 },',
+  '-  "copy": { "labelMaxWords": 5 },',
+  '-  "states": ["idle", "focused"]',
+].join("\n");
+
 const sourceRoots = ["docs/ui/pattern-registry/patterns"];
 const changedBase = process.env.CLAWIX_UI_GUARD_DIFF_BASE;
 const visualHits = args.includes("--simulate-unauthorized-pattern-mutation")
   ? findPatternMutationHits(simulatedPatternMutation, "simulated unauthorized pattern mutation")
+  : args.includes("--simulate-unauthorized-pattern-removal")
+    ? findPatternMutationHits(simulatedPatternRemoval, "simulated unauthorized pattern removal")
+    : args.includes("--simulate-unauthorized-pattern-deletion")
+      ? findPatternMutationHits(simulatedPatternDeletion, "simulated unauthorized pattern deletion")
   : [
       ...findPatternMutationHits(
         git(changedBase ? ["diff", "--unified=0", changedBase, "--", ...sourceRoots] : ["diff", "--unified=0", "--", ...sourceRoots]),
@@ -158,7 +205,7 @@ if (visualHits.length > 0 && !visualAuthorized) {
       "non-authorized agents may update governance wiring, but visual/copy contract mutations require an allowlisted visual lane",
       ...visualHits.map(
         (hit) =>
-          `  ${hit.path}:${hit.line} [${hit.source}/${hit.detector}/${hit.changeKind}] text=${hit.text}`,
+          `  ${hit.path}:${hit.line} [${hit.source}/${hit.detector}/${hit.changeKind}/${hit.operation}] text=${hit.text}`,
       ),
     ].join("\n"),
   );
