@@ -35,7 +35,9 @@ if (!hasFlag("--require-approved")) {
 
 const manifest = readJson("docs/ui/completion-gate.manifest.json");
 const decisionVerification = readJson(manifest.decisionVerificationPath || "docs/ui/decision-verification.json");
-const openDecisions = (decisionVerification.decisions || []).filter((decision) => decision.status === "open");
+const openDecisions = hasFlag("--simulate-no-open-decisions")
+  ? []
+  : (decisionVerification.decisions || []).filter((decision) => decision.status === "open");
 if (openDecisions.length > 0) {
   console.error(`EXTERNAL PENDING: ${openDecisions.length} open decisions block update_goal: ${openDecisions.map((decision) => decision.id).join(", ")}.`);
   process.exit(2);

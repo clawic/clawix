@@ -64,6 +64,14 @@ function scanPublicSafety(value, label) {
   }
 }
 
+function withoutPrivateCompletionEnv() {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("CLAWIX_UI_PRIVATE_")) delete env[key];
+  }
+  return env;
+}
+
 const manifestPath = "docs/ui/completion-gate.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -141,6 +149,7 @@ for (const snippet of [
   "EXTERNAL PENDING",
   "process.exit(2)",
   "open decisions",
+  "--simulate-no-open-decisions",
 ]) {
   if (!privateVerifier.includes(snippet)) {
     fail(`${manifest.privateVerifierScript} must include ${snippet}`);
@@ -153,6 +162,7 @@ const openDecisions = requireArray(decisionVerification, manifest?.decisionVerif
 if (openDecisions.length > 0) {
   const result = spawnSync(process.execPath, [path.join(rootDir, manifest.privateVerifierScript), "--require-approved"], {
     cwd: rootDir,
+    env: withoutPrivateCompletionEnv(),
     encoding: "utf8",
   });
   const output = `${result.stdout || ""}${result.stderr || ""}`;
@@ -167,6 +177,26 @@ if (openDecisions.length > 0) {
       fail(`${manifest.privateVerifierScript} open-decision output must include ${decision.id}`);
     }
   }
+}
+
+const simulatedClosedResult = spawnSync(
+  process.execPath,
+  [path.join(rootDir, manifest.privateVerifierScript), "--require-approved", "--simulate-no-open-decisions"],
+  {
+    cwd: rootDir,
+    env: withoutPrivateCompletionEnv(),
+    encoding: "utf8",
+  },
+);
+const simulatedClosedOutput = `${simulatedClosedResult.stdout || ""}${simulatedClosedResult.stderr || ""}`;
+if (simulatedClosedResult.status !== manifest.externalPendingExitCode) {
+  fail(`${manifest.privateVerifierScript} must exit ${manifest.externalPendingExitCode} when closed decisions still lack private sources`);
+}
+if (!simulatedClosedOutput.includes("CLAWIX_UI_PRIVATE_COMPLETION_GOAL_FILE")) {
+  fail(`${manifest.privateVerifierScript} must delegate to private completion source verification after decisions close`);
+}
+if (simulatedClosedOutput.includes("open decisions block update_goal")) {
+  fail(`${manifest.privateVerifierScript} must not report open decisions during closed-decision simulation`);
 }
 
 const gateSurface = readJson("docs/ui/gate-surface.manifest.json");
