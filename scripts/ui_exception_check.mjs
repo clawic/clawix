@@ -4,6 +4,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const today = new Date().toISOString().slice(0, 10);
+const args = new Set(process.argv.slice(2));
 const errors = [];
 
 function fail(message) {
@@ -61,6 +62,19 @@ function scanForLocalPaths(value, label) {
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
 }
 
+function requireIsoDate(value, label) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    fail(`${label} must be an ISO yyyy-mm-dd date`);
+    return null;
+  }
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    fail(`${label} must be a valid calendar date`);
+    return null;
+  }
+  return value;
+}
+
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
 const registryPath = "docs/ui/exceptions.registry.json";
 const registry = readJson(registryPath);
@@ -96,8 +110,28 @@ for (const field of [
   if (!requiredExceptionFieldSet.has(field)) fail(`${registryPath}.requiredExceptionFields must include ${field}`);
 }
 
+if (args.has("--simulate-unreferenced-active-exception")) {
+  registry.exceptions = [
+    ...(Array.isArray(registry?.exceptions) ? registry.exceptions : []),
+    {
+      id: "simulated-unreferenced-active-exception",
+      status: "active",
+      scope: "simulated",
+      platforms: ["macos"],
+      owner: "ui-governance-self-test",
+      reason: "Synthetic fixture for active exception inventory mapping enforcement.",
+      createdAt: "2026-05-17",
+      reviewAfter: "2026-08-15",
+      expiresAt: "2026-09-15",
+      allowedAction: "conceptual proposal only",
+      privateApprovalReference: "private-codex-ui-approval:simulated",
+    },
+  ];
+}
+
 const exceptionIds = new Set();
-for (const [index, exception] of requireArray(registry, registryPath, "exceptions", { nonEmpty: false }).entries()) {
+const exceptionRecords = requireArray(registry, registryPath, "exceptions", { nonEmpty: false });
+for (const [index, exception] of exceptionRecords.entries()) {
   const label = `${registryPath}.exceptions[${index}]`;
   requireFields(exception, label, requiredExceptionFields);
   if (exceptionIds.has(exception.id)) fail(`${label}.id duplicates ${exception.id}`);
@@ -112,6 +146,15 @@ for (const [index, exception] of requireArray(registry, registryPath, "exception
   if (exception.reviewAfter < today && exception.status === "active") {
     fail(`${label} active exception reviewAfter expired on ${exception.reviewAfter}`);
   }
+  const createdAt = requireIsoDate(exception.createdAt, `${label}.createdAt`);
+  const reviewAfter = requireIsoDate(exception.reviewAfter, `${label}.reviewAfter`);
+  const expiresAt = requireIsoDate(exception.expiresAt, `${label}.expiresAt`);
+  if (createdAt && reviewAfter && createdAt > reviewAfter) {
+    fail(`${label}.createdAt must not be after reviewAfter`);
+  }
+  if (reviewAfter && expiresAt && reviewAfter > expiresAt) {
+    fail(`${label}.reviewAfter must not be after expiresAt`);
+  }
   if (!String(exception.privateApprovalReference || "").startsWith("private-codex-ui-approval:")) {
     fail(`${label}.privateApprovalReference must use private-codex-ui-approval:`);
   }
@@ -119,11 +162,20 @@ for (const [index, exception] of requireArray(registry, registryPath, "exception
 
 const inventoryPath = "docs/ui/visible-surfaces.inventory.json";
 const inventory = readJson(inventoryPath);
+const referencedExceptionIds = new Set();
 for (const [index, entry] of requireArray(inventory, inventoryPath, "coverage").entries()) {
   if (entry?.classification !== "exception") continue;
   const label = `${inventoryPath}.coverage[${index}]`;
   for (const exceptionId of requireArray(entry, label, "exceptionIds")) {
     if (!exceptionIds.has(exceptionId)) fail(`${label}.exceptionIds references unknown exception ${exceptionId}`);
+    referencedExceptionIds.add(exceptionId);
+  }
+}
+
+for (const [index, exception] of exceptionRecords.entries()) {
+  if (exception?.status !== "active") continue;
+  if (!referencedExceptionIds.has(exception.id)) {
+    fail(`${registryPath}.exceptions[${index}] active exception must be referenced by ${inventoryPath}`);
   }
 }
 
