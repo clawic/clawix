@@ -352,6 +352,10 @@ function verifyPublicApprovalState(item, registries, label) {
       fail(`${label} is pending approved surface baseline capture`);
       return false;
     }
+    if (item.type === "surface-geometry" && registries.renderedGeometryStatus !== "approved") {
+      fail(`${label} is pending approved rendered geometry evidence`);
+      return false;
+    }
     return true;
   }
   if (item.type === "critical-flow-baseline") {
