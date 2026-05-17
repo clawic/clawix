@@ -74,6 +74,7 @@ const skillContracts = [
       "CLAWIX_UI_PRIVATE_COPY_ROOT=<private-root>",
       "CLAWIX_UI_PRIVATE_DRIFT_ROOT=<private-root>",
       "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT=<private-root>",
+      "CLAWIX_UI_PRIVATE_APPROVAL_ROOT=<private-root>",
       "node scripts/ui_private_geometry_verify.mjs --require-approved",
       "node scripts/ui_private_baseline_verify.mjs --require-approved",
       "Private screenshots/baselines stay outside the public repo",
