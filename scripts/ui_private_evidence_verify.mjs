@@ -96,6 +96,10 @@ function readJson(file, label) {
   }
 }
 
+function readRepoJson(relativePath) {
+  return readJson(path.join(rootDir, relativePath), relativePath);
+}
+
 function requireField(object, label, field) {
   if (object?.[field] === undefined || object[field] === null || object[field] === "") {
     fail(`${label} is missing ${field}`);
@@ -134,11 +138,16 @@ function verifyApprovedScope(value, label) {
   fail(`${label} must be a non-empty string, array, or object`);
 }
 
-function verifyMetrics(evidence, label) {
+function verifyMetrics(evidence, label, requiredMetrics = []) {
   if (!("metrics" in evidence)) return;
   if (!evidence.metrics || typeof evidence.metrics !== "object" || Array.isArray(evidence.metrics)) {
     fail(`${label}.metrics must be an object`);
     return;
+  }
+  for (const metric of requiredMetrics) {
+    if (typeof evidence.metrics[metric] !== "number" || !Number.isFinite(evidence.metrics[metric]) || evidence.metrics[metric] < 0) {
+      fail(`${label}.metrics.${metric} must be a finite non-negative number`);
+    }
   }
   for (const [metric, value] of Object.entries(evidence.metrics)) {
     if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
@@ -147,12 +156,13 @@ function verifyMetrics(evidence, label) {
   }
 }
 
-function verifyMeasurementSamples(evidence, label) {
+function verifyMeasurementSamples(evidence, label, requiredMetrics = []) {
   if (!("measurementSamples" in evidence)) return;
   if (!Array.isArray(evidence.measurementSamples) || evidence.measurementSamples.length === 0) {
     fail(`${label}.measurementSamples must be a non-empty array`);
     return;
   }
+  const seenMetrics = new Set();
   for (const [index, sample] of evidence.measurementSamples.entries()) {
     const sampleLabel = `${label}.measurementSamples[${index}]`;
     if (!sample || typeof sample !== "object" || Array.isArray(sample)) {
@@ -161,6 +171,11 @@ function verifyMeasurementSamples(evidence, label) {
     }
     if (typeof sample.metric !== "string" || sample.metric === "") {
       fail(`${sampleLabel}.metric must be a non-empty string`);
+    } else {
+      seenMetrics.add(sample.metric);
+      if (requiredMetrics.length > 0 && !requiredMetrics.includes(sample.metric)) {
+        fail(`${sampleLabel}.metric must be one of the required metrics`);
+      }
     }
     if (typeof sample.value !== "number" || !Number.isFinite(sample.value) || sample.value < 0) {
       fail(`${sampleLabel}.value must be a finite non-negative number`);
@@ -168,6 +183,9 @@ function verifyMeasurementSamples(evidence, label) {
     if (typeof sample.sampleHash !== "string" || !/^[a-f0-9]{64}$/i.test(sample.sampleHash)) {
       fail(`${sampleLabel}.sampleHash must be a 64-character hex hash`);
     }
+  }
+  for (const metric of requiredMetrics) {
+    if (!seenMetrics.has(metric)) fail(`${label}.measurementSamples must include ${metric}`);
   }
 }
 
@@ -219,11 +237,21 @@ function verifyCopyHierarchyHash(evidence, label) {
   }
 }
 
-function verifyDriftResults(evidence, label) {
+function verifyDriftResults(evidence, label, driftPolicy = {}) {
   if (!("driftResults" in evidence)) return;
   if (!evidence.driftResults || typeof evidence.driftResults !== "object" || Array.isArray(evidence.driftResults)) {
     fail(`${label}.driftResults must be an object keyed by drift category`);
     return;
+  }
+  const allowedStatuses = driftPolicy.allowedStatuses || new Set();
+  const blockingStatuses = driftPolicy.blockingStatuses || new Set();
+  const approvalRequiredStatuses = driftPolicy.approvalRequiredStatuses || new Set();
+  if (blockingStatuses.has(evidence.status)) {
+    fail(`${label}.status ${evidence.status} is blocking and cannot satisfy approved private evidence`);
+  }
+  if (approvalRequiredStatuses.has(evidence.status)) {
+    requireField(evidence, label, "approvedByUserAt");
+    requireField(evidence, label, "approvedScope");
   }
   const entries = Object.entries(evidence.driftResults);
   if (entries.length === 0) {
@@ -238,6 +266,11 @@ function verifyDriftResults(evidence, label) {
     }
     if (typeof result.status !== "string" || result.status === "") {
       fail(`${resultLabel}.status must be a non-empty string`);
+    } else if (allowedStatuses.size > 0 && !allowedStatuses.has(result.status)) {
+      fail(`${resultLabel}.status is invalid`);
+    }
+    if (evidence.status !== "pending-private-evidence" && result.status === "pending-private-evidence") {
+      fail(`${resultLabel}.status must not be pending when the report is approved`);
     }
     if (typeof result.resultHash !== "string" || !/^[a-f0-9]{64}$/i.test(result.resultHash)) {
       fail(`${resultLabel}.resultHash must be a 64-character hex hash`);
@@ -301,6 +334,19 @@ for (const alias of aliases) {
   roots.set(alias, assertRoot(process.env[envName], envName));
 }
 
+const performanceBudgets = readRepoJson("docs/ui/performance-budgets.registry.json");
+const requiredPerformanceMetrics = Array.isArray(performanceBudgets?.requiredMetrics)
+  ? performanceBudgets.requiredMetrics
+  : [];
+const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
+const driftPolicy = {
+  allowedStatuses: new Set(Array.isArray(renderedDrift?.reportStatuses) ? renderedDrift.reportStatuses : []),
+  blockingStatuses: new Set(Array.isArray(renderedDrift?.blockingReportStatuses) ? renderedDrift.blockingReportStatuses : []),
+  approvalRequiredStatuses: new Set(
+    Array.isArray(renderedDrift?.approvalRequiredStatuses) ? renderedDrift.approvalRequiredStatuses : [],
+  ),
+};
+
 let verified = 0;
 for (const item of plan.evidence || []) {
   const parsed = splitReference(item.privateReference);
@@ -323,12 +369,13 @@ for (const item of plan.evidence || []) {
     fail(`${label}.${referenceField} must match the public evidence plan`);
   }
 
-  verifyMetrics(evidence, label);
-  verifyMeasurementSamples(evidence, label);
+  const itemRequiredMetrics = item.type === "performance-budget" ? requiredPerformanceMetrics : [];
+  verifyMetrics(evidence, label, itemRequiredMetrics);
+  verifyMeasurementSamples(evidence, label, itemRequiredMetrics);
   verifyMeasurements(evidence, label);
   verifyCopyItems(evidence, label);
   verifyCopyHierarchyHash(evidence, label);
-  verifyDriftResults(evidence, label);
+  verifyDriftResults(evidence, label, item.type === "rendered-drift" ? driftPolicy : {});
   verifyFindingItems(evidence, label);
   verified += 1;
 }
