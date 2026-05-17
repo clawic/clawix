@@ -45,6 +45,8 @@ function hasFlag(name) {
   return args.includes(name);
 }
 
+const includePending = hasFlag("--include-pending");
+
 function runEvidencePlan() {
   const result = spawnSync(process.execPath, [path.join(rootDir, "scripts/ui_private_evidence_plan_check.mjs"), "--json"], {
     cwd: rootDir,
@@ -336,6 +338,56 @@ function verifyFindingItems(evidence, label, allowedCategories) {
   }
 }
 
+function mapByKey(items, keyFn) {
+  const result = new Map();
+  for (const item of items || []) result.set(keyFn(item), item);
+  return result;
+}
+
+function verifyPublicApprovalState(item, registries, label) {
+  if (includePending) return true;
+  if (["surface-baseline", "surface-geometry", "surface-copy"].includes(item.type)) {
+    const coverage = registries.surfaceCoverageById.get(item.id);
+    if (coverage?.baselineStatus !== "approved") {
+      fail(`${label} is pending approved surface baseline capture`);
+      return false;
+    }
+    return true;
+  }
+  if (item.type === "critical-flow-baseline") {
+    const flow = registries.privateBaselineByKey.get(`${item.platform}:${item.id}`);
+    if (flow?.baselineStatus !== "approved") {
+      fail(`${label} is pending approved baseline capture`);
+      return false;
+    }
+    return true;
+  }
+  if (item.type === "rendered-drift") {
+    const report = registries.renderedDriftById.get(item.id);
+    if (registries.driftBlockingStatuses.has(report?.status)) {
+      fail(`${label} rendered drift evidence is not approved; status=${report?.status || "missing"}`);
+      return false;
+    }
+    return true;
+  }
+  if (item.type === "debt-audit") {
+    const audit = registries.debtAuditById.get(item.id);
+    if (audit?.auditStatus !== "audited-approved") {
+      fail(`${label} is pending approved private debt audit`);
+      return false;
+    }
+    return true;
+  }
+  if (item.type === "performance-budget") {
+    const budget = registries.performanceBudgetByKey.get(`${item.platform}:${item.id}`);
+    if (budget?.baselineStatus !== "approved" || budget?.budgetStatus !== "enforced") {
+      fail(`${label} is pending approved performance measurement`);
+      return false;
+    }
+  }
+  return true;
+}
+
 if (!hasFlag("--require-approved")) {
   console.error("UI private evidence verification requires --require-approved.");
   process.exit(1);
@@ -374,6 +426,9 @@ const performanceBudgets = readRepoJson("docs/ui/performance-budgets.registry.js
 const requiredPerformanceMetrics = Array.isArray(performanceBudgets?.requiredMetrics)
   ? performanceBudgets.requiredMetrics
   : [];
+const surfaceCoverage = readRepoJson("docs/ui/surface-baseline-coverage.manifest.json");
+const privateBaselines = readRepoJson("docs/ui/private-baselines.manifest.json");
+const debtAudit = readRepoJson("docs/ui/debt-audit.manifest.json");
 const copyInventory = readRepoJson("docs/ui/copy.inventory.json");
 const allowedCopyKinds = new Set(Array.isArray(copyInventory?.restrictedCopyKinds) ? copyInventory.restrictedCopyKinds : []);
 const renderedDrift = readRepoJson("docs/ui/rendered-drift.manifest.json");
@@ -384,6 +439,14 @@ const driftPolicy = {
     Array.isArray(renderedDrift?.approvalRequiredStatuses) ? renderedDrift.approvalRequiredStatuses : [],
   ),
 };
+const publicRegistries = {
+  surfaceCoverageById: mapByKey(surfaceCoverage?.coverage, (entry) => entry.coverageId),
+  privateBaselineByKey: mapByKey(privateBaselines?.flows, (flow) => `${flow.platform}:${flow.id}`),
+  renderedDriftById: mapByKey(renderedDrift?.reports, (report) => report.coverageId),
+  debtAuditById: mapByKey(debtAudit?.entries, (entry) => entry.debtId),
+  performanceBudgetByKey: mapByKey(performanceBudgets?.flows, (flow) => `${flow.platform}:${flow.id}`),
+  driftBlockingStatuses: driftPolicy.blockingStatuses,
+};
 
 let verified = 0;
 for (const item of plan.evidence || []) {
@@ -393,6 +456,7 @@ for (const item of plan.evidence || []) {
   if (!root) continue;
   const evidencePath = path.join(root, parsed.suffix.split("/").join(path.sep), item.evidenceFilename);
   const label = `${item.type}:${item.platform}:${item.id}`;
+  if (!verifyPublicApprovalState(item, publicRegistries, label)) continue;
   const evidence = readJson(evidencePath, `${label} ${item.evidenceFilename}`);
   if (!evidence) continue;
 

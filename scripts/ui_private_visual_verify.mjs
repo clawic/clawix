@@ -23,7 +23,7 @@ const checks = [
       "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
     ],
     script: "scripts/ui_private_evidence_verify.mjs",
-    args: ["--require-approved"],
+    args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
   },
   {
     name: "private debt audit",
