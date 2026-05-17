@@ -43,7 +43,7 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function hasLocalPath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
 }
 
 function scanForLocalPaths(value, label) {

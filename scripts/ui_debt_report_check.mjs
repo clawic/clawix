@@ -54,7 +54,7 @@ function scanForLocalPaths(value, label) {
     for (const [key, child] of Object.entries(value)) scanForLocalPaths(child, `${label}.${key}`);
     return;
   }
-  if (typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value))) {
+  if (typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value))) {
     fail(`${label} must not contain a local path`);
   }
 }

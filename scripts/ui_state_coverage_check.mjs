@@ -113,7 +113,7 @@ const inventoryPath = manifest?.inventoryPath || "docs/ui/visible-surfaces.inven
 const inventory = readJson(inventoryPath);
 const sourceRoots = requireArray(inventory, inventoryPath, "sourceRoots");
 for (const sourceRoot of sourceRoots) {
-  if (sourceRoot.startsWith("/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://")) {
+  if (sourceRoot.startsWith("/") || sourceRoot.startsWith("~/") || sourceRoot.includes("..") || sourceRoot.startsWith("file://") || /^[A-Z]:\\/.test(sourceRoot)) {
     fail(`${inventoryPath}.sourceRoots must use safe relative paths`);
     continue;
   }
