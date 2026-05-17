@@ -33,6 +33,10 @@ function optionValue(name) {
   return args[index + 1] || null;
 }
 
+function hasFlag(name) {
+  return args.includes(name);
+}
+
 function requireField(object, label, field) {
   if (object?.[field] === undefined || object[field] === null || object[field] === "") {
     fail(`${label} is missing ${field}`);
@@ -62,6 +66,11 @@ function verifyMeasurements(value, label) {
       fail(`${label}.${key} must be a finite non-negative number`);
     }
   }
+}
+
+if (!hasFlag("--require-approved")) {
+  console.error("UI private geometry verification requires --require-approved.");
+  process.exit(1);
 }
 
 const privateRootArg = optionValue("--root");

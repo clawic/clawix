@@ -80,6 +80,9 @@ if (manifest?.evidenceFilename !== "geometry-evidence.json") {
 if (!String(manifest?.verificationCommand || "").includes("scripts/ui_private_geometry_verify.mjs")) {
   fail(`${manifestPath}.verificationCommand must run scripts/ui_private_geometry_verify.mjs`);
 }
+if (!String(manifest?.verificationCommand || "").includes("--require-approved")) {
+  fail(`${manifestPath}.verificationCommand must require approved private geometry evidence`);
+}
 
 const requiredEvidence = new Set(requireArray(manifest, manifestPath, "requiredEvidenceFields"));
 for (const field of ["patternId", "platform", "measurements", "geometryHash", "screenshotComparisonHash", "captureCommand", "approvedByUserAt", "approvedScope"]) {
