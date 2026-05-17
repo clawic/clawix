@@ -111,6 +111,12 @@ function isVisibleCandidate(relativePath) {
 
 const registry = readJson("docs/ui/pattern-registry/patterns.registry.json");
 const patternIds = new Set(requireArray(registry, "docs/ui/pattern-registry/patterns.registry.json", "patterns"));
+const patternPlatforms = new Map();
+for (const patternId of patternIds) {
+  const patternPath = `docs/ui/pattern-registry/patterns/${patternId}.pattern.json`;
+  const pattern = readJson(patternPath);
+  patternPlatforms.set(patternId, new Set(requireArray(pattern, patternPath, "platforms")));
+}
 
 const debt = readJson("docs/ui/debt.baseline.json");
 const debtIds = new Set(requireArray(debt, "docs/ui/debt.baseline.json", "entries").map((entry) => entry.id));
@@ -149,6 +155,10 @@ for (const [index, entry] of coverage.entries()) {
   if (entry.classification === "pattern") {
     for (const patternId of requireArray(entry, label, "patterns")) {
       if (!patternIds.has(patternId)) fail(`${label}.patterns references unknown pattern ${patternId}`);
+      const platforms = patternPlatforms.get(patternId) || new Set();
+      if (platforms.size > 0 && !platforms.has(entry.platform)) {
+        fail(`${label}.patterns references ${patternId}, which is not declared for ${entry.platform}`);
+      }
     }
   }
   if (entry.classification === "debt") {

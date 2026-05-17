@@ -128,7 +128,7 @@
         "ios/Sources/Clawix/Theme/**"
       ],
       "classification": "pattern",
-      "patterns": ["design-surface", "settings-surface", "entity-card", "search-field", "sheet-chrome", "icon-chip-button"],
+      "patterns": ["settings-surface", "entity-card", "search-field", "sheet-chrome", "icon-chip-button"],
       "reason": "iOS secondary screens and visible support modules mapped to existing cross-platform patterns."
     },
     {
