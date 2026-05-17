@@ -257,9 +257,9 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Publishing calendar/composer/channels",
-      "programmaticSurface": "ClawJS publishing API/CLI/fixtures",
+      "programmaticSurface": "claw content brand|destination|campaign|entry|approval|publish plus content Relay read/write routes",
       "storageOwner": "framework-publishing",
-      "validation": "Publishing contract fixtures and matrix row"
+      "validation": "Publishing approval fixtures; live channel publish EXTERNAL PENDING without explicit approval"
     },
     {
       "id": "database",
@@ -267,7 +267,7 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix database explorer",
-      "programmaticSurface": "ClawJS database API/CLI/fixtures",
+      "programmaticSurface": "claw database ..., claw db <collection> ... and DatabaseApiClient",
       "storageOwner": "framework-database",
       "validation": "Database service fixtures and UI boundary tests"
     },
@@ -287,9 +287,9 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Index catalog, searches, monitors and alerts",
-      "programmaticSurface": "Resource registry/search APIs and fixtures",
+      "programmaticSurface": "claw sessions index, claw search rebuild, inspect storage/events/API routes",
       "storageOwner": "framework-resource-registry",
-      "validation": "Index/search resource fixtures"
+      "validation": "Index/search resource fixtures and Codex read-only mirror tests"
     },
     {
       "id": "marketplace",
@@ -297,9 +297,9 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Marketplace offers/wants/prospects/receipts",
-      "programmaticSurface": "ClawJS marketplace API/CLI/fixtures",
+      "programmaticSurface": "claw marketplace choice plus marketplace identity/profile/vertical APIs",
       "storageOwner": "framework-marketplace",
-      "validation": "Marketplace contract fixtures"
+      "validation": "Marketplace contract fixtures; payment/live installs EXTERNAL PENDING without explicit approval"
     },
     {
       "id": "iotHome",
@@ -307,7 +307,7 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Home/IoT devices, scenes and approvals",
-      "programmaticSurface": "ClawJS IoT/home API/CLI/fixtures",
+      "programmaticSurface": "claw iot homes|things|state|lights|climate|scenes|automations|approvals plus IoT Relay routes",
       "storageOwner": "framework-iot-plus-host-policy",
       "validation": "IoT contract fixtures; physical devices EXTERNAL PENDING"
     },
@@ -315,21 +315,21 @@
       "id": "calendar",
       "featureFlag": "calendar",
       "status": "stable",
-      "owner": "framework",
+      "owner": "framework+host",
       "humanSurface": "Clawix Calendar mini-app",
-      "programmaticSurface": "Resource registry/runtime calendar contract",
-      "storageOwner": "framework-resource-registry",
-      "validation": "Calendar resource fixtures"
+      "programmaticSurface": "claw calendar list|get|create|update|delete, claw time calendar and host calendar command contract",
+      "storageOwner": "framework-resource-registry-plus-signed-host-permission-broker",
+      "validation": "Calendar fixtures; live macOS/provider sync EXTERNAL PENDING"
     },
     {
       "id": "contacts",
       "featureFlag": "contacts",
       "status": "stable",
-      "owner": "framework",
+      "owner": "framework+host",
       "humanSurface": "Clawix Contacts mini-app",
-      "programmaticSurface": "Resource registry/runtime contacts contract",
-      "storageOwner": "framework-resource-registry",
-      "validation": "Contacts resource fixtures"
+      "programmaticSurface": "claw contacts list|get|create|update|archive and host contacts command contract",
+      "storageOwner": "framework-resource-registry-plus-signed-host-permission-broker",
+      "validation": "Contacts fixtures; live macOS/provider sync EXTERNAL PENDING"
     },
     {
       "id": "life",
@@ -337,9 +337,9 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Life vertical explorer",
-      "programmaticSurface": "Resource registry/runtime life/signal vertical contract",
+      "programmaticSurface": "claw signals catalog|seed-catalog|observe|list|delete and signal resource registry/runtime contract",
       "storageOwner": "framework-resource-registry",
-      "validation": "Life vertical resource fixtures"
+      "validation": "Life/signal fixtures; native/provider adapters EXTERNAL PENDING"
     },
     {
       "id": "identity",

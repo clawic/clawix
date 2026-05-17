@@ -52,14 +52,14 @@ experimental switch. Every current surface must be one of:
 | OpenCode/runtime adapters | Framework | Runtime adapter selector | Framework runtime adapter registry | Framework runtime | Adapter registry tests |
 | Local Models | Host + Framework | Model availability/selection | Framework capability records | Host model cache; framework capability metadata | No synced blob guard |
 | Telegram/Connections QA | Framework + Host | Integration settings and QA state | ClawJS Integration QA Lab and provider matrices | Framework integration records; host secret refs | Hermetic QA tests; live checks `EXTERNAL PENDING` |
-| Publishing | Framework | Calendar/composer/channels | ClawJS publishing API/CLI/fixtures | Framework publishing storage | Publishing contract fixtures |
-| Database and Workbench | Framework + Host | Explorer and workbench | ClawJS database APIs/CLI/fixtures | Framework database; host vault refs for credentials | Service fixtures and secret-ref tests |
-| Index/Search | Framework | Catalog/search/monitors/alerts | Resource registry/search APIs | Framework resource registry | Resource fixtures |
-| Marketplace | Framework | Offers/wants/prospects/receipts | ClawJS marketplace API/CLI/fixtures | Framework marketplace storage | Contract fixtures |
-| IoT/Home | Framework + Host | Devices/scenes/approvals | ClawJS IoT/home API/CLI/fixtures | Framework IoT plus host policy | Contract fixtures; physical devices `EXTERNAL PENDING` |
-| Calendar | Framework | Calendar mini-app | Resource registry/runtime calendar contract | Framework resource registry | Calendar fixtures |
-| Contacts | Framework | Contacts mini-app | Resource registry/runtime contacts contract | Framework resource registry | Contacts fixtures |
-| Life verticals | Framework | Life vertical explorer | Resource registry/runtime life/signal contract | Framework resource registry | Life vertical fixtures |
+| Publishing | Framework | Calendar/composer/channels | `claw content brand|destination|campaign|entry|approval|publish`; content Relay read/write routes | Framework publishing storage | Publishing approval fixtures; live channel publish `EXTERNAL PENDING` without explicit approval |
+| Database and Workbench | Framework + Host | Explorer and workbench | `claw database ...`, `claw db <collection> ...`, `DatabaseApiClient` | Framework database; host vault refs for credentials | Service fixtures and secret-ref tests |
+| Index/Search | Framework | Catalog/search/monitors/alerts | `claw sessions index`, `claw search rebuild`, inspect storage/events/API routes | Framework resource registry | Resource fixtures and Codex read-only mirror tests |
+| Marketplace | Framework | Offers/wants/prospects/receipts | `claw marketplace choice`, marketplace identity/profile/vertical APIs | Framework marketplace storage | Contract fixtures; payment/live installs `EXTERNAL PENDING` without explicit approval |
+| IoT/Home | Framework + Host | Devices/scenes/approvals | `claw iot homes|things|state|lights|climate|scenes|automations|approvals`; IoT Relay routes | Framework IoT plus host policy | Contract fixtures; physical devices `EXTERNAL PENDING` |
+| Calendar | Framework + Host | Calendar mini-app | `claw calendar list|get|create|update|delete`; `claw time calendar`; host calendar command contract | Framework resource registry plus signed-host permission broker | Calendar fixtures; live macOS/provider sync `EXTERNAL PENDING` |
+| Contacts | Framework + Host | Contacts mini-app | `claw contacts list|get|create|update|archive`; host contacts command contract | Framework resource registry plus signed-host permission broker | Contacts fixtures; live macOS/provider sync `EXTERNAL PENDING` |
+| Life verticals | Framework | Life vertical explorer | `claw signals catalog|seed-catalog|observe|list|delete`; signal resource registry/runtime contract | Framework resource registry | Life/signal fixtures; native/provider adapters `EXTERNAL PENDING` |
 | Identity/Profile | Framework | Identity/profile settings | Framework profile/identity APIs | Framework `core.sqlite` | Profile fixtures |
 | Claw framework status | Framework + Host | Framework settings/status | `claw` CLI, SDK, host status APIs | Framework global plus host state | Host/framework status tests |
 

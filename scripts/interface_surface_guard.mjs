@@ -116,6 +116,58 @@ for (const featureFlag of requiredFeatureFlags) {
   }
 }
 
+const v1ClosureSurfaceRequirements = {
+  publishing: {
+    matrix: ["| Publishing |", "`claw content brand|destination|campaign|entry|approval|publish`", "live channel publish `EXTERNAL PENDING`"],
+    registry: ["claw content brand|destination|campaign|entry|approval|publish", "content Relay read/write routes", "EXTERNAL PENDING"],
+  },
+  database: {
+    matrix: ["| Database and Workbench |", "`claw database ...`", "`claw db <collection> ...`", "`DatabaseApiClient`"],
+    registry: ["claw database ...", "claw db <collection> ...", "DatabaseApiClient"],
+  },
+  index: {
+    matrix: ["| Index/Search |", "`claw sessions index`", "`claw search rebuild`", "Codex read-only mirror tests"],
+    registry: ["claw sessions index", "claw search rebuild", "Codex read-only mirror tests"],
+  },
+  marketplace: {
+    matrix: ["| Marketplace |", "`claw marketplace choice`", "payment/live installs `EXTERNAL PENDING`"],
+    registry: ["claw marketplace choice", "marketplace identity/profile/vertical APIs", "EXTERNAL PENDING"],
+  },
+  iotHome: {
+    matrix: ["| IoT/Home |", "`claw iot homes|things|state|lights|climate|scenes|automations|approvals`", "physical devices `EXTERNAL PENDING`"],
+    registry: ["claw iot homes|things|state|lights|climate|scenes|automations|approvals", "IoT Relay routes", "EXTERNAL PENDING"],
+  },
+  calendar: {
+    matrix: ["| Calendar |", "`claw calendar list|get|create|update|delete`", "`claw time calendar`", "signed-host permission broker"],
+    registry: ["claw calendar list|get|create|update|delete", "claw time calendar", "signed-host-permission-broker", "EXTERNAL PENDING"],
+  },
+  contacts: {
+    matrix: ["| Contacts |", "`claw contacts list|get|create|update|archive`", "signed-host permission broker"],
+    registry: ["claw contacts list|get|create|update|archive", "signed-host-permission-broker", "EXTERNAL PENDING"],
+  },
+  life: {
+    matrix: ["| Life verticals |", "`claw signals catalog|seed-catalog|observe|list|delete`", "native/provider adapters `EXTERNAL PENDING`"],
+    registry: ["claw signals catalog|seed-catalog|observe|list|delete", "signal resource registry/runtime contract", "EXTERNAL PENDING"],
+  },
+};
+
+const matrixText = read("docs/interface-matrix.md");
+for (const [id, requirement] of Object.entries(v1ClosureSurfaceRequirements)) {
+  const surface = (registry.surfaces ?? []).find((entry) => entry.id === id);
+  if (!surface) {
+    fail(`interface registry is missing v1 closure surface ${id}`);
+    continue;
+  }
+  if (surface.status !== "stable") fail(`${id} must be stable in the v1 closure registry`);
+  const registryText = `${surface.programmaticSurface ?? ""}\n${surface.storageOwner ?? ""}\n${surface.validation ?? ""}`;
+  for (const snippet of requirement.registry) {
+    if (!registryText.includes(snippet)) fail(`${id} registry row is missing v1 closure snippet ${JSON.stringify(snippet)}`);
+  }
+  for (const snippet of requirement.matrix) {
+    if (!matrixText.includes(snippet)) fail(`docs/interface-matrix.md is missing ${id} v1 closure snippet ${JSON.stringify(snippet)}`);
+  }
+}
+
 function validateLifeRegistryResource(relativePath) {
   const envelope = JSON.parse(read(relativePath));
   const invalid = (envelope.entries ?? []).filter((entry) => !allowedStatuses.has(entry.status));
