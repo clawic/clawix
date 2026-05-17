@@ -314,6 +314,7 @@ for (const [surfaceId, snippets] of [
   ["apps", ["claw apps list|upsert", "ClawJS apps/resource APIs"]],
   ["design", ["claw design list|upsert", "design resource types"]],
   ["providers.routing", ["claw providers routing list|set|delete", "claw providers settings list|set", "host vault refs"]],
+  ["voiceToText.audio", ["claw audio index|transcript|artifact list|get|delete", "@clawjs/audio API/CLI/fixtures"]],
 ]) {
   const surface = (registry.surfaces ?? []).find((entry) => entry.id === surfaceId);
   if (!surface) {

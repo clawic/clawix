@@ -147,7 +147,7 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix dictation and audio catalog UI",
-      "programmaticSurface": "@clawjs/audio API/CLI/fixtures",
+      "programmaticSurface": "claw audio index|transcript|artifact list|get|delete; @clawjs/audio API/CLI/fixtures",
       "storageOwner": "framework-audio-sidecar",
       "validation": "Audio catalog/transcript tests; host temp/debug exception checks"
     },
