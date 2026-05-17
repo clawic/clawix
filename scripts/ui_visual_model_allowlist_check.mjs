@@ -45,7 +45,10 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function hasLocalPath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+  return (
+    typeof value === "string" &&
+    (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value))
+  );
 }
 
 function scanForLocalPaths(value, label) {
@@ -58,6 +61,20 @@ function scanForLocalPaths(value, label) {
     return;
   }
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
+}
+
+function requireSafePrivateReference(value, alias, label) {
+  if (typeof value !== "string" || !value.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasLocalPath(value) || value.includes("/Users/")) {
+    fail(`${label} must not contain a local path`);
+  }
 }
 
 const manifestPath = "docs/ui/visual-model-allowlist.manifest.json";
@@ -126,9 +143,7 @@ for (const [index, model] of requireArray(manifest, manifestPath, "allowedVisual
   if (model.status === "active") activeVisualModelCount += 1;
   if (model.privateApprovalRequired !== true) fail(`${label}.privateApprovalRequired must be true`);
   if (model.status === "active" && !initialActiveModels.has(model.id)) {
-    if (typeof model.privateApprovalReference !== "string" || !model.privateApprovalReference.startsWith(`${manifest.privateApprovalAlias}:`)) {
-      fail(`${label}.privateApprovalReference must use ${manifest.privateApprovalAlias}: for additional active visual models`);
-    }
+    requireSafePrivateReference(model.privateApprovalReference, manifest.privateApprovalAlias, `${label}.privateApprovalReference`);
   }
   if (model.scopeSource !== "docs/ui/visual-change-scopes.manifest.json") {
     fail(`${label}.scopeSource must be docs/ui/visual-change-scopes.manifest.json`);

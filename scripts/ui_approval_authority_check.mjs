@@ -58,6 +58,20 @@ function scanForLocalPaths(value, label) {
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
 }
 
+function requireSafePrivateReference(value, alias, label) {
+  if (typeof value !== "string" || !value.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasLocalPath(value) || value.includes("/Users/")) {
+    fail(`${label} must not contain a local path`);
+  }
+}
+
 const manifestPath = "docs/ui/approval-authority.manifest.json";
 const manifest = readJson(manifestPath);
 requireFields(manifest, manifestPath, [
@@ -117,9 +131,7 @@ for (const [sourceIndex, source] of requireArray(manifest, manifestPath, "approv
     }
     if (source.privateApprovalField) {
       const reference = record[source.privateApprovalField];
-      if (typeof reference !== "string" || !reference.startsWith(`${manifest.privateApprovalAlias}:`)) {
-        fail(`${label}.${source.privateApprovalField} must use ${manifest.privateApprovalAlias}:`);
-      }
+      requireSafePrivateReference(reference, manifest.privateApprovalAlias, `${label}.${source.privateApprovalField}`);
     }
     checkedRecords += 1;
   }

@@ -65,6 +65,20 @@ function scanForLocalPaths(value, label) {
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
 }
 
+function requireSafePrivateReference(value, alias, label) {
+  if (typeof value !== "string" || !value.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasLocalPath(value) || value.includes("/Users/")) {
+    fail(`${label} must not contain a local path`);
+  }
+}
+
 const registryPath = "docs/ui/visual-proposals.registry.json";
 const registry = readJson(registryPath);
 requireFields(registry, registryPath, [
@@ -139,9 +153,7 @@ for (const [index, proposal] of requireArray(registry, registryPath, "proposals"
     if (proposal.userApprovalStatus !== "approved") {
       fail(`${label}.userApprovalStatus must be approved for ${proposal.status}`);
     }
-    if (typeof proposal.privateApprovalReference !== "string" || !proposal.privateApprovalReference.startsWith(`${registry.privateApprovalAlias}:`)) {
-      fail(`${label}.privateApprovalReference must use ${registry.privateApprovalAlias}: for ${proposal.status}`);
-    }
+    requireSafePrivateReference(proposal.privateApprovalReference, registry.privateApprovalAlias, `${label}.privateApprovalReference`);
   }
   if (proposal.reviewAfter < today) fail(`${label}.reviewAfter expired on ${proposal.reviewAfter}`);
 }

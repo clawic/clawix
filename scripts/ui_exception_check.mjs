@@ -47,7 +47,10 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function hasLocalPath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+  return (
+    typeof value === "string" &&
+    (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value))
+  );
 }
 
 function scanForLocalPaths(value, label) {
@@ -60,6 +63,20 @@ function scanForLocalPaths(value, label) {
     return;
   }
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
+}
+
+function requireSafePrivateReference(value, alias, label) {
+  if (typeof value !== "string" || !value.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasLocalPath(value) || value.includes("/Users/")) {
+    fail(`${label} must not contain a local path`);
+  }
 }
 
 function requireIsoDate(value, label) {
@@ -155,9 +172,7 @@ for (const [index, exception] of exceptionRecords.entries()) {
   if (reviewAfter && expiresAt && reviewAfter > expiresAt) {
     fail(`${label}.reviewAfter must not be after expiresAt`);
   }
-  if (!String(exception.privateApprovalReference || "").startsWith("private-codex-ui-approval:")) {
-    fail(`${label}.privateApprovalReference must use private-codex-ui-approval:`);
-  }
+  requireSafePrivateReference(exception.privateApprovalReference, "private-codex-ui-approval", `${label}.privateApprovalReference`);
 }
 
 const inventoryPath = "docs/ui/visible-surfaces.inventory.json";

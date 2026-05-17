@@ -46,7 +46,10 @@ function requireArray(object, label, field, { nonEmpty = true } = {}) {
 }
 
 function hasLocalPath(value) {
-  return typeof value === "string" && (/^\/Users\//.test(value) || value.startsWith("file://") || /^[A-Z]:\\/.test(value));
+  return (
+    typeof value === "string" &&
+    (/^\/Users\//.test(value) || value.startsWith("~/") || value.startsWith("file://") || /^[A-Z]:\\/.test(value))
+  );
 }
 
 function scanForLocalPaths(value, label) {
@@ -59,6 +62,20 @@ function scanForLocalPaths(value, label) {
     return;
   }
   if (hasLocalPath(value)) fail(`${label} must not contain a local path`);
+}
+
+function requireSafePrivateReference(value, alias, label) {
+  if (typeof value !== "string" || !value.startsWith(`${alias}:`)) {
+    fail(`${label} must use ${alias}:`);
+    return;
+  }
+  const suffix = value.slice(alias.length + 1);
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.startsWith("~/") || suffix.includes("..") || /^[A-Z]:\\/.test(suffix)) {
+    fail(`${label} must use a safe relative private reference`);
+  }
+  if (hasLocalPath(value) || value.includes("/Users/")) {
+    fail(`${label} must not contain a local path`);
+  }
 }
 
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
@@ -145,9 +162,7 @@ for (const [index, scope] of scopes.entries()) {
     if (!requiredChangeKinds.has(kind)) fail(`${label}.changeBudget.allowedChangeKinds contains unsupported ${kind}`);
     if (!scope.changeKinds.includes(kind)) fail(`${label}.changeBudget.allowedChangeKinds must be within scope.changeKinds`);
   }
-  if (!String(scope.privateApprovalReference || "").startsWith("private-codex-ui-approval:")) {
-    fail(`${label}.privateApprovalReference must use private-codex-ui-approval:`);
-  }
+  requireSafePrivateReference(scope.privateApprovalReference, "private-codex-ui-approval", `${label}.privateApprovalReference`);
 }
 
 scanForLocalPaths(manifest, manifestPath);
