@@ -148,7 +148,7 @@ enum EnhancementProviderID: String, CaseIterable, Codable {
         case .mistral:
             return ["mistral-small-latest", "mistral-large-latest", "open-mistral-7b"]
         case .xai:
-            return ["grok-2-latest", "grok-beta"]
+            return ["grok-4.3-latest", "grok-4.20-reasoning-latest", "grok-4.20-non-reasoning-latest"]
         case .openrouter:
             return [
                 "openai/gpt-4o-mini",
