@@ -26,6 +26,10 @@ Exceptions are named with their reason; silent deviations are bugs.
 - Machine-readable UI contracts live in `docs/ui/`. When a surface maps to a
   pattern registry entry, that pattern is the auditable contract for states,
   geometry, copy, validation, and visual mutation permissions.
+- Visual, copy, and layout mutation authority is not inferred from code
+  ownership. The public gate is `docs/ui/visual-model-allowlist.manifest.json`
+  plus an approved scope in `docs/ui/visual-change-scopes.manifest.json`;
+  frozen surfaces are tracked in `docs/ui/protected-surfaces.registry.json`.
 - A check is **auditable** if a contributor can produce a yes/no answer
   by running the app or grepping the source. Anything subjective ("feels
   good") belongs to `STYLE.md`, not here.

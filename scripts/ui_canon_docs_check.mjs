@@ -50,6 +50,9 @@ for (const snippet of [
   "geometry",
   "copy",
   "visual mutation permissions",
+  "visual-model-allowlist.manifest.json",
+  "visual-change-scopes.manifest.json",
+  "protected-surfaces.registry.json",
 ]) {
   requireSnippet("STANDARDS.md", snippet);
 }
@@ -59,6 +62,12 @@ for (const snippet of [
   "docs/ui/private-baselines.manifest.json",
   "ui_performance_budget_check.mjs",
   "ui_private_performance_budget_verify.mjs",
+  "sidebar hover/click/expand",
+  "chat scroll",
+  "composer typing",
+  "dropdown open",
+  "terminal/sidebar switch",
+  "right-sidebar/browser use",
 ]) {
   requireSnippet("PERF.md", snippet);
 }
