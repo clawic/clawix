@@ -59,6 +59,12 @@ function requireAlias(reference, alias, label) {
   return suffix;
 }
 
+function requireHash(value, label) {
+  if (typeof value !== "string" || !/^[a-f0-9]{64}$/i.test(value)) {
+    fail(`${label} must be a 64-character hex hash`);
+  }
+}
+
 const manifestPath = "docs/ui/surface-baseline-coverage.manifest.json";
 const manifest = readJson(manifestPath);
 if (args.has("--simulate-mismatched-surface-reference") && Array.isArray(manifest?.coverage) && manifest.coverage[0]) {
@@ -163,9 +169,7 @@ for (const [index, entry] of requireArray(manifest, manifestPath, "coverage").en
   }
   if (entry.baselineStatus === "approved") {
     for (const hashField of ["screenshotHash", "geometryHash", "copySnapshotHash", "baselineArtifactHash"]) {
-      if (typeof entry[hashField] !== "string" || entry[hashField].length < 16) {
-        fail(`${label}.${hashField} must be present when approved`);
-      }
+      requireHash(entry[hashField], `${label}.${hashField}`);
     }
   }
 }
