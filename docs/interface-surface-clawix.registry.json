@@ -127,7 +127,7 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix provider account and model selection UI",
-      "programmaticSurface": "Framework provider account/routing config with host vault refs",
+      "programmaticSurface": "claw providers routing list|set|delete; claw providers settings list|set; framework provider account/routing config with host vault refs",
       "storageOwner": "framework-config-plus-host-vault",
       "validation": "Provider routing tests; no UserDefaults as canonical store"
     },
