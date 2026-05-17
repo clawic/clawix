@@ -59,8 +59,28 @@ function assertPublicSafeReference(reference, alias, label) {
   return suffix;
 }
 
+function assertSafeEvidenceFilename(filename, label) {
+  if (typeof filename !== "string" || filename.trim() !== filename || filename.length === 0) {
+    fail(`${label}.evidenceFilename must be a non-empty filename`);
+    return;
+  }
+  if (
+    path.isAbsolute(filename) ||
+    filename.startsWith("~/") ||
+    filename.includes("/") ||
+    filename.includes("\\") ||
+    filename.includes("..")
+  ) {
+    fail(`${label}.evidenceFilename must be a safe filename, not a path`);
+  }
+  if (!filename.endsWith(".json")) {
+    fail(`${label}.evidenceFilename must be a JSON evidence file`);
+  }
+}
+
 function addPlanItem(item) {
   requireFields(item, item.label, ["type", "id", "platform", "privateReference", "evidenceFilename", "requiredFields"]);
+  assertSafeEvidenceFilename(item.evidenceFilename, item.label);
   if (Array.isArray(item.requiredFields) && item.requiredFields.length === 0) {
     fail(`${item.label}.requiredFields must not be empty`);
   }
