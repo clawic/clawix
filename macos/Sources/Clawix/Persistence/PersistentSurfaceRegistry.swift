@@ -82,7 +82,6 @@ struct PersistentSurfaceNode: Codable, Equatable {
     var externalProvider: String?
     var replacement: String?
     var introducedIn: String?
-    var deprecatedIn: String?
     var dataType: String?
     var nullable: Bool?
     var notes: String?
@@ -268,7 +267,6 @@ enum ClawixPersistentSurface {
         externalProvider: String? = nil,
         replacement: String? = nil,
         introducedIn: String? = nil,
-        deprecatedIn: String? = nil,
         dataType: String? = nil,
         nullable: Bool? = nil,
         notes: String? = nil,
@@ -307,7 +305,6 @@ enum ClawixPersistentSurface {
             externalProvider: externalProvider,
             replacement: replacement,
             introducedIn: introducedIn,
-            deprecatedIn: deprecatedIn,
             dataType: dataType,
             nullable: nullable,
             notes: notes,
