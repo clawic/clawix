@@ -222,6 +222,7 @@ require_snippet "docs/ui/approval-authority.manifest.json" "private-codex-ui-app
 require_snippet "docs/ui/approval-authority.manifest.json" "canon-promotions"
 require_snippet "docs/ui/canon-units.manifest.json" "\"primaryUnit\": \"pattern\""
 require_snippet "docs/ui/canon-units.manifest.json" "promotionRequired"
+require_snippet "docs/ui/pattern-registry/README.md" "every platform declared by the"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "private-codex-ui-rendered-geometry"
 require_snippet "docs/ui/rendered-geometry.manifest.json" "ui_private_geometry_verify.mjs"
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "\"defaultAuthorized\": false"

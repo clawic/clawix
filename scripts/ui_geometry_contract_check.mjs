@@ -96,6 +96,14 @@ function classifyGeometryClause(value, label) {
   return "invalid";
 }
 
+function geometryHasDirectMeasurements(value) {
+  return isPlainObject(value) && Object.values(value).some((child) => typeof child === "number");
+}
+
+function geometryHasPlatformClauses(value) {
+  return isPlainObject(value) && Object.values(value).some((child) => isPlainObject(child));
+}
+
 const registryPath = "docs/ui/pattern-registry/patterns.registry.json";
 const registry = readJson(registryPath);
 const patternIds = requireArray(registry, registryPath, "patterns");
@@ -106,6 +114,14 @@ for (const patternId of patternIds) {
   if (!pattern) continue;
 
   const geometryType = classifyGeometryClause(pattern.geometry, `${patternPath}.geometry`);
+  const platforms = requireArray(pattern, patternPath, "platforms");
+  if (geometryHasPlatformClauses(pattern.geometry) && !geometryHasDirectMeasurements(pattern.geometry)) {
+    for (const platform of platforms) {
+      if (!isPlainObject(pattern.geometry?.[platform])) {
+        fail(`${patternPath}.geometry.${platform} must declare measured values or an explicit pending source`);
+      }
+    }
+  }
   const validationPrivate = Array.isArray(pattern.validation?.private) ? pattern.validation.private : [];
   if (validationPrivate.length === 0) {
     fail(`${patternPath}.validation.private must name the private geometry/visual evidence`);

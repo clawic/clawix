@@ -28,4 +28,6 @@ Each pattern declares:
 
 `scripts/ui_geometry_contract_check.mjs` validates that every geometry clause is
 either measured with finite non-negative numbers or explicitly pending with a
-reason. It does not approve a new visual direction.
+reason. When geometry is platform-specific, every platform declared by the
+pattern must have either measured values or its own pending source clause. It
+does not approve a new visual direction.
