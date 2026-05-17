@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -143,6 +144,28 @@ for (const snippet of [
 ]) {
   if (!privateVerifier.includes(snippet)) {
     fail(`${manifest.privateVerifierScript} must include ${snippet}`);
+  }
+}
+
+const decisionVerification = readJson(manifest?.decisionVerificationPath || "docs/ui/decision-verification.json");
+const openDecisions = requireArray(decisionVerification, manifest?.decisionVerificationPath || "docs/ui/decision-verification.json", "decisions")
+  .filter((decision) => decision?.status === "open");
+if (openDecisions.length > 0) {
+  const result = spawnSync(process.execPath, [path.join(rootDir, manifest.privateVerifierScript), "--require-approved"], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+  const output = `${result.stdout || ""}${result.stderr || ""}`;
+  if (result.status !== manifest.externalPendingExitCode) {
+    fail(`${manifest.privateVerifierScript} must exit ${manifest.externalPendingExitCode} while decisions remain open`);
+  }
+  if (!output.includes("open decisions block update_goal")) {
+    fail(`${manifest.privateVerifierScript} must report open decisions before asking for private roots`);
+  }
+  for (const decision of openDecisions) {
+    if (!output.includes(decision.id)) {
+      fail(`${manifest.privateVerifierScript} open-decision output must include ${decision.id}`);
+    }
   }
 }
 
