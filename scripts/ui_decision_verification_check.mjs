@@ -50,6 +50,24 @@ function isPublicEvidenceReference(reference) {
   return true;
 }
 
+const privateEvidenceAliases = new Set([
+  "private-codex-ui-baselines",
+  "private-codex-ui-rendered-geometry",
+  "private-codex-ui-copy-snapshots",
+  "private-codex-ui-rendered-drift",
+  "private-codex-ui-debt-audit",
+]);
+
+function isPrivateEvidenceReference(reference) {
+  if (typeof reference !== "string" || reference.length === 0) return false;
+  if (reference.startsWith("~/") || reference.includes("/Users/") || reference.startsWith("file://")) return false;
+  const [alias, ...suffixParts] = reference.split(":");
+  const suffix = suffixParts.join(":");
+  if (!privateEvidenceAliases.has(alias)) return false;
+  if (!suffix || suffix.startsWith("/") || suffix.startsWith("\\") || suffix.includes("..")) return false;
+  return true;
+}
+
 const decisionPath = "docs/ui/decision-verification.json";
 const decisionVerification = readJson(decisionPath);
 requireFields(decisionVerification, decisionPath, [
@@ -96,6 +114,26 @@ for (const [index, decision] of decisions.entries()) {
   }
   if (decision.status === "open" && decision.remaining.length === 0) {
     fail(`${label} must be verified-complete when no remaining work is listed`);
+  }
+  if (decision.status === "open") {
+    for (const [evidenceIndex, evidence] of requireArray(decision, label, "privateEvidence").entries()) {
+      if (!isPrivateEvidenceReference(evidence)) {
+        fail(`${label}.privateEvidence[${evidenceIndex}] must be a public-safe private evidence alias reference`);
+      }
+    }
+    for (const [verifierIndex, verifier] of requireArray(decision, label, "blockingVerifiers").entries()) {
+      const verifierLabel = `${label}.blockingVerifiers[${verifierIndex}]`;
+      if (!isPublicEvidenceReference(verifier)) {
+        fail(`${verifierLabel} must be a public-safe repo-relative reference`);
+        continue;
+      }
+      if (!verifier.startsWith("scripts/ui_private_")) {
+        fail(`${verifierLabel} must point to a private UI verifier`);
+      }
+      if (!fs.existsSync(path.join(rootDir, verifier))) {
+        fail(`${verifierLabel} points to missing verifier ${verifier}`);
+      }
+    }
   }
   for (const [evidenceIndex, evidence] of requireArray(decision, label, "publicEvidence").entries()) {
     const evidenceLabel = `${label}.publicEvidence[${evidenceIndex}]`;
