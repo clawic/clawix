@@ -145,6 +145,8 @@ for (const snippet of [
   "process.exit(2)",
   "expectedDecisionIds",
   "expectedConversationId",
+  "decision.choice",
+  "normalizeText",
 ]) {
   if (!privateVerifier.includes(snippet)) {
     fail(`scripts/ui_private_completion_source_verify.mjs must include ${snippet}`);

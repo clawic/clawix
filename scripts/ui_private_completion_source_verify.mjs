@@ -18,6 +18,13 @@ function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(rootDir, relativePath), "utf8"));
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
 function assertPrivateFile(file, envName) {
   const resolved = path.resolve(file);
   const relativeToRepo = path.relative(rootDir, resolved);
@@ -53,6 +60,10 @@ const goalFile = assertPrivateFile(process.env[goalEnv], goalEnv);
 const sessionFile = assertPrivateFile(process.env[sessionEnv], sessionEnv);
 const goalSource = goalFile ? fs.readFileSync(goalFile, "utf8") : "";
 const sessionSource = sessionFile ? fs.readFileSync(sessionFile, "utf8") : "";
+const normalizedGoalSource = normalizeText(goalSource);
+const normalizedSessionSource = normalizeText(sessionSource);
+const decisionVerification = readJson("docs/ui/decision-verification.json");
+const decisionsById = new Map((decisionVerification.decisions || []).map((decision) => [decision.id, decision]));
 
 for (const snippet of [
   manifest.expectedConversationId,
@@ -70,11 +81,23 @@ if (sessionFile && countJsonlRecords(sessionFile) < manifest.expectedDecisionCou
 }
 
 for (const decisionId of manifest.expectedDecisionIds || []) {
+  const decision = decisionsById.get(decisionId);
   if (!goalSource.includes(`\`${decisionId}\``)) {
     fail(`${goalEnv} must include decision ${decisionId}`);
   }
   if (!sessionSource.includes(decisionId)) {
     fail(`${sessionEnv} must include decision ${decisionId}`);
+  }
+  if (!decision?.choice) {
+    fail(`docs/ui/decision-verification.json must include a choice for ${decisionId}`);
+    continue;
+  }
+  const normalizedChoice = normalizeText(decision.choice);
+  if (!normalizedGoalSource.includes(normalizedChoice)) {
+    fail(`${goalEnv} must include choice ${decision.choice} for decision ${decisionId}`);
+  }
+  if (!normalizedSessionSource.includes(normalizedChoice)) {
+    fail(`${sessionEnv} must include choice ${decision.choice} for decision ${decisionId}`);
   }
 }
 
