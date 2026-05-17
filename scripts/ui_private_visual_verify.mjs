@@ -41,7 +41,7 @@ const checks = [
     name: "private rendered geometry",
     env: "CLAWIX_UI_PRIVATE_GEOMETRY_ROOT",
     script: "scripts/ui_private_geometry_verify.mjs",
-    args: ["--require-approved"],
+    args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
   },
   {
     name: "private copy",

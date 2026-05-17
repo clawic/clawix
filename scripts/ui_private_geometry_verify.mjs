@@ -130,6 +130,7 @@ if (!hasFlag("--require-approved")) {
   process.exit(1);
 }
 
+const includePending = hasFlag("--include-pending");
 const privateRootArg = optionValue("--root");
 const privateRootRaw = privateRootArg || process.env.CLAWIX_UI_PRIVATE_GEOMETRY_ROOT || "";
 if (!privateRootRaw) {
@@ -154,54 +155,59 @@ const evidenceFilename = manifest?.evidenceFilename || "geometry-evidence.json";
 const requiredEvidence = Array.isArray(manifest?.requiredEvidenceFields) ? manifest.requiredEvidenceFields : [];
 const requiredSurfaceEvidence = Array.isArray(manifest?.requiredSurfaceEvidenceFields) ? manifest.requiredSurfaceEvidenceFields : [];
 const requiredPlatforms = new Set(["macos", "ios", "android", "web"]);
+const skipEvidence = manifest?.status !== "approved" && !includePending;
 let verifiedPatterns = 0;
 let verifiedSurfaces = 0;
 
-for (const patternId of registry?.patterns || []) {
-  const pattern = readJson(`docs/ui/pattern-registry/patterns/${patternId}.pattern.json`);
-  for (const platform of pattern?.platforms || []) {
-    if (!requiredPlatforms.has(platform)) continue;
-    const evidencePath = path.join(privateRoot, platform, patternId, evidenceFilename);
-    const label = `${platform}:${patternId}`;
+if (skipEvidence) {
+  fail("docs/ui/rendered-geometry.manifest.json is pending approved rendered geometry evidence");
+} else {
+  for (const patternId of registry?.patterns || []) {
+    const pattern = readJson(`docs/ui/pattern-registry/patterns/${patternId}.pattern.json`);
+    for (const platform of pattern?.platforms || []) {
+      if (!requiredPlatforms.has(platform)) continue;
+      const evidencePath = path.join(privateRoot, platform, patternId, evidenceFilename);
+      const label = `${platform}:${patternId}`;
+      const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
+      if (!evidence) continue;
+      for (const field of requiredEvidence) requireField(evidence, `${label} evidence`, field);
+      assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+      assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
+      if (evidence.patternId !== patternId) fail(`${label}.patternId must match the pattern registry`);
+      if (evidence.platform !== platform) fail(`${label}.platform must match the pattern registry`);
+      const expectedReference = `${privateGeometryAlias}:${platform}/${patternId}`;
+      if (evidence.geometryEvidenceReference !== expectedReference) {
+        fail(`${label}.geometryEvidenceReference must be ${expectedReference}`);
+      }
+      const requiredMeasurementKeys = measuredGeometryKeys(pattern, platform);
+      verifyMeasurements(evidence.measurements, `${label}.measurements`);
+      verifyRequiredMeasurementKeys(evidence.measurements, requiredMeasurementKeys, `${label}.measurements`);
+      assertHash(evidence.geometryHash, `${label}.geometryHash`);
+      assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
+      verifiedPatterns += 1;
+    }
+  }
+
+  for (const [index, entry] of (surfaceCoverage?.coverage || []).entries()) {
+    const label = `surface:${entry?.platform || "unknown"}:${entry?.coverageId || index}`;
+    const suffix = splitReference(entry?.geometryEvidenceReference, privateGeometryAlias, `${label}.geometryEvidenceReference`);
+    if (!suffix) continue;
+    const evidencePath = path.join(privateRoot, suffix.split("/").join(path.sep), evidenceFilename);
     const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
     if (!evidence) continue;
-    for (const field of requiredEvidence) requireField(evidence, `${label} evidence`, field);
+    for (const field of requiredSurfaceEvidence) requireField(evidence, `${label} evidence`, field);
     assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
     assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
-    if (evidence.patternId !== patternId) fail(`${label}.patternId must match the pattern registry`);
-    if (evidence.platform !== platform) fail(`${label}.platform must match the pattern registry`);
-    const expectedReference = `${privateGeometryAlias}:${platform}/${patternId}`;
-    if (evidence.geometryEvidenceReference !== expectedReference) {
-      fail(`${label}.geometryEvidenceReference must be ${expectedReference}`);
+    if (evidence.coverageId !== entry.coverageId) fail(`${label}.coverageId must match the surface coverage manifest`);
+    if (evidence.platform !== entry.platform) fail(`${label}.platform must match the surface coverage manifest`);
+    if (evidence.geometryEvidenceReference !== entry.geometryEvidenceReference) {
+      fail(`${label}.geometryEvidenceReference must match the surface coverage manifest`);
     }
-    const requiredMeasurementKeys = measuredGeometryKeys(pattern, platform);
     verifyMeasurements(evidence.measurements, `${label}.measurements`);
-    verifyRequiredMeasurementKeys(evidence.measurements, requiredMeasurementKeys, `${label}.measurements`);
     assertHash(evidence.geometryHash, `${label}.geometryHash`);
     assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
-    verifiedPatterns += 1;
+    verifiedSurfaces += 1;
   }
-}
-
-for (const [index, entry] of (surfaceCoverage?.coverage || []).entries()) {
-  const label = `surface:${entry?.platform || "unknown"}:${entry?.coverageId || index}`;
-  const suffix = splitReference(entry?.geometryEvidenceReference, privateGeometryAlias, `${label}.geometryEvidenceReference`);
-  if (!suffix) continue;
-  const evidencePath = path.join(privateRoot, suffix.split("/").join(path.sep), evidenceFilename);
-  const evidence = readJsonFile(evidencePath, `${label} ${evidenceFilename}`);
-  if (!evidence) continue;
-  for (const field of requiredSurfaceEvidence) requireField(evidence, `${label} evidence`, field);
-  assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
-  assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
-  if (evidence.coverageId !== entry.coverageId) fail(`${label}.coverageId must match the surface coverage manifest`);
-  if (evidence.platform !== entry.platform) fail(`${label}.platform must match the surface coverage manifest`);
-  if (evidence.geometryEvidenceReference !== entry.geometryEvidenceReference) {
-    fail(`${label}.geometryEvidenceReference must match the surface coverage manifest`);
-  }
-  verifyMeasurements(evidence.measurements, `${label}.measurements`);
-  assertHash(evidence.geometryHash, `${label}.geometryHash`);
-  assertHash(evidence.screenshotComparisonHash, `${label}.screenshotComparisonHash`);
-  verifiedSurfaces += 1;
 }
 
 if (errors.length > 0) {
