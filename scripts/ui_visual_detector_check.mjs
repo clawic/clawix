@@ -53,6 +53,7 @@ requireFields(manifest, detectorPath, [
   "policy",
   "sourceRoots",
   "requiredChangeKinds",
+  "classificationBuckets",
   "detectors",
 ]);
 
@@ -76,6 +77,32 @@ for (const kind of [
   "typography",
 ]) {
   if (!requiredKinds.has(kind)) fail(`${detectorPath}.requiredChangeKinds must include ${kind}`);
+}
+
+const requiredBuckets = new Map([
+  ["presentation", ["color", "spacing", "size", "icon", "layout", "animation", "typography"]],
+  ["copy", ["microcopy", "visible-name"]],
+  ["hierarchy", ["ordering", "hierarchy"]],
+]);
+const bucketsById = new Map();
+for (const [index, bucket] of requireArray(manifest, detectorPath, "classificationBuckets").entries()) {
+  const label = `${detectorPath}.classificationBuckets[${index}]`;
+  requireFields(bucket, label, ["id", "changeKinds"]);
+  if (bucket?.id) bucketsById.set(bucket.id, bucket);
+  for (const kind of requireArray(bucket, label, "changeKinds")) {
+    if (!requiredKinds.has(kind)) fail(`${label}.changeKinds contains unregistered ${kind}`);
+  }
+}
+for (const [bucketId, kinds] of requiredBuckets.entries()) {
+  const bucket = bucketsById.get(bucketId);
+  if (!bucket) {
+    fail(`${detectorPath}.classificationBuckets must include ${bucketId}`);
+    continue;
+  }
+  const bucketKinds = new Set(bucket.changeKinds || []);
+  for (const kind of kinds) {
+    if (!bucketKinds.has(kind)) fail(`${detectorPath}.classificationBuckets.${bucketId} must include ${kind}`);
+  }
 }
 
 const seenKinds = new Set();

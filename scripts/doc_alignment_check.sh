@@ -224,6 +224,7 @@ require_snippet "docs/ui/visual-change-scopes.manifest.json" "privateModelAssign
 require_snippet "docs/ui/visual-change-scopes.manifest.json" "changeBudget"
 require_snippet "docs/ui/visual-change-detectors.manifest.json" "platform-specific source tokens"
 require_snippet "docs/ui/visual-change-detectors.manifest.json" "swiftui-layout"
+require_snippet "docs/ui/visual-change-detectors.manifest.json" "classificationBuckets"
 require_snippet "docs/ui/visual-model-allowlist.manifest.json" "claude-opus-4.7"
 require_snippet "docs/ui/visual-model-allowlist.manifest.json" "CLAWIX_UI_VISUAL_MODEL"
 require_snippet "scripts/ui_visual_guard_failure_check.mjs" "simulate-unauthorized-visual-diff"

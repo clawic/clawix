@@ -51,8 +51,8 @@ the public repo.
   geometry evidence.
 - `visual-change-scopes.manifest.json`: public-safe approved scope metadata for
   visual/copy/layout work.
-- `visual-change-detectors.manifest.json`: platform-specific source tokens for
-  unauthorized visual/copy/layout diffs.
+- `visual-change-detectors.manifest.json`: platform-specific source tokens and
+  classification buckets for unauthorized visual/copy/layout diffs.
 - `visual-proposals.registry.json`: public-safe conceptual proposal records for
   visual/copy/layout changes.
 - `debt.baseline.json`: frozen existing visual drift.
@@ -149,7 +149,8 @@ the public repo.
 29. Keep visual authorization scopes current with
    `scripts/ui_visual_scope_check.mjs`; no scope is authorized by default, and
    approved scopes must declare files plus a change budget.
-30. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`.
+30. Keep visual change detectors current with `scripts/ui_visual_detector_check.mjs`;
+   presentation, copy, and hierarchy buckets must stay explicit.
 31. Keep visual model authorization current with
    `scripts/ui_visual_model_allowlist_check.mjs`; the active model signal must
    identify an allowlisted visual model.

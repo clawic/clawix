@@ -16,6 +16,20 @@
     "hierarchy",
     "typography"
   ],
+  "classificationBuckets": [
+    {
+      "id": "presentation",
+      "changeKinds": ["color", "spacing", "size", "icon", "layout", "animation", "typography"]
+    },
+    {
+      "id": "copy",
+      "changeKinds": ["microcopy", "visible-name"]
+    },
+    {
+      "id": "hierarchy",
+      "changeKinds": ["ordering", "hierarchy"]
+    }
+  ],
   "detectors": [
     { "id": "swiftui-color", "platforms": ["macos", "ios"], "changeKind": "color", "pattern": "\\b(Color|Palette|foregroundColor|foregroundStyle|background)\\b", "reason": "SwiftUI color and background tokens affect presentation." },
     { "id": "swiftui-icon", "platforms": ["macos", "ios"], "changeKind": "icon", "pattern": "Image\\(systemName:", "reason": "SF Symbol selection is a visual decision." },
