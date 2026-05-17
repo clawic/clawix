@@ -52,6 +52,7 @@
     "geometry-contract-clause-check",
     "implementation-evidence-contract-check",
     "implementation-phase-contract-check",
+    "ui-skill-contract-check",
     "state-coverage-source-evidence",
     "surface-inventory-coverage",
     "surface-reference-contract-check",
