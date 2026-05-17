@@ -21,7 +21,6 @@ public sealed class InMemoryEngineHost : IEngineHost
 
     public event Action<BridgeRuntimeState>? BridgeStateChanged;
     public event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
-    public event Action<WireSession>? ChatChanged;
     public event Action<MessagesEvent>? MessagesChanged;
     public event Action<(WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId)>? RateLimitsChanged;
 

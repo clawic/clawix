@@ -22,8 +22,6 @@ public interface IEngineHost
 
     event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
 
-    event Action<WireSession>? ChatChanged;
-
     event Action<MessagesEvent>? MessagesChanged;
 
     // ===== Session actions =====

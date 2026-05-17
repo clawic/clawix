@@ -8,7 +8,7 @@ namespace Clawix.Bridged;
 
 /// <summary>
 /// Daemon-side <see cref="IEngineHost"/>. Wraps <see cref="CodexBackend"/>
-/// and exposes the chat / message surface to the bridge sessions.
+/// and exposes the session / message surface to the bridge sessions.
 /// Mirrors Swift <c>DaemonEngineHost</c> for <c>listSessions</c>,
 /// <c>openSession</c>, <c>sendMessage</c>, streaming, and the daemon-owned
 /// bridge surface.
@@ -38,7 +38,6 @@ public sealed partial class DaemonEngineHost : IEngineHost, IAsyncDisposable
 
     public event Action<BridgeRuntimeState>? BridgeStateChanged;
     public event Action<IReadOnlyList<WireSession>>? BridgeSessionsChanged;
-    public event Action<WireSession>? ChatChanged;
     public event Action<MessagesEvent>? MessagesChanged;
     public event Action<(WireRateLimitSnapshot? Snapshot, IReadOnlyDictionary<string, WireRateLimitSnapshot> ByLimitId)>? RateLimitsChanged;
 
@@ -67,7 +66,7 @@ public sealed partial class DaemonEngineHost : IEngineHost, IAsyncDisposable
     public async Task RefreshSessionsAsync(CancellationToken ct)
     {
         var result = await _backend.CallAsync("thread/list", null, ct);
-        var sessions = ChatSnapshotFromBackend(result);
+        var sessions = SessionSnapshotFromBackend(result);
         lock (_stateLock) _sessions = sessions;
         BridgeSessionsChanged?.Invoke(sessions);
     }

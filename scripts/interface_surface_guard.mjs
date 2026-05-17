@@ -418,6 +418,20 @@ for (const pattern of [
   }
 }
 
+for (const [relativePath, patterns] of [
+  ["windows/Clawix.Engine/IEngineHost.cs", ["ChatChanged"]],
+  ["windows/Clawix.Bridged/DaemonEngineHost.cs", ["ChatChanged", "chat / message surface", "ChatSnapshotFromBackend"]],
+  ["windows/Clawix.Bridged/DaemonEngineHost.Events.cs", ["ChatSnapshotFromBackend"]],
+  ["windows/Clawix.Tests/InMemoryEngineHost.cs", ["ChatChanged"]],
+]) {
+  const source = read(relativePath);
+  for (const pattern of patterns) {
+    if (source.includes(pattern)) {
+      fail(`${relativePath} must use session bridge vocabulary: ${JSON.stringify(pattern)}`);
+    }
+  }
+}
+
 const bridgeProtocolDoc = read("packages/ClawixCore/Sources/ClawixCore/BridgeProtocol.md");
 for (const snippet of [
   "The current schema version is `1`.",

@@ -58,11 +58,11 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void OpenSession_OmitsLimitWhenNull()
     {
-        var noLimit = new BridgeFrame(new BridgeBody.OpenSession("chat-1", null));
+        var noLimit = new BridgeFrame(new BridgeBody.OpenSession("session-1", null));
         var jsonA = BridgeCoder.Encode(noLimit);
         Assert.DoesNotContain("\"limit\"", jsonA);
 
-        var withLimit = new BridgeFrame(new BridgeBody.OpenSession("chat-1", 60));
+        var withLimit = new BridgeFrame(new BridgeBody.OpenSession("session-1", 60));
         var jsonB = BridgeCoder.Encode(withLimit);
         Assert.Contains("\"limit\":60", jsonB);
     }
@@ -85,7 +85,7 @@ public sealed class BridgeProtocolTests
     [Fact]
     public void SessionsSnapshot_RoundTrip()
     {
-        var chat = new WireSession
+        var session = new WireSession
         {
             Id = "id-1",
             Title = "Hello",
@@ -93,7 +93,7 @@ public sealed class BridgeProtocolTests
             HasActiveTurn = true,
             LastMessagePreview = "ping",
         };
-        var frame = new BridgeFrame(new BridgeBody.SessionsSnapshot([chat]));
+        var frame = new BridgeFrame(new BridgeBody.SessionsSnapshot([session]));
         var json = BridgeCoder.Encode(frame);
         var decoded = BridgeCoder.Decode(json);
         Assert.IsType<BridgeBody.SessionsSnapshot>(decoded.Body);
