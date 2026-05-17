@@ -42,6 +42,9 @@ for (const snippet of [
   "simulated unauthorized visual diff",
   "web/src/simulated-visual-diff.tsx:1",
   "className",
+  "web/src/simulated-visual-diff.tsx:2",
+  "cross-visible-option-list",
+  "visible-model-alpha",
 ]) {
   if (!output.includes(snippet)) fail(`failure output is missing: ${snippet}`);
 }

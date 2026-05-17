@@ -588,8 +588,9 @@ function visualDiffHits(diffText, sourceLabel) {
 const simulatedVisualDiff = [
   "diff --git a/web/src/simulated-visual-diff.tsx b/web/src/simulated-visual-diff.tsx",
   "+++ b/web/src/simulated-visual-diff.tsx",
-  "@@ -0,0 +1 @@",
+  "@@ -0,0 +1,2 @@",
   '+<button className="gap-2 text-red-500" aria-label="Rename">Rename</button>',
+  '+const visibleModelOptions = ["visible-model-alpha", "visible-model-beta"];',
 ].join("\n");
 const visualHits = simulateUnauthorizedVisualDiff
   ? visualDiffHits(simulatedVisualDiff, "simulated unauthorized visual diff")
