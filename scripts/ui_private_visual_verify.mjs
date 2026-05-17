@@ -29,7 +29,7 @@ const checks = [
     name: "private debt audit",
     env: "CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT",
     script: "scripts/ui_private_debt_audit_verify.mjs",
-    args: ["--require-approved"],
+    args: ["--require-approved", ...(includePending ? ["--include-pending"] : [])],
   },
   {
     name: "private baseline",

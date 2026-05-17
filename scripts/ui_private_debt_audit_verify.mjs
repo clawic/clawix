@@ -112,6 +112,7 @@ if (!hasFlag("--require-approved")) {
   process.exit(1);
 }
 
+const includePending = hasFlag("--include-pending");
 const privateRootRaw = optionValue("--root") || process.env.CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT || "";
 if (!privateRootRaw) {
   console.error("EXTERNAL PENDING: set CLAWIX_UI_PRIVATE_DEBT_AUDIT_ROOT or pass --root to verify private UI debt audit evidence.");
@@ -135,6 +136,12 @@ let verified = 0;
 
 for (const [index, entry] of (manifest?.entries || []).entries()) {
   const label = `${entry.debtId || index}`;
+  if (entry.auditStatus !== "audited-approved") {
+    if (!includePending) {
+      fail(`${label} is pending approved private debt audit`);
+      continue;
+    }
+  }
   const relativeEvidenceDir = relativePathFromReference(entry.privateDebtAuditReference, alias);
   if (!relativeEvidenceDir) {
     fail(`${label}.privateDebtAuditReference is invalid`);
