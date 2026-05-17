@@ -62,10 +62,14 @@ requireFields(manifest, manifestPath, [
   "privateBaselineAlias",
   "privateGeometryAlias",
   "privateCopyAlias",
+  "surfaceEvidenceFilename",
   "allowedBaselineStatuses",
   "requiredEvidenceFields",
   "coverage",
 ]);
+if (manifest?.surfaceEvidenceFilename !== "surface-evidence.json") {
+  fail(`${manifestPath}.surfaceEvidenceFilename must be surface-evidence.json`);
+}
 
 const privateBaselines = readJson("docs/ui/private-baselines.manifest.json");
 if (manifest?.privateBaselineAlias !== privateBaselines?.privateRootAlias) {

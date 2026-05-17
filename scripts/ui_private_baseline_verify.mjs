@@ -107,16 +107,20 @@ if (!fs.existsSync(privateRoot) || !fs.statSync(privateRoot).isDirectory()) {
 }
 
 const manifest = readJson(manifestPath);
+const surfaceCoverage = readJson("docs/ui/surface-baseline-coverage.manifest.json");
 const alias = manifest?.privateRootAlias || "private-codex-ui-baselines";
 const evidenceFilename = manifest?.evidenceFilename || "evidence.json";
-let verified = 0;
-let pending = 0;
+const surfaceEvidenceFilename = surfaceCoverage?.surfaceEvidenceFilename || "surface-evidence.json";
+let verifiedFlows = 0;
+let verifiedSurfaces = 0;
+let pendingFlows = 0;
+let pendingSurfaces = 0;
 
 if (Array.isArray(manifest?.flows)) {
   for (const flow of manifest.flows) {
     const label = `${flow.platform}:${flow.id}`;
     if (flow.baselineStatus !== "approved") {
-      pending += 1;
+      pendingFlows += 1;
       if (!verifyPending) continue;
     }
     if (requireApproved && flow.baselineStatus !== "approved") {
@@ -146,10 +150,51 @@ if (Array.isArray(manifest?.flows)) {
     }
     if (evidence.platform !== flow.platform) fail(`${label}.platform must match the public manifest`);
     if (evidence.flowId !== flow.id) fail(`${label}.flowId must match the public manifest`);
-    verified += 1;
+    verifiedFlows += 1;
   }
 } else {
   fail(`${manifestPath}.flows must be an array`);
+}
+
+if (Array.isArray(surfaceCoverage?.coverage)) {
+  for (const [index, entry] of surfaceCoverage.coverage.entries()) {
+    const label = `surface:${entry.platform || "unknown"}:${entry.coverageId || index}`;
+    if (entry.baselineStatus !== "approved") {
+      pendingSurfaces += 1;
+      if (!verifyPending) continue;
+    }
+    if (requireApproved && entry.baselineStatus !== "approved") {
+      fail(`${label} is not approved`);
+      continue;
+    }
+
+    const relativeEvidenceDir = relativePathFromReference(entry.privateBaselineReference, alias);
+    if (!relativeEvidenceDir) {
+      fail(`${label} has invalid privateBaselineReference`);
+      continue;
+    }
+    const evidencePath = path.join(privateRoot, relativeEvidenceDir, surfaceEvidenceFilename);
+    const evidence = readJsonFile(evidencePath, `${label} ${surfaceEvidenceFilename}`);
+    if (!evidence) continue;
+
+    for (const field of entry.requiredEvidence || []) {
+      requireField(evidence, `${label} evidence`, field);
+    }
+    assertIsoTimestamp(evidence.approvedByUserAt, `${label}.approvedByUserAt`);
+    assertApprovedScope(evidence.approvedScope, `${label}.approvedScope`);
+    assertHash(evidence.geometryHash, `${label}.geometryHash`);
+    assertHash(evidence.screenshotHash, `${label}.screenshotHash`);
+    assertHash(evidence.copySnapshotHash, `${label}.copySnapshotHash`);
+    assertHash(evidence.baselineArtifactHash, `${label}.baselineArtifactHash`);
+    if (String(evidence.privateBaselineReference || "") !== entry.privateBaselineReference) {
+      fail(`${label}.privateBaselineReference must match the surface coverage manifest`);
+    }
+    if (evidence.platform !== entry.platform) fail(`${label}.platform must match the surface coverage manifest`);
+    if (evidence.coverageId !== entry.coverageId) fail(`${label}.coverageId must match the surface coverage manifest`);
+    verifiedSurfaces += 1;
+  }
+} else {
+  fail("docs/ui/surface-baseline-coverage.manifest.json.coverage must be an array");
 }
 
 if (errors.length > 0) {
@@ -158,4 +203,6 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`UI private baseline verification passed (${verified} verified, ${pending} pending)`);
+console.log(
+  `UI private baseline verification passed (${verifiedFlows} flow baselines, ${verifiedSurfaces} surface baselines; ${pendingFlows} flow pending, ${pendingSurfaces} surface pending)`,
+);

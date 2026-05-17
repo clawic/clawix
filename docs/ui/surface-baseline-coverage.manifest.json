@@ -6,6 +6,7 @@
   "privateBaselineAlias": "private-codex-ui-baselines",
   "privateGeometryAlias": "private-codex-ui-rendered-geometry",
   "privateCopyAlias": "private-codex-ui-copy-snapshots",
+  "surfaceEvidenceFilename": "surface-evidence.json",
   "allowedBaselineStatuses": ["pending-user-approved-capture", "approved"],
   "requiredEvidenceFields": ["coverageId", "platform", "privateBaselineReference", "captureCommand", "screenshotHash", "geometryHash", "copySnapshotHash", "baselineArtifactHash", "approvedByUserAt", "approvedScope"],
   "coverage": [

@@ -96,7 +96,7 @@ for (const [index, entry] of requireArray(surfaceCoverage, "docs/ui/surface-base
     id: entry.coverageId,
     platform: entry.platform,
     privateReference: entry.privateBaselineReference,
-    evidenceFilename: "surface-evidence.json",
+    evidenceFilename: surfaceCoverage?.surfaceEvidenceFilename || "surface-evidence.json",
     requiredFields: surfaceRequiredFields,
   });
   addPlanItem({
