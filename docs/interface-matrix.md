@@ -42,8 +42,8 @@ experimental switch. Every current surface must be one of:
 | Provider accounts/routing | Framework + Host | Provider account/model settings | Framework config plus host vault refs | Framework config; credentials in host vault | Routing tests; no UserDefaults as canonical store |
 | QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | `claw snippets list|upsert|delete`; framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |
 | Voice/audio/dictation | Framework + Host | Dictation and audio catalog UI | `@clawjs/audio` API/CLI/fixtures | Framework audio sidecar; host temp/debug/prefs local | Transcript/catalog tests and host exception checks |
-| Apps | Framework | Apps catalog and app surface | ClawJS apps/resource APIs | Framework workspace storage | Reject App Support as canonical Apps path |
-| Design | Framework | Styles, templates, references, editor | Design resource types in registry/runtime | Framework workspace storage | Design fixtures and storage boundary tests |
+| Apps | Framework | Apps catalog and app surface | `claw apps list|upsert`; ClawJS apps/resource APIs | Framework workspace storage | Reject App Support as canonical Apps path |
+| Design | Framework | Styles, templates, references, editor | `claw design list|upsert`; design resource types in registry/runtime | Framework workspace storage | Design fixtures and storage boundary tests |
 | Browser tool | Host | Browser/right sidebar | Host browser policy/API/audit | Host policy plus UI cache | Approval/policy tests |
 | Screen tools | Host | Capture tools | `HostActionPolicy` approval/audit API | Host policy plus UI prefs | Signed-host permission validation + policy tests |
 | Mac Utilities | Host | Native utility controls | `HostActionPolicy` approval/audit API | Host policy + host action audit | Approval/audit tests |

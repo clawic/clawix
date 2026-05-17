@@ -305,8 +305,24 @@ for (const relativePath of [
 
 for (const snippet of [
   "| QuickAsk snippets/prompts | Framework | QuickAsk slash/mention templates | `claw snippets list|upsert|delete`; framework snippets/prompts/skills | Framework snippets; host hotkey/panel prefs local | Snippet tests; host prefs remain local |",
+  "| Apps | Framework | Apps catalog and app surface | `claw apps list|upsert`; ClawJS apps/resource APIs | Framework workspace storage | Reject App Support as canonical Apps path |",
+  "| Design | Framework | Styles, templates, references, editor | `claw design list|upsert`; design resource types in registry/runtime | Framework workspace storage | Design fixtures and storage boundary tests |",
 ]) {
   requireSnippet("docs/interface-matrix.md", snippet);
+}
+for (const [surfaceId, snippets] of [
+  ["apps", ["claw apps list|upsert", "ClawJS apps/resource APIs"]],
+  ["design", ["claw design list|upsert", "design resource types"]],
+]) {
+  const surface = (registry.surfaces ?? []).find((entry) => entry.id === surfaceId);
+  if (!surface) {
+    fail(`interface registry is missing ${surfaceId}`);
+    continue;
+  }
+  const surfaceText = `${surface.programmaticSurface ?? ""}\n${surface.validation ?? ""}`;
+  for (const snippet of snippets) {
+    if (!surfaceText.includes(snippet)) fail(`${surfaceId} registry row is missing apps/design CLI snippet ${JSON.stringify(snippet)}`);
+  }
 }
 const quickAskSnippetsSurface = (registry.surfaces ?? []).find((entry) => entry.id === "quickAsk.snippets");
 if (!quickAskSnippetsSurface) {

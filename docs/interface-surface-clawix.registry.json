@@ -157,7 +157,7 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Apps catalog and app surface",
-      "programmaticSurface": "ClawJS apps/resource APIs and workspace storage",
+      "programmaticSurface": "claw apps list|upsert; ClawJS apps/resource APIs and workspace storage",
       "storageOwner": "framework-workspace",
       "validation": "Apps storage boundary tests reject Application Support canonical path"
     },
@@ -167,7 +167,7 @@
       "status": "stable",
       "owner": "framework",
       "humanSurface": "Clawix Design styles, templates, references and editor",
-      "programmaticSurface": "Design resource types in common registry/runtime",
+      "programmaticSurface": "claw design list|upsert; design resource types in common registry/runtime",
       "storageOwner": "framework-workspace",
       "validation": "Design resource fixtures and storage boundary tests"
     },
